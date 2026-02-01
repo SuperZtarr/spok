@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { Prisma } from '@spok/database';
 
 const createItemSchema = z.object({
   type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT']),
@@ -117,11 +118,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = createItemSchema.parse(request.body);
-      const { tagIds, ...itemData } = body;
+      const { tagIds, content, ...itemData } = body;
 
       const item = await fastify.prisma.item.create({
         data: {
           ...itemData,
+          content: content as Prisma.InputJsonValue | undefined,
           dueDate: itemData.dueDate ? new Date(itemData.dueDate) : undefined,
           spaceId: request.params.spaceId,
           createdById: request.user.userId,
@@ -134,7 +136,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         include: {
           tags: { include: { tag: true } },
         },
-      });
+      }) as any;
 
       return reply.status(201).send({
         ...item,
@@ -211,7 +213,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = updateItemSchema.parse(request.body);
-      const { tagIds, ...updateData } = body;
+      const { tagIds, content, ...updateData } = body;
 
       // Handle tag updates
       if (tagIds !== undefined) {
@@ -224,17 +226,18 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.params.id },
         data: {
           ...updateData,
+          content: content as Prisma.InputJsonValue | undefined,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
           tags: tagIds
             ? {
                 create: tagIds.map((tagId) => ({ tagId })),
               }
             : undefined,
-        },
+        } as any,
         include: {
           tags: { include: { tag: true } },
         },
-      });
+      }) as any;
 
       return {
         ...item,
