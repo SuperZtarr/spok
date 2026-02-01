@@ -58,7 +58,7 @@ export function LoginPage() {
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
                 <p>{error}</p>
-                {devMode && errorDetails && (
+                {devMode && !!errorDetails && (
                   <pre className="mt-2 text-xs overflow-auto max-h-32 bg-black/10 p-2 rounded">
                     {JSON.stringify(errorDetails, null, 2)}
                   </pre>
