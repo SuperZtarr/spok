@@ -6,8 +6,6 @@ import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
 import { authRoutes } from './routes/auth.js';
 import { spacesRoutes } from './routes/spaces.js';
-import { itemsRoutes } from './routes/items.js';
-import { tagsRoutes } from './routes/tags.js';
 
 const envToLogger = {
   development: {

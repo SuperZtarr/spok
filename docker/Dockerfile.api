@@ -25,6 +25,7 @@ RUN pnpm --filter @spok/database generate
 
 # Build packages
 RUN pnpm --filter @spok/shared build
+RUN pnpm --filter @spok/database build
 RUN pnpm --filter @spok/api build
 
 # Production stage

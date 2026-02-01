@@ -90,9 +90,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       ]);
 
       return {
-        data: items.map((item) => ({
+        data: items.map((item: any) => ({
           ...item,
-          tags: item.tags.map((t) => t.tag),
+          tags: item.tags.map((t: any) => t.tag),
           childCount: item._count.children,
         })),
         total,
@@ -138,7 +138,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.status(201).send({
         ...item,
-        tags: item.tags.map((t) => t.tag),
+        tags: item.tags.map((t: any) => t.tag),
       });
     }
   );
@@ -178,10 +178,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     return {
       ...item,
-      tags: item.tags.map((t) => t.tag),
-      children: item.children.map((c) => ({
+      tags: item.tags.map((t: any) => t.tag),
+      children: item.children.map((c: any) => ({
         ...c,
-        tags: c.tags.map((t) => t.tag),
+        tags: c.tags.map((t: any) => t.tag),
       })),
     };
   });
@@ -238,7 +238,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         ...item,
-        tags: item.tags.map((t) => t.tag),
+        tags: item.tags.map((t: any) => t.tag),
       };
     }
   );
@@ -398,7 +398,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Reorder siblings
-    const updates = siblings.map((sibling, index) => {
+    const updates = siblings.map((sibling: any, index: number) => {
       const pos = index >= newPosition ? index + 1 : index;
       return fastify.prisma.item.update({
         where: { id: sibling.id },

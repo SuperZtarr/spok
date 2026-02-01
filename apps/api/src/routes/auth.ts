@@ -44,7 +44,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Create personal space
-    const personalSpace = await fastify.prisma.space.create({
+    await fastify.prisma.space.create({
       data: {
         name: 'Mon espace personnel',
         type: 'PERSONAL',
@@ -161,7 +161,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Logout
-  fastify.post<{ Body: z.infer<typeof refreshSchema> }>('/logout', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof refreshSchema> }>('/logout', async (request, _reply) => {
     const { refreshToken } = refreshSchema.parse(request.body);
 
     await fastify.prisma.refreshToken.deleteMany({

@@ -36,7 +36,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { name: 'asc' },
     });
 
-    return tags.map((tag) => ({
+    return tags.map((tag: any) => ({
       ...tag,
       itemCount: tag._count.items,
     }));
