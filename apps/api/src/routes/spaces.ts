@@ -41,7 +41,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    return memberships.map((m: any) => ({
+    return memberships.map((m) => ({
       ...m.space,
       role: m.role,
       memberCount: m.space._count.memberships,
@@ -192,7 +192,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    return members.map((m: any) => ({
+    return members.map((m) => ({
       id: m.id,
       userId: m.userId,
       email: m.user.email,
