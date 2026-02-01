@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: spok-postgres-dev
+    environment:
+      POSTGRES_USER: spok
+      POSTGRES_PASSWORD: spok
+      POSTGRES_DB: spok
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_dev:

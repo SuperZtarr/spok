@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Utilisateur
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  SpaceMembership[]
+  createdItems Item[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+// Espace (personnel ou groupe)
+model Space {
+  id        String    @id @default(cuid())
+  name      String
+  type      SpaceType
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  memberships SpaceMembership[]
+  items       Item[]
+  modules     SpaceModule[]
+  tags        Tag[]
+
+  @@map("spaces")
+}
+
+enum SpaceType {
+  PERSONAL
+  GROUP
+}
+
+// Appartenance à un espace
+model SpaceMembership {
+  id       String   @id @default(cuid())
+  userId   String
+  spaceId  String
+  role     Role
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, spaceId])
+  @@map("space_memberships")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// Élément générique (note, projet, tâche)
+model Item {
+  id          String    @id @default(cuid())
+  type        ItemType
+  title       String
+  description String?
+  content     Json?
+  status      String?
+  priority    Int?
+  position    Int       @default(0)
+  dueDate     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  spaceId     String
+  space       Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  // Relations hiérarchiques
+  parentId String?
+  parent   Item?   @relation("ItemHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Item[]  @relation("ItemHierarchy")
+
+  // Relations libres
+  relationsFrom ItemRelation[] @relation("RelationFrom")
+  relationsTo   ItemRelation[] @relation("RelationTo")
+
+  tags ItemTag[]
+
+  @@index([spaceId])
+  @@index([createdById])
+  @@index([parentId])
+  @@map("items")
+}
+
+enum ItemType {
+  NOTE
+  PROJECT
+  TASK
+  APPOINTMENT
+}
+
+// Relations entre éléments
+model ItemRelation {
+  id         String @id @default(cuid())
+  fromItemId String
+  toItemId   String
+  type       String // "blocks", "relates", "depends", etc.
+
+  fromItem Item @relation("RelationFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
+  toItem   Item @relation("RelationTo", fields: [toItemId], references: [id], onDelete: Cascade)
+
+  @@unique([fromItemId, toItemId, type])
+  @@map("item_relations")
+}
+
+// Tags
+model Tag {
+  id      String  @id @default(cuid())
+  name    String
+  color   String?
+  spaceId String
+
+  space Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  items ItemTag[]
+
+  @@unique([spaceId, name])
+  @@map("tags")
+}
+
+model ItemTag {
+  itemId String
+  tagId  String
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@map("item_tags")
+}
+
+// Modules activés par espace
+model SpaceModule {
+  id        String  @id @default(cuid())
+  spaceId   String
+  moduleKey String
+  config    Json?
+  enabled   Boolean @default(true)
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, moduleKey])
+  @@map("space_modules")
+}
+
+// Traçabilité
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  changes   Json?
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+// Refresh tokens for JWT
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
