@@ -13,6 +13,8 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState<unknown>(null);
+  const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true');
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
@@ -23,15 +25,24 @@ export function LoginPage() {
     onError: (err) => {
       if (err instanceof ApiError) {
         setError(err.message);
+        setErrorDetails({ statusCode: err.statusCode, details: err.details });
       } else {
         setError('Une erreur est survenue');
+        setErrorDetails(err);
       }
     },
   });
 
+  const toggleDevMode = () => {
+    const newValue = !devMode;
+    setDevMode(newValue);
+    localStorage.setItem('devMode', String(newValue));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorDetails(null);
     loginMutation.mutate({ email, password });
   };
 
@@ -46,7 +57,12 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-                {error}
+                <p>{error}</p>
+                {devMode && errorDetails && (
+                  <pre className="mt-2 text-xs overflow-auto max-h-32 bg-black/10 p-2 rounded">
+                    {JSON.stringify(errorDetails, null, 2)}
+                  </pre>
+                )}
               </div>
             )}
 
@@ -92,6 +108,14 @@ export function LoginPage() {
                 S'inscrire
               </Link>
             </p>
+
+            <button
+              type="button"
+              onClick={toggleDevMode}
+              className="w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              {devMode ? '🔧 Mode dev activé' : '🔧 Activer mode dev'}
+            </button>
           </form>
         </CardContent>
       </Card>

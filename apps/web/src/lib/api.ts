@@ -21,7 +21,8 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 class ApiError extends Error {
   constructor(
     public statusCode: number,
-    message: string
+    message: string,
+    public details?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -118,7 +119,7 @@ async function fetchApi<T>(
     }
 
     const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-    throw new ApiError(response.status, error.message || 'An error occurred');
+    throw new ApiError(response.status, error.message || 'An error occurred', error);
   }
 
   return response.json();
