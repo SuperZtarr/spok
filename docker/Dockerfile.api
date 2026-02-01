@@ -1,6 +1,7 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 
 WORKDIR /app
@@ -29,8 +30,9 @@ RUN pnpm --filter @spok/database build
 RUN pnpm --filter @spok/api build
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 
 WORKDIR /app
