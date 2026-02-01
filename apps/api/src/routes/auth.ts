@@ -2,7 +2,10 @@ import { FastifyPluginAsync } from 'fastify';
 import { hash, compare } from 'bcrypt';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
+import { Resend } from 'resend';
 import type { AuthResponse, AuthTokens, AuthUser } from '@spok/shared';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -17,6 +20,15 @@ const loginSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string(),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(8),
 });
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -169,6 +181,103 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { success: true };
+  });
+
+  // Forgot password
+  fastify.post<{ Body: z.infer<typeof forgotPasswordSchema> }>('/forgot-password', async (request, reply) => {
+    const { email } = forgotPasswordSchema.parse(request.body);
+
+    const user = await fastify.prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return { success: true, message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' };
+    }
+
+    // Delete any existing reset tokens for this user
+    await fastify.prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    // Create reset token
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiry
+
+    await fastify.prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    // Send email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+
+    try {
+      await resend.emails.send({
+        from: process.env.EMAIL_FROM || 'SPOK <noreply@resend.dev>',
+        to: email,
+        subject: 'Réinitialisation de votre mot de passe SPOK',
+        html: `
+          <h1>Réinitialisation de mot de passe</h1>
+          <p>Bonjour ${user.name},</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+          <p>Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :</p>
+          <p><a href="${resetUrl}">Réinitialiser mon mot de passe</a></p>
+          <p>Ce lien expire dans 1 heure.</p>
+          <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+        `,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Failed to send password reset email');
+      return reply.internalServerError('Erreur lors de l\'envoi de l\'email');
+    }
+
+    return { success: true, message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' };
+  });
+
+  // Reset password
+  fastify.post<{ Body: z.infer<typeof resetPasswordSchema> }>('/reset-password', async (request, reply) => {
+    const { token, password } = resetPasswordSchema.parse(request.body);
+
+    const resetToken = await fastify.prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!resetToken) {
+      return reply.badRequest('Token invalide ou expiré');
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      await fastify.prisma.passwordResetToken.delete({
+        where: { id: resetToken.id },
+      });
+      return reply.badRequest('Token invalide ou expiré');
+    }
+
+    if (resetToken.used) {
+      return reply.badRequest('Ce lien a déjà été utilisé');
+    }
+
+    // Update password
+    const passwordHash = await hash(password, 10);
+    await fastify.prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    });
+
+    // Mark token as used
+    await fastify.prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { used: true },
+    });
+
+    return { success: true, message: 'Mot de passe mis à jour avec succès' };
   });
 };
 
