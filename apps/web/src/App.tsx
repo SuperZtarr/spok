@@ -8,7 +8,6 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
 import { Layout } from './components/Layout';
-import { DevDbStatus } from './components/DevDbStatus';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -40,9 +39,7 @@ export default function App() {
   }, [logout]);
 
   return (
-    <>
-      <DevDbStatus />
-      <Routes>
+    <Routes>
       <Route
         path="/login"
         element={
@@ -87,6 +84,5 @@ export default function App() {
         <Route path="spaces/:spaceId" element={<SpacePage />} />
       </Route>
     </Routes>
-    </>
   );
 }

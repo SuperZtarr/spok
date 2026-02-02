@@ -4,6 +4,7 @@ import { LogOut, Home, FolderKanban, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { spacesApi, authApi } from '../lib/api';
 import { Button } from './ui/Button';
+import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 
 export function Layout() {
   const navigate = useNavigate();
@@ -67,7 +68,9 @@ export function Layout() {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <DevModeToggle />
+          <DevDbStatus />
           <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
             Déconnexion
