@@ -48,6 +48,7 @@ export function ItemEditModal({
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [url, setUrl] = useState('');
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
@@ -72,6 +73,7 @@ export function ItemEditModal({
     if (item) {
       setTitle(item.title);
       setDescription(item.description || '');
+      setUrl(item.url || '');
       setParentId(item.parentId || '');
       setStatus(item.status || '');
       setType(item.type);
@@ -79,7 +81,7 @@ export function ItemEditModal({
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; parentId?: string | null; status?: string }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -92,7 +94,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; parentId?: string | null; status?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string } = {};
 
     if (type !== item.type) {
       updates.type = type;
@@ -105,6 +107,11 @@ export function ItemEditModal({
     const newDescription = description || null;
     if (newDescription !== (item.description || null)) {
       updates.description = newDescription;
+    }
+
+    const newUrl = url || null;
+    if (newUrl !== (item.url || null)) {
+      updates.url = newUrl;
     }
 
     const newParentId = parentId || null;
@@ -226,6 +233,18 @@ export function ItemEditModal({
               }))}
             />
           </div>
+
+          {(type === 'LINK' || type === 'DOCUMENT' || type === 'IMAGE') && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">URL</label>
+              <Input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

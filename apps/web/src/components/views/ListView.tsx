@@ -1,4 +1,4 @@
-import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image } from 'lucide-react';
+import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image, ExternalLink } from 'lucide-react';
 import type { Item, ItemType } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -71,6 +71,19 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus }: ListViewPr
             <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
             <span className="flex-1 truncate">{item.title}</span>
+
+            {item.url && (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 text-blue-500 hover:text-blue-700 rounded hover:bg-blue-50"
+                onClick={(e) => e.stopPropagation()}
+                title="Ouvrir le lien"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            )}
 
             <Badge variant="outline" className="text-xs">
               {TYPE_LABELS[item.type]}

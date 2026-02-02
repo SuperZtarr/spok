@@ -60,6 +60,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
       setShowAddMember(false);
       setNewMemberSearch('');
     },
@@ -78,6 +79,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
     },
   });
 

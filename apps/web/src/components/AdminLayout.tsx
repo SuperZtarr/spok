@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, Users, ArrowLeft, Shield, FolderKanban } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -21,6 +22,16 @@ export function AdminLayout() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Update document title
+  useEffect(() => {
+    const getPageTitle = () => {
+      if (location.pathname === '/admin/users') return 'Utilisateurs';
+      if (location.pathname === '/admin/spaces') return 'Espaces';
+      return 'Administration';
+    };
+    document.title = `${getPageTitle()} - SPOK Admin`;
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen flex">

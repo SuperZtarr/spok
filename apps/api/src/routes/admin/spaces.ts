@@ -31,7 +31,9 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /admin/spaces - List all spaces with pagination and search
   fastify.get<{ Querystring: ListSpacesQuery }>('/', async (request) => {
-    const { page = 1, pageSize = 20, search, type } = request.query;
+    const { search, type } = request.query;
+    const page = Number(request.query.page) || 1;
+    const pageSize = Number(request.query.pageSize) || 20;
     const skip = (page - 1) * pageSize;
 
     const where: {

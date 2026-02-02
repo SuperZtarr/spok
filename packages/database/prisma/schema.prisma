@@ -80,6 +80,7 @@ model Item {
   title       String
   description String?
   content     Json?
+  url         String?
   status      String?
   priority    Int?
   position    Int       @default(0)

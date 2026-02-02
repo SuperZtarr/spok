@@ -6,6 +6,7 @@ export interface Item {
   title: string;
   description?: string | null;
   content?: Record<string, unknown> | null;
+  url?: string | null;
   status?: string | null;
   priority?: number | null;
   position: number;
@@ -35,6 +36,7 @@ export interface CreateItemInput {
   title: string;
   description?: string;
   content?: Record<string, unknown>;
+  url?: string;
   status?: string;
   priority?: number;
   dueDate?: string;
@@ -47,6 +49,7 @@ export interface UpdateItemInput {
   title?: string;
   description?: string | null;
   content?: Record<string, unknown>;
+  url?: string | null;
   status?: string;
   priority?: number;
   dueDate?: string | null;

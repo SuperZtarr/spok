@@ -2,10 +2,11 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
 const createItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT']),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']),
   title: z.string().min(1),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
+  url: z.string().url().optional(),
   status: z.string().optional(),
   priority: z.number().int().min(1).max(4).optional(),
   dueDate: z.string().datetime().optional(),
@@ -18,6 +19,7 @@ const updateItemSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
+  url: z.string().url().nullable().optional(),
   status: z.string().optional(),
   priority: z.number().int().min(1).max(4).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),

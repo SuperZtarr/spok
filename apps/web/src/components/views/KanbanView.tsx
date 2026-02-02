@@ -1,4 +1,4 @@
-import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image } from 'lucide-react';
+import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image, ExternalLink } from 'lucide-react';
 import type { Item, ItemType } from '@spok/shared';
 import { Button } from '../ui/Button';
 
@@ -14,6 +14,7 @@ const TYPE_ICONS: Record<ItemType, typeof FileText> = {
 };
 
 const COLUMNS = [
+  { id: 'undefined', label: 'Non defini', color: 'border-slate-400' },
   { id: 'todo', label: 'A faire', color: 'border-gray-300' },
   { id: 'in_progress', label: 'En cours', color: 'border-blue-400' },
   { id: 'done', label: 'Termine', color: 'border-green-400' },
@@ -31,15 +32,15 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
   // Group items by status
   const groupedItems = COLUMNS.reduce(
     (acc, column) => {
-      acc[column.id] = items.filter((item) => (item.status || 'todo') === column.id);
+      if (column.id === 'undefined') {
+        acc[column.id] = items.filter((item) => !item.status);
+      } else {
+        acc[column.id] = items.filter((item) => item.status === column.id);
+      }
       return acc;
     },
     {} as Record<string, Item[]>
   );
-
-  // Items without status go to "todo"
-  const noStatusItems = items.filter((item) => !item.status);
-  groupedItems['todo'] = [...(groupedItems['todo'] || []), ...noStatusItems];
 
   return (
     <div className="p-4 overflow-x-auto">
@@ -72,7 +73,21 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
                     <div className="flex items-start gap-2">
                       <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium truncate">{item.title}</h4>
+                        <div className="flex items-center gap-1">
+                          <h4 className="text-sm font-medium truncate">{item.title}</h4>
+                          {item.url && (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Ouvrir le lien"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
                         {item.description && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {item.description}
@@ -91,16 +106,18 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
                           onClick={(e) => {
                             e.stopPropagation();
                             const nextStatus =
-                              column.id === 'todo'
-                                ? 'in_progress'
-                                : column.id === 'in_progress'
-                                  ? 'done'
-                                  : 'done';
+                              column.id === 'undefined'
+                                ? 'todo'
+                                : column.id === 'todo'
+                                  ? 'in_progress'
+                                  : column.id === 'in_progress'
+                                    ? 'done'
+                                    : 'done';
                             onUpdateStatus(item.id, nextStatus);
                           }}
                         >
                           <CheckSquare className="w-3 h-3 mr-1" />
-                          {column.id === 'todo' ? 'Demarrer' : 'Terminer'}
+                          {column.id === 'undefined' ? 'Planifier' : column.id === 'todo' ? 'Demarrer' : 'Terminer'}
                         </Button>
                       )}
                       <Button

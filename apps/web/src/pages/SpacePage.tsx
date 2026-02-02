@@ -91,6 +91,7 @@ export function SpacePage() {
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemType, setNewItemType] = useState<ItemType>('NOTE');
+  const [newItemUrl, setNewItemUrl] = useState('');
   const [newItemParentId, setNewItemParentId] = useState<string>('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
@@ -123,11 +124,12 @@ export function SpacePage() {
   });
 
   const createItemMutation = useMutation({
-    mutationFn: (data: { type: ItemType; title: string; parentId?: string; status?: string }) =>
+    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string }) =>
       itemsApi.create(spaceId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       setNewItemTitle('');
+      setNewItemUrl('');
       setNewItemParentId('');
       setShowNewItem(false);
     },
@@ -270,6 +272,7 @@ export function SpacePage() {
       createItemMutation.mutate({
         type: newItemType,
         title: newItemTitle,
+        url: newItemUrl || undefined,
         parentId: newItemParentId || undefined,
         status: 'todo',
       });
@@ -360,6 +363,15 @@ export function SpacePage() {
                 autoFocus
               />
 
+              {(newItemType === 'LINK' || newItemType === 'DOCUMENT' || newItemType === 'IMAGE') && (
+                <Input
+                  type="url"
+                  value={newItemUrl}
+                  onChange={(e) => setNewItemUrl(e.target.value)}
+                  placeholder="URL (https://...)"
+                />
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Parent (optionnel)</label>
                 <Select
@@ -379,6 +391,7 @@ export function SpacePage() {
                   onClick={() => {
                     setShowNewItem(false);
                     setNewItemTitle('');
+                    setNewItemUrl('');
                     setNewItemParentId('');
                   }}
                 >

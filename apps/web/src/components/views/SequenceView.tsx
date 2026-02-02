@@ -1,4 +1,4 @@
-import { FileText, CheckSquare, Trash2, ArrowDown, FolderKanban, Calendar, Link2, Settings, File, Image } from 'lucide-react';
+import { FileText, CheckSquare, Trash2, ArrowDown, FolderKanban, Calendar, Link2, Settings, File, Image, ExternalLink } from 'lucide-react';
 import type { Item, ItemType } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -77,7 +77,21 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus }: Sequen
                   <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{item.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{item.title}</h3>
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Ouvrir le lien"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
                     {item.description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {item.description}

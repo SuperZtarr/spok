@@ -1,16 +1,19 @@
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Home, FolderKanban, Plus, Shield } from 'lucide-react';
+import { LogOut, Home, FolderKanban, Plus, Shield, Search } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { spacesApi, authApi } from '../lib/api';
 import { Button } from './ui/Button';
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { ViewModeSelector } from './ViewModeSelector';
+import { UserProfileModal } from './UserProfileModal';
 
 export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, refreshToken } = useAuthStore();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { data: spaces } = useQuery({
     queryKey: ['spaces'],
@@ -29,6 +32,12 @@ export function Layout() {
     return 'SPOK';
   };
 
+  // Update document title
+  useEffect(() => {
+    const title = getPageTitle();
+    document.title = title === 'SPOK' ? 'SPOK' : `${title} - SPOK`;
+  }, [currentSpace, location.pathname]);
+
   const handleLogout = async () => {
     try {
       if (refreshToken) {
@@ -46,7 +55,16 @@ export function Layout() {
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold">SPOK</h1>
-          <p className="text-sm text-muted-foreground">{user?.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">{user?.name}</p>
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              className="p-1 rounded hover:bg-accent transition-colors"
+              title="Voir le profil"
+            >
+              <Search className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -120,6 +138,12 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+      />
     </div>
   );
 }

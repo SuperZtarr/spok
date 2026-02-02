@@ -18,7 +18,9 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /admin/users - List all users with pagination and search
   fastify.get<{ Querystring: ListUsersQuery }>('/', async (request) => {
-    const { page = 1, pageSize = 20, search } = request.query;
+    const { search } = request.query;
+    const page = Number(request.query.page) || 1;
+    const pageSize = Number(request.query.pageSize) || 20;
     const skip = (page - 1) * pageSize;
 
     const where = search
