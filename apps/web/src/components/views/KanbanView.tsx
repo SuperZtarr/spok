@@ -4,6 +4,7 @@ import {
   DragOverlay,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -234,7 +235,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
     setActiveId(event.active.id as string);
   };
 
-  const handleDragOver = (event: { over: { id: string } | null }) => {
+  const handleDragOver = (event: DragOverEvent) => {
     setOverId(event.over?.id as string | null);
   };
 
