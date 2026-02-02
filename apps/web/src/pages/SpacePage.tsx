@@ -57,6 +57,14 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: 'bg-blue-100 text-blue-800',
   done: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
+  undefined: 'bg-gray-50 text-gray-400',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  todo: 'À faire',
+  in_progress: 'En cours',
+  done: 'Terminé',
+  cancelled: 'Annulé',
 };
 
 export function SpacePage() {
@@ -564,17 +572,12 @@ function SortableItem({
 
         <span className="flex-1 truncate">{item.title}</span>
 
-        {item.status && (
-          <Badge
-            className={`text-xs ${STATUS_COLORS[item.status] || 'bg-gray-100'}`}
-            variant="secondary"
-          >
-            {item.status === 'todo' && 'À faire'}
-            {item.status === 'in_progress' && 'En cours'}
-            {item.status === 'done' && 'Terminé'}
-            {item.status === 'cancelled' && 'Annulé'}
-          </Badge>
-        )}
+        <Badge
+          className={`text-xs ${STATUS_COLORS[item.status || 'undefined']}`}
+          variant="secondary"
+        >
+          {STATUS_LABELS[item.status || ''] || 'Non défini'}
+        </Badge>
 
         {item.status && item.status !== 'done' && (
           <Button
@@ -778,17 +781,12 @@ function DraggableChildItem({
 
         <span className="flex-1 truncate">{item.title}</span>
 
-        {item.status && (
-          <Badge
-            className={`text-xs ${STATUS_COLORS[item.status] || 'bg-gray-100'}`}
-            variant="secondary"
-          >
-            {item.status === 'todo' && 'À faire'}
-            {item.status === 'in_progress' && 'En cours'}
-            {item.status === 'done' && 'Terminé'}
-            {item.status === 'cancelled' && 'Annulé'}
-          </Badge>
-        )}
+        <Badge
+          className={`text-xs ${STATUS_COLORS[item.status || 'undefined']}`}
+          variant="secondary"
+        >
+          {STATUS_LABELS[item.status || ''] || 'Non défini'}
+        </Badge>
 
         {item.status && item.status !== 'done' && (
           <Button

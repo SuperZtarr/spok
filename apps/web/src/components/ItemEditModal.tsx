@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -6,6 +6,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
+import { ArrowDownAZ, GitBranch } from 'lucide-react';
 
 const TYPE_LABELS: Record<ItemType, string> = {
   NOTE: 'Note',
@@ -20,6 +21,9 @@ const STATUS_OPTIONS = [
   { value: 'done', label: 'Terminé' },
   { value: 'cancelled', label: 'Annulé' },
 ];
+
+type ParentSortMode = 'tree' | 'alpha';
+const PARENT_SORT_KEY = 'spok-parent-sort-mode';
 
 interface ItemEditModalProps {
   isOpen: boolean;
@@ -42,6 +46,15 @@ export function ItemEditModal({
   const [description, setDescription] = useState('');
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
+  const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
+    return (localStorage.getItem(PARENT_SORT_KEY) as ParentSortMode) || 'tree';
+  });
+
+  const toggleParentSortMode = () => {
+    const newMode = parentSortMode === 'tree' ? 'alpha' : 'tree';
+    setParentSortMode(newMode);
+    localStorage.setItem(PARENT_SORT_KEY, newMode);
+  };
 
   const { data: item, isLoading } = useQuery({
     queryKey: ['item', spaceId, itemId],
@@ -116,20 +129,53 @@ export function ItemEditModal({
   };
 
   // Build parent options excluding current item and its descendants
-  const parentOptions = [
-    { value: '', label: 'Aucun parent (racine)' },
-    ...allItems
-      .filter((i) => {
-        if (!itemId) return true;
-        if (i.id === itemId) return false;
-        const descendants = getDescendantIds(itemId);
-        return !descendants.has(i.id);
-      })
-      .map((i) => ({
-        value: i.id,
-        label: i.title,
-      })),
-  ];
+  const parentOptions = useMemo(() => {
+    const descendants = itemId ? getDescendantIds(itemId) : new Set<string>();
+
+    const validItems = allItems.filter((i) => {
+      if (!itemId) return true;
+      if (i.id === itemId) return false;
+      return !descendants.has(i.id);
+    });
+
+    if (parentSortMode === 'alpha') {
+      // Alphabetical sort
+      const sorted = [...validItems].sort((a, b) =>
+        a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' })
+      );
+      return [
+        { value: '', label: 'Aucun parent (racine)' },
+        ...sorted.map((i) => ({
+          value: i.id,
+          label: i.title,
+        })),
+      ];
+    } else {
+      // Tree sort with indentation
+      const buildTree = (parentId: string | null, depth: number): { value: string; label: string }[] => {
+        const children = validItems
+          .filter((i) => (i.parentId || null) === parentId)
+          .sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
+
+        const result: { value: string; label: string }[] = [];
+        for (const child of children) {
+          const indent = '  '.repeat(depth);
+          const prefix = depth > 0 ? '└ ' : '';
+          result.push({
+            value: child.id,
+            label: `${indent}${prefix}${child.title}`,
+          });
+          result.push(...buildTree(child.id, depth + 1));
+        }
+        return result;
+      };
+
+      return [
+        { value: '', label: 'Aucun parent (racine)' },
+        ...buildTree(null, 0),
+      ];
+    }
+  }, [allItems, itemId, parentSortMode]);
 
   if (!isOpen) return null;
 
@@ -165,7 +211,27 @@ export function ItemEditModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Parent</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Parent</label>
+              <button
+                type="button"
+                onClick={toggleParentSortMode}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
+              >
+                {parentSortMode === 'tree' ? (
+                  <>
+                    <GitBranch className="w-3 h-3" />
+                    <span>Arborescence</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowDownAZ className="w-3 h-3" />
+                    <span>A-Z</span>
+                  </>
+                )}
+              </button>
+            </div>
             <Select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
