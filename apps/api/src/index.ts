@@ -2,6 +2,8 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
+import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
 import { adminAuthPlugin } from './plugins/adminAuth.js';
@@ -24,9 +26,150 @@ const envToLogger = {
   test: false,
 };
 
+/**
+ * Formate les erreurs Zod en messages lisibles
+ */
+function formatZodError(error: ZodError): { message: string; field?: string; details: string[] } {
+  const details = error.errors.map((e) => {
+    const path = e.path.join('.');
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+
+  const firstError = error.errors[0];
+  const field = firstError?.path?.join('.');
+
+  return {
+    message: `Données invalides: ${details[0]}`,
+    field: field || undefined,
+    details,
+  };
+}
+
+/**
+ * Formate les erreurs Prisma en messages lisibles
+ */
+function formatPrismaError(error: Prisma.PrismaClientKnownRequestError): {
+  statusCode: number;
+  message: string;
+  code: string;
+} {
+  switch (error.code) {
+    case 'P2002': {
+      // Unique constraint violation
+      const target = (error.meta?.target as string[])?.join(', ') || 'champ';
+      return {
+        statusCode: 409,
+        message: `Cette valeur existe déjà pour: ${target}`,
+        code: 'UNIQUE_CONSTRAINT',
+      };
+    }
+    case 'P2003':
+      // Foreign key constraint violation
+      return {
+        statusCode: 400,
+        message: 'Référence invalide: l\'élément lié n\'existe pas',
+        code: 'FOREIGN_KEY_CONSTRAINT',
+      };
+    case 'P2025':
+      // Record not found
+      return {
+        statusCode: 404,
+        message: 'Élément non trouvé',
+        code: 'NOT_FOUND',
+      };
+    case 'P2014':
+      // Required relation violation
+      return {
+        statusCode: 400,
+        message: 'Une relation requise est manquante',
+        code: 'REQUIRED_RELATION',
+      };
+    default:
+      return {
+        statusCode: 500,
+        message: `Erreur base de données (${error.code})`,
+        code: error.code,
+      };
+  }
+}
+
 async function buildApp() {
   const app = Fastify({
     logger: envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] ?? true,
+  });
+
+  // Gestionnaire d'erreurs global
+  app.setErrorHandler((error, request, reply) => {
+    app.log.error(error);
+
+    // Erreurs de validation Zod
+    if (error instanceof ZodError) {
+      const formatted = formatZodError(error);
+      return reply.status(400).send({
+        statusCode: 400,
+        error: 'Validation Error',
+        message: formatted.message,
+        field: formatted.field,
+        details: formatted.details,
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    // Erreurs Prisma connues
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      const formatted = formatPrismaError(error);
+      return reply.status(formatted.statusCode).send({
+        statusCode: formatted.statusCode,
+        error: 'Database Error',
+        message: formatted.message,
+        code: formatted.code,
+      });
+    }
+
+    // Erreurs Prisma de validation
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      return reply.status(400).send({
+        statusCode: 400,
+        error: 'Validation Error',
+        message: 'Données invalides pour la base de données',
+        code: 'PRISMA_VALIDATION',
+      });
+    }
+
+    // Erreurs Fastify (via @fastify/sensible)
+    if ('statusCode' in error && typeof error.statusCode === 'number') {
+      return reply.status(error.statusCode).send({
+        statusCode: error.statusCode,
+        error: error.name || 'Error',
+        message: error.message || 'Une erreur est survenue',
+        code: (error as any).code,
+      });
+    }
+
+    // Erreur inconnue
+    const statusCode = 500;
+    const message =
+      process.env.NODE_ENV === 'development'
+        ? error.message
+        : 'Une erreur interne est survenue';
+
+    return reply.status(statusCode).send({
+      statusCode,
+      error: 'Internal Server Error',
+      message,
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
+  // Gestionnaire 404 pour les routes non trouvées
+  app.setNotFoundHandler((request, reply) => {
+    reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: `Route non trouvée: ${request.method} ${request.url}`,
+      code: 'ROUTE_NOT_FOUND',
+      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/admin/*'],
+    });
   });
 
   // Register plugins
@@ -50,16 +193,20 @@ async function buildApp() {
   // Health check
   app.get('/health', async () => {
     let database = 'disconnected';
+    let databaseError: string | undefined;
     try {
       await app.prisma.$queryRaw`SELECT 1`;
       database = 'connected';
-    } catch {
+    } catch (err) {
       database = 'disconnected';
+      databaseError = err instanceof Error ? err.message : 'Erreur inconnue';
     }
     return {
       status: database === 'connected' ? 'ok' : 'degraded',
       database,
+      databaseError,
       timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
     };
   });
 

@@ -26,11 +26,37 @@ class ApiError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public details?: unknown
+    public details?: unknown,
+    public code?: string
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * Messages d'erreur explicites selon le code HTTP
+ */
+const HTTP_ERROR_MESSAGES: Record<number, string> = {
+  400: 'Requête invalide. Vérifiez les données envoyées.',
+  401: 'Non authentifié. Veuillez vous connecter.',
+  403: 'Accès refusé. Vous n\'avez pas les permissions nécessaires.',
+  404: 'Ressource non trouvée.',
+  409: 'Conflit. Cette ressource existe déjà.',
+  422: 'Données invalides. Vérifiez le format des champs.',
+  429: 'Trop de requêtes. Veuillez patienter avant de réessayer.',
+  500: 'Erreur serveur. Veuillez réessayer plus tard.',
+  502: 'Le serveur API est inaccessible. Vérifiez qu\'il est démarré.',
+  503: 'Service temporairement indisponible. Veuillez réessayer.',
+  504: 'Le serveur API ne répond pas. Vérifiez la connexion.',
+};
+
+/**
+ * Vérifie si la réponse est du JSON valide
+ */
+function isJsonResponse(response: Response): boolean {
+  const contentType = response.headers.get('content-type');
+  return contentType !== null && contentType.includes('application/json');
 }
 
 let isRefreshing = false;
@@ -95,10 +121,19 @@ async function fetchApi<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (networkError) {
+    // Erreur réseau (pas de connexion, DNS, etc.)
+    const message = `Impossible de contacter le serveur API (${API_URL}). ` +
+      'Vérifiez que le serveur est démarré et accessible.';
+    throw new ApiError(0, message, { originalError: String(networkError) }, 'NETWORK_ERROR');
+  }
 
   if (!response.ok) {
     // Handle 401 Unauthorized - try to refresh token
@@ -118,12 +153,64 @@ async function fetchApi<T>(
       } else {
         // Refresh failed, clear auth (ProtectedRoute will redirect)
         clearAuth();
-        throw new ApiError(401, 'Session expirée. Veuillez vous reconnecter.');
+        throw new ApiError(401, 'Session expirée. Veuillez vous reconnecter.', undefined, 'SESSION_EXPIRED');
       }
     }
 
-    const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-    throw new ApiError(response.status, error.message || 'An error occurred', error);
+    // Vérifier si la réponse est du JSON
+    if (!isJsonResponse(response)) {
+      // La réponse n'est pas du JSON - probablement le mauvais serveur (frontend au lieu de l'API)
+      const text = await response.text().catch(() => '');
+      const isHtmlResponse = text.includes('<!DOCTYPE html>') || text.includes('<html');
+
+      if (isHtmlResponse) {
+        const message = `L'API n'est pas accessible sur ${API_URL}. ` +
+          'Le port semble être occupé par un autre service (probablement le frontend). ' +
+          'Vérifiez que l\'API est bien démarrée sur le bon port.';
+        throw new ApiError(response.status, message, { receivedHtml: true }, 'WRONG_SERVER');
+      }
+
+      const defaultMessage = HTTP_ERROR_MESSAGES[response.status] ||
+        `Erreur ${response.status}: ${response.statusText}`;
+      throw new ApiError(response.status, defaultMessage, { rawResponse: text });
+    }
+
+    // Parser l'erreur JSON du serveur
+    const error = await response.json().catch(() => ({}));
+
+    // Construire un message explicite
+    let message = error.message || error.error || HTTP_ERROR_MESSAGES[response.status];
+
+    // Ajouter des détails si disponibles
+    if (error.details && typeof error.details === 'string') {
+      message = `${message} (${error.details})`;
+    }
+
+    // Ajouter le champ en erreur pour les erreurs de validation
+    if (error.field) {
+      message = `${message} [Champ: ${error.field}]`;
+    }
+
+    throw new ApiError(
+      response.status,
+      message || `Erreur ${response.status}`,
+      error,
+      error.code
+    );
+  }
+
+  // Vérifier que la réponse réussie est bien du JSON
+  if (!isJsonResponse(response)) {
+    const text = await response.text().catch(() => '');
+    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+      throw new ApiError(
+        200,
+        `L'API a retourné une page HTML au lieu de JSON. ` +
+        `Vérifiez que l'API est bien démarrée sur ${API_URL}.`,
+        { receivedHtml: true },
+        'WRONG_SERVER'
+      );
+    }
   }
 
   return response.json();
@@ -267,9 +354,47 @@ export const tagsApi = {
 
 // Health check (no auth required)
 export const healthApi = {
-  check: async (): Promise<{ status: string; database: string; timestamp: string }> => {
-    const response = await fetch(`${API_URL}/health`);
-    return response.json();
+  check: async (): Promise<{
+    status: string;
+    database: string;
+    databaseError?: string;
+    timestamp: string;
+    env?: string;
+  }> => {
+    try {
+      const response = await fetch(`${API_URL}/health`);
+
+      // Vérifier si on reçoit du JSON
+      if (!isJsonResponse(response)) {
+        const text = await response.text().catch(() => '');
+        if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+          throw new ApiError(
+            0,
+            `L'API n'est pas disponible sur ${API_URL}. ` +
+              'Le serveur retourne une page HTML au lieu de JSON. ' +
+              'Vérifiez que l\'API Fastify est démarrée (pnpm dev:api).',
+            { receivedHtml: true },
+            'WRONG_SERVER'
+          );
+        }
+        throw new ApiError(0, 'Réponse invalide du serveur', { rawResponse: text });
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      // Erreur réseau
+      throw new ApiError(
+        0,
+        `Impossible de contacter l'API sur ${API_URL}. ` +
+          'Le serveur est-il démarré ? Essayez: pnpm dev:api',
+        { originalError: String(error) },
+        'NETWORK_ERROR'
+      );
+    }
   },
 };
 

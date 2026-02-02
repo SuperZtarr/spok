@@ -1,0 +1,43 @@
+# Dockerfile de développement pour l'API avec hot reload et debug
+FROM node:20-slim
+
+# Installer OpenSSL (requis par Prisma)
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Activer pnpm
+RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
+
+WORKDIR /app
+
+# Copier les fichiers de configuration pnpm
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/database/package.json ./packages/database/
+COPY packages/shared/package.json ./packages/shared/
+
+# Installer les dépendances
+RUN pnpm install
+
+# Copier les fichiers de configuration TypeScript
+COPY tsconfig.base.json ./
+COPY apps/api/tsconfig.json ./apps/api/
+COPY packages/database/tsconfig.json ./packages/database/
+COPY packages/shared/tsconfig.json ./packages/shared/
+
+# Copier le code source (sera écrasé par les volumes en dev)
+COPY apps/api ./apps/api
+COPY packages/database ./packages/database
+COPY packages/shared ./packages/shared
+
+# Générer le client Prisma
+RUN pnpm --filter @spok/database generate
+
+# Builder les packages partagés
+RUN pnpm --filter @spok/shared build
+RUN pnpm --filter @spok/database build
+
+EXPOSE 3001
+EXPOSE 9229
+
+# Script de démarrage avec hot reload
+CMD ["sh", "-c", "pnpm --filter @spok/database db:push && pnpm --filter @spok/api dev"]

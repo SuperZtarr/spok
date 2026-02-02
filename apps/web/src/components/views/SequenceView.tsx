@@ -1,13 +1,17 @@
-import { FileText, CheckSquare, Trash2, ArrowDown } from 'lucide-react';
+import { FileText, CheckSquare, Trash2, ArrowDown, FolderKanban, Calendar, Link2, Settings, File, Image } from 'lucide-react';
 import type { Item, ItemType } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 
 const TYPE_ICONS: Record<ItemType, typeof FileText> = {
   NOTE: FileText,
-  PROJECT: FileText,
+  PROJECT: FolderKanban,
   TASK: CheckSquare,
-  APPOINTMENT: FileText,
+  APPOINTMENT: Calendar,
+  LINK: Link2,
+  CONFIG: Settings,
+  DOCUMENT: File,
+  IMAGE: Image,
 };
 
 const STATUS_COLORS: Record<string, string> = {

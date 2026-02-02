@@ -1,4 +1,4 @@
-export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'APPOINTMENT';
+export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'APPOINTMENT' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE';
 
 export interface Item {
   id: string;
@@ -43,6 +43,7 @@ export interface CreateItemInput {
 }
 
 export interface UpdateItemInput {
+  type?: ItemType;
   title?: string;
   description?: string | null;
   content?: Record<string, unknown>;

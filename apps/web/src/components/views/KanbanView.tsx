@@ -1,12 +1,16 @@
-import { FileText, CheckSquare, Trash2 } from 'lucide-react';
+import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image } from 'lucide-react';
 import type { Item, ItemType } from '@spok/shared';
 import { Button } from '../ui/Button';
 
 const TYPE_ICONS: Record<ItemType, typeof FileText> = {
   NOTE: FileText,
-  PROJECT: FileText,
+  PROJECT: FolderKanban,
   TASK: CheckSquare,
-  APPOINTMENT: FileText,
+  APPOINTMENT: Calendar,
+  LINK: Link2,
+  CONFIG: Settings,
+  DOCUMENT: File,
+  IMAGE: Image,
 };
 
 const COLUMNS = [

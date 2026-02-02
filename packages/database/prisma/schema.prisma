@@ -114,6 +114,10 @@ enum ItemType {
   PROJECT
   TASK
   APPOINTMENT
+  LINK
+  CONFIG
+  DOCUMENT
+  IMAGE
 }
 
 // Relations entre éléments

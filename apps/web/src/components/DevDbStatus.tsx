@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
-import { healthApi } from '../lib/api';
-import { Bug } from 'lucide-react';
+import { healthApi, ApiError } from '../lib/api';
+import { Bug, AlertCircle } from 'lucide-react';
 
-type DbStatus = 'checking' | 'connected' | 'disconnected' | 'error';
+type DbStatus = 'checking' | 'connected' | 'disconnected' | 'api_error' | 'wrong_server' | 'network_error';
+
+interface StatusInfo {
+  status: DbStatus;
+  message?: string;
+  details?: string;
+}
 
 const DEV_MODE_KEY = 'spok-dev-mode';
 
@@ -36,7 +42,8 @@ export function DevModeToggle() {
 }
 
 export function DevDbStatus() {
-  const [status, setStatus] = useState<DbStatus>('checking');
+  const [statusInfo, setStatusInfo] = useState<StatusInfo>({ status: 'checking' });
+  const [showDetails, setShowDetails] = useState(false);
   const [devModeEnabled, setDevModeEnabled] = useState(() => {
     return localStorage.getItem(DEV_MODE_KEY) === 'true';
   });
@@ -70,9 +77,43 @@ export function DevDbStatus() {
     const checkHealth = async () => {
       try {
         const health = await healthApi.check();
-        setStatus(health.database === 'connected' ? 'connected' : 'disconnected');
-      } catch {
-        setStatus('error');
+        if (health.database === 'connected') {
+          setStatusInfo({ status: 'connected' });
+        } else {
+          setStatusInfo({
+            status: 'disconnected',
+            message: 'Base de données déconnectée',
+            details: health.databaseError || 'Vérifiez que PostgreSQL est démarré',
+          });
+        }
+      } catch (err) {
+        if (err instanceof ApiError) {
+          if (err.code === 'WRONG_SERVER') {
+            setStatusInfo({
+              status: 'wrong_server',
+              message: 'Mauvais serveur',
+              details: 'Le port 3001 sert le frontend au lieu de l\'API. Lancez: pnpm dev:api',
+            });
+          } else if (err.code === 'NETWORK_ERROR') {
+            setStatusInfo({
+              status: 'network_error',
+              message: 'API inaccessible',
+              details: 'Le serveur API n\'est pas démarré. Lancez: pnpm dev:api',
+            });
+          } else {
+            setStatusInfo({
+              status: 'api_error',
+              message: err.message,
+              details: JSON.stringify(err.details, null, 2),
+            });
+          }
+        } else {
+          setStatusInfo({
+            status: 'api_error',
+            message: 'Erreur inconnue',
+            details: String(err),
+          });
+        }
       }
     };
 
@@ -83,19 +124,40 @@ export function DevDbStatus() {
 
   if (!canShowDevMode || !devModeEnabled) return null;
 
-  const statusConfig = {
-    checking: { color: 'bg-yellow-500', text: 'Vérification...' },
-    connected: { color: 'bg-green-500', text: 'DB connectée' },
-    disconnected: { color: 'bg-red-500', text: 'DB déconnectée' },
-    error: { color: 'bg-red-500', text: 'API inaccessible' },
+  const statusConfig: Record<DbStatus, { color: string; bgColor: string; text: string }> = {
+    checking: { color: 'bg-yellow-500', bgColor: 'bg-yellow-100 text-yellow-800', text: 'Vérification...' },
+    connected: { color: 'bg-green-500', bgColor: 'bg-green-100 text-green-800', text: 'API + DB OK' },
+    disconnected: { color: 'bg-orange-500', bgColor: 'bg-orange-100 text-orange-800', text: 'DB déconnectée' },
+    api_error: { color: 'bg-red-500', bgColor: 'bg-red-100 text-red-800', text: 'Erreur API' },
+    wrong_server: { color: 'bg-purple-500', bgColor: 'bg-purple-100 text-purple-800', text: 'Mauvais serveur!' },
+    network_error: { color: 'bg-red-500', bgColor: 'bg-red-100 text-red-800', text: 'API non démarrée' },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[statusInfo.status];
+  const hasError = statusInfo.status !== 'connected' && statusInfo.status !== 'checking';
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${status === 'connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-      <span className={`w-2 h-2 rounded-full ${config.color} ${status === 'checking' ? 'animate-pulse' : ''}`} />
-      <span className="truncate">{config.text}</span>
+    <div className="relative">
+      <button
+        onClick={() => hasError && setShowDetails(!showDetails)}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs w-full ${config.bgColor} ${hasError ? 'cursor-pointer hover:opacity-80' : ''}`}
+      >
+        <span className={`w-2 h-2 rounded-full ${config.color} ${statusInfo.status === 'checking' ? 'animate-pulse' : ''}`} />
+        <span className="truncate flex-1 text-left">{config.text}</span>
+        {hasError && <AlertCircle className="w-3 h-3" />}
+      </button>
+
+      {showDetails && statusInfo.details && (
+        <div className="absolute bottom-full left-0 right-0 mb-2 p-3 bg-gray-900 text-white text-xs rounded-md shadow-lg z-50 max-w-sm">
+          <div className="font-semibold mb-1">{statusInfo.message}</div>
+          <pre className="whitespace-pre-wrap break-words text-gray-300 text-[10px]">
+            {statusInfo.details}
+          </pre>
+          <div className="mt-2 pt-2 border-t border-gray-700 text-gray-400">
+            Cliquez pour fermer
+          </div>
+        </div>
+      )}
     </div>
   );
 }

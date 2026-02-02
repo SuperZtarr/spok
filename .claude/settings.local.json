@@ -53,7 +53,9 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd status field to all item types\n\n- Enable status \\(todo, in_progress, done, cancelled\\) for NOTE, PROJECT, TASK and APPOINTMENT\n- Show status selector in edit modal for all item types\n- Set default status to ''todo'' when creating any new item\n- Display mark-as-done button for all items with a status\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(ls:*)",
-      "Bash(pnpm db:seed:*)"
+      "Bash(pnpm db:seed:*)",
+      "Bash(pnpm build:*)",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")"
     ]
   }
 }

@@ -11,8 +11,12 @@ import { ArrowDownAZ, GitBranch } from 'lucide-react';
 const TYPE_LABELS: Record<ItemType, string> = {
   NOTE: 'Note',
   PROJECT: 'Projet',
-  TASK: 'Tâche',
+  TASK: 'Tache',
   APPOINTMENT: 'Rendez-vous',
+  LINK: 'Lien',
+  CONFIG: 'Configuration',
+  DOCUMENT: 'Document',
+  IMAGE: 'Image',
 };
 
 const STATUS_OPTIONS = [
@@ -46,6 +50,7 @@ export function ItemEditModal({
   const [description, setDescription] = useState('');
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
+  const [type, setType] = useState<ItemType>('NOTE');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(PARENT_SORT_KEY) as ParentSortMode) || 'tree';
   });
@@ -69,11 +74,12 @@ export function ItemEditModal({
       setDescription(item.description || '');
       setParentId(item.parentId || '');
       setStatus(item.status || '');
+      setType(item.type);
     }
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { title?: string; description?: string | null; parentId?: string | null; status?: string }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; parentId?: string | null; status?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -86,7 +92,11 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { title?: string; description?: string | null; parentId?: string | null; status?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; parentId?: string | null; status?: string } = {};
+
+    if (type !== item.type) {
+      updates.type = type;
+    }
 
     if (title !== item.title) {
       updates.title = title;
@@ -207,7 +217,14 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Type</label>
-            <Input value={TYPE_LABELS[item.type]} disabled className="bg-muted" />
+            <Select
+              value={type}
+              onChange={(e) => setType(e.target.value as ItemType)}
+              options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">

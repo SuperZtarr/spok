@@ -1,4 +1,13 @@
-export const ITEM_TYPES = ['NOTE', 'PROJECT', 'TASK'] as const;
+export const ITEM_TYPES = [
+  'NOTE',
+  'PROJECT',
+  'TASK',
+  'APPOINTMENT',
+  'LINK',
+  'CONFIG',
+  'DOCUMENT',
+  'IMAGE',
+] as const;
 
 export const SPACE_TYPES = ['PERSONAL', 'GROUP'] as const;
 

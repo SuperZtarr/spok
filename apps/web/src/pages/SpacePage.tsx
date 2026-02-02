@@ -29,6 +29,10 @@ import {
   ChevronDown,
   Trash2,
   GripVertical,
+  Link2,
+  Settings,
+  File,
+  Image,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -47,13 +51,21 @@ const TYPE_ICONS: Record<ItemType, typeof FileText> = {
   PROJECT: FolderKanban,
   TASK: CheckSquare,
   APPOINTMENT: Calendar,
+  LINK: Link2,
+  CONFIG: Settings,
+  DOCUMENT: File,
+  IMAGE: Image,
 };
 
 const TYPE_LABELS: Record<ItemType, string> = {
   NOTE: 'Note',
   PROJECT: 'Projet',
-  TASK: 'Tâche',
+  TASK: 'Tache',
   APPOINTMENT: 'Rendez-vous',
+  LINK: 'Lien',
+  CONFIG: 'Config',
+  DOCUMENT: 'Document',
+  IMAGE: 'Image',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -307,7 +319,7 @@ export function SpacePage() {
 
         {/* Filters */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'APPOINTMENT'] as const).map((type) => (
+          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => (
             <Button
               key={type}
               variant={filter === type ? 'default' : 'outline'}
@@ -324,7 +336,7 @@ export function SpacePage() {
           <div className="bg-card border rounded-lg p-4 mb-6">
             <form onSubmit={handleCreateItem} className="space-y-4">
               <div className="flex gap-2 flex-wrap">
-                {(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT'] as const).map((type) => {
+                {(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => {
                   const Icon = TYPE_ICONS[type];
                   return (
                     <Button
