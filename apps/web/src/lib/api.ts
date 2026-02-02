@@ -261,4 +261,12 @@ export const tagsApi = {
     }),
 };
 
+// Health check (no auth required)
+export const healthApi = {
+  check: async (): Promise<{ status: string; database: string; timestamp: string }> => {
+    const response = await fetch(`${API_URL}/health`);
+    return response.json();
+  },
+};
+
 export { ApiError };

@@ -43,7 +43,18 @@ async function buildApp() {
 
   // Health check
   app.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    let database = 'disconnected';
+    try {
+      await app.prisma.$queryRaw`SELECT 1`;
+      database = 'connected';
+    } catch {
+      database = 'disconnected';
+    }
+    return {
+      status: database === 'connected' ? 'ok' : 'degraded',
+      database,
+      timestamp: new Date().toISOString(),
+    };
   });
 
   return app;

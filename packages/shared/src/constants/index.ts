@@ -8,6 +8,9 @@ export const RELATION_TYPES = ['blocks', 'relates', 'depends', 'parent'] as cons
 
 export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'cancelled'] as const;
 
+// Alias pour tous les types d'éléments (pas seulement les tâches)
+export const ITEM_STATUSES = TASK_STATUSES;
+
 export const PRIORITY_LEVELS = {
   LOW: 1,
   MEDIUM: 2,

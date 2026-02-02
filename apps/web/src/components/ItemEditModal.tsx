@@ -89,8 +89,8 @@ export function ItemEditModal({
       updates.parentId = newParentId;
     }
 
-    if (item.type === 'TASK' && status !== item.status) {
-      updates.status = status;
+    if (status !== (item.status || '')) {
+      updates.status = status || undefined;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -173,16 +173,14 @@ export function ItemEditModal({
             />
           </div>
 
-          {item.type === 'TASK' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Statut</label>
-              <Select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                options={STATUS_OPTIONS}
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Statut</label>
+            <Select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={[{ value: '', label: 'Aucun statut' }, ...STATUS_OPTIONS]}
+            />
+          </div>
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={updateMutation.isPending}>

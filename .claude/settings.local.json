@@ -39,7 +39,18 @@
       "Bash(cmd //c \"taskkill /PID 5604 /F & taskkill /PID 3184 /F\")",
       "Bash(cmd //c \"taskkill /PID 6272 /F\")",
       "Bash(timeout:*)",
-      "Bash(cmd //c \"taskkill /PID 21428 /F & taskkill /PID 16308 /F & taskkill /PID 6424 /F\")"
+      "Bash(cmd //c \"taskkill /PID 21428 /F & taskkill /PID 16308 /F & taskkill /PID 6424 /F\")",
+      "Bash(docker-compose:*)",
+      "Bash(docker stop:*)",
+      "Bash(ping:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(tasklist:*)",
+      "Bash(tasklist /FI \"PID eq 17364\")",
+      "Bash(cmd /c \"tasklist /FI \"\"PID eq 12028\"\"\")",
+      "Bash(powershell -Command \"Get-Process -Id 12028,17364 | Format-Table ProcessName,Id -AutoSize\")",
+      "Bash(powershell -Command \"Stop-Process -Id 12028,17364 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 12028,17364 -Force; Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(git add:*)"
     ]
   }
 }

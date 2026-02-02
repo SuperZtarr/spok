@@ -246,7 +246,7 @@ export function SpacePage() {
         type: newItemType,
         title: newItemTitle,
         parentId: newItemParentId || undefined,
-        status: newItemType === 'TASK' ? 'todo' : undefined,
+        status: 'todo',
       });
     }
   };
@@ -576,7 +576,7 @@ function SortableItem({
           </Badge>
         )}
 
-        {item.type === 'TASK' && item.status !== 'done' && (
+        {item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
             size="sm"
@@ -790,7 +790,7 @@ function DraggableChildItem({
           </Badge>
         )}
 
-        {item.type === 'TASK' && item.status !== 'done' && (
+        {item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
             size="sm"
