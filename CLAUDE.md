@@ -79,3 +79,27 @@ Copy `.env.example` to `.env` and configure:
 Internal packages use `workspace:*` protocol. When importing:
 - `@spok/database` exports Prisma client
 - `@spok/shared` exports shared types/constants
+
+## Instructions pour Claude
+
+### Configuration des ports (NE PAS MODIFIER)
+- **Web** : port 3000 (configuré dans `apps/web/vite.config.ts` avec `strictPort: true`)
+- **API** : port 3001 (configuré via `API_PORT`)
+
+### Redémarrage des services
+Après chaque développement nécessitant un redémarrage, exécuter `pnpm dev` en arrière-plan.
+
+**Redémarrage nécessaire après** :
+- Modifications du schéma Prisma → `pnpm db:generate` puis `pnpm dev`
+- Ajout/suppression de dépendances → `pnpm install` puis `pnpm dev`
+- Modifications de `vite.config.ts` ou fichiers de configuration
+- Modifications des fichiers `.env`
+
+**Pas de redémarrage nécessaire** (rechargement automatique) :
+- Modifications de code TypeScript/React (tsx watch + Vite HMR)
+
+### Avant de redémarrer
+Libérer les ports si nécessaire :
+```powershell
+powershell -Command "Get-NetTCPConnection -LocalPort 3000,3001 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id \$_ -Force -ErrorAction SilentlyContinue }"
+```

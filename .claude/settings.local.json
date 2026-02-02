@@ -55,7 +55,8 @@
       "Bash(ls:*)",
       "Bash(pnpm db:seed:*)",
       "Bash(pnpm build:*)",
-      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")"
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(powershell:*)"
     ]
   }
 }

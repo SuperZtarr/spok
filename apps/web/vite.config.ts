@@ -12,6 +12,7 @@ export default defineConfig({
   server: {
     host: true, // Accepte les connexions de tous les hosts (0.0.0.0)
     port: 3000,
+    strictPort: true, // Ne pas chercher un autre port si 3000 est occupé
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

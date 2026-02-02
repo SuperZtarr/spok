@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@spok/database';
 import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
 import { adminAuthPlugin } from './plugins/adminAuth.js';
