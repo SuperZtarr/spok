@@ -1,10 +1,54 @@
-import { PrismaClient, SpaceType, Role, ItemType } from '@prisma/client';
+import { PrismaClient, SpaceType, Role, ItemType, GlobalRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
+
+  // Create admin user
+  const adminPasswordHash = await hash('admin1234', 10);
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@spok.app' },
+    update: { globalRole: GlobalRole.ADMIN },
+    create: {
+      email: 'admin@spok.app',
+      name: 'Admin SPOK',
+      passwordHash: adminPasswordHash,
+      globalRole: GlobalRole.ADMIN,
+    },
+  });
+
+  console.log('Created admin user:', adminUser.email);
+
+  // Create admin personal space
+  const adminPersonalSpace = await prisma.space.upsert({
+    where: { id: 'personal-space-admin' },
+    update: {},
+    create: {
+      id: 'personal-space-admin',
+      name: 'Espace de Admin',
+      type: SpaceType.PERSONAL,
+    },
+  });
+
+  await prisma.spaceMembership.upsert({
+    where: {
+      userId_spaceId: {
+        userId: adminUser.id,
+        spaceId: adminPersonalSpace.id,
+      },
+    },
+    update: {},
+    create: {
+      userId: adminUser.id,
+      spaceId: adminPersonalSpace.id,
+      role: Role.OWNER,
+    },
+  });
+
+  console.log('Created admin personal space');
 
   // Create demo user
   const passwordHash = await hash('demo1234', 10);

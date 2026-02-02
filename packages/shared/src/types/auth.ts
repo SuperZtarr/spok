@@ -14,10 +14,13 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+export type GlobalRole = 'USER' | 'ADMIN';
+
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  globalRole: GlobalRole;
 }
 
 export interface AuthResponse {
@@ -32,4 +35,31 @@ export interface RefreshTokenInput {
 export interface JWTPayload {
   userId: string;
   email: string;
+}
+
+// Admin types
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  globalRole: GlobalRole;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    memberships: number;
+  };
+}
+
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+  globalRole?: GlobalRole;
+}
+
+export interface UpdateUserInput {
+  email?: string;
+  password?: string;
+  name?: string;
+  globalRole?: GlobalRole;
 }

@@ -37,6 +37,10 @@ import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { ItemEditModal } from '../components/ItemEditModal';
+import { useViewModeStore } from '../stores/viewMode';
+import { ListView } from '../components/views/ListView';
+import { SequenceView } from '../components/views/SequenceView';
+import { KanbanView } from '../components/views/KanbanView';
 
 const TYPE_ICONS: Record<ItemType, typeof FileText> = {
   NOTE: FileText,
@@ -57,7 +61,7 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: 'bg-blue-100 text-blue-800',
   done: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
-  undefined: 'bg-gray-50 text-gray-400',
+  none: 'bg-gray-100 text-gray-500 border-dashed',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -70,6 +74,7 @@ const STATUS_LABELS: Record<string, string> = {
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const queryClient = useQueryClient();
+  const { mode: viewMode } = useViewModeStore();
 
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
@@ -376,6 +381,27 @@ export function SpacePage() {
         <div className="bg-card border rounded-lg">
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+          ) : viewMode === 'list' ? (
+            <ListView
+              items={allItemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+            />
+          ) : viewMode === 'sequence' ? (
+            <SequenceView
+              items={itemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+            />
+          ) : viewMode === 'kanban' ? (
+            <KanbanView
+              items={allItemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+            />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -383,6 +409,7 @@ export function SpacePage() {
               <p className="text-sm">Créez votre premier élément pour commencer</p>
             </div>
           ) : (
+            /* Tree view (default) */
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -573,7 +600,7 @@ function SortableItem({
         <span className="flex-1 truncate">{item.title}</span>
 
         <Badge
-          className={`text-xs ${STATUS_COLORS[item.status || 'undefined']}`}
+          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
           variant="secondary"
         >
           {STATUS_LABELS[item.status || ''] || 'Non défini'}
@@ -782,7 +809,7 @@ function DraggableChildItem({
         <span className="flex-1 truncate">{item.title}</span>
 
         <Badge
-          className={`text-xs ${STATUS_COLORS[item.status || 'undefined']}`}
+          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
           variant="secondary"
         >
           {STATUS_LABELS[item.status || ''] || 'Non défini'}

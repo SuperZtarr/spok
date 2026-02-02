@@ -14,6 +14,10 @@ import type {
   ItemFilterParams,
   SpaceMember,
   CreateRelationInput,
+  AdminUser,
+  CreateUserInput,
+  UpdateUserInput,
+  GlobalRole,
 } from '@spok/shared';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -145,7 +149,7 @@ export const authApi = {
       body: JSON.stringify({ refreshToken }),
     }),
 
-  me: () => fetchApi<{ id: string; email: string; name: string }>('/auth/me'),
+  me: () => fetchApi<{ id: string; email: string; name: string; globalRole: GlobalRole }>('/auth/me'),
 
   logout: (refreshToken: string) =>
     fetchApi<{ success: boolean }>('/auth/logout', {
@@ -266,6 +270,141 @@ export const healthApi = {
   check: async (): Promise<{ status: string; database: string; timestamp: string }> => {
     const response = await fetch(`${API_URL}/health`);
     return response.json();
+  },
+};
+
+// Admin - Users
+interface AdminUsersListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+interface AdminUsersListResponse {
+  data: AdminUser[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Admin - Spaces
+interface AdminSpacesListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  type?: 'PERSONAL' | 'GROUP';
+}
+
+interface AdminSpace {
+  id: string;
+  name: string;
+  type: 'PERSONAL' | 'GROUP';
+  createdAt: string;
+  updatedAt: string;
+  memberCount: number;
+  itemCount: number;
+  owner: { id: string; name: string; email: string } | null;
+}
+
+interface AdminSpaceDetail extends AdminSpace {
+  members: AdminSpaceMember[];
+}
+
+interface AdminSpaceMember {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  joinedAt: string;
+}
+
+interface AdminSpacesListResponse {
+  data: AdminSpace[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const adminApi = {
+  users: {
+    list: (params?: AdminUsersListParams) => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      if (params?.search) searchParams.set('search', params.search);
+      const query = searchParams.toString();
+      return fetchApi<AdminUsersListResponse>(`/admin/users${query ? `?${query}` : ''}`);
+    },
+
+    get: (id: string) => fetchApi<AdminUser & { memberships: unknown[] }>(`/admin/users/${id}`),
+
+    create: (data: CreateUserInput) =>
+      fetchApi<AdminUser>('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: UpdateUserInput) =>
+      fetchApi<AdminUser>(`/admin/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      fetchApi<{ success: boolean }>(`/admin/users/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  spaces: {
+    list: (params?: AdminSpacesListParams) => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.type) searchParams.set('type', params.type);
+      const query = searchParams.toString();
+      return fetchApi<AdminSpacesListResponse>(`/admin/spaces${query ? `?${query}` : ''}`);
+    },
+
+    get: (id: string) => fetchApi<AdminSpaceDetail>(`/admin/spaces/${id}`),
+
+    update: (id: string, data: { name?: string; type?: 'PERSONAL' | 'GROUP' }) =>
+      fetchApi<AdminSpace>(`/admin/spaces/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      fetchApi<{ success: boolean }>(`/admin/spaces/${id}`, {
+        method: 'DELETE',
+      }),
+
+    getMembers: (id: string) => fetchApi<AdminSpaceMember[]>(`/admin/spaces/${id}/members`),
+
+    addMember: (id: string, data: { userId: string; role: string }) =>
+      fetchApi<AdminSpaceMember>(`/admin/spaces/${id}/members`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateMember: (spaceId: string, memberId: string, data: { role: string }) =>
+      fetchApi<AdminSpaceMember>(`/admin/spaces/${spaceId}/members/${memberId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    removeMember: (spaceId: string, memberId: string) =>
+      fetchApi<{ success: boolean }>(`/admin/spaces/${spaceId}/members/${memberId}`, {
+        method: 'DELETE',
+      }),
   },
 };
 

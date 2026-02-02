@@ -4,6 +4,8 @@ export const SPACE_TYPES = ['PERSONAL', 'GROUP'] as const;
 
 export const ROLES = ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'] as const;
 
+export const GLOBAL_ROLES = ['USER', 'ADMIN'] as const;
+
 export const RELATION_TYPES = ['blocks', 'relates', 'depends', 'parent'] as const;
 
 export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'cancelled'] as const;

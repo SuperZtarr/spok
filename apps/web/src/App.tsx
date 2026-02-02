@@ -8,6 +8,10 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
 import { Layout } from './components/Layout';
+import { AdminLayout } from './components/AdminLayout';
+import { AdminRoute } from './components/AdminRoute';
+import { UsersPage } from './pages/admin/UsersPage';
+import { SpacesPage } from './pages/admin/SpacesPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -82,6 +86,18 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="spaces/:spaceId" element={<SpacePage />} />
+      </Route>
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<Navigate to="/admin/users" replace />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="spaces" element={<SpacesPage />} />
       </Route>
     </Routes>
   );

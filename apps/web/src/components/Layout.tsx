@@ -1,10 +1,11 @@
-import { Outlet, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Home, FolderKanban, Plus, Menu } from 'lucide-react';
+import { LogOut, Home, FolderKanban, Plus, Shield } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { spacesApi, authApi } from '../lib/api';
 import { Button } from './ui/Button';
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
+import { ViewModeSelector } from './ViewModeSelector';
 
 export function Layout() {
   const navigate = useNavigate();
@@ -82,6 +83,14 @@ export function Layout() {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
+          {user?.globalRole === 'ADMIN' && (
+            <Link to="/admin">
+              <Button variant="ghost" className="w-full justify-start">
+                <Shield className="w-4 h-4 mr-2" />
+                Administration
+              </Button>
+            </Link>
+          )}
           <DevModeToggle />
           <DevDbStatus />
           <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
@@ -94,13 +103,16 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background">
         {/* Top header */}
-        <header className="h-14 border-b border-border bg-card flex items-center px-6 gap-4">
-          <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
-          {currentSpace && (
-            <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
-              {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
-            </span>
-          )}
+        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
+            {currentSpace && (
+              <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+                {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
+              </span>
+            )}
+          </div>
+          {currentSpace && <ViewModeSelector />}
         </header>
 
         {/* Page content */}

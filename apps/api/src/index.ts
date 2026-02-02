@@ -4,8 +4,11 @@ import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
+import { adminAuthPlugin } from './plugins/adminAuth.js';
 import { authRoutes } from './routes/auth.js';
 import { spacesRoutes } from './routes/spaces.js';
+import { adminUsersRoutes } from './routes/admin/users.js';
+import { adminSpacesRoutes } from './routes/admin/spaces.js';
 
 const envToLogger = {
   development: {
@@ -36,10 +39,13 @@ async function buildApp() {
   await app.register(sensible);
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);
+  await app.register(adminAuthPlugin);
 
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(spacesRoutes, { prefix: '/spaces' });
+  await app.register(adminUsersRoutes, { prefix: '/admin/users' });
+  await app.register(adminSpacesRoutes, { prefix: '/admin/spaces' });
 
   // Health check
   app.get('/health', async () => {

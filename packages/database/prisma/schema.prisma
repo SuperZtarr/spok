@@ -9,12 +9,13 @@ datasource db {
 
 // Utilisateur
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   passwordHash String
   name         String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  globalRole   GlobalRole @default(USER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   memberships         SpaceMembership[]
   createdItems        Item[]
@@ -43,6 +44,11 @@ model Space {
 enum SpaceType {
   PERSONAL
   GROUP
+}
+
+enum GlobalRole {
+  USER
+  ADMIN
 }
 
 // Appartenance à un espace
