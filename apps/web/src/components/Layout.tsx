@@ -52,7 +52,7 @@ export function Layout() {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-card border-r border-border flex flex-col">
+      <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold">SPOK</h1>
           <div className="flex items-center gap-2">

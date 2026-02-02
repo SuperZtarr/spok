@@ -301,8 +301,8 @@ export function SpacePage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className={`p-6 h-full flex flex-col ${viewMode === 'kanban' ? '' : ''}`}>
+      <div className={`${viewMode === 'kanban' ? 'w-full h-full flex flex-col' : 'max-w-4xl mx-auto'}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -403,12 +403,12 @@ export function SpacePage() {
         )}
 
         {/* Items list */}
-        <div className="bg-card border rounded-lg">
+        <div className={`bg-card border rounded-lg ${viewMode === 'kanban' ? 'flex-1 min-h-0' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
             <ListView
-              items={allItemsData?.data || []}
+              items={itemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
@@ -422,7 +422,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'kanban' ? (
             <KanbanView
-              items={allItemsData?.data || []}
+              items={itemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
