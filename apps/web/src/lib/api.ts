@@ -345,6 +345,18 @@ export const itemsApi = {
         body: JSON.stringify(data),
       }
     ),
+
+  bulkDuplicate: (
+    spaceId: string,
+    data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean }
+  ) =>
+    fetchApi<{ success: boolean; duplicatedCount: number; targetSpaceId: string }>(
+      `/spaces/${spaceId}/items/bulk-duplicate`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
 };
 
 // Tags

@@ -50,6 +50,7 @@ import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
+import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 
 import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS } from '../constants/ui';
 
@@ -69,6 +70,7 @@ export function SpacePage() {
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   // Clear selection when leaving the page or changing space
   useEffect(() => {
@@ -631,6 +633,7 @@ export function SpacePage() {
       {isSelectionMode && (
         <SelectionActionBar
           onMoveToSpace={() => setShowMoveModal(true)}
+          onDuplicateToSpace={() => setShowDuplicateModal(true)}
         />
       )}
 
@@ -638,6 +641,13 @@ export function SpacePage() {
       <MoveToSpaceModal
         isOpen={showMoveModal}
         onClose={() => setShowMoveModal(false)}
+        currentSpaceId={spaceId!}
+      />
+
+      {/* Duplicate to space modal */}
+      <DuplicateToSpaceModal
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
         currentSpaceId={spaceId!}
       />
     </div>

@@ -1,15 +1,17 @@
-import { X, FolderInput, CheckSquare, Trash2 } from 'lucide-react';
+import { X, FolderInput, Copy, CheckSquare, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useSelectionStore } from '../stores/selection';
 
 interface SelectionActionBarProps {
   onMoveToSpace: () => void;
+  onDuplicateToSpace: () => void;
   onBulkDelete?: () => void;
   onBulkStatusChange?: (status: string) => void;
 }
 
 export function SelectionActionBar({
   onMoveToSpace,
+  onDuplicateToSpace,
   onBulkDelete,
   onBulkStatusChange,
 }: SelectionActionBarProps) {
@@ -35,6 +37,16 @@ export function SelectionActionBar({
         >
           <FolderInput className="w-4 h-4 mr-2" />
           Déplacer
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onDuplicateToSpace}
+          title="Dupliquer vers un espace"
+        >
+          <Copy className="w-4 h-4 mr-2" />
+          Dupliquer
         </Button>
 
         {onBulkStatusChange && (
