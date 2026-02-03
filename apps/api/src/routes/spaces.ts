@@ -4,6 +4,7 @@ import type { Role } from '@spok/shared';
 import { itemsRoutes } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
+import { auditLogsRoutes } from './auditLogs.js';
 
 const createSpaceSchema = z.object({
   name: z.string().min(1),
@@ -27,6 +28,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(itemsRoutes, { prefix: '/:spaceId/items' });
   await fastify.register(tagsRoutes, { prefix: '/:spaceId/tags' });
   await fastify.register(referentielsRoutes, { prefix: '/:spaceId/referentiels' });
+  await fastify.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
 
   // List user's spaces
   fastify.get('/', async (request) => {

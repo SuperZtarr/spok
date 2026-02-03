@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { createAuditLog, serializeItemForAudit, serializeRelationForAudit } from '../utils/audit.js';
 
 const createItemSchema = z.object({
   type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']),
@@ -145,6 +146,18 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
+      // Audit log for CREATE
+      await createAuditLog(fastify.prisma, {
+        action: 'CREATE',
+        entity: 'Item',
+        entityId: item.id,
+        userId: request.user.userId,
+        spaceId: request.params.spaceId,
+        changes: {
+          after: serializeItemForAudit(item),
+        },
+      });
+
       return reply.status(201).send({
         ...item,
         tags: item.tags.map((t) => t.tag),
@@ -222,6 +235,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updateItemSchema.parse(request.body);
       const { tagIds, ...updateData } = body;
 
+      // Save state before update for audit
+      const beforeState = serializeItemForAudit(existingItem);
+
       // Handle tag updates
       if (tagIds !== undefined) {
         await fastify.prisma.itemTag.deleteMany({
@@ -242,6 +258,19 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         } as any,
         include: {
           tags: { include: { tag: true } },
+        },
+      });
+
+      // Audit log for UPDATE
+      await createAuditLog(fastify.prisma, {
+        action: 'UPDATE',
+        entity: 'Item',
+        entityId: item.id,
+        userId: request.user.userId,
+        spaceId: request.params.spaceId,
+        changes: {
+          before: beforeState,
+          after: serializeItemForAudit(item),
         },
       });
 
@@ -268,14 +297,32 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         id: request.params.id,
         spaceId: request.params.spaceId,
       },
+      include: {
+        tags: { include: { tag: true } },
+      },
     });
 
     if (!item) {
       return reply.notFound('Item not found');
     }
 
+    // Save state before delete for audit
+    const beforeState = serializeItemForAudit(item);
+
     await fastify.prisma.item.delete({
       where: { id: request.params.id },
+    });
+
+    // Audit log for DELETE
+    await createAuditLog(fastify.prisma, {
+      action: 'DELETE',
+      entity: 'Item',
+      entityId: item.id,
+      userId: request.user.userId,
+      spaceId: request.params.spaceId,
+      changes: {
+        before: beforeState,
+      },
     });
 
     return { success: true };
@@ -319,6 +366,18 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Audit log for ADD_RELATION
+    await createAuditLog(fastify.prisma, {
+      action: 'ADD_RELATION',
+      entity: 'ItemRelation',
+      entityId: relation.id,
+      userId: request.user.userId,
+      spaceId: request.params.spaceId,
+      changes: {
+        after: serializeRelationForAudit(relation),
+      },
+    });
+
     return reply.status(201).send(relation);
   });
 
@@ -346,8 +405,23 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Relation not found');
       }
 
+      // Save state before delete for audit
+      const beforeState = serializeRelationForAudit(relation);
+
       await fastify.prisma.itemRelation.delete({
         where: { id: request.params.relationId },
+      });
+
+      // Audit log for DELETE_RELATION
+      await createAuditLog(fastify.prisma, {
+        action: 'DELETE_RELATION',
+        entity: 'ItemRelation',
+        entityId: relation.id,
+        userId: request.user.userId,
+        spaceId: request.params.spaceId,
+        changes: {
+          before: beforeState,
+        },
       });
 
       return { success: true };
@@ -382,6 +456,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     const body = moveItemSchema.parse(request.body);
     const newParentId = body.parentId === undefined ? item.parentId : body.parentId;
     const newPosition = body.position;
+
+    // Save state before move for audit
+    const beforeState = {
+      parentId: item.parentId,
+      position: item.position,
+    };
 
     // Prevent moving an item to be its own descendant
     if (newParentId) {
@@ -427,6 +507,22 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     );
 
     await fastify.prisma.$transaction(updates);
+
+    // Audit log for MOVE
+    await createAuditLog(fastify.prisma, {
+      action: 'MOVE',
+      entity: 'Item',
+      entityId: item.id,
+      userId: request.user.userId,
+      spaceId: request.params.spaceId,
+      changes: {
+        before: beforeState,
+        after: {
+          parentId: newParentId,
+          position: newPosition,
+        },
+      },
+    });
 
     return { success: true };
   });
@@ -535,6 +631,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    // Get items before move for audit
+    const itemsBeforeMove = await fastify.prisma.item.findMany({
+      where: { id: { in: allItemIds } },
+    });
+    const itemsBeforeMoveMap = new Map(
+      itemsBeforeMove.map((item) => [item.id, serializeItemForAudit(item)])
+    );
+
     // Move items in a transaction
     await fastify.prisma.$transaction(async (tx) => {
       // For each item, update spaceId and handle parent references
@@ -598,6 +702,24 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
     });
+
+    // Audit log for BULK_MOVE - one log entry per item
+    for (const itemId of allItemIds) {
+      const beforeState = itemsBeforeMoveMap.get(itemId);
+      await createAuditLog(fastify.prisma, {
+        action: 'BULK_MOVE',
+        entity: 'Item',
+        entityId: itemId,
+        userId: request.user.userId,
+        spaceId: request.params.spaceId,
+        changes: {
+          before: beforeState,
+          after: {
+            spaceId: targetSpaceId,
+          },
+        },
+      });
+    }
 
     return {
       success: true,

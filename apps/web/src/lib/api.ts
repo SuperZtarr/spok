@@ -20,6 +20,9 @@ import type {
   GlobalRole,
   SpaceReferentiels,
   ReferentielsResponse,
+  AuditLog,
+  AuditLogFilters,
+  AuditLogListResponse,
 } from '@spok/shared';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -566,6 +569,35 @@ export const referentielsApi = {
   checkStatusUsage: (spaceId: string, statusId: string) =>
     fetchApi<{ statusId: string; itemCount: number; isUsed: boolean }>(
       `/spaces/${spaceId}/referentiels/check-status-usage/${statusId}`
+    ),
+};
+
+// Audit Logs
+export const auditLogsApi = {
+  list: (spaceId: string, params?: AuditLogFilters) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+    if (params?.entity) searchParams.set('entity', params.entity);
+    if (params?.action) searchParams.set('action', params.action);
+    if (params?.entityId) searchParams.set('entityId', params.entityId);
+    if (params?.userId) searchParams.set('userId', params.userId);
+    if (params?.from) searchParams.set('from', params.from);
+    if (params?.to) searchParams.set('to', params.to);
+
+    const query = searchParams.toString();
+    return fetchApi<AuditLogListResponse>(`/spaces/${spaceId}/audit-logs${query ? `?${query}` : ''}`);
+  },
+
+  get: (spaceId: string, logId: string) =>
+    fetchApi<AuditLog>(`/spaces/${spaceId}/audit-logs/${logId}`),
+
+  restore: (spaceId: string, logId: string) =>
+    fetchApi<{ success: boolean; restored: unknown; message: string }>(
+      `/spaces/${spaceId}/audit-logs/${logId}/restore`,
+      {
+        method: 'POST',
+      }
     ),
 };
 

@@ -37,6 +37,7 @@ model Space {
   items       Item[]
   modules     SpaceModule[]
   tags        Tag[]
+  auditLogs   AuditLog[]
 
   @@map("spaces")
 }
@@ -180,14 +181,17 @@ model AuditLog {
   action    String
   entity    String
   entityId  String
+  spaceId   String
   changes   Json?
   userId    String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   @@index([entity, entityId])
   @@index([userId])
+  @@index([spaceId, createdAt])
   @@map("audit_logs")
 }
 

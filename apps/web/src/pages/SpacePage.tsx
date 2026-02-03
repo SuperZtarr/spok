@@ -32,6 +32,7 @@ import {
   ArrowDownAZ,
   GitBranch,
   Settings,
+  History,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -354,6 +355,11 @@ export function SpacePage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Link to={`/spaces/${spaceId}/history`}>
+              <Button variant="outline" title="Historique des modifications">
+                <History className="w-4 h-4" />
+              </Button>
+            </Link>
             {(space?.role === 'OWNER' || space?.role === 'ADMIN') && (
               <Link to={`/spaces/${spaceId}/settings`}>
                 <Button variant="outline" title="Paramètres de l'espace">
@@ -787,13 +793,6 @@ function SortableItem({
           </a>
         )}
 
-        <Badge
-          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
-          variant="secondary"
-        >
-          {STATUS_LABELS[item.status || ''] || 'Non défini'}
-        </Badge>
-
         {item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
@@ -807,6 +806,13 @@ function SortableItem({
             <CheckSquare className="w-4 h-4" />
           </Button>
         )}
+
+        <Badge
+          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
+          variant="secondary"
+        >
+          {STATUS_LABELS[item.status || ''] || 'Non défini'}
+        </Badge>
 
         <Button
           variant="ghost"
@@ -1064,13 +1070,6 @@ function DraggableChildItem({
           </a>
         )}
 
-        <Badge
-          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
-          variant="secondary"
-        >
-          {STATUS_LABELS[item.status || ''] || 'Non défini'}
-        </Badge>
-
         {item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
@@ -1084,6 +1083,13 @@ function DraggableChildItem({
             <CheckSquare className="w-4 h-4" />
           </Button>
         )}
+
+        <Badge
+          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
+          variant="secondary"
+        >
+          {STATUS_LABELS[item.status || ''] || 'Non défini'}
+        </Badge>
 
         <Button
           variant="ghost"
