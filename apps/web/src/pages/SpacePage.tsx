@@ -22,17 +22,11 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus,
   FileText,
-  FolderKanban,
   CheckSquare,
-  Calendar,
   ChevronRight,
   ChevronDown,
   Trash2,
   GripVertical,
-  Link2,
-  Settings,
-  File,
-  Image,
   ListChecks,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
@@ -51,42 +45,7 @@ import { TypesView } from '../components/views/TypesView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 
-const TYPE_ICONS: Record<ItemType, typeof FileText> = {
-  NOTE: FileText,
-  PROJECT: FolderKanban,
-  TASK: CheckSquare,
-  APPOINTMENT: Calendar,
-  LINK: Link2,
-  CONFIG: Settings,
-  DOCUMENT: File,
-  IMAGE: Image,
-};
-
-const TYPE_LABELS: Record<ItemType, string> = {
-  NOTE: 'Note',
-  PROJECT: 'Projet',
-  TASK: 'Tache',
-  APPOINTMENT: 'Rendez-vous',
-  LINK: 'Lien',
-  CONFIG: 'Config',
-  DOCUMENT: 'Document',
-  IMAGE: 'Image',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  todo: 'bg-gray-100 text-gray-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  done: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  none: 'bg-gray-100 text-gray-500 border-dashed',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'À faire',
-  in_progress: 'En cours',
-  done: 'Terminé',
-  cancelled: 'Annulé',
-};
+import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS } from '../constants/ui';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -115,14 +74,17 @@ export function SpacePage() {
     enabled: !!spaceId,
   });
 
+  // Flat views (kanban, types) should load all items regardless of hierarchy
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list';
+
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', spaceId, filter],
+    queryKey: ['items', spaceId, filter, viewMode],
     queryFn: () =>
       itemsApi.list(spaceId!, {
         type: filter === 'ALL' ? undefined : filter,
-        // Only filter by parentId when showing all types (hierarchical view)
-        // When filtering by type, show all items of that type regardless of hierarchy
-        parentId: filter === 'ALL' ? null : undefined,
+        // Only filter by parentId for hierarchical views when showing all types
+        // Flat views (kanban, types) should show all items regardless of hierarchy
+        parentId: filter === 'ALL' && !isFlatView ? null : undefined,
         pageSize: 100,
       }),
     enabled: !!spaceId,

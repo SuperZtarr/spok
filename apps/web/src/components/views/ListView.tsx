@@ -1,44 +1,8 @@
-import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image, ExternalLink } from 'lucide-react';
-import type { Item, ItemType } from '@spok/shared';
+import { Trash2, ExternalLink, FileText, CheckSquare } from 'lucide-react';
+import type { Item } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-
-const TYPE_ICONS: Record<ItemType, typeof FileText> = {
-  NOTE: FileText,
-  PROJECT: FolderKanban,
-  TASK: CheckSquare,
-  APPOINTMENT: Calendar,
-  LINK: Link2,
-  CONFIG: Settings,
-  DOCUMENT: File,
-  IMAGE: Image,
-};
-
-const TYPE_LABELS: Record<ItemType, string> = {
-  NOTE: 'Note',
-  PROJECT: 'Projet',
-  TASK: 'Tache',
-  APPOINTMENT: 'RDV',
-  LINK: 'Lien',
-  CONFIG: 'Config',
-  DOCUMENT: 'Doc',
-  IMAGE: 'Image',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  todo: 'bg-gray-100 text-gray-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  done: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  none: 'bg-gray-100 text-gray-500 border-dashed',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'A faire',
-  in_progress: 'En cours',
-  done: 'Termine',
-  cancelled: 'Annule',
-};
+import { TYPE_ICONS, TYPE_LABELS_SHORT, STATUS_COLORS, STATUS_LABELS } from '../../constants/ui';
 
 interface ListViewProps {
   items: Item[];
@@ -86,7 +50,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus }: ListViewPr
             )}
 
             <Badge variant="outline" className="text-xs">
-              {TYPE_LABELS[item.type]}
+              {TYPE_LABELS_SHORT[item.type]}
             </Badge>
 
             <Badge

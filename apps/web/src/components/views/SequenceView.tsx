@@ -1,33 +1,8 @@
-import { FileText, CheckSquare, Trash2, ArrowDown, FolderKanban, Calendar, Link2, Settings, File, Image, ExternalLink } from 'lucide-react';
-import type { Item, ItemType } from '@spok/shared';
+import { Trash2, ArrowDown, ExternalLink, FileText, CheckSquare } from 'lucide-react';
+import type { Item } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-
-const TYPE_ICONS: Record<ItemType, typeof FileText> = {
-  NOTE: FileText,
-  PROJECT: FolderKanban,
-  TASK: CheckSquare,
-  APPOINTMENT: Calendar,
-  LINK: Link2,
-  CONFIG: Settings,
-  DOCUMENT: File,
-  IMAGE: Image,
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  todo: 'border-gray-300 bg-gray-50',
-  in_progress: 'border-blue-300 bg-blue-50',
-  done: 'border-green-300 bg-green-50',
-  cancelled: 'border-red-300 bg-red-50',
-  none: 'border-gray-200 bg-white',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'A faire',
-  in_progress: 'En cours',
-  done: 'Termine',
-  cancelled: 'Annule',
-};
+import { TYPE_ICONS, STATUS_BORDER_COLORS, STATUS_LABELS } from '../../constants/ui';
 
 interface SequenceViewProps {
   items: Item[];
@@ -64,7 +39,7 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus }: Sequen
               {/* Sequence item card */}
               <div
                 className={`relative border-2 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow group ${
-                  STATUS_COLORS[item.status || 'none']
+                  STATUS_BORDER_COLORS[item.status || 'none']
                 }`}
                 onClick={() => onEdit(item.id)}
               >

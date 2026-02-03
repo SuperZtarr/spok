@@ -11,28 +11,10 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { FileText, CheckSquare, Trash2, FolderKanban, Calendar, Link2, Settings, File, Image, ExternalLink, GripVertical } from 'lucide-react';
-import type { Item, ItemType } from '@spok/shared';
+import { Trash2, ExternalLink, GripVertical, CheckSquare } from 'lucide-react';
+import type { Item } from '@spok/shared';
 import { Button } from '../ui/Button';
-
-const TYPE_ICONS: Record<ItemType, typeof FileText> = {
-  NOTE: FileText,
-  PROJECT: FolderKanban,
-  TASK: CheckSquare,
-  APPOINTMENT: Calendar,
-  LINK: Link2,
-  CONFIG: Settings,
-  DOCUMENT: File,
-  IMAGE: Image,
-};
-
-const COLUMNS = [
-  { id: 'undefined', label: 'Non défini', color: 'border-slate-400', bgHover: 'bg-slate-100' },
-  { id: 'todo', label: 'À faire', color: 'border-gray-300', bgHover: 'bg-gray-100' },
-  { id: 'in_progress', label: 'En cours', color: 'border-blue-400', bgHover: 'bg-blue-100' },
-  { id: 'done', label: 'Terminé', color: 'border-green-400', bgHover: 'bg-green-100' },
-  { id: 'cancelled', label: 'Annulé', color: 'border-red-400', bgHover: 'bg-red-100' },
-];
+import { TYPE_ICONS, KANBAN_COLUMNS } from '../../constants/ui';
 
 interface KanbanViewProps {
   items: Item[];
@@ -42,7 +24,7 @@ interface KanbanViewProps {
 }
 
 interface KanbanColumnProps {
-  column: typeof COLUMNS[0];
+  column: typeof KANBAN_COLUMNS[0];
   items: Item[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -217,7 +199,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
   );
 
   // Group items by status
-  const groupedItems = COLUMNS.reduce(
+  const groupedItems = KANBAN_COLUMNS.reduce(
     (acc, column) => {
       if (column.id === 'undefined') {
         acc[column.id] = items.filter((item) => !item.status);
@@ -278,7 +260,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
     >
       <div className="p-4 overflow-x-auto h-full">
         <div className="flex gap-3 h-full min-h-0">
-          {COLUMNS.map((column) => (
+          {KANBAN_COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}

@@ -7,27 +7,9 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch } from 'lucide-react';
-
-const TYPE_LABELS: Record<ItemType, string> = {
-  NOTE: 'Note',
-  PROJECT: 'Projet',
-  TASK: 'Tache',
-  APPOINTMENT: 'Rendez-vous',
-  LINK: 'Lien',
-  CONFIG: 'Configuration',
-  DOCUMENT: 'Document',
-  IMAGE: 'Image',
-};
-
-const STATUS_OPTIONS = [
-  { value: 'todo', label: 'À faire' },
-  { value: 'in_progress', label: 'En cours' },
-  { value: 'done', label: 'Terminé' },
-  { value: 'cancelled', label: 'Annulé' },
-];
+import { TYPE_LABELS, STATUS_OPTIONS, STORAGE_KEYS } from '../constants/ui';
 
 type ParentSortMode = 'tree' | 'alpha';
-const PARENT_SORT_KEY = 'spok-parent-sort-mode';
 
 interface ItemEditModalProps {
   isOpen: boolean;
@@ -53,13 +35,13 @@ export function ItemEditModal({
   const [status, setStatus] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
-    return (localStorage.getItem(PARENT_SORT_KEY) as ParentSortMode) || 'tree';
+    return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
 
   const toggleParentSortMode = () => {
     const newMode = parentSortMode === 'tree' ? 'alpha' : 'tree';
     setParentSortMode(newMode);
-    localStorage.setItem(PARENT_SORT_KEY, newMode);
+    localStorage.setItem(STORAGE_KEYS.PARENT_SORT_MODE, newMode);
   };
 
   const { data: item, isLoading } = useQuery({

@@ -11,58 +11,11 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import {
-  FileText,
-  CheckSquare,
-  Trash2,
-  FolderKanban,
-  Calendar,
-  Link2,
-  Settings,
-  File,
-  Image,
-  ExternalLink,
-  GripVertical,
-} from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical } from 'lucide-react';
 import type { Item, ItemType } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-
-const TYPE_ICONS: Record<ItemType, typeof FileText> = {
-  NOTE: FileText,
-  PROJECT: FolderKanban,
-  TASK: CheckSquare,
-  APPOINTMENT: Calendar,
-  LINK: Link2,
-  CONFIG: Settings,
-  DOCUMENT: File,
-  IMAGE: Image,
-};
-
-const TYPE_COLUMNS: { id: ItemType; label: string; color: string; bgHover: string }[] = [
-  { id: 'NOTE', label: 'Notes', color: 'border-blue-400', bgHover: 'bg-blue-50' },
-  { id: 'PROJECT', label: 'Projets', color: 'border-purple-400', bgHover: 'bg-purple-50' },
-  { id: 'TASK', label: 'Tâches', color: 'border-green-400', bgHover: 'bg-green-50' },
-  { id: 'APPOINTMENT', label: 'RDV', color: 'border-orange-400', bgHover: 'bg-orange-50' },
-  { id: 'LINK', label: 'Liens', color: 'border-cyan-400', bgHover: 'bg-cyan-50' },
-  { id: 'CONFIG', label: 'Config', color: 'border-gray-400', bgHover: 'bg-gray-50' },
-  { id: 'DOCUMENT', label: 'Documents', color: 'border-amber-400', bgHover: 'bg-amber-50' },
-  { id: 'IMAGE', label: 'Images', color: 'border-pink-400', bgHover: 'bg-pink-50' },
-];
-
-const STATUS_COLORS: Record<string, string> = {
-  todo: 'bg-gray-100 text-gray-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  done: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'À faire',
-  in_progress: 'En cours',
-  done: 'Terminé',
-  cancelled: 'Annulé',
-};
+import { TYPE_ICONS, TYPE_COLUMNS, STATUS_COLORS, STATUS_LABELS } from '../../constants/ui';
 
 interface TypesViewProps {
   items: Item[];
