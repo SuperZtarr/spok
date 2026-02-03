@@ -772,6 +772,9 @@ function ItemChildren({
 
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
+  // Get selection store for checking selection state (must be before any early return)
+  const { selectedIds: globalSelectedIds } = useSelectionStore();
+
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) => {
       const next = new Set(prev);
@@ -785,9 +788,6 @@ function ItemChildren({
   };
 
   if (!data?.data.length) return null;
-
-  // Get selection store for checking selection state
-  const { selectedIds: globalSelectedIds } = useSelectionStore();
 
   return (
     <>
