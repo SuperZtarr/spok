@@ -33,7 +33,7 @@ const createRelationSchema = z.object({
 });
 
 const querySchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT']).optional(),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
   status: z.string().optional(),
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
