@@ -33,6 +33,8 @@ import {
   GitBranch,
   Settings,
   History,
+  ChevronsUpDown,
+  ChevronsDownUp,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -343,11 +345,26 @@ export function SpacePage() {
     setExpandedItems((prev) => new Set([...prev, parentId]));
   };
 
-  const isFullWidthView = viewMode === 'kanban' || viewMode === 'types';
+  // Expand all items that have children
+  const expandAll = () => {
+    const allItems = allItemsData?.data || [];
+    const itemsWithChildren = allItems
+      .filter((item: Item & { childCount?: number }) => (item.childCount || 0) > 0)
+      .map((item: Item) => item.id);
+    setExpandedItems(new Set(itemsWithChildren));
+  };
+
+  // Collapse all items
+  const collapseAll = () => {
+    setExpandedItems(new Set());
+  };
+
+  // Check if any item is expanded
+  const hasExpandedItems = expandedItems.size > 0;
 
   return (
-    <div className={`p-6 h-full flex flex-col ${isFullWidthView ? '' : ''}`}>
-      <div className={`${isFullWidthView ? 'w-full h-full flex flex-col' : 'max-w-4xl mx-auto'}`}>
+    <div className="p-6 h-full flex flex-col">
+      <div className="w-full h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -388,7 +405,7 @@ export function SpacePage() {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-6 flex-wrap items-center">
           {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => (
             <Button
               key={type}
@@ -399,6 +416,27 @@ export function SpacePage() {
               {type === 'ALL' ? 'Tous' : TYPE_LABELS[type]}
             </Button>
           ))}
+
+          <div className="h-6 w-px bg-border mx-2" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={hasExpandedItems ? collapseAll : expandAll}
+            title={hasExpandedItems ? 'Tout réduire' : 'Tout étendre'}
+          >
+            {hasExpandedItems ? (
+              <>
+                <ChevronsDownUp className="w-4 h-4 mr-1" />
+                Réduire
+              </>
+            ) : (
+              <>
+                <ChevronsUpDown className="w-4 h-4 mr-1" />
+                Étendre
+              </>
+            )}
+          </Button>
         </div>
 
         {/* New item form */}
@@ -502,7 +540,7 @@ export function SpacePage() {
         )}
 
         {/* Items list */}
-        <div className={`bg-card border rounded-lg ${isFullWidthView ? 'flex-1 min-h-0' : ''}`}>
+        <div className="bg-card border rounded-lg flex-1 min-h-0">
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (

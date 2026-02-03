@@ -50,9 +50,9 @@ export function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Sidebar */}
-      <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0">
+    <div className="h-screen flex overflow-hidden">
+      {/* Sidebar - fixed left */}
+      <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0 overflow-y-auto">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold">SPOK</h1>
           <div className="flex items-center gap-2">
@@ -119,9 +119,9 @@ export function Layout() {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col bg-background">
-        {/* Top header */}
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
+      <div className="flex-1 flex flex-col bg-background min-w-0">
+        {/* Top header - sticky */}
+        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
             {currentSpace && (
@@ -133,7 +133,7 @@ export function Layout() {
           {currentSpace && <ViewModeSelector />}
         </header>
 
-        {/* Page content */}
+        {/* Page content - scrollable */}
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>
