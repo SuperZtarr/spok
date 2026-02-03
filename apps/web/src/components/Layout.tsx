@@ -52,8 +52,9 @@ export function Layout() {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Sidebar - fixed left */}
-      <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0 overflow-y-auto">
-        <div className="p-4 border-b border-border">
+      <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0 h-full">
+        {/* Header sidebar - fixe */}
+        <div className="p-4 border-b border-border flex-shrink-0">
           <h1 className="text-xl font-bold">SPOK</h1>
           <div className="flex items-center gap-2">
             <p className="text-sm text-muted-foreground">{user?.name}</p>
@@ -67,7 +68,8 @@ export function Layout() {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        {/* Navigation - scrollable */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
           <Link
             to="/"
             className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors"
@@ -90,17 +92,18 @@ export function Layout() {
                 to={`/spaces/${space.id}`}
                 className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
               >
-                <FolderKanban className="w-4 h-4" />
+                <FolderKanban className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{space.name}</span>
                 {space.type === 'PERSONAL' && (
-                  <span className="ml-auto text-xs text-muted-foreground">Perso</span>
+                  <span className="ml-auto text-xs text-muted-foreground flex-shrink-0">Perso</span>
                 )}
               </Link>
             ))}
           </div>
         </nav>
 
-        <div className="p-4 border-t border-border space-y-2">
+        {/* Footer sidebar - fixe */}
+        <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
           {user?.globalRole === 'ADMIN' && (
             <Link to="/admin">
               <Button variant="ghost" className="w-full justify-start">
