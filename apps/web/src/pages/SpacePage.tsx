@@ -345,13 +345,23 @@ export function SpacePage() {
     setExpandedItems((prev) => new Set([...prev, parentId]));
   };
 
-  // Expand all items that have children
+  // Expand all items that have children (at any level)
   const expandAll = () => {
     const allItems = allItemsData?.data || [];
-    const itemsWithChildren = allItems
-      .filter((item: Item & { childCount?: number }) => (item.childCount || 0) > 0)
-      .map((item: Item) => item.id);
-    setExpandedItems(new Set(itemsWithChildren));
+    // Find all items that are parents (have at least one child)
+    const parentIds = new Set<string>();
+    allItems.forEach((item: Item) => {
+      if (item.parentId) {
+        parentIds.add(item.parentId);
+      }
+    });
+    // Also add items with childCount > 0 (from the API response)
+    allItems.forEach((item: Item & { childCount?: number }) => {
+      if ((item.childCount || 0) > 0) {
+        parentIds.add(item.id);
+      }
+    });
+    setExpandedItems(parentIds);
   };
 
   // Collapse all items
