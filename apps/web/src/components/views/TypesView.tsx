@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -11,35 +11,51 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical } from 'lucide-react';
-import type { Item, ItemType } from '@spok/shared';
+import { Trash2, ExternalLink, GripVertical, Plus } from 'lucide-react';
+import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS, TYPE_COLUMNS, STATUS_COLORS, STATUS_LABELS } from '../../constants/ui';
+import { TYPE_ICONS } from '../../constants/ui';
 
 interface TypesViewProps {
   items: Item[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateType: (id: string, type: ItemType) => void;
+  onAddChild: (parentId: string) => void;
+  referentiels?: SpaceReferentiels;
+}
+
+interface TypeColumnConfig {
+  id: ItemType;
+  label: string;
+  color: string;
+  bgHover: string;
 }
 
 interface TypeColumnProps {
-  column: (typeof TYPE_COLUMNS)[0];
+  column: TypeColumnConfig;
   items: Item[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onAddChild: (parentId: string) => void;
   isOver: boolean;
+  statusLabels: Record<string, string>;
+  statusColors: Record<string, string>;
 }
 
 interface TypeCardProps {
   item: Item;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onAddChild: (parentId: string) => void;
   isDragging?: boolean;
+  statusLabels: Record<string, string>;
+  statusColors: Record<string, string>;
 }
 
-function TypeCard({ item, onEdit, onDelete, isDragging }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels, statusColors }: TypeCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -51,6 +67,9 @@ function TypeCard({ item, onEdit, onDelete, isDragging }: TypeCardProps) {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
       }
     : undefined;
+
+  const statusLabel = item.status ? (statusLabels[item.status] || item.status) : null;
+  const statusColor = item.status ? (statusColors[item.status] || '') : '';
 
   return (
     <div
@@ -92,12 +111,12 @@ function TypeCard({ item, onEdit, onDelete, isDragging }: TypeCardProps) {
               {item.description}
             </p>
           )}
-          {item.status && (
+          {statusLabel && (
             <Badge
-              className={`text-xs mt-2 ${STATUS_COLORS[item.status] || ''}`}
+              className={`text-xs mt-2 ${statusColor}`}
               variant="secondary"
             >
-              {STATUS_LABELS[item.status] || item.status}
+              {statusLabel}
             </Badge>
           )}
         </div>
@@ -105,6 +124,18 @@ function TypeCard({ item, onEdit, onDelete, isDragging }: TypeCardProps) {
 
       {/* Quick actions */}
       <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddChild(item.id);
+          }}
+          title="Ajouter un enfant"
+        >
+          <Plus className="w-3 h-3" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -121,7 +152,7 @@ function TypeCard({ item, onEdit, onDelete, isDragging }: TypeCardProps) {
   );
 }
 
-function TypeColumn({ column, items, onEdit, onDelete, isOver }: TypeColumnProps) {
+function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statusLabels, statusColors }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -160,12 +191,15 @@ function TypeColumn({ column, items, onEdit, onDelete, isOver }: TypeColumnProps
             item={item}
             onEdit={onEdit}
             onDelete={onDelete}
+            onAddChild={onAddChild}
+            statusLabels={statusLabels}
+            statusColors={statusColors}
           />
         ))}
 
         {items.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            Aucun élément
+            Aucun element
           </div>
         )}
       </div>
@@ -173,7 +207,7 @@ function TypeColumn({ column, items, onEdit, onDelete, isOver }: TypeColumnProps
   );
 }
 
-export function TypesView({ items, onEdit, onDelete, onUpdateType }: TypesViewProps) {
+export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, referentiels }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -185,14 +219,48 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType }: TypesViewPr
     })
   );
 
+  // Use referentiels or defaults
+  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+
+  // Build type columns from referentiels
+  const typeColumns = useMemo(() => {
+    return ITEM_TYPES
+      .filter((type) => typeLabels[type]?.visible !== false)
+      .map((type) => {
+        const config = typeLabels[type] || DEFAULT_REFERENTIELS.typeLabels[type];
+        return {
+          id: type as ItemType,
+          label: config?.label || type,
+          color: config?.color || 'border-gray-400',
+          bgHover: config?.bgHover || 'bg-gray-50',
+          order: config?.order ?? 999,
+        };
+      })
+      .sort((a, b) => a.order - b.order);
+  }, [typeLabels]);
+
+  // Build status maps from referentiels
+  const { statusLabels, statusColors } = useMemo(() => {
+    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    const labels: Record<string, string> = {};
+    const colors: Record<string, string> = {};
+    statuses.forEach((s) => {
+      labels[s.id] = s.label;
+      colors[s.id] = s.color;
+    });
+    return { statusLabels: labels, statusColors: colors };
+  }, [referentiels]);
+
   // Group items by type
-  const groupedItems = TYPE_COLUMNS.reduce(
-    (acc, column) => {
-      acc[column.id] = items.filter((item) => item.type === column.id);
-      return acc;
-    },
-    {} as Record<string, Item[]>
-  );
+  const groupedItems = useMemo(() => {
+    return typeColumns.reduce(
+      (acc, column) => {
+        acc[column.id] = items.filter((item) => item.type === column.id);
+        return acc;
+      },
+      {} as Record<string, Item[]>
+    );
+  }, [typeColumns, items]);
 
   const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
 
@@ -238,14 +306,17 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType }: TypesViewPr
     >
       <div className="p-4 overflow-x-auto h-full">
         <div className="flex gap-3 h-full min-h-0">
-          {TYPE_COLUMNS.map((column) => (
+          {typeColumns.map((column) => (
             <TypeColumn
               key={column.id}
               column={column}
               items={groupedItems[column.id] || []}
               onEdit={onEdit}
               onDelete={onDelete}
+              onAddChild={onAddChild}
               isOver={overId === column.id}
+              statusLabels={statusLabels}
+              statusColors={statusColors}
             />
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -31,9 +31,11 @@ import {
   ExternalLink,
   ArrowDownAZ,
   GitBranch,
+  Settings,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
+import { useReferentiels } from '../hooks/useReferentiels';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -61,6 +63,7 @@ export function SpacePage() {
   const [newItemType, setNewItemType] = useState<ItemType>('NOTE');
   const [newItemUrl, setNewItemUrl] = useState('');
   const [newItemParentId, setNewItemParentId] = useState<string>('');
+  const [newItemDueDate, setNewItemDueDate] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -76,6 +79,10 @@ export function SpacePage() {
     queryFn: () => spacesApi.get(spaceId!),
     enabled: !!spaceId,
   });
+
+  // Load referentiels for this space
+  const { data: referentielsData } = useReferentiels(spaceId!);
+  const referentiels = referentielsData?.referentiels;
 
   // Flat views (kanban, types) should load all items regardless of hierarchy
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list';
@@ -101,13 +108,14 @@ export function SpacePage() {
   });
 
   const createItemMutation = useMutation({
-    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string }) =>
+    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string }) =>
       itemsApi.create(spaceId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       setNewItemTitle('');
       setNewItemUrl('');
       setNewItemParentId('');
+      setNewItemDueDate('');
       setShowNewItem(false);
     },
   });
@@ -252,6 +260,7 @@ export function SpacePage() {
         url: newItemUrl || undefined,
         parentId: newItemParentId || undefined,
         status: 'todo',
+        dueDate: newItemDueDate ? new Date(newItemDueDate).toISOString() : undefined,
       });
     }
   };
@@ -345,6 +354,13 @@ export function SpacePage() {
             </p>
           </div>
           <div className="flex gap-2">
+            {(space?.role === 'OWNER' || space?.role === 'ADMIN') && (
+              <Link to={`/spaces/${spaceId}/settings`}>
+                <Button variant="outline" title="Paramètres de l'espace">
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
             <Button
               variant={isSelectionMode ? 'default' : 'outline'}
               onClick={() => setSelectionMode(!isSelectionMode)}
@@ -415,6 +431,17 @@ export function SpacePage() {
                 />
               )}
 
+              {newItemType === 'APPOINTMENT' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date et heure</label>
+                  <Input
+                    type="datetime-local"
+                    value={newItemDueDate}
+                    onChange={(e) => setNewItemDueDate(e.target.value)}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent (optionnel)</label>
@@ -456,6 +483,7 @@ export function SpacePage() {
                     setNewItemTitle('');
                     setNewItemUrl('');
                     setNewItemParentId('');
+                    setNewItemDueDate('');
                   }}
                 >
                   Annuler
@@ -475,6 +503,8 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
             />
           ) : viewMode === 'sequence' ? (
             <SequenceView
@@ -482,6 +512,8 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
             />
           ) : viewMode === 'kanban' ? (
             <KanbanView
@@ -489,6 +521,8 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
             />
           ) : viewMode === 'types' ? (
             <TypesView
@@ -496,6 +530,8 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateType={(id, type) => updateItemMutation.mutate({ id, data: { type } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">

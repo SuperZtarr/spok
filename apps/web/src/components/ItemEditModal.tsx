@@ -34,6 +34,7 @@ export function ItemEditModal({
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
+  const [dueDate, setDueDate] = useState('');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
@@ -59,11 +60,19 @@ export function ItemEditModal({
       setParentId(item.parentId || '');
       setStatus(item.status || '');
       setType(item.type);
+      // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+      if (item.dueDate) {
+        const date = new Date(item.dueDate);
+        const formatted = date.toISOString().slice(0, 16);
+        setDueDate(formatted);
+      } else {
+        setDueDate('');
+      }
     }
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -76,7 +85,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null } = {};
 
     if (type !== item.type) {
       updates.type = type;
@@ -103,6 +112,13 @@ export function ItemEditModal({
 
     if (status !== (item.status || '')) {
       updates.status = status || undefined;
+    }
+
+    // Handle dueDate changes
+    const newDueDate = dueDate ? new Date(dueDate).toISOString() : null;
+    const currentDueDate = item.dueDate ? new Date(item.dueDate).toISOString() : null;
+    if (newDueDate !== currentDueDate) {
+      updates.dueDate = newDueDate;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -223,6 +239,17 @@ export function ItemEditModal({
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://..."
+              />
+            </div>
+          )}
+
+          {type === 'APPOINTMENT' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date et heure</label>
+              <Input
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
           )}

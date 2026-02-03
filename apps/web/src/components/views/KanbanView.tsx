@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -11,25 +11,42 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare } from 'lucide-react';
-import type { Item } from '@spok/shared';
+import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar } from 'lucide-react';
+import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
-import { TYPE_ICONS, KANBAN_COLUMNS } from '../../constants/ui';
+import { TYPE_ICONS } from '../../constants/ui';
+
+// Format date for display
+function formatDate(dateString: string | null | undefined): string | null {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 interface KanbanViewProps {
   items: Item[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (parentId: string) => void;
+  referentiels?: SpaceReferentiels;
 }
 
 interface KanbanColumnProps {
-  column: typeof KANBAN_COLUMNS[0];
+  column: StatusConfig;
   items: Item[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (parentId: string) => void;
   isOver: boolean;
+  nextStatus?: string;
 }
 
 interface KanbanCardProps {
@@ -38,10 +55,13 @@ interface KanbanCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (parentId: string) => void;
   isDragging?: boolean;
+  nextStatus?: string;
+  nextStatusLabel?: string;
 }
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, isDragging }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, isDragging, nextStatus, nextStatusLabel }: KanbanCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -94,33 +114,43 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, isDraggi
               {item.description}
             </p>
           )}
+          {item.type === 'APPOINTMENT' && item.dueDate && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+              <Calendar className="w-3 h-3" />
+              {formatDate(item.dueDate)}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Quick actions */}
       <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        {columnId !== 'done' && (
+        {nextStatus && (
           <Button
             variant="ghost"
             size="sm"
             className="h-7 text-xs"
             onClick={(e) => {
               e.stopPropagation();
-              const nextStatus =
-                columnId === 'undefined'
-                  ? 'todo'
-                  : columnId === 'todo'
-                    ? 'in_progress'
-                    : columnId === 'in_progress'
-                      ? 'done'
-                      : 'done';
               onUpdateStatus(item.id, nextStatus);
             }}
           >
             <CheckSquare className="w-3 h-3 mr-1" />
-            {columnId === 'undefined' ? 'Planifier' : columnId === 'todo' ? 'Démarrer' : 'Terminer'}
+            {nextStatusLabel || 'Suivant'}
           </Button>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddChild(item.id);
+          }}
+          title="Ajouter un enfant"
+        >
+          <Plus className="w-3 h-3" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -137,15 +167,20 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, isDraggi
   );
 }
 
-function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, isOver }: KanbanColumnProps) {
+function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, isOver, nextStatus }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
 
+  // Extract border color from borderColor (e.g., "border-gray-300 bg-gray-50" -> "border-gray-300")
+  const borderColorClass = column.borderColor.split(' ')[0] || 'border-gray-300';
+  // Extract bg color for hover (e.g., "border-gray-300 bg-gray-50" -> "bg-gray-50")
+  const bgHoverClass = column.borderColor.split(' ')[1] || 'bg-gray-50';
+
   return (
     <div
-      className={`flex-1 min-w-[180px] bg-muted/50 rounded-lg border-t-4 flex flex-col ${column.color} transition-colors ${
-        isOver ? column.bgHover : ''
+      className={`flex-1 min-w-[180px] bg-muted/50 rounded-lg border-t-4 flex flex-col ${borderColorClass} transition-colors ${
+        isOver ? bgHoverClass : ''
       }`}
     >
       {/* Column header */}
@@ -173,12 +208,14 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, isOver 
             onEdit={onEdit}
             onDelete={onDelete}
             onUpdateStatus={onUpdateStatus}
+            onAddChild={onAddChild}
+            nextStatus={nextStatus}
           />
         ))}
 
         {items.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            Aucun élément
+            Aucun element
           </div>
         )}
       </div>
@@ -186,7 +223,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, isOver 
   );
 }
 
-export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanViewProps) {
+export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -198,18 +235,38 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
     })
   );
 
-  // Group items by status
-  const groupedItems = KANBAN_COLUMNS.reduce(
-    (acc, column) => {
-      if (column.id === 'undefined') {
-        acc[column.id] = items.filter((item) => !item.status);
-      } else {
-        acc[column.id] = items.filter((item) => item.status === column.id);
+  // Use referentiels or defaults
+  const statuses = useMemo(() => {
+    const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    return statusList.filter((s) => s.visible).sort((a, b) => a.order - b.order);
+  }, [referentiels]);
+
+  // Build next status map for quick actions
+  const nextStatusMap = useMemo(() => {
+    const map: Record<string, { id: string; label: string } | undefined> = {};
+    statuses.forEach((status, index) => {
+      if (index < statuses.length - 1) {
+        const next = statuses[index + 1];
+        map[status.id] = { id: next.id === 'undefined' ? '' : next.id, label: next.label };
       }
-      return acc;
-    },
-    {} as Record<string, Item[]>
-  );
+    });
+    return map;
+  }, [statuses]);
+
+  // Group items by status
+  const groupedItems = useMemo(() => {
+    return statuses.reduce(
+      (acc, status) => {
+        if (status.id === 'undefined') {
+          acc[status.id] = items.filter((item) => !item.status);
+        } else {
+          acc[status.id] = items.filter((item) => item.status === status.id);
+        }
+        return acc;
+      },
+      {} as Record<string, Item[]>
+    );
+  }, [statuses, items]);
 
   const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
 
@@ -260,15 +317,17 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus }: KanbanVi
     >
       <div className="p-4 overflow-x-auto h-full">
         <div className="flex gap-3 h-full min-h-0">
-          {KANBAN_COLUMNS.map((column) => (
+          {statuses.map((status) => (
             <KanbanColumn
-              key={column.id}
-              column={column}
-              items={groupedItems[column.id] || []}
+              key={status.id}
+              column={status}
+              items={groupedItems[status.id] || []}
               onEdit={onEdit}
               onDelete={onDelete}
               onUpdateStatus={onUpdateStatus}
-              isOver={overId === column.id}
+              onAddChild={onAddChild}
+              isOver={overId === status.id}
+              nextStatus={nextStatusMap[status.id]?.id}
             />
           ))}
         </div>

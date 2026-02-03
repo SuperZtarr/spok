@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
+import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { Layout } from './components/Layout';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminRoute } from './components/AdminRoute';
@@ -86,6 +87,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="spaces/:spaceId" element={<SpacePage />} />
+        <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
       </Route>
       <Route
         path="/admin"

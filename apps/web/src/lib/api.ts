@@ -18,6 +18,8 @@ import type {
   CreateUserInput,
   UpdateUserInput,
   GlobalRole,
+  SpaceReferentiels,
+  ReferentielsResponse,
 } from '@spok/shared';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -543,6 +545,28 @@ export const adminApi = {
         method: 'DELETE',
       }),
   },
+};
+
+// Referentiels
+export const referentielsApi = {
+  get: (spaceId: string) =>
+    fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels`),
+
+  update: (spaceId: string, data: Partial<SpaceReferentiels>) =>
+    fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  reset: (spaceId: string) =>
+    fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels/reset`, {
+      method: 'POST',
+    }),
+
+  checkStatusUsage: (spaceId: string, statusId: string) =>
+    fetchApi<{ statusId: string; itemCount: number; isUsed: boolean }>(
+      `/spaces/${spaceId}/referentiels/check-status-usage/${statusId}`
+    ),
 };
 
 export { ApiError };
