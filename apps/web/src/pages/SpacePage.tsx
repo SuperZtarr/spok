@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -28,6 +28,9 @@ import {
   Trash2,
   GripVertical,
   ListChecks,
+  ExternalLink,
+  ArrowDownAZ,
+  GitBranch,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -45,7 +48,7 @@ import { TypesView } from '../components/views/TypesView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 
-import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS } from '../constants/ui';
+import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS } from '../constants/ui';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -253,14 +256,60 @@ export function SpacePage() {
     }
   };
 
-  // Build parent options for the creation form
-  const parentOptions = [
-    { value: '', label: 'Aucun parent (racine)' },
-    ...(allItemsData?.data || []).map((item: Item) => ({
-      value: item.id,
-      label: item.title,
-    })),
-  ];
+  // Parent sort mode state (persisted in localStorage)
+  type ParentSortMode = 'tree' | 'alpha';
+  const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE);
+    return (saved as ParentSortMode) || 'tree';
+  });
+
+  const toggleParentSortMode = () => {
+    const newMode = parentSortMode === 'tree' ? 'alpha' : 'tree';
+    setParentSortMode(newMode);
+    localStorage.setItem(STORAGE_KEYS.PARENT_SORT_MODE, newMode);
+  };
+
+  // Build parent options for the creation form (with tree or alpha sort)
+  const parentOptions = useMemo(() => {
+    const allItems = allItemsData?.data || [];
+
+    if (parentSortMode === 'alpha') {
+      // Alphabetical sort
+      const sorted = [...allItems].sort((a: Item, b: Item) =>
+        a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' })
+      );
+      return [
+        { value: '', label: 'Aucun parent (racine)' },
+        ...sorted.map((item: Item) => ({
+          value: item.id,
+          label: item.title,
+        })),
+      ];
+    } else {
+      // Tree sort with indentation
+      const buildTree = (parentId: string | null, depth: number): { value: string; label: string }[] => {
+        const children = allItems
+          .filter((item: Item) => (item.parentId || null) === parentId)
+          .sort((a: Item, b: Item) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
+
+        const result: { value: string; label: string }[] = [];
+        for (const child of children) {
+          const indent = depth > 0 ? '—'.repeat(depth) + ' ' : '';
+          result.push({
+            value: child.id,
+            label: `${indent}${child.title}`,
+          });
+          result.push(...buildTree(child.id, depth + 1));
+        }
+        return result;
+      };
+
+      return [
+        { value: '', label: 'Aucun parent (racine)' },
+        ...buildTree(null, 0),
+      ];
+    }
+  }, [allItemsData?.data, parentSortMode]);
 
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) => {
@@ -272,6 +321,14 @@ export function SpacePage() {
       }
       return next;
     });
+  };
+
+  const handleAddChild = (parentId: string) => {
+    setNewItemParentId(parentId);
+    setNewItemType('NOTE');
+    setShowNewItem(true);
+    // Auto-expand the parent to show the new child after creation
+    setExpandedItems((prev) => new Set([...prev, parentId]));
   };
 
   const isFullWidthView = viewMode === 'kanban' || viewMode === 'types';
@@ -359,7 +416,27 @@ export function SpacePage() {
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Parent (optionnel)</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Parent (optionnel)</label>
+                  <button
+                    type="button"
+                    onClick={toggleParentSortMode}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
+                  >
+                    {parentSortMode === 'tree' ? (
+                      <>
+                        <GitBranch className="w-3 h-3" />
+                        <span>Arborescence</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownAZ className="w-3 h-3" />
+                        <span>A-Z</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <Select
                   value={newItemParentId}
                   onChange={(e) => setNewItemParentId(e.target.value)}
@@ -455,6 +532,7 @@ export function SpacePage() {
                       onEdit={setEditingItemId}
                       onDelete={(id) => deleteItemMutation.mutate(id)}
                       onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+                      onAddChild={handleAddChild}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       dropMode={overId === item.id ? dropMode : undefined}
@@ -551,6 +629,7 @@ function SortableItem({
   onEdit,
   onDelete,
   onUpdateStatus,
+  onAddChild,
   spaceId,
   isOver,
   dropMode,
@@ -568,6 +647,7 @@ function SortableItem({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (parentId: string) => void;
   spaceId: string;
   isOver: boolean;
   dropMode?: 'reorder' | 'nest';
@@ -658,6 +738,19 @@ function SortableItem({
 
         <span className="flex-1 truncate">{item.title}</span>
 
+        {item.url && (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            title="Ouvrir le lien"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        )}
+
         <Badge
           className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
           variant="secondary"
@@ -682,6 +775,19 @@ function SortableItem({
         <Button
           variant="ghost"
           size="sm"
+          className="opacity-0 group-hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddChild(item.id);
+          }}
+          title="Ajouter un enfant"
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
           className="opacity-0 group-hover:opacity-100 text-destructive"
           onClick={(e) => {
             e.stopPropagation();
@@ -700,6 +806,7 @@ function SortableItem({
           onEditItem={onEdit}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
+          onAddChild={onAddChild}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
@@ -719,6 +826,7 @@ function ItemChildren({
   onEditItem,
   onDelete,
   onUpdateStatus,
+  onAddChild,
   onMove,
   globalOverId,
   globalDropMode,
@@ -731,6 +839,7 @@ function ItemChildren({
   onEditItem: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (parentId: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -773,6 +882,7 @@ function ItemChildren({
           onEdit={onEditItem}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
+          onAddChild={onAddChild}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           dropMode={globalOverId === item.id ? globalDropMode : undefined}
@@ -797,6 +907,7 @@ function DraggableChildItem({
   onEdit,
   onDelete,
   onUpdateStatus,
+  onAddChild,
   spaceId,
   isOver,
   dropMode,
@@ -814,6 +925,7 @@ function DraggableChildItem({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (parentId: string) => void;
   spaceId: string;
   isOver: boolean;
   dropMode?: 'reorder' | 'nest';
@@ -903,6 +1015,19 @@ function DraggableChildItem({
 
         <span className="flex-1 truncate">{item.title}</span>
 
+        {item.url && (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            title="Ouvrir le lien"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        )}
+
         <Badge
           className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
           variant="secondary"
@@ -927,6 +1052,19 @@ function DraggableChildItem({
         <Button
           variant="ghost"
           size="sm"
+          className="opacity-0 group-hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddChild(item.id);
+          }}
+          title="Ajouter un enfant"
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
           className="opacity-0 group-hover:opacity-100 text-destructive"
           onClick={(e) => {
             e.stopPropagation();
@@ -945,6 +1083,7 @@ function DraggableChildItem({
           onEditItem={onEdit}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
+          onAddChild={onAddChild}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}

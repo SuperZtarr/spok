@@ -158,11 +158,10 @@ export function ItemEditModal({
 
         const result: { value: string; label: string }[] = [];
         for (const child of children) {
-          const indent = '  '.repeat(depth);
-          const prefix = depth > 0 ? '└ ' : '';
+          const indent = depth > 0 ? '—'.repeat(depth) + ' ' : '';
           result.push({
             value: child.id,
-            label: `${indent}${prefix}${child.title}`,
+            label: `${indent}${child.title}`,
           });
           result.push(...buildTree(child.id, depth + 1));
         }
