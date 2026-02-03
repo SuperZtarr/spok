@@ -47,6 +47,7 @@ import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
 import { SequenceView } from '../components/views/SequenceView';
 import { KanbanView } from '../components/views/KanbanView';
+import { TypesView } from '../components/views/TypesView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 
@@ -154,7 +155,7 @@ export function SpacePage() {
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { status?: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType } }) =>
       itemsApi.update(spaceId!, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -311,9 +312,11 @@ export function SpacePage() {
     });
   };
 
+  const isFullWidthView = viewMode === 'kanban' || viewMode === 'types';
+
   return (
-    <div className={`p-6 h-full flex flex-col ${viewMode === 'kanban' ? '' : ''}`}>
-      <div className={`${viewMode === 'kanban' ? 'w-full h-full flex flex-col' : 'max-w-4xl mx-auto'}`}>
+    <div className={`p-6 h-full flex flex-col ${isFullWidthView ? '' : ''}`}>
+      <div className={`${isFullWidthView ? 'w-full h-full flex flex-col' : 'max-w-4xl mx-auto'}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -424,7 +427,7 @@ export function SpacePage() {
         )}
 
         {/* Items list */}
-        <div className={`bg-card border rounded-lg ${viewMode === 'kanban' ? 'flex-1 min-h-0' : ''}`}>
+        <div className={`bg-card border rounded-lg ${isFullWidthView ? 'flex-1 min-h-0' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
@@ -447,6 +450,13 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+            />
+          ) : viewMode === 'types' ? (
+            <TypesView
+              items={itemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateType={(id, type) => updateItemMutation.mutate({ id, data: { type } })}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
