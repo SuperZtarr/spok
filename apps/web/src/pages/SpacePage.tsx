@@ -33,6 +33,7 @@ import {
   Settings,
   File,
   Image,
+  ListChecks,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -42,9 +43,12 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore } from '../stores/viewMode';
+import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
 import { SequenceView } from '../components/views/SequenceView';
 import { KanbanView } from '../components/views/KanbanView';
+import { SelectionActionBar } from '../components/SelectionActionBar';
+import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 
 const TYPE_ICONS: Record<ItemType, typeof FileText> = {
   NOTE: FileText,
@@ -87,6 +91,7 @@ export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const queryClient = useQueryClient();
   const { mode: viewMode } = useViewModeStore();
+  const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
 
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
@@ -96,6 +101,12 @@ export function SpacePage() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+
+  // Clear selection when leaving the page or changing space
+  useEffect(() => {
+    return () => clearSelection();
+  }, [spaceId, clearSelection]);
 
   const { data: space } = useQuery({
     queryKey: ['space', spaceId],
@@ -311,13 +322,23 @@ export function SpacePage() {
               {space?.itemCount || 0} élément{(space?.itemCount || 0) > 1 ? 's' : ''}
             </p>
           </div>
-          <Button onClick={() => {
-            setNewItemType(filter === 'ALL' ? 'NOTE' : filter);
-            setShowNewItem(true);
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant={isSelectionMode ? 'default' : 'outline'}
+              onClick={() => setSelectionMode(!isSelectionMode)}
+              title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
+            >
+              <ListChecks className="w-4 h-4 mr-2" />
+              {isSelectionMode ? 'Annuler' : 'Sélectionner'}
+            </Button>
+            <Button onClick={() => {
+              setNewItemType(filter === 'ALL' ? 'NOTE' : filter);
+              setShowNewItem(true);
+            }}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -468,6 +489,9 @@ export function SpacePage() {
                       onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
                       globalOverId={overId}
                       globalDropMode={dropMode}
+                      isSelectionMode={isSelectionMode}
+                      isSelected={selectedIds.has(item.id)}
+                      onToggleSelection={toggleSelection}
                     />
                   ))}
                 </div>
@@ -510,6 +534,20 @@ export function SpacePage() {
         itemId={editingItemId}
         allItems={allItemsData?.data || []}
       />
+
+      {/* Selection action bar */}
+      {isSelectionMode && (
+        <SelectionActionBar
+          onMoveToSpace={() => setShowMoveModal(true)}
+        />
+      )}
+
+      {/* Move to space modal */}
+      <MoveToSpaceModal
+        isOpen={showMoveModal}
+        onClose={() => setShowMoveModal(false)}
+        currentSpaceId={spaceId!}
+      />
     </div>
   );
 }
@@ -547,6 +585,9 @@ function SortableItem({
   onMove,
   globalOverId,
   globalDropMode,
+  isSelectionMode,
+  isSelected,
+  onToggleSelection,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -561,6 +602,9 @@ function SortableItem({
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
 }) {
   const {
     attributes,
@@ -580,6 +624,14 @@ function SortableItem({
   const Icon = TYPE_ICONS[item.type];
   const hasChildren = (item.childCount || 0) > 0;
 
+  const handleClick = () => {
+    if (isSelectionMode && onToggleSelection) {
+      onToggleSelection(item.id);
+    } else {
+      onEdit(item.id);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style}>
       {/* Drop indicator for reorder mode */}
@@ -589,18 +641,28 @@ function SortableItem({
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer ${
           isOver && dropMode === 'nest' ? 'bg-blue-100 border-2 border-dashed border-blue-500' : ''
-        }`}
+        } ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
-        onClick={() => onEdit(item.id)}
+        onClick={handleClick}
       >
-        <button
-          {...attributes}
-          {...listeners}
-          className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
-        </button>
+        {isSelectionMode ? (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelection?.(item.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded"
+          />
+        ) : (
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
 
         {hasChildren ? (
           <button
@@ -669,6 +731,8 @@ function SortableItem({
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
+          isSelectionMode={isSelectionMode}
+          onToggleSelection={onToggleSelection}
         />
       )}
     </div>
@@ -686,6 +750,8 @@ function ItemChildren({
   onMove,
   globalOverId,
   globalDropMode,
+  isSelectionMode,
+  onToggleSelection,
 }: {
   spaceId: string;
   parentId: string;
@@ -696,6 +762,8 @@ function ItemChildren({
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
+  isSelectionMode?: boolean;
+  onToggleSelection?: (id: string) => void;
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
@@ -718,6 +786,9 @@ function ItemChildren({
 
   if (!data?.data.length) return null;
 
+  // Get selection store for checking selection state
+  const { selectedIds: globalSelectedIds } = useSelectionStore();
+
   return (
     <>
       {data.data.map((item: Item & { childCount?: number }) => (
@@ -736,6 +807,9 @@ function ItemChildren({
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
+          isSelectionMode={isSelectionMode}
+          isSelected={globalSelectedIds.has(item.id)}
+          onToggleSelection={onToggleSelection}
         />
       ))}
     </>
@@ -757,6 +831,9 @@ function DraggableChildItem({
   onMove,
   globalOverId,
   globalDropMode,
+  isSelectionMode,
+  isSelected,
+  onToggleSelection,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -771,6 +848,9 @@ function DraggableChildItem({
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
 }) {
   const {
     attributes,
@@ -790,6 +870,14 @@ function DraggableChildItem({
   const Icon = TYPE_ICONS[item.type];
   const hasChildren = (item.childCount || 0) > 0;
 
+  const handleClick = () => {
+    if (isSelectionMode && onToggleSelection) {
+      onToggleSelection(item.id);
+    } else {
+      onEdit(item.id);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style}>
       {isOver && dropMode === 'reorder' && (
@@ -798,18 +886,28 @@ function DraggableChildItem({
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer ${
           isOver && dropMode === 'nest' ? 'bg-blue-100 border-2 border-dashed border-blue-500' : ''
-        }`}
+        } ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
-        onClick={() => onEdit(item.id)}
+        onClick={handleClick}
       >
-        <button
-          {...attributes}
-          {...listeners}
-          className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
-        </button>
+        {isSelectionMode ? (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelection?.(item.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded"
+          />
+        ) : (
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
 
         {hasChildren ? (
           <button
@@ -878,6 +976,8 @@ function DraggableChildItem({
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
+          isSelectionMode={isSelectionMode}
+          onToggleSelection={onToggleSelection}
         />
       )}
     </div>

@@ -328,6 +328,18 @@ export const itemsApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  bulkMove: (
+    spaceId: string,
+    data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean }
+  ) =>
+    fetchApi<{ success: boolean; movedCount: number; targetSpaceId: string }>(
+      `/spaces/${spaceId}/items/bulk-move`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
 };
 
 // Tags
