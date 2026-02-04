@@ -16,7 +16,7 @@ export function UsersPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', { page, search }],
-    queryFn: () => adminApi.users.list({ page, pageSize: 20, search: search || undefined }),
+    queryFn: () => adminApi.users.list({ page, pageSize: 100, search: search || undefined }),
   });
 
   const deleteMutation = useMutation({
@@ -36,6 +36,77 @@ export function UsersPage() {
     e.preventDefault();
     setPage(1);
   };
+
+  // Séparer les utilisateurs par rôle
+  const adminUsers = data?.data.filter((u) => u.globalRole === 'ADMIN') || [];
+  const regularUsers = data?.data.filter((u) => u.globalRole === 'USER') || [];
+
+  const UserTable = ({ users }: { users: AdminUser[] }) => (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-muted">
+          <tr>
+            <th className="px-4 py-3 text-left text-sm font-medium">Nom</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">Espaces</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">Date creation</th>
+            <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {users.map((user) => (
+            <tr key={user.id} className="hover:bg-muted/50">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                  {user.globalRole === 'ADMIN' ? (
+                    <Shield className="w-4 h-4 text-primary" />
+                  ) : (
+                    <User className="w-4 h-4 text-muted-foreground" />
+                  )}
+                  {user.name}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+              <td className="px-4 py-3 text-muted-foreground">
+                {user._count?.memberships ?? 0}
+              </td>
+              <td className="px-4 py-3 text-muted-foreground">
+                {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setModalUserId(user.id)}
+                    title="Voir / Modifier"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(user)}
+                    disabled={deleteMutation.isPending}
+                    title="Supprimer"
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          ))}
+          {users.length === 0 && (
+            <tr>
+              <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                Aucun utilisateur trouve
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="p-6">
@@ -67,106 +138,37 @@ export function UsersPage() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
-        <>
-          <div className="border border-border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Nom</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Role</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Espaces</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Date creation</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data?.data.map((user) => (
-                  <tr key={user.id} className="hover:bg-muted/50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {user.globalRole === 'ADMIN' ? (
-                          <Shield className="w-4 h-4 text-primary" />
-                        ) : (
-                          <User className="w-4 h-4 text-muted-foreground" />
-                        )}
-                        {user.name}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          user.globalRole === 'ADMIN'
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {user.globalRole === 'ADMIN' ? 'Admin' : 'Utilisateur'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {user._count?.memberships ?? 0}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setModalUserId(user.id)}
-                          title="Voir / Modifier"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(user)}
-                          disabled={deleteMutation.isPending}
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="space-y-8">
+          {/* Administrateurs */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Administrateurs
+              <span className="text-sm font-normal text-muted-foreground">
+                ({adminUsers.length})
+              </span>
+            </h2>
+            <UserTable users={adminUsers} />
           </div>
 
-          {data && data.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-muted-foreground">
-                {data.pagination.total} utilisateur(s) au total
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Precedent
-                </Button>
-                <span className="text-sm">
-                  Page {page} sur {data.pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                  disabled={page === data.pagination.totalPages}
-                >
-                  Suivant
-                </Button>
-              </div>
-            </div>
+          {/* Utilisateurs */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-muted-foreground" />
+              Utilisateurs
+              <span className="text-sm font-normal text-muted-foreground">
+                ({regularUsers.length})
+              </span>
+            </h2>
+            <UserTable users={regularUsers} />
+          </div>
+
+          {data && (
+            <p className="text-sm text-muted-foreground text-center">
+              {data.pagination.total} utilisateur(s) au total
+            </p>
           )}
-        </>
+        </div>
       )}
 
       {modalUserId !== undefined && (

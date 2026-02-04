@@ -13,8 +13,8 @@ interface AdminSpace {
   createdAt: string;
   memberCount: number;
   itemCount: number;
-  owner?: { id: string; name: string; email: string };
-  community?: { id: string; name: string };
+  owner: { id: string; name: string; email: string } | null;
+  community: { id: string; name: string } | null;
 }
 
 export function SpacesPage() {
