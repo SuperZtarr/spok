@@ -7,7 +7,7 @@ export type AuditAction =
   | 'ADD_RELATION'
   | 'DELETE_RELATION';
 
-export type AuditEntity = 'Item' | 'ItemRelation';
+export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution';
 
 export interface AuditLogChanges {
   before?: Record<string, unknown>;
