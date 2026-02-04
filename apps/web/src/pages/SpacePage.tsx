@@ -677,6 +677,7 @@ export function SpacePage() {
           ) : viewMode === 'mindmap' ? (
             <MindMapView
               items={allItemsData?.data || []}
+              spaceName={space?.name || 'Espace'}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}

@@ -15,10 +15,11 @@ import '@xyflow/react/dist/style.css';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react';
 
 interface MindMapViewProps {
   items: Item[];
+  spaceName?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -221,8 +222,42 @@ function MindMapNode({ data }: MindMapNodeProps) {
   );
 }
 
+// Space node component (central node)
+interface SpaceNodeProps {
+  data: {
+    label: string;
+    spaceName: string;
+    itemCount: number;
+  };
+}
+
+function SpaceNode({ data }: SpaceNodeProps) {
+  const { spaceName, itemCount } = data;
+
+  return (
+    <div
+      className="px-6 py-3 rounded-xl shadow-lg border-3 border-primary bg-primary/10 min-w-[140px] cursor-default"
+    >
+      {/* Handles on all sides for radial connections */}
+      <Handle type="source" position={Position.Top} className="!bg-primary !w-3 !h-3" id="top-source" />
+      <Handle type="source" position={Position.Bottom} className="!bg-primary !w-3 !h-3" id="bottom-source" />
+      <Handle type="source" position={Position.Left} className="!bg-primary !w-3 !h-3" id="left-source" />
+      <Handle type="source" position={Position.Right} className="!bg-primary !w-3 !h-3" id="right-source" />
+
+      <div className="flex items-center gap-2">
+        <FolderOpen className="w-5 h-5 text-primary flex-shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-base font-bold text-primary">{spaceName}</span>
+          <span className="text-xs text-muted-foreground">{itemCount} élément{itemCount > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const nodeTypes = {
   mindmap: MindMapNode,
+  space: SpaceNode,
 };
 
 // Layout constants for radial layout
@@ -265,12 +300,16 @@ function calculateLayout(
   tree: TreeItem[],
   statuses: StatusConfig[],
   collapsedIds: Set<string>,
+  spaceName: string,
+  totalItemCount: number,
   onEdit: (id: string) => void,
   onAddChild: (id: string) => void,
   onToggleCollapse: (id: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+
+  const SPACE_NODE_ID = '__space__';
 
   function processNode(
     item: TreeItem,
@@ -288,16 +327,17 @@ function calculateLayout(
     const isCollapsed = collapsedIds.has(item.id);
     const childCount = countDescendants(item);
 
-    // Calculate position
+    // Calculate position based on angle and radius
+    // depth 1 = root items (around space node), depth 2+ = children
     let x: number, y: number;
 
-    if (depth === 0) {
-      // Root node at center
+    if (depth === 1) {
+      // Root items are placed at centerX, centerY (already calculated by caller)
       x = centerX;
       y = centerY;
     } else {
-      // Calculate position based on angle and radius
-      const radius = BASE_RADIUS + (depth - 1) * RADIUS_INCREMENT;
+      // Children are placed around their parent
+      const radius = RADIUS_INCREMENT;
       const angle = (startAngle + endAngle) / 2;
       x = centerX + Math.cos(angle) * radius;
       y = centerY + Math.sin(angle) * radius;
@@ -372,24 +412,56 @@ function calculateLayout(
     }
   }
 
-  // Process all root nodes
-  if (tree.length === 1) {
-    // Single root: place at center with children around it
-    processNode(tree[0], 0, null, 0, 0, 0, 2 * Math.PI);
-  } else {
-    // Multiple roots: distribute them in a circle
-    const rootRadius = tree.length > 3 ? BASE_RADIUS : BASE_RADIUS / 2;
-    tree.forEach((rootItem, index) => {
-      const angle = (2 * Math.PI * index) / tree.length - Math.PI / 2;
-      const x = Math.cos(angle) * rootRadius;
-      const y = Math.sin(angle) * rootRadius;
+  // Add central space node
+  nodes.push({
+    id: SPACE_NODE_ID,
+    type: 'space',
+    position: { x: -70, y: -25 }, // Center the space node
+    data: {
+      label: spaceName,
+      spaceName,
+      itemCount: totalItemCount,
+    },
+  });
 
-      // Calculate angle span for this root's subtree
-      const angleSpan = (2 * Math.PI) / tree.length;
-      const startAngle = angle - angleSpan / 2;
-      const endAngle = angle + angleSpan / 2;
+  // Process all root nodes around the space node
+  if (tree.length > 0) {
+    const totalSubtreeSize = tree.reduce(
+      (sum, item) => sum + calculateSubtreeSize(item, collapsedIds),
+      0
+    );
 
-      processNode(rootItem, 0, null, x, y, startAngle, endAngle);
+    let currentAngle = -Math.PI / 2; // Start from top
+    const angleRange = 2 * Math.PI;
+
+    tree.forEach(rootItem => {
+      const itemSize = calculateSubtreeSize(rootItem, collapsedIds);
+      const itemAngleSpan = (itemSize / totalSubtreeSize) * angleRange;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + itemAngleSpan;
+      const midAngle = (startAngle + endAngle) / 2;
+
+      // Position root items around the space node
+      const x = Math.cos(midAngle) * BASE_RADIUS;
+      const y = Math.sin(midAngle) * BASE_RADIUS;
+
+      // Add edge from space to root item
+      const sourceHandle = getHandleFromAngle(midAngle) + '-source';
+      const targetHandle = getHandleFromAngle(midAngle + Math.PI);
+
+      edges.push({
+        id: `${SPACE_NODE_ID}-${rootItem.id}`,
+        source: SPACE_NODE_ID,
+        target: rootItem.id,
+        sourceHandle,
+        targetHandle,
+        type: 'default',
+        style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
+      });
+
+      processNode(rootItem, 1, SPACE_NODE_ID, x, y, startAngle, endAngle, midAngle);
+
+      currentAngle = endAngle;
     });
   }
 
@@ -398,6 +470,7 @@ function calculateLayout(
 
 export function MindMapView({
   items,
+  spaceName = 'Espace',
   onEdit,
   onDelete: _onDelete,
   onUpdateStatus: _onUpdateStatus,
@@ -425,23 +498,26 @@ export function MindMapView({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges } = calculateLayout(tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse);
+    const { nodes, edges } = calculateLayout(tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
     return { initialNodes: nodes, initialEdges: edges };
-  }, [tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse]);
+  }, [tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Update nodes when items or collapsed state change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse);
+    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse, setNodes, setEdges]);
+  }, [tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges]);
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      onEdit(node.id);
+      // Don't try to edit the space node
+      if (node.id !== '__space__') {
+        onEdit(node.id);
+      }
     },
     [onEdit]
   );
