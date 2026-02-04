@@ -1,42 +1,22 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Shield, User, Building2 } from 'lucide-react';
+import { Plus, Search, Trash2, Shield, User, Eye } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { UserFormModal } from '../../components/admin/UserFormModal';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
-import type { AdminUser, CreateUserInput, UpdateUserInput } from '@spok/shared';
+import type { AdminUser } from '@spok/shared';
 
 export function UsersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
+  // undefined = modal fermé, null = création, string = édition
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', { page, search }],
     queryFn: () => adminApi.users.list({ page, pageSize: 20, search: search || undefined }),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: CreateUserInput) => adminApi.users.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      setIsModalOpen(false);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateUserInput }) =>
-      adminApi.users.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      setIsModalOpen(false);
-      setEditingUser(null);
-    },
   });
 
   const deleteMutation = useMutation({
@@ -46,27 +26,9 @@ export function UsersPage() {
     },
   });
 
-  const handleCreate = () => {
-    setEditingUser(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (user: AdminUser) => {
-    setEditingUser(user);
-    setIsModalOpen(true);
-  };
-
   const handleDelete = async (user: AdminUser) => {
     if (confirm(`Supprimer l'utilisateur ${user.name} ?`)) {
       deleteMutation.mutate(user.id);
-    }
-  };
-
-  const handleSubmit = (data: CreateUserInput | UpdateUserInput) => {
-    if (editingUser) {
-      updateMutation.mutate({ id: editingUser.id, data });
-    } else {
-      createMutation.mutate(data as CreateUserInput);
     }
   };
 
@@ -79,7 +41,7 @@ export function UsersPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Utilisateurs</h1>
-        <Button onClick={handleCreate}>
+        <Button onClick={() => setModalUserId(null)}>
           <Plus className="w-4 h-4 mr-2" />
           Nouvel utilisateur
         </Button>
@@ -154,18 +116,10 @@ export function UsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedUserId(user.id)}
-                          title="Communautés"
+                          onClick={() => setModalUserId(user.id)}
+                          title="Voir / Modifier"
                         >
-                          <Building2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(user)}
-                          title="Modifier"
-                        >
-                          <Pencil className="w-4 h-4" />
+                          <Eye className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -215,22 +169,10 @@ export function UsersPage() {
         </>
       )}
 
-      <UserFormModal
-        open={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingUser(null);
-        }}
-        onSubmit={handleSubmit}
-        user={editingUser}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-        error={createMutation.error?.message || updateMutation.error?.message}
-      />
-
-      {selectedUserId && (
+      {modalUserId !== undefined && (
         <UserDetailModal
-          userId={selectedUserId}
-          onClose={() => setSelectedUserId(null)}
+          userId={modalUserId}
+          onClose={() => setModalUserId(undefined)}
         />
       )}
     </div>

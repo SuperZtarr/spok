@@ -1,32 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, FolderKanban, Plus, Trash2 } from 'lucide-react';
+import { User, Building2, FolderKanban, Plus, Trash2, Save } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Modal } from '../ui/Modal';
-import type { CommunityRole, Role } from '@spok/shared';
+import type { CommunityRole, Role, GlobalRole } from '@spok/shared';
 
 interface UserDetailModalProps {
-  userId: string;
+  userId: string | null; // null = création
   onClose: () => void;
 }
 
+const globalRoleOptions = [
+  { value: 'USER', label: 'Utilisateur' },
+  { value: 'ADMIN', label: 'Administrateur' },
+];
+
 const communityRoleOptions = [
-  { value: 'OWNER', label: 'Propriétaire' },
+  { value: 'OWNER', label: 'Proprietaire' },
   { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
 ];
 
 const spaceRoleOptions = [
-  { value: 'OWNER', label: 'Propriétaire' },
+  { value: 'OWNER', label: 'Proprietaire' },
   { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
   { value: 'VIEWER', label: 'Lecteur' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
-  OWNER: 'Propriétaire',
+  OWNER: 'Proprietaire',
   ADMIN: 'Admin',
   MEMBER: 'Membre',
   VIEWER: 'Lecteur',
@@ -34,20 +40,40 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   const queryClient = useQueryClient();
+  const isCreating = !userId;
+
+  // User info
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editGlobalRole, setEditGlobalRole] = useState<GlobalRole>('USER');
+
+  // Community states
   const [showAddCommunity, setShowAddCommunity] = useState(false);
   const [selectedCommunityId, setSelectedCommunityId] = useState('');
-  const [selectedRole, setSelectedRole] = useState<CommunityRole>('MEMBER');
+  const [selectedCommunityRole, setSelectedCommunityRole] = useState<CommunityRole>('MEMBER');
 
   // Space states
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [selectedSpaceRole, setSelectedSpaceRole] = useState<Role>('MEMBER');
 
+  // Fetch user (only if editing)
   const { data: user, isLoading } = useQuery({
     queryKey: ['admin', 'user', userId],
-    queryFn: () => adminApi.users.get(userId),
+    queryFn: () => adminApi.users.get(userId!),
     enabled: !!userId,
   });
+
+  // Initialize form when user loads
+  useEffect(() => {
+    if (user) {
+      setEditName(user.name);
+      setEditEmail(user.email);
+      setEditGlobalRole(user.globalRole);
+      setEditPassword('');
+    }
+  }, [user]);
 
   const { data: communitiesData } = useQuery({
     queryKey: ['admin', 'communities'],
@@ -59,58 +85,102 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     queryFn: () => adminApi.spaces.list({ pageSize: 100 }),
   });
 
-  const addToCommunityMutation = useMutation({
-    mutationFn: (data: { communityId: string; role: CommunityRole }) =>
-      adminApi.users.addToCommunity(userId, data),
+  // Create user
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; email: string; password: string; globalRole: GlobalRole }) =>
+      adminApi.users.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      onClose();
+    },
+  });
+
+  // Update user
+  const updateMutation = useMutation({
+    mutationFn: (data: { name?: string; email?: string; password?: string; globalRole?: GlobalRole }) =>
+      adminApi.users.update(userId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      queryClient.invalidateQueries({ queryKey: ['communities'] });
+    },
+  });
+
+  // Community mutations
+  const addToCommunityMutation = useMutation({
+    mutationFn: (data: { communityId: string; role: CommunityRole }) =>
+      adminApi.users.addToCommunity(userId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       setShowAddCommunity(false);
       setSelectedCommunityId('');
-      setSelectedRole('MEMBER');
     },
   });
 
   const removeFromCommunityMutation = useMutation({
-    mutationFn: (communityId: string) => adminApi.users.removeFromCommunity(userId, communityId),
+    mutationFn: (communityId: string) => adminApi.users.removeFromCommunity(userId!, communityId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      queryClient.invalidateQueries({ queryKey: ['communities'] });
     },
   });
 
+  // Space mutations
   const addToSpaceMutation = useMutation({
     mutationFn: (data: { spaceId: string; role: Role }) =>
-      adminApi.users.addToSpace(userId, data),
+      adminApi.users.addToSpace(userId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
       setShowAddSpace(false);
       setSelectedSpaceId('');
-      setSelectedSpaceRole('MEMBER');
     },
   });
 
   const removeFromSpaceMutation = useMutation({
-    mutationFn: (spaceId: string) => adminApi.users.removeFromSpace(userId, spaceId),
+    mutationFn: (spaceId: string) => adminApi.users.removeFromSpace(userId!, spaceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
     },
   });
 
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({
+      name: editName,
+      email: editEmail,
+      password: editPassword,
+      globalRole: editGlobalRole,
+    });
+  };
+
+  const handleSaveInfo = () => {
+    const updates: { name?: string; email?: string; password?: string; globalRole?: GlobalRole } = {};
+    if (editName !== user?.name) updates.name = editName;
+    if (editEmail !== user?.email) updates.email = editEmail;
+    if (editGlobalRole !== user?.globalRole) updates.globalRole = editGlobalRole;
+    if (editPassword) updates.password = editPassword;
+    if (Object.keys(updates).length > 0) {
+      updateMutation.mutate(updates);
+    }
+  };
+
+  const hasInfoChanges = user && (
+    editName !== user.name ||
+    editEmail !== user.email ||
+    editGlobalRole !== user.globalRole ||
+    editPassword.length > 0
+  );
+
   const handleAddToCommunity = () => {
     if (selectedCommunityId) {
-      addToCommunityMutation.mutate({ communityId: selectedCommunityId, role: selectedRole });
+      addToCommunityMutation.mutate({ communityId: selectedCommunityId, role: selectedCommunityRole });
     }
   };
 
   const handleRemoveFromCommunity = (communityId: string, communityName: string) => {
-    if (confirm(`Retirer l'utilisateur de la communauté "${communityName}" ?`)) {
+    if (confirm(`Retirer l'utilisateur de la communaute "${communityName}" ?`)) {
       removeFromCommunityMutation.mutate(communityId);
     }
   };
@@ -127,54 +197,155 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     }
   };
 
-  // Filter out communities the user is already a member of
+  // Filter available communities and spaces
   const existingCommunityIds = user?.communityMemberships?.map((m) => m.community.id) || [];
   const availableCommunities = communitiesData?.data.filter((c) => !existingCommunityIds.includes(c.id)) || [];
 
-  const communityOptions = [
-    { value: '', label: 'Sélectionner une communauté' },
-    ...availableCommunities.map((c) => ({ value: c.id, label: c.name })),
-  ];
-
-  // Filter out spaces the user is already a member of, and personal spaces
   const existingSpaceIds = user?.memberships?.map((m) => m.space.id) || [];
   const availableSpaces = spacesData?.data.filter(
     (s) => !existingSpaceIds.includes(s.id) && s.type !== 'PERSONAL'
   ) || [];
 
+  const communityOptions = [
+    { value: '', label: 'Selectionner une communaute' },
+    ...availableCommunities.map((c) => ({ value: c.id, label: c.name })),
+  ];
+
   const spaceOptions = [
-    { value: '', label: 'Sélectionner un espace' },
+    { value: '', label: 'Selectionner un espace' },
     ...availableSpaces.map((s) => ({ value: s.id, label: s.name })),
   ];
 
+  // Creation form
+  if (isCreating) {
+    return (
+      <Modal isOpen={true} onClose={onClose} title="Nouvel utilisateur">
+        <form onSubmit={handleCreate} className="space-y-4">
+          {createMutation.error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+              {createMutation.error.message}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Nom</label>
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Nom complet"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <Input
+              type="email"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              placeholder="email@exemple.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Mot de passe</label>
+            <Input
+              type="password"
+              value={editPassword}
+              onChange={(e) => setEditPassword(e.target.value)}
+              placeholder="********"
+              required
+              minLength={8}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Role</label>
+            <Select
+              value={editGlobalRole}
+              onChange={(e) => setEditGlobalRole(e.target.value as GlobalRole)}
+              options={globalRoleOptions}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Creation...' : 'Creer'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    );
+  }
+
+  // Detail/edit view
   return (
-    <Modal isOpen={true} onClose={onClose} title="Détails de l'utilisateur" className="max-w-2xl">
+    <Modal isOpen={true} onClose={onClose} title="Details de l'utilisateur" className="max-w-2xl">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : user ? (
         <div className="space-y-6">
           {/* User info */}
           <div className="space-y-4">
-            <h3 className="font-medium">Informations</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Nom:</span>{' '}
-                <span className="font-medium">{user.name}</span>
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              <h3 className="font-medium">Informations</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nom</label>
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <Input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <span className="text-muted-foreground">Email:</span>{' '}
-                <span className="font-medium">{user.email}</span>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Mot de passe</label>
+                  <Input
+                    type="password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Laisser vide pour ne pas changer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role global</label>
+                  <Select
+                    value={editGlobalRole}
+                    onChange={(e) => setEditGlobalRole(e.target.value as GlobalRole)}
+                    options={globalRoleOptions}
+                  />
+                </div>
               </div>
-              <div>
-                <span className="text-muted-foreground">Rôle global:</span>{' '}
-                <span className="font-medium">
-                  {user.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Espaces:</span>{' '}
-                <span className="font-medium">{user._count?.memberships || 0}</span>
-              </div>
+              {hasInfoChanges && (
+                <Button
+                  size="sm"
+                  onClick={handleSaveInfo}
+                  disabled={updateMutation.isPending}
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                </Button>
+              )}
+              {updateMutation.error && (
+                <p className="text-sm text-destructive">{updateMutation.error.message}</p>
+              )}
             </div>
           </div>
 
@@ -183,7 +354,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
             <div className="flex items-center justify-between">
               <h3 className="font-medium flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
-                Communautés ({user.communityMemberships?.length || 0})
+                Communautes ({user.communityMemberships?.length || 0})
               </h3>
               {availableCommunities.length > 0 && (
                 <Button
@@ -207,8 +378,8 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                     className="flex-1"
                   />
                   <Select
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value as CommunityRole)}
+                    value={selectedCommunityRole}
+                    onChange={(e) => setSelectedCommunityRole(e.target.value as CommunityRole)}
                     options={communityRoleOptions}
                     className="w-36"
                   />
@@ -219,7 +390,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                     onClick={handleAddToCommunity}
                     disabled={!selectedCommunityId || addToCommunityMutation.isPending}
                   >
-                    Ajouter à la communauté
+                    Ajouter
                   </Button>
                   <Button
                     size="sm"
@@ -236,7 +407,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
             )}
 
             {user.communityMemberships && user.communityMemberships.length > 0 ? (
-              <div className="border border-border rounded-lg divide-y divide-border">
+              <div className="border border-border rounded-lg divide-y divide-border max-h-40 overflow-auto">
                 {user.communityMemberships.map((membership) => (
                   <div key={membership.id} className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-2">
@@ -259,7 +430,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded-lg">
-                Cet utilisateur n'appartient à aucune communauté
+                Aucune communaute
               </p>
             )}
           </div>
@@ -305,7 +476,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                     onClick={handleAddToSpace}
                     disabled={!selectedSpaceId || addToSpaceMutation.isPending}
                   >
-                    Ajouter à l'espace
+                    Ajouter
                   </Button>
                   <Button
                     size="sm"
@@ -322,7 +493,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
             )}
 
             {user.memberships && user.memberships.filter(m => m.space.type !== 'PERSONAL').length > 0 ? (
-              <div className="border border-border rounded-lg divide-y divide-border">
+              <div className="border border-border rounded-lg divide-y divide-border max-h-40 overflow-auto">
                 {user.memberships
                   .filter(m => m.space.type !== 'PERSONAL')
                   .map((membership) => (
@@ -347,13 +518,13 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded-lg">
-                Cet utilisateur n'appartient à aucun espace de groupe
+                Aucun espace de groupe
               </p>
             )}
           </div>
         </div>
       ) : (
-        <div className="py-8 text-center text-muted-foreground">Utilisateur non trouvé</div>
+        <div className="py-8 text-center text-muted-foreground">Utilisateur non trouve</div>
       )}
     </Modal>
   );
