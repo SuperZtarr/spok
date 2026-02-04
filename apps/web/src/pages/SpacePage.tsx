@@ -50,6 +50,7 @@ import { ListView } from '../components/views/ListView';
 import { SequenceView } from '../components/views/SequenceView';
 import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
+import { TimelineView } from '../components/views/TimelineView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
@@ -662,6 +663,15 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               referentiels={referentiels}
             />
+          ) : viewMode === 'timeline' ? (
+            <TimelineView
+              items={itemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
+            />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -714,26 +724,38 @@ export function SpacePage() {
               </SortableContext>
               <DragOverlay>
                 {activeItem ? (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-card border rounded-md shadow-lg">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-card border-2 border-primary rounded-md shadow-xl">
                       {TYPE_ICONS[activeItem.type] && (
                         <span className="w-4 h-4 text-muted-foreground">
                           {(() => { const Icon = TYPE_ICONS[activeItem.type]; return <Icon className="w-4 h-4" />; })()}
                         </span>
                       )}
-                      <span className="truncate">{activeItem.title}</span>
+                      <span className="truncate font-medium">{activeItem.title}</span>
                     </div>
-                    {overId && overId !== 'root' && (
-                      <div className={`text-xs mt-1 px-2 py-1 rounded ${
-                        dropMode === 'nest'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {dropMode === 'nest'
-                          ? '↳ Imbriquer comme enfant (Shift)'
-                          : '↕ Réordonner • Shift = imbriquer'}
-                      </div>
-                    )}
+                    <div className={`text-xs px-3 py-2 rounded-md shadow-lg ${
+                      dropMode === 'nest'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-white'
+                    }`}>
+                      {dropMode === 'nest' ? (
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1 font-semibold">
+                            <span>↳</span>
+                            <span>Mode: Imbriquer comme enfant</span>
+                          </div>
+                          <div className="opacity-75 text-[10px]">Relâchez Shift pour réordonner</div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1 font-semibold">
+                            <span>↕</span>
+                            <span>Mode: Réordonner</span>
+                          </div>
+                          <div className="opacity-75 text-[10px]">Maintenez Shift pour imbriquer</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : null}
               </DragOverlay>
@@ -862,13 +884,26 @@ function SortableItem({
 
   return (
     <div ref={setNodeRef} style={style}>
-      {/* Drop indicator for reorder mode */}
+      {/* Drop indicator for reorder mode - place above this item */}
       {isOver && dropMode === 'reorder' && (
-        <div className="h-0.5 bg-primary mx-3 rounded-full" />
+        <div className="relative mx-3 my-1">
+          <div className="h-1 bg-primary rounded-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded whitespace-nowrap">
+            Placer ici
+          </span>
+        </div>
+      )}
+      {/* Nest indicator - becomes child of this item */}
+      {isOver && dropMode === 'nest' && (
+        <div className="mx-3 mb-1 px-3 py-1 bg-blue-100 border-2 border-dashed border-blue-500 rounded-md text-xs text-blue-700 flex items-center gap-1">
+          <span>↳</span>
+          <span>Imbriquer comme enfant de "{item.title}"</span>
+        </div>
       )}
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer ${
-          isOver && dropMode === 'nest' ? 'bg-blue-100 border-2 border-dashed border-blue-500' : ''
+          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50' : ''
         } ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
@@ -1135,12 +1170,26 @@ function DraggableChildItem({
 
   return (
     <div ref={setNodeRef} style={style}>
+      {/* Drop indicator for reorder mode - place above this item */}
       {isOver && dropMode === 'reorder' && (
-        <div className="h-0.5 bg-primary mx-3 rounded-full" />
+        <div className="relative mx-3 my-1" style={{ marginLeft: `${12 + depth * 24}px` }}>
+          <div className="h-1 bg-primary rounded-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded whitespace-nowrap">
+            Placer ici
+          </span>
+        </div>
+      )}
+      {/* Nest indicator - becomes child of this item */}
+      {isOver && dropMode === 'nest' && (
+        <div className="mx-3 mb-1 px-3 py-1 bg-blue-100 border-2 border-dashed border-blue-500 rounded-md text-xs text-blue-700 flex items-center gap-1" style={{ marginLeft: `${12 + depth * 24}px` }}>
+          <span>↳</span>
+          <span>Imbriquer comme enfant de "{item.title}"</span>
+        </div>
       )}
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer ${
-          isOver && dropMode === 'nest' ? 'bg-blue-100 border-2 border-dashed border-blue-500' : ''
+          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50' : ''
         } ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}

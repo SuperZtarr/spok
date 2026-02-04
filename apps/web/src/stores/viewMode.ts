@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline';
 
 export const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
   { value: 'list', label: 'Liste', icon: 'List' },
@@ -9,6 +9,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
   { value: 'sequence', label: 'Séquence', icon: 'ArrowDownUp' },
   { value: 'kanban', label: 'Kanban', icon: 'Columns3' },
   { value: 'types', label: 'Types', icon: 'LayoutGrid' },
+  { value: 'timeline', label: 'Planning', icon: 'GanttChart' },
   { value: 'mindmap', label: 'Carte mentale', icon: 'Share2' },
 ];
 
