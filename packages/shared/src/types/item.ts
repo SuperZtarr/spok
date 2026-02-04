@@ -1,4 +1,4 @@
-export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'APPOINTMENT' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE';
+export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE';
 
 export interface Item {
   id: string;
@@ -11,6 +11,8 @@ export interface Item {
   priority?: number | null;
   position: number;
   dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   createdAt: string;
   updatedAt: string;
   spaceId: string;
@@ -40,6 +42,8 @@ export interface CreateItemInput {
   status?: string;
   priority?: number;
   dueDate?: string;
+  startDate?: string;
+  endDate?: string;
   parentId?: string;
   tagIds?: string[];
 }
@@ -53,6 +57,8 @@ export interface UpdateItemInput {
   status?: string;
   priority?: number;
   dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   parentId?: string | null;
   tagIds?: string[];
 }
