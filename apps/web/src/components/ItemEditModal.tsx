@@ -7,7 +7,6 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
-import { BBCodeText } from './BBCodeText';
 import { TYPE_LABELS, STATUS_OPTIONS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 
@@ -360,17 +359,18 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
-            {/* Pour les éléments du forum: affichage formaté + édition cachée */}
-            {item?.content && (item.content as { forumTopicId?: number }).forumTopicId && description ? (
+            {/* Pour les éléments du forum (HTML): affichage formaté + édition cachée */}
+            {item?.content && (item.content as { isHtml?: boolean }).isHtml && description ? (
               <div className="space-y-2">
-                {/* Aperçu formaté BBCode */}
-                <div className="max-h-[250px] overflow-y-auto p-3 bg-muted/50 rounded-md border border-border">
-                  <BBCodeText content={description} className="text-sm" />
-                </div>
+                {/* Aperçu HTML */}
+                <div
+                  className="max-h-[250px] overflow-y-auto p-3 bg-muted/50 rounded-md border border-border prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
                 {/* Bouton pour éditer le source */}
                 <details className="text-sm">
                   <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                    Modifier le texte source
+                    Modifier le code source
                   </summary>
                   <textarea
                     value={description}
@@ -664,9 +664,12 @@ export function ItemEditModal({
                       </div>
                     ) : (
                       <>
-                        {/* BBCode uniquement pour les éléments du forum */}
-                        {item?.content && (item.content as { forumTopicId?: number }).forumTopicId ? (
-                          <BBCodeText content={contribution.content} className="text-sm" />
+                        {/* HTML pour les éléments du forum */}
+                        {item?.content && (item.content as { isHtml?: boolean }).isHtml ? (
+                          <div
+                            className="prose prose-sm dark:prose-invert max-w-none"
+                            dangerouslySetInnerHTML={{ __html: contribution.content }}
+                          />
                         ) : (
                           <p className="text-sm whitespace-pre-wrap">{contribution.content}</p>
                         )}
