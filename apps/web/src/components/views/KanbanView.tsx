@@ -114,10 +114,10 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
               {item.description}
             </p>
           )}
-          {item.type === 'APPOINTMENT' && item.dueDate && (
+          {item.type === 'MEETING' && item.startDate && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               <Calendar className="w-3 h-3" />
-              {formatDate(item.dueDate)}
+              {formatDate(item.startDate)}
             </div>
           )}
         </div>

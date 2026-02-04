@@ -89,10 +89,10 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
 
             <span className="flex-1 truncate">{item.title}</span>
 
-            {item.type === 'APPOINTMENT' && item.dueDate && (
+            {item.type === 'MEETING' && item.startDate && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className="w-3 h-3" />
-                {formatDate(item.dueDate)}
+                {formatDate(item.startDate)}
               </span>
             )}
 

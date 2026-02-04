@@ -117,10 +117,10 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
                       <Badge variant="secondary" className="text-xs">
                         {statusLabel}
                       </Badge>
-                      {item.type === 'APPOINTMENT' && item.dueDate && (
+                      {item.type === 'MEETING' && item.startDate && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="w-3 h-3" />
-                          {formatDate(item.dueDate)}
+                          {formatDate(item.startDate)}
                         </span>
                       )}
                     </div>
