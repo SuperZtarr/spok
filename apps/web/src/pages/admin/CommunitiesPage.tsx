@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Building2, Users, FolderKanban, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, Eye } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { CommunityFormModal } from '../../components/admin/CommunityFormModal';
 import { CommunityDetailModal } from '../../components/admin/CommunityDetailModal';
-import type { CreateCommunityInput, UpdateCommunityInput } from '@spok/shared';
 
 interface AdminCommunity {
   id: string;
@@ -22,33 +20,12 @@ export function CommunitiesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCommunity, setEditingCommunity] = useState<AdminCommunity | null>(null);
-  const [viewingCommunityId, setViewingCommunityId] = useState<string | null>(null);
+  const [modalCommunityId, setModalCommunityId] = useState<string | null | undefined>(undefined);
+  // undefined = modal fermé, null = création, string = édition
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'communities', { page, search }],
     queryFn: () => adminApi.communities.list({ page, pageSize: 20, search: search || undefined }),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: CreateCommunityInput & { ownerEmail?: string }) => adminApi.communities.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
-      queryClient.invalidateQueries({ queryKey: ['communities'] });
-      setIsModalOpen(false);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCommunityInput }) =>
-      adminApi.communities.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
-      queryClient.invalidateQueries({ queryKey: ['communities'] });
-      setIsModalOpen(false);
-      setEditingCommunity(null);
-    },
   });
 
   const deleteMutation = useMutation({
@@ -59,27 +36,9 @@ export function CommunitiesPage() {
     },
   });
 
-  const handleCreate = () => {
-    setEditingCommunity(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (community: AdminCommunity) => {
-    setEditingCommunity(community);
-    setIsModalOpen(true);
-  };
-
   const handleDelete = async (community: AdminCommunity) => {
     if (confirm(`Supprimer la communaute "${community.name}" ? Les espaces associes perdront leur lien avec cette communaute.`)) {
       deleteMutation.mutate(community.id);
-    }
-  };
-
-  const handleSubmit = (data: (CreateCommunityInput & { ownerEmail?: string }) | UpdateCommunityInput) => {
-    if (editingCommunity) {
-      updateMutation.mutate({ id: editingCommunity.id, data });
-    } else {
-      createMutation.mutate(data as CreateCommunityInput & { ownerEmail?: string });
     }
   };
 
@@ -92,7 +51,7 @@ export function CommunitiesPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Communautes</h1>
-        <Button onClick={handleCreate}>
+        <Button onClick={() => setModalCommunityId(null)}>
           <Plus className="w-4 h-4 mr-2" />
           Nouvelle communaute
         </Button>
@@ -163,18 +122,10 @@ export function CommunitiesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setViewingCommunityId(community.id)}
-                          title="Voir les details"
+                          onClick={() => setModalCommunityId(community.id)}
+                          title="Voir / Modifier"
                         >
                           <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(community)}
-                          title="Modifier"
-                        >
-                          <Pencil className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -231,22 +182,10 @@ export function CommunitiesPage() {
         </>
       )}
 
-      <CommunityFormModal
-        open={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingCommunity(null);
-        }}
-        onSubmit={handleSubmit}
-        community={editingCommunity}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-        error={createMutation.error?.message || updateMutation.error?.message}
-      />
-
-      {viewingCommunityId && (
+      {modalCommunityId !== undefined && (
         <CommunityDetailModal
-          communityId={viewingCommunityId}
-          onClose={() => setViewingCommunityId(null)}
+          communityId={modalCommunityId}
+          onClose={() => setModalCommunityId(undefined)}
         />
       )}
     </div>

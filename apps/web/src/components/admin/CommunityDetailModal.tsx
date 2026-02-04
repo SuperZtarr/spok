@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building2, Users, FolderKanban, Plus, Trash2, Save, UserPlus } from 'lucide-react';
 import { adminApi } from '../../lib/api';
@@ -6,10 +6,10 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Modal } from '../ui/Modal';
-import type { CommunityRole, Role } from '@spok/shared';
+import type { CommunityRole } from '@spok/shared';
 
 interface CommunityDetailModalProps {
-  communityId: string;
+  communityId: string | null; // null = création
   onClose: () => void;
 }
 
@@ -17,13 +17,6 @@ const memberRoleOptions = [
   { value: 'OWNER', label: 'Proprietaire' },
   { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
-];
-
-const spaceRoleOptions = [
-  { value: 'OWNER', label: 'Proprietaire' },
-  { value: 'ADMIN', label: 'Administrateur' },
-  { value: 'MEMBER', label: 'Membre' },
-  { value: 'VIEWER', label: 'Lecteur' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -35,11 +28,12 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function CommunityDetailModal({ communityId, onClose }: CommunityDetailModalProps) {
   const queryClient = useQueryClient();
+  const isCreating = !communityId;
 
   // Info editing
-  const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
 
   // Add member
   const [showAddMember, setShowAddMember] = useState(false);
@@ -50,12 +44,20 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
 
-  // Fetch community details
+  // Fetch community details (only if editing)
   const { data: community, isLoading } = useQuery({
     queryKey: ['admin', 'community', communityId],
-    queryFn: () => adminApi.communities.get(communityId),
+    queryFn: () => adminApi.communities.get(communityId!),
     enabled: !!communityId,
   });
+
+  // Initialize form when community loads
+  useEffect(() => {
+    if (community) {
+      setEditName(community.name);
+      setEditDescription(community.description || '');
+    }
+  }, [community]);
 
   // Fetch all users for adding members
   const { data: usersData } = useQuery({
@@ -70,21 +72,31 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     queryFn: () => adminApi.spaces.list({ pageSize: 100 }),
   });
 
+  // Create community
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; description?: string; ownerEmail?: string }) =>
+      adminApi.communities.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      onClose();
+    },
+  });
+
   // Update community
   const updateMutation = useMutation({
     mutationFn: (data: { name?: string; description?: string }) =>
-      adminApi.communities.update(communityId, data),
+      adminApi.communities.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'community', communityId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
-      setIsEditingInfo(false);
     },
   });
 
   // Add member
   const addMemberMutation = useMutation({
     mutationFn: (data: { email: string; role: CommunityRole }) =>
-      adminApi.communities.addMember(communityId, data),
+      adminApi.communities.addMember(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'community', communityId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
@@ -93,13 +105,12 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     },
   });
 
-  // Remove member (using the community members API)
+  // Remove member
   const removeMemberMutation = useMutation({
     mutationFn: (memberId: string) => {
-      // We need to find the user and remove them via user API
       const member = community?.members.find(m => m.id === memberId);
       if (member) {
-        return adminApi.users.removeFromCommunity(member.userId, communityId);
+        return adminApi.users.removeFromCommunity(member.userId, communityId!);
       }
       return Promise.reject(new Error('Member not found'));
     },
@@ -133,12 +144,13 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     },
   });
 
-  const handleStartEdit = () => {
-    if (community) {
-      setEditName(community.name);
-      setEditDescription(community.description || '');
-      setIsEditingInfo(true);
-    }
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({
+      name: editName,
+      description: editDescription || undefined,
+      ownerEmail: ownerEmail || undefined,
+    });
   };
 
   const handleSaveInfo = () => {
@@ -147,10 +159,13 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
     if (Object.keys(updates).length > 0) {
       updateMutation.mutate(updates);
-    } else {
-      setIsEditingInfo(false);
     }
   };
+
+  const hasInfoChanges = community && (
+    editName !== community.name ||
+    editDescription !== (community.description || '')
+  );
 
   const handleAddMember = (email: string) => {
     addMemberMutation.mutate({ email, role: selectedMemberRole });
@@ -189,6 +204,65 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     ...availableSpaces.map(s => ({ value: s.id, label: s.name })),
   ];
 
+  // Creation form
+  if (isCreating) {
+    return (
+      <Modal isOpen={true} onClose={onClose} title="Nouvelle communaute">
+        <form onSubmit={handleCreate} className="space-y-4">
+          {createMutation.error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+              {createMutation.error.message}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Nom</label>
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Nom de la communaute"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Description</label>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder="Description (optionnel)"
+              className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Proprietaire (email)</label>
+            <Input
+              type="email"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+              placeholder="Laisser vide pour vous designer comme proprietaire"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Si vide, vous serez le proprietaire de la communaute.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Creation...' : 'Creer'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    );
+  }
+
+  // Detail/edit view
   return (
     <Modal isOpen={true} onClose={onClose} title="Details de la communaute" className="max-w-3xl">
       {isLoading ? (
@@ -202,62 +276,36 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
               <h3 className="font-medium">Informations</h3>
             </div>
 
-            {isEditingInfo ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Nom</label>
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
-                  <Input
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Description (optionnel)"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveInfo}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    Enregistrer
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditingInfo(false)}
-                  >
-                    Annuler
-                  </Button>
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nom</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Nom:</span>{' '}
-                    <span className="font-medium">{community.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Description:</span>{' '}
-                    <span>{community.description || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Cree le:</span>{' '}
-                    <span>{new Date(community.createdAt).toLocaleDateString('fr-FR')}</span>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" onClick={handleStartEdit}>
-                  Modifier
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <Input
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Description (optionnel)"
+                />
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Cree le {new Date(community.createdAt).toLocaleDateString('fr-FR')}
+              </div>
+              {hasInfoChanges && (
+                <Button
+                  size="sm"
+                  onClick={handleSaveInfo}
+                  disabled={updateMutation.isPending}
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Members */}
