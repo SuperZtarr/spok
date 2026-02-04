@@ -68,6 +68,63 @@ export function SpacePage() {
   const [newItemUrl, setNewItemUrl] = useState('');
   const [newItemParentId, setNewItemParentId] = useState<string>('');
   const [newItemDueDate, setNewItemDueDate] = useState('');
+  const [newItemStartDate, setNewItemStartDate] = useState('');
+  const [newItemEndDate, setNewItemEndDate] = useState('');
+
+  // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Helper to get default dates for PROJECT type (today 00:00 -> tomorrow 00:00)
+  const getDefaultProjectDates = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return {
+      startDate: formatDateForInput(today),
+      endDate: formatDateForInput(tomorrow),
+    };
+  };
+
+  // Helper to get default dates for MEETING type (next hour -> +1h)
+  const getDefaultMeetingDates = () => {
+    const now = new Date();
+    // Round to next hour with 0 minutes
+    const startDate = new Date(now);
+    startDate.setHours(now.getHours() + 1, 0, 0, 0);
+    // End date is 1 hour after start
+    const endDate = new Date(startDate);
+    endDate.setHours(startDate.getHours() + 1);
+    return {
+      startDate: formatDateForInput(startDate),
+      endDate: formatDateForInput(endDate),
+    };
+  };
+
+  // Handle item type change with default dates for PROJECT, PERIOD and MEETING
+  const handleItemTypeChange = (type: ItemType) => {
+    setNewItemType(type);
+    if (type === 'PROJECT' || type === 'PERIOD') {
+      const { startDate, endDate } = getDefaultProjectDates();
+      setNewItemStartDate(startDate);
+      setNewItemEndDate(endDate);
+    } else if (type === 'MEETING') {
+      const { startDate, endDate } = getDefaultMeetingDates();
+      setNewItemStartDate(startDate);
+      setNewItemEndDate(endDate);
+    } else {
+      // Clear dates for other types
+      setNewItemStartDate('');
+      setNewItemEndDate('');
+    }
+  };
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -113,7 +170,7 @@ export function SpacePage() {
   });
 
   const createItemMutation = useMutation({
-    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string }) =>
+    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string; startDate?: string; endDate?: string }) =>
       itemsApi.create(spaceId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -121,6 +178,8 @@ export function SpacePage() {
       setNewItemUrl('');
       setNewItemParentId('');
       setNewItemDueDate('');
+      setNewItemStartDate('');
+      setNewItemEndDate('');
       setShowNewItem(false);
     },
   });
@@ -266,6 +325,8 @@ export function SpacePage() {
         parentId: newItemParentId || undefined,
         status: 'todo',
         dueDate: newItemDueDate ? new Date(newItemDueDate).toISOString() : undefined,
+        startDate: newItemStartDate ? new Date(newItemStartDate).toISOString() : undefined,
+        endDate: newItemEndDate ? new Date(newItemEndDate).toISOString() : undefined,
       });
     }
   };
@@ -339,7 +400,7 @@ export function SpacePage() {
 
   const handleAddChild = (parentId: string) => {
     setNewItemParentId(parentId);
-    setNewItemType('NOTE');
+    handleItemTypeChange('NOTE');
     setShowNewItem(true);
     // Auto-expand the parent to show the new child after creation
     setExpandedItems((prev) => new Set([...prev, parentId]));
@@ -405,7 +466,7 @@ export function SpacePage() {
               {isSelectionMode ? 'Annuler' : 'Sélectionner'}
             </Button>
             <Button onClick={() => {
-              setNewItemType(filter === 'ALL' ? 'NOTE' : filter);
+              handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
               setShowNewItem(true);
             }}>
               <Plus className="w-4 h-4 mr-2" />
@@ -416,7 +477,7 @@ export function SpacePage() {
 
         {/* Filters */}
         <div className="flex gap-2 mb-6 flex-wrap items-center">
-          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => (
+          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => (
             <Button
               key={type}
               variant={filter === type ? 'default' : 'outline'}
@@ -454,7 +515,7 @@ export function SpacePage() {
           <div className="bg-card border rounded-lg p-4 mb-6">
             <form onSubmit={handleCreateItem} className="space-y-4">
               <div className="flex gap-2 flex-wrap">
-                {(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => {
+                {(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => {
                   const Icon = TYPE_ICONS[type];
                   return (
                     <Button
@@ -462,7 +523,7 @@ export function SpacePage() {
                       type="button"
                       variant={newItemType === type ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setNewItemType(type)}
+                      onClick={() => handleItemTypeChange(type)}
                     >
                       <Icon className="w-4 h-4 mr-1" />
                       {TYPE_LABELS[type]}
@@ -487,14 +548,24 @@ export function SpacePage() {
                 />
               )}
 
-              {newItemType === 'APPOINTMENT' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date et heure</label>
-                  <Input
-                    type="datetime-local"
-                    value={newItemDueDate}
-                    onChange={(e) => setNewItemDueDate(e.target.value)}
-                  />
+              {(newItemType === 'MEETING' || newItemType === 'PERIOD' || newItemType === 'PROJECT' || newItemType === 'TASK') && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date de début</label>
+                    <Input
+                      type="datetime-local"
+                      value={newItemStartDate}
+                      onChange={(e) => setNewItemStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date de fin</label>
+                    <Input
+                      type="datetime-local"
+                      value={newItemEndDate}
+                      onChange={(e) => setNewItemEndDate(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -540,6 +611,8 @@ export function SpacePage() {
                     setNewItemUrl('');
                     setNewItemParentId('');
                     setNewItemDueDate('');
+                    setNewItemStartDate('');
+                    setNewItemEndDate('');
                   }}
                 >
                   Annuler
