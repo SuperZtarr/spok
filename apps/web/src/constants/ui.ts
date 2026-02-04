@@ -14,7 +14,7 @@ import type { ItemType } from '@spok/shared';
 // =============================================================================
 // TYPE ICONS - Icônes associées à chaque type d'item
 // =============================================================================
-export const TYPE_ICONS: Record<ItemType, typeof FileText> = {
+export const TYPE_ICONS: Record<string, typeof FileText> = {
   NOTE: FileText,
   PROJECT: FolderKanban,
   TASK: CheckSquare,
@@ -24,12 +24,14 @@ export const TYPE_ICONS: Record<ItemType, typeof FileText> = {
   CONFIG: Settings,
   DOCUMENT: File,
   IMAGE: Image,
+  // Legacy fallback
+  APPOINTMENT: Calendar,
 };
 
 // =============================================================================
 // TYPE LABELS - Libellés des types d'items
 // =============================================================================
-export const TYPE_LABELS: Record<ItemType, string> = {
+export const TYPE_LABELS: Record<string, string> = {
   NOTE: 'Note',
   PROJECT: 'Projet',
   TASK: 'Tâche',
@@ -39,10 +41,12 @@ export const TYPE_LABELS: Record<ItemType, string> = {
   CONFIG: 'Configuration',
   DOCUMENT: 'Document',
   IMAGE: 'Image',
+  // Legacy fallback
+  APPOINTMENT: 'Rendez-vous',
 };
 
 // Version courte pour les espaces restreints
-export const TYPE_LABELS_SHORT: Record<ItemType, string> = {
+export const TYPE_LABELS_SHORT: Record<string, string> = {
   NOTE: 'Note',
   PROJECT: 'Projet',
   TASK: 'Tâche',
@@ -52,6 +56,8 @@ export const TYPE_LABELS_SHORT: Record<ItemType, string> = {
   CONFIG: 'Config',
   DOCUMENT: 'Doc',
   IMAGE: 'Image',
+  // Legacy fallback
+  APPOINTMENT: 'RDV',
 };
 
 // =============================================================================
