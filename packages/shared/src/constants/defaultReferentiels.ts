@@ -76,13 +76,21 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     visible: true,
     order: 2,
   },
-  APPOINTMENT: {
-    label: 'Rendez-vous',
-    labelShort: 'RDV',
+  MEETING: {
+    label: 'Réunions',
+    labelShort: 'Réunion',
     color: 'border-orange-400',
     bgHover: 'bg-orange-50',
     visible: true,
     order: 3,
+  },
+  PERIOD: {
+    label: 'Périodes',
+    labelShort: 'Période',
+    color: 'border-teal-400',
+    bgHover: 'bg-teal-50',
+    visible: true,
+    order: 4,
   },
   LINK: {
     label: 'Liens',
@@ -90,7 +98,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     color: 'border-cyan-400',
     bgHover: 'bg-cyan-50',
     visible: true,
-    order: 4,
+    order: 5,
   },
   CONFIG: {
     label: 'Configuration',
@@ -98,7 +106,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     color: 'border-gray-400',
     bgHover: 'bg-gray-50',
     visible: true,
-    order: 5,
+    order: 6,
   },
   DOCUMENT: {
     label: 'Documents',
@@ -106,7 +114,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     color: 'border-amber-400',
     bgHover: 'bg-amber-50',
     visible: true,
-    order: 6,
+    order: 7,
   },
   IMAGE: {
     label: 'Images',
@@ -114,7 +122,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     color: 'border-pink-400',
     bgHover: 'bg-pink-50',
     visible: true,
-    order: 7,
+    order: 8,
   },
 };
 

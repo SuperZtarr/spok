@@ -35,6 +35,8 @@ export function ItemEditModal({
   const [status, setStatus] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
   const [dueDate, setDueDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
@@ -68,11 +70,25 @@ export function ItemEditModal({
       } else {
         setDueDate('');
       }
+      if (item.startDate) {
+        const date = new Date(item.startDate);
+        const formatted = date.toISOString().slice(0, 16);
+        setStartDate(formatted);
+      } else {
+        setStartDate('');
+      }
+      if (item.endDate) {
+        const date = new Date(item.endDate);
+        const formatted = date.toISOString().slice(0, 16);
+        setEndDate(formatted);
+      } else {
+        setEndDate('');
+      }
     }
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -85,7 +101,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null } = {};
 
     if (type !== item.type) {
       updates.type = type;
@@ -119,6 +135,20 @@ export function ItemEditModal({
     const currentDueDate = item.dueDate ? new Date(item.dueDate).toISOString() : null;
     if (newDueDate !== currentDueDate) {
       updates.dueDate = newDueDate;
+    }
+
+    // Handle startDate changes
+    const newStartDate = startDate ? new Date(startDate).toISOString() : null;
+    const currentStartDate = item.startDate ? new Date(item.startDate).toISOString() : null;
+    if (newStartDate !== currentStartDate) {
+      updates.startDate = newStartDate;
+    }
+
+    // Handle endDate changes
+    const newEndDate = endDate ? new Date(endDate).toISOString() : null;
+    const currentEndDate = item.endDate ? new Date(item.endDate).toISOString() : null;
+    if (newEndDate !== currentEndDate) {
+      updates.endDate = newEndDate;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -243,14 +273,24 @@ export function ItemEditModal({
             </div>
           )}
 
-          {type === 'APPOINTMENT' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Date et heure</label>
-              <Input
-                type="datetime-local"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+          {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date de début</label>
+                <Input
+                  type="datetime-local"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date de fin</label>
+                <Input
+                  type="datetime-local"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
             </div>
           )}
 
