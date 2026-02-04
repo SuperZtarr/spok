@@ -14,6 +14,7 @@ import { AdminLayout } from './components/AdminLayout';
 import { AdminRoute } from './components/AdminRoute';
 import { UsersPage } from './pages/admin/UsersPage';
 import { SpacesPage } from './pages/admin/SpacesPage';
+import { CommunitiesPage } from './pages/admin/CommunitiesPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -102,6 +103,7 @@ export default function App() {
         <Route index element={<Navigate to="/admin/users" replace />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="spaces" element={<SpacesPage />} />
+        <Route path="communities" element={<CommunitiesPage />} />
       </Route>
     </Routes>
   );

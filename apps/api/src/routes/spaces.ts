@@ -9,6 +9,7 @@ import { auditLogsRoutes } from './auditLogs.js';
 const createSpaceSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['PERSONAL', 'GROUP']),
+  communityId: z.string().optional(),
 });
 
 const updateSpaceSchema = z.object({
@@ -31,14 +32,50 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
 
   // List user's spaces
-  fastify.get('/', async (request) => {
+  fastify.get<{ Querystring: { communityId?: string } }>('/', async (request) => {
+    const { communityId } = request.query;
+
+    // Build filter based on communityId parameter
+    let spaceFilter: { communityId?: string | null } = {};
+
+    if (communityId === 'none') {
+      // Spaces without community (personal spaces or unassigned)
+      spaceFilter = { communityId: null };
+    } else if (communityId) {
+      // Spaces in specific community - verify user is member of the community
+      const communityMembership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!communityMembership) {
+        return []; // User is not a member of this community
+      }
+
+      spaceFilter = { communityId };
+    }
+    // If no communityId specified, return all spaces user has access to
+
     const memberships = await fastify.prisma.spaceMembership.findMany({
-      where: { userId: request.user.userId },
+      where: {
+        userId: request.user.userId,
+        space: spaceFilter,
+      },
       include: {
         space: {
           include: {
             _count: {
               select: { memberships: true, items: true },
+            },
+            community: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
         },
@@ -57,14 +94,44 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof createSpaceSchema> }>('/', async (request, reply) => {
     const body = createSpaceSchema.parse(request.body);
 
+    // Only GROUP spaces can be associated with a community
+    if (body.communityId && body.type === 'PERSONAL') {
+      return reply.badRequest('Personal spaces cannot be associated with a community');
+    }
+
+    // Verify user is member of the community if specified
+    if (body.communityId) {
+      const communityMembership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: body.communityId,
+          },
+        },
+      });
+
+      if (!communityMembership) {
+        return reply.forbidden('You are not a member of this community');
+      }
+    }
+
     const space = await fastify.prisma.space.create({
       data: {
         name: body.name,
         type: body.type,
+        communityId: body.communityId,
         memberships: {
           create: {
             userId: request.user.userId,
             role: 'OWNER',
+          },
+        },
+      },
+      include: {
+        community: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },

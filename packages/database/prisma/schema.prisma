@@ -17,28 +17,32 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  memberships         SpaceMembership[]
-  createdItems        Item[]
-  auditLogs           AuditLog[]
-  passwordResetTokens PasswordResetToken[]
+  memberships            SpaceMembership[]
+  communityMemberships   CommunityMembership[]
+  createdItems           Item[]
+  auditLogs              AuditLog[]
+  passwordResetTokens    PasswordResetToken[]
 
   @@map("users")
 }
 
 // Espace (personnel ou groupe)
 model Space {
-  id        String    @id @default(cuid())
-  name      String
-  type      SpaceType
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  name        String
+  type        SpaceType
+  communityId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
   memberships SpaceMembership[]
   items       Item[]
   modules     SpaceModule[]
   tags        Tag[]
   auditLogs   AuditLog[]
 
+  @@index([communityId])
   @@map("spaces")
 }
 
@@ -50,6 +54,41 @@ enum SpaceType {
 enum GlobalRole {
   USER
   ADMIN
+}
+
+// Communauté
+model Community {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships CommunityMembership[]
+  spaces      Space[]
+
+  @@map("communities")
+}
+
+// Appartenance à une communauté
+model CommunityMembership {
+  id          String        @id @default(cuid())
+  userId      String
+  communityId String
+  role        CommunityRole
+  joinedAt    DateTime      @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+  @@map("community_memberships")
+}
+
+enum CommunityRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
 // Appartenance à un espace

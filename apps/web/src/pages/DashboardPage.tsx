@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X } from 'lucide-react';
-import { spacesApi } from '../lib/api';
+import { FolderKanban, Users, FileText, Plus, X, Building2 } from 'lucide-react';
+import { spacesApi, communitiesApi } from '../lib/api';
+import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 
@@ -12,13 +14,33 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const showNewSpace = searchParams.get('new') === 'space';
+  const { currentCommunity } = useCommunityStore();
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
+  const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>('');
 
   const { data: spaces, isLoading } = useQuery({
-    queryKey: ['spaces'],
-    queryFn: spacesApi.list,
+    queryKey: ['spaces', currentCommunity?.id],
+    queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
+  });
+
+  // Fetch personal spaces separately when community is selected
+  const { data: personalSpaces } = useQuery({
+    queryKey: ['spaces', 'personal'],
+    queryFn: () => spacesApi.list('none'),
+    enabled: !!currentCommunity,
+  });
+
+  // Combine spaces
+  const displaySpaces = currentCommunity
+    ? [...(personalSpaces?.filter(s => s.type === 'PERSONAL') || []), ...(spaces || [])]
+    : spaces;
+
+  // Fetch communities for the select dropdown
+  const { data: communities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: communitiesApi.list,
   });
 
   const createSpaceMutation = useMutation({
@@ -37,14 +59,36 @@ export function DashboardPage() {
   const handleCreateSpace = (e: React.FormEvent) => {
     e.preventDefault();
     if (newSpaceName.trim()) {
-      createSpaceMutation.mutate({ name: newSpaceName, type: newSpaceType });
+      createSpaceMutation.mutate({
+        name: newSpaceName,
+        type: newSpaceType,
+        communityId: newSpaceType === 'GROUP' && newSpaceCommunityId ? newSpaceCommunityId : undefined,
+      });
     }
   };
 
   const closeNewSpaceForm = () => {
     setSearchParams({});
     setNewSpaceName('');
+    setNewSpaceCommunityId('');
   };
+
+  // When space type changes, reset community if personal
+  const handleTypeChange = (type: 'PERSONAL' | 'GROUP') => {
+    setNewSpaceType(type);
+    if (type === 'PERSONAL') {
+      setNewSpaceCommunityId('');
+    } else if (currentCommunity) {
+      // Pre-select the current community when creating a GROUP space
+      setNewSpaceCommunityId(currentCommunity.id);
+    }
+  };
+
+  // Build community options for select
+  const communityOptions = [
+    { value: '', label: 'Aucune (espace independant)' },
+    ...(communities?.map(c => ({ value: c.id, label: c.name })) || []),
+  ];
 
   return (
     <div className="p-8">
@@ -93,7 +137,7 @@ export function DashboardPage() {
                         type="radio"
                         name="spaceType"
                         checked={newSpaceType === 'GROUP'}
-                        onChange={() => setNewSpaceType('GROUP')}
+                        onChange={() => handleTypeChange('GROUP')}
                       />
                       <span className="text-sm">Groupe (collaboratif)</span>
                     </label>
@@ -102,12 +146,26 @@ export function DashboardPage() {
                         type="radio"
                         name="spaceType"
                         checked={newSpaceType === 'PERSONAL'}
-                        onChange={() => setNewSpaceType('PERSONAL')}
+                        onChange={() => handleTypeChange('PERSONAL')}
                       />
                       <span className="text-sm">Personnel</span>
                     </label>
                   </div>
                 </div>
+
+                {newSpaceType === 'GROUP' && communities && communities.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Communaute</label>
+                    <Select
+                      value={newSpaceCommunityId}
+                      onChange={(e) => setNewSpaceCommunityId(e.target.value)}
+                      options={communityOptions}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Associer cet espace a une communaute pour le partager avec ses membres.
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button type="submit" disabled={createSpaceMutation.isPending}>
@@ -127,7 +185,7 @@ export function DashboardPage() {
           <div className="text-center py-12 text-muted-foreground">
             Chargement...
           </div>
-        ) : spaces?.length === 0 ? (
+        ) : displaySpaces?.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <FolderKanban className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -143,7 +201,7 @@ export function DashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {spaces?.map((space) => (
+            {displaySpaces?.map((space) => (
               <Link key={space.id} to={`/spaces/${space.id}`}>
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                   <CardHeader>
@@ -172,6 +230,11 @@ export function DashboardPage() {
                         <FileText className="w-4 h-4" />
                         {space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}
                       </span>
+                      {space.communityId && (
+                        <span className="flex items-center gap-1">
+                          <Building2 className="w-4 h-4" />
+                        </span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

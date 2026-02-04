@@ -23,6 +23,12 @@ import type {
   AuditLog,
   AuditLogFilters,
   AuditLogListResponse,
+  CommunityWithRole,
+  CommunityMember,
+  CreateCommunityInput,
+  UpdateCommunityInput,
+  InviteCommunityMemberInput,
+  CommunityRole,
 } from '@spok/shared';
 
 // API URL is injected at build time via VITE_API_URL environment variable
@@ -253,7 +259,12 @@ export const authApi = {
 
 // Spaces
 export const spacesApi = {
-  list: () => fetchApi<SpaceWithRole[]>('/spaces'),
+  list: (communityId?: string) => {
+    const params = new URLSearchParams();
+    if (communityId !== undefined) params.set('communityId', communityId);
+    const query = params.toString();
+    return fetchApi<SpaceWithRole[]>(`/spaces${query ? `?${query}` : ''}`);
+  },
 
   get: (id: string) => fetchApi<SpaceWithRole & { itemCount: number }>(`/spaces/${id}`),
 
@@ -280,6 +291,43 @@ export const spacesApi = {
     fetchApi<SpaceMember>(`/spaces/${id}/invite`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+};
+
+// Communities
+export const communitiesApi = {
+  list: () => fetchApi<CommunityWithRole[]>('/communities'),
+
+  get: (id: string) => fetchApi<CommunityWithRole>(`/communities/${id}`),
+
+  update: (id: string, data: UpdateCommunityInput) =>
+    fetchApi<CommunityWithRole>(`/communities/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getMembers: (id: string) => fetchApi<CommunityMember[]>(`/communities/${id}/members`),
+
+  invite: (id: string, data: InviteCommunityMemberInput) =>
+    fetchApi<CommunityMember>(`/communities/${id}/invite`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  removeMember: (id: string, memberId: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/members/${memberId}`, {
+      method: 'DELETE',
+    }),
+
+  updateMemberRole: (id: string, memberId: string, role: CommunityRole) =>
+    fetchApi<CommunityMember>(`/communities/${id}/members/${memberId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
     }),
 };
 
@@ -487,6 +535,37 @@ interface AdminSpacesListResponse {
   };
 }
 
+// Admin - Communities
+interface AdminCommunitiesListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+interface AdminCommunity {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  memberCount: number;
+  spaceCount: number;
+}
+
+interface AdminCommunityDetail extends AdminCommunity {
+  members: CommunityMember[];
+}
+
+interface AdminCommunitiesListResponse {
+  data: AdminCommunity[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export const adminApi = {
   users: {
     list: (params?: AdminUsersListParams) => {
@@ -559,6 +638,42 @@ export const adminApi = {
     removeMember: (spaceId: string, memberId: string) =>
       fetchApi<{ success: boolean }>(`/admin/spaces/${spaceId}/members/${memberId}`, {
         method: 'DELETE',
+      }),
+  },
+
+  communities: {
+    list: (params?: AdminCommunitiesListParams) => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      if (params?.search) searchParams.set('search', params.search);
+      const query = searchParams.toString();
+      return fetchApi<AdminCommunitiesListResponse>(`/admin/communities${query ? `?${query}` : ''}`);
+    },
+
+    get: (id: string) => fetchApi<AdminCommunityDetail>(`/admin/communities/${id}`),
+
+    create: (data: CreateCommunityInput & { ownerEmail?: string }) =>
+      fetchApi<AdminCommunity>('/admin/communities', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: UpdateCommunityInput) =>
+      fetchApi<AdminCommunity>(`/admin/communities/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      fetchApi<{ success: boolean }>(`/admin/communities/${id}`, {
+        method: 'DELETE',
+      }),
+
+    addMember: (id: string, data: { email: string; role: CommunityRole }) =>
+      fetchApi<CommunityMember>(`/admin/communities/${id}/members`, {
+        method: 'POST',
+        body: JSON.stringify(data),
       }),
   },
 };

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Users, ArrowLeft, Shield, FolderKanban } from 'lucide-react';
+import { LogOut, Users, ArrowLeft, Shield, FolderKanban, Building2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { Button } from './ui/Button';
@@ -28,6 +28,7 @@ export function AdminLayout() {
     const getPageTitle = () => {
       if (location.pathname === '/admin/users') return 'Utilisateurs';
       if (location.pathname === '/admin/spaces') return 'Espaces';
+      if (location.pathname === '/admin/communities') return 'Communautes';
       return 'Administration';
     };
     document.title = `${getPageTitle()} - SPOK Admin`;
@@ -81,6 +82,18 @@ export function AdminLayout() {
             >
               <FolderKanban className="w-4 h-4" />
               Espaces
+            </Link>
+
+            <Link
+              to="/admin/communities"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                isActive('/admin/communities')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              Communautes
             </Link>
           </div>
         </nav>

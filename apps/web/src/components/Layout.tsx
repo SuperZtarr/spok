@@ -3,27 +3,43 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { LogOut, Home, FolderKanban, Plus, Shield, Search } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
+import { useCommunityStore } from '../stores/community';
 import { spacesApi, authApi } from '../lib/api';
 import { Button } from './ui/Button';
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
+import { CommunitySelector } from './CommunitySelector';
 
 export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, refreshToken } = useAuthStore();
+  const { currentCommunity } = useCommunityStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  // Filter spaces by current community
   const { data: spaces } = useQuery({
-    queryKey: ['spaces'],
-    queryFn: spacesApi.list,
+    queryKey: ['spaces', currentCommunity?.id],
+    queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
   });
+
+  // Also fetch personal spaces (always visible)
+  const { data: personalSpaces } = useQuery({
+    queryKey: ['spaces', 'personal'],
+    queryFn: () => spacesApi.list('none'),
+    enabled: !!currentCommunity, // Only fetch when community is selected
+  });
+
+  // Combine spaces: show personal spaces + community spaces
+  const displaySpaces = currentCommunity
+    ? [...(personalSpaces?.filter(s => s.type === 'PERSONAL') || []), ...(spaces || [])]
+    : spaces;
 
   // Get current space from URL
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
   const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
-  const currentSpace = currentSpaceId ? spaces?.find(s => s.id === currentSpaceId) : null;
+  const currentSpace = currentSpaceId ? displaySpaces?.find(s => s.id === currentSpaceId) : null;
 
   // Page title based on current location
   const getPageTitle = () => {
@@ -78,7 +94,12 @@ export function Layout() {
             Tableau de bord
           </Link>
 
-          <div className="pt-4">
+          {/* Community Selector */}
+          <div className="pt-2 pb-2 border-b border-border mb-2">
+            <CommunitySelector />
+          </div>
+
+          <div className="pt-2">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-sm font-medium text-muted-foreground">Espaces</span>
               <Link to="/?new=space">
@@ -86,7 +107,7 @@ export function Layout() {
               </Link>
             </div>
 
-            {spaces?.map((space) => (
+            {displaySpaces?.map((space) => (
               <Link
                 key={space.id}
                 to={`/spaces/${space.id}`}

@@ -5,6 +5,7 @@ export interface Space {
   id: string;
   name: string;
   type: SpaceType;
+  communityId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +27,7 @@ export interface SpaceWithRole extends Space {
 export interface CreateSpaceInput {
   name: string;
   type: SpaceType;
+  communityId?: string;
 }
 
 export interface UpdateSpaceInput {

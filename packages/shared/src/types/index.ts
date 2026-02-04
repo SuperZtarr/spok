@@ -4,3 +4,4 @@ export * from './item.js';
 export * from './api.js';
 export * from './referentiels.js';
 export * from './audit.js';
+export * from './community.js';

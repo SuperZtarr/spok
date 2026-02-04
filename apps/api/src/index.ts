@@ -9,8 +9,10 @@ import { jwtPlugin } from './plugins/jwt.js';
 import { adminAuthPlugin } from './plugins/adminAuth.js';
 import { authRoutes } from './routes/auth.js';
 import { spacesRoutes } from './routes/spaces.js';
+import { communitiesRoutes } from './routes/communities.js';
 import { adminUsersRoutes } from './routes/admin/users.js';
 import { adminSpacesRoutes } from './routes/admin/spaces.js';
+import { adminCommunitiesRoutes } from './routes/admin/communities.js';
 
 const envToLogger = {
   development: {
@@ -168,7 +170,7 @@ async function buildApp() {
       error: 'Not Found',
       message: `Route non trouvée: ${request.method} ${request.url}`,
       code: 'ROUTE_NOT_FOUND',
-      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/admin/*'],
+      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/communities/*', '/admin/*'],
     });
   });
 
@@ -187,8 +189,10 @@ async function buildApp() {
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(spacesRoutes, { prefix: '/spaces' });
+  await app.register(communitiesRoutes, { prefix: '/communities' });
   await app.register(adminUsersRoutes, { prefix: '/admin/users' });
   await app.register(adminSpacesRoutes, { prefix: '/admin/spaces' });
+  await app.register(adminCommunitiesRoutes, { prefix: '/admin/communities' });
 
   // Health check
   app.get('/health', async () => {
