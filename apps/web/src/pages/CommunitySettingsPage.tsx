@@ -6,7 +6,6 @@ import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import type { CommunityWithRole } from '@spok/shared';
 
 export function CommunitySettingsPage() {
   const { communityId } = useParams<{ communityId: string }>();

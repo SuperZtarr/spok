@@ -45,3 +45,35 @@ export interface InviteCommunityMemberInput {
   email: string;
   role: CommunityRole;
 }
+
+// Admin types
+export interface AdminCommunity {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  memberCount: number;
+  spaceCount: number;
+}
+
+export interface AdminCommunityMember {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: CommunityRole;
+  joinedAt: string;
+}
+
+export interface AdminCommunitySpace {
+  id: string;
+  name: string;
+  type: string;
+  memberCount: number;
+}
+
+export interface AdminCommunityDetail extends AdminCommunity {
+  members: AdminCommunityMember[];
+  spaces: AdminCommunitySpace[];
+}

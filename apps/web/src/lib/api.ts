@@ -15,9 +15,11 @@ import type {
   SpaceMember,
   CreateRelationInput,
   AdminUser,
+  AdminUserDetail,
   CreateUserInput,
   UpdateUserInput,
   GlobalRole,
+  Role,
   SpaceReferentiels,
   ReferentielsResponse,
   AuditLog,
@@ -28,6 +30,8 @@ import type {
   CreateCommunityInput,
   UpdateCommunityInput,
   InviteCommunityMemberInput,
+  AdminCommunity,
+  AdminCommunityDetail,
   CommunityRole,
   ContributionWithAuthor,
   CreateContributionInput,
@@ -568,20 +572,6 @@ interface AdminCommunitiesListParams {
   search?: string;
 }
 
-interface AdminCommunity {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  memberCount: number;
-  spaceCount: number;
-}
-
-interface AdminCommunityDetail extends AdminCommunity {
-  members: CommunityMember[];
-}
-
 interface AdminCommunitiesListResponse {
   data: AdminCommunity[];
   pagination: {
@@ -603,7 +593,7 @@ export const adminApi = {
       return fetchApi<AdminUsersListResponse>(`/admin/users${query ? `?${query}` : ''}`);
     },
 
-    get: (id: string) => fetchApi<AdminUser & { memberships: unknown[] }>(`/admin/users/${id}`),
+    get: (id: string) => fetchApi<AdminUserDetail>(`/admin/users/${id}`),
 
     create: (data: CreateUserInput) =>
       fetchApi<AdminUser>('/admin/users', {

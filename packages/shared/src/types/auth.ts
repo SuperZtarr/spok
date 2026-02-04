@@ -63,3 +63,29 @@ export interface UpdateUserInput {
   name?: string;
   globalRole?: GlobalRole;
 }
+
+export interface AdminUserCommunityMembership {
+  id: string;
+  role: string;
+  joinedAt: string;
+  community: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface AdminUserSpaceMembership {
+  id: string;
+  role: string;
+  joinedAt: string;
+  space: {
+    id: string;
+    name: string;
+    type: string;
+  };
+}
+
+export interface AdminUserDetail extends AdminUser {
+  communityMemberships: AdminUserCommunityMembership[];
+  memberships: AdminUserSpaceMembership[];
+}
