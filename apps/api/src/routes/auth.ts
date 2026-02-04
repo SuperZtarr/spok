@@ -42,7 +42,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (existingUser) {
-      return reply.conflict('Email already registered');
+      return reply.conflict('Cet email est déjà utilisé');
     }
 
     // Create user
@@ -96,12 +96,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!user) {
-      return reply.unauthorized('Invalid credentials');
+      return reply.unauthorized('Email ou mot de passe incorrect');
     }
 
     const validPassword = await compare(body.password, user.passwordHash);
     if (!validPassword) {
-      return reply.unauthorized('Invalid credentials');
+      return reply.unauthorized('Email ou mot de passe incorrect');
     }
 
     const tokens = await generateTokens(fastify, user.id, user.email);
@@ -130,7 +130,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!storedToken) {
-      return reply.unauthorized('Invalid refresh token');
+      return reply.unauthorized('Session expirée, veuillez vous reconnecter');
     }
 
     if (storedToken.expiresAt < new Date()) {

@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X } from 'lucide-react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X, MessageSquare } from 'lucide-react';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS } from '../../constants/ui';
 
+// Extended Item type with contribution count
+interface ItemWithContributions extends Item {
+  contributionCount?: number;
+}
+
 interface ListViewProps {
-  items: Item[];
+  items: ItemWithContributions[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -149,6 +154,16 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
+            )}
+
+            {item.contributionCount !== undefined && item.contributionCount > 0 && (
+              <span
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+                title={`${item.contributionCount} contribution(s)`}
+              >
+                <MessageSquare className="w-3 h-3" />
+                {item.contributionCount}
+              </span>
             )}
 
             <Badge variant="outline" className="text-xs">

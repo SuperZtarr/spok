@@ -1,3 +1,5 @@
+import type { ContributionWithAuthor } from './contribution.js';
+
 export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE';
 
 export interface Item {
@@ -31,6 +33,10 @@ export interface ItemWithRelations extends Item {
   tags?: Tag[];
   relationsFrom?: ItemRelation[];
   relationsTo?: ItemRelation[];
+  contributions?: ContributionWithAuthor[];
+  _count?: {
+    contributions?: number;
+  };
 }
 
 export interface CreateItemInput {

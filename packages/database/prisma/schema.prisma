@@ -20,6 +20,7 @@ model User {
   memberships            SpaceMembership[]
   communityMemberships   CommunityMembership[]
   createdItems           Item[]
+  contributions          Contribution[]
   auditLogs              AuditLog[]
   passwordResetTokens    PasswordResetToken[]
 
@@ -145,6 +146,7 @@ model Item {
   relationsTo   ItemRelation[] @relation("RelationTo")
 
   tags ItemTag[]
+  contributions Contribution[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -215,6 +217,23 @@ model SpaceModule {
 
   @@unique([spaceId, moduleKey])
   @@map("space_modules")
+}
+
+// Contributions aux éléments
+model Contribution {
+  id        String   @id @default(cuid())
+  content   String
+  itemId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([authorId])
+  @@map("contributions")
 }
 
 // Traçabilité

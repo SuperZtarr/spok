@@ -29,6 +29,9 @@ import type {
   UpdateCommunityInput,
   InviteCommunityMemberInput,
   CommunityRole,
+  ContributionWithAuthor,
+  CreateContributionInput,
+  UpdateContributionInput,
 } from '@spok/shared';
 
 // API URL is injected at build time via VITE_API_URL environment variable
@@ -406,6 +409,27 @@ export const itemsApi = {
         body: JSON.stringify(data),
       }
     ),
+
+  // Contributions
+  listContributions: (spaceId: string, itemId: string) =>
+    fetchApi<ContributionWithAuthor[]>(`/spaces/${spaceId}/items/${itemId}/contributions`),
+
+  createContribution: (spaceId: string, itemId: string, data: CreateContributionInput) =>
+    fetchApi<ContributionWithAuthor>(`/spaces/${spaceId}/items/${itemId}/contributions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateContribution: (spaceId: string, itemId: string, contributionId: string, data: UpdateContributionInput) =>
+    fetchApi<ContributionWithAuthor>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteContribution: (spaceId: string, itemId: string, contributionId: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Tags

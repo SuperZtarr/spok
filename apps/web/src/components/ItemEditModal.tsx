@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi } from '../lib/api';
-import type { Item, ItemType } from '@spok/shared';
+import type { Item, ItemType, ContributionWithAuthor } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X } from 'lucide-react';
 import { TYPE_LABELS, STATUS_OPTIONS, STORAGE_KEYS } from '../constants/ui';
+import { useAuthStore } from '../stores/auth';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -40,6 +41,13 @@ export function ItemEditModal({
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
+
+  // Contributions state
+  const [newContribution, setNewContribution] = useState('');
+  const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
+  const [editingContributionContent, setEditingContributionContent] = useState('');
+
+  const { user } = useAuthStore();
 
   const toggleParentSortMode = () => {
     const newMode = parentSortMode === 'tree' ? 'alpha' : 'tree';
@@ -96,6 +104,59 @@ export function ItemEditModal({
       onClose();
     },
   });
+
+  const createContributionMutation = useMutation({
+    mutationFn: (content: string) =>
+      itemsApi.createContribution(spaceId, itemId!, { content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      setNewContribution('');
+    },
+  });
+
+  const updateContributionMutation = useMutation({
+    mutationFn: ({ id, content }: { id: string; content: string }) =>
+      itemsApi.updateContribution(spaceId, itemId!, id, { content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      setEditingContributionId(null);
+      setEditingContributionContent('');
+    },
+  });
+
+  const deleteContributionMutation = useMutation({
+    mutationFn: (contributionId: string) =>
+      itemsApi.deleteContribution(spaceId, itemId!, contributionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+    },
+  });
+
+  const handleAddContribution = () => {
+    if (newContribution.trim()) {
+      createContributionMutation.mutate(newContribution.trim());
+    }
+  };
+
+  const handleEditContribution = (contribution: ContributionWithAuthor) => {
+    setEditingContributionId(contribution.id);
+    setEditingContributionContent(contribution.content);
+  };
+
+  const handleSaveContribution = () => {
+    if (editingContributionId && editingContributionContent.trim()) {
+      updateContributionMutation.mutate({
+        id: editingContributionId,
+        content: editingContributionContent.trim(),
+      });
+    }
+  };
+
+  const handleDeleteContribution = (contributionId: string) => {
+    if (confirm('Supprimer cette contribution ?')) {
+      deleteContributionMutation.mutate(contributionId);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,6 +391,118 @@ export function ItemEditModal({
               onChange={(e) => setStatus(e.target.value)}
               options={[{ value: '', label: 'Aucun statut' }, ...STATUS_OPTIONS]}
             />
+          </div>
+
+          {/* Contributions section */}
+          <div className="space-y-3 pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <MessageSquarePlus className="w-4 h-4" />
+                Contributions ({item.contributions?.length || 0})
+              </label>
+            </div>
+
+            {/* New contribution input */}
+            <div className="space-y-2">
+              <textarea
+                value={newContribution}
+                onChange={(e) => setNewContribution(e.target.value)}
+                placeholder="Ajouter une contribution..."
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddContribution}
+                disabled={!newContribution.trim() || createContributionMutation.isPending}
+              >
+                {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
+              </Button>
+            </div>
+
+            {/* Existing contributions */}
+            {item.contributions && item.contributions.length > 0 && (
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {item.contributions.map((contribution) => (
+                  <div
+                    key={contribution.id}
+                    className="p-3 bg-muted rounded-lg space-y-2"
+                  >
+                    {editingContributionId === contribution.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingContributionContent}
+                          onChange={(e) => setEditingContributionContent(e.target.value)}
+                          className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleSaveContribution}
+                            disabled={updateContributionMutation.isPending}
+                          >
+                            Enregistrer
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingContributionId(null);
+                              setEditingContributionContent('');
+                            }}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm whitespace-pre-wrap">{contribution.content}</p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            <span>{contribution.author.name}</span>
+                            <span>-</span>
+                            <span>
+                              {new Date(contribution.createdAt).toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                          {(contribution.authorId === user?.id) && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleEditContribution(contribution)}
+                                className="p-1 hover:bg-background rounded transition-colors"
+                                title="Modifier"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteContribution(contribution.id)}
+                                className="p-1 hover:bg-background rounded transition-colors text-destructive"
+                                title="Supprimer"
+                                disabled={deleteContributionMutation.isPending}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-4">

@@ -5,3 +5,4 @@ export * from './api.js';
 export * from './referentiels.js';
 export * from './audit.js';
 export * from './community.js';
+export * from './contribution.js';
