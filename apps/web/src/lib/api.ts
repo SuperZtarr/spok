@@ -277,7 +277,7 @@ export const spacesApi = {
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: { name?: string }) =>
+  update: (id: string, data: { name?: string; communityId?: string | null }) =>
     fetchApi<SpaceWithRole>(`/spaces/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),

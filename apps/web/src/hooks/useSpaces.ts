@@ -32,7 +32,7 @@ export function useUpdateSpace(spaceId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name?: string }) => spacesApi.update(spaceId, data),
+    mutationFn: (data: { name?: string; communityId?: string | null }) => spacesApi.update(spaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });

@@ -14,6 +14,7 @@ const createSpaceSchema = z.object({
 
 const updateSpaceSchema = z.object({
   name: z.string().min(1).optional(),
+  communityId: z.string().nullable().optional(),
 });
 
 const inviteSchema = z.object({
@@ -155,6 +156,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             _count: {
               select: { memberships: true, items: true },
             },
+            community: {
+              select: { id: true, name: true },
+            },
           },
         },
       },
@@ -183,6 +187,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             spaceId: request.params.id,
           },
         },
+        include: { space: true },
       });
 
       if (!membership) {
@@ -195,9 +200,41 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = updateSpaceSchema.parse(request.body);
 
+      // Cannot assign community to personal space
+      if (body.communityId && membership.space.type === 'PERSONAL') {
+        return reply.badRequest('Les espaces personnels ne peuvent pas être rattachés à une communauté');
+      }
+
+      // Verify user is member of the target community
+      if (body.communityId) {
+        const communityMembership = await fastify.prisma.communityMembership.findUnique({
+          where: {
+            userId_communityId: {
+              userId: request.user.userId,
+              communityId: body.communityId,
+            },
+          },
+        });
+
+        if (!communityMembership) {
+          return reply.forbidden('Vous devez être membre de la communauté pour y rattacher un espace');
+        }
+      }
+
       const space = await fastify.prisma.space.update({
         where: { id: request.params.id },
-        data: body,
+        data: {
+          name: body.name,
+          communityId: body.communityId,
+        },
+        include: {
+          community: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
 
       return space;

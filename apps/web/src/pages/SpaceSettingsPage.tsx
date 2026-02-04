@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, Save, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2 } from 'lucide-react';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
-import { useSpace } from '../hooks/useSpaces';
+import { useSpace, useUpdateSpace } from '../hooks/useSpaces';
+import { communitiesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
@@ -17,10 +21,21 @@ export function SpaceSettingsPage() {
   const updateMutation = useUpdateReferentiels(spaceId!);
   const resetMutation = useResetReferentiels(spaceId!);
   const checkUsageMutation = useCheckStatusUsage(spaceId!);
+  const updateSpaceMutation = useUpdateSpace(spaceId!);
+
+  // Fetch communities user belongs to
+  const { data: communities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: () => communitiesApi.list(),
+  });
 
   const [localStatuses, setLocalStatuses] = useState<StatusConfig[] | null>(null);
   const [localTypeLabels, setLocalTypeLabels] = useState<Record<string, TypeLabelConfig> | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Space info state
+  const [editName, setEditName] = useState('');
+  const [editCommunityId, setEditCommunityId] = useState<string>('');
 
   // Initialize local state when data loads
   useEffect(() => {
@@ -29,6 +44,14 @@ export function SpaceSettingsPage() {
       setLocalTypeLabels(referentielsData.referentiels.typeLabels);
     }
   }, [referentielsData, localStatuses]);
+
+  // Initialize space info state
+  useEffect(() => {
+    if (space && !editName) {
+      setEditName(space.name);
+      setEditCommunityId(space.communityId || '');
+    }
+  }, [space, editName]);
 
   const handleStatusesChange = (statuses: StatusConfig[]) => {
     setLocalStatuses(statuses);
@@ -63,6 +86,29 @@ export function SpaceSettingsPage() {
     const result = await checkUsageMutation.mutateAsync(statusId);
     return result;
   };
+
+  const handleSaveSpaceInfo = async () => {
+    if (!space) return;
+
+    const updates: { name?: string; communityId?: string | null } = {};
+    if (editName !== space.name) updates.name = editName;
+    const newCommunityId = editCommunityId || null;
+    if (newCommunityId !== space.communityId) updates.communityId = newCommunityId;
+
+    if (Object.keys(updates).length > 0) {
+      await updateSpaceMutation.mutateAsync(updates);
+    }
+  };
+
+  const hasSpaceInfoChanges = space && (
+    editName !== space.name ||
+    (editCommunityId || null) !== space.communityId
+  );
+
+  const communityOptions = [
+    { value: '', label: 'Aucune communauté' },
+    ...(communities?.map((c) => ({ value: c.id, label: c.name })) || []),
+  ];
 
   // Check permissions
   const canEdit = space?.role === 'OWNER' || space?.role === 'ADMIN';
@@ -155,6 +201,51 @@ export function SpaceSettingsPage() {
 
       {/* Settings sections */}
       <div className="space-y-8">
+        {/* General info */}
+        {space?.type === 'GROUP' && (
+          <div className="bg-card border rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Informations générales
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nom de l'espace</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Nom de l'espace"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Communauté</label>
+                <Select
+                  value={editCommunityId}
+                  onChange={(e) => setEditCommunityId(e.target.value)}
+                  options={communityOptions}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Rattacher cet espace à une communauté dont vous êtes membre
+                </p>
+              </div>
+              {hasSpaceInfoChanges && (
+                <Button
+                  onClick={handleSaveSpaceInfo}
+                  disabled={updateSpaceMutation.isPending}
+                  size="sm"
+                >
+                  {updateSpaceMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Enregistrer les modifications
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Statuses */}
         <div className="bg-card border rounded-lg p-6">
           {localStatuses && (

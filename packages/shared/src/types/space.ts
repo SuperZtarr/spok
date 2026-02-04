@@ -5,7 +5,8 @@ export interface Space {
   id: string;
   name: string;
   type: SpaceType;
-  communityId?: string;
+  communityId?: string | null;
+  community?: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
