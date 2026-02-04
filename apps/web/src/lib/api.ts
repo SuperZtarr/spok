@@ -25,6 +25,7 @@ import type {
   AuditLogListResponse,
 } from '@spok/shared';
 
+// API URL is injected at build time via VITE_API_URL environment variable
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 class ApiError extends Error {
