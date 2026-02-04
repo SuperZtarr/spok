@@ -219,6 +219,22 @@ async function start() {
   const port = parseInt(process.env.API_PORT || '3001', 10);
   const host = process.env.API_HOST || '0.0.0.0';
 
+  // Graceful shutdown handler
+  const shutdown = async (signal: string) => {
+    app.log.info(`${signal} received, shutting down gracefully...`);
+    try {
+      await app.close();
+      app.log.info('Server closed');
+      process.exit(0);
+    } catch (err) {
+      app.log.error(err, 'Error during shutdown');
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+
   try {
     await app.listen({ port, host });
     console.log(`Server running at http://${host}:${port}`);

@@ -5,7 +5,7 @@
   "description": "Application modulaire multi-utilisateurs pour structurer, relier, évaluer et planifier",
   "scripts": {
     "predev": "pnpm run build:packages",
-    "dev": "pnpm --parallel -r run dev",
+    "dev": "concurrently --kill-others-on-fail --names api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:api": "pnpm --filter @spok/api dev",
     "dev:web": "pnpm --filter @spok/web dev",
     "build:packages": "pnpm --filter @spok/shared --filter @spok/database build",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.0"
   },
