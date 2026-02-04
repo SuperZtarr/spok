@@ -296,9 +296,9 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
 
   const visibleEndDate = addDays(visibleStartDate, zoomConfig.days);
 
-  // Determine which header row to show based on zoom level
+  // Determine which header rows to show based on zoom level
+  const showMonthRow = true; // Toujours afficher les mois
   const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month';
-  const showMonthRow = zoomLevel === 'quarter' || zoomLevel === 'year';
 
   return (
     <div className="flex flex-col h-full">
