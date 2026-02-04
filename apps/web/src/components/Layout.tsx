@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Home, FolderKanban, Plus, Shield, Search } from 'lucide-react';
+import { LogOut, Home, FolderKanban, Plus, Shield, User } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { spacesApi, authApi } from '../lib/api';
@@ -71,17 +71,20 @@ export function Layout() {
       <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0 h-full">
         {/* Header sidebar - fixe */}
         <div className="p-4 border-b border-border flex-shrink-0">
-          <h1 className="text-xl font-bold">SPOK</h1>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">{user?.name}</p>
-            <button
-              onClick={() => setIsProfileOpen(true)}
-              className="p-1 rounded hover:bg-accent transition-colors"
-              title="Voir le profil"
-            >
-              <Search className="w-3 h-3 text-muted-foreground hover:text-foreground" />
-            </button>
-          </div>
+          <img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" />
+          <button
+            onClick={() => setIsProfileOpen(true)}
+            className="w-full flex items-center justify-between p-2 rounded-md hover:bg-accent transition-colors text-left"
+            title="Voir le profil"
+          >
+            <div>
+              <p className="text-sm font-medium">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+              </p>
+            </div>
+            <User className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
 
         {/* Navigation - scrollable */}

@@ -39,11 +39,14 @@ export function AdminLayout() {
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-bold">SPOK Admin</h1>
+          <img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" />
+          <div className="flex items-center justify-between p-2 rounded-md bg-accent/50">
+            <div>
+              <p className="text-sm font-medium">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">Administrateur</p>
+            </div>
+            <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">Admin</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">{user?.name}</p>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">

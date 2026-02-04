@@ -57,7 +57,7 @@ export function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">SPOK</CardTitle>
+          <img src="/logo.png" alt="SPOK" className="h-12 w-auto mx-auto mb-2" />
           <CardDescription>Créez votre compte</CardDescription>
         </CardHeader>
         <CardContent>

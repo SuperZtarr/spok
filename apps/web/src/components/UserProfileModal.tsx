@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2 } from 'lucide-react';
+import { communitiesApi } from '../lib/api';
 import type { AuthUser } from '@spok/shared';
 
 interface UserProfileModalProps {
@@ -13,7 +15,19 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrateur',
 };
 
+const COMMUNITY_ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Propriétaire',
+  ADMIN: 'Admin',
+  MEMBER: 'Membre',
+};
+
 export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
+  const { data: communities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: communitiesApi.list,
+    enabled: isOpen,
+  });
+
   if (!user) return null;
 
   return (
@@ -47,6 +61,31 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             <span className="text-muted-foreground">ID :</span>
             <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{user.id}</span>
           </div>
+        </div>
+
+        {/* Communautés */}
+        <div className="pt-4 border-t border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Communautés</span>
+          </div>
+          {communities && communities.length > 0 ? (
+            <div className="space-y-2">
+              {communities.map((community) => (
+                <div
+                  key={community.id}
+                  className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
+                >
+                  <span>{community.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {COMMUNITY_ROLE_LABELS[community.role] || community.role}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucune communauté</p>
+          )}
         </div>
       </div>
     </Modal>
