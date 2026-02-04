@@ -16,6 +16,7 @@ import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { TYPE_ICONS } from '../../constants/ui';
+import { stripBbcode } from '../../lib/bbcode';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -111,7 +112,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
           </div>
           {item.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              {item.description}
+              {stripBbcode(item.description)}
             </p>
           )}
           {item.type === 'MEETING' && item.startDate && (

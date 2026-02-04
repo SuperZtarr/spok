@@ -5,6 +5,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS } from '../../constants/ui';
+import { stripBbcode } from '../../lib/bbcode';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -109,7 +110,7 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
                     </div>
                     {item.description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {item.description}
+                        {stripBbcode(item.description)}
                       </p>
                     )}
 

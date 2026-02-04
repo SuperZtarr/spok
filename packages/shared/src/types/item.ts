@@ -34,6 +34,11 @@ export interface ItemWithRelations extends Item {
   relationsFrom?: ItemRelation[];
   relationsTo?: ItemRelation[];
   contributions?: ContributionWithAuthor[];
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   _count?: {
     contributions?: number;
   };

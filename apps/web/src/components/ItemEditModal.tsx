@@ -7,6 +7,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
+import { BBCodeText } from './BBCodeText';
 import { TYPE_LABELS, STATUS_OPTIONS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 
@@ -329,6 +330,24 @@ export function ItemEditModal({
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Auteur et date de création */}
+          {item.createdBy && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b border-border">
+              <User className="w-4 h-4" />
+              <span>Créé par <strong className="text-foreground">{item.createdBy.name}</strong></span>
+              <span>•</span>
+              <span>
+                {new Date(item.createdAt).toLocaleDateString('fr-FR', {
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Titre</label>
             <Input
@@ -341,12 +360,35 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ajoutez une description..."
-              className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-            />
+            {/* Pour les éléments du forum: affichage formaté + édition cachée */}
+            {item?.content && (item.content as { forumTopicId?: number }).forumTopicId && description ? (
+              <div className="space-y-2">
+                {/* Aperçu formaté BBCode */}
+                <div className="max-h-[250px] overflow-y-auto p-3 bg-muted/50 rounded-md border border-border">
+                  <BBCodeText content={description} className="text-sm" />
+                </div>
+                {/* Bouton pour éditer le source */}
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    Modifier le texte source
+                  </summary>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Ajoutez une description..."
+                    className="mt-2 flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y font-mono text-xs"
+                  />
+                </details>
+              </div>
+            ) : (
+              /* Pour les autres éléments: textarea normal */
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ajoutez une description..."
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              />
+            )}
           </div>
 
           <div className="space-y-2">
@@ -622,8 +664,13 @@ export function ItemEditModal({
                       </div>
                     ) : (
                       <>
-                        <p className="text-sm whitespace-pre-wrap">{contribution.content}</p>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        {/* BBCode uniquement pour les éléments du forum */}
+                        {item?.content && (item.content as { forumTopicId?: number }).forumTopicId ? (
+                          <BBCodeText content={contribution.content} className="text-sm" />
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">{contribution.content}</p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                           <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
                             <span>{contribution.author.name}</span>

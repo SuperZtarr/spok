@@ -206,6 +206,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         parent: true,
+        createdBy: { select: { id: true, name: true, email: true } },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true } } },
         },

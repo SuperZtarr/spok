@@ -17,6 +17,7 @@ import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS } from '../../constants/ui';
+import { stripBbcode } from '../../lib/bbcode';
 
 interface TypesViewProps {
   items: Item[];
@@ -108,7 +109,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
           </div>
           {item.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              {item.description}
+              {stripBbcode(item.description)}
             </p>
           )}
           {statusLabel && (

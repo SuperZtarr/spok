@@ -5,6 +5,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS } from '../../constants/ui';
+import { stripBbcode } from '../../lib/bbcode';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -42,7 +43,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
     const query = searchQuery.toLowerCase();
     return items.filter((item) =>
       item.title.toLowerCase().includes(query) ||
-      item.description?.toLowerCase().includes(query)
+      stripBbcode(item.description || '').toLowerCase().includes(query)
     );
   }, [items, searchQuery]);
 
