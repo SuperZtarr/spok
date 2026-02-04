@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Node,
@@ -15,7 +15,7 @@ import '@xyflow/react/dist/style.css';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2 } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface MindMapViewProps {
   items: Item[];
@@ -116,6 +116,15 @@ function buildTree(items: Item[]): TreeItem[] {
   return rootItems;
 }
 
+// Count all descendants
+function countDescendants(item: TreeItem): number {
+  let count = item.children.length;
+  item.children.forEach(child => {
+    count += countDescendants(child);
+  });
+  return count;
+}
+
 // Custom node component
 interface MindMapNodeProps {
   data: {
@@ -125,13 +134,16 @@ interface MindMapNodeProps {
     hexColor: string;
     onEdit: (id: string) => void;
     onAddChild: (id: string) => void;
+    onToggleCollapse: (id: string) => void;
     isRoot: boolean;
     hasChildren: boolean;
+    isCollapsed: boolean;
+    childCount: number;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onEdit, onAddChild, isRoot, hasChildren } = data;
+  const { item, hexColor, onEdit, onAddChild, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -151,8 +163,36 @@ function MindMapNode({ data }: MindMapNodeProps) {
       )}
 
       <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
+        {/* Collapse/Expand button for nodes with children */}
+        {hasChildren ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse(item.id);
+            }}
+            className="p-0.5 hover:bg-black/10 rounded flex-shrink-0"
+            title={isCollapsed ? 'Déplier' : 'Replier'}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-600" />
+            )}
+          </button>
+        ) : (
+          <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
+        )}
+
+        {hasChildren && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
+
         <span className="text-sm font-medium truncate">{item.title}</span>
+
+        {/* Badge showing child count when collapsed */}
+        {isCollapsed && childCount > 0 && (
+          <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-600 text-white rounded-full">
+            {childCount}
+          </span>
+        )}
       </div>
 
       {/* Action buttons on hover */}
@@ -179,20 +219,20 @@ function MindMapNode({ data }: MindMapNodeProps) {
         </button>
       </div>
 
-      {/* Output handle */}
-      {hasChildren && (
+      {/* Output handle - show when has children and not collapsed */}
+      {hasChildren && !isCollapsed && (
         <Handle
           type="source"
           position={Position.Right}
           className="!bg-gray-400 !w-2 !h-2"
         />
       )}
-      {/* Always show source handle if not a leaf, or allow adding children */}
-      {!hasChildren && (
+      {/* Show handle on hover for adding children, or when collapsed */}
+      {(!hasChildren || isCollapsed) && (
         <Handle
           type="source"
           position={Position.Right}
-          className="!bg-gray-300 !w-2 !h-2 !opacity-0 group-hover:!opacity-100"
+          className={`!bg-gray-300 !w-2 !h-2 ${isCollapsed ? '' : '!opacity-0 group-hover:!opacity-100'}`}
         />
       )}
     </div>
@@ -211,18 +251,16 @@ const VERTICAL_SPACING = 80;
 function calculateLayout(
   tree: TreeItem[],
   statuses: StatusConfig[],
+  collapsedIds: Set<string>,
   onEdit: (id: string) => void,
-  onAddChild: (id: string) => void
+  onAddChild: (id: string) => void,
+  onToggleCollapse: (id: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
   // Track vertical position for each depth level
   const depthYPositions: Map<number, number> = new Map();
-
-  function hasDescendants(item: TreeItem): boolean {
-    return item.children.length > 0;
-  }
 
   function processNode(
     item: TreeItem,
@@ -232,9 +270,12 @@ function calculateLayout(
     const statusColor = getStatusColor(item.status, statuses);
     const hexColor = tailwindBgToHex(statusColor);
     const x = depth * HORIZONTAL_SPACING;
+    const hasChildren = item.children.length > 0;
+    const isCollapsed = collapsedIds.has(item.id);
+    const childCount = countDescendants(item);
 
-    // If leaf node, place at next available Y position
-    if (item.children.length === 0) {
+    // If leaf node OR collapsed, place at next available Y position
+    if (item.children.length === 0 || isCollapsed) {
       const currentY = depthYPositions.get(depth) || 0;
       const y = currentY;
       depthYPositions.set(depth, currentY + VERTICAL_SPACING);
@@ -250,8 +291,11 @@ function calculateLayout(
           hexColor,
           onEdit,
           onAddChild,
+          onToggleCollapse,
           isRoot: depth === 0 && parentId === null,
-          hasChildren: false,
+          hasChildren,
+          isCollapsed,
+          childCount,
         },
       });
 
@@ -268,7 +312,7 @@ function calculateLayout(
       return { minY: y, maxY: y, centerY: y };
     }
 
-    // Process children first
+    // Process children first (only if not collapsed)
     const childResults = item.children.map(child =>
       processNode(child, depth + 1, item.id)
     );
@@ -294,8 +338,11 @@ function calculateLayout(
         hexColor,
         onEdit,
         onAddChild,
+        onToggleCollapse,
         isRoot: depth === 0 && parentId === null,
-        hasChildren: hasDescendants(item),
+        hasChildren,
+        isCollapsed,
+        childCount,
       },
     });
 
@@ -328,26 +375,40 @@ export function MindMapView({
   onAddChild,
   referentiels,
 }: MindMapViewProps) {
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
 
   const tree = useMemo(() => buildTree(items), [items]);
 
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges } = calculateLayout(tree, statuses, onEdit, onAddChild);
+    const { nodes, edges } = calculateLayout(tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse);
     return { initialNodes: nodes, initialEdges: edges };
-  }, [tree, statuses, onEdit, onAddChild]);
+  }, [tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update nodes when items change
+  // Update nodes when items or collapsed state change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, onEdit, onAddChild);
+    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse);
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [tree, statuses, onEdit, onAddChild, setNodes, setEdges]);
+  }, [tree, statuses, collapsedIds, onEdit, onAddChild, toggleCollapse, setNodes, setEdges]);
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
