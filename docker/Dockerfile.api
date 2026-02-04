@@ -58,5 +58,9 @@ ENV NODE_ENV=production
 
 EXPOSE 3001
 
+# Copy startup script
+COPY docker/start-api.sh /app/start-api.sh
+RUN chmod +x /app/start-api.sh
+
 # Run migrations then start the app
-CMD ["sh", "-c", "echo DATABASE_URL=$DATABASE_URL && ./packages/database/node_modules/.bin/prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss && node apps/api/dist/index.js"]
+CMD ["/app/start-api.sh"]
