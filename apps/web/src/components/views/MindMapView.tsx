@@ -13,20 +13,24 @@ import {
   ReactFlowProvider,
   Handle,
   Position,
+  Connection,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { ItemWithRelations, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, X } from 'lucide-react';
 
 interface MindMapViewProps {
-  items: Item[];
+  items: ItemWithRelations[];
   spaceName?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
+  onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
 }
 
@@ -84,12 +88,12 @@ function tailwindBgToHex(bgClass: string): string {
 }
 
 // Build tree structure
-interface TreeItem extends Item {
+interface TreeItem extends ItemWithRelations {
   children: TreeItem[];
   depth: number;
 }
 
-function buildTree(items: Item[]): TreeItem[] {
+function buildTree(items: ItemWithRelations[]): TreeItem[] {
   const itemMap = new Map<string, TreeItem>();
   const rootItems: TreeItem[] = [];
 
@@ -280,8 +284,8 @@ const nodeTypes = {
 };
 
 // Layout constants for radial layout
-const BASE_RADIUS = 200; // Base radius for first level
-const RADIUS_INCREMENT = 180; // Additional radius per level
+const BASE_RADIUS = 350; // Base radius for first level (root items around space node)
+const RADIUS_INCREMENT = 300; // Additional radius per level (children around parent)
 const MIN_ANGLE_SPREAD = Math.PI / 6; // Minimum angle between siblings (30 degrees)
 
 // Calculate the angular size needed for a subtree
@@ -317,6 +321,7 @@ function getHandleFromAngle(angle: number): string {
 // Calculate node positions using radial/star layout
 function calculateLayout(
   tree: TreeItem[],
+  items: ItemWithRelations[],
   statuses: StatusConfig[],
   collapsedIds: Set<string>,
   spaceName: string,
@@ -324,7 +329,7 @@ function calculateLayout(
   onEdit: (id: string) => void,
   onAddChild: (id: string) => void,
   onToggleCollapse: (id: string) => void
-): { nodes: Node[]; edges: Edge[] } {
+): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -484,7 +489,43 @@ function calculateLayout(
     });
   }
 
-  return { nodes, edges };
+  // Create edges for relations (not parent-child)
+  const relationEdges: Edge[] = [];
+  const nodeIds = new Set(nodes.map(n => n.id));
+
+  items.forEach(item => {
+    // Relations from this item
+    item.relationsFrom?.forEach(relation => {
+      // Only create edge if both nodes exist in the current view
+      if (nodeIds.has(relation.fromItemId) && nodeIds.has(relation.toItemId)) {
+        relationEdges.push({
+          id: `relation-${relation.id}`,
+          source: relation.fromItemId,
+          target: relation.toItemId,
+          type: 'default',
+          animated: true,
+          style: {
+            stroke: '#8b5cf6',
+            strokeWidth: 2,
+            strokeDasharray: '5,5',
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: '#8b5cf6',
+          },
+          data: {
+            relationId: relation.id,
+            type: relation.type,
+          },
+          label: relation.type === 'relates' ? '' : relation.type,
+          labelStyle: { fontSize: 10, fill: '#8b5cf6' },
+          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+        });
+      }
+    });
+  });
+
+  return { nodes, edges, relationEdges };
 }
 
 // Inner component that uses useReactFlow
@@ -493,6 +534,8 @@ function MindMapViewInner({
   spaceName = 'Espace',
   onEdit,
   onAddChild,
+  onCreateRelation,
+  onDeleteRelation,
   referentiels,
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -517,19 +560,46 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges } = calculateLayout(tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
-    return { initialNodes: nodes, initialEdges: edges };
-  }, [tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
+    return { initialNodes: nodes, initialEdges: [...edges, ...relationEdges] };
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Update nodes when items or collapsed state change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
     setNodes(newNodes);
-    setEdges(newEdges);
-  }, [tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges]);
+    setEdges([...newEdges, ...relationEdges]);
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges]);
+
+  // Handle new connection (create relation)
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (connection.source && connection.target && connection.source !== '__space__' && connection.target !== '__space__') {
+        // Don't create relation if it's a parent-child relationship
+        const sourceItem = items.find(i => i.id === connection.source);
+        const targetItem = items.find(i => i.id === connection.target);
+        if (sourceItem && targetItem && sourceItem.parentId !== connection.target && targetItem.parentId !== connection.source) {
+          onCreateRelation?.(connection.source, connection.target, 'relates');
+        }
+      }
+    },
+    [items, onCreateRelation]
+  );
+
+  // Handle edge click (to delete relation)
+  const onEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      if (edge.id.startsWith('relation-') && edge.data?.relationId) {
+        if (confirm('Supprimer cette relation ?')) {
+          onDeleteRelation?.(edge.source, edge.data.relationId as string);
+        }
+      }
+    },
+    [onDeleteRelation]
+  );
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -543,12 +613,12 @@ function MindMapViewInner({
 
   // Reset layout function
   const resetLayout = useCallback(() => {
-    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
     setNodes(newNodes);
-    setEdges(newEdges);
+    setEdges([...newEdges, ...relationEdges]);
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges, fitView]);
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges, fitView]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
@@ -588,11 +658,14 @@ function MindMapViewInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
+        onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.1}
         maxZoom={2}
+        connectOnClick={false}
         defaultEdgeOptions={{
           type: 'default',
           style: { stroke: '#94a3b8', strokeWidth: 2 },
@@ -633,6 +706,16 @@ function MindMapViewInner({
             <span className="text-sm">Réorganiser</span>
           </button>
         </Panel>
+        <Panel position="bottom-left" className="bg-white/90 border rounded-lg shadow-sm p-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 mb-1">
+            <Link2 className="w-3 h-3 text-purple-500" />
+            <span>Glissez depuis un point pour créer une relation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-0.5 bg-purple-500" style={{ strokeDasharray: '5,5' }} />
+            <span>Cliquez sur une relation pour la supprimer</span>
+          </div>
+        </Panel>
       </ReactFlow>
     </>
   );
@@ -645,6 +728,8 @@ export function MindMapView({
   onDelete: _onDelete,
   onUpdateStatus: _onUpdateStatus,
   onAddChild,
+  onCreateRelation,
+  onDeleteRelation,
   referentiels,
 }: MindMapViewProps) {
   if (items.length === 0) {
@@ -666,6 +751,8 @@ export function MindMapView({
           spaceName={spaceName}
           onEdit={onEdit}
           onAddChild={onAddChild}
+          onCreateRelation={onCreateRelation}
+          onDeleteRelation={onDeleteRelation}
           referentiels={referentiels}
         />
       </ReactFlowProvider>

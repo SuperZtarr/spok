@@ -209,6 +209,22 @@ export function SpacePage() {
     },
   });
 
+  const createRelationMutation = useMutation({
+    mutationFn: ({ fromItemId, toItemId, type }: { fromItemId: string; toItemId: string; type: string }) =>
+      itemsApi.createRelation(spaceId!, fromItemId, { toItemId, type }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  const deleteRelationMutation = useMutation({
+    mutationFn: ({ itemId, relationId }: { itemId: string; relationId: string }) =>
+      itemsApi.deleteRelation(spaceId!, itemId, relationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('reorder');
@@ -682,6 +698,8 @@ export function SpacePage() {
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
+              onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
+              onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
             />
           ) : itemsData?.data.length === 0 ? (

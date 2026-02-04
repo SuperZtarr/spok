@@ -68,7 +68,7 @@ export function CommunitySelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg py-1">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg py-1">
           <button
             onClick={() => handleSelect(null)}
             className={`flex items-center gap-2 w-full px-3 py-2 hover:bg-accent transition-colors text-sm text-left ${
