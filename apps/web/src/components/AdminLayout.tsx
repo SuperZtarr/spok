@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Users, ArrowLeft, Shield, FolderKanban, Building2 } from 'lucide-react';
+import { LogOut, Users, ArrowLeft, FolderKanban, Building2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { Button } from './ui/Button';

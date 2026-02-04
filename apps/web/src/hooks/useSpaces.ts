@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesApi } from '../lib/api';
 import type { CreateSpaceInput } from '@spok/shared';
 
-export function useSpaces() {
+export function useSpaces(communityId?: string) {
   return useQuery({
-    queryKey: ['spaces'],
-    queryFn: spacesApi.list,
+    queryKey: ['spaces', communityId],
+    queryFn: () => spacesApi.list(communityId),
   });
 }
 

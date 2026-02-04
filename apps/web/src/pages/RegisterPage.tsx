@@ -5,7 +5,7 @@ import { authApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader } from '../components/ui/Card';
 
 export function RegisterPage() {
   const navigate = useNavigate();
