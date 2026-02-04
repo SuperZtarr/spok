@@ -34,7 +34,6 @@ function getStatusColor(status: string | null | undefined, statuses: StatusConfi
   }
   const statusConfig = statuses.find(s => s.id === status);
   if (!statusConfig) return 'bg-gray-100';
-  // Extract just the bg color class
   const colorMatch = statusConfig.color.match(/bg-[a-z]+-\d+/);
   return colorMatch ? colorMatch[0] : 'bg-gray-100';
 }
@@ -125,7 +124,7 @@ function countDescendants(item: TreeItem): number {
   return count;
 }
 
-// Custom node component
+// Custom node component for radial layout
 interface MindMapNodeProps {
   data: {
     label: string;
@@ -148,19 +147,21 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
   return (
     <div
-      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[120px] max-w-[250px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
-        isRoot ? 'border-primary' : 'border-gray-300'
+      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] max-w-[200px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+        isRoot ? 'border-primary border-3' : 'border-gray-300'
       }`}
       style={{ backgroundColor: hexColor }}
     >
-      {/* Input handle - not for root nodes */}
-      {!isRoot && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="!bg-gray-400 !w-2 !h-2"
-        />
-      )}
+      {/* Handles on all sides for radial connections */}
+      <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" id="top" />
+      <Handle type="target" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" id="bottom" />
+      <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2" id="left" />
+      <Handle type="target" position={Position.Right} className="!bg-gray-400 !w-2 !h-2" id="right" />
+
+      <Handle type="source" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" id="top-source" />
+      <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" id="bottom-source" />
+      <Handle type="source" position={Position.Left} className="!bg-gray-400 !w-2 !h-2" id="left-source" />
+      <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2" id="right-source" />
 
       <div className="flex items-center gap-2">
         {/* Collapse/Expand button for nodes with children */}
@@ -179,11 +180,9 @@ function MindMapNode({ data }: MindMapNodeProps) {
               <ChevronDown className="w-4 h-4 text-gray-600" />
             )}
           </button>
-        ) : (
-          <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
-        )}
+        ) : null}
 
-        {hasChildren && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
+        <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
 
         <span className="text-sm font-medium truncate">{item.title}</span>
 
@@ -196,7 +195,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
       </div>
 
       {/* Action buttons on hover */}
-      <div className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+      <div className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 z-10">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -218,23 +217,6 @@ function MindMapNode({ data }: MindMapNodeProps) {
           <Plus className="w-3 h-3 text-green-600" />
         </button>
       </div>
-
-      {/* Output handle - show when has children and not collapsed */}
-      {hasChildren && !isCollapsed && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="!bg-gray-400 !w-2 !h-2"
-        />
-      )}
-      {/* Show handle on hover for adding children, or when collapsed */}
-      {(!hasChildren || isCollapsed) && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className={`!bg-gray-300 !w-2 !h-2 ${isCollapsed ? '' : '!opacity-0 group-hover:!opacity-100'}`}
-        />
-      )}
     </div>
   );
 }
@@ -243,11 +225,42 @@ const nodeTypes = {
   mindmap: MindMapNode,
 };
 
-// Layout constants
-const HORIZONTAL_SPACING = 280;
-const VERTICAL_SPACING = 80;
+// Layout constants for radial layout
+const BASE_RADIUS = 200; // Base radius for first level
+const RADIUS_INCREMENT = 180; // Additional radius per level
+const MIN_ANGLE_SPREAD = Math.PI / 6; // Minimum angle between siblings (30 degrees)
 
-// Calculate node positions using a tree layout algorithm
+// Calculate the angular size needed for a subtree
+function calculateSubtreeSize(item: TreeItem, collapsedIds: Set<string>): number {
+  if (item.children.length === 0 || collapsedIds.has(item.id)) {
+    return MIN_ANGLE_SPREAD;
+  }
+
+  let totalSize = 0;
+  item.children.forEach(child => {
+    totalSize += calculateSubtreeSize(child, collapsedIds);
+  });
+
+  return Math.max(totalSize, MIN_ANGLE_SPREAD);
+}
+
+// Get the best handle position based on angle
+function getHandleFromAngle(angle: number): string {
+  // Normalize angle to 0-2PI
+  const normalizedAngle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
+  if (normalizedAngle >= Math.PI * 7/4 || normalizedAngle < Math.PI * 1/4) {
+    return 'right';
+  } else if (normalizedAngle >= Math.PI * 1/4 && normalizedAngle < Math.PI * 3/4) {
+    return 'bottom';
+  } else if (normalizedAngle >= Math.PI * 3/4 && normalizedAngle < Math.PI * 5/4) {
+    return 'left';
+  } else {
+    return 'top';
+  }
+}
+
+// Calculate node positions using radial/star layout
 function calculateLayout(
   tree: TreeItem[],
   statuses: StatusConfig[],
@@ -259,78 +272,41 @@ function calculateLayout(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  // Track vertical position for each depth level
-  const depthYPositions: Map<number, number> = new Map();
-
   function processNode(
     item: TreeItem,
     depth: number,
-    parentId: string | null
-  ): { minY: number; maxY: number; centerY: number } {
+    parentId: string | null,
+    centerX: number,
+    centerY: number,
+    startAngle: number,
+    endAngle: number,
+    parentAngle?: number
+  ) {
     const statusColor = getStatusColor(item.status, statuses);
     const hexColor = tailwindBgToHex(statusColor);
-    const x = depth * HORIZONTAL_SPACING;
     const hasChildren = item.children.length > 0;
     const isCollapsed = collapsedIds.has(item.id);
     const childCount = countDescendants(item);
 
-    // If leaf node OR collapsed, place at next available Y position
-    if (item.children.length === 0 || isCollapsed) {
-      const currentY = depthYPositions.get(depth) || 0;
-      const y = currentY;
-      depthYPositions.set(depth, currentY + VERTICAL_SPACING);
+    // Calculate position
+    let x: number, y: number;
 
-      nodes.push({
-        id: item.id,
-        type: 'mindmap',
-        position: { x, y },
-        data: {
-          label: item.title,
-          item,
-          statusColor,
-          hexColor,
-          onEdit,
-          onAddChild,
-          onToggleCollapse,
-          isRoot: depth === 0 && parentId === null,
-          hasChildren,
-          isCollapsed,
-          childCount,
-        },
-      });
-
-      if (parentId) {
-        edges.push({
-          id: `${parentId}-${item.id}`,
-          source: parentId,
-          target: item.id,
-          type: 'smoothstep',
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
-        });
-      }
-
-      return { minY: y, maxY: y, centerY: y };
-    }
-
-    // Process children first (only if not collapsed)
-    const childResults = item.children.map(child =>
-      processNode(child, depth + 1, item.id)
-    );
-
-    const minY = Math.min(...childResults.map(r => r.minY));
-    const maxY = Math.max(...childResults.map(r => r.maxY));
-    const centerY = (minY + maxY) / 2;
-
-    // Update depth position if needed
-    const currentDepthY = depthYPositions.get(depth) || 0;
-    if (maxY + VERTICAL_SPACING > currentDepthY) {
-      depthYPositions.set(depth, maxY + VERTICAL_SPACING);
+    if (depth === 0) {
+      // Root node at center
+      x = centerX;
+      y = centerY;
+    } else {
+      // Calculate position based on angle and radius
+      const radius = BASE_RADIUS + (depth - 1) * RADIUS_INCREMENT;
+      const angle = (startAngle + endAngle) / 2;
+      x = centerX + Math.cos(angle) * radius;
+      y = centerY + Math.sin(angle) * radius;
     }
 
     nodes.push({
       id: item.id,
       type: 'mindmap',
-      position: { x, y: centerY },
+      position: { x: x - 75, y: y - 20 }, // Center the node (approximate node size)
       data: {
         label: item.title,
         item,
@@ -339,30 +315,83 @@ function calculateLayout(
         onEdit,
         onAddChild,
         onToggleCollapse,
-        isRoot: depth === 0 && parentId === null,
+        isRoot: depth === 0,
         hasChildren,
         isCollapsed,
         childCount,
       },
     });
 
-    if (parentId) {
+    // Add edge from parent
+    if (parentId && parentAngle !== undefined) {
+      const childAngle = (startAngle + endAngle) / 2;
+      const sourceHandle = getHandleFromAngle(childAngle) + '-source';
+      const targetHandle = getHandleFromAngle(childAngle + Math.PI); // Opposite side
+
       edges.push({
         id: `${parentId}-${item.id}`,
         source: parentId,
         target: item.id,
-        type: 'smoothstep',
+        sourceHandle,
+        targetHandle,
+        type: 'default',
         style: { stroke: '#94a3b8', strokeWidth: 2 },
       });
     }
 
-    return { minY, maxY, centerY };
+    // Process children if not collapsed
+    if (hasChildren && !isCollapsed) {
+      const visibleChildren = item.children;
+      const totalSubtreeSize = visibleChildren.reduce(
+        (sum, child) => sum + calculateSubtreeSize(child, collapsedIds),
+        0
+      );
+
+      let currentAngle = startAngle;
+      const angleRange = endAngle - startAngle;
+
+      visibleChildren.forEach(child => {
+        const childSize = calculateSubtreeSize(child, collapsedIds);
+        const childAngleSpan = (childSize / totalSubtreeSize) * angleRange;
+        const childStartAngle = currentAngle;
+        const childEndAngle = currentAngle + childAngleSpan;
+
+        processNode(
+          child,
+          depth + 1,
+          item.id,
+          x,
+          y,
+          childStartAngle,
+          childEndAngle,
+          (startAngle + endAngle) / 2
+        );
+
+        currentAngle = childEndAngle;
+      });
+    }
   }
 
   // Process all root nodes
-  tree.forEach(rootItem => {
-    processNode(rootItem, 0, null);
-  });
+  if (tree.length === 1) {
+    // Single root: place at center with children around it
+    processNode(tree[0], 0, null, 0, 0, 0, 2 * Math.PI);
+  } else {
+    // Multiple roots: distribute them in a circle
+    const rootRadius = tree.length > 3 ? BASE_RADIUS : BASE_RADIUS / 2;
+    tree.forEach((rootItem, index) => {
+      const angle = (2 * Math.PI * index) / tree.length - Math.PI / 2;
+      const x = Math.cos(angle) * rootRadius;
+      const y = Math.sin(angle) * rootRadius;
+
+      // Calculate angle span for this root's subtree
+      const angleSpan = (2 * Math.PI) / tree.length;
+      const startAngle = angle - angleSpan / 2;
+      const endAngle = angle + angleSpan / 2;
+
+      processNode(rootItem, 0, null, x, y, startAngle, endAngle);
+    });
+  }
 
   return { nodes, edges };
 }
@@ -438,11 +467,11 @@ export function MindMapView({
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.3 }}
         minZoom={0.1}
         maxZoom={2}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'default',
           style: { stroke: '#94a3b8', strokeWidth: 2 },
         }}
       >
