@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -60,9 +60,60 @@ function getStatusColor(status: string | null | undefined, statuses: StatusConfi
   return statusConfig.color;
 }
 
-interface TimelineItem extends Item {
-  startDate: string;
-  endDate?: string | null;
+// Build tree structure from flat items
+interface TreeItem extends Item {
+  children: TreeItem[];
+  depth: number;
+}
+
+function buildTree(items: Item[]): TreeItem[] {
+  const itemMap = new Map<string, TreeItem>();
+  const rootItems: TreeItem[] = [];
+
+  // First pass: create TreeItem for each item
+  items.forEach(item => {
+    itemMap.set(item.id, { ...item, children: [], depth: 0 });
+  });
+
+  // Second pass: build hierarchy
+  items.forEach(item => {
+    const treeItem = itemMap.get(item.id)!;
+    if (item.parentId && itemMap.has(item.parentId)) {
+      const parent = itemMap.get(item.parentId)!;
+      parent.children.push(treeItem);
+    } else {
+      rootItems.push(treeItem);
+    }
+  });
+
+  // Third pass: calculate depths and sort
+  function setDepths(items: TreeItem[], depth: number) {
+    items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    items.forEach(item => {
+      item.depth = depth;
+      setDepths(item.children, depth + 1);
+    });
+  }
+  setDepths(rootItems, 0);
+
+  return rootItems;
+}
+
+// Flatten tree for rendering
+function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
+  const result: TreeItem[] = [];
+
+  function traverse(items: TreeItem[]) {
+    items.forEach(item => {
+      result.push(item);
+      if (item.children.length > 0 && !collapsedIds.has(item.id)) {
+        traverse(item.children);
+      }
+    });
+  }
+
+  traverse(items);
+  return result;
 }
 
 export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onAddChild: _onAddChild, referentiels }: TimelineViewProps) {
@@ -73,33 +124,22 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
   });
   const [daysToShow, setDaysToShow] = useState(28); // 4 weeks by default
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
 
-  // Filter items that have dates
-  const timelineItems = useMemo(() => {
-    return items.filter((item): item is TimelineItem => {
-      return !!(item.startDate || item.dueDate);
-    }).map(item => ({
-      ...item,
-      // Use startDate or dueDate as start
-      startDate: item.startDate || item.dueDate!,
-      // Use endDate, or if only dueDate, make it a single day
-      endDate: item.endDate || item.dueDate || item.startDate,
-    }));
-  }, [items]);
+  // Build tree structure
+  const tree = useMemo(() => buildTree(items), [items]);
 
-  // Items without dates
-  const itemsWithoutDates = useMemo(() => {
-    return items.filter(item => !item.startDate && !item.dueDate);
-  }, [items]);
+  // Flatten tree for display
+  const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
 
-  // Calculate the date range
-  const visibleEndDate = useMemo(() => {
-    return addDays(visibleStartDate, daysToShow);
-  }, [visibleStartDate, daysToShow]);
+  // Count items with dates
+  const itemsWithDatesCount = useMemo(() => {
+    return items.filter(item => item.startDate || item.dueDate).length;
+  }, [items]);
 
   // Generate days array for the header
   const days = useMemo(() => {
@@ -145,10 +185,26 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
     setVisibleStartDate(addDays(new Date(), -7));
   };
 
+  // Toggle collapse
+  const toggleCollapse = (itemId: string) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
   // Calculate bar position for an item
-  const getBarStyle = (item: TimelineItem) => {
-    const itemStart = startOfDay(new Date(item.startDate));
-    const itemEnd = startOfDay(new Date(item.endDate || item.startDate));
+  const getBarStyle = (item: Item) => {
+    const itemStartDate = item.startDate || item.dueDate;
+    if (!itemStartDate) return null;
+
+    const itemStart = startOfDay(new Date(itemStartDate));
+    const itemEnd = startOfDay(new Date(item.endDate || item.dueDate || itemStartDate));
 
     const startOffset = differenceInDays(itemStart, visibleStartDate);
     const duration = differenceInDays(itemEnd, itemStart) + 1;
@@ -180,6 +236,8 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
     return day === 0 || day === 6;
   };
 
+  const visibleEndDate = addDays(visibleStartDate, daysToShow);
+
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
@@ -199,7 +257,9 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
           {formatDateFull(visibleStartDate)} - {formatDateFull(addDays(visibleEndDate, -1))}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{timelineItems.length} éléments planifiés</span>
+          <span className="text-sm text-muted-foreground">
+            {items.length} éléments ({itemsWithDatesCount} planifiés)
+          </span>
           <select
             className="text-sm border rounded px-2 py-1 bg-background"
             value={daysToShow}
@@ -220,7 +280,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
           <div className="sticky top-0 bg-background z-10 border-b">
             {/* Weeks row */}
             <div className="flex border-b">
-              <div className="w-64 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
+              <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
                 Semaine
               </div>
               <div className="flex">
@@ -237,7 +297,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
             </div>
             {/* Days row */}
             <div className="flex">
-              <div className="w-64 flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50">
+              <div className="w-72 flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50">
                 Élément
               </div>
               <div className="flex">
@@ -259,18 +319,20 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
             </div>
           </div>
 
-          {/* Items rows */}
-          {timelineItems.length === 0 ? (
+          {/* Items rows - hierarchical */}
+          {flatItems.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Aucun élément avec des dates</p>
-              <p className="text-sm">Ajoutez des dates de début/fin à vos éléments pour les voir ici</p>
+              <p>Aucun élément</p>
+              <p className="text-sm">Créez des éléments pour les voir dans le planning</p>
             </div>
           ) : (
-            timelineItems.map((item) => {
+            flatItems.map((item) => {
               const barStyle = getBarStyle(item);
               const Icon = TYPE_ICONS[item.type];
               const statusColor = getStatusColor(item.status, statuses);
+              const hasChildren = item.children.length > 0;
+              const isCollapsed = collapsedIds.has(item.id);
+              const hasDate = !!(item.startDate || item.dueDate);
 
               return (
                 <div
@@ -279,13 +341,36 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Item label */}
+                  {/* Item label with indentation */}
                   <div
-                    className="w-64 flex-shrink-0 px-3 py-2 border-r flex items-center gap-2 cursor-pointer hover:bg-muted/50"
-                    onClick={() => onEdit(item.id)}
+                    className="w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50"
+                    style={{ paddingLeft: `${8 + item.depth * 20}px` }}
                   >
+                    {/* Expand/collapse button */}
+                    {hasChildren ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCollapse(item.id);
+                        }}
+                        className="p-0.5 hover:bg-muted rounded"
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="w-5" /> // Spacer for alignment
+                    )}
                     <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate text-sm">{item.title}</span>
+                    <span
+                      className={`truncate text-sm ${!hasDate ? 'text-muted-foreground' : ''}`}
+                      onClick={() => onEdit(item.id)}
+                    >
+                      {item.title}
+                    </span>
                   </div>
 
                   {/* Timeline bar area */}
@@ -301,7 +386,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                       ))}
                     </div>
 
-                    {/* Item bar */}
+                    {/* Item bar (only if has dates) */}
                     {barStyle && (
                       <div
                         className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} shadow-md border border-black/20 ${
@@ -312,7 +397,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                           width: barStyle.width,
                         }}
                         onClick={() => onEdit(item.id)}
-                        title={`${item.title}\n${formatDateShort(new Date(item.startDate))} - ${formatDateShort(new Date(item.endDate || item.startDate))}`}
+                        title={`${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${formatDateShort(new Date(item.endDate || item.dueDate || item.startDate!))}`}
                       >
                         <div className="px-2 py-1 text-xs truncate font-semibold">
                           {item.title}
@@ -323,37 +408,6 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                 </div>
               );
             })
-          )}
-
-          {/* Items without dates section */}
-          {itemsWithoutDates.length > 0 && (
-            <div className="border-t-2 border-dashed">
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50">
-                <AlertCircle className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {itemsWithoutDates.length} élément(s) sans date
-                </span>
-              </div>
-              {itemsWithoutDates.slice(0, 5).map((item) => {
-                const Icon = TYPE_ICONS[item.type];
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-2 px-3 py-2 border-b hover:bg-muted/30 cursor-pointer"
-                    onClick={() => onEdit(item.id)}
-                  >
-                    <Icon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm truncate">{item.title}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">Cliquer pour ajouter des dates</span>
-                  </div>
-                );
-              })}
-              {itemsWithoutDates.length > 5 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  Et {itemsWithoutDates.length - 5} autre(s)...
-                </div>
-              )}
-            </div>
           )}
         </div>
       </div>

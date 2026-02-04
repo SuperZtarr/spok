@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi } from '../lib/api';
-import type { Item, ItemType, ContributionWithAuthor } from '@spok/shared';
+import type { Item, ItemType, ContributionWithAuthor, ItemRelation } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
 import { TYPE_LABELS, STATUS_OPTIONS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 
@@ -46,6 +46,11 @@ export function ItemEditModal({
   const [newContribution, setNewContribution] = useState('');
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
   const [editingContributionContent, setEditingContributionContent] = useState('');
+
+  // Relations state
+  const [showAddRelation, setShowAddRelation] = useState(false);
+  const [newRelationType, setNewRelationType] = useState<'depends' | 'blocks'>('depends');
+  const [newRelationTargetId, setNewRelationTargetId] = useState('');
 
   const { user } = useAuthStore();
 
@@ -131,6 +136,40 @@ export function ItemEditModal({
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
     },
   });
+
+  // Relations mutations
+  const createRelationMutation = useMutation({
+    mutationFn: (data: { toItemId: string; type: string }) =>
+      itemsApi.createRelation(spaceId, itemId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      setShowAddRelation(false);
+      setNewRelationTargetId('');
+    },
+  });
+
+  const deleteRelationMutation = useMutation({
+    mutationFn: (relationId: string) =>
+      itemsApi.deleteRelation(spaceId, itemId!, relationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+    },
+  });
+
+  const handleAddRelation = () => {
+    if (newRelationTargetId) {
+      createRelationMutation.mutate({
+        toItemId: newRelationTargetId,
+        type: newRelationType,
+      });
+    }
+  };
+
+  const handleDeleteRelation = (relationId: string) => {
+    if (confirm('Supprimer cette dépendance ?')) {
+      deleteRelationMutation.mutate(relationId);
+    }
+  };
 
   const handleAddContribution = () => {
     if (newContribution.trim()) {
@@ -391,6 +430,130 @@ export function ItemEditModal({
               onChange={(e) => setStatus(e.target.value)}
               options={[{ value: '', label: 'Aucun statut' }, ...STATUS_OPTIONS]}
             />
+          </div>
+
+          {/* Dependencies/Relations section */}
+          <div className="space-y-3 pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Link2 className="w-4 h-4" />
+                Dépendances
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddRelation(!showAddRelation)}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Ajouter
+              </Button>
+            </div>
+
+            {/* Add new relation */}
+            {showAddRelation && (
+              <div className="p-3 bg-muted rounded-lg space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Type</label>
+                    <Select
+                      value={newRelationType}
+                      onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks')}
+                      options={[
+                        { value: 'depends', label: 'Dépend de...' },
+                        { value: 'blocks', label: 'Bloque...' },
+                      ]}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Élément</label>
+                    <Select
+                      value={newRelationTargetId}
+                      onChange={(e) => setNewRelationTargetId(e.target.value)}
+                      options={[
+                        { value: '', label: 'Sélectionner...' },
+                        ...allItems
+                          .filter((i) => i.id !== itemId)
+                          .map((i) => ({ value: i.id, label: i.title })),
+                      ]}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddRelation}
+                    disabled={!newRelationTargetId || createRelationMutation.isPending}
+                  >
+                    {createRelationMutation.isPending ? 'Ajout...' : 'Ajouter'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddRelation(false);
+                      setNewRelationTargetId('');
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Existing relations */}
+            {((item.relationsFrom && item.relationsFrom.length > 0) ||
+              (item.relationsTo && item.relationsTo.length > 0)) ? (
+              <div className="space-y-2">
+                {/* Relations FROM this item (this item depends on / blocks others) */}
+                {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => (
+                  <div
+                    key={relation.id}
+                    className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        relation.type === 'depends' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {relation.type === 'depends' ? 'Dépend de' : 'Bloque'}
+                      </span>
+                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                      <span>{relation.toItem?.title || 'Élément inconnu'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRelation(relation.id)}
+                      className="p-1 hover:bg-background rounded transition-colors text-destructive"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Relations TO this item (others depend on / block this item) */}
+                {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => (
+                  <div
+                    key={relation.id}
+                    className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{relation.fromItem?.title || 'Élément inconnu'}</span>
+                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        relation.type === 'depends' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {relation.type === 'depends' ? 'dépend de ceci' : 'est bloqué par ceci'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucune dépendance</p>
+            )}
           </div>
 
           {/* Contributions section */}
