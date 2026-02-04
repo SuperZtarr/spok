@@ -86,6 +86,8 @@ model Item {
   priority    Int?
   position    Int       @default(0)
   dueDate     DateTime?
+  startDate   DateTime?
+  endDate     DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -115,7 +117,8 @@ enum ItemType {
   NOTE
   PROJECT
   TASK
-  APPOINTMENT
+  MEETING
+  PERIOD
   LINK
   CONFIG
   DOCUMENT

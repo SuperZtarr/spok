@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit, serializeRelationForAudit } from '../utils/audit.js';
 
 const createItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']),
   title: z.string().min(1),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
@@ -11,12 +11,14 @@ const createItemSchema = z.object({
   status: z.string().optional(),
   priority: z.number().int().min(1).max(4).optional(),
   dueDate: z.string().datetime().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
   parentId: z.string().optional(),
   tagIds: z.array(z.string()).optional(),
 });
 
 const updateItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
@@ -24,6 +26,8 @@ const updateItemSchema = z.object({
   status: z.string().optional(),
   priority: z.number().int().min(1).max(4).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
+  startDate: z.string().datetime().nullable().optional(),
+  endDate: z.string().datetime().nullable().optional(),
   parentId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
 });
@@ -34,7 +38,7 @@ const createRelationSchema = z.object({
 });
 
 const querySchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'APPOINTMENT', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
   status: z.string().optional(),
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
@@ -139,6 +143,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           ...itemData,
           dueDate: itemData.dueDate ? new Date(itemData.dueDate) : undefined,
+          startDate: itemData.startDate ? new Date(itemData.startDate) : undefined,
+          endDate: itemData.endDate ? new Date(itemData.endDate) : undefined,
           spaceId: request.params.spaceId,
           createdById: request.user.userId,
           tags: tagIds
@@ -256,6 +262,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           ...updateData,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
+          startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : undefined,
+          endDate: updateData.endDate === null ? null : updateData.endDate ? new Date(updateData.endDate) : undefined,
           tags: tagIds
             ? {
                 create: tagIds.map((tagId) => ({ tagId })),
