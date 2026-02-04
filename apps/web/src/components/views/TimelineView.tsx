@@ -49,18 +49,15 @@ function getWeekNumber(date: Date): number {
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-// Get status color from referentiels
+// Get status color from referentiels - utilise la même couleur que les badges de statut
 function getStatusColor(status: string | null | undefined, statuses: StatusConfig[]): string {
-  if (!status) return 'bg-gray-400';
-  const statusConfig = statuses.find(s => s.id === status);
-  if (!statusConfig) return 'bg-gray-400';
-  // Extract color from borderColor (e.g., "border-yellow-500 bg-yellow-50" -> yellow)
-  const match = statusConfig.borderColor.match(/border-(\w+)-/);
-  if (match) {
-    const colorName = match[1];
-    return `bg-${colorName}-500`;
+  if (!status) {
+    const undefinedStatus = statuses.find(s => s.id === 'undefined');
+    return undefinedStatus?.color || 'bg-slate-100 text-slate-600';
   }
-  return 'bg-gray-400';
+  const statusConfig = statuses.find(s => s.id === status);
+  if (!statusConfig) return 'bg-gray-100 text-gray-800';
+  return statusConfig.color;
 }
 
 interface TimelineItem extends Item {
@@ -307,8 +304,8 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                     {/* Item bar */}
                     {barStyle && (
                       <div
-                        className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} ${
-                          hoveredItem === item.id ? 'ring-2 ring-primary shadow-lg' : 'opacity-80 hover:opacity-100'
+                        className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} shadow-md border border-black/20 ${
+                          hoveredItem === item.id ? 'ring-2 ring-primary shadow-xl scale-[1.02]' : 'hover:shadow-lg'
                         }`}
                         style={{
                           left: barStyle.left + 2,
@@ -317,7 +314,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                         onClick={() => onEdit(item.id)}
                         title={`${item.title}\n${formatDateShort(new Date(item.startDate))} - ${formatDateShort(new Date(item.endDate || item.startDate))}`}
                       >
-                        <div className="px-2 py-1 text-xs text-white truncate font-medium">
+                        <div className="px-2 py-1 text-xs truncate font-semibold">
                           {item.title}
                         </div>
                       </div>
