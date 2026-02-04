@@ -6,8 +6,11 @@ import {
   Background,
   Controls,
   MiniMap,
+  Panel,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   Handle,
   Position,
 } from '@xyflow/react';
@@ -15,7 +18,7 @@ import '@xyflow/react/dist/style.css';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 
 interface MindMapViewProps {
   items: Item[];
@@ -468,16 +471,16 @@ function calculateLayout(
   return { nodes, edges };
 }
 
-export function MindMapView({
+// Inner component that uses useReactFlow
+function MindMapViewInner({
   items,
   spaceName = 'Espace',
   onEdit,
-  onDelete: _onDelete,
-  onUpdateStatus: _onUpdateStatus,
   onAddChild,
   referentiels,
-}: MindMapViewProps) {
+}: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const { fitView } = useReactFlow();
 
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -522,19 +525,47 @@ export function MindMapView({
     [onEdit]
   );
 
-  if (items.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        <div className="text-center">
-          <p>Aucun élément</p>
-          <p className="text-sm">Créez des éléments pour les voir dans la carte mentale</p>
-        </div>
-      </div>
-    );
-  }
+  // Reset layout function
+  const resetLayout = useCallback(() => {
+    const { nodes: newNodes, edges: newEdges } = calculateLayout(tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
+    setNodes(newNodes);
+    setEdges(newEdges);
+    // Fit view after a small delay to ensure nodes are positioned
+    setTimeout(() => fitView({ padding: 0.3 }), 50);
+  }, [tree, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges, fitView]);
+
+  // Get all node IDs that have children
+  const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
+    const parentIds = new Set<string>();
+    function traverse(items: TreeItem[]) {
+      items.forEach(item => {
+        if (item.children.length > 0) {
+          parentIds.add(item.id);
+          traverse(item.children);
+        }
+      });
+    }
+    traverse(items);
+    return parentIds;
+  }, []);
+
+  // Expand all nodes
+  const expandAll = useCallback(() => {
+    setCollapsedIds(new Set());
+    setTimeout(() => fitView({ padding: 0.3 }), 100);
+  }, [fitView]);
+
+  // Collapse all nodes
+  const collapseAll = useCallback(() => {
+    const parentIds = getParentIds(tree);
+    setCollapsedIds(parentIds);
+    setTimeout(() => fitView({ padding: 0.3 }), 100);
+  }, [tree, getParentIds, fitView]);
+
+  const hasCollapsedNodes = collapsedIds.size > 0;
 
   return (
-    <div className="h-full w-full">
+    <>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -559,7 +590,69 @@ export function MindMapView({
           }}
           maskColor="rgba(0, 0, 0, 0.1)"
         />
+        <Panel position="top-right" className="flex gap-2">
+          <button
+            onClick={hasCollapsedNodes ? expandAll : collapseAll}
+            className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+            title={hasCollapsedNodes ? 'Tout étendre' : 'Tout replier'}
+          >
+            {hasCollapsedNodes ? (
+              <>
+                <ChevronsUpDown className="w-4 h-4" />
+                <span className="text-sm">Étendre</span>
+              </>
+            ) : (
+              <>
+                <ChevronsDownUp className="w-4 h-4" />
+                <span className="text-sm">Replier</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={resetLayout}
+            className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+            title="Réorganiser les éléments"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="text-sm">Réorganiser</span>
+          </button>
+        </Panel>
       </ReactFlow>
+    </>
+  );
+}
+
+export function MindMapView({
+  items,
+  spaceName = 'Espace',
+  onEdit,
+  onDelete: _onDelete,
+  onUpdateStatus: _onUpdateStatus,
+  onAddChild,
+  referentiels,
+}: MindMapViewProps) {
+  if (items.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <div className="text-center">
+          <p>Aucun élément</p>
+          <p className="text-sm">Créez des éléments pour les voir dans la carte mentale</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full w-full">
+      <ReactFlowProvider>
+        <MindMapViewInner
+          items={items}
+          spaceName={spaceName}
+          onEdit={onEdit}
+          onAddChild={onAddChild}
+          referentiels={referentiels}
+        />
+      </ReactFlowProvider>
     </div>
   );
 }
