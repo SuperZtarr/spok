@@ -27,11 +27,11 @@ interface ZoomConfig {
 }
 
 const ZOOM_CONFIGS: Record<ZoomLevel, ZoomConfig> = {
-  day: { label: 'Jour', days: 1, dayWidth: 60, navStep: 1, showDayNumbers: true, showWeekdays: true },
-  week: { label: 'Semaine', days: 7, dayWidth: 50, navStep: 7, showDayNumbers: true, showWeekdays: true },
-  month: { label: 'Mois', days: 31, dayWidth: 35, navStep: 30, showDayNumbers: true, showWeekdays: true },
-  quarter: { label: 'Trimestre', days: 91, dayWidth: 12, navStep: 30, showDayNumbers: false, showWeekdays: false },
-  year: { label: 'Année', days: 365, dayWidth: 3, navStep: 90, showDayNumbers: false, showWeekdays: false },
+  day: { label: 'Jour', days: 7, dayWidth: 80, navStep: 1, showDayNumbers: true, showWeekdays: true },
+  week: { label: 'Semaine', days: 42, dayWidth: 40, navStep: 7, showDayNumbers: true, showWeekdays: true },
+  month: { label: 'Mois', days: 90, dayWidth: 20, navStep: 30, showDayNumbers: true, showWeekdays: false },
+  quarter: { label: 'Trimestre', days: 180, dayWidth: 8, navStep: 30, showDayNumbers: false, showWeekdays: false },
+  year: { label: 'Année', days: 365, dayWidth: 4, navStep: 90, showDayNumbers: false, showWeekdays: false },
 };
 
 const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];
@@ -258,10 +258,14 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
 
   const getBarStyle = (item: Item) => {
     const itemStartDate = item.startDate || item.dueDate;
-    if (!itemStartDate) return null;
+    const hasDate = !!itemStartDate;
 
-    const itemStart = startOfDay(new Date(itemStartDate));
-    const itemEnd = startOfDay(new Date(item.endDate || item.dueDate || itemStartDate));
+    // Si pas de date, utiliser aujourd'hui
+    const today = startOfDay(new Date());
+    const itemStart = hasDate ? startOfDay(new Date(itemStartDate)) : today;
+    const itemEnd = hasDate
+      ? startOfDay(new Date(item.endDate || item.dueDate || itemStartDate))
+      : today;
 
     const startOffset = differenceInDays(itemStart, visibleStartDate);
     const duration = differenceInDays(itemEnd, itemStart) + 1;
@@ -277,7 +281,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
     );
     const width = Math.max(adjustedDuration * dayWidth - 2, Math.min(dayWidth, 20));
 
-    return { left, width };
+    return { left, width, hasDate };
   };
 
   const isToday = (date: Date) => {
@@ -502,15 +506,22 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                     {/* Item bar */}
                     {barStyle && (
                       <div
-                        className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} shadow-md border border-black/20 ${
-                          hoveredItem === item.id ? 'ring-2 ring-primary shadow-xl scale-[1.02]' : 'hover:shadow-lg'
+                        className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} ${
+                          barStyle.hasDate
+                            ? 'shadow-md border border-black/20'
+                            : 'border-2 border-dashed border-gray-400 opacity-60'
+                        } ${
+                          hoveredItem === item.id ? 'ring-2 ring-primary shadow-xl scale-[1.02] opacity-100' : 'hover:shadow-lg hover:opacity-100'
                         }`}
                         style={{
                           left: barStyle.left + 1,
                           width: barStyle.width,
                         }}
                         onClick={() => onEdit(item.id)}
-                        title={`${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${formatDateShort(new Date(item.endDate || item.dueDate || item.startDate!))}`}
+                        title={barStyle.hasDate
+                          ? `${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${formatDateShort(new Date(item.endDate || item.dueDate || item.startDate!))}`
+                          : `${item.title}\n(Sans date - cliquer pour définir)`
+                        }
                       >
                         {barStyle.width > 40 && (
                           <div className="px-2 py-1 text-xs truncate font-semibold">
