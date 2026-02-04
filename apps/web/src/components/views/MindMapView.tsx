@@ -220,6 +220,22 @@ function MindMapNode({ data }: MindMapNodeProps) {
         >
           <Plus className="w-3 h-3 text-green-600" />
         </button>
+        {hasChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse(item.id);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-orange-50"
+            title={isCollapsed ? `Déplier (${childCount})` : `Replier (${childCount})`}
+          >
+            {isCollapsed ? (
+              <ChevronsUpDown className="w-3 h-3 text-orange-600" />
+            ) : (
+              <ChevronsDownUp className="w-3 h-3 text-orange-600" />
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
