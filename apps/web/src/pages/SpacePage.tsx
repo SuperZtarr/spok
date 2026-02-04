@@ -707,6 +707,7 @@ export function SpacePage() {
                       isSelectionMode={isSelectionMode}
                       isSelected={selectedIds.has(item.id)}
                       onToggleSelection={toggleSelection}
+                      expandedItems={expandedItems}
                     />
                   ))}
                 </div>
@@ -812,6 +813,7 @@ function SortableItem({
   isSelectionMode,
   isSelected,
   onToggleSelection,
+  expandedItems,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -830,6 +832,7 @@ function SortableItem({
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
+  expandedItems: Set<string>;
 }) {
   const {
     attributes,
@@ -985,6 +988,8 @@ function SortableItem({
           globalDropMode={globalDropMode}
           isSelectionMode={isSelectionMode}
           onToggleSelection={onToggleSelection}
+          expandedItems={expandedItems}
+          onToggleExpand={onToggleExpand}
         />
       )}
     </div>
@@ -1005,6 +1010,8 @@ function ItemChildren({
   globalDropMode,
   isSelectionMode,
   onToggleSelection,
+  expandedItems,
+  onToggleExpand,
 }: {
   spaceId: string;
   parentId: string;
@@ -1018,28 +1025,16 @@ function ItemChildren({
   globalDropMode: 'reorder' | 'nest';
   isSelectionMode?: boolean;
   onToggleSelection?: (id: string) => void;
+  expandedItems: Set<string>;
+  onToggleExpand: (id: string) => void;
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
     queryFn: () => itemsApi.list(spaceId, { parentId, pageSize: 100 }),
   });
 
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-
   // Get selection store for checking selection state (must be before any early return)
   const { selectedIds: globalSelectedIds } = useSelectionStore();
-
-  const toggleExpanded = (id: string) => {
-    setExpandedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
 
   if (!data?.data.length) return null;
 
@@ -1051,7 +1046,7 @@ function ItemChildren({
           item={item}
           depth={depth}
           isExpanded={expandedItems.has(item.id)}
-          onToggleExpand={toggleExpanded}
+          onToggleExpand={onToggleExpand}
           onEdit={onEditItem}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
@@ -1065,6 +1060,7 @@ function ItemChildren({
           isSelectionMode={isSelectionMode}
           isSelected={globalSelectedIds.has(item.id)}
           onToggleSelection={onToggleSelection}
+          expandedItems={expandedItems}
         />
       ))}
     </>
@@ -1090,6 +1086,7 @@ function DraggableChildItem({
   isSelectionMode,
   isSelected,
   onToggleSelection,
+  expandedItems,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1108,6 +1105,7 @@ function DraggableChildItem({
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
+  expandedItems: Set<string>;
 }) {
   const {
     attributes,
@@ -1262,6 +1260,8 @@ function DraggableChildItem({
           globalDropMode={globalDropMode}
           isSelectionMode={isSelectionMode}
           onToggleSelection={onToggleSelection}
+          expandedItems={expandedItems}
+          onToggleExpand={onToggleExpand}
         />
       )}
     </div>
