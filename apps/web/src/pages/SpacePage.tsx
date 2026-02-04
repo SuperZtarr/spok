@@ -665,7 +665,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
-              items={itemsData?.data || []}
+              items={allItemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
