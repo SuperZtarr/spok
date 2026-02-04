@@ -294,24 +294,28 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
       const item = items.find(i => i.id === dragging.itemId);
       if (!item) return;
 
-      const currentStart = item.startDate ? new Date(item.startDate) : new Date();
+      const hasExistingDates = !!(item.startDate || item.endDate);
+      const today = startOfDay(new Date());
+      const currentStart = item.startDate ? new Date(item.startDate) : today;
       const currentEnd = item.endDate ? new Date(item.endDate) : currentStart;
 
       if (dragging.type === 'start') {
-        // Don't allow start date to go past end date
-        if (newDate <= currentEnd) {
+        // Don't allow start date to go past end date (only if item has existing dates)
+        if (!hasExistingDates || newDate <= currentEnd) {
           onUpdateDates(
             dragging.itemId,
             newDate.toISOString(),
-            item.endDate || null
+            // Pour les éléments sans date, définir aussi la date de fin
+            item.endDate || (hasExistingDates ? null : newDate.toISOString())
           );
         }
       } else {
-        // Don't allow end date to go before start date
-        if (newDate >= currentStart) {
+        // Don't allow end date to go before start date (only if item has existing dates)
+        if (!hasExistingDates || newDate >= currentStart) {
           onUpdateDates(
             dragging.itemId,
-            item.startDate || null,
+            // Pour les éléments sans date, définir aussi la date de début
+            item.startDate || (hasExistingDates ? null : newDate.toISOString()),
             newDate.toISOString()
           );
         }
