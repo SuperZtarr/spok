@@ -576,6 +576,7 @@ export const referentielsApi = {
   reset: (spaceId: string) =>
     fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels/reset`, {
       method: 'POST',
+      body: JSON.stringify({}),
     }),
 
   checkStatusUsage: (spaceId: string, statusId: string) =>
