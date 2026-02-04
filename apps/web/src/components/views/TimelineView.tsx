@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -10,6 +10,7 @@ interface TimelineViewProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
 }
@@ -138,7 +139,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onAddChild: _onAddChild, referentiels }: TimelineViewProps) {
+export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -147,6 +148,14 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
   });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+  // Drag state for resizing
+  const [dragging, setDragging] = useState<{
+    itemId: string;
+    type: 'start' | 'end';
+    initialX: number;
+    initialDate: Date;
+  } | null>(null);
 
   const zoomConfig = ZOOM_CONFIGS[zoomLevel];
 
@@ -255,6 +264,86 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
       return next;
     });
   };
+
+  // Handle drag start for resizing
+  const handleDragStart = useCallback((
+    e: React.MouseEvent,
+    itemId: string,
+    type: 'start' | 'end',
+    currentDate: Date
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging({
+      itemId,
+      type,
+      initialX: e.clientX,
+      initialDate: currentDate,
+    });
+  }, []);
+
+  // Handle drag move
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!dragging || !onUpdateDates) return;
+
+    const deltaX = e.clientX - dragging.initialX;
+    const deltaDays = Math.round(deltaX / dayWidth);
+
+    if (deltaDays !== 0) {
+      const newDate = addDays(dragging.initialDate, deltaDays);
+      const item = items.find(i => i.id === dragging.itemId);
+      if (!item) return;
+
+      const currentStart = item.startDate ? new Date(item.startDate) : new Date();
+      const currentEnd = item.endDate ? new Date(item.endDate) : currentStart;
+
+      if (dragging.type === 'start') {
+        // Don't allow start date to go past end date
+        if (newDate <= currentEnd) {
+          onUpdateDates(
+            dragging.itemId,
+            newDate.toISOString(),
+            item.endDate || null
+          );
+        }
+      } else {
+        // Don't allow end date to go before start date
+        if (newDate >= currentStart) {
+          onUpdateDates(
+            dragging.itemId,
+            item.startDate || null,
+            newDate.toISOString()
+          );
+        }
+      }
+
+      // Update initial values for continuous dragging
+      setDragging(prev => prev ? {
+        ...prev,
+        initialX: e.clientX,
+        initialDate: newDate,
+      } : null);
+    }
+  }, [dragging, dayWidth, items, onUpdateDates]);
+
+  // Handle drag end
+  const handleDragEnd = useCallback(() => {
+    setDragging(null);
+  }, []);
+
+  // Effect for drag listeners
+  useEffect(() => {
+    if (dragging) {
+      const moveHandler = (e: MouseEvent) => handleDragMove(e);
+      const upHandler = () => handleDragEnd();
+      window.addEventListener('mousemove', moveHandler);
+      window.addEventListener('mouseup', upHandler);
+      return () => {
+        window.removeEventListener('mousemove', moveHandler);
+        window.removeEventListener('mouseup', upHandler);
+      };
+    }
+  }, [dragging, handleDragMove, handleDragEnd]);
 
   const getBarStyle = (item: Item) => {
     const itemStartDate = item.startDate || item.dueDate;
@@ -506,26 +595,65 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                     {/* Item bar */}
                     {barStyle && (
                       <div
-                        className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} ${
+                        className={`absolute top-1 h-8 rounded transition-all ${statusColor} ${
                           barStyle.hasDate
                             ? 'shadow-md border border-black/20'
                             : 'border-2 border-dashed border-gray-400 opacity-60'
                         } ${
-                          hoveredItem === item.id ? 'ring-2 ring-primary shadow-xl scale-[1.02] opacity-100' : 'hover:shadow-lg hover:opacity-100'
-                        }`}
+                          hoveredItem === item.id || dragging?.itemId === item.id
+                            ? 'ring-2 ring-primary shadow-xl opacity-100'
+                            : 'hover:shadow-lg hover:opacity-100'
+                        } ${dragging?.itemId === item.id ? 'cursor-grabbing' : ''}`}
                         style={{
                           left: barStyle.left + 1,
                           width: barStyle.width,
                         }}
-                        onClick={() => onEdit(item.id)}
                         title={barStyle.hasDate
                           ? `${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${formatDateShort(new Date(item.endDate || item.dueDate || item.startDate!))}`
                           : `${item.title}\n(Sans date - cliquer pour définir)`
                         }
                       >
-                        {barStyle.width > 40 && (
-                          <div className="px-2 py-1 text-xs truncate font-semibold">
-                            {item.title}
+                        {/* Left resize handle */}
+                        {onUpdateDates && (
+                          <div
+                            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-l group/handle"
+                            onMouseDown={(e) => handleDragStart(
+                              e,
+                              item.id,
+                              'start',
+                              item.startDate ? new Date(item.startDate) : new Date()
+                            )}
+                            title="Ajuster la date de début"
+                          >
+                            <div className="w-0.5 h-4 bg-black/30 group-hover/handle:bg-black/50 rounded" />
+                          </div>
+                        )}
+
+                        {/* Content - clickable */}
+                        <div
+                          className="h-full flex items-center cursor-pointer px-3"
+                          onClick={() => onEdit(item.id)}
+                        >
+                          {barStyle.width > 50 && (
+                            <span className="text-xs truncate font-semibold">
+                              {item.title}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right resize handle */}
+                        {onUpdateDates && (
+                          <div
+                            className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-r group/handle"
+                            onMouseDown={(e) => handleDragStart(
+                              e,
+                              item.id,
+                              'end',
+                              item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : new Date())
+                            )}
+                            title="Ajuster la date de fin"
+                          >
+                            <div className="w-0.5 h-4 bg-black/30 group-hover/handle:bg-black/50 rounded" />
                           </div>
                         )}
                       </div>

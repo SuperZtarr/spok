@@ -193,7 +193,7 @@ export function SpacePage() {
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null } }) =>
       itemsApi.update(spaceId!, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -669,6 +669,7 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onUpdateDates={(id, startDate, endDate) => updateItemMutation.mutate({ id, data: { startDate, endDate } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
             />
