@@ -32,7 +32,7 @@ RUN pnpm --filter @spok/api build
 # Production stage
 FROM node:20-slim AS runner
 
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y openssl postgresql-client && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 
 WORKDIR /app
