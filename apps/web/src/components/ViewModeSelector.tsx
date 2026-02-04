@@ -20,21 +20,18 @@ export function ViewModeSelector() {
       {VIEW_MODES.map((viewMode) => {
         const Icon = ICONS[viewMode.icon];
         const isActive = mode === viewMode.value;
-        const isDisabled = viewMode.value === 'mindmap'; // Mind map not implemented yet
 
         return (
           <button
             key={viewMode.value}
-            onClick={() => !isDisabled && setMode(viewMode.value)}
-            disabled={isDisabled}
+            onClick={() => setMode(viewMode.value)}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
               isActive
                 ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-              isDisabled && 'opacity-50 cursor-not-allowed'
+                : 'text-muted-foreground hover:text-foreground'
             )}
-            title={isDisabled ? `${viewMode.label} (bientot disponible)` : viewMode.label}
+            title={viewMode.label}
           >
             <Icon className="w-4 h-4" />
             <span className="hidden sm:inline">{viewMode.label}</span>

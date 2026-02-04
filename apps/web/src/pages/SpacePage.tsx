@@ -51,6 +51,7 @@ import { SequenceView } from '../components/views/SequenceView';
 import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
 import { TimelineView } from '../components/views/TimelineView';
+import { MindMapView } from '../components/views/MindMapView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
@@ -670,6 +671,15 @@ export function SpacePage() {
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onUpdateDates={(id, startDate, endDate) => updateItemMutation.mutate({ id, data: { startDate, endDate } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
+            />
+          ) : viewMode === 'mindmap' ? (
+            <MindMapView
+              items={allItemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
             />
