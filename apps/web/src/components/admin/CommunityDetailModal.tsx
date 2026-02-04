@@ -264,7 +264,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   // Detail/edit view
   return (
-    <Modal isOpen={true} onClose={onClose} title="Details de la communaute" className="max-w-3xl">
+    <Modal isOpen={true} onClose={onClose} title="Details de la communaute">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : community ? (

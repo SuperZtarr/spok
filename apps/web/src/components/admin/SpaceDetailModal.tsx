@@ -131,7 +131,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
   const availableUsers = usersData?.data.filter((u) => !existingMemberIds.includes(u.id)) || [];
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Details de l'espace" className="max-w-2xl">
+    <Modal isOpen={true} onClose={onClose} title="Details de l'espace">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : space ? (

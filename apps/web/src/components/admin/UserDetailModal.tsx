@@ -284,7 +284,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
 
   // Detail/edit view
   return (
-    <Modal isOpen={true} onClose={onClose} title="Details de l'utilisateur" className="max-w-2xl">
+    <Modal isOpen={true} onClose={onClose} title="Details de l'utilisateur">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : user ? (

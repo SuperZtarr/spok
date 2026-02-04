@@ -32,7 +32,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 transition-opacity"
@@ -43,7 +43,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       {/* Modal content */}
       <div
         className={cn(
-          'relative z-50 w-full max-w-md rounded-lg bg-background border shadow-lg p-6',
+          'relative z-50 w-full max-w-4xl max-h-[90vh] flex flex-col rounded-lg bg-background border shadow-lg p-6',
           className
         )}
         role="dialog"
@@ -51,7 +51,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <h2 id="modal-title" className="text-lg font-semibold">
             {title}
           </h2>
@@ -65,7 +65,9 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
         </div>
 
         {/* Body */}
-        {children}
+        <div className="overflow-y-auto flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );
