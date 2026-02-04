@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Building2, Users, FolderKanban } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Building2, Users, FolderKanban, Eye } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { CommunityFormModal } from '../../components/admin/CommunityFormModal';
+import { CommunityDetailModal } from '../../components/admin/CommunityDetailModal';
 import type { CreateCommunityInput, UpdateCommunityInput } from '@spok/shared';
 
 interface AdminCommunity {
@@ -23,6 +24,7 @@ export function CommunitiesPage() {
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<AdminCommunity | null>(null);
+  const [viewingCommunityId, setViewingCommunityId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'communities', { page, search }],
@@ -161,7 +163,16 @@ export function CommunitiesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setViewingCommunityId(community.id)}
+                          title="Voir les details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(community)}
+                          title="Modifier"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -170,6 +181,7 @@ export function CommunitiesPage() {
                           size="sm"
                           onClick={() => handleDelete(community)}
                           disabled={deleteMutation.isPending}
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -230,6 +242,13 @@ export function CommunitiesPage() {
         isLoading={createMutation.isPending || updateMutation.isPending}
         error={createMutation.error?.message || updateMutation.error?.message}
       />
+
+      {viewingCommunityId && (
+        <CommunityDetailModal
+          communityId={viewingCommunityId}
+          onClose={() => setViewingCommunityId(null)}
+        />
+      )}
     </div>
   );
 }

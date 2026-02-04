@@ -89,6 +89,13 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
             },
           },
         },
+        spaces: {
+          include: {
+            _count: {
+              select: { memberships: true },
+            },
+          },
+        },
       },
     });
 
@@ -107,6 +114,12 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
         name: m.user.name,
         role: m.role,
         joinedAt: m.joinedAt,
+      })),
+      spaces: community.spaces.map((s) => ({
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        memberCount: s._count.memberships,
       })),
     };
   });
