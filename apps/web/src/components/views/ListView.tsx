@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X } from 'lucide-react';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -29,6 +29,18 @@ function formatDate(dateString: string | null | undefined): string | null {
 }
 
 export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels }: ListViewProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter items based on search query
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
+    const query = searchQuery.toLowerCase();
+    return items.filter((item) =>
+      item.title.toLowerCase().includes(query) ||
+      item.description?.toLowerCase().includes(query)
+    );
+  }, [items, searchQuery]);
+
   // Build status and type maps from referentiels
   const { statusLabels, statusColors, typeLabelsShort } = useMemo(() => {
     const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -60,19 +72,49 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
     return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
   }, [referentiels]);
 
-  if (items.length === 0) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>Aucun element</p>
-        <p className="text-sm">Creez votre premier element pour commencer</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="divide-y divide-border">
-      {items.map((item) => {
+    <div className="flex flex-col h-full">
+      {/* Search bar */}
+      <div className="p-3 border-b border-border">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-9 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Items list */}
+      {filteredItems.length === 0 ? (
+        <div className="p-8 text-center text-muted-foreground">
+          <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          {searchQuery ? (
+            <>
+              <p>Aucun résultat</p>
+              <p className="text-sm">Aucun élément ne correspond à "{searchQuery}"</p>
+            </>
+          ) : (
+            <>
+              <p>Aucun element</p>
+              <p className="text-sm">Creez votre premier element pour commencer</p>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="divide-y divide-border flex-1 overflow-auto">
+          {filteredItems.map((item) => {
         const Icon = TYPE_ICONS[item.type];
         const statusLabel = statusLabels[item.status || ''] || 'Non defini';
         const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
@@ -161,6 +203,8 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
           </div>
         );
       })}
+        </div>
+      )}
     </div>
   );
 }
