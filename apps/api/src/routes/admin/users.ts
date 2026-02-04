@@ -346,4 +346,91 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
       return { success: true };
     }
   );
+
+  // POST /admin/users/:id/spaces - Add user to a space
+  fastify.post<{ Params: UserParams; Body: { spaceId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' } }>(
+    ':id/spaces',
+    async (request, reply) => {
+      const { id } = request.params;
+      const { spaceId, role } = request.body;
+
+      const user = await fastify.prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        return reply.notFound('User not found');
+      }
+
+      const space = await fastify.prisma.space.findUnique({ where: { id: spaceId } });
+      if (!space) {
+        return reply.notFound('Space not found');
+      }
+
+      if (space.type === 'PERSONAL') {
+        return reply.badRequest('Cannot add members to a personal space');
+      }
+
+      const existingMembership = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId: id, spaceId } },
+      });
+
+      if (existingMembership) {
+        return reply.conflict('User is already a member of this space');
+      }
+
+      // If adding as OWNER, demote current owner to ADMIN
+      if (role === 'OWNER') {
+        await fastify.prisma.spaceMembership.updateMany({
+          where: { spaceId, role: 'OWNER' },
+          data: { role: 'ADMIN' },
+        });
+      }
+
+      const membership = await fastify.prisma.spaceMembership.create({
+        data: {
+          userId: id,
+          spaceId,
+          role,
+        },
+        include: {
+          space: {
+            select: { id: true, name: true, type: true },
+          },
+        },
+      });
+
+      return reply.status(201).send({
+        id: membership.id,
+        role: membership.role,
+        joinedAt: membership.joinedAt,
+        space: membership.space,
+      });
+    }
+  );
+
+  // DELETE /admin/users/:id/spaces/:spaceId - Remove user from a space
+  fastify.delete<{ Params: { id: string; spaceId: string } }>(
+    ':id/spaces/:spaceId',
+    async (request, reply) => {
+      const { id, spaceId } = request.params;
+
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId: id, spaceId } },
+        include: { space: true },
+      });
+
+      if (!membership) {
+        return reply.notFound('User is not a member of this space');
+      }
+
+      // Cannot remove from personal space
+      if (membership.space.type === 'PERSONAL') {
+        return reply.badRequest('Cannot remove user from their personal space');
+      }
+
+      await fastify.prisma.spaceMembership.delete({
+        where: { id: membership.id },
+      });
+
+      return { success: true };
+    }
+  );
 };

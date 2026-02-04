@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, Plus, Trash2 } from 'lucide-react';
+import { Building2, FolderKanban, Plus, Trash2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { Modal } from '../ui/Modal';
-import type { CommunityRole } from '@spok/shared';
+import type { CommunityRole, Role } from '@spok/shared';
 
 interface UserDetailModalProps {
   userId: string;
@@ -18,10 +18,18 @@ const communityRoleOptions = [
   { value: 'MEMBER', label: 'Membre' },
 ];
 
+const spaceRoleOptions = [
+  { value: 'OWNER', label: 'Propriétaire' },
+  { value: 'ADMIN', label: 'Administrateur' },
+  { value: 'MEMBER', label: 'Membre' },
+  { value: 'VIEWER', label: 'Lecteur' },
+];
+
 const ROLE_LABELS: Record<string, string> = {
   OWNER: 'Propriétaire',
   ADMIN: 'Admin',
   MEMBER: 'Membre',
+  VIEWER: 'Lecteur',
 };
 
 export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
@@ -29,6 +37,11 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   const [showAddCommunity, setShowAddCommunity] = useState(false);
   const [selectedCommunityId, setSelectedCommunityId] = useState('');
   const [selectedRole, setSelectedRole] = useState<CommunityRole>('MEMBER');
+
+  // Space states
+  const [showAddSpace, setShowAddSpace] = useState(false);
+  const [selectedSpaceId, setSelectedSpaceId] = useState('');
+  const [selectedSpaceRole, setSelectedSpaceRole] = useState<Role>('MEMBER');
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['admin', 'user', userId],
@@ -39,6 +52,11 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   const { data: communitiesData } = useQuery({
     queryKey: ['admin', 'communities'],
     queryFn: () => adminApi.communities.list({ pageSize: 100 }),
+  });
+
+  const { data: spacesData } = useQuery({
+    queryKey: ['admin', 'spaces'],
+    queryFn: () => adminApi.spaces.list({ pageSize: 100 }),
   });
 
   const addToCommunityMutation = useMutation({
@@ -63,6 +81,28 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     },
   });
 
+  const addToSpaceMutation = useMutation({
+    mutationFn: (data: { spaceId: string; role: Role }) =>
+      adminApi.users.addToSpace(userId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
+      setShowAddSpace(false);
+      setSelectedSpaceId('');
+      setSelectedSpaceRole('MEMBER');
+    },
+  });
+
+  const removeFromSpaceMutation = useMutation({
+    mutationFn: (spaceId: string) => adminApi.users.removeFromSpace(userId, spaceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
+    },
+  });
+
   const handleAddToCommunity = () => {
     if (selectedCommunityId) {
       addToCommunityMutation.mutate({ communityId: selectedCommunityId, role: selectedRole });
@@ -75,6 +115,18 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     }
   };
 
+  const handleAddToSpace = () => {
+    if (selectedSpaceId) {
+      addToSpaceMutation.mutate({ spaceId: selectedSpaceId, role: selectedSpaceRole });
+    }
+  };
+
+  const handleRemoveFromSpace = (spaceId: string, spaceName: string) => {
+    if (confirm(`Retirer l'utilisateur de l'espace "${spaceName}" ?`)) {
+      removeFromSpaceMutation.mutate(spaceId);
+    }
+  };
+
   // Filter out communities the user is already a member of
   const existingCommunityIds = user?.communityMemberships?.map((m) => m.community.id) || [];
   const availableCommunities = communitiesData?.data.filter((c) => !existingCommunityIds.includes(c.id)) || [];
@@ -82,6 +134,17 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   const communityOptions = [
     { value: '', label: 'Sélectionner une communauté' },
     ...availableCommunities.map((c) => ({ value: c.id, label: c.name })),
+  ];
+
+  // Filter out spaces the user is already a member of, and personal spaces
+  const existingSpaceIds = user?.memberships?.map((m) => m.space.id) || [];
+  const availableSpaces = spacesData?.data.filter(
+    (s) => !existingSpaceIds.includes(s.id) && s.type !== 'PERSONAL'
+  ) || [];
+
+  const spaceOptions = [
+    { value: '', label: 'Sélectionner un espace' },
+    ...availableSpaces.map((s) => ({ value: s.id, label: s.name })),
   ];
 
   return (
@@ -197,6 +260,94 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded-lg">
                 Cet utilisateur n'appartient à aucune communauté
+              </p>
+            )}
+          </div>
+
+          {/* Space memberships */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium flex items-center gap-2">
+                <FolderKanban className="w-4 h-4" />
+                Espaces ({user.memberships?.filter(m => m.space.type !== 'PERSONAL').length || 0})
+              </h3>
+              {availableSpaces.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddSpace(!showAddSpace)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Ajouter
+                </Button>
+              )}
+            </div>
+
+            {showAddSpace && (
+              <div className="p-3 bg-muted rounded-lg space-y-3">
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedSpaceId}
+                    onChange={(e) => setSelectedSpaceId(e.target.value)}
+                    options={spaceOptions}
+                    className="flex-1"
+                  />
+                  <Select
+                    value={selectedSpaceRole}
+                    onChange={(e) => setSelectedSpaceRole(e.target.value as Role)}
+                    options={spaceRoleOptions}
+                    className="w-36"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleAddToSpace}
+                    disabled={!selectedSpaceId || addToSpaceMutation.isPending}
+                  >
+                    Ajouter à l'espace
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddSpace(false);
+                      setSelectedSpaceId('');
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {user.memberships && user.memberships.filter(m => m.space.type !== 'PERSONAL').length > 0 ? (
+              <div className="border border-border rounded-lg divide-y divide-border">
+                {user.memberships
+                  .filter(m => m.space.type !== 'PERSONAL')
+                  .map((membership) => (
+                    <div key={membership.id} className="flex items-center justify-between p-3">
+                      <div className="flex items-center gap-2">
+                        <FolderKanban className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{membership.space.name}</span>
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                          {ROLE_LABELS[membership.role] || membership.role}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveFromSpace(membership.space.id, membership.space.name)}
+                        disabled={removeFromSpaceMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded-lg">
+                Cet utilisateur n'appartient à aucun espace de groupe
               </p>
             )}
           </div>

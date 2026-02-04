@@ -635,6 +635,20 @@ export const adminApi = {
       fetchApi<{ success: boolean }>(`/admin/users/${userId}/communities/${communityId}`, {
         method: 'DELETE',
       }),
+
+    addToSpace: (userId: string, data: { spaceId: string; role: Role }) =>
+      fetchApi<{ id: string; role: string; joinedAt: string; space: { id: string; name: string; type: string } }>(
+        `/admin/users/${userId}/spaces`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }
+      ),
+
+    removeFromSpace: (userId: string, spaceId: string) =>
+      fetchApi<{ success: boolean }>(`/admin/users/${userId}/spaces/${spaceId}`, {
+        method: 'DELETE',
+      }),
   },
 
   spaces: {
