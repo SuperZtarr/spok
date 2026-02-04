@@ -53,4 +53,11 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  body.dev-mode {
+    --background: 30 100% 97%;
+  }
+  .dark body.dev-mode,
+  body.dev-mode.dark {
+    --background: 30 30% 8%;
+  }
 }
