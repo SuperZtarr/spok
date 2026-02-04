@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Trash2, Save } from 'lucide-react';
+import { UserPlus, Trash2, Save, Building2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -28,6 +28,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
   const queryClient = useQueryClient();
   const [editName, setEditName] = useState('');
   const [editType, setEditType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
+  const [editCommunityId, setEditCommunityId] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberSearch, setNewMemberSearch] = useState('');
@@ -38,6 +39,16 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     enabled: !!spaceId,
   });
 
+  const { data: communitiesData } = useQuery({
+    queryKey: ['admin', 'communities'],
+    queryFn: () => adminApi.communities.list({ pageSize: 100 }),
+  });
+
+  const communityOptions = [
+    { value: '', label: 'Aucune communauté' },
+    ...(communitiesData?.data.map((c) => ({ value: c.id, label: c.name })) || []),
+  ];
+
   const { data: usersData } = useQuery({
     queryKey: ['admin', 'users', { search: newMemberSearch }],
     queryFn: () => adminApi.users.list({ search: newMemberSearch, pageSize: 10 }),
@@ -45,11 +56,12 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { name?: string; type?: 'PERSONAL' | 'GROUP' }) =>
+    mutationFn: (data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null }) =>
       adminApi.spaces.update(spaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
       setIsEditing(false);
     },
   });
@@ -87,14 +99,17 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     if (space) {
       setEditName(space.name);
       setEditType(space.type);
+      setEditCommunityId(space.communityId || '');
       setIsEditing(true);
     }
   };
 
   const handleSaveEdit = () => {
-    const data: { name?: string; type?: 'PERSONAL' | 'GROUP' } = {};
+    const data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null } = {};
     if (editName !== space?.name) data.name = editName;
     if (editType !== space?.type) data.type = editType;
+    const newCommunityId = editCommunityId || null;
+    if (newCommunityId !== space?.communityId) data.communityId = newCommunityId;
     if (Object.keys(data).length > 0) {
       updateMutation.mutate(data);
     } else {
@@ -138,10 +153,24 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
                   <label className="block text-sm font-medium mb-1">Type</label>
                   <Select
                     value={editType}
-                    onChange={(e) => setEditType(e.target.value as 'PERSONAL' | 'GROUP')}
+                    onChange={(e) => {
+                      const newType = e.target.value as 'PERSONAL' | 'GROUP';
+                      setEditType(newType);
+                      if (newType === 'PERSONAL') setEditCommunityId('');
+                    }}
                     options={typeOptions}
                   />
                 </div>
+                {editType === 'GROUP' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Communauté</label>
+                    <Select
+                      value={editCommunityId}
+                      onChange={(e) => setEditCommunityId(e.target.value)}
+                      options={communityOptions}
+                    />
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -172,6 +201,21 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
                     {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
                   </span>
                 </div>
+                {space.type === 'GROUP' && (
+                  <div>
+                    <span className="text-muted-foreground">Communauté:</span>{' '}
+                    <span className="font-medium">
+                      {space.community ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {space.community.name}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50">Aucune</span>
+                      )}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <span className="text-muted-foreground">Elements:</span>{' '}
                   <span className="font-medium">{space.itemCount}</span>

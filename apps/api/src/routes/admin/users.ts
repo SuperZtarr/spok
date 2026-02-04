@@ -78,7 +78,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
         createdAt: true,
         updatedAt: true,
         _count: {
-          select: { memberships: true },
+          select: { memberships: true, communityMemberships: true },
         },
         memberships: {
           select: {
@@ -90,6 +90,19 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
                 id: true,
                 name: true,
                 type: true,
+              },
+            },
+          },
+        },
+        communityMemberships: {
+          select: {
+            id: true,
+            role: true,
+            joinedAt: true,
+            community: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -262,4 +275,75 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true };
   });
+
+  // POST /admin/users/:id/communities - Add user to a community
+  fastify.post<{ Params: UserParams; Body: { communityId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' } }>(
+    '/:id/communities',
+    async (request, reply) => {
+      const { id } = request.params;
+      const { communityId, role } = request.body;
+
+      const user = await fastify.prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        return reply.notFound('User not found');
+      }
+
+      const community = await fastify.prisma.community.findUnique({ where: { id: communityId } });
+      if (!community) {
+        return reply.notFound('Community not found');
+      }
+
+      const existingMembership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: id, communityId } },
+      });
+
+      if (existingMembership) {
+        return reply.conflict('User is already a member of this community');
+      }
+
+      // If adding as OWNER, demote current owner to ADMIN
+      if (role === 'OWNER') {
+        await fastify.prisma.communityMembership.updateMany({
+          where: { communityId, role: 'OWNER' },
+          data: { role: 'ADMIN' },
+        });
+      }
+
+      const membership = await fastify.prisma.communityMembership.create({
+        data: { userId: id, communityId, role },
+        include: {
+          community: { select: { id: true, name: true } },
+        },
+      });
+
+      return reply.code(201).send({
+        id: membership.id,
+        role: membership.role,
+        joinedAt: membership.joinedAt,
+        community: membership.community,
+      });
+    }
+  );
+
+  // DELETE /admin/users/:id/communities/:communityId - Remove user from a community
+  fastify.delete<{ Params: { id: string; communityId: string } }>(
+    '/:id/communities/:communityId',
+    async (request, reply) => {
+      const { id, communityId } = request.params;
+
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: id, communityId } },
+      });
+
+      if (!membership) {
+        return reply.notFound('User is not a member of this community');
+      }
+
+      await fastify.prisma.communityMembership.delete({
+        where: { id: membership.id },
+      });
+
+      return { success: true };
+    }
+  );
 };

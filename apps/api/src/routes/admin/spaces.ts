@@ -14,6 +14,7 @@ interface SpaceParams {
 interface UpdateSpaceBody {
   name?: string;
   type?: 'PERSONAL' | 'GROUP';
+  communityId?: string | null;
 }
 
 interface AddMemberBody {
@@ -65,6 +66,9 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
             },
             take: 1,
           },
+          community: {
+            select: { id: true, name: true },
+          },
         },
         skip,
         take: pageSize,
@@ -78,6 +82,8 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         id: space.id,
         name: space.name,
         type: space.type,
+        communityId: space.communityId,
+        community: space.community,
         createdAt: space.createdAt,
         updatedAt: space.updatedAt,
         memberCount: space._count.memberships,
@@ -111,6 +117,9 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
           },
           orderBy: { joinedAt: 'asc' },
         },
+        community: {
+          select: { id: true, name: true },
+        },
       },
     });
 
@@ -122,6 +131,8 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
       id: space.id,
       name: space.name,
       type: space.type,
+      communityId: space.communityId,
+      community: space.community,
       createdAt: space.createdAt,
       updatedAt: space.updatedAt,
       memberCount: space._count.memberships,
@@ -142,7 +153,7 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     async (request, reply) => {
       const { id } = request.params;
-      const { name, type } = request.body;
+      const { name, type, communityId } = request.body;
 
       const existingSpace = await fastify.prisma.space.findUnique({
         where: { id },
@@ -152,9 +163,26 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      const updateData: { name?: string; type?: 'PERSONAL' | 'GROUP' } = {};
+      // Validate communityId if provided
+      if (communityId) {
+        const community = await fastify.prisma.community.findUnique({
+          where: { id: communityId },
+        });
+        if (!community) {
+          return reply.notFound('Community not found');
+        }
+      }
+
+      // Personal spaces cannot have a community
+      const finalType = type || existingSpace.type;
+      if (finalType === 'PERSONAL' && communityId) {
+        return reply.badRequest('Personal spaces cannot be associated with a community');
+      }
+
+      const updateData: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null } = {};
       if (name) updateData.name = name;
       if (type) updateData.type = type;
+      if (communityId !== undefined) updateData.communityId = communityId;
 
       const space = await fastify.prisma.space.update({
         where: { id },
@@ -163,6 +191,9 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
           _count: {
             select: { memberships: true, items: true },
           },
+          community: {
+            select: { id: true, name: true },
+          },
         },
       });
 
@@ -170,6 +201,8 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         id: space.id,
         name: space.name,
         type: space.type,
+        communityId: space.communityId,
+        community: space.community,
         createdAt: space.createdAt,
         updatedAt: space.updatedAt,
         memberCount: space._count.memberships,

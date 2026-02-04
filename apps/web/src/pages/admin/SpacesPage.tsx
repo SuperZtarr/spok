@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Pencil, Trash2, Users, FolderKanban, User } from 'lucide-react';
+import { Search, Pencil, Trash2, Users, FolderKanban, User, Building2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -98,6 +98,7 @@ export function SpacesPage() {
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium">Nom</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Communauté</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Proprietaire</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Membres</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Elements</th>
@@ -134,6 +135,16 @@ export function SpacesPage() {
                           </>
                         )}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {space.community ? (
+                        <span className="inline-flex items-center gap-1 text-sm">
+                          <Building2 className="w-3 h-3" />
+                          {space.community.name}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {space.owner ? (

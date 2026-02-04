@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Shield, User } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Shield, User, Building2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { UserFormModal } from '../../components/admin/UserFormModal';
+import { UserDetailModal } from '../../components/admin/UserDetailModal';
 import type { AdminUser, CreateUserInput, UpdateUserInput } from '@spok/shared';
 
 export function UsersPage() {
@@ -13,6 +14,7 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', { page, search }],
@@ -152,7 +154,16 @@ export function UsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setSelectedUserId(user.id)}
+                          title="Communautés"
+                        >
+                          <Building2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(user)}
+                          title="Modifier"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -161,6 +172,7 @@ export function UsersPage() {
                           size="sm"
                           onClick={() => handleDelete(user)}
                           disabled={deleteMutation.isPending}
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -214,6 +226,13 @@ export function UsersPage() {
         isLoading={createMutation.isPending || updateMutation.isPending}
         error={createMutation.error?.message || updateMutation.error?.message}
       />
+
+      {selectedUserId && (
+        <UserDetailModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 }

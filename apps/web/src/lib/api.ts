@@ -505,6 +505,8 @@ interface AdminSpace {
   id: string;
   name: string;
   type: 'PERSONAL' | 'GROUP';
+  communityId: string | null;
+  community: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
   memberCount: number;
@@ -595,6 +597,20 @@ export const adminApi = {
       fetchApi<{ success: boolean }>(`/admin/users/${id}`, {
         method: 'DELETE',
       }),
+
+    addToCommunity: (userId: string, data: { communityId: string; role: CommunityRole }) =>
+      fetchApi<{ id: string; role: string; joinedAt: string; community: { id: string; name: string } }>(
+        `/admin/users/${userId}/communities`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }
+      ),
+
+    removeFromCommunity: (userId: string, communityId: string) =>
+      fetchApi<{ success: boolean }>(`/admin/users/${userId}/communities/${communityId}`, {
+        method: 'DELETE',
+      }),
   },
 
   spaces: {
@@ -610,7 +626,7 @@ export const adminApi = {
 
     get: (id: string) => fetchApi<AdminSpaceDetail>(`/admin/spaces/${id}`),
 
-    update: (id: string, data: { name?: string; type?: 'PERSONAL' | 'GROUP' }) =>
+    update: (id: string, data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null }) =>
       fetchApi<AdminSpace>(`/admin/spaces/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
