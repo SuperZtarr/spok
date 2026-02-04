@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from 'react';
-import { ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -13,6 +13,28 @@ interface TimelineViewProps {
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
 }
+
+// Zoom level configuration
+type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year';
+
+interface ZoomConfig {
+  label: string;
+  days: number;
+  dayWidth: number;
+  navStep: number; // days to navigate
+  showDayNumbers: boolean;
+  showWeekdays: boolean;
+}
+
+const ZOOM_CONFIGS: Record<ZoomLevel, ZoomConfig> = {
+  day: { label: 'Jour', days: 1, dayWidth: 60, navStep: 1, showDayNumbers: true, showWeekdays: true },
+  week: { label: 'Semaine', days: 7, dayWidth: 50, navStep: 7, showDayNumbers: true, showWeekdays: true },
+  month: { label: 'Mois', days: 31, dayWidth: 35, navStep: 30, showDayNumbers: true, showWeekdays: true },
+  quarter: { label: 'Trimestre', days: 91, dayWidth: 12, navStep: 30, showDayNumbers: false, showWeekdays: false },
+  year: { label: 'Année', days: 365, dayWidth: 3, navStep: 90, showDayNumbers: false, showWeekdays: false },
+};
+
+const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];
 
 // Utility functions
 function startOfDay(date: Date): Date {
@@ -49,7 +71,11 @@ function getWeekNumber(date: Date): number {
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-// Get status color from referentiels - utilise la même couleur que les badges de statut
+function getMonthName(date: Date): string {
+  return date.toLocaleDateString('fr-FR', { month: 'short' });
+}
+
+// Get status color from referentiels
 function getStatusColor(status: string | null | undefined, statuses: StatusConfig[]): string {
   if (!status) {
     const undefinedStatus = statuses.find(s => s.id === 'undefined');
@@ -70,12 +96,10 @@ function buildTree(items: Item[]): TreeItem[] {
   const itemMap = new Map<string, TreeItem>();
   const rootItems: TreeItem[] = [];
 
-  // First pass: create TreeItem for each item
   items.forEach(item => {
     itemMap.set(item.id, { ...item, children: [], depth: 0 });
   });
 
-  // Second pass: build hierarchy
   items.forEach(item => {
     const treeItem = itemMap.get(item.id)!;
     if (item.parentId && itemMap.has(item.parentId)) {
@@ -86,7 +110,6 @@ function buildTree(items: Item[]): TreeItem[] {
     }
   });
 
-  // Third pass: calculate depths and sort
   function setDepths(items: TreeItem[], depth: number) {
     items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     items.forEach(item => {
@@ -99,7 +122,6 @@ function buildTree(items: Item[]): TreeItem[] {
   return rootItems;
 }
 
-// Flatten tree for rendering
 function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   const result: TreeItem[] = [];
 
@@ -118,39 +140,37 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
 
 export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onAddChild: _onAddChild, referentiels }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
     const today = new Date();
-    return startOfDay(addDays(today, -7)); // Start a week before today
+    return startOfDay(addDays(today, -7));
   });
-  const [daysToShow, setDaysToShow] = useState(28); // 4 weeks by default
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+  const zoomConfig = ZOOM_CONFIGS[zoomLevel];
 
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
 
-  // Build tree structure
   const tree = useMemo(() => buildTree(items), [items]);
-
-  // Flatten tree for display
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
 
-  // Count items with dates
   const itemsWithDatesCount = useMemo(() => {
     return items.filter(item => item.startDate || item.dueDate).length;
   }, [items]);
 
-  // Generate days array for the header
+  // Generate days array
   const days = useMemo(() => {
     const result: Date[] = [];
-    for (let i = 0; i < daysToShow; i++) {
+    for (let i = 0; i < zoomConfig.days; i++) {
       result.push(addDays(visibleStartDate, i));
     }
     return result;
-  }, [visibleStartDate, daysToShow]);
+  }, [visibleStartDate, zoomConfig.days]);
 
-  // Group days by week for the header
+  // Group days by week
   const weeks = useMemo(() => {
     const result: { weekNum: number; year: number; days: Date[] }[] = [];
     let currentWeek: { weekNum: number; year: number; days: Date[] } | null = null;
@@ -169,23 +189,61 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
     return result;
   }, [days]);
 
-  // Calculate day width based on container
-  const dayWidth = 40; // pixels per day
+  // Group days by month
+  const months = useMemo(() => {
+    const result: { month: number; year: number; name: string; days: Date[] }[] = [];
+    let currentMonth: { month: number; year: number; name: string; days: Date[] } | null = null;
 
-  // Navigation functions
-  const goToPreviousWeek = () => {
-    setVisibleStartDate(prev => addDays(prev, -7));
+    days.forEach(day => {
+      const month = day.getMonth();
+      const year = day.getFullYear();
+
+      if (!currentMonth || currentMonth.month !== month || currentMonth.year !== year) {
+        currentMonth = { month, year, name: getMonthName(day), days: [] };
+        result.push(currentMonth);
+      }
+      currentMonth.days.push(day);
+    });
+
+    return result;
+  }, [days]);
+
+  const dayWidth = zoomConfig.dayWidth;
+
+  // Navigation
+  const goToPrevious = () => {
+    setVisibleStartDate(prev => addDays(prev, -zoomConfig.navStep));
   };
 
-  const goToNextWeek = () => {
-    setVisibleStartDate(prev => addDays(prev, 7));
+  const goToNext = () => {
+    setVisibleStartDate(prev => addDays(prev, zoomConfig.navStep));
   };
 
   const goToToday = () => {
-    setVisibleStartDate(addDays(new Date(), -7));
+    const today = new Date();
+    // Center today in the view
+    const offset = Math.floor(zoomConfig.days / 4);
+    setVisibleStartDate(startOfDay(addDays(today, -offset)));
   };
 
-  // Toggle collapse
+  // Zoom controls
+  const zoomIn = () => {
+    const currentIndex = ZOOM_ORDER.indexOf(zoomLevel);
+    if (currentIndex > 0) {
+      setZoomLevel(ZOOM_ORDER[currentIndex - 1]);
+    }
+  };
+
+  const zoomOut = () => {
+    const currentIndex = ZOOM_ORDER.indexOf(zoomLevel);
+    if (currentIndex < ZOOM_ORDER.length - 1) {
+      setZoomLevel(ZOOM_ORDER[currentIndex + 1]);
+    }
+  };
+
+  const canZoomIn = ZOOM_ORDER.indexOf(zoomLevel) > 0;
+  const canZoomOut = ZOOM_ORDER.indexOf(zoomLevel) < ZOOM_ORDER.length - 1;
+
   const toggleCollapse = (itemId: string) => {
     setCollapsedIds(prev => {
       const next = new Set(prev);
@@ -198,7 +256,6 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
     });
   };
 
-  // Calculate bar position for an item
   const getBarStyle = (item: Item) => {
     const itemStartDate = item.startDate || item.dueDate;
     if (!itemStartDate) return null;
@@ -209,92 +266,143 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
     const startOffset = differenceInDays(itemStart, visibleStartDate);
     const duration = differenceInDays(itemEnd, itemStart) + 1;
 
-    // Check if item is visible
-    if (startOffset + duration < 0 || startOffset > daysToShow) {
-      return null; // Not visible
+    if (startOffset + duration < 0 || startOffset > zoomConfig.days) {
+      return null;
     }
 
     const left = Math.max(0, startOffset) * dayWidth;
     const adjustedDuration = Math.min(
       duration - Math.max(0, -startOffset),
-      daysToShow - Math.max(0, startOffset)
+      zoomConfig.days - Math.max(0, startOffset)
     );
-    const width = Math.max(adjustedDuration * dayWidth - 4, dayWidth - 4);
+    const width = Math.max(adjustedDuration * dayWidth - 2, Math.min(dayWidth, 20));
 
     return { left, width };
   };
 
-  // Check if a date is today
   const isToday = (date: Date) => {
     const today = new Date();
     return date.toDateString() === today.toDateString();
   };
 
-  // Check if a date is weekend
   const isWeekend = (date: Date) => {
     const day = date.getDay();
     return day === 0 || day === 6;
   };
 
-  const visibleEndDate = addDays(visibleStartDate, daysToShow);
+  const visibleEndDate = addDays(visibleStartDate, zoomConfig.days);
+
+  // Determine which header row to show based on zoom level
+  const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month';
+  const showMonthRow = zoomLevel === 'quarter' || zoomLevel === 'year';
 
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+      <div className="flex items-center justify-between p-3 border-b bg-muted/30 gap-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
+          <Button variant="outline" size="sm" onClick={goToPrevious} title="Précédent">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
             Aujourd'hui
           </Button>
-          <Button variant="outline" size="sm" onClick={goToNextWeek}>
+          <Button variant="outline" size="sm" onClick={goToNext} title="Suivant">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-        <div className="text-sm text-muted-foreground">
+
+        <div className="text-sm text-muted-foreground text-center">
           {formatDateFull(visibleStartDate)} - {formatDateFull(addDays(visibleEndDate, -1))}
         </div>
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            {items.length} éléments ({itemsWithDatesCount} planifiés)
+            {items.length} ({itemsWithDatesCount} planifiés)
           </span>
-          <select
-            className="text-sm border rounded px-2 py-1 bg-background"
-            value={daysToShow}
-            onChange={(e) => setDaysToShow(Number(e.target.value))}
-          >
-            <option value={14}>2 semaines</option>
-            <option value={28}>4 semaines</option>
-            <option value={56}>8 semaines</option>
-            <option value={90}>3 mois</option>
-          </select>
+
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1 border rounded-md">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={zoomIn}
+              disabled={!canZoomIn}
+              title="Zoom avant"
+              className="h-8 px-2"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <select
+              className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 min-w-[100px] text-center"
+              value={zoomLevel}
+              onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
+            >
+              <option value="day">Jour</option>
+              <option value="week">Semaine</option>
+              <option value="month">Mois</option>
+              <option value="quarter">Trimestre</option>
+              <option value="year">Année</option>
+            </select>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={zoomOut}
+              disabled={!canZoomOut}
+              title="Zoom arrière"
+              className="h-8 px-2"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Timeline content */}
       <div className="flex-1 overflow-auto" ref={containerRef}>
         <div className="min-w-max">
-          {/* Header with weeks and days */}
+          {/* Header */}
           <div className="sticky top-0 bg-background z-10 border-b">
-            {/* Weeks row */}
-            <div className="flex border-b">
-              <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
-                Semaine
+            {/* Month row (for quarter/year zoom) */}
+            {showMonthRow && (
+              <div className="flex border-b">
+                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
+                  Mois
+                </div>
+                <div className="flex">
+                  {months.map((month, idx) => (
+                    <div
+                      key={`${month.year}-${month.month}-${idx}`}
+                      className="text-xs font-medium text-center py-1 border-r bg-muted/30"
+                      style={{ width: month.days.length * dayWidth }}
+                    >
+                      {month.name} {month.year}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex">
-                {weeks.map((week, idx) => (
-                  <div
-                    key={`${week.year}-${week.weekNum}-${idx}`}
-                    className="text-xs font-medium text-center py-1 border-r bg-muted/30"
-                    style={{ width: week.days.length * dayWidth }}
-                  >
-                    S{week.weekNum}
-                  </div>
-                ))}
+            )}
+
+            {/* Week row (for day/week/month zoom) */}
+            {showWeekRow && (
+              <div className="flex border-b">
+                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
+                  Semaine
+                </div>
+                <div className="flex">
+                  {weeks.map((week, idx) => (
+                    <div
+                      key={`${week.year}-${week.weekNum}-${idx}`}
+                      className="text-xs font-medium text-center py-1 border-r bg-muted/30"
+                      style={{ width: week.days.length * dayWidth }}
+                    >
+                      S{week.weekNum}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
             {/* Days row */}
             <div className="flex">
               <div className="w-72 flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50">
@@ -304,22 +412,28 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                 {days.map((day, idx) => (
                   <div
                     key={idx}
-                    className={`text-xs text-center py-2 border-r ${
+                    className={`text-xs text-center border-r ${
                       isToday(day) ? 'bg-primary/20 font-bold' : isWeekend(day) ? 'bg-muted/50' : ''
-                    }`}
+                    } ${zoomConfig.showDayNumbers ? 'py-2' : 'py-1'}`}
                     style={{ width: dayWidth }}
                   >
-                    <div>{day.getDate()}</div>
-                    <div className="text-muted-foreground">
-                      {day.toLocaleDateString('fr-FR', { weekday: 'narrow' })}
-                    </div>
+                    {zoomConfig.showDayNumbers && (
+                      <>
+                        <div>{day.getDate()}</div>
+                        {zoomConfig.showWeekdays && (
+                          <div className="text-muted-foreground">
+                            {day.toLocaleDateString('fr-FR', { weekday: 'narrow' })}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Items rows - hierarchical */}
+          {/* Items rows */}
           {flatItems.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <p>Aucun élément</p>
@@ -341,12 +455,11 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Item label with indentation */}
+                  {/* Item label */}
                   <div
                     className="w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50"
                     style={{ paddingLeft: `${8 + item.depth * 20}px` }}
                   >
-                    {/* Expand/collapse button */}
                     {hasChildren ? (
                       <button
                         onClick={(e) => {
@@ -362,7 +475,7 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                         )}
                       </button>
                     ) : (
-                      <span className="w-5" /> // Spacer for alignment
+                      <span className="w-5" />
                     )}
                     <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <span
@@ -386,22 +499,24 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                       ))}
                     </div>
 
-                    {/* Item bar (only if has dates) */}
+                    {/* Item bar */}
                     {barStyle && (
                       <div
                         className={`absolute top-1 h-8 rounded cursor-pointer transition-all ${statusColor} shadow-md border border-black/20 ${
                           hoveredItem === item.id ? 'ring-2 ring-primary shadow-xl scale-[1.02]' : 'hover:shadow-lg'
                         }`}
                         style={{
-                          left: barStyle.left + 2,
+                          left: barStyle.left + 1,
                           width: barStyle.width,
                         }}
                         onClick={() => onEdit(item.id)}
                         title={`${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${formatDateShort(new Date(item.endDate || item.dueDate || item.startDate!))}`}
                       >
-                        <div className="px-2 py-1 text-xs truncate font-semibold">
-                          {item.title}
-                        </div>
+                        {barStyle.width > 40 && (
+                          <div className="px-2 py-1 text-xs truncate font-semibold">
+                            {item.title}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
