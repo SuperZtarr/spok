@@ -56,7 +56,20 @@
       "Bash(pnpm db:seed:*)",
       "Bash(pnpm build:*)",
       "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(npx tsx:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAjout du champ URL pour les éléments LINK, DOCUMENT et IMAGE\n\n- Ajout du champ url dans le schéma Prisma et les types partagés\n- Champ URL dans les formulaires de création et d''édition\n- Bouton pour ouvrir l''URL dans un nouvel onglet \\(ListView, KanbanView, SequenceView\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAmélioration du Kanban: drag & drop et optimisation de l''espace\n\n- Drag & drop des cartes entre colonnes pour changer le statut\n- Colonnes flexibles qui s''adaptent à l''espace disponible\n- Sidebar réduite pour maximiser la zone de travail\n- Correction du filtre par type dans les vues liste et kanban\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(exit 0)",
+      "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -aon ^| findstr :3000 ^| findstr LISTENING''\\) do taskkill /F /PID %a\")",
+      "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -aon ^| findstr :3001 ^| findstr LISTENING''\\) do taskkill /F /PID %a\")",
+      "Bash(npx kill-port:*)",
+      "Bash(pnpm vite build:*)",
+      "Bash(psql:*)",
+      "Bash(pnpm --filter @spok/database push:*)",
+      "Bash(npx prisma:*)"
     ]
   }
 }
