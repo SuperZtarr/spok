@@ -38,3 +38,20 @@ packages/database/prisma/*.db-journal
 
 # Docker volumes
 docker/data/
+
+# Temporary files
+nul
+temp_tables.txt
+analyze_forum*.js
+check-boards.js
+
+# Forum import data
+ex forum.sql
+
+# Debug/fix scripts (temporary)
+apps/api/scripts/debug-*.ts
+apps/api/scripts/fix-*.ts
+apps/api/scripts/check-*.ts
+apps/api/scripts/compare-*.ts
+apps/api/scripts/reimport-*.ts
+apps/api/scripts/update-*.ts
