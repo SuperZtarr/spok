@@ -109,6 +109,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             tags: { include: { tag: true } },
             children: { select: { id: true } },
             _count: { select: { children: true, contributions: true } },
+            relationsFrom: {
+              include: { toItem: { select: { id: true, title: true, type: true } } },
+            },
+            relationsTo: {
+              include: { fromItem: { select: { id: true, title: true, type: true } } },
+            },
           },
           orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
           skip: (page - 1) * pageSize,

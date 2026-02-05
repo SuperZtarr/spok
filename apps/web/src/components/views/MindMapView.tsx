@@ -161,15 +161,15 @@ function MindMapNode({ data }: MindMapNodeProps) {
       style={{ backgroundColor: hexColor }}
     >
       {/* Handles on all sides for radial connections */}
-      <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" id="top" />
-      <Handle type="target" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" id="bottom" />
-      <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2" id="left" />
-      <Handle type="target" position={Position.Right} className="!bg-gray-400 !w-2 !h-2" id="right" />
+      <Handle type="target" position={Position.Top} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="top" />
+      <Handle type="target" position={Position.Bottom} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="bottom" />
+      <Handle type="target" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="left" />
+      <Handle type="target" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="right" />
 
-      <Handle type="source" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" id="top-source" />
-      <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" id="bottom-source" />
-      <Handle type="source" position={Position.Left} className="!bg-gray-400 !w-2 !h-2" id="left-source" />
-      <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2" id="right-source" />
+      <Handle type="source" position={Position.Top} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="top-source" />
+      <Handle type="source" position={Position.Bottom} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="bottom-source" />
+      <Handle type="source" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="left-source" />
+      <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="right-source" />
 
       <div className="flex items-center gap-2">
         {/* Collapse/Expand button for nodes with children */}
@@ -483,7 +483,8 @@ function calculateLayout(
         style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
       });
 
-      processNode(rootItem, 1, SPACE_NODE_ID, x, y, startAngle, endAngle, midAngle);
+      // Pass null as parentId since we already added the edge above
+      processNode(rootItem, 1, null, x, y, startAngle, endAngle, midAngle);
 
       currentAngle = endAngle;
     });
@@ -492,16 +493,51 @@ function calculateLayout(
   // Create edges for relations (not parent-child)
   const relationEdges: Edge[] = [];
   const nodeIds = new Set(nodes.map(n => n.id));
+  const nodePositions = new Map(nodes.map(n => [n.id, n.position]));
+
+  // Helper to get best handles based on relative positions
+  const getBestHandles = (sourceId: string, targetId: string): { sourceHandle: string; targetHandle: string } => {
+    const sourcePos = nodePositions.get(sourceId);
+    const targetPos = nodePositions.get(targetId);
+
+    if (!sourcePos || !targetPos) {
+      return { sourceHandle: 'right-source', targetHandle: 'left' };
+    }
+
+    const dx = targetPos.x - sourcePos.x;
+    const dy = targetPos.y - sourcePos.y;
+
+    // Determine primary direction
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal - use left/right handles
+      if (dx > 0) {
+        return { sourceHandle: 'right-source', targetHandle: 'left' };
+      } else {
+        return { sourceHandle: 'left-source', targetHandle: 'right' };
+      }
+    } else {
+      // Vertical - use top/bottom handles
+      if (dy > 0) {
+        return { sourceHandle: 'bottom-source', targetHandle: 'top' };
+      } else {
+        return { sourceHandle: 'top-source', targetHandle: 'bottom' };
+      }
+    }
+  };
 
   items.forEach(item => {
     // Relations from this item
     item.relationsFrom?.forEach(relation => {
       // Only create edge if both nodes exist in the current view
       if (nodeIds.has(relation.fromItemId) && nodeIds.has(relation.toItemId)) {
+        const { sourceHandle, targetHandle } = getBestHandles(relation.fromItemId, relation.toItemId);
+
         relationEdges.push({
           id: `relation-${relation.id}`,
           source: relation.fromItemId,
           target: relation.toItemId,
+          sourceHandle,
+          targetHandle,
           type: 'default',
           animated: true,
           style: {
@@ -528,6 +564,16 @@ function calculateLayout(
   return { nodes, edges, relationEdges };
 }
 
+// Relation type options
+const RELATION_TYPES = [
+  { id: 'relates', label: 'Est lié à', icon: '🔗' },
+  { id: 'blocks', label: 'Bloque', icon: '🚫' },
+  { id: 'depends', label: 'Dépend de', icon: '⬅️' },
+  { id: 'duplicates', label: 'Duplique', icon: '📋' },
+  { id: 'implements', label: 'Implémente', icon: '⚙️' },
+  { id: 'tests', label: 'Teste', icon: '🧪' },
+];
+
 // Inner component that uses useReactFlow
 function MindMapViewInner({
   items,
@@ -539,6 +585,7 @@ function MindMapViewInner({
   referentiels,
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   const { fitView } = useReactFlow();
 
   const statuses = useMemo(() => {
@@ -582,12 +629,28 @@ function MindMapViewInner({
         const sourceItem = items.find(i => i.id === connection.source);
         const targetItem = items.find(i => i.id === connection.target);
         if (sourceItem && targetItem && sourceItem.parentId !== connection.target && targetItem.parentId !== connection.source) {
-          onCreateRelation?.(connection.source, connection.target, 'relates');
+          // Open dialog to choose relation type
+          setPendingConnection({ source: connection.source, target: connection.target });
         }
       }
     },
-    [items, onCreateRelation]
+    [items]
   );
+
+  // Handle relation type selection
+  const handleRelationTypeSelect = useCallback(
+    (type: string) => {
+      if (pendingConnection) {
+        onCreateRelation?.(pendingConnection.source, pendingConnection.target, type);
+        setPendingConnection(null);
+      }
+    },
+    [pendingConnection, onCreateRelation]
+  );
+
+  // Get item titles for dialog
+  const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
+  const pendingTargetItem = pendingConnection ? items.find(i => i.id === pendingConnection.target) : null;
 
   // Handle edge click (to delete relation)
   const onEdgeClick = useCallback(
@@ -717,6 +780,38 @@ function MindMapViewInner({
           </div>
         </Panel>
       </ReactFlow>
+
+      {/* Relation type selection dialog */}
+      {pendingConnection && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Type de relation</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium">{pendingSourceItem?.title}</span>
+              {' → '}
+              <span className="font-medium">{pendingTargetItem?.title}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {RELATION_TYPES.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => handleRelationTypeSelect(type.id)}
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"
+                >
+                  <span>{type.icon}</span>
+                  <span className="text-sm">{type.label}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setPendingConnection(null)}
+              className="mt-4 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
