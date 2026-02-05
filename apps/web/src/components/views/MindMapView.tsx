@@ -679,10 +679,36 @@ function MindMapViewInner({
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
-  const [portals, setPortals] = useState<PortalState[]>([]);
   const [showPortalDialog, setShowPortalDialog] = useState(false);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView } = useReactFlow();
+
+  // localStorage key for portals
+  const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
+
+  // Portals state
+  const [portals, setPortals] = useState<PortalState[]>([]);
+  const [portalsLoaded, setPortalsLoaded] = useState(false);
+
+  // Load portals from localStorage when spaceId is available
+  useEffect(() => {
+    if (!portalsStorageKey) return;
+    try {
+      const saved = localStorage.getItem(portalsStorageKey);
+      if (saved) {
+        setPortals(JSON.parse(saved));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    setPortalsLoaded(true);
+  }, [portalsStorageKey]);
+
+  // Save portals to localStorage when they change (only after initial load)
+  useEffect(() => {
+    if (!portalsStorageKey || !portalsLoaded) return;
+    localStorage.setItem(portalsStorageKey, JSON.stringify(portals));
+  }, [portals, portalsStorageKey, portalsLoaded]);
 
   // Filter available spaces (same community, not current space)
   const availableSpaces = useMemo(() => {
@@ -845,11 +871,49 @@ function MindMapViewInner({
   // Reset layout function
   const resetLayout = useCallback(() => {
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
-    setNodes(newNodes);
-    setEdges([...newEdges, ...relationEdges]);
+
+    // Build a map of node positions for portal placement
+    const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
+
+    // Add portal nodes positioned relative to their parent item
+    const portalNodes: Node[] = [];
+    const portalEdges: Edge[] = [];
+
+    portals.forEach((portal, index) => {
+      const targetSpace = communitySpaces.find(s => s.id === portal.spaceId);
+      const parentPos = nodePositions.get(portal.parentItemId);
+      if (!targetSpace || !parentPos) return;
+
+      const offsetX = 200;
+      const offsetY = 50 + index * 80;
+
+      portalNodes.push({
+        id: portal.id,
+        type: 'portal',
+        position: { x: parentPos.x + offsetX, y: parentPos.y + offsetY },
+        data: {
+          space: targetSpace,
+          onRemove: removePortal,
+          portalId: portal.id,
+        },
+      });
+
+      portalEdges.push({
+        id: `edge-${portal.parentItemId}-${portal.id}`,
+        source: portal.parentItemId,
+        target: portal.id,
+        sourceHandle: 'right-source',
+        targetHandle: 'left',
+        type: 'default',
+        style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
+      });
+    });
+
+    setNodes([...newNodes, ...portalNodes]);
+    setEdges([...newEdges, ...relationEdges, ...portalEdges]);
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges, fitView]);
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
