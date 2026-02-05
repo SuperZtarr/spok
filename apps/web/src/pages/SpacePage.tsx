@@ -52,6 +52,7 @@ import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
 import { TimelineView } from '../components/views/TimelineView';
 import { MindMapView } from '../components/views/MindMapView';
+import { PlanningView } from '../components/views/PlanningView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
@@ -148,8 +149,8 @@ export function SpacePage() {
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
 
-  // Flat views (kanban, types) should load all items regardless of hierarchy
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list';
+  // Flat views (kanban, types, planning) should load all items regardless of hierarchy
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
     queryKey: ['items', spaceId, filter, viewMode],
@@ -677,6 +678,15 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateType={(id, type) => updateItemMutation.mutate({ id, data: { type } })}
+              onAddChild={handleAddChild}
+              referentiels={referentiels}
+            />
+          ) : viewMode === 'planning' ? (
+            <PlanningView
+              items={allItemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
             />
