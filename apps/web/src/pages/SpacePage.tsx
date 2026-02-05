@@ -39,6 +39,7 @@ import {
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
+import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -148,6 +149,9 @@ export function SpacePage() {
   // Load referentiels for this space
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
+
+  // Load spaces from the same community (for portal feature in mindmap)
+  const { data: communitySpaces } = useSpaces(space?.communityId || undefined);
 
   // Flat views (kanban, types, planning) should load all items regardless of hierarchy
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
@@ -704,6 +708,8 @@ export function SpacePage() {
             <MindMapView
               items={allItemsData?.data || []}
               spaceName={space?.name || 'Espace'}
+              spaceId={spaceId}
+              communitySpaces={communitySpaces || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}

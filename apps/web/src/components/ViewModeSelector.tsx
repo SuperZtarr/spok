@@ -1,4 +1,4 @@
-import { List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid, GanttChart } from 'lucide-react';
+import { List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck } from 'lucide-react';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { cn } from '../lib/utils';
 
@@ -10,6 +10,7 @@ const ICONS: Record<string, typeof List> = {
   Share2,
   LayoutGrid,
   GanttChart,
+  CalendarCheck,
 };
 
 export function ViewModeSelector() {

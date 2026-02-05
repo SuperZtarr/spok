@@ -17,14 +17,16 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { ItemWithRelations, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2 } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X } from 'lucide-react';
 
 interface MindMapViewProps {
   items: ItemWithRelations[];
   spaceName?: string;
+  spaceId?: string;
+  communitySpaces?: SpaceWithRole[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -141,16 +143,18 @@ interface MindMapNodeProps {
     hexColor: string;
     onEdit: (id: string) => void;
     onAddChild: (id: string) => void;
+    onAddPortal: (id: string) => void;
     onToggleCollapse: (id: string) => void;
     isRoot: boolean;
     hasChildren: boolean;
     isCollapsed: boolean;
     childCount: number;
+    hasPortalSupport: boolean;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onEdit, onAddChild, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount } = data;
+  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -224,6 +228,18 @@ function MindMapNode({ data }: MindMapNodeProps) {
         >
           <Plus className="w-3 h-3 text-green-600" />
         </button>
+        {hasPortalSupport && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddPortal(item.id);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-indigo-50"
+            title="Ajouter un portail vers un autre espace"
+          >
+            <ExternalLink className="w-3 h-3 text-indigo-600" />
+          </button>
+        )}
         {hasChildren && (
           <button
             onClick={(e) => {
@@ -278,9 +294,66 @@ function SpaceNode({ data }: SpaceNodeProps) {
   );
 }
 
+// Portal node component (link to another space)
+interface PortalNodeProps {
+  data: {
+    space: SpaceWithRole;
+    onRemove: (portalId: string) => void;
+    portalId: string;
+  };
+}
+
+function PortalNode({ data }: PortalNodeProps) {
+  const { space, onRemove, portalId } = data;
+
+  const handleClick = () => {
+    // Open in new tab
+    window.open(`/spaces/${space.id}`, '_blank');
+  };
+
+  return (
+    <div
+      className="px-4 py-3 rounded-xl shadow-lg border-2 border-dashed border-indigo-400 bg-indigo-50 min-w-[120px] cursor-pointer hover:bg-indigo-100 hover:border-indigo-500 transition-all group"
+      onClick={handleClick}
+    >
+      {/* Handles for connections */}
+      <Handle type="target" position={Position.Top} className="!bg-indigo-400 !w-3 !h-3" id="top" />
+      <Handle type="target" position={Position.Bottom} className="!bg-indigo-400 !w-3 !h-3" id="bottom" />
+      <Handle type="target" position={Position.Left} className="!bg-indigo-400 !w-3 !h-3" id="left" />
+      <Handle type="target" position={Position.Right} className="!bg-indigo-400 !w-3 !h-3" id="right" />
+
+      <Handle type="source" position={Position.Top} className="!bg-indigo-400 !w-3 !h-3" id="top-source" />
+      <Handle type="source" position={Position.Bottom} className="!bg-indigo-400 !w-3 !h-3" id="bottom-source" />
+      <Handle type="source" position={Position.Left} className="!bg-indigo-400 !w-3 !h-3" id="left-source" />
+      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-3 !h-3" id="right-source" />
+
+      <div className="flex items-center gap-2">
+        <ExternalLink className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-indigo-700">{space.name}</span>
+          <span className="text-xs text-indigo-500">Portail</span>
+        </div>
+      </div>
+
+      {/* Remove button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(portalId);
+        }}
+        className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Supprimer le portail"
+      >
+        <X className="w-3 h-3 text-red-500" />
+      </button>
+    </div>
+  );
+}
+
 const nodeTypes = {
   mindmap: MindMapNode,
   space: SpaceNode,
+  portal: PortalNode,
 };
 
 // Layout constants for radial layout
@@ -328,7 +401,9 @@ function calculateLayout(
   totalItemCount: number,
   onEdit: (id: string) => void,
   onAddChild: (id: string) => void,
-  onToggleCollapse: (id: string) => void
+  onAddPortal: (id: string) => void,
+  onToggleCollapse: (id: string) => void,
+  hasPortalSupport: boolean
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -378,11 +453,13 @@ function calculateLayout(
         hexColor,
         onEdit,
         onAddChild,
+        onAddPortal,
         onToggleCollapse,
         isRoot: depth === 0,
         hasChildren,
         isCollapsed,
         childCount,
+        hasPortalSupport,
       },
     });
 
@@ -574,10 +651,19 @@ const RELATION_TYPES = [
   { id: 'tests', label: 'Teste', icon: '🧪' },
 ];
 
+// Portal state type
+interface PortalState {
+  id: string;
+  spaceId: string;
+  parentItemId: string; // The item this portal is attached to
+}
+
 // Inner component that uses useReactFlow
 function MindMapViewInner({
   items,
   spaceName = 'Espace',
+  spaceId,
+  communitySpaces = [],
   onEdit,
   onAddChild,
   onCreateRelation,
@@ -586,7 +672,42 @@ function MindMapViewInner({
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+  const [portals, setPortals] = useState<PortalState[]>([]);
+  const [showPortalDialog, setShowPortalDialog] = useState(false);
+  const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView } = useReactFlow();
+
+  // Filter available spaces (same community, not current space)
+  const availableSpaces = useMemo(() => {
+    return communitySpaces.filter(s => s.id !== spaceId);
+  }, [communitySpaces, spaceId]);
+
+  // Open portal dialog for a specific item
+  const handleAddPortal = useCallback((parentItemId: string) => {
+    setPendingPortalParentId(parentItemId);
+    setShowPortalDialog(true);
+  }, []);
+
+  // Add a portal attached to an item
+  const addPortal = useCallback((targetSpaceId: string) => {
+    if (!pendingPortalParentId) return;
+    const newPortal: PortalState = {
+      id: `portal-${Date.now()}`,
+      spaceId: targetSpaceId,
+      parentItemId: pendingPortalParentId,
+    };
+    setPortals(prev => [...prev, newPortal]);
+    setShowPortalDialog(false);
+    setPendingPortalParentId(null);
+  }, [pendingPortalParentId]);
+
+  // Remove a portal
+  const removePortal = useCallback((portalId: string) => {
+    setPortals(prev => prev.filter(p => p.id !== portalId));
+  }, []);
+
+  // Check if portal support is available
+  const hasPortalSupport = availableSpaces.length > 0;
 
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -607,19 +728,59 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport);
     return { initialNodes: nodes, initialEdges: [...edges, ...relationEdges] };
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update nodes when items or collapsed state change
+  // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
-    setNodes(newNodes);
-    setEdges([...newEdges, ...relationEdges]);
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, setNodes, setEdges]);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport);
+
+    // Build a map of node positions for portal placement
+    const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
+
+    // Add portal nodes positioned relative to their parent item
+    const portalNodes: Node[] = [];
+    const portalEdges: Edge[] = [];
+
+    portals.forEach((portal, index) => {
+      const targetSpace = communitySpaces.find(s => s.id === portal.spaceId);
+      const parentPos = nodePositions.get(portal.parentItemId);
+      if (!targetSpace || !parentPos) return;
+
+      // Position portal to the right and slightly below the parent
+      const offsetX = 200;
+      const offsetY = 50 + index * 80; // Stack multiple portals vertically
+
+      portalNodes.push({
+        id: portal.id,
+        type: 'portal',
+        position: { x: parentPos.x + offsetX, y: parentPos.y + offsetY },
+        data: {
+          space: targetSpace,
+          onRemove: removePortal,
+          portalId: portal.id,
+        },
+      });
+
+      // Create edge from parent item to portal
+      portalEdges.push({
+        id: `edge-${portal.parentItemId}-${portal.id}`,
+        source: portal.parentItemId,
+        target: portal.id,
+        sourceHandle: 'right-source',
+        targetHandle: 'left',
+        type: 'default',
+        style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
+      });
+    });
+
+    setNodes([...newNodes, ...portalNodes]);
+    setEdges([...newEdges, ...relationEdges, ...portalEdges]);
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal]);
 
   // Handle new connection (create relation)
   const onConnect = useCallback(
@@ -666,8 +827,8 @@ function MindMapViewInner({
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      // Don't try to edit the space node
-      if (node.id !== '__space__') {
+      // Don't try to edit the space node or portal nodes
+      if (node.id !== '__space__' && node.type !== 'portal') {
         onEdit(node.id);
       }
     },
@@ -676,7 +837,7 @@ function MindMapViewInner({
 
   // Reset layout function
   const resetLayout = useCallback(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport);
     setNodes(newNodes);
     setEdges([...newEdges, ...relationEdges]);
     // Fit view after a small delay to ensure nodes are positioned
@@ -812,6 +973,50 @@ function MindMapViewInner({
           </div>
         </div>
       )}
+
+      {/* Portal selection dialog */}
+      {showPortalDialog && pendingPortalParentId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+              <ExternalLink className="w-5 h-5 text-indigo-600" />
+              Ajouter un portail
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Depuis <span className="font-medium">{items.find(i => i.id === pendingPortalParentId)?.title}</span>, ouvrir :
+            </p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {availableSpaces.map((space) => (
+                <button
+                  key={space.id}
+                  onClick={() => addPortal(space.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2 border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors text-left"
+                >
+                  <FolderOpen className="w-4 h-4 text-indigo-500" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate">{space.name}</span>
+                    <span className="text-xs text-muted-foreground">{space.role}</span>
+                  </div>
+                </button>
+              ))}
+              {availableSpaces.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Aucun autre espace disponible dans cette communauté
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setShowPortalDialog(false);
+                setPendingPortalParentId(null);
+              }}
+              className="mt-4 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -819,6 +1024,8 @@ function MindMapViewInner({
 export function MindMapView({
   items,
   spaceName = 'Espace',
+  spaceId,
+  communitySpaces,
   onEdit,
   onDelete: _onDelete,
   onUpdateStatus: _onUpdateStatus,
@@ -844,6 +1051,8 @@ export function MindMapView({
         <MindMapViewInner
           items={items}
           spaceName={spaceName}
+          spaceId={spaceId}
+          communitySpaces={communitySpaces}
           onEdit={onEdit}
           onAddChild={onAddChild}
           onCreateRelation={onCreateRelation}
