@@ -641,14 +641,14 @@ function calculateLayout(
   return { nodes, edges, relationEdges };
 }
 
-// Relation type options
+// Relation type options with descriptions
 const RELATION_TYPES = [
-  { id: 'relates', label: 'Est lié à', icon: '🔗' },
-  { id: 'blocks', label: 'Bloque', icon: '🚫' },
-  { id: 'depends', label: 'Dépend de', icon: '⬅️' },
-  { id: 'duplicates', label: 'Duplique', icon: '📋' },
-  { id: 'implements', label: 'Implémente', icon: '⚙️' },
-  { id: 'tests', label: 'Teste', icon: '🧪' },
+  { id: 'relates', label: 'Est lié à', icon: '🔗', description: 'Lien simple entre deux éléments' },
+  { id: 'blocks', label: 'Bloque', icon: '🚫', description: 'A doit être terminé avant B' },
+  { id: 'depends', label: 'Dépend de', icon: '⬅️', description: 'A nécessite B pour avancer' },
+  { id: 'duplicates', label: 'Duplique', icon: '📋', description: 'A est un doublon de B' },
+  { id: 'implements', label: 'Implémente', icon: '⚙️', description: 'A réalise/concrétise B' },
+  { id: 'tests', label: 'Teste', icon: '🧪', description: 'A valide le bon fonctionnement de B' },
 ];
 
 // Portal state type
@@ -930,14 +930,37 @@ function MindMapViewInner({
             <span className="text-sm">Réorganiser</span>
           </button>
         </Panel>
-        <Panel position="bottom-left" className="bg-white/90 border rounded-lg shadow-sm p-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2 mb-1">
-            <Link2 className="w-3 h-3 text-purple-500" />
-            <span>Glissez depuis un point pour créer une relation</span>
+        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-3 text-xs max-w-xs">
+          <div className="font-semibold text-foreground mb-2">Légende</div>
+
+          {/* Instructions */}
+          <div className="space-y-1 mb-3 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
+              <span>Glissez depuis un point pour créer une relation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-0.5 bg-purple-500 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
+              <span>Cliquez sur une relation pour la supprimer</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+              <span>Portail : ouvre un autre espace (nouvel onglet)</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-0.5 bg-purple-500" style={{ strokeDasharray: '5,5' }} />
-            <span>Cliquez sur une relation pour la supprimer</span>
+
+          {/* Relation types */}
+          <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Types de relations</div>
+          <div className="space-y-1.5">
+            {RELATION_TYPES.map((type) => (
+              <div key={type.id} className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-4 text-center">{type.icon}</span>
+                <div>
+                  <span className="font-medium text-foreground">{type.label}</span>
+                  <span className="text-muted-foreground ml-1">— {type.description}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </Panel>
       </ReactFlow>
