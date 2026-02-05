@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, X } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2 } from 'lucide-react';
 
 interface MindMapViewProps {
   items: ItemWithRelations[];
@@ -136,7 +136,7 @@ function countDescendants(item: TreeItem): number {
 interface MindMapNodeProps {
   data: {
     label: string;
-    item: Item;
+    item: TreeItem;
     statusColor: string;
     hexColor: string;
     onEdit: (id: string) => void;
