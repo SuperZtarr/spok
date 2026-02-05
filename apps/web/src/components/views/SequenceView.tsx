@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Trash2, ArrowDown, ExternalLink, FileText, CheckSquare, Plus, Calendar } from 'lucide-react';
-import type { Item, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -27,9 +27,10 @@ interface SequenceViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
+  highlightType?: ItemType;
 }
 
-export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels }: SequenceViewProps) {
+export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType }: SequenceViewProps) {
   // Build status maps from referentiels
   const { statusLabels, statusBorderColors, doneStatusId } = useMemo(() => {
     const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -69,19 +70,23 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           const statusLabel = statusLabels[item.status || ''] || 'Non defini';
           const borderColor = statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
           const isDone = item.status === doneStatusId;
+          const isHighlighted = highlightType && item.type === highlightType;
+          const isDimmed = highlightType && item.type !== highlightType;
 
           return (
             <div key={item.id} className="w-full max-w-md">
               {/* Connector arrow */}
               {index > 0 && (
                 <div className="flex justify-center py-1">
-                  <ArrowDown className="w-5 h-5 text-muted-foreground" />
+                  <ArrowDown className={`w-5 h-5 ${isDimmed ? 'text-muted-foreground/30' : 'text-muted-foreground'}`} />
                 </div>
               )}
 
               {/* Sequence item card */}
               <div
-                className={`relative border-2 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow group ${borderColor}`}
+                className={`relative border-2 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all group ${borderColor} ${
+                  isHighlighted ? 'ring-2 ring-primary ring-offset-2 scale-[1.02]' : ''
+                } ${isDimmed ? 'opacity-40' : ''}`}
                 onClick={() => onEdit(item.id)}
               >
                 {/* Step number */}

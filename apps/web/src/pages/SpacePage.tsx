@@ -666,6 +666,7 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
+              highlightType={filter !== 'ALL' ? filter : undefined}
             />
           ) : viewMode === 'kanban' ? (
             <KanbanView
@@ -693,6 +694,7 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
+              highlightType={filter !== 'ALL' ? filter : undefined}
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
@@ -710,6 +712,7 @@ export function SpacePage() {
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
               communitySpaces={communitySpaces || []}
+              highlightType={filter !== 'ALL' ? filter : undefined}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}

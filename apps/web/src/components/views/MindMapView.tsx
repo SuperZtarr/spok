@@ -20,13 +20,14 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X } from 'lucide-react';
+import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
 
 interface MindMapViewProps {
   items: ItemWithRelations[];
   spaceName?: string;
   spaceId?: string;
   communitySpaces?: SpaceWithRole[];
+  highlightType?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -150,18 +151,20 @@ interface MindMapNodeProps {
     isCollapsed: boolean;
     childCount: number;
     hasPortalSupport: boolean;
+    isHighlighted: boolean;
+    isDimmed: boolean;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport } = data;
+  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
     <div
       className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] max-w-[200px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isRoot ? 'border-primary border-3' : 'border-gray-300'
-      }`}
+      } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isDimmed ? 'opacity-30' : ''}`}
       style={{ backgroundColor: hexColor }}
     >
       {/* Handles on all sides for radial connections */}
@@ -403,7 +406,8 @@ function calculateLayout(
   onAddChild: (id: string) => void,
   onAddPortal: (id: string) => void,
   onToggleCollapse: (id: string) => void,
-  hasPortalSupport: boolean
+  hasPortalSupport: boolean,
+  highlightType?: string
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -460,6 +464,8 @@ function calculateLayout(
         isCollapsed,
         childCount,
         hasPortalSupport,
+        isHighlighted: highlightType ? item.type === highlightType : false,
+        isDimmed: highlightType ? item.type !== highlightType : false,
       },
     });
 
@@ -642,13 +648,13 @@ function calculateLayout(
 }
 
 // Relation type options with descriptions
-const RELATION_TYPES = [
-  { id: 'relates', label: 'Est lié à', icon: '🔗', description: 'Lien simple entre deux éléments' },
-  { id: 'blocks', label: 'Bloque', icon: '🚫', description: 'A doit être terminé avant B' },
-  { id: 'depends', label: 'Dépend de', icon: '⬅️', description: 'A nécessite B pour avancer' },
-  { id: 'duplicates', label: 'Duplique', icon: '📋', description: 'A est un doublon de B' },
-  { id: 'implements', label: 'Implémente', icon: '⚙️', description: 'A réalise/concrétise B' },
-  { id: 'tests', label: 'Teste', icon: '🧪', description: 'A valide le bon fonctionnement de B' },
+const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
+  { id: 'relates', label: 'Est lié à', Icon: Link2, description: 'Lien simple entre deux éléments', color: 'text-purple-500' },
+  { id: 'blocks', label: 'Bloque', Icon: Ban, description: 'A doit être terminé avant B', color: 'text-red-500' },
+  { id: 'depends', label: 'Dépend de', Icon: ArrowLeft, description: 'A nécessite B pour avancer', color: 'text-orange-500' },
+  { id: 'duplicates', label: 'Duplique', Icon: Copy, description: 'A est un doublon de B', color: 'text-gray-500' },
+  { id: 'implements', label: 'Implémente', Icon: Cog, description: 'A réalise/concrétise B', color: 'text-blue-500' },
+  { id: 'tests', label: 'Teste', Icon: FlaskConical, description: 'A valide le bon fonctionnement de B', color: 'text-green-500' },
 ];
 
 // Portal state type
@@ -664,6 +670,7 @@ function MindMapViewInner({
   spaceName = 'Espace',
   spaceId,
   communitySpaces = [],
+  highlightType,
   onEdit,
   onAddChild,
   onCreateRelation,
@@ -728,7 +735,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
     return { initialNodes: nodes, initialEdges: [...edges, ...relationEdges] };
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
 
@@ -737,7 +744,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
 
     // Build a map of node positions for portal placement
     const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
@@ -837,7 +844,7 @@ function MindMapViewInner({
 
   // Reset layout function
   const resetLayout = useCallback(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
     setNodes(newNodes);
     setEdges([...newEdges, ...relationEdges]);
     // Fit view after a small delay to ensure nodes are positioned
@@ -930,7 +937,7 @@ function MindMapViewInner({
             <span className="text-sm">Réorganiser</span>
           </button>
         </Panel>
-        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-3 text-xs max-w-xs">
+        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-3 text-xs">
           <div className="font-semibold text-foreground mb-2">Légende</div>
 
           {/* Instructions */}
@@ -940,7 +947,7 @@ function MindMapViewInner({
               <span>Glissez depuis un point pour créer une relation</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-purple-500 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
+              <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
               <span>Cliquez sur une relation pour la supprimer</span>
             </div>
             <div className="flex items-center gap-2">
@@ -949,15 +956,22 @@ function MindMapViewInner({
             </div>
           </div>
 
-          {/* Relation types */}
+          {/* Relation types - compact with hover */}
           <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Types de relations</div>
-          <div className="space-y-1.5">
+          <div className="flex flex-wrap gap-1">
             {RELATION_TYPES.map((type) => (
-              <div key={type.id} className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-4 text-center">{type.icon}</span>
-                <div>
-                  <span className="font-medium text-foreground">{type.label}</span>
-                  <span className="text-muted-foreground ml-1">— {type.description}</span>
+              <div
+                key={type.id}
+                className="group relative p-1.5 rounded-md hover:bg-gray-100 cursor-help transition-colors"
+                title={`${type.label} — ${type.description}`}
+              >
+                <type.Icon className={`w-4 h-4 ${type.color}`} />
+                {/* Tooltip on hover */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                  <div className="font-medium">{type.label}</div>
+                  <div className="text-gray-300 text-[10px]">{type.description}</div>
+                  {/* Arrow */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
                 </div>
               </div>
             ))}
@@ -980,10 +994,14 @@ function MindMapViewInner({
                 <button
                   key={type.id}
                   onClick={() => handleRelationTypeSelect(type.id)}
-                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors text-left group"
+                  title={type.description}
                 >
-                  <span>{type.icon}</span>
-                  <span className="text-sm">{type.label}</span>
+                  <type.Icon className={`w-4 h-4 ${type.color}`} />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{type.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{type.description}</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -1049,6 +1067,7 @@ export function MindMapView({
   spaceName = 'Espace',
   spaceId,
   communitySpaces,
+  highlightType,
   onEdit,
   onDelete: _onDelete,
   onUpdateStatus: _onUpdateStatus,
@@ -1076,6 +1095,7 @@ export function MindMapView({
           spaceName={spaceName}
           spaceId={spaceId}
           communitySpaces={communitySpaces}
+          highlightType={highlightType}
           onEdit={onEdit}
           onAddChild={onAddChild}
           onCreateRelation={onCreateRelation}

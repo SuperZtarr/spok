@@ -12,7 +12,7 @@ import {
   HelpCircle,
   User,
 } from 'lucide-react';
-import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -125,6 +125,7 @@ interface PlanningViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
+  highlightType?: ItemType;
 }
 
 interface PlanningItemProps {
@@ -134,16 +135,20 @@ interface PlanningItemProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   statuses: StatusConfig[];
+  isHighlighted?: boolean;
+  isDimmed?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses }: PlanningItemProps) {
+function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, isHighlighted, isDimmed }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 bg-card border rounded-lg hover:shadow-sm transition-shadow cursor-pointer group"
+      className={`flex items-center gap-3 px-4 py-3 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer group ${
+        isHighlighted ? 'ring-2 ring-primary ring-offset-2 scale-[1.01]' : ''
+      } ${isDimmed ? 'opacity-40' : ''}`}
       onClick={() => onEdit(item.id)}
     >
       {/* Type icon */}
@@ -255,9 +260,10 @@ interface PeriodSectionProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   statuses: StatusConfig[];
+  highlightType?: ItemType;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, highlightType }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -282,6 +288,8 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             onUpdateStatus={onUpdateStatus}
             onAddChild={onAddChild}
             statuses={statuses}
+            isHighlighted={highlightType ? item.type === highlightType : false}
+            isDimmed={highlightType ? item.type !== highlightType : false}
           />
         ))}
       </div>
@@ -289,7 +297,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels }: PlanningViewProps) {
+export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -359,6 +367,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           onUpdateStatus={onUpdateStatus}
           onAddChild={onAddChild}
           statuses={statuses}
+          highlightType={highlightType}
         />
       ))}
     </div>
