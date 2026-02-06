@@ -32,7 +32,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(referentielsRoutes, { prefix: '/:spaceId/referentiels' });
   await fastify.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
 
-  // List user's spaces
+  // List user's spaces (including visible community spaces)
   fastify.get<{ Querystring: { communityId?: string } }>('/', async (request) => {
     const { communityId } = request.query;
 
@@ -40,10 +40,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     let spaceFilter: { communityId?: string | null } = {};
 
     if (communityId === 'none') {
-      // Spaces without community (personal spaces or unassigned)
       spaceFilter = { communityId: null };
     } else if (communityId) {
-      // Spaces in specific community - verify user is member of the community
       const communityMembership = await fastify.prisma.communityMembership.findUnique({
         where: {
           userId_communityId: {
@@ -54,13 +52,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (!communityMembership) {
-        return []; // User is not a member of this community
+        return [];
       }
 
       spaceFilter = { communityId };
     }
-    // If no communityId specified, return all spaces user has access to
 
+    // 1. Get spaces where user is a member
     const memberships = await fastify.prisma.spaceMembership.findMany({
       where: {
         userId: request.user.userId,
@@ -83,12 +81,56 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    return memberships.map((m) => ({
+    const memberSpaces = memberships.map((m) => ({
       ...m.space,
-      role: m.role,
+      role: m.role as Role,
       memberCount: m.space._count.memberships,
       itemCount: m.space._count.items,
+      isMember: true,
     }));
+
+    // 2. Get community spaces the user can see but hasn't joined
+    const userCommunities = await fastify.prisma.communityMembership.findMany({
+      where: { userId: request.user.userId },
+      select: { communityId: true },
+    });
+
+    const communityIds = userCommunities.map(c => c.communityId);
+    const memberSpaceIds = new Set(memberSpaces.map(s => s.id));
+
+    if (communityIds.length > 0) {
+      const communitySpaceFilter: Record<string, unknown> = {
+        communityId: communityId && communityId !== 'none'
+          ? communityId
+          : { in: communityIds },
+        type: 'GROUP',
+        id: { notIn: Array.from(memberSpaceIds) },
+      };
+
+      const visibleSpaces = await fastify.prisma.space.findMany({
+        where: communitySpaceFilter,
+        include: {
+          _count: {
+            select: { memberships: true, items: true },
+          },
+          community: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      const nonMemberSpaces = visibleSpaces.map((s) => ({
+        ...s,
+        role: 'VIEWER' as Role,
+        memberCount: s._count.memberships,
+        itemCount: s._count.items,
+        isMember: false,
+      }));
+
+      return [...memberSpaces, ...nonMemberSpaces];
+    }
+
+    return memberSpaces;
   });
 
   // Create space
@@ -267,6 +309,60 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     await fastify.prisma.space.delete({
       where: { id: request.params.id },
+    });
+
+    return { success: true };
+  });
+
+  // Join a community space
+  fastify.post<{ Params: { id: string } }>('/:id/join', async (request, reply) => {
+    // Check the space exists and belongs to a community
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: request.params.id },
+    });
+
+    if (!space) {
+      return reply.notFound('Space not found');
+    }
+
+    if (!space.communityId) {
+      return reply.forbidden('Can only join community spaces');
+    }
+
+    // Verify user is member of the community
+    const communityMembership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: space.communityId,
+        },
+      },
+    });
+
+    if (!communityMembership) {
+      return reply.forbidden('You must be a member of the community');
+    }
+
+    // Check not already a member
+    const existing = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+    });
+
+    if (existing) {
+      return reply.conflict('Already a member of this space');
+    }
+
+    await fastify.prisma.spaceMembership.create({
+      data: {
+        userId: request.user.userId,
+        spaceId: request.params.id,
+        role: 'MEMBER',
+      },
     });
 
     return { success: true };

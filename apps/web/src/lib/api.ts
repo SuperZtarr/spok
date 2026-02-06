@@ -292,6 +292,11 @@ export const spacesApi = {
       method: 'DELETE',
     }),
 
+  join: (id: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/join`, {
+      method: 'POST',
+    }),
+
   getMembers: (id: string) => fetchApi<SpaceMember[]>(`/spaces/${id}/members`),
 
   invite: (id: string, data: { email: string; role: string }) =>

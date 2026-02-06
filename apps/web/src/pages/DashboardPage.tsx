@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -12,41 +12,69 @@ import { Badge } from '../components/ui/Badge';
 import type { SpaceWithRole } from '@spok/shared';
 
 // Reusable space card component
-function SpaceCard({ space }: { space: SpaceWithRole }) {
-  return (
-    <Link to={`/spaces/${space.id}`}>
-      <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <FolderKanban className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">{space.name}</CardTitle>
-            </div>
+function SpaceCard({ space, onJoin }: { space: SpaceWithRole; onJoin?: (id: string) => void }) {
+  const isMember = space.isMember !== false;
+
+  const cardContent = (
+    <Card className={`transition-colors h-full ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <FolderKanban className={`w-5 h-5 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />
+            <CardTitle className="text-lg">{space.name}</CardTitle>
+          </div>
+          {isMember ? (
             <Badge variant={space.type === 'PERSONAL' ? 'secondary' : 'outline'}>
               {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
             </Badge>
-          </div>
-          <CardDescription>
-            {space.role === 'OWNER' ? 'Propriétaire' : space.role}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {space.type === 'GROUP' && (
-              <span className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                {space.memberCount} membre{(space.memberCount || 0) > 1 ? 's' : ''}
-              </span>
-            )}
+          ) : (
+            <Badge variant="secondary" className="text-xs">Non rejoint</Badge>
+          )}
+        </div>
+        <CardDescription>
+          {isMember
+            ? (space.role === 'OWNER' ? 'Propriétaire' : space.role)
+            : null
+          }
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          {space.type === 'GROUP' && (
             <span className="flex items-center gap-1">
-              <FileText className="w-4 h-4" />
-              {space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}
+              <Users className="w-4 h-4" />
+              {space.memberCount} membre{(space.memberCount || 0) > 1 ? 's' : ''}
             </span>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+          )}
+          <span className="flex items-center gap-1">
+            <FileText className="w-4 h-4" />
+            {space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}
+          </span>
+        </div>
+        {!isMember && onJoin && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onJoin(space.id);
+            }}
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            Rejoindre
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
+
+  if (isMember) {
+    return <Link to={`/spaces/${space.id}`}>{cardContent}</Link>;
+  }
+
+  return cardContent;
 }
 
 export function DashboardPage() {
@@ -94,6 +122,18 @@ export function DashboardPage() {
 
     return { personalSpaces: personal, communityGroups: groups, independentSpaces: independent };
   }, [allSpaces]);
+
+  // Join space mutation
+  const joinSpaceMutation = useMutation({
+    mutationFn: spacesApi.join,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const handleJoinSpace = (spaceId: string) => {
+    joinSpaceMutation.mutate(spaceId);
+  };
 
   // Fetch communities for the select dropdown
   const { data: communities } = useQuery({
@@ -285,7 +325,7 @@ export function DashboardPage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {group.spaces.map((space) => (
-                    <SpaceCard key={space.id} space={space} />
+                    <SpaceCard key={space.id} space={space} onJoin={handleJoinSpace} />
                   ))}
                 </div>
               </section>

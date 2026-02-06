@@ -23,6 +23,7 @@ export interface SpaceWithRole extends Space {
   role: Role;
   memberCount?: number;
   itemCount?: number;
+  isMember?: boolean;
 }
 
 export interface CreateSpaceInput {
