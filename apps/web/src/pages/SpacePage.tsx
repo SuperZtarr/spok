@@ -515,19 +515,17 @@ export function SpacePage() {
 
           {/* Mode indicator */}
           {filter !== 'ALL' && (
-            <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1">
-              {viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'mindmap' ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-yellow-400" />
-                  <span>Surlignage</span>
-                </>
-              ) : (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
-                  <span>Filtre</span>
-                </>
-              )}
-            </span>
+            viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'mindmap' ? (
+              <span className="text-xs ml-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-100 text-yellow-700 border border-yellow-300">
+                <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                Mise en lumière
+              </span>
+            ) : (
+              <span className="text-xs ml-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-300">
+                <span className="w-2 h-2 rounded-full bg-blue-400" />
+                Filtre actif
+              </span>
+            )
           )}
 
           <div className="h-6 w-px bg-border mx-2" />
