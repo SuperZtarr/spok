@@ -87,9 +87,6 @@ export function Layout() {
     };
   }, [currentCommunity, spaces, personalSpaces]);
 
-  // Combined for backward compat (sidebar active state lookup)
-  const displaySpaces = [...mySpaces, ...communitySpaces];
-
   // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
   const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
