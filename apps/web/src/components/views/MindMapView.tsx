@@ -32,6 +32,7 @@ interface MindMapViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMove?: (id: string, parentId: string | null, position: number) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
@@ -153,18 +154,19 @@ interface MindMapNodeProps {
     hasPortalSupport: boolean;
     isHighlighted: boolean;
     isDimmed: boolean;
+    isDropTarget: boolean;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed } = data;
+  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
     <div
       className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] max-w-[200px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isRoot ? 'border-primary border-3' : 'border-gray-300'
-      } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isDimmed ? 'opacity-30' : ''}`}
+      } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
       style={{ backgroundColor: hexColor }}
     >
       {/* Handles on all sides for radial connections */}
@@ -466,6 +468,7 @@ function calculateLayout(
         hasPortalSupport,
         isHighlighted: highlightType ? item.type === highlightType : false,
         isDimmed: highlightType ? item.type !== highlightType : false,
+        isDropTarget: false,
       },
     });
 
@@ -673,15 +676,17 @@ function MindMapViewInner({
   highlightType,
   onEdit,
   onAddChild,
+  onMove,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [showPortalDialog, setShowPortalDialog] = useState(false);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
-  const { fitView } = useReactFlow();
+  const { fitView, getIntersectingNodes } = useReactFlow();
 
   // localStorage key for portals
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
@@ -815,6 +820,16 @@ function MindMapViewInner({
     setEdges([...newEdges, ...relationEdges, ...portalEdges]);
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal]);
 
+  // Update drop target highlight on nodes
+  useEffect(() => {
+    setNodes(nds => nds.map(n => {
+      if (n.type !== 'mindmap') return n;
+      const isTarget = n.id === dropTargetId;
+      if (n.data?.isDropTarget === isTarget) return n;
+      return { ...n, data: { ...n.data, isDropTarget: isTarget } };
+    }));
+  }, [dropTargetId, setNodes]);
+
   // Handle new connection (create relation)
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -866,6 +881,43 @@ function MindMapViewInner({
       }
     },
     [onEdit]
+  );
+
+  // Handle node drag - highlight potential drop target
+  const onNodeDrag = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
+      const intersecting = getIntersectingNodes(draggedNode);
+      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
+      setDropTargetId(target?.id || null);
+    },
+    [getIntersectingNodes]
+  );
+
+  // Handle node drop - reparent if dropped on another node
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') {
+        setDropTargetId(null);
+        return;
+      }
+      const intersecting = getIntersectingNodes(draggedNode);
+      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
+      if (target && onMove) {
+        // Prevent dropping a parent onto its own descendant
+        const isDescendant = (parentId: string, childId: string): boolean => {
+          const child = items.find(i => i.id === childId);
+          if (!child || !child.parentId) return false;
+          if (child.parentId === parentId) return true;
+          return isDescendant(parentId, child.parentId);
+        };
+        if (!isDescendant(draggedNode.id, target.id)) {
+          onMove(draggedNode.id, target.id, 0);
+        }
+      }
+      setDropTargetId(null);
+    },
+    [getIntersectingNodes, onMove, items]
   );
 
   // Reset layout function
@@ -954,6 +1006,8 @@ function MindMapViewInner({
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
@@ -1136,6 +1190,7 @@ export function MindMapView({
   onDelete: _onDelete,
   onUpdateStatus: _onUpdateStatus,
   onAddChild,
+  onMove,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
@@ -1162,6 +1217,7 @@ export function MindMapView({
           highlightType={highlightType}
           onEdit={onEdit}
           onAddChild={onAddChild}
+          onMove={onMove}
           onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation}
           referentiels={referentiels}

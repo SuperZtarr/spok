@@ -734,6 +734,7 @@ export function SpacePage() {
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
+              onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
