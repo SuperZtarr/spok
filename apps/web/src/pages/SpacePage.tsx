@@ -759,10 +759,6 @@ export function SpacePage() {
                 strategy={verticalListSortingStrategy}
               >
                 <div className="py-2">
-                  {/* Root drop zone - to move items to root level */}
-                  {activeId && (
-                    <RootDropZone isOver={overId === 'root'} />
-                  )}
                   {itemsData?.data.map((item: Item & { childCount?: number }, index: number) => (
                     <SortableItem
                       key={item.id}
@@ -787,6 +783,10 @@ export function SpacePage() {
                       expandedItems={expandedItems}
                     />
                   ))}
+                  {/* Root drop zone - at the bottom to avoid interfering with first item */}
+                  {activeId && (
+                    <RootDropZone isOver={overId === 'root'} />
+                  )}
                 </div>
               </SortableContext>
               <DragOverlay>
@@ -872,13 +872,13 @@ function RootDropZone({ isOver }: { isOver: boolean }) {
   return (
     <div
       ref={setNodeRef}
-      className={`mx-3 mb-2 py-2 px-3 rounded-md border-2 border-dashed transition-colors ${
+      className={`mx-3 mt-2 py-2 px-3 rounded-md border-2 border-dashed transition-colors ${
         isOver
           ? 'border-green-500 bg-green-50 text-green-700'
           : 'border-gray-300 text-gray-400'
       }`}
     >
-      <span className="text-sm">↑ Déposer ici pour mettre à la racine</span>
+      <span className="text-sm">↓ Déposer ici pour mettre à la racine</span>
     </div>
   );
 }
