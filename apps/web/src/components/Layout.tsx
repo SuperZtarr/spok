@@ -172,7 +172,11 @@ export function Layout() {
                 <Link
                   key={space.id}
                   to={`/spaces/${space.id}`}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
+                    currentSpaceId === space.id
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'hover:bg-accent'
+                  }`}
                 >
                   <FolderKanban className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate">{space.name}</span>
@@ -196,7 +200,11 @@ export function Layout() {
                 <Link
                   key={space.id}
                   to={`/spaces/${space.id}`}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
+                    currentSpaceId === space.id
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'hover:bg-accent'
+                  }`}
                 >
                   <FolderKanban className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate">{space.name}</span>

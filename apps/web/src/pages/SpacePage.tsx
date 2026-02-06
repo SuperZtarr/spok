@@ -459,52 +459,10 @@ export function SpacePage() {
   const hasExpandedItems = expandedItems.size > 0;
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-4 h-full flex flex-col">
       <div className="w-full h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">{space?.name}</h1>
-            <p className="text-muted-foreground mt-1">
-              {space?.community && (
-                <span className="text-sm font-medium text-primary/70 mr-2">{space.community.name} ·</span>
-              )}
-              {space?.itemCount || 0} élément{(space?.itemCount || 0) > 1 ? 's' : ''}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link to={`/spaces/${spaceId}/history`}>
-              <Button variant="outline" title="Historique des modifications">
-                <History className="w-4 h-4" />
-              </Button>
-            </Link>
-            {(space?.role === 'OWNER' || space?.role === 'ADMIN') && (
-              <Link to={`/spaces/${spaceId}/settings`}>
-                <Button variant="outline" title="Paramètres de l'espace">
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </Link>
-            )}
-            <Button
-              variant={isSelectionMode ? 'default' : 'outline'}
-              onClick={() => setSelectionMode(!isSelectionMode)}
-              title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
-            >
-              <ListChecks className="w-4 h-4 mr-2" />
-              {isSelectionMode ? 'Annuler' : 'Sélectionner'}
-            </Button>
-            <Button onClick={() => {
-              handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
-              setShowNewItem(true);
-            }}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nouveau
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-2 mb-6 flex-wrap items-center">
+        {/* Toolbar */}
+        <div className="flex gap-2 mb-3 flex-wrap items-center">
           {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => (
             <Button
               key={type}
@@ -551,6 +509,42 @@ export function SpacePage() {
               </>
             )}
           </Button>
+
+          <div className="h-6 w-px bg-border mx-2" />
+
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {space?.itemCount || 0} élément{(space?.itemCount || 0) > 1 ? 's' : ''}
+          </span>
+
+          <div className="ml-auto flex gap-1">
+            <Link to={`/spaces/${spaceId}/history`}>
+              <Button variant="ghost" size="sm" title="Historique des modifications">
+                <History className="w-4 h-4" />
+              </Button>
+            </Link>
+            {(space?.role === 'OWNER' || space?.role === 'ADMIN') && (
+              <Link to={`/spaces/${spaceId}/settings`}>
+                <Button variant="ghost" size="sm" title="Paramètres de l'espace">
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
+            <Button
+              variant={isSelectionMode ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectionMode(!isSelectionMode)}
+              title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
+            >
+              <ListChecks className="w-4 h-4" />
+            </Button>
+            <Button size="sm" onClick={() => {
+              handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
+              setShowNewItem(true);
+            }}>
+              <Plus className="w-4 h-4 mr-1" />
+              Nouveau
+            </Button>
+          </div>
         </div>
 
         {/* New item form */}
