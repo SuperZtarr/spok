@@ -719,6 +719,7 @@ export function SpacePage() {
           ) : viewMode === 'timeline' ? (
             <TimelineView
               items={allItemsData?.data || []}
+              relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}

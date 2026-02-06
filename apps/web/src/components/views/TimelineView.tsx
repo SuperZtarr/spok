@@ -1,12 +1,13 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
-import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { TYPE_ICONS } from '../../constants/ui';
 
 interface TimelineViewProps {
   items: Item[];
+  relations?: ItemRelation[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -140,7 +141,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -390,6 +391,40 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
 
   const visibleEndDate = addDays(visibleStartDate, zoomConfig.days);
 
+  const ROW_HEIGHT = 40;
+
+  // Compute dependency arrows between related items
+  const dependencyArrows = useMemo(() => {
+    if (!relations || relations.length === 0) return [];
+
+    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string }[] = [];
+    const rowIndexMap = new Map<string, number>();
+    flatItems.forEach((item, idx) => rowIndexMap.set(item.id, idx));
+
+    for (const rel of relations) {
+      const fromIdx = rowIndexMap.get(rel.fromItemId);
+      const toIdx = rowIndexMap.get(rel.toItemId);
+      if (fromIdx === undefined || toIdx === undefined) continue;
+
+      const fromItem = flatItems[fromIdx];
+      const toItem = flatItems[toIdx];
+
+      const fromBar = getBarStyle(fromItem);
+      const toBar = getBarStyle(toItem);
+      if (!fromBar || !toBar) continue;
+
+      // Arrow from end of source bar to start of target bar
+      const fromX = fromBar.left + fromBar.width;
+      const fromY = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+      const toX = toBar.left;
+      const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+
+      arrows.push({ fromX, fromY, toX, toY, type: rel.type });
+    }
+
+    return arrows;
+  }, [relations, flatItems, visibleStartDate, zoomConfig, dayWidth]);
+
   // Determine which header rows to show based on zoom level
   const showMonthRow = true; // Toujours afficher les mois
   const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month';
@@ -537,8 +572,8 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
               <p>Aucun élément</p>
               <p className="text-sm">Créez des éléments pour les voir dans le planning</p>
             </div>
-          ) : (
-            flatItems.map((item) => {
+          ) : (<div className="relative">
+            {flatItems.map((item) => {
               const barStyle = getBarStyle(item);
               const Icon = TYPE_ICONS[item.type];
               const statusColor = getStatusColor(item.status, statuses);
@@ -670,8 +705,53 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
                   </div>
                 </div>
               );
-            })
-          )}
+            })}
+
+            {/* Dependency arrows SVG overlay */}
+            {dependencyArrows.length > 0 && (
+              <svg
+                className="absolute top-0 pointer-events-none"
+                style={{ left: 288, width: zoomConfig.days * dayWidth, height: flatItems.length * ROW_HEIGHT }}
+              >
+                <defs>
+                  <marker id="arrowhead-depends" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="hsl(var(--primary))" opacity="0.7" />
+                  </marker>
+                  <marker id="arrowhead-blocks" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="hsl(var(--destructive))" opacity="0.7" />
+                  </marker>
+                </defs>
+                {dependencyArrows.map((arrow, idx) => {
+                  const isBlocks = arrow.type === 'blocks';
+                  const color = isBlocks ? 'hsl(var(--destructive))' : 'hsl(var(--primary))';
+                  const markerId = isBlocks ? 'arrowhead-blocks' : 'arrowhead-depends';
+
+                  // Curved path: from end of source bar to start of target bar
+                  const dx = arrow.toX - arrow.fromX;
+                  const dy = arrow.toY - arrow.fromY;
+                  const midX = arrow.fromX + dx / 2;
+                  // If going backwards (target starts before source ends), route around
+                  const curveOffset = dx < 20 ? 30 : 0;
+
+                  const path = curveOffset > 0
+                    ? `M ${arrow.fromX} ${arrow.fromY} C ${arrow.fromX + curveOffset} ${arrow.fromY}, ${arrow.toX - curveOffset} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`
+                    : `M ${arrow.fromX} ${arrow.fromY} C ${midX} ${arrow.fromY}, ${midX} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
+
+                  return (
+                    <path
+                      key={idx}
+                      d={path}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth={1.5}
+                      strokeOpacity={0.6}
+                      markerEnd={`url(#${markerId})`}
+                    />
+                  );
+                })}
+              </svg>
+            )}
+          </div>)}
         </div>
       </div>
     </div>
