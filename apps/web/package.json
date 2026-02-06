@@ -15,6 +15,12 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@spok/shared": "workspace:*",
     "@tanstack/react-query": "^5.17.0",
+    "@tiptap/extension-link": "^3.19.0",
+    "@tiptap/extension-placeholder": "^3.19.0",
+    "@tiptap/extension-underline": "^3.19.0",
+    "@tiptap/pm": "^3.19.0",
+    "@tiptap/react": "^3.19.0",
+    "@tiptap/starter-kit": "^3.19.0",
     "@xyflow/react": "^12.10.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.309.0",
@@ -25,6 +31,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",

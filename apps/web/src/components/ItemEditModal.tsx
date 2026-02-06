@@ -11,6 +11,7 @@ import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Lin
 import { TYPE_LABELS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { containsHtml } from '../lib/bbcode';
+import { RichTextEditor } from './ui/RichTextEditor';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -215,7 +216,7 @@ export function ItemEditModal({
       updates.title = title;
     }
 
-    const newDescription = description || null;
+    const newDescription = (description && description !== '<p></p>') ? description : null;
     if (newDescription !== (item.description || null)) {
       updates.description = newDescription;
     }
@@ -364,36 +365,11 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
-            {/* Si la description contient du HTML : affichage formaté + édition cachée */}
-            {description && containsHtml(description) ? (
-              <div className="space-y-2">
-                {/* Aperçu HTML */}
-                <div
-                  className="max-h-[250px] overflow-y-auto p-3 bg-muted/50 rounded-md border border-border prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: description }}
-                />
-                {/* Bouton pour éditer le source */}
-                <details className="text-sm">
-                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                    Modifier le code source
-                  </summary>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ajoutez une description..."
-                    className="mt-2 flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y font-mono text-xs"
-                  />
-                </details>
-              </div>
-            ) : (
-              /* Pour les autres éléments: textarea normal */
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ajoutez une description..."
-                className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-              />
-            )}
+            <RichTextEditor
+              key={itemId}
+              content={description}
+              onChange={setDescription}
+            />
           </div>
 
           <div className="space-y-2">

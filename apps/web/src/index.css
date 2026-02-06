@@ -62,6 +62,12 @@
   }
 }
 
+/* TipTap placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  @apply text-muted-foreground pointer-events-none float-left h-0;
+  content: attr(data-placeholder);
+}
+
 /* BBCode content styles */
 @layer components {
   .bbcode-content {
