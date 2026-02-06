@@ -232,7 +232,7 @@ export function SpacePage() {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('reorder');
+  const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -269,10 +269,9 @@ export function SpacePage() {
     const overId = event.over?.id as string | null;
     setOverId(overId);
 
-    // Use Shift key to determine drop mode
-    // Shift held = nest (make child), otherwise = reorder
+    // Default = nest (make child), Shift held = reorder
     if (event.over) {
-      setDropMode(shiftHeld ? 'nest' : 'reorder');
+      setDropMode(shiftHeld ? 'reorder' : 'nest');
     }
   };
 
@@ -281,7 +280,7 @@ export function SpacePage() {
     const currentDropMode = dropMode;
     setActiveId(null);
     setOverId(null);
-    setDropMode('reorder');
+    setDropMode('nest');
 
     if (!over || active.id === over.id) return;
 
@@ -333,7 +332,7 @@ export function SpacePage() {
   const handleDragCancel = () => {
     setActiveId(null);
     setOverId(null);
-    setDropMode('reorder');
+    setDropMode('nest');
   };
 
   const activeItem = activeId ? allItemsData?.data?.find((item: Item) => item.id === activeId) : null;
@@ -510,6 +509,23 @@ export function SpacePage() {
               {type === 'ALL' ? 'Tous' : TYPE_LABELS[type]}
             </Button>
           ))}
+
+          {/* Mode indicator */}
+          {filter !== 'ALL' && (
+            <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1">
+              {viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'mindmap' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                  <span>Surlignage</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  <span>Filtre</span>
+                </>
+              )}
+            </span>
+          )}
 
           <div className="h-6 w-px bg-border mx-2" />
 
@@ -705,6 +721,7 @@ export function SpacePage() {
               onUpdateDates={(id, startDate, endDate) => updateItemMutation.mutate({ id, data: { startDate, endDate } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
+              highlightType={filter !== 'ALL' ? filter : undefined}
             />
           ) : viewMode === 'mindmap' ? (
             <MindMapView
@@ -746,11 +763,12 @@ export function SpacePage() {
                   {activeId && (
                     <RootDropZone isOver={overId === 'root'} />
                   )}
-                  {itemsData?.data.map((item: Item & { childCount?: number }) => (
+                  {itemsData?.data.map((item: Item & { childCount?: number }, index: number) => (
                     <SortableItem
                       key={item.id}
                       item={item}
                       depth={0}
+                      orderNumber={`${index + 1}`}
                       isExpanded={expandedItems.has(item.id)}
                       onToggleExpand={toggleExpanded}
                       onEdit={setEditingItemId}
@@ -793,7 +811,7 @@ export function SpacePage() {
                             <span>↳</span>
                             <span>Mode: Imbriquer comme enfant</span>
                           </div>
-                          <div className="opacity-75 text-[10px]">Relâchez Shift pour réordonner</div>
+                          <div className="opacity-75 text-[10px]">Maintenez Shift pour réordonner</div>
                         </div>
                       ) : (
                         <div className="flex flex-col gap-0.5">
@@ -801,7 +819,7 @@ export function SpacePage() {
                             <span>↕</span>
                             <span>Mode: Réordonner</span>
                           </div>
-                          <div className="opacity-75 text-[10px]">Maintenez Shift pour imbriquer</div>
+                          <div className="opacity-75 text-[10px]">Relâchez Shift pour imbriquer</div>
                         </div>
                       )}
                     </div>
@@ -869,6 +887,7 @@ function RootDropZone({ isOver }: { isOver: boolean }) {
 function SortableItem({
   item,
   depth,
+  orderNumber,
   isExpanded,
   onToggleExpand,
   onEdit,
@@ -888,6 +907,7 @@ function SortableItem({
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
+  orderNumber: string;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
   onEdit: (id: string) => void;
@@ -951,9 +971,9 @@ function SortableItem({
         </div>
       )}
       <div
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer ${
-          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50' : ''
-        } ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
+        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-all duration-150 ${
+          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 shadow-md' : ''
+        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
@@ -993,6 +1013,8 @@ function SortableItem({
         ) : (
           <div className="w-5" />
         )}
+
+        <span className="text-xs text-muted-foreground font-mono min-w-[1.5rem]">{orderNumber}</span>
 
         <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
@@ -1063,6 +1085,7 @@ function SortableItem({
           spaceId={spaceId}
           parentId={item.id}
           depth={depth + 1}
+          parentOrderNumber={orderNumber}
           onEditItem={onEdit}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
@@ -1085,6 +1108,7 @@ function ItemChildren({
   spaceId,
   parentId,
   depth,
+  parentOrderNumber,
   onEditItem,
   onDelete,
   onUpdateStatus,
@@ -1100,6 +1124,7 @@ function ItemChildren({
   spaceId: string;
   parentId: string;
   depth: number;
+  parentOrderNumber: string;
   onEditItem: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -1124,11 +1149,12 @@ function ItemChildren({
 
   return (
     <>
-      {data.data.map((item: Item & { childCount?: number }) => (
+      {data.data.map((item: Item & { childCount?: number }, index: number) => (
         <DraggableChildItem
           key={item.id}
           item={item}
           depth={depth}
+          orderNumber={`${parentOrderNumber}.${index + 1}`}
           isExpanded={expandedItems.has(item.id)}
           onToggleExpand={onToggleExpand}
           onEdit={onEditItem}
@@ -1155,6 +1181,7 @@ function ItemChildren({
 function DraggableChildItem({
   item,
   depth,
+  orderNumber,
   isExpanded,
   onToggleExpand,
   onEdit,
@@ -1174,6 +1201,7 @@ function DraggableChildItem({
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
+  orderNumber: string;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
   onEdit: (id: string) => void;
@@ -1237,9 +1265,9 @@ function DraggableChildItem({
         </div>
       )}
       <div
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer ${
-          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50' : ''
-        } ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
+        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-all duration-150 ${
+          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 shadow-md' : ''
+        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
@@ -1279,6 +1307,8 @@ function DraggableChildItem({
         ) : (
           <div className="w-5" />
         )}
+
+        <span className="text-xs text-muted-foreground font-mono min-w-[1.5rem]">{orderNumber}</span>
 
         <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
@@ -1349,6 +1379,7 @@ function DraggableChildItem({
           spaceId={spaceId}
           parentId={item.id}
           depth={depth + 1}
+          parentOrderNumber={orderNumber}
           onEditItem={onEdit}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
