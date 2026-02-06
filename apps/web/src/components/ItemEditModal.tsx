@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi } from '../lib/api';
-import type { Item, ItemType, ContributionWithAuthor, ItemRelation } from '@spok/shared';
+import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
-import { TYPE_LABELS, STATUS_OPTIONS, STORAGE_KEYS } from '../constants/ui';
+import { TYPE_LABELS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 
 type ParentSortMode = 'tree' | 'alpha';
@@ -18,6 +19,7 @@ interface ItemEditModalProps {
   spaceId: string;
   itemId: string | null;
   allItems: Item[];
+  referentiels?: SpaceReferentiels;
 }
 
 export function ItemEditModal({
@@ -26,6 +28,7 @@ export function ItemEditModal({
   spaceId,
   itemId,
   allItems,
+  referentiels,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
 
@@ -328,7 +331,8 @@ export function ItemEditModal({
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
           {/* Auteur et date de création */}
           {item.createdBy && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b border-border">
@@ -467,11 +471,25 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Statut</label>
-            <Select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              options={[{ value: '', label: 'Aucun statut' }, ...STATUS_OPTIONS]}
-            />
+            <div className="flex flex-wrap gap-2">
+              {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
+                const isSelected = (s.id === 'undefined' && !status) || s.id === status;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
+                    className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                      isSelected
+                        ? `${s.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`
+                        : `${s.borderColor} opacity-60 hover:opacity-100`
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Dependencies/Relations section */}
@@ -718,7 +736,9 @@ export function ItemEditModal({
             )}
           </div>
 
-          <div className="flex gap-2 pt-4">
+          </div>
+
+          <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
             <Button type="submit" disabled={updateMutation.isPending}>
               {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
             </Button>

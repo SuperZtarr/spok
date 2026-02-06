@@ -65,7 +65,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1">
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
           {children}
         </div>
       </div>

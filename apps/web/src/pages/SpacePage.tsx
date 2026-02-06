@@ -840,6 +840,7 @@ export function SpacePage() {
         spaceId={spaceId!}
         itemId={editingItemId}
         allItems={allItemsData?.data || []}
+        referentiels={referentiels}
       />
 
       {/* Selection action bar */}
