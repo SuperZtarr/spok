@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2 } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -9,6 +9,45 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import type { SpaceWithRole } from '@spok/shared';
+
+// Reusable space card component
+function SpaceCard({ space }: { space: SpaceWithRole }) {
+  return (
+    <Link to={`/spaces/${space.id}`}>
+      <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">{space.name}</CardTitle>
+            </div>
+            <Badge variant={space.type === 'PERSONAL' ? 'secondary' : 'outline'}>
+              {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
+            </Badge>
+          </div>
+          <CardDescription>
+            {space.role === 'OWNER' ? 'Propriétaire' : space.role}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            {space.type === 'GROUP' && (
+              <span className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                {space.memberCount} membre{(space.memberCount || 0) > 1 ? 's' : ''}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <FileText className="w-4 h-4" />
+              {space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
 
 export function DashboardPage() {
   const queryClient = useQueryClient();
@@ -20,22 +59,41 @@ export function DashboardPage() {
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
   const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>('');
 
-  const { data: spaces, isLoading } = useQuery({
-    queryKey: ['spaces', currentCommunity?.id],
-    queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
+  // Fetch ALL spaces (no community filter) for segmented display
+  const { data: allSpaces, isLoading } = useQuery({
+    queryKey: ['spaces', 'all'],
+    queryFn: () => spacesApi.list(),
   });
 
-  // Fetch personal spaces separately when community is selected
-  const { data: personalSpaces } = useQuery({
-    queryKey: ['spaces', 'personal'],
-    queryFn: () => spacesApi.list('none'),
-    enabled: !!currentCommunity,
-  });
+  // Segment spaces into categories
+  const { personalSpaces, communityGroups, independentSpaces } = useMemo(() => {
+    if (!allSpaces) return { personalSpaces: [], communityGroups: [] as { communityId: string; communityName: string; spaces: SpaceWithRole[] }[], independentSpaces: [] };
 
-  // Combine spaces
-  const displaySpaces = currentCommunity
-    ? [...(personalSpaces?.filter(s => s.type === 'PERSONAL') || []), ...(spaces || [])]
-    : spaces;
+    const personal = allSpaces.filter(s => s.type === 'PERSONAL');
+    const independent = allSpaces.filter(s => s.type === 'GROUP' && !s.communityId);
+
+    // Group by community
+    const byCommunity = new Map<string, { communityName: string; spaces: SpaceWithRole[] }>();
+    for (const space of allSpaces) {
+      if (space.type === 'GROUP' && space.communityId && space.community) {
+        const existing = byCommunity.get(space.communityId);
+        if (existing) {
+          existing.spaces.push(space);
+        } else {
+          byCommunity.set(space.communityId, {
+            communityName: space.community.name,
+            spaces: [space],
+          });
+        }
+      }
+    }
+
+    const groups = Array.from(byCommunity.entries())
+      .map(([communityId, { communityName, spaces }]) => ({ communityId, communityName, spaces }))
+      .sort((a, b) => a.communityName.localeCompare(b.communityName));
+
+    return { personalSpaces: personal, communityGroups: groups, independentSpaces: independent };
+  }, [allSpaces]);
 
   // Fetch communities for the select dropdown
   const { data: communities } = useQuery({
@@ -180,12 +238,12 @@ export function DashboardPage() {
           </Card>
         )}
 
-        {/* Spaces grid */}
+        {/* Spaces sections */}
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">
             Chargement...
           </div>
-        ) : displaySpaces?.length === 0 ? (
+        ) : allSpaces?.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <FolderKanban className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -200,46 +258,54 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {displaySpaces?.map((space) => (
-              <Link key={space.id} to={`/spaces/${space.id}`}>
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <FolderKanban className="w-5 h-5 text-primary" />
-                        <CardTitle className="text-lg">{space.name}</CardTitle>
-                      </div>
-                      <Badge variant={space.type === 'PERSONAL' ? 'secondary' : 'outline'}>
-                        {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
-                      </Badge>
-                    </div>
-                    <CardDescription>
-                      Rôle: {space.role === 'OWNER' ? 'Propriétaire' : space.role}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {space.type === 'GROUP' && (
-                        <span className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
-                          {space.memberCount} membre{(space.memberCount || 0) > 1 ? 's' : ''}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-4 h-4" />
-                        {space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}
-                      </span>
-                      {space.communityId && (
-                        <span className="flex items-center gap-1">
-                          <Building2 className="w-4 h-4" />
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+          <div className="space-y-8">
+            {/* Personal spaces */}
+            {personalSpaces.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <User className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Espaces personnels</h2>
+                  <Badge variant="secondary" className="ml-1">{personalSpaces.length}</Badge>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {personalSpaces.map((space) => (
+                    <SpaceCard key={space.id} space={space} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Community groups */}
+            {communityGroups.map((group) => (
+              <section key={group.communityId}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Building2 className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">{group.communityName}</h2>
+                  <Badge variant="outline" className="ml-1">{group.spaces.length}</Badge>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {group.spaces.map((space) => (
+                    <SpaceCard key={space.id} space={space} />
+                  ))}
+                </div>
+              </section>
             ))}
+
+            {/* Independent group spaces (no community) */}
+            {independentSpaces.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Espaces de groupe</h2>
+                  <Badge variant="outline" className="ml-1">{independentSpaces.length}</Badge>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {independentSpaces.map((space) => (
+                    <SpaceCard key={space.id} space={space} />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </div>

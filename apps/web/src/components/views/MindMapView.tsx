@@ -355,10 +355,42 @@ function PortalNode({ data }: PortalNodeProps) {
   );
 }
 
+// Project group node component (background rectangle around PROJECT items and their children)
+interface ProjectGroupNodeProps {
+  data: {
+    label: string;
+    childCount: number;
+    hexColor: string;
+  };
+}
+
+function ProjectGroupNode({ data }: ProjectGroupNodeProps) {
+  const { label, childCount, hexColor } = data;
+
+  return (
+    <div
+      className="w-full h-full rounded-xl pointer-events-none"
+      style={{
+        border: `2px dashed ${hexColor}`,
+        backgroundColor: `${hexColor}33`,
+      }}
+    >
+      <div
+        className="absolute top-2 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium"
+        style={{ color: hexColor, backgroundColor: `${hexColor}22` }}
+      >
+        <span className="truncate max-w-[150px]">{label}</span>
+        <span className="opacity-60">({childCount})</span>
+      </div>
+    </div>
+  );
+}
+
 const nodeTypes = {
   mindmap: MindMapNode,
   space: SpaceNode,
   portal: PortalNode,
+  projectGroup: ProjectGroupNode,
 };
 
 // Layout constants for radial layout
@@ -378,6 +410,81 @@ function calculateSubtreeSize(item: TreeItem, collapsedIds: Set<string>): number
   });
 
   return Math.max(totalSize, MIN_ANGLE_SPREAD);
+}
+
+// Collect all visible descendant IDs (not behind a collapsed node)
+function collectVisibleDescendantIds(item: TreeItem, collapsedIds: Set<string>): string[] {
+  if (collapsedIds.has(item.id)) return [];
+  const ids: string[] = [];
+  for (const child of item.children) {
+    ids.push(child.id);
+    ids.push(...collectVisibleDescendantIds(child, collapsedIds));
+  }
+  return ids;
+}
+
+// Generate background group nodes for PROJECT items that have visible children
+function generateProjectGroupNodes(
+  tree: TreeItem[],
+  nodePositions: Map<string, { x: number; y: number }>,
+  statuses: StatusConfig[],
+  collapsedIds: Set<string>,
+): Node[] {
+  const groupNodes: Node[] = [];
+  const NODE_WIDTH = 150; // approximate node width
+  const NODE_HEIGHT = 40; // approximate node height
+  const PADDING = 40;
+
+  function traverse(items: TreeItem[], depth: number) {
+    for (const item of items) {
+      if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
+        const descendantIds = collectVisibleDescendantIds(item, collapsedIds);
+        if (descendantIds.length === 0) continue;
+
+        // Include the project node itself in the bounding box
+        const allIds = [item.id, ...descendantIds];
+        const positions = allIds
+          .map(id => nodePositions.get(id))
+          .filter((p): p is { x: number; y: number } => !!p);
+
+        if (positions.length < 2) continue; // Need at least project + 1 child
+
+        const minX = Math.min(...positions.map(p => p.x)) - PADDING;
+        const minY = Math.min(...positions.map(p => p.y)) - PADDING;
+        const maxX = Math.max(...positions.map(p => p.x)) + NODE_WIDTH + PADDING;
+        const maxY = Math.max(...positions.map(p => p.y)) + NODE_HEIGHT + PADDING;
+
+        const statusColor = getStatusColor(item.status, statuses);
+        const hexColor = tailwindBgToHex(statusColor);
+        // Use a darker variant for the border
+        const darkerHex = hexColor.replace(/f/gi, 'a').slice(0, 7);
+
+        groupNodes.push({
+          id: `project-group-${item.id}`,
+          type: 'projectGroup',
+          position: { x: minX, y: minY },
+          style: { width: maxX - minX, height: maxY - minY },
+          zIndex: -100 + depth,
+          selectable: false,
+          draggable: false,
+          connectable: false,
+          data: {
+            label: item.title,
+            childCount: descendantIds.length,
+            hexColor: darkerHex,
+          },
+        });
+      }
+
+      // Recurse into children
+      if (!collapsedIds.has(item.id)) {
+        traverse(item.children, depth + 1);
+      }
+    }
+  }
+
+  traverse(tree, 0);
+  return groupNodes;
 }
 
 // Get the best handle position based on angle
@@ -767,7 +874,9 @@ function MindMapViewInner({
 
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
-    return { initialNodes: nodes, initialEdges: [...edges, ...relationEdges] };
+    const nodePositions = new Map(nodes.map(n => [n.id, n.position]));
+    const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
+    return { initialNodes: [...projectGroups, ...nodes], initialEdges: [...edges, ...relationEdges] };
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -816,7 +925,8 @@ function MindMapViewInner({
       });
     });
 
-    setNodes([...newNodes, ...portalNodes]);
+    const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
+    setNodes([...projectGroups, ...newNodes, ...portalNodes]);
     setEdges([...newEdges, ...relationEdges, ...portalEdges]);
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal]);
 
@@ -875,8 +985,8 @@ function MindMapViewInner({
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      // Don't try to edit the space node or portal nodes
-      if (node.id !== '__space__' && node.type !== 'portal') {
+      // Don't try to edit the space node, portal nodes, or project group nodes
+      if (node.id !== '__space__' && node.type !== 'portal' && node.type !== 'projectGroup') {
         onEdit(node.id);
       }
     },
@@ -886,9 +996,9 @@ function MindMapViewInner({
   // Handle node drag - highlight potential drop target
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
       const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
+      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
       setDropTargetId(target?.id || null);
     },
     [getIntersectingNodes]
@@ -897,12 +1007,12 @@ function MindMapViewInner({
   // Handle node drop - reparent if dropped on another node
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') {
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') {
         setDropTargetId(null);
         return;
       }
       const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
+      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
       if (target && onMove) {
         // Prevent dropping a parent onto its own descendant
         const isDescendant = (parentId: string, childId: string): boolean => {
@@ -961,7 +1071,8 @@ function MindMapViewInner({
       });
     });
 
-    setNodes([...newNodes, ...portalNodes]);
+    const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
+    setNodes([...projectGroups, ...newNodes, ...portalNodes]);
     setEdges([...newEdges, ...relationEdges, ...portalEdges]);
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
@@ -1024,6 +1135,7 @@ function MindMapViewInner({
         <Controls />
         <MiniMap
           nodeColor={(node) => {
+            if (node.type === 'projectGroup') return 'transparent';
             return node.data?.hexColor as string || '#f3f4f6';
           }}
           maskColor="rgba(0, 0, 0, 0.1)"

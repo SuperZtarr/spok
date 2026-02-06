@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
-import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { TYPE_ICONS } from '../../constants/ui';
@@ -13,6 +13,7 @@ interface TimelineViewProps {
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
+  highlightType?: ItemType;
 }
 
 // Zoom level configuration
@@ -139,7 +140,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels }: TimelineViewProps) {
+export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -544,11 +545,15 @@ export function TimelineView({ items, onEdit, onDelete: _onDelete, onUpdateStatu
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);
               const hasDate = !!(item.startDate || item.dueDate);
+              const isHighlighted = highlightType && item.type === highlightType;
+              const isDimmed = highlightType && item.type !== highlightType;
 
               return (
                 <div
                   key={item.id}
-                  className="flex border-b hover:bg-muted/30 group"
+                  className={`flex border-b hover:bg-muted/30 group ${
+                    isHighlighted ? 'bg-primary/10 ring-1 ring-primary ring-inset' : ''
+                  } ${isDimmed ? 'opacity-40' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
