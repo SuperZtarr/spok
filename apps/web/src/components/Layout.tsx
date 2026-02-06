@@ -36,10 +36,14 @@ export function Layout() {
     ? [...(personalSpaces?.filter(s => s.type === 'PERSONAL') || []), ...(spaces || [])]
     : spaces;
 
-  // Get current space from URL
+  // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
   const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
-  const currentSpace = currentSpaceId ? displaySpaces?.find(s => s.id === currentSpaceId) : null;
+  const { data: currentSpace } = useQuery({
+    queryKey: ['space', currentSpaceId],
+    queryFn: () => spacesApi.get(currentSpaceId!),
+    enabled: !!currentSpaceId,
+  });
 
   // Page title based on current location
   const getPageTitle = () => {
@@ -152,9 +156,16 @@ export function Layout() {
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
             {currentSpace && (
-              <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
-                {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
-              </span>
+              <>
+                {currentSpace.community && (
+                  <span className="text-xs text-muted-foreground px-2 py-1 bg-primary/10 text-primary rounded">
+                    {currentSpace.community.name}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+                  {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
+                </span>
+              </>
             )}
           </div>
           {currentSpace && <ViewModeSelector />}

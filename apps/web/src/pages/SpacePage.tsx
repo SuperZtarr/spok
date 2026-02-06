@@ -466,6 +466,9 @@ export function SpacePage() {
           <div>
             <h1 className="text-3xl font-bold">{space?.name}</h1>
             <p className="text-muted-foreground mt-1">
+              {space?.community && (
+                <span className="text-sm font-medium text-primary/70 mr-2">{space.community.name} ·</span>
+              )}
               {space?.itemCount || 0} élément{(space?.itemCount || 0) > 1 ? 's' : ''}
             </p>
           </div>
