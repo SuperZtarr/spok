@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { LogOut, Home, FolderKanban, Plus, Shield, User } from 'lucide-react';
@@ -18,6 +18,41 @@ export function Layout() {
   const { currentCommunity } = useCommunityStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('spok-sidebar-width');
+    return saved ? Math.max(160, Math.min(400, Number(saved))) : 208;
+  });
+  const isResizing = useRef(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = Math.max(160, Math.min(400, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('spok-sidebar-width', String(sidebarWidth));
+  }, [sidebarWidth]);
+
   // Filter spaces by current community
   const { data: spaces } = useQuery({
     queryKey: ['spaces', currentCommunity?.id],
@@ -31,10 +66,23 @@ export function Layout() {
     enabled: !!currentCommunity, // Only fetch when community is selected
   });
 
-  // Combine spaces: show personal spaces + community spaces
-  const displaySpaces = currentCommunity
-    ? [...(personalSpaces?.filter(s => s.type === 'PERSONAL') || []), ...(spaces || [])]
-    : spaces;
+  // Separate personal and community/group spaces
+  const { mySpaces, communitySpaces } = useMemo(() => {
+    if (currentCommunity) {
+      return {
+        mySpaces: personalSpaces?.filter(s => s.type === 'PERSONAL') || [],
+        communitySpaces: spaces || [],
+      };
+    }
+    const all = spaces || [];
+    return {
+      mySpaces: all.filter(s => s.type === 'PERSONAL'),
+      communitySpaces: all.filter(s => s.type !== 'PERSONAL'),
+    };
+  }, [currentCommunity, spaces, personalSpaces]);
+
+  // Combined for backward compat (sidebar active state lookup)
+  const displaySpaces = [...mySpaces, ...communitySpaces];
 
   // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
@@ -71,8 +119,16 @@ export function Layout() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      {/* Sidebar - fixed left */}
-      <aside className="w-52 bg-card border-r border-border flex flex-col flex-shrink-0 h-full">
+      {/* Sidebar - resizable */}
+      <aside
+        className="bg-card border-r border-border flex flex-col flex-shrink-0 h-full relative"
+        style={{ width: sidebarWidth }}
+      >
+        {/* Resize handle */}
+        <div
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 active:bg-primary/40 z-10"
+          onMouseDown={handleMouseDown}
+        />
         {/* Header sidebar - fixe */}
         <div className="p-4 border-b border-border flex-shrink-0">
           <img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" />
@@ -106,27 +162,49 @@ export function Layout() {
             <CommunitySelector />
           </div>
 
+          {/* Personal spaces */}
+          {mySpaces.length > 0 && (
+            <div className="pt-2">
+              <div className="flex items-center justify-between px-3 mb-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
+              </div>
+              {mySpaces.map((space) => (
+                <Link
+                  key={space.id}
+                  to={`/spaces/${space.id}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
+                >
+                  <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">{space.name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Community / Group spaces */}
           <div className="pt-2">
             <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Espaces</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {currentCommunity ? currentCommunity.name : 'Espaces de groupe'}
+              </span>
               <Link to="/?new=space">
                 <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
               </Link>
             </div>
-
-            {displaySpaces?.map((space) => (
-              <Link
-                key={space.id}
-                to={`/spaces/${space.id}`}
-                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
-              >
-                <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{space.name}</span>
-                {space.type === 'PERSONAL' && (
-                  <span className="ml-auto text-xs text-muted-foreground flex-shrink-0">Perso</span>
-                )}
-              </Link>
-            ))}
+            {communitySpaces.length > 0 ? (
+              communitySpaces.map((space) => (
+                <Link
+                  key={space.id}
+                  to={`/spaces/${space.id}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
+                >
+                  <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">{space.name}</span>
+                </Link>
+              ))
+            ) : (
+              <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
+            )}
           </div>
         </nav>
 
