@@ -138,10 +138,16 @@ function bbcodeToHtml(bbcode: string): string {
   html = html.replace(/\n/g, '<br>');
   html = html.replace(/(<br>\s*){3,}/g, '<br><br>');
 
-  // Decode entities
+  // Decode double-encoded entities (from source SQL already having entities)
   html = html.replace(/&amp;nbsp;/g, ' ');
   html = html.replace(/&amp;quot;/g, '"');
+  html = html.replace(/&amp;#039;/g, "'");
   html = html.replace(/&amp;amp;/g, '&');
+
+  // Decode single-encoded entities (created by escapeHtml above)
+  html = html.replace(/&#039;/g, "'");
+  html = html.replace(/&quot;/g, '"');
+  html = html.replace(/&amp;/g, '&'); // must be last
 
   return html;
 }
