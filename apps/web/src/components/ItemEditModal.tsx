@@ -10,6 +10,7 @@ import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
 import { TYPE_LABELS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
+import { containsHtml } from '../lib/bbcode';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -363,8 +364,8 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
-            {/* Pour les éléments du forum (HTML): affichage formaté + édition cachée */}
-            {item?.content && (item.content as { isHtml?: boolean }).isHtml && description ? (
+            {/* Si la description contient du HTML : affichage formaté + édition cachée */}
+            {description && containsHtml(description) ? (
               <div className="space-y-2">
                 {/* Aperçu HTML */}
                 <div
@@ -682,8 +683,8 @@ export function ItemEditModal({
                       </div>
                     ) : (
                       <>
-                        {/* HTML pour les éléments du forum */}
-                        {item?.content && (item.content as { isHtml?: boolean }).isHtml ? (
+                        {/* Rendu HTML si le contenu contient des balises */}
+                        {containsHtml(contribution.content) ? (
                           <div
                             className="prose prose-sm dark:prose-invert max-w-none"
                             dangerouslySetInnerHTML={{ __html: contribution.content }}

@@ -49,6 +49,14 @@ export function stripBbcode(bbcode: string): string {
 }
 
 /**
+ * Detect if a string contains HTML tags
+ */
+export function containsHtml(text: string): boolean {
+  if (!text) return false;
+  return /<[a-z][\s\S]*?>/i.test(text);
+}
+
+/**
  * Strip all markup (both HTML and BBCode) to get plain text
  * Use this for content that might be in either format
  */
