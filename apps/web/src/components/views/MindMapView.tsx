@@ -801,6 +801,7 @@ function MindMapViewInner({
   // Portals state
   const [portals, setPortals] = useState<PortalState[]>([]);
   const [portalsLoaded, setPortalsLoaded] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   // Load portals from localStorage when spaceId is available
   useEffect(() => {
@@ -1140,71 +1141,68 @@ function MindMapViewInner({
           }}
           maskColor="rgba(0, 0, 0, 0.1)"
         />
-        <Panel position="top-right" className="flex gap-2">
+        <Panel position="top-right" className="flex gap-1 sm:gap-2">
           <button
             onClick={hasCollapsedNodes ? expandAll : collapseAll}
-            className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
             title={hasCollapsedNodes ? 'Tout étendre' : 'Tout replier'}
           >
-            {hasCollapsedNodes ? (
-              <>
-                <ChevronsUpDown className="w-4 h-4" />
-                <span className="text-sm">Étendre</span>
-              </>
-            ) : (
-              <>
-                <ChevronsDownUp className="w-4 h-4" />
-                <span className="text-sm">Replier</span>
-              </>
-            )}
+            {hasCollapsedNodes ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
+            <span className="text-sm hidden sm:inline">{hasCollapsedNodes ? 'Étendre' : 'Replier'}</span>
           </button>
           <button
             onClick={resetLayout}
-            className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
             title="Réorganiser les éléments"
           >
             <RotateCcw className="w-4 h-4" />
-            <span className="text-sm">Réorganiser</span>
+            <span className="text-sm hidden sm:inline">Réorganiser</span>
           </button>
         </Panel>
-        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-3 text-xs">
-          <div className="font-semibold text-foreground mb-2">Légende</div>
+        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-2 sm:p-3 text-xs max-w-[200px] sm:max-w-none">
+          <button
+            onClick={() => setLegendOpen(v => !v)}
+            className="flex items-center gap-1 font-semibold text-foreground w-full sm:pointer-events-none"
+          >
+            <ChevronRight className={`w-3 h-3 sm:hidden transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
+            Légende
+          </button>
 
-          {/* Instructions */}
-          <div className="space-y-1 mb-3 text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
-              <span>Glissez depuis un point pour créer une relation</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
-              <span>Cliquez sur une relation pour la supprimer</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
-              <span>Portail : ouvre un autre espace (nouvel onglet)</span>
-            </div>
-          </div>
-
-          {/* Relation types - compact with hover */}
-          <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Types de relations</div>
-          <div className="flex flex-wrap gap-1">
-            {RELATION_TYPES.map((type) => (
-              <div
-                key={type.id}
-                className="group relative p-1.5 rounded-md hover:bg-gray-100 cursor-help transition-colors"
-                title={`${type.label} — ${type.description}`}
-              >
-                <type.Icon className={`w-4 h-4 ${type.color}`} />
-                {/* Tooltip on hover */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                  <div className="font-medium">{type.label}</div>
-                  <div className="text-gray-300 text-[10px]">{type.description}</div>
-                  {/* Arrow */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
-                </div>
+          <div className={`${legendOpen ? 'block' : 'hidden'} sm:block mt-2`}>
+            {/* Instructions */}
+            <div className="space-y-1 mb-3 text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                <span>Glissez pour créer une relation</span>
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
+                <span>Cliquez pour supprimer</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+                <span>Portail : autre espace</span>
+              </div>
+            </div>
+
+            {/* Relation types */}
+            <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Relations</div>
+            <div className="flex flex-wrap gap-1">
+              {RELATION_TYPES.map((type) => (
+                <div
+                  key={type.id}
+                  className="group relative p-1.5 rounded-md hover:bg-gray-100 cursor-help transition-colors"
+                  title={`${type.label} — ${type.description}`}
+                >
+                  <type.Icon className={`w-4 h-4 ${type.color}`} />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                    <div className="font-medium">{type.label}</div>
+                    <div className="text-gray-300 text-[10px]">{type.description}</div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </Panel>
       </ReactFlow>

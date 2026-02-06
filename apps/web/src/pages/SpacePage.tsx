@@ -172,6 +172,12 @@ export function SpacePage() {
     enabled: !!spaceId,
   });
 
+  // Root items for tree view (only items without parent)
+  const rootItems = useMemo(() => {
+    if (!itemsData?.data) return [];
+    return itemsData.data.filter((item: Item) => !item.parentId);
+  }, [itemsData?.data]);
+
   // Load all items for parent selector (without filter)
   const { data: allItemsData } = useQuery({
     queryKey: ['items', spaceId, 'all'],
@@ -754,11 +760,11 @@ export function SpacePage() {
               onDragCancel={handleDragCancel}
             >
               <SortableContext
-                items={itemsData?.data.map((item: Item) => item.id) || []}
+                items={rootItems.map((item: Item) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="py-2">
-                  {itemsData?.data.map((item: Item & { childCount?: number }, index: number) => (
+                  {rootItems.map((item: Item & { childCount?: number }, index: number) => (
                     <SortableItem
                       key={item.id}
                       item={item}
