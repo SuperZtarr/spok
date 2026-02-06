@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   Node,
@@ -394,9 +394,9 @@ const nodeTypes = {
 };
 
 // Layout constants for radial layout
-const BASE_RADIUS = 350; // Base radius for first level (root items around space node)
-const RADIUS_INCREMENT = 300; // Additional radius per level (children around parent)
-const MIN_ANGLE_SPREAD = Math.PI / 6; // Minimum angle between siblings (30 degrees)
+const BASE_RADIUS = 450; // Base radius for first level (root items around space node)
+const RADIUS_INCREMENT = 400; // Additional radius per level (children around parent)
+const MIN_ANGLE_SPREAD = Math.PI / 4; // Minimum angle between siblings (45 degrees)
 
 // Calculate the angular size needed for a subtree
 function calculateSubtreeSize(item: TreeItem, collapsedIds: Set<string>): number {
@@ -501,6 +501,41 @@ function getHandleFromAngle(angle: number): string {
   } else {
     return 'top';
   }
+}
+
+// Recalculate edge handles based on actual node positions
+function recalculateEdgeHandles(edges: Edge[], nodePositions: Map<string, { x: number; y: number }>): Edge[] {
+  return edges.map(edge => {
+    const sourcePos = nodePositions.get(edge.source);
+    const targetPos = nodePositions.get(edge.target);
+    if (!sourcePos || !targetPos) return edge;
+
+    const dx = targetPos.x - sourcePos.x;
+    const dy = targetPos.y - sourcePos.y;
+
+    let sourceHandle: string;
+    let targetHandle: string;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0) {
+        sourceHandle = 'right-source';
+        targetHandle = 'left';
+      } else {
+        sourceHandle = 'left-source';
+        targetHandle = 'right';
+      }
+    } else {
+      if (dy > 0) {
+        sourceHandle = 'bottom-source';
+        targetHandle = 'top';
+      } else {
+        sourceHandle = 'top-source';
+        targetHandle = 'bottom';
+      }
+    }
+
+    return { ...edge, sourceHandle, targetHandle };
+  });
 }
 
 // Calculate node positions using radial/star layout
@@ -795,8 +830,28 @@ function MindMapViewInner({
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView, getIntersectingNodes } = useReactFlow();
 
-  // localStorage key for portals
+  // localStorage keys
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
+  const positionsStorageKey = spaceId ? `mindmap-positions-${spaceId}` : null;
+
+  // Saved node positions
+  const savedPositions = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Load saved positions from localStorage
+  useEffect(() => {
+    if (!positionsStorageKey) return;
+    try {
+      const stored = localStorage.getItem(positionsStorageKey);
+      if (stored) {
+        savedPositions.current = JSON.parse(stored);
+      }
+    } catch { /* ignore */ }
+  }, [positionsStorageKey]);
+
+  const savePositions = useCallback(() => {
+    if (!positionsStorageKey) return;
+    localStorage.setItem(positionsStorageKey, JSON.stringify(savedPositions.current));
+  }, [positionsStorageKey]);
 
   // Portals state
   const [portals, setPortals] = useState<PortalState[]>([]);
@@ -873,22 +928,49 @@ function MindMapViewInner({
     });
   }, []);
 
+  // Apply saved positions to nodes (override calculated positions with user-dragged ones)
+  const applyPositions = useCallback((nodes: Node[]): Node[] => {
+    const sp = savedPositions.current;
+    if (!sp || Object.keys(sp).length === 0) return nodes;
+    return nodes.map(n => {
+      const saved = sp[n.id];
+      return saved ? { ...n, position: saved } : n;
+    });
+  }, []);
+
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
-    const nodePositions = new Map(nodes.map(n => [n.id, n.position]));
+    const positionedNodes = applyPositions(nodes);
+    const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
-    return { initialNodes: [...projectGroups, ...nodes], initialEdges: [...edges, ...relationEdges] };
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse]);
+    const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], nodePositions);
+    return { initialNodes: [...projectGroups, ...positionedNodes], initialEdges: allEdges };
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, applyPositions]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Wrap onNodesChange to recalculate edge handles when nodes are dragged
+  const onNodesChange = useCallback((changes: any) => {
+    onNodesChangeBase(changes);
+    // If any position change, recalculate edges
+    const hasPositionChange = changes.some((c: any) => c.type === 'position' && c.position);
+    if (hasPositionChange) {
+      setNodes(currentNodes => {
+        const nodePositions = new Map(currentNodes.map(n => [n.id, n.position]));
+        setEdges(currentEdges => recalculateEdgeHandles(currentEdges, nodePositions));
+        return currentNodes;
+      });
+    }
+  }, [onNodesChangeBase, setNodes, setEdges]);
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
+    const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
+    const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -927,9 +1009,10 @@ function MindMapViewInner({
     });
 
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
-    setNodes([...projectGroups, ...newNodes, ...portalNodes]);
-    setEdges([...newEdges, ...relationEdges, ...portalEdges]);
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal]);
+    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], nodePositions);
+    setNodes([...projectGroups, ...positionedNodes, ...portalNodes]);
+    setEdges(allEdges);
+  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -1005,10 +1088,15 @@ function MindMapViewInner({
     [getIntersectingNodes]
   );
 
-  // Handle node drop - reparent if dropped on another node
+  // Handle node drop - reparent if dropped on another node, or save position
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
       if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') {
+        // Save position for space node too
+        if (draggedNode.id === '__space__') {
+          savedPositions.current[draggedNode.id] = draggedNode.position;
+          savePositions();
+        }
         setDropTargetId(null);
         return;
       }
@@ -1025,14 +1113,22 @@ function MindMapViewInner({
         if (!isDescendant(draggedNode.id, target.id)) {
           onMove(draggedNode.id, target.id, 0);
         }
+      } else {
+        // No reparenting - save the new position
+        savedPositions.current[draggedNode.id] = draggedNode.position;
+        savePositions();
       }
       setDropTargetId(null);
     },
-    [getIntersectingNodes, onMove, items]
+    [getIntersectingNodes, onMove, items, savePositions]
   );
 
-  // Reset layout function
+  // Reset layout function - clears saved positions
   const resetLayout = useCallback(() => {
+    savedPositions.current = {};
+    if (positionsStorageKey) {
+      localStorage.removeItem(positionsStorageKey);
+    }
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
 
     // Build a map of node positions for portal placement
