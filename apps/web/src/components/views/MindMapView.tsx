@@ -164,7 +164,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
   return (
     <div
-      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] max-w-[200px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isRoot ? 'border-primary border-3' : 'border-gray-300'
       } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
       style={{ backgroundColor: hexColor }}
@@ -201,7 +201,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
         <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
 
-        <span className="text-sm font-medium truncate">{item.title}</span>
+        <span className="text-sm font-medium whitespace-nowrap">{item.title}</span>
 
         {/* Badge showing child count when collapsed */}
         {isCollapsed && childCount > 0 && (
@@ -395,21 +395,27 @@ const nodeTypes = {
 
 // Layout constants for radial layout
 const BASE_RADIUS = 450; // Base radius for first level (root items around space node)
-const RADIUS_INCREMENT = 400; // Additional radius per level (children around parent)
+const RADIUS_INCREMENT = 400; // Radius for children around parent
 const MIN_ANGLE_SPREAD = Math.PI / 4; // Minimum angle between siblings (45 degrees)
+const DEPTH_ANGLE_MULTIPLIER = 1.5; // Multiply angular spread per extra depth level
 
 // Calculate the angular size needed for a subtree
-function calculateSubtreeSize(item: TreeItem, collapsedIds: Set<string>): number {
+// depth: 0 = root items, 1 = their children, etc.
+function calculateSubtreeSize(item: TreeItem, collapsedIds: Set<string>, depth: number = 0): number {
+  // Deeper nodes get a wider minimum angle so siblings are more spaced out
+  const depthMultiplier = Math.pow(DEPTH_ANGLE_MULTIPLIER, Math.max(0, depth - 1));
+  const minSpread = MIN_ANGLE_SPREAD * depthMultiplier;
+
   if (item.children.length === 0 || collapsedIds.has(item.id)) {
-    return MIN_ANGLE_SPREAD;
+    return minSpread;
   }
 
   let totalSize = 0;
   item.children.forEach(child => {
-    totalSize += calculateSubtreeSize(child, collapsedIds);
+    totalSize += calculateSubtreeSize(child, collapsedIds, depth + 1);
   });
 
-  return Math.max(totalSize, MIN_ANGLE_SPREAD);
+  return Math.max(totalSize, minSpread);
 }
 
 // Collect all visible descendant IDs (not behind a collapsed node)
@@ -635,7 +641,7 @@ function calculateLayout(
     if (hasChildren && !isCollapsed) {
       const visibleChildren = item.children;
       const totalSubtreeSize = visibleChildren.reduce(
-        (sum, child) => sum + calculateSubtreeSize(child, collapsedIds),
+        (sum, child) => sum + calculateSubtreeSize(child, collapsedIds, depth + 1),
         0
       );
 
@@ -643,7 +649,7 @@ function calculateLayout(
       const angleRange = endAngle - startAngle;
 
       visibleChildren.forEach(child => {
-        const childSize = calculateSubtreeSize(child, collapsedIds);
+        const childSize = calculateSubtreeSize(child, collapsedIds, depth + 1);
         const childAngleSpan = (childSize / totalSubtreeSize) * angleRange;
         const childStartAngle = currentAngle;
         const childEndAngle = currentAngle + childAngleSpan;
@@ -679,7 +685,7 @@ function calculateLayout(
   // Process all root nodes around the space node
   if (tree.length > 0) {
     const totalSubtreeSize = tree.reduce(
-      (sum, item) => sum + calculateSubtreeSize(item, collapsedIds),
+      (sum, item) => sum + calculateSubtreeSize(item, collapsedIds, 0),
       0
     );
 
@@ -687,7 +693,7 @@ function calculateLayout(
     const angleRange = 2 * Math.PI;
 
     tree.forEach(rootItem => {
-      const itemSize = calculateSubtreeSize(rootItem, collapsedIds);
+      const itemSize = calculateSubtreeSize(rootItem, collapsedIds, 0);
       const itemAngleSpan = (itemSize / totalSubtreeSize) * angleRange;
       const startAngle = currentAngle;
       const endAngle = currentAngle + itemAngleSpan;
@@ -1229,8 +1235,9 @@ function MindMapViewInner({
         }}
       >
         <Background color="#e2e8f0" gap={20} />
-        <Controls />
+        <Controls className="hidden sm:flex" position="bottom-right" />
         <MiniMap
+          className="hidden md:block"
           nodeColor={(node) => {
             if (node.type === 'projectGroup') return 'transparent';
             return node.data?.hexColor as string || '#f3f4f6';
@@ -1255,16 +1262,16 @@ function MindMapViewInner({
             <span className="text-sm hidden sm:inline">Réorganiser</span>
           </button>
         </Panel>
-        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-2 sm:p-3 text-xs max-w-[200px] sm:max-w-none">
+        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-2 text-xs max-w-[220px]">
           <button
             onClick={() => setLegendOpen(v => !v)}
-            className="flex items-center gap-1 font-semibold text-foreground w-full sm:pointer-events-none"
+            className="flex items-center gap-1 font-semibold text-foreground w-full"
           >
-            <ChevronRight className={`w-3 h-3 sm:hidden transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
+            <ChevronRight className={`w-3 h-3 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
             Légende
           </button>
 
-          <div className={`${legendOpen ? 'block' : 'hidden'} sm:block mt-2`}>
+          <div className={`${legendOpen ? 'block' : 'hidden'} mt-2`}>
             {/* Instructions */}
             <div className="space-y-1 mb-3 text-muted-foreground">
               <div className="flex items-center gap-2">
