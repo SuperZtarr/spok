@@ -153,7 +153,9 @@ export function SpacePage() {
   // Load spaces from the same community (for portal feature in mindmap)
   const { data: communitySpaces } = useSpaces(space?.communityId || undefined);
 
-  // Flat views (kanban, types, planning) should load all items regardless of hierarchy
+  // Tree-based views (mindmap, tree, timeline) need ALL items to rebuild hierarchy
+  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline';
+  // Flat views (kanban, types, planning, list) show all items without hierarchy filtering
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
@@ -161,10 +163,11 @@ export function SpacePage() {
     queryFn: () =>
       itemsApi.list(spaceId!, {
         type: filter === 'ALL' ? undefined : filter,
-        // Only filter by parentId for hierarchical views when showing all types
-        // Flat views (kanban, types) should show all items regardless of hierarchy
-        parentId: filter === 'ALL' && !isFlatView ? null : undefined,
-        pageSize: 100,
+        // Tree views need all items (no parentId filter) to build the full hierarchy
+        // Flat views also need all items
+        // Only filter by parentId for non-tree, non-flat views
+        parentId: filter === 'ALL' && !isFlatView && !isTreeView ? null : undefined,
+        pageSize: 5000,
       }),
     enabled: !!spaceId,
   });
@@ -172,7 +175,7 @@ export function SpacePage() {
   // Load all items for parent selector (without filter)
   const { data: allItemsData } = useQuery({
     queryKey: ['items', spaceId, 'all'],
-    queryFn: () => itemsApi.list(spaceId!, { pageSize: 100 }),
+    queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000 }),
     enabled: !!spaceId,
   });
 
@@ -1140,7 +1143,7 @@ function ItemChildren({
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
-    queryFn: () => itemsApi.list(spaceId, { parentId, pageSize: 100 }),
+    queryFn: () => itemsApi.list(spaceId, { parentId, pageSize: 5000 }),
   });
 
   // Get selection store for checking selection state (must be before any early return)

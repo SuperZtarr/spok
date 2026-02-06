@@ -43,7 +43,7 @@ const querySchema = z.object({
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(5000).default(20),
 });
 
 const moveItemSchema = z.object({
