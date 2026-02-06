@@ -10,7 +10,6 @@ import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
 import { TYPE_LABELS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
-import { containsHtml } from '../lib/bbcode';
 import { RichTextEditor } from './ui/RichTextEditor';
 
 type ParentSortMode = 'tree' | 'alpha';
@@ -176,9 +175,11 @@ export function ItemEditModal({
     }
   };
 
+  const isContributionEmpty = (html: string) => !html || html === '<p></p>';
+
   const handleAddContribution = () => {
-    if (newContribution.trim()) {
-      createContributionMutation.mutate(newContribution.trim());
+    if (!isContributionEmpty(newContribution)) {
+      createContributionMutation.mutate(newContribution);
     }
   };
 
@@ -188,10 +189,10 @@ export function ItemEditModal({
   };
 
   const handleSaveContribution = () => {
-    if (editingContributionId && editingContributionContent.trim()) {
+    if (editingContributionId && !isContributionEmpty(editingContributionContent)) {
       updateContributionMutation.mutate({
         id: editingContributionId,
-        content: editingContributionContent.trim(),
+        content: editingContributionContent,
       });
     }
   };
@@ -604,17 +605,17 @@ export function ItemEditModal({
 
             {/* New contribution input */}
             <div className="space-y-2">
-              <textarea
-                value={newContribution}
-                onChange={(e) => setNewContribution(e.target.value)}
+              <RichTextEditor
+                key={`new-contrib-${item.contributions?.length ?? 0}`}
+                content={newContribution}
+                onChange={setNewContribution}
                 placeholder="Ajouter une contribution..."
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
               />
               <Button
                 type="button"
                 size="sm"
                 onClick={handleAddContribution}
-                disabled={!newContribution.trim() || createContributionMutation.isPending}
+                disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}
               >
                 {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
               </Button>
@@ -630,10 +631,10 @@ export function ItemEditModal({
                   >
                     {editingContributionId === contribution.id ? (
                       <div className="space-y-2">
-                        <textarea
-                          value={editingContributionContent}
-                          onChange={(e) => setEditingContributionContent(e.target.value)}
-                          className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+                        <RichTextEditor
+                          key={`edit-${contribution.id}`}
+                          content={editingContributionContent}
+                          onChange={setEditingContributionContent}
                         />
                         <div className="flex gap-2">
                           <Button
@@ -659,15 +660,10 @@ export function ItemEditModal({
                       </div>
                     ) : (
                       <>
-                        {/* Rendu HTML si le contenu contient des balises */}
-                        {containsHtml(contribution.content) ? (
-                          <div
-                            className="prose prose-sm dark:prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ __html: contribution.content }}
-                          />
-                        ) : (
-                          <p className="text-sm whitespace-pre-wrap">{contribution.content}</p>
-                        )}
+                        <div
+                          className="prose prose-sm dark:prose-invert max-w-none"
+                          dangerouslySetInnerHTML={{ __html: contribution.content }}
+                        />
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                           <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
