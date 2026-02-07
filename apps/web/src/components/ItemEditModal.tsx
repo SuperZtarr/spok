@@ -623,11 +623,11 @@ export function ItemEditModal({
 
             {/* Existing contributions */}
             {item.contributions && item.contributions.length > 0 && (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {item.contributions.map((contribution) => (
                   <div
                     key={contribution.id}
-                    className="p-3 bg-muted rounded-lg space-y-2"
+                    className="p-3 bg-card border border-border rounded-lg space-y-2"
                   >
                     {editingContributionId === contribution.id ? (
                       <div className="space-y-2">
@@ -661,14 +661,14 @@ export function ItemEditModal({
                     ) : (
                       <>
                         <div
-                          className="prose prose-sm dark:prose-invert max-w-none"
+                          className="prose prose-sm dark:prose-invert max-w-none text-foreground"
                           dangerouslySetInnerHTML={{ __html: contribution.content }}
                         />
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground/80 mt-2">
                           <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
-                            <span>{contribution.author.name}</span>
-                            <span>-</span>
+                            <span className="font-medium text-foreground/70">{contribution.author.name}</span>
+                            <span>·</span>
                             <span>
                               {new Date(contribution.createdAt).toLocaleDateString('fr-FR', {
                                 day: '2-digit',
