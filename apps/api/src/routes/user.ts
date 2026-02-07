@@ -1,12 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import sharp from 'sharp';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { writeFile, unlink } from 'fs/promises';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const AVATARS_DIR = join(__dirname, '..', '..', 'uploads', 'avatars');
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const updatePreferencesSchema = z.object({
@@ -37,7 +32,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     return { themePreference: user.themePreference };
   });
 
-  // POST /user/avatar — upload avatar
+  // POST /user/avatar — upload avatar (stored as data URI in DB)
   fastify.post('/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const file = await request.file();
 
@@ -61,10 +56,8 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       .webp({ quality: 80 })
       .toBuffer();
 
-    const filename = `${request.user.userId}.webp`;
-    await writeFile(join(AVATARS_DIR, filename), processed);
-
-    const avatarUrl = `/uploads/avatars/${filename}`;
+    // Store as data URI in DB (no filesystem dependency)
+    const avatarUrl = `data:image/webp;base64,${processed.toString('base64')}`;
     const user = await fastify.prisma.user.update({
       where: { id: request.user.userId },
       data: { avatarUrl },
@@ -76,13 +69,6 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
 
   // DELETE /user/avatar — remove avatar
   fastify.delete('/avatar', { preHandler: [fastify.authenticate] }, async (request) => {
-    const filename = `${request.user.userId}.webp`;
-    try {
-      await unlink(join(AVATARS_DIR, filename));
-    } catch {
-      // File may not exist, that's ok
-    }
-
     await fastify.prisma.user.update({
       where: { id: request.user.userId },
       data: { avatarUrl: null },

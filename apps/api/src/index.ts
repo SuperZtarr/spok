@@ -3,12 +3,8 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import multipart from '@fastify/multipart';
-import fastifyStatic from '@fastify/static';
 import { ZodError } from 'zod';
 import { Prisma } from '@spok/database';
-import { mkdir } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
 import { adminAuthPlugin } from './plugins/adminAuth.js';
@@ -193,16 +189,6 @@ async function buildApp() {
 
   await app.register(sensible);
   await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
-
-  // Serve uploaded files
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const uploadsDir = join(__dirname, '..', 'uploads');
-  await mkdir(join(uploadsDir, 'avatars'), { recursive: true });
-  await app.register(fastifyStatic, {
-    root: uploadsDir,
-    prefix: '/uploads/',
-    decorateReply: false,
-  });
 
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);

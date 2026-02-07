@@ -14,7 +14,6 @@
     "@fastify/jwt": "^8.0.0",
     "@fastify/multipart": "8",
     "@fastify/sensible": "^5.5.0",
-    "@fastify/static": "7",
     "@spok/database": "workspace:*",
     "@spok/shared": "workspace:*",
     "bcrypt": "^5.1.1",

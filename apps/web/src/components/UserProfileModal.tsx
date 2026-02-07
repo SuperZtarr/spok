@@ -75,8 +75,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     { value: 'system', label: 'Système', icon: Monitor },
   ];
 
-  // Add cache-busting param to avatar URL
-  const avatarSrc = user.avatarUrl ? `${user.avatarUrl}?t=${Date.now()}` : null;
+  const avatarSrc = user.avatarUrl || null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur">
