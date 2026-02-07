@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { hash, compare } from 'bcrypt';
 import sharp from 'sharp';
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -12,6 +13,11 @@ const updateProfileSchema = z.object({
   name: z.string().min(1, 'Le nom ne peut pas être vide').max(100).optional(),
   email: z.string().email('Email invalide').optional(),
 }).refine(data => data.name || data.email, { message: 'Au moins un champ requis' });
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
+  newPassword: z.string().min(8, 'Le nouveau mot de passe doit faire au moins 8 caractères'),
+});
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /user/preferences
@@ -60,6 +66,31 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { name: user.name, email: user.email };
+  });
+
+  // PATCH /user/password — change password
+  fastify.patch('/password', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(request.body);
+
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: request.user.userId },
+      select: { passwordHash: true },
+    });
+
+    if (!user) return reply.notFound('Utilisateur non trouvé');
+
+    const valid = await compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return reply.badRequest('Mot de passe actuel incorrect');
+    }
+
+    const passwordHash = await hash(newPassword, 10);
+    await fastify.prisma.user.update({
+      where: { id: request.user.userId },
+      data: { passwordHash },
+    });
+
+    return { success: true };
   });
 
   // POST /user/avatar — upload avatar (stored as data URI in DB)

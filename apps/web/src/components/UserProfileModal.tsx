@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X, Lock } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser, ThemePreference } from '@spok/shared';
@@ -35,6 +35,11 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailValue, setEmailValue] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+  const [editingPassword, setEditingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: communities } = useQuery({
@@ -97,6 +102,24 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       setError(err.message || 'Erreur lors de la modification de l\'email');
     } finally {
       setSavingEmail(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) return;
+    setError(null);
+    setPasswordSuccess(false);
+    setSavingPassword(true);
+    try {
+      await userApi.changePassword({ currentPassword, newPassword });
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setTimeout(() => { setEditingPassword(false); setPasswordSuccess(false); }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du changement de mot de passe');
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -237,6 +260,64 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   onClick={() => { setEmailValue(user.email); setEditingEmail(true); }}
                   className="p-1 text-muted-foreground opacity-0 group-hover/email:opacity-100 hover:bg-accent rounded transition-opacity flex-shrink-0"
                   title="Modifier l'email"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 text-sm">
+            <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            {editingPassword ? (
+              <div className="flex-1 space-y-2">
+                <input
+                  type="password"
+                  placeholder="Mot de passe actuel"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  disabled={savingPassword}
+                  className="w-full px-2 py-1 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <input
+                  type="password"
+                  placeholder="Nouveau mot de passe (min. 8 car.)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleChangePassword();
+                    if (e.key === 'Escape') { setEditingPassword(false); setCurrentPassword(''); setNewPassword(''); }
+                  }}
+                  disabled={savingPassword}
+                  className="w-full px-2 py-1 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={savingPassword || !currentPassword || newPassword.length < 8}
+                    className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {savingPassword ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    Valider
+                  </button>
+                  <button
+                    onClick={() => { setEditingPassword(false); setCurrentPassword(''); setNewPassword(''); }}
+                    disabled={savingPassword}
+                    className="px-3 py-1 text-xs text-muted-foreground hover:bg-accent rounded-md"
+                  >
+                    Annuler
+                  </button>
+                  {passwordSuccess && <span className="text-xs text-green-600">Mot de passe modifié</span>}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group/pwd flex-1">
+                <span className="text-muted-foreground">Mot de passe :</span>
+                <span className="font-medium">********</span>
+                <button
+                  onClick={() => setEditingPassword(true)}
+                  className="p-1 text-muted-foreground opacity-0 group-hover/pwd:opacity-100 hover:bg-accent rounded transition-opacity"
+                  title="Modifier le mot de passe"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>

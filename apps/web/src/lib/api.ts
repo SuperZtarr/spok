@@ -283,6 +283,12 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
 
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    fetchApi<{ success: boolean }>('/user/password', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
   uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
     const token = localStorage.getItem('accessToken');
     const formData = new FormData();
