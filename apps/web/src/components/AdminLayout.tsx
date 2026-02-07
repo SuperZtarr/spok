@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Users, ArrowLeft, FolderKanban, Building2 } from 'lucide-react';
+import { LogOut, Users, ArrowLeft, FolderKanban, Building2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { Button } from './ui/Button';
@@ -29,6 +29,7 @@ export function AdminLayout() {
       if (location.pathname === '/admin/users') return 'Utilisateurs';
       if (location.pathname === '/admin/spaces') return 'Espaces';
       if (location.pathname === '/admin/communities') return 'Communautes';
+      if (location.pathname === '/admin/anomalies') return 'Anomalies';
       return 'Administration';
     };
     document.title = `${getPageTitle()} - SPOK Admin`;
@@ -97,6 +98,18 @@ export function AdminLayout() {
             >
               <Building2 className="w-4 h-4" />
               Communautes
+            </Link>
+
+            <Link
+              to="/admin/anomalies"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                isActive('/admin/anomalies')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Anomalies
             </Link>
           </div>
         </nav>

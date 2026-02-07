@@ -725,6 +725,45 @@ export const adminApi = {
         body: JSON.stringify(data),
       }),
   },
+
+  anomalies: {
+    summary: () =>
+      fetchApi<{
+        categories: Array<{
+          key: string;
+          label: string;
+          group: string;
+          severity: 'error' | 'warning' | 'info';
+          count: number;
+        }>;
+        totalAnomalies: number;
+        checkedAt: string;
+      }>('/admin/anomalies'),
+
+    detail: (category: string, params?: { page?: number; pageSize?: number }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      const query = searchParams.toString();
+      return fetchApi<{
+        category: string;
+        severity: 'error' | 'warning' | 'info';
+        items: Array<{
+          id: string;
+          title: string;
+          spaceId?: string | null;
+          spaceName?: string | null;
+          detail?: string;
+        }>;
+        pagination: {
+          page: number;
+          pageSize: number;
+          total: number;
+          totalPages: number;
+        };
+      }>(`/admin/anomalies/${category}${query ? `?${query}` : ''}`);
+    },
+  },
 };
 
 // Referentiels
