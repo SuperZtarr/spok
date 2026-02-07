@@ -728,7 +728,6 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
 
                   // Curved path: from end of source bar to start of target bar
                   const dx = arrow.toX - arrow.fromX;
-                  const dy = arrow.toY - arrow.fromY;
                   const midX = arrow.fromX + dx / 2;
                   // If going backwards (target starts before source ends), route around
                   const curveOffset = dx < 20 ? 30 : 0;
