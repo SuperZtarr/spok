@@ -28,6 +28,9 @@ interface CategoryQuery {
   pageSize?: number;
 }
 
+// Pattern SQL pour détecter le mojibake (double-encodage UTF-8)
+const MOJIBAKE_SQL = "\u00C3[\u00A0-\u00BF]|\u00C2[\u0080-\u00BF]|\u00C4[\u0080-\u00BF]|\u00C5[\u0080-\u00BF]";
+
 export const adminAnomaliesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticateAdmin);
 
@@ -61,11 +64,10 @@ export const adminAnomaliesRoutes: FastifyPluginAsync = async (fastify) => {
         SELECT COUNT(*) as count FROM items
         WHERE title ~ '^Topic [0-9]+$' OR title ~ '^[0-9]+$'
       `,
-      // Mojibake (corrupted encoding - 2-byte latin + 3-byte CJK)
-      prisma.$queryRaw<[{ count: bigint }]>`
-        SELECT COUNT(*) as count FROM items
-        WHERE title ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}' OR (description IS NOT NULL AND description ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}')
-      `,
+      // Mojibake (corrupted encoding)
+      prisma.$queryRawUnsafe<[{ count: bigint }]>(
+        `SELECT COUNT(*) as count FROM items WHERE title ~ '${MOJIBAKE_SQL}' OR (description IS NOT NULL AND description ~ '${MOJIBAKE_SQL}')`
+      ),
       // Orphan items (no parent, no children, no relations)
       prisma.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(*) as count FROM items i
@@ -211,18 +213,18 @@ export const adminAnomaliesRoutes: FastifyPluginAsync = async (fastify) => {
 
         case 'items-mojibake': {
           severity = 'error';
-          const rows = await prisma.$queryRaw<Array<{ id: string; title: string; spaceId: string; spaceName: string; description: string | null }>>`
-            SELECT i.id, i.title, i."spaceId", s.name as "spaceName", LEFT(i.description, 100) as description
+          const rows = await prisma.$queryRawUnsafe<Array<{ id: string; title: string; spaceId: string; spaceName: string; description: string | null }>>(
+            `SELECT i.id, i.title, i."spaceId", s.name as "spaceName", LEFT(i.description, 100) as description
             FROM items i
             JOIN spaces s ON i."spaceId" = s.id
-            WHERE i.title ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}' OR (i.description IS NOT NULL AND i.description ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}')
+            WHERE i.title ~ '${MOJIBAKE_SQL}' OR (i.description IS NOT NULL AND i.description ~ '${MOJIBAKE_SQL}')
             ORDER BY i.title
-            LIMIT ${pageSize} OFFSET ${skip}
-          `;
-          const countResult = await prisma.$queryRaw<[{ count: bigint }]>`
-            SELECT COUNT(*) as count FROM items
-            WHERE title ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}' OR (description IS NOT NULL AND description ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}')
-          `;
+            LIMIT $1 OFFSET $2`,
+            pageSize, skip
+          );
+          const countResult = await prisma.$queryRawUnsafe<[{ count: bigint }]>(
+            `SELECT COUNT(*) as count FROM items WHERE title ~ '${MOJIBAKE_SQL}' OR (description IS NOT NULL AND description ~ '${MOJIBAKE_SQL}')`
+          );
           total = Number(countResult[0].count);
           items = rows.map(r => ({
             id: r.id,

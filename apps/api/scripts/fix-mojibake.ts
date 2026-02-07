@@ -1,96 +1,79 @@
 import { prisma } from '@spok/database';
 
 // =============================================================
-// FIX MOJIBAKE - Corrige le double encodage UTF-8
+// FIX MOJIBAKE - Corrige le double encodage UTF-8 (ciblé)
 // =============================================================
-// Problème : les données importées du forum SMF (SQL en GBK) ont été
-// lues en UTF-8 alors que les bytes UTF-8 originaux étaient stockés
-// tels quels. Résultat : double encodage (UTF-8 → Latin-1 → UTF-8).
-//
-// Exemple : ゼ (U+30BC) → UTF-8 bytes E3 82 BC → interprété Latin-1
-//           → ã‚¼ (3 chars au lieu de 1)
-//
-// Solution : inverser le double encodage via
-//   Buffer.from(text, 'latin1').toString('utf8')
+// Certains textes ont un mélange de caractères correctement encodés
+// et de séquences mojibake. On ne corrige que les séquences mojibake
+// sans toucher au reste du texte.
 // =============================================================
 
 const BATCH_SIZE = 100;
 
-// Pattern regex pour détecter le mojibake (double-encoded UTF-8)
-// - 2-byte UTF-8 double-encodé (accents latins) : [Â-ß][€-¿] → \xC2-\xDF suivi de \x80-\xBF
-// - 3-byte UTF-8 double-encodé (CJK/asiatiques) : [à-ï][€-¿]{2} → \xE0-\xEF suivi de 2x \x80-\xBF
-const MOJIBAKE_REGEX = /[\xC2-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}/;
-
-// Pattern SQL pour PostgreSQL (utilise les noms Unicode des caractères)
-const MOJIBAKE_SQL_PATTERN = '[Â-ß][€-¿]|[à-ï][€-¿]{2}';
+// Pattern SQL pour détecter la présence de mojibake
+const SQL_PATTERN = "\u00C3[\u00A0-\u00BF]|\u00C2[\u0080-\u00BF]|\u00C4[\u0080-\u00BF]|\u00C5[\u0080-\u00BF]";
 
 /**
- * Inverse le double encodage UTF-8.
- * Les bytes ASCII (0x00-0x7F) restent identiques.
- * Les bytes 0x80-0xFF retrouvent leur valeur originale.
+ * Corrige les séquences mojibake dans un texte de manière ciblée.
+ * Remplace uniquement les séquences de 2 ou 3 caractères Latin-1 qui
+ * forment un caractère UTF-8 valide, sans toucher au reste.
  */
-function fixDoubleEncoding(text: string): string {
-  const latin1Bytes = Buffer.from(text, 'latin1');
-  return latin1Bytes.toString('utf8');
-}
-
-/**
- * Vérifie que le texte corrigé est du UTF-8 valide et ne contient plus de mojibake.
- */
-function isValidFix(original: string, fixed: string): boolean {
-  // Le résultat ne doit plus contenir de mojibake
-  if (MOJIBAKE_REGEX.test(fixed)) return false;
-
-  // Le résultat doit être différent de l'original
-  if (fixed === original) return false;
-
-  // Le résultat ne doit pas contenir le caractère de remplacement U+FFFD
-  if (fixed.includes('\uFFFD')) return false;
-
-  return true;
+function fixMojibakeTargeted(text: string): string {
+  // Regex pour trouver les séquences mojibake :
+  // - 2-byte : char 0xC2-0xDF suivi de char 0x80-0xBF
+  // - 3-byte : char 0xE0-0xEF suivi de 2x char 0x80-0xBF
+  return text.replace(
+    /([\u00C0-\u00DF])([\u0080-\u00BF])|([\u00E0-\u00EF])([\u0080-\u00BF])([\u0080-\u00BF])/g,
+    (...args) => {
+      try {
+        if (args[1] && args[2]) {
+          // 2-byte sequence
+          const bytes = Buffer.from([args[1].charCodeAt(0), args[2].charCodeAt(0)]);
+          const decoded = bytes.toString('utf8');
+          if (!decoded.includes('\uFFFD')) return decoded;
+        } else if (args[3] && args[4] && args[5]) {
+          // 3-byte sequence
+          const bytes = Buffer.from([args[3].charCodeAt(0), args[4].charCodeAt(0), args[5].charCodeAt(0)]);
+          const decoded = bytes.toString('utf8');
+          if (!decoded.includes('\uFFFD')) return decoded;
+        }
+      } catch {
+        // pas de conversion possible, on garde l'original
+      }
+      return args[0]; // retourner le match original si la conversion échoue
+    }
+  );
 }
 
 async function fixMojibake() {
-  console.log('=== FIX MOJIBAKE - Double encodage UTF-8 ===\n');
+  console.log('=== FIX MOJIBAKE (cible) - Double encodage UTF-8 ===\n');
 
-  // 1. Détecter les items avec mojibake
-  console.log('1. Détection des items avec mojibake...');
-  const mojibakeItems = await prisma.$queryRaw<Array<{
+  // 1. Items
+  console.log('1. Detection des items avec mojibake...');
+  const mojibakeItems = await prisma.$queryRawUnsafe<Array<{
     id: string;
     title: string;
     description: string | null;
-  }>>`
-    SELECT id, title, description FROM items
-    WHERE title ~ ${MOJIBAKE_SQL_PATTERN}
-      OR (description IS NOT NULL AND description ~ ${MOJIBAKE_SQL_PATTERN})
-  `;
-  console.log(`   ${mojibakeItems.length} items détectés`);
+  }>>(
+    `SELECT id, title, description FROM items
+     WHERE title ~ '${SQL_PATTERN}'
+       OR (description IS NOT NULL AND description ~ '${SQL_PATTERN}')`
+  );
+  console.log(`   ${mojibakeItems.length} items detectes`);
 
-  // 2. Preview des 10 premiers
   if (mojibakeItems.length > 0) {
-    console.log('\n   Preview des corrections (10 premiers) :');
+    console.log('\n   Preview (10 premiers) :');
     for (const item of mojibakeItems.slice(0, 10)) {
-      const hasTitleMojibake = MOJIBAKE_REGEX.test(item.title);
-      if (hasTitleMojibake) {
-        const fixed = fixDoubleEncoding(item.title);
-        const valid = isValidFix(item.title, fixed);
-        console.log(`   ${valid ? '✓' : '✗'} "${item.title}" → "${fixed}"`);
-      }
-      if (item.description && MOJIBAKE_REGEX.test(item.description)) {
-        const fixed = fixDoubleEncoding(item.description);
-        const valid = isValidFix(item.description, fixed);
-        const preview = item.description.substring(0, 60);
-        const fixedPreview = fixed.substring(0, 60);
-        console.log(`     desc: ${valid ? '✓' : '✗'} "${preview}..." → "${fixedPreview}..."`);
-      }
+      const fixed = fixMojibakeTargeted(item.title);
+      const changed = fixed !== item.title;
+      console.log(`   ${changed ? 'V' : '='} "${item.title}" -> "${fixed}"`);
     }
   }
 
-  // 3. Appliquer les corrections sur les items
+  // 2. Corriger les items
   console.log('\n2. Correction des items...');
   let fixedItemTitles = 0;
   let fixedItemDescs = 0;
-  let skippedItems = 0;
 
   for (let i = 0; i < mojibakeItems.length; i += BATCH_SIZE) {
     const batch = mojibakeItems.slice(i, i + BATCH_SIZE);
@@ -98,20 +81,16 @@ async function fixMojibake() {
     for (const item of batch) {
       const updates: { title?: string; description?: string } = {};
 
-      if (MOJIBAKE_REGEX.test(item.title)) {
-        const fixed = fixDoubleEncoding(item.title);
-        if (isValidFix(item.title, fixed)) {
-          updates.title = fixed;
-          fixedItemTitles++;
-        } else {
-          skippedItems++;
-        }
+      const fixedTitle = fixMojibakeTargeted(item.title);
+      if (fixedTitle !== item.title) {
+        updates.title = fixedTitle;
+        fixedItemTitles++;
       }
 
-      if (item.description && MOJIBAKE_REGEX.test(item.description)) {
-        const fixed = fixDoubleEncoding(item.description);
-        if (isValidFix(item.description, fixed)) {
-          updates.description = fixed;
+      if (item.description) {
+        const fixedDesc = fixMojibakeTargeted(item.description);
+        if (fixedDesc !== item.description) {
+          updates.description = fixedDesc;
           fixedItemDescs++;
         }
       }
@@ -125,106 +104,92 @@ async function fixMojibake() {
     }
 
     if (i + BATCH_SIZE < mojibakeItems.length) {
-      console.log(`   [${Math.min(i + BATCH_SIZE, mojibakeItems.length)}/${mojibakeItems.length}] items traités...`);
+      console.log(`   [${Math.min(i + BATCH_SIZE, mojibakeItems.length)}/${mojibakeItems.length}] items traites...`);
     }
   }
 
-  console.log(`   Titres corrigés:       ${fixedItemTitles}`);
-  console.log(`   Descriptions corrigées: ${fixedItemDescs}`);
-  console.log(`   Items ignorés (fix invalide): ${skippedItems}`);
+  console.log(`   Titres corriges:       ${fixedItemTitles}`);
+  console.log(`   Descriptions corrigees: ${fixedItemDescs}`);
 
-  // 4. Détecter et corriger les contributions
-  console.log('\n3. Détection des contributions avec mojibake...');
-  const mojibakeContribs = await prisma.$queryRaw<Array<{
+  // 3. Contributions
+  console.log('\n3. Detection des contributions avec mojibake...');
+  const mojibakeContribs = await prisma.$queryRawUnsafe<Array<{
     id: string;
     content: string;
-  }>>`
-    SELECT id, content FROM contributions
-    WHERE content ~ ${MOJIBAKE_SQL_PATTERN}
-  `;
-  console.log(`   ${mojibakeContribs.length} contributions détectées`);
+  }>>(
+    `SELECT id, content FROM contributions
+     WHERE content ~ '${SQL_PATTERN}'`
+  );
+  console.log(`   ${mojibakeContribs.length} contributions detectees`);
 
   let fixedContribs = 0;
-  let skippedContribs = 0;
 
   for (let i = 0; i < mojibakeContribs.length; i += BATCH_SIZE) {
     const batch = mojibakeContribs.slice(i, i + BATCH_SIZE);
 
     for (const contrib of batch) {
-      const fixed = fixDoubleEncoding(contrib.content);
-      if (isValidFix(contrib.content, fixed)) {
+      const fixed = fixMojibakeTargeted(contrib.content);
+      if (fixed !== contrib.content) {
         await prisma.contribution.update({
           where: { id: contrib.id },
           data: { content: fixed },
         });
         fixedContribs++;
-      } else {
-        skippedContribs++;
       }
     }
 
     if (i + BATCH_SIZE < mojibakeContribs.length) {
-      console.log(`   [${Math.min(i + BATCH_SIZE, mojibakeContribs.length)}/${mojibakeContribs.length}] contributions traitées...`);
+      console.log(`   [${Math.min(i + BATCH_SIZE, mojibakeContribs.length)}/${mojibakeContribs.length}] contributions traitees...`);
     }
   }
 
-  console.log(`   Contributions corrigées: ${fixedContribs}`);
-  console.log(`   Contributions ignorées:  ${skippedContribs}`);
+  console.log(`   Contributions corrigees: ${fixedContribs}`);
 
-  // 5. Détecter et corriger les espaces
-  console.log('\n4. Détection des espaces avec mojibake...');
-  const mojibakeSpaces = await prisma.$queryRaw<Array<{
+  // 4. Espaces
+  console.log('\n4. Detection des espaces avec mojibake...');
+  const mojibakeSpaces = await prisma.$queryRawUnsafe<Array<{
     id: string;
     name: string;
-  }>>`
-    SELECT id, name FROM spaces
-    WHERE name ~ ${MOJIBAKE_SQL_PATTERN}
-  `;
-  console.log(`   ${mojibakeSpaces.length} espaces détectés`);
+  }>>(
+    `SELECT id, name FROM spaces WHERE name ~ '${SQL_PATTERN}'`
+  );
+  console.log(`   ${mojibakeSpaces.length} espaces detectes`);
 
   let fixedSpaces = 0;
-
   for (const space of mojibakeSpaces) {
-    const fixed = fixDoubleEncoding(space.name);
-    if (isValidFix(space.name, fixed)) {
+    const fixed = fixMojibakeTargeted(space.name);
+    if (fixed !== space.name) {
       await prisma.space.update({
         where: { id: space.id },
         data: { name: fixed },
       });
       fixedSpaces++;
-      console.log(`   ✓ "${space.name}" → "${fixed}"`);
+      console.log(`   V "${space.name}" -> "${fixed}"`);
     }
   }
+  console.log(`   Espaces corriges: ${fixedSpaces}`);
 
-  console.log(`   Espaces corrigés: ${fixedSpaces}`);
+  // 5. Resume
+  console.log('\n=== RESUME ===');
+  console.log(`  Titres corriges:        ${fixedItemTitles}`);
+  console.log(`  Descriptions corrigees: ${fixedItemDescs}`);
+  console.log(`  Contributions corrigees: ${fixedContribs}`);
+  console.log(`  Espaces corriges:       ${fixedSpaces}`);
+  console.log(`  Total:                  ${fixedItemTitles + fixedItemDescs + fixedContribs + fixedSpaces}`);
 
-  // 6. Résumé final
-  console.log('\n=== RÉSUMÉ ===');
-  console.log(`  Items - titres corrigés:       ${fixedItemTitles}`);
-  console.log(`  Items - descriptions corrigées: ${fixedItemDescs}`);
-  console.log(`  Contributions corrigées:        ${fixedContribs}`);
-  console.log(`  Espaces corrigés:               ${fixedSpaces}`);
-  console.log(`  Total corrections:              ${fixedItemTitles + fixedItemDescs + fixedContribs + fixedSpaces}`);
+  // 6. Verification
+  console.log('\n=== VERIFICATION ===');
+  const remainingItems = await prisma.$queryRawUnsafe<[{ count: bigint }]>(
+    `SELECT COUNT(*) as count FROM items
+     WHERE title ~ '${SQL_PATTERN}'
+       OR (description IS NOT NULL AND description ~ '${SQL_PATTERN}')`
+  );
+  const remainingContribs = await prisma.$queryRawUnsafe<[{ count: bigint }]>(
+    `SELECT COUNT(*) as count FROM contributions WHERE content ~ '${SQL_PATTERN}'`
+  );
 
-  // 7. Vérification
-  console.log('\n=== VÉRIFICATION ===');
-  const remainingItems = await prisma.$queryRaw<[{ count: bigint }]>`
-    SELECT COUNT(*) as count FROM items
-    WHERE title ~ ${MOJIBAKE_SQL_PATTERN}
-      OR (description IS NOT NULL AND description ~ ${MOJIBAKE_SQL_PATTERN})
-  `;
-  const remainingContribs = await prisma.$queryRaw<[{ count: bigint }]>`
-    SELECT COUNT(*) as count FROM contributions
-    WHERE content ~ ${MOJIBAKE_SQL_PATTERN}
-  `;
-  const remainingSpaces = await prisma.$queryRaw<[{ count: bigint }]>`
-    SELECT COUNT(*) as count FROM spaces
-    WHERE name ~ ${MOJIBAKE_SQL_PATTERN}
-  `;
-
-  console.log(`  Items restants avec mojibake:        ${Number(remainingItems[0].count)}`);
-  console.log(`  Contributions restantes avec mojibake: ${Number(remainingContribs[0].count)}`);
-  console.log(`  Espaces restants avec mojibake:       ${Number(remainingSpaces[0].count)}`);
+  console.log(`  Items restants:          ${Number(remainingItems[0].count)}`);
+  console.log(`  Contributions restantes: ${Number(remainingContribs[0].count)}`);
 }
 
 fixMojibake()
