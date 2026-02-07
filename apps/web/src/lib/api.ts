@@ -463,6 +463,39 @@ export const tagsApi = {
     }),
 };
 
+// Search
+interface SearchResults {
+  items: Array<{
+    id: string;
+    title: string;
+    type: string;
+    status: string;
+    spaceId: string;
+    spaceName: string;
+    createdAt: string;
+    description: string | null;
+  }>;
+  contributions: Array<{
+    id: string;
+    content: string | null;
+    itemId: string;
+    itemTitle: string;
+    spaceId: string;
+    spaceName: string;
+    authorName: string;
+    createdAt: string;
+  }>;
+  totalItems: number;
+  totalContributions: number;
+}
+
+export const searchApi = {
+  search: (q: string, page?: number, pageSize?: number) =>
+    fetchApi<SearchResults>(
+      `/search?q=${encodeURIComponent(q)}&page=${page || 1}&pageSize=${pageSize || 20}`
+    ),
+};
+
 // Health check (no auth required)
 export const healthApi = {
   check: async (): Promise<{

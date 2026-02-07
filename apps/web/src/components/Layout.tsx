@@ -10,6 +10,7 @@ import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
 import { CommunitySelector } from './CommunitySelector';
+import { GlobalSearch } from './GlobalSearch';
 
 export function Layout() {
   const navigate = useNavigate();
@@ -151,14 +152,9 @@ export function Layout() {
           Tableau de bord
         </Link>
 
-        {/* Community Selector */}
-        <div className="pt-2 pb-2 border-b border-border mb-2">
-          <CommunitySelector />
-        </div>
-
         {/* Personal spaces */}
         {mySpaces.length > 0 && (
-          <div className="pt-2">
+          <div className="pt-2 pb-2 border-b border-border">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
             </div>
@@ -178,6 +174,11 @@ export function Layout() {
             ))}
           </div>
         )}
+
+        {/* Community Selector */}
+        <div className="pt-2 pb-2 border-b border-border">
+          <CommunitySelector />
+        </div>
 
         {/* Community / Group spaces */}
         <div className="pt-2">
@@ -291,7 +292,10 @@ export function Layout() {
               </div>
             )}
           </div>
-          {currentSpace && <ViewModeSelector />}
+          <div className="flex items-center gap-3">
+            <GlobalSearch />
+            {currentSpace && <ViewModeSelector />}
+          </div>
         </header>
 
         {/* Page content - scrollable */}

@@ -14,6 +14,7 @@ import { adminUsersRoutes } from './routes/admin/users.js';
 import { adminSpacesRoutes } from './routes/admin/spaces.js';
 import { adminCommunitiesRoutes } from './routes/admin/communities.js';
 import { adminAnomaliesRoutes } from './routes/admin/anomalies.js';
+import { searchRoutes } from './routes/search.js';
 
 const envToLogger = {
   development: {
@@ -195,6 +196,7 @@ async function buildApp() {
   await app.register(adminSpacesRoutes, { prefix: '/admin/spaces' });
   await app.register(adminCommunitiesRoutes, { prefix: '/admin/communities' });
   await app.register(adminAnomaliesRoutes, { prefix: '/admin/anomalies' });
+  await app.register(searchRoutes, { prefix: '/search' });
 
   // Health check
   app.get('/health', async () => {
