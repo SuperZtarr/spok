@@ -16,11 +16,18 @@ export interface AuthTokens {
 
 export type GlobalRole = 'USER' | 'ADMIN';
 
+export type ThemePreference = 'light' | 'dark' | 'system';
+
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
   globalRole: GlobalRole;
+  themePreference: ThemePreference;
+}
+
+export interface UpdatePreferencesInput {
+  themePreference?: ThemePreference;
 }
 
 export interface AuthResponse {

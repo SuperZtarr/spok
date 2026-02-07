@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthUser } from '@spok/shared';
+import { useThemeStore } from './theme';
 
 interface AuthState {
   user: AuthUser | null;
@@ -28,6 +29,8 @@ export const useAuthStore = create<AuthState>()(
           refreshToken,
           isAuthenticated: true,
         });
+        // Initialize theme from user preferences
+        useThemeStore.getState().initTheme(user.themePreference || 'system');
       },
 
       updateTokens: (accessToken, refreshToken) => {

@@ -77,6 +77,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       email: user.email,
       name: user.name,
       globalRole: user.globalRole,
+      themePreference: user.themePreference as AuthUser['themePreference'],
     };
 
     const response: AuthResponse = {
@@ -111,6 +112,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       email: user.email,
       name: user.name,
       globalRole: user.globalRole,
+      themePreference: user.themePreference as AuthUser['themePreference'],
     };
 
     const response: AuthResponse = {
@@ -168,6 +170,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         email: true,
         name: true,
         globalRole: true,
+        themePreference: true,
         createdAt: true,
       },
     });

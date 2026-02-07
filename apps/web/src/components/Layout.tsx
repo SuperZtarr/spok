@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LogOut, Home, FolderKanban, Plus, Shield, User, Menu, X } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
+import { useThemeStore } from '../stores/theme';
 import { spacesApi, authApi } from '../lib/api';
 import { Button } from './ui/Button';
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
@@ -17,6 +18,7 @@ export function Layout() {
   const location = useLocation();
   const { user, logout, refreshToken } = useAuthStore();
   const { currentCommunity } = useCommunityStore();
+  const { initTheme } = useThemeStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -54,6 +56,13 @@ export function Layout() {
   useEffect(() => {
     localStorage.setItem('spok-sidebar-width', String(sidebarWidth));
   }, [sidebarWidth]);
+
+  // Initialize theme from user preferences on mount
+  useEffect(() => {
+    if (user?.themePreference) {
+      initTheme(user.themePreference);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close sidebar on navigation (mobile)
   useEffect(() => {

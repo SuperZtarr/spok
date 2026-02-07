@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2 } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Monitor } from 'lucide-react';
 import { communitiesApi } from '../lib/api';
-import type { AuthUser } from '@spok/shared';
+import type { AuthUser, ThemePreference } from '@spok/shared';
+import { useThemeStore } from '../stores/theme';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const COMMUNITY_ROLE_LABELS: Record<string, string> = {
 };
 
 export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
+  const { theme, setTheme } = useThemeStore();
   const { data: communities } = useQuery({
     queryKey: ['communities'],
     queryFn: communitiesApi.list,
@@ -29,6 +31,12 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   });
 
   if (!user) return null;
+
+  const themeOptions: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+    { value: 'light', label: 'Clair', icon: Sun },
+    { value: 'dark', label: 'Sombre', icon: Moon },
+    { value: 'system', label: 'Système', icon: Monitor },
+  ];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur">
@@ -60,6 +68,27 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             <Hash className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">ID :</span>
             <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{user.id}</span>
+          </div>
+        </div>
+
+        {/* Préférences */}
+        <div className="pt-4 border-t border-border">
+          <span className="text-sm font-medium">Thème</span>
+          <div className="flex gap-2 mt-2">
+            {themeOptions.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => setTheme(value)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  theme === value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-accent'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

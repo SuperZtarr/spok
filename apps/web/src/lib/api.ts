@@ -2,6 +2,8 @@ import type {
   AuthResponse,
   LoginInput,
   RegisterInput,
+  ThemePreference,
+  UpdatePreferencesInput,
   SpaceWithRole,
   CreateSpaceInput,
   Item,
@@ -255,12 +257,24 @@ export const authApi = {
       body: JSON.stringify({ refreshToken }),
     }),
 
-  me: () => fetchApi<{ id: string; email: string; name: string; globalRole: GlobalRole }>('/auth/me'),
+  me: () => fetchApi<{ id: string; email: string; name: string; globalRole: GlobalRole; themePreference: ThemePreference }>('/auth/me'),
 
   logout: (refreshToken: string) =>
     fetchApi<{ success: boolean }>('/auth/logout', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
+    }),
+};
+
+// User preferences
+export const userApi = {
+  getPreferences: () =>
+    fetchApi<{ themePreference: ThemePreference }>('/user/preferences'),
+
+  updatePreferences: (data: UpdatePreferencesInput) =>
+    fetchApi<{ themePreference: ThemePreference }>('/user/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     }),
 };
 
