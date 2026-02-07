@@ -37,6 +37,7 @@ import { UsersPage } from './pages/admin/UsersPage';
 import { SpacesPage } from './pages/admin/SpacesPage';
 import { CommunitiesPage } from './pages/admin/CommunitiesPage';
 import { AnomaliesPage } from './pages/admin/AnomaliesPage';
+import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -129,6 +130,7 @@ export default function App() {
         <Route path="spaces" element={<SpacesPage />} />
         <Route path="communities" element={<CommunitiesPage />} />
         <Route path="anomalies" element={<AnomaliesPage />} />
+        <Route path="referentiels" element={<ReferentielsPage />} />
       </Route>
     </Routes>
     <DevIndicator />

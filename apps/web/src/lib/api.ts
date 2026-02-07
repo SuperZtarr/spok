@@ -759,6 +759,39 @@ export const adminApi = {
       }),
   },
 
+  referentiels: {
+    summary: () =>
+      fetchApi<{
+        defaults: {
+          statuses: Array<{
+            id: string;
+            label: string;
+            color: string;
+            borderColor: string;
+            order: number;
+            visible: boolean;
+          }>;
+          typeLabels: Record<string, {
+            label: string;
+            labelShort: string;
+            color: string;
+            bgHover: string;
+            visible: boolean;
+            order: number;
+          }>;
+        };
+        customizedSpaces: Array<{
+          id: string;
+          name: string;
+          type: string;
+          customStatusCount: number;
+          customTypeCount: number;
+        }>;
+        totalSpaces: number;
+        customizedCount: number;
+      }>('/admin/referentiels'),
+  },
+
   anomalies: {
     summary: () =>
       fetchApi<{
