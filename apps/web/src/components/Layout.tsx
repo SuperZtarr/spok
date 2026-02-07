@@ -89,16 +89,19 @@ export function Layout() {
 
   // Separate personal and community/group spaces
   const { mySpaces, communitySpaces } = useMemo(() => {
+    const sortByName = (a: { name: string }, b: { name: string }) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+
     if (currentCommunity) {
       return {
-        mySpaces: personalSpaces?.filter(s => s.type === 'PERSONAL') || [],
-        communitySpaces: spaces || [],
+        mySpaces: (personalSpaces?.filter(s => s.type === 'PERSONAL') || []).sort(sortByName),
+        communitySpaces: (spaces || []).slice().sort(sortByName),
       };
     }
     const all = spaces || [];
     return {
-      mySpaces: all.filter(s => s.type === 'PERSONAL'),
-      communitySpaces: all.filter(s => s.type !== 'PERSONAL'),
+      mySpaces: all.filter(s => s.type === 'PERSONAL').sort(sortByName),
+      communitySpaces: all.filter(s => s.type !== 'PERSONAL').sort(sortByName),
     };
   }, [currentCommunity, spaces, personalSpaces]);
 

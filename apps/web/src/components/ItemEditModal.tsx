@@ -603,24 +603,6 @@ export function ItemEditModal({
               </label>
             </div>
 
-            {/* New contribution input */}
-            <div className="space-y-2">
-              <RichTextEditor
-                key={`new-contrib-${item.contributions?.length ?? 0}`}
-                content={newContribution}
-                onChange={setNewContribution}
-                placeholder="Ajouter une contribution..."
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleAddContribution}
-                disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}
-              >
-                {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
-              </Button>
-            </div>
-
             {/* Existing contributions */}
             {item.contributions && item.contributions.length > 0 && (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -707,6 +689,24 @@ export function ItemEditModal({
                 ))}
               </div>
             )}
+
+            {/* New contribution input */}
+            <div className="space-y-2">
+              <RichTextEditor
+                key={`new-contrib-${item.contributions?.length ?? 0}`}
+                content={newContribution}
+                onChange={setNewContribution}
+                placeholder="Ajouter une contribution..."
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddContribution}
+                disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}
+              >
+                {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
+              </Button>
+            </div>
           </div>
 
           </div>
