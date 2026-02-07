@@ -143,7 +143,7 @@ export function Layout() {
     <>
       {/* Header sidebar */}
       <div className="p-4 border-b border-border flex-shrink-0">
-        <img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" />
+        <Link to="/"><img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" /></Link>
         <button
           onClick={() => setIsProfileOpen(true)}
           className="w-full flex items-center justify-between p-2 rounded-md hover:bg-accent transition-colors text-left"
