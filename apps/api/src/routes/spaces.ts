@@ -79,6 +79,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
+      orderBy: { space: { name: 'asc' } },
     });
 
     const memberSpaces = memberships.map((m) => ({
@@ -117,6 +118,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             select: { id: true, name: true },
           },
         },
+        orderBy: { name: 'asc' },
       });
 
       const nonMemberSpaces = visibleSpaces.map((s) => ({
