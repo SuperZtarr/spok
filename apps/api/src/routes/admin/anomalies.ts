@@ -61,10 +61,10 @@ export const adminAnomaliesRoutes: FastifyPluginAsync = async (fastify) => {
         SELECT COUNT(*) as count FROM items
         WHERE title ~ '^Topic [0-9]+$' OR title ~ '^[0-9]+$'
       `,
-      // Mojibake (corrupted encoding)
+      // Mojibake (corrupted encoding - 2-byte latin + 3-byte CJK)
       prisma.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(*) as count FROM items
-        WHERE title ~ 'Ã[€-¿]' OR (description IS NOT NULL AND description ~ 'Ã[€-¿]')
+        WHERE title ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}' OR (description IS NOT NULL AND description ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}')
       `,
       // Orphan items (no parent, no children, no relations)
       prisma.$queryRaw<[{ count: bigint }]>`
@@ -215,13 +215,13 @@ export const adminAnomaliesRoutes: FastifyPluginAsync = async (fastify) => {
             SELECT i.id, i.title, i."spaceId", s.name as "spaceName", LEFT(i.description, 100) as description
             FROM items i
             JOIN spaces s ON i."spaceId" = s.id
-            WHERE i.title ~ 'Ã[€-¿]' OR (i.description IS NOT NULL AND i.description ~ 'Ã[€-¿]')
+            WHERE i.title ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}' OR (i.description IS NOT NULL AND i.description ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}')
             ORDER BY i.title
             LIMIT ${pageSize} OFFSET ${skip}
           `;
           const countResult = await prisma.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count FROM items
-            WHERE title ~ 'Ã[€-¿]' OR (description IS NOT NULL AND description ~ 'Ã[€-¿]')
+            WHERE title ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}' OR (description IS NOT NULL AND description ~ '[Â-ß][€-¿]|[à-ï][€-¿]{2}')
           `;
           total = Number(countResult[0].count);
           items = rows.map(r => ({

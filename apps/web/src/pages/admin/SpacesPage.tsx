@@ -27,6 +27,8 @@ interface AdminSpace {
 
 const accessors: Record<string, (s: AdminSpace) => string | number> = {
   name: (s) => s.name?.toLowerCase() ?? '',
+  owner: (s) => s.owner?.name?.toLowerCase() ?? '\uffff',
+  community: (s) => s.community?.name?.toLowerCase() ?? '\uffff',
   members: (s) => s.memberCount,
   items: (s) => s.itemCount,
   createdAt: (s) => s.createdAt,
@@ -113,9 +115,9 @@ export function SpacesPage() {
           <tr>
             <SortHeader label="Nom" column="name" />
             {showCommunity && (
-              <th className="px-4 py-3 text-left text-sm font-medium">Communaute</th>
+              <SortHeader label="Communaute" column="community" />
             )}
-            <th className="px-4 py-3 text-left text-sm font-medium">Proprietaire</th>
+            <SortHeader label="Proprietaire" column="owner" />
             <SortHeader label="Membres" column="members" />
             <SortHeader label="Elements" column="items" />
             <SortHeader label="Date creation" column="createdAt" />
