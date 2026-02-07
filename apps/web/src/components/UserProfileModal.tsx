@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser, ThemePreference } from '@spok/shared';
@@ -29,6 +29,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const { updateUser } = useAuthStore();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: communities } = useQuery({
@@ -53,6 +56,25 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed || trimmed === user.name) {
+      setEditingName(false);
+      return;
+    }
+    setError(null);
+    setSavingName(true);
+    try {
+      const result = await userApi.updateProfile({ name: trimmed });
+      updateUser({ name: result.name });
+      setEditingName(false);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la modification du nom');
+    } finally {
+      setSavingName(false);
     }
   };
 
@@ -109,8 +131,40 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               onChange={handleUpload}
             />
           </div>
-          <div className="flex-1">
-            <p className="font-medium text-lg">{user.name}</p>
+          <div className="flex-1 min-w-0">
+            {editingName ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveName();
+                    if (e.key === 'Escape') setEditingName(false);
+                  }}
+                  autoFocus
+                  disabled={savingName}
+                  className="flex-1 min-w-0 px-2 py-1 text-lg font-medium border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button onClick={handleSaveName} disabled={savingName} className="p-1 text-primary hover:bg-accent rounded" title="Valider">
+                  {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
+                <button onClick={() => setEditingName(false)} disabled={savingName} className="p-1 text-muted-foreground hover:bg-accent rounded" title="Annuler">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group/name">
+                <p className="font-medium text-lg truncate">{user.name}</p>
+                <button
+                  onClick={() => { setNameValue(user.name); setEditingName(true); }}
+                  className="p-1 text-muted-foreground opacity-0 group-hover/name:opacity-100 hover:bg-accent rounded transition-opacity"
+                  title="Modifier le nom"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">{ROLE_LABELS[user.globalRole] || user.globalRole}</p>
             {user.avatarUrl && (
               <button

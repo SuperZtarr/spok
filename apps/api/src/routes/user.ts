@@ -8,6 +8,10 @@ const updatePreferencesSchema = z.object({
   themePreference: z.enum(['light', 'dark', 'system']).optional(),
 });
 
+const updateProfileSchema = z.object({
+  name: z.string().min(1, 'Le nom ne peut pas être vide').max(100),
+});
+
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /user/preferences
   fastify.get('/preferences', { preHandler: [fastify.authenticate] }, async (request) => {
@@ -30,6 +34,19 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { themePreference: user.themePreference };
+  });
+
+  // PATCH /user/profile — update name
+  fastify.patch('/profile', { preHandler: [fastify.authenticate] }, async (request) => {
+    const data = updateProfileSchema.parse(request.body);
+
+    const user = await fastify.prisma.user.update({
+      where: { id: request.user.userId },
+      data: { name: data.name },
+      select: { name: true },
+    });
+
+    return { name: user.name };
   });
 
   // POST /user/avatar — upload avatar (stored as data URI in DB)
