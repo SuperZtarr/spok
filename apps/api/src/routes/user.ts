@@ -1,5 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import sharp from 'sharp';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { writeFile, unlink } from 'fs/promises';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const AVATARS_DIR = join(__dirname, '..', '..', 'uploads', 'avatars');
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const updatePreferencesSchema = z.object({
   themePreference: z.enum(['light', 'dark', 'system']).optional(),
@@ -27,5 +35,59 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { themePreference: user.themePreference };
+  });
+
+  // POST /user/avatar — upload avatar
+  fastify.post('/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const file = await request.file();
+
+    if (!file) {
+      return reply.badRequest('Aucun fichier envoyé');
+    }
+
+    if (!ALLOWED_MIMES.includes(file.mimetype)) {
+      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+    }
+
+    const buffer = await file.toBuffer();
+
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
+    }
+
+    // Resize and convert to webp
+    const processed = await sharp(buffer)
+      .resize(256, 256, { fit: 'cover' })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    const filename = `${request.user.userId}.webp`;
+    await writeFile(join(AVATARS_DIR, filename), processed);
+
+    const avatarUrl = `/uploads/avatars/${filename}`;
+    const user = await fastify.prisma.user.update({
+      where: { id: request.user.userId },
+      data: { avatarUrl },
+      select: { avatarUrl: true },
+    });
+
+    return { avatarUrl: user.avatarUrl };
+  });
+
+  // DELETE /user/avatar — remove avatar
+  fastify.delete('/avatar', { preHandler: [fastify.authenticate] }, async (request) => {
+    const filename = `${request.user.userId}.webp`;
+    try {
+      await unlink(join(AVATARS_DIR, filename));
+    } catch {
+      // File may not exist, that's ok
+    }
+
+    await fastify.prisma.user.update({
+      where: { id: request.user.userId },
+      data: { avatarUrl: null },
+    });
+
+    return { success: true };
   });
 };

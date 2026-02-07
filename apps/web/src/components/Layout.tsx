@@ -147,7 +147,11 @@ export function Layout() {
               {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
             </p>
           </div>
-          <User className="w-4 h-4 text-muted-foreground" />
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+          ) : (
+            <User className="w-4 h-4 text-muted-foreground" />
+          )}
         </button>
       </div>
 

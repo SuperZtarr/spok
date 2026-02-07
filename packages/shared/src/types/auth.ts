@@ -24,6 +24,7 @@ export interface AuthUser {
   name: string;
   globalRole: GlobalRole;
   themePreference: ThemePreference;
+  avatarUrl?: string;
 }
 
 export interface UpdatePreferencesInput {

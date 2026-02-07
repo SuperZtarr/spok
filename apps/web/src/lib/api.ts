@@ -257,7 +257,7 @@ export const authApi = {
       body: JSON.stringify({ refreshToken }),
     }),
 
-  me: () => fetchApi<{ id: string; email: string; name: string; globalRole: GlobalRole; themePreference: ThemePreference }>('/auth/me'),
+  me: () => fetchApi<{ id: string; email: string; name: string; globalRole: GlobalRole; themePreference: ThemePreference; avatarUrl?: string }>('/auth/me'),
 
   logout: (refreshToken: string) =>
     fetchApi<{ success: boolean }>('/auth/logout', {
@@ -266,7 +266,7 @@ export const authApi = {
     }),
 };
 
-// User preferences
+// User preferences & avatar
 export const userApi = {
   getPreferences: () =>
     fetchApi<{ themePreference: ThemePreference }>('/user/preferences'),
@@ -276,6 +276,28 @@ export const userApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/user/avatar`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload avatar', error);
+    }
+
+    return response.json();
+  },
+
+  deleteAvatar: () =>
+    fetchApi<{ success: boolean }>('/user/avatar', { method: 'DELETE' }),
 };
 
 // Spaces
