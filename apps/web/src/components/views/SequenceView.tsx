@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Trash2, ArrowDown, ExternalLink, FileText, CheckSquare, Plus, Calendar } from 'lucide-react';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -22,6 +22,7 @@ function formatDate(dateString: string | null | undefined): string | null {
 
 interface SequenceViewProps {
   items: Item[];
+  relations?: ItemRelation[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -30,7 +31,83 @@ interface SequenceViewProps {
   highlightType?: ItemType;
 }
 
-export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType }: SequenceViewProps) {
+// Topological sort using Kahn's algorithm
+function topologicalSort(items: Item[], relations: ItemRelation[]): Item[] {
+  const itemIds = new Set(items.map(i => i.id));
+
+  // Build adjacency: "must come before" -> "item"
+  // depends: fromItem depends on toItem => toItem before fromItem
+  // blocks: fromItem blocks toItem => fromItem before toItem
+  const inDegree = new Map<string, number>();
+  const adj = new Map<string, string[]>(); // predecessor -> successors
+
+  items.forEach(item => {
+    inDegree.set(item.id, 0);
+    adj.set(item.id, []);
+  });
+
+  relations.forEach(rel => {
+    const from = rel.fromItemId;
+    const to = rel.toItemId;
+    if (!itemIds.has(from) || !itemIds.has(to)) return;
+
+    if (rel.type === 'depends') {
+      // fromItem depends on toItem => toItem must come before fromItem
+      adj.get(to)!.push(from);
+      inDegree.set(from, (inDegree.get(from) || 0) + 1);
+    } else if (rel.type === 'blocks') {
+      // fromItem blocks toItem => fromItem must come before toItem
+      adj.get(from)!.push(to);
+      inDegree.set(to, (inDegree.get(to) || 0) + 1);
+    }
+  });
+
+  // Items with no dependencies first, ordered by original position
+  const itemPositionMap = new Map(items.map((item, idx) => [item.id, idx]));
+  const queue: string[] = [];
+
+  items.forEach(item => {
+    if ((inDegree.get(item.id) || 0) === 0) {
+      queue.push(item.id);
+    }
+  });
+
+  // Sort queue by original position to maintain stable order
+  queue.sort((a, b) => (itemPositionMap.get(a) || 0) - (itemPositionMap.get(b) || 0));
+
+  const sorted: string[] = [];
+
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    sorted.push(id);
+
+    const successors = adj.get(id) || [];
+    // Sort successors by original position for stable ordering
+    const readySuccessors: string[] = [];
+    for (const succ of successors) {
+      const deg = (inDegree.get(succ) || 0) - 1;
+      inDegree.set(succ, deg);
+      if (deg === 0) {
+        readySuccessors.push(succ);
+      }
+    }
+    readySuccessors.sort((a, b) => (itemPositionMap.get(a) || 0) - (itemPositionMap.get(b) || 0));
+    queue.push(...readySuccessors);
+  }
+
+  // Handle cycles: add remaining items at the end
+  const sortedSet = new Set(sorted);
+  items.forEach(item => {
+    if (!sortedSet.has(item.id)) {
+      sorted.push(item.id);
+    }
+  });
+
+  const itemMap = new Map(items.map(i => [i.id, i]));
+  return sorted.map(id => itemMap.get(id)!).filter(Boolean);
+}
+
+export function SequenceView({ items, relations, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType }: SequenceViewProps) {
   // Build status maps from referentiels
   const { statusLabels, statusBorderColors, doneStatusId } = useMemo(() => {
     const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -52,6 +129,59 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
     return { statusLabels: labels, statusBorderColors: borderColors, doneStatusId: doneId };
   }, [referentiels]);
 
+  // Topological sort based on dependencies
+  const sortedItems = useMemo(() => {
+    if (!relations || relations.length === 0) return items;
+    return topologicalSort(items, relations);
+  }, [items, relations]);
+
+  // Build dependency lookup maps
+  const { dependsOnMap, blocksMap, directRelationMap } = useMemo(() => {
+    // dependsOnMap: itemId -> list of item titles it depends on
+    // blocksMap: itemId -> list of item titles it blocks
+    const dependsOn = new Map<string, { id: string; title: string }[]>();
+    const blocks = new Map<string, { id: string; title: string }[]>();
+    // directRelationMap: [prevId, nextId] -> relation type ('depends' | 'blocks')
+    const directRel = new Map<string, string>();
+
+    if (!relations) return { dependsOnMap: dependsOn, blocksMap: blocks, directRelationMap: directRel };
+
+    const itemMap = new Map(items.map(i => [i.id, i]));
+    const itemIds = new Set(items.map(i => i.id));
+
+    relations.forEach(rel => {
+      if (!itemIds.has(rel.fromItemId) || !itemIds.has(rel.toItemId)) return;
+
+      if (rel.type === 'depends') {
+        // fromItem depends on toItem
+        const fromItem = itemMap.get(rel.fromItemId);
+        const toItem = itemMap.get(rel.toItemId);
+        if (fromItem && toItem) {
+          if (!dependsOn.has(rel.fromItemId)) dependsOn.set(rel.fromItemId, []);
+          dependsOn.get(rel.fromItemId)!.push({ id: toItem.id, title: toItem.title });
+          if (!blocks.has(rel.toItemId)) blocks.set(rel.toItemId, []);
+          blocks.get(rel.toItemId)!.push({ id: fromItem.id, title: fromItem.title });
+          // toItem should come before fromItem → connector from toItem to fromItem
+          directRel.set(`${rel.toItemId}→${rel.fromItemId}`, 'depends');
+        }
+      } else if (rel.type === 'blocks') {
+        // fromItem blocks toItem
+        const fromItem = itemMap.get(rel.fromItemId);
+        const toItem = itemMap.get(rel.toItemId);
+        if (fromItem && toItem) {
+          if (!blocks.has(rel.fromItemId)) blocks.set(rel.fromItemId, []);
+          blocks.get(rel.fromItemId)!.push({ id: toItem.id, title: toItem.title });
+          if (!dependsOn.has(rel.toItemId)) dependsOn.set(rel.toItemId, []);
+          dependsOn.get(rel.toItemId)!.push({ id: fromItem.id, title: fromItem.title });
+          // fromItem should come before toItem → connector from fromItem to toItem
+          directRel.set(`${rel.fromItemId}→${rel.toItemId}`, 'blocks');
+        }
+      }
+    });
+
+    return { dependsOnMap: dependsOn, blocksMap: blocks, directRelationMap: directRel };
+  }, [items, relations]);
+
   if (items.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground">
@@ -65,7 +195,7 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
   return (
     <div className="p-6">
       <div className="flex flex-col items-center gap-2">
-        {items.map((item, index) => {
+        {sortedItems.map((item, index) => {
           const Icon = TYPE_ICONS[item.type];
           const statusLabel = statusLabels[item.status || ''] || 'Non defini';
           const borderColor = statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
@@ -73,12 +203,48 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           const isHighlighted = highlightType && item.type === highlightType;
           const isDimmed = highlightType && item.type !== highlightType;
 
+          // Dependency info for this item
+          const itemDependsOn = dependsOnMap.get(item.id) || [];
+          const itemBlocks = blocksMap.get(item.id) || [];
+          const hasUnsatisfiedDeps = itemDependsOn.length > 0 && !isDone;
+
+          // Determine connector type between previous and current item
+          let connectorType: 'depends' | 'blocks' | 'none' = 'none';
+          if (index > 0) {
+            const prevItem = sortedItems[index - 1];
+            const key = `${prevItem.id}→${item.id}`;
+            const relType = directRelationMap.get(key);
+            if (relType === 'depends') connectorType = 'depends';
+            else if (relType === 'blocks') connectorType = 'blocks';
+          }
+
           return (
             <div key={item.id} className="w-full max-w-md">
               {/* Connector arrow */}
               {index > 0 && (
-                <div className="flex justify-center py-1">
-                  <ArrowDown className={`w-5 h-5 ${isDimmed ? 'text-muted-foreground/30' : 'text-muted-foreground'}`} />
+                <div className="flex flex-col items-center py-1">
+                  {connectorType === 'depends' ? (
+                    <>
+                      <div className="w-0.5 h-3 bg-blue-400" />
+                      <span className="text-[10px] font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                        dépend de
+                      </span>
+                      <ArrowDown className="w-5 h-5 text-blue-500" />
+                    </>
+                  ) : connectorType === 'blocks' ? (
+                    <>
+                      <div className="w-0.5 h-3 bg-red-400" />
+                      <span className="text-[10px] font-medium text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
+                        bloqué par
+                      </span>
+                      <ArrowDown className="w-5 h-5 text-red-500" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-0.5 h-3 border-l-2 border-dashed border-gray-300" />
+                      <ArrowDown className={`w-5 h-5 ${isDimmed ? 'text-muted-foreground/30' : 'text-gray-300'}`} />
+                    </>
+                  )}
                 </div>
               )}
 
@@ -86,7 +252,7 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
               <div
                 className={`relative border-2 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all group ${borderColor} ${
                   isHighlighted ? 'ring-2 ring-primary ring-offset-2 scale-[1.02]' : ''
-                } ${isDimmed ? 'opacity-40' : ''}`}
+                } ${isDimmed ? 'opacity-40' : ''} ${hasUnsatisfiedDeps ? 'ring-1 ring-orange-300' : ''}`}
                 onClick={() => onEdit(item.id)}
               >
                 {/* Step number */}
@@ -130,6 +296,24 @@ export function SequenceView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
                         </span>
                       )}
                     </div>
+
+                    {/* Dependency indicators */}
+                    {(itemDependsOn.length > 0 || itemBlocks.length > 0) && (
+                      <div className="mt-2 space-y-1">
+                        {itemDependsOn.length > 0 && (
+                          <p className="text-[11px] text-orange-600">
+                            <span className="font-medium">Dépend de :</span>{' '}
+                            {itemDependsOn.map(d => d.title).join(', ')}
+                          </p>
+                        )}
+                        {itemBlocks.length > 0 && (
+                          <p className="text-[11px] text-red-600">
+                            <span className="font-medium">Bloque :</span>{' '}
+                            {itemBlocks.map(b => b.title).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
