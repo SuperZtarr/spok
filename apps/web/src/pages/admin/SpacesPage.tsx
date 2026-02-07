@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Trash2, Users, FolderKanban, User, Building2, Eye } from 'lucide-react';
+import { Search, Trash2, Users, FolderKanban, User, Building2, Eye, ArrowUp, ArrowDown } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { SpaceDetailModal } from '../../components/admin/SpaceDetailModal';
+import { useSort } from '../../hooks/useSort';
 
 interface AdminSpace {
   id: string;
@@ -17,11 +18,20 @@ interface AdminSpace {
   community: { id: string; name: string } | null;
 }
 
+const accessors: Record<string, (s: AdminSpace) => string | number> = {
+  name: (s) => s.name?.toLowerCase() ?? '',
+  members: (s) => s.memberCount,
+  items: (s) => s.itemCount,
+  createdAt: (s) => s.createdAt,
+};
+
 export function SpacesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+
+  const { sortKey, sortOrder, toggle, sortData } = useSort<AdminSpace>('name', 'asc');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'spaces', { page, search }],
@@ -56,23 +66,45 @@ export function SpacesPage() {
     setPage(1);
   };
 
-  // Séparer les espaces par type
-  const groupSpaces = data?.data.filter((s) => s.type === 'GROUP') || [];
-  const personalSpaces = data?.data.filter((s) => s.type === 'PERSONAL') || [];
+  // Séparer les espaces par type puis trier chaque groupe
+  const groupSpaces = useMemo(
+    () => sortData(data?.data.filter((s) => s.type === 'GROUP') || [], accessors),
+    [data, sortData]
+  );
+  const personalSpaces = useMemo(
+    () => sortData(data?.data.filter((s) => s.type === 'PERSONAL') || [], accessors),
+    [data, sortData]
+  );
+
+  const SortHeader = ({ label, column }: { label: string; column: string }) => (
+    <th
+      className="px-4 py-3 text-left text-sm font-medium cursor-pointer select-none hover:bg-muted/80"
+      onClick={() => toggle(column)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === column && (
+          sortOrder === 'asc'
+            ? <ArrowUp className="w-3.5 h-3.5" />
+            : <ArrowDown className="w-3.5 h-3.5" />
+        )}
+      </span>
+    </th>
+  );
 
   const SpaceTable = ({ spaces, showCommunity = false }: { spaces: AdminSpace[]; showCommunity?: boolean }) => (
     <div className="border border-border rounded-lg overflow-hidden">
       <table className="w-full">
         <thead className="bg-muted">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-medium">Nom</th>
+            <SortHeader label="Nom" column="name" />
             {showCommunity && (
               <th className="px-4 py-3 text-left text-sm font-medium">Communaute</th>
             )}
             <th className="px-4 py-3 text-left text-sm font-medium">Proprietaire</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Membres</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Elements</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Date creation</th>
+            <SortHeader label="Membres" column="members" />
+            <SortHeader label="Elements" column="items" />
+            <SortHeader label="Date creation" column="createdAt" />
             <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
           </tr>
         </thead>

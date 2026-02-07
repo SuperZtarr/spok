@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Building2, Users, FolderKanban, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, Eye, ArrowUp, ArrowDown } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { CommunityDetailModal } from '../../components/admin/CommunityDetailModal';
+import { useSort } from '../../hooks/useSort';
 
 interface AdminCommunity {
   id: string;
@@ -16,12 +17,21 @@ interface AdminCommunity {
   spaceCount: number;
 }
 
+const accessors: Record<string, (c: AdminCommunity) => string | number> = {
+  name: (c) => c.name?.toLowerCase() ?? '',
+  members: (c) => c.memberCount,
+  spaces: (c) => c.spaceCount,
+  createdAt: (c) => c.createdAt,
+};
+
 export function CommunitiesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [modalCommunityId, setModalCommunityId] = useState<string | null | undefined>(undefined);
   // undefined = modal fermé, null = création, string = édition
+
+  const { sortKey, sortOrder, toggle, sortData } = useSort<AdminCommunity>('name', 'asc');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'communities', { page, search }],
@@ -46,6 +56,27 @@ export function CommunitiesPage() {
     e.preventDefault();
     setPage(1);
   };
+
+  const sortedCommunities = useMemo(
+    () => sortData(data?.data || [], accessors),
+    [data, sortData]
+  );
+
+  const SortHeader = ({ label, column }: { label: string; column: string }) => (
+    <th
+      className="px-4 py-3 text-left text-sm font-medium cursor-pointer select-none hover:bg-muted/80"
+      onClick={() => toggle(column)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === column && (
+          sortOrder === 'asc'
+            ? <ArrowUp className="w-3.5 h-3.5" />
+            : <ArrowDown className="w-3.5 h-3.5" />
+        )}
+      </span>
+    </th>
+  );
 
   return (
     <div className="p-6">
@@ -82,16 +113,16 @@ export function CommunitiesPage() {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Nom</th>
+                  <SortHeader label="Nom" column="name" />
                   <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Membres</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Espaces</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Date creation</th>
+                  <SortHeader label="Membres" column="members" />
+                  <SortHeader label="Espaces" column="spaces" />
+                  <SortHeader label="Date creation" column="createdAt" />
                   <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data?.data.map((community) => (
+                {sortedCommunities.map((community) => (
                   <tr key={community.id} className="hover:bg-muted/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -140,7 +171,7 @@ export function CommunitiesPage() {
                     </td>
                   </tr>
                 ))}
-                {data?.data.length === 0 && (
+                {sortedCommunities.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                       Aucune communaute trouvee

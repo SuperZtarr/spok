@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Shield, User, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Shield, User, Eye, ArrowUp, ArrowDown } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
+import { useSort } from '../../hooks/useSort';
 import type { AdminUser } from '@spok/shared';
+
+const accessors: Record<string, (u: AdminUser) => string | number> = {
+  name: (u) => u.name?.toLowerCase() ?? '',
+  email: (u) => u.email?.toLowerCase() ?? '',
+  spaces: (u) => u._count?.memberships ?? 0,
+  createdAt: (u) => u.createdAt,
+};
 
 export function UsersPage() {
   const queryClient = useQueryClient();
@@ -13,6 +21,8 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
   // undefined = modal fermé, null = création, string = édition
+
+  const { sortKey, sortOrder, toggle, sortData } = useSort<AdminUser>('name', 'asc');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', { page, search }],
@@ -37,19 +47,41 @@ export function UsersPage() {
     setPage(1);
   };
 
-  // Séparer les utilisateurs par rôle
-  const adminUsers = data?.data.filter((u) => u.globalRole === 'ADMIN') || [];
-  const regularUsers = data?.data.filter((u) => u.globalRole === 'USER') || [];
+  // Séparer les utilisateurs par rôle puis trier chaque groupe
+  const adminUsers = useMemo(
+    () => sortData(data?.data.filter((u) => u.globalRole === 'ADMIN') || [], accessors),
+    [data, sortData]
+  );
+  const regularUsers = useMemo(
+    () => sortData(data?.data.filter((u) => u.globalRole === 'USER') || [], accessors),
+    [data, sortData]
+  );
+
+  const SortHeader = ({ label, column }: { label: string; column: string }) => (
+    <th
+      className="px-4 py-3 text-left text-sm font-medium cursor-pointer select-none hover:bg-muted/80"
+      onClick={() => toggle(column)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === column && (
+          sortOrder === 'asc'
+            ? <ArrowUp className="w-3.5 h-3.5" />
+            : <ArrowDown className="w-3.5 h-3.5" />
+        )}
+      </span>
+    </th>
+  );
 
   const UserTable = ({ users }: { users: AdminUser[] }) => (
     <div className="border border-border rounded-lg overflow-hidden">
       <table className="w-full">
         <thead className="bg-muted">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-medium">Nom</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Espaces</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Date creation</th>
+            <SortHeader label="Nom" column="name" />
+            <SortHeader label="Email" column="email" />
+            <SortHeader label="Espaces" column="spaces" />
+            <SortHeader label="Date creation" column="createdAt" />
             <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
           </tr>
         </thead>
