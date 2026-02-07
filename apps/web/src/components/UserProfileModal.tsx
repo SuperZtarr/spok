@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Monitor, Camera, Trash2, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2 } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser, ThemePreference } from '@spok/shared';
@@ -72,7 +72,6 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const themeOptions: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
     { value: 'light', label: 'Clair', icon: Sun },
     { value: 'dark', label: 'Sombre', icon: Moon },
-    { value: 'system', label: 'Système', icon: Monitor },
   ];
 
   const avatarSrc = user.avatarUrl || null;

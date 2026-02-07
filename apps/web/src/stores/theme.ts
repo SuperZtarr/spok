@@ -2,56 +2,35 @@ import { create } from 'zustand';
 import type { ThemePreference } from '@spok/shared';
 import { userApi } from '../lib/api';
 
-type ResolvedTheme = 'light' | 'dark';
+type Theme = 'light' | 'dark';
 
 interface ThemeState {
-  theme: ThemePreference;
-  resolvedTheme: ResolvedTheme;
-  setTheme: (theme: ThemePreference) => void;
-  initTheme: (theme: ThemePreference) => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  initTheme: (pref: ThemePreference) => void;
 }
 
-function getSystemTheme(): ResolvedTheme {
+function getSystemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function resolveTheme(theme: ThemePreference): ResolvedTheme {
-  return theme === 'system' ? getSystemTheme() : theme;
+function applyTheme(theme: Theme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
 }
 
-function applyTheme(resolved: ResolvedTheme) {
-  document.documentElement.classList.toggle('dark', resolved === 'dark');
-}
+export const useThemeStore = create<ThemeState>()((set) => ({
+  theme: getSystemTheme(),
 
-export const useThemeStore = create<ThemeState>()((set) => {
-  // Listen for OS theme changes
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  mediaQuery.addEventListener('change', () => {
-    const state = useThemeStore.getState();
-    if (state.theme === 'system') {
-      const resolved = getSystemTheme();
-      applyTheme(resolved);
-      set({ resolvedTheme: resolved });
-    }
-  });
+  setTheme: (theme) => {
+    applyTheme(theme);
+    set({ theme });
+    userApi.updatePreferences({ themePreference: theme }).catch(() => {});
+  },
 
-  return {
-    theme: 'system',
-    resolvedTheme: getSystemTheme(),
-
-    setTheme: (theme) => {
-      const resolved = resolveTheme(theme);
-      applyTheme(resolved);
-      set({ theme, resolvedTheme: resolved });
-
-      // Persist to server (fire and forget)
-      userApi.updatePreferences({ themePreference: theme }).catch(() => {});
-    },
-
-    initTheme: (theme) => {
-      const resolved = resolveTheme(theme);
-      applyTheme(resolved);
-      set({ theme, resolvedTheme: resolved });
-    },
-  };
-});
+  initTheme: (pref) => {
+    // "system" → resolve to OS theme, otherwise use the saved value
+    const theme: Theme = pref === 'system' ? getSystemTheme() : pref;
+    applyTheme(theme);
+    set({ theme });
+  },
+}));
