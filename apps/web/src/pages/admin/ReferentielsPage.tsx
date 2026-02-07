@@ -3,23 +3,6 @@ import { RefreshCw, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
-import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
-
-interface AdminReferentielsSummary {
-  defaults: {
-    statuses: StatusConfig[];
-    typeLabels: Record<string, TypeLabelConfig>;
-  };
-  customizedSpaces: Array<{
-    id: string;
-    name: string;
-    type: string;
-    customStatusCount: number;
-    customTypeCount: number;
-  }>;
-  totalSpaces: number;
-  customizedCount: number;
-}
 
 export function ReferentielsPage() {
   const { data, isLoading, refetch, isFetching } = useQuery({
