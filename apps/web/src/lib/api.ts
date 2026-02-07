@@ -759,6 +759,24 @@ export const adminApi = {
       }),
   },
 
+  tests: {
+    run: () =>
+      fetchApi<{
+        tests: Array<{
+          key: string;
+          label: string;
+          group: string;
+          status: 'pass' | 'fail' | 'warning';
+          message: string;
+          count: number;
+          durationMs: number;
+        }>;
+        summary: { total: number; passed: number; failed: number; warnings: number };
+        totalDurationMs: number;
+        executedAt: string;
+      }>('/admin/tests'),
+  },
+
   referentiels: {
     summary: () =>
       fetchApi<{

@@ -47,6 +47,10 @@ check-boards.js
 
 # Forum import data
 ex forum.sql
+*.sql
+
+# Archive folder
+_archive/
 
 # Debug/fix scripts (temporary)
 apps/api/scripts/debug-*.ts
