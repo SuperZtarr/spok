@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Trash2, Users, FolderKanban, User, Building2, Eye, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Trash2, Users, FolderKanban, User, Building2, ArrowUp, ArrowDown } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -110,7 +110,7 @@ export function SpacesPage() {
         </thead>
         <tbody className="divide-y divide-border">
           {spaces.map((space) => (
-            <tr key={space.id} className="hover:bg-muted/50">
+            <tr key={space.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setSelectedSpaceId(space.id)}>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <FolderKanban className="w-4 h-4 text-muted-foreground" />
@@ -146,15 +146,7 @@ export function SpacesPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedSpaceId(space.id)}
-                    title="Voir les details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(space)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(space); }}
                     disabled={deleteMutation.isPending}
                     title="Supprimer"
                   >

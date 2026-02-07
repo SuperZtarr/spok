@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Shield, User, Eye, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -87,7 +87,7 @@ export function UsersPage() {
         </thead>
         <tbody className="divide-y divide-border">
           {users.map((user) => (
-            <tr key={user.id} className="hover:bg-muted/50">
+            <tr key={user.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setModalUserId(user.id)}>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   {user.globalRole === 'ADMIN' ? (
@@ -110,15 +110,7 @@ export function UsersPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setModalUserId(user.id)}
-                    title="Voir / Modifier"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(user)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(user); }}
                     disabled={deleteMutation.isPending}
                     title="Supprimer"
                   >

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Building2, Users, FolderKanban, Eye, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -123,7 +123,7 @@ export function CommunitiesPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {sortedCommunities.map((community) => (
-                  <tr key={community.id} className="hover:bg-muted/50">
+                  <tr key={community.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setModalCommunityId(community.id)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-primary" />
@@ -153,15 +153,7 @@ export function CommunitiesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setModalCommunityId(community.id)}
-                          title="Voir / Modifier"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(community)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(community); }}
                           disabled={deleteMutation.isPending}
                           title="Supprimer"
                         >
