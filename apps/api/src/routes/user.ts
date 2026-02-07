@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';
 import sharp from 'sharp';
+import { generateTokens } from './auth.js';
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -64,6 +65,12 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       data: updateData,
       select: { name: true, email: true },
     });
+
+    // If email changed, regenerate tokens (JWT contains email)
+    if (data.email && data.email !== request.user.email) {
+      const tokens = await generateTokens(fastify, request.user.userId, user.email);
+      return { name: user.name, email: user.email, tokens };
+    }
 
     return { name: user.name, email: user.email };
   });

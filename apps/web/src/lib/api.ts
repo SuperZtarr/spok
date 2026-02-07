@@ -278,7 +278,7 @@ export const userApi = {
     }),
 
   updateProfile: (data: { name?: string; email?: string }) =>
-    fetchApi<{ name: string; email: string }>('/user/profile', {
+    fetchApi<{ name: string; email: string; tokens?: { accessToken: string; refreshToken: string } }>('/user/profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),

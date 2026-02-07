@@ -290,7 +290,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-async function generateTokens(
+export async function generateTokens(
   fastify: any,
   userId: string,
   email: string

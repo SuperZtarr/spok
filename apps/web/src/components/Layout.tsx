@@ -16,7 +16,7 @@ import { GlobalSearch } from './GlobalSearch';
 export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, refreshToken } = useAuthStore();
+  const { user, logout, refreshToken, updateUser } = useAuthStore();
   const { currentCommunity } = useCommunityStore();
   const { initTheme } = useThemeStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -57,11 +57,16 @@ export function Layout() {
     localStorage.setItem('spok-sidebar-width', String(sidebarWidth));
   }, [sidebarWidth]);
 
-  // Initialize theme from user preferences on mount
+  // Sync user from server on mount
   useEffect(() => {
-    if (user?.themePreference) {
-      initTheme(user.themePreference);
-    }
+    authApi.me().then((serverUser) => {
+      if (serverUser) {
+        updateUser(serverUser);
+        initTheme(serverUser.themePreference || 'system');
+      }
+    }).catch(() => {
+      // Token invalid — will be handled by 401 interceptor
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close sidebar on navigation (mobile)

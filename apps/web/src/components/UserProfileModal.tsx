@@ -26,7 +26,7 @@ const COMMUNITY_ROLE_LABELS: Record<string, string> = {
 
 export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
   const { theme, setTheme } = useThemeStore();
-  const { updateUser } = useAuthStore();
+  const { updateUser, updateTokens } = useAuthStore();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -97,6 +97,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     try {
       const result = await userApi.updateProfile({ email: trimmed });
       updateUser({ email: result.email });
+      if (result.tokens) {
+        updateTokens(result.tokens.accessToken, result.tokens.refreshToken);
+      }
       setEditingEmail(false);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la modification de l\'email');
