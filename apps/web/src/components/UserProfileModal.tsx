@@ -4,7 +4,7 @@ import { Modal } from './ui/Modal';
 import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X, Lock } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
-import type { AuthUser, ThemePreference } from '@spok/shared';
+import type { AuthUser } from '@spok/shared';
 import { useThemeStore } from '../stores/theme';
 
 interface UserProfileModalProps {
@@ -139,7 +139,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     }
   };
 
-  const themeOptions: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+  const themeOptions: { value: 'light' | 'dark'; label: string; icon: typeof Sun }[] = [
     { value: 'light', label: 'Clair', icon: Sun },
     { value: 'dark', label: 'Sombre', icon: Moon },
   ];
