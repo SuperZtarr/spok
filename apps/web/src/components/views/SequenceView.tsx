@@ -699,6 +699,14 @@ export function SequenceView({
     else globalCardRefs.current.delete(itemId);
   }, []);
 
+  // Handle relation delete from SVG click
+  const handleRelationClick = useCallback(
+    (fromItemId: string, relationId: string) => {
+      onDeleteRelation?.(fromItemId, relationId);
+    },
+    [onDeleteRelation]
+  );
+
   if (items.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground">
@@ -712,14 +720,6 @@ export function SequenceView({
   // Item title lookup for dialog
   const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
   const pendingTargetItem = pendingConnection ? items.find(i => i.id === pendingConnection.target) : null;
-
-  // Handle relation delete from SVG click
-  const handleRelationClick = useCallback(
-    (fromItemId: string, relationId: string) => {
-      onDeleteRelation?.(fromItemId, relationId);
-    },
-    [onDeleteRelation]
-  );
 
   return (
     <div className="p-6 space-y-6">
