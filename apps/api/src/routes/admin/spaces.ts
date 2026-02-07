@@ -5,6 +5,7 @@ interface ListSpacesQuery {
   pageSize?: number;
   search?: string;
   type?: 'PERSONAL' | 'GROUP';
+  anomaly?: string;
 }
 
 interface SpaceParams {
@@ -32,15 +33,12 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /admin/spaces - List all spaces with pagination and search
   fastify.get<{ Querystring: ListSpacesQuery }>('/', async (request) => {
-    const { search, type } = request.query;
+    const { search, type, anomaly } = request.query;
     const page = Number(request.query.page) || 1;
     const pageSize = Number(request.query.pageSize) || 20;
     const skip = (page - 1) * pageSize;
 
-    const where: {
-      name?: { contains: string; mode: 'insensitive' };
-      type?: 'PERSONAL' | 'GROUP';
-    } = {};
+    const where: Record<string, unknown> = {};
 
     if (search) {
       where.name = { contains: search, mode: 'insensitive' };
@@ -48,6 +46,22 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (type) {
       where.type = type;
+    }
+
+    // Anomaly filters for coherence tests
+    if (anomaly === 'no-owner') {
+      where.memberships = { none: { role: 'OWNER' } };
+    } else if (anomaly === 'no-community') {
+      where.type = 'GROUP';
+      where.communityId = null;
+    } else if (anomaly === 'multi-member-personal') {
+      // Get IDs of personal spaces with > 1 member via raw SQL
+      const rows = await fastify.prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT s.id FROM spaces s
+        WHERE s.type = 'PERSONAL'
+          AND (SELECT COUNT(*) FROM space_memberships sm WHERE sm."spaceId" = s.id) > 1
+      `;
+      where.id = { in: rows.map(r => r.id) };
     }
 
     const [spaces, total] = await Promise.all([

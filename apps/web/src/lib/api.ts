@@ -547,6 +547,7 @@ interface AdminUsersListParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  anomaly?: string;
 }
 
 interface AdminUsersListResponse {
@@ -565,6 +566,7 @@ interface AdminSpacesListParams {
   pageSize?: number;
   search?: string;
   type?: 'PERSONAL' | 'GROUP';
+  anomaly?: string;
 }
 
 interface AdminSpace {
@@ -627,6 +629,7 @@ export const adminApi = {
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
       if (params?.search) searchParams.set('search', params.search);
+      if (params?.anomaly) searchParams.set('anomaly', params.anomaly);
       const query = searchParams.toString();
       return fetchApi<AdminUsersListResponse>(`/admin/users${query ? `?${query}` : ''}`);
     },
@@ -686,6 +689,7 @@ export const adminApi = {
       if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
       if (params?.search) searchParams.set('search', params.search);
       if (params?.type) searchParams.set('type', params.type);
+      if (params?.anomaly) searchParams.set('anomaly', params.anomaly);
       const query = searchParams.toString();
       return fetchApi<AdminSpacesListResponse>(`/admin/spaces${query ? `?${query}` : ''}`);
     },

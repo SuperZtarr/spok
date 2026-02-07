@@ -6,6 +6,7 @@ interface ListUsersQuery {
   page?: number;
   pageSize?: number;
   search?: string;
+  anomaly?: string;
 }
 
 interface UserParams {
@@ -18,19 +19,23 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /admin/users - List all users with pagination and search
   fastify.get<{ Querystring: ListUsersQuery }>('/', async (request) => {
-    const { search } = request.query;
+    const { search, anomaly } = request.query;
     const page = Number(request.query.page) || 1;
     const pageSize = Number(request.query.pageSize) || 20;
     const skip = (page - 1) * pageSize;
 
-    const where = search
-      ? {
-          OR: [
-            { email: { contains: search, mode: 'insensitive' as const } },
-            { name: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {};
+    const where: Record<string, unknown> = {};
+
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' as const } },
+        { name: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+
+    if (anomaly === 'no-personal-space') {
+      where.memberships = { none: { space: { type: 'PERSONAL' } } };
+    }
 
     const [users, total] = await Promise.all([
       fastify.prisma.user.findMany({

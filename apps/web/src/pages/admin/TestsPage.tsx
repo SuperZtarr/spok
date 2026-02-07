@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Play, CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Play, CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+
+// Mapping test key → lien vers la console admin avec filtre
+const testConsoleLinks: Record<string, { url: string; label: string }> = {
+  'biz-users-personal-space': { url: '/admin/users?anomaly=no-personal-space', label: 'Voir les utilisateurs' },
+  'biz-spaces-have-owner': { url: '/admin/spaces?anomaly=no-owner', label: 'Voir les espaces' },
+  'biz-group-spaces-community': { url: '/admin/spaces?anomaly=no-community', label: 'Voir les espaces' },
+  'biz-personal-spaces-single-member': { url: '/admin/spaces?anomaly=multi-member-personal', label: 'Voir les espaces' },
+};
 
 type TestStatus = 'pass' | 'fail' | 'warning';
 
@@ -166,6 +175,16 @@ export function TestsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      {test.count > 0 && testConsoleLinks[test.key] && (
+                        <Link
+                          to={testConsoleLinks[test.key].url}
+                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                          title={testConsoleLinks[test.key].label}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          {testConsoleLinks[test.key].label}
+                        </Link>
+                      )}
                       {test.count > 0 && (
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.badge}`}>
                           {test.count}

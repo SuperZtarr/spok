@@ -1,12 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
 import { useSort } from '../../hooks/useSort';
 import type { AdminUser } from '@spok/shared';
+
+const anomalyLabels: Record<string, string> = {
+  'no-personal-space': 'Utilisateurs sans espace personnel',
+};
 
 const accessors: Record<string, (u: AdminUser) => string | number> = {
   name: (u) => u.name?.toLowerCase() ?? '',
@@ -17,6 +22,8 @@ const accessors: Record<string, (u: AdminUser) => string | number> = {
 
 export function UsersPage() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const anomaly = searchParams.get('anomaly') || undefined;
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
@@ -25,9 +32,13 @@ export function UsersPage() {
   const { sortKey, sortOrder, toggle, sortData } = useSort<AdminUser>('name', 'asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'users', { page, search }],
-    queryFn: () => adminApi.users.list({ page, pageSize: 100, search: search || undefined }),
+    queryKey: ['admin', 'users', { page, search, anomaly }],
+    queryFn: () => adminApi.users.list({ page, pageSize: 100, search: search || undefined, anomaly }),
   });
+
+  const clearAnomaly = () => {
+    setSearchParams({});
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => adminApi.users.delete(id),
@@ -141,6 +152,22 @@ export function UsersPage() {
           Nouvel utilisateur
         </Button>
       </div>
+
+      {anomaly && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+          <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+          <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
+            Filtre anomalie : {anomalyLabels[anomaly] || anomaly}
+          </span>
+          <button
+            onClick={clearAnomaly}
+            className="ml-auto p-1 rounded hover:bg-orange-200 dark:hover:bg-orange-800 text-orange-500"
+            title="Retirer le filtre"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSearch} className="mb-6">
         <div className="flex gap-2">
