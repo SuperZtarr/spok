@@ -32,6 +32,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailValue, setEmailValue] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: communities } = useQuery({
@@ -75,6 +78,25 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       setError(err.message || 'Erreur lors de la modification du nom');
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    const trimmed = emailValue.trim();
+    if (!trimmed || trimmed === user.email) {
+      setEditingEmail(false);
+      return;
+    }
+    setError(null);
+    setSavingEmail(true);
+    try {
+      const result = await userApi.updateProfile({ email: trimmed });
+      updateUser({ email: result.email });
+      setEditingEmail(false);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la modification de l\'email');
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -185,9 +207,41 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
 
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm">
-            <Mail className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Email :</span>
-            <span className="font-medium">{user.email}</span>
+            <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            {editingEmail ? (
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <input
+                  type="email"
+                  value={emailValue}
+                  onChange={(e) => setEmailValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveEmail();
+                    if (e.key === 'Escape') setEditingEmail(false);
+                  }}
+                  autoFocus
+                  disabled={savingEmail}
+                  className="flex-1 min-w-0 px-2 py-0.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button onClick={handleSaveEmail} disabled={savingEmail} className="p-1 text-primary hover:bg-accent rounded" title="Valider">
+                  {savingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={() => setEditingEmail(false)} disabled={savingEmail} className="p-1 text-muted-foreground hover:bg-accent rounded" title="Annuler">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group/email flex-1 min-w-0">
+                <span className="text-muted-foreground flex-shrink-0">Email :</span>
+                <span className="font-medium truncate">{user.email}</span>
+                <button
+                  onClick={() => { setEmailValue(user.email); setEditingEmail(true); }}
+                  className="p-1 text-muted-foreground opacity-0 group-hover/email:opacity-100 hover:bg-accent rounded transition-opacity flex-shrink-0"
+                  title="Modifier l'email"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 text-sm">

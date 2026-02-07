@@ -9,8 +9,9 @@ const updatePreferencesSchema = z.object({
 });
 
 const updateProfileSchema = z.object({
-  name: z.string().min(1, 'Le nom ne peut pas être vide').max(100),
-});
+  name: z.string().min(1, 'Le nom ne peut pas être vide').max(100).optional(),
+  email: z.string().email('Email invalide').optional(),
+}).refine(data => data.name || data.email, { message: 'Au moins un champ requis' });
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /user/preferences
@@ -36,17 +37,29 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     return { themePreference: user.themePreference };
   });
 
-  // PATCH /user/profile — update name
-  fastify.patch('/profile', { preHandler: [fastify.authenticate] }, async (request) => {
+  // PATCH /user/profile — update name and/or email
+  fastify.patch('/profile', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const data = updateProfileSchema.parse(request.body);
+
+    // Check email uniqueness if changing email
+    if (data.email) {
+      const existing = await fastify.prisma.user.findUnique({ where: { email: data.email } });
+      if (existing && existing.id !== request.user.userId) {
+        return reply.conflict('Cet email est déjà utilisé');
+      }
+    }
+
+    const updateData: { name?: string; email?: string } = {};
+    if (data.name) updateData.name = data.name;
+    if (data.email) updateData.email = data.email;
 
     const user = await fastify.prisma.user.update({
       where: { id: request.user.userId },
-      data: { name: data.name },
-      select: { name: true },
+      data: updateData,
+      select: { name: true, email: true },
     });
 
-    return { name: user.name };
+    return { name: user.name, email: user.email };
   });
 
   // POST /user/avatar — upload avatar (stored as data URI in DB)

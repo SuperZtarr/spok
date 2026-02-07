@@ -277,8 +277,8 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
 
-  updateProfile: (data: { name: string }) =>
-    fetchApi<{ name: string }>('/user/profile', {
+  updateProfile: (data: { name?: string; email?: string }) =>
+    fetchApi<{ name: string; email: string }>('/user/profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
