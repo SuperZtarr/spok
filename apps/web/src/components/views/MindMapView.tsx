@@ -355,36 +355,9 @@ function PortalNode({ data }: PortalNodeProps) {
   );
 }
 
-// Project group node component (background rectangle around PROJECT items and their children)
-interface ProjectGroupNodeProps {
-  data: {
-    label: string;
-    childCount: number;
-    hexColor: string;
-    memberIds: string[];
-  };
-}
-
-function ProjectGroupNode({ data }: ProjectGroupNodeProps) {
-  const { label, childCount, hexColor } = data;
-
-  return (
-    <div
-      className="w-full h-full rounded-xl cursor-grab active:cursor-grabbing"
-      style={{
-        border: `2px dashed ${hexColor}`,
-        backgroundColor: `${hexColor}33`,
-      }}
-    >
-      <div
-        className="absolute top-2 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium"
-        style={{ color: hexColor, backgroundColor: `${hexColor}22` }}
-      >
-        <span className="truncate max-w-[150px]">{label}</span>
-        <span className="opacity-60">({childCount})</span>
-      </div>
-    </div>
-  );
+// Project group node component (invisible container for native ReactFlow grouping)
+function ProjectGroupNode() {
+  return <div className="w-full h-full" />;
 }
 
 const nodeTypes = {
