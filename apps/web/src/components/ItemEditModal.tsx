@@ -371,6 +371,16 @@ export function ItemEditModal({
           </div>
 
           <div className="space-y-2">
+            <label className="text-sm font-medium">Description</label>
+            <RichTextEditor
+              key={itemId}
+              content={description}
+              onChange={setDescription}
+              editable={canEdit}
+            />
+          </div>
+
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Parent</label>
               {canEdit && (
@@ -677,17 +687,6 @@ export function ItemEditModal({
             ) : (
               <p className="text-sm text-muted-foreground">Aucune dépendance</p>
             )}
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2 pt-4 border-t border-border">
-            <label className="text-sm font-medium">Description</label>
-            <RichTextEditor
-              key={itemId}
-              content={description}
-              onChange={setDescription}
-              editable={canEdit}
-            />
           </div>
 
           {/* Contributions section */}
