@@ -189,20 +189,19 @@ export function DashboardPage() {
   ];
 
   return (
-    <div className="p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Tableau de bord</h1>
-            <p className="text-muted-foreground mt-1">
-              Gérez vos espaces et projets
-            </p>
-          </div>
+    <div className="flex flex-col h-full">
+      {/* Barre d'actions sticky */}
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex-shrink-0">
+        <div className="max-w-6xl mx-auto flex items-center justify-end">
           <Button onClick={() => setSearchParams({ new: 'space' })}>
             <Plus className="w-4 h-4 mr-2" />
             Nouvel espace
           </Button>
         </div>
+      </div>
+
+      <div className="p-8 flex-1">
+      <div className="max-w-6xl mx-auto">
 
         {/* New space form */}
         {showNewSpace && (
@@ -348,6 +347,7 @@ export function DashboardPage() {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
