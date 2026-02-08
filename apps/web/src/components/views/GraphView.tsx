@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, FolderKanban, Building2, Globe } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useGraphData } from '../../hooks/useGraphData';
 
 const STORAGE_KEY = 'graph-link-types';
+const SCOPE_STORAGE_KEY = 'graph-scope';
 
 const NODE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -30,16 +31,56 @@ const LINK_LABELS: Record<string, string> = {
   tag: 'Tags communs',
 };
 
+type Scope = 'space' | 'community' | 'global';
+
 interface GraphViewProps {
-  level: 'space' | 'community' | 'global';
+  level: Scope;
   entityId?: string;
+  /** spaceId when level=space, needed to build scope options */
+  spaceId?: string;
+  spaceName?: string;
+  communityId?: string;
+  communityName?: string;
   onNodeClick: (itemId: string, spaceId: string) => void;
 }
 
-export function GraphView({ level, entityId, onNodeClick }: GraphViewProps) {
+export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick }: GraphViewProps) {
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+  // Scope selector — starts at the level prop, user can widen/narrow
+  const [scope, setScope] = useState<Scope>(() => {
+    try {
+      const saved = localStorage.getItem(SCOPE_STORAGE_KEY);
+      if (saved && ['space', 'community', 'global'].includes(saved)) return saved as Scope;
+    } catch { /* ignore */ }
+    return level;
+  });
+
+  // Reset scope when the level prop changes (e.g. navigating to a different page)
+  useEffect(() => { setScope(level); }, [level]);
+
+  useEffect(() => {
+    localStorage.setItem(SCOPE_STORAGE_KEY, scope);
+  }, [scope]);
+
+  // Compute the active entityId based on scope
+  const activeEntityId = useMemo(() => {
+    if (scope === 'space') return spaceId || entityId;
+    if (scope === 'community') return communityId || entityId;
+    return undefined; // global
+  }, [scope, spaceId, communityId, entityId]);
+
+  // Available scopes depend on context
+  const scopeOptions = useMemo(() => {
+    const opts: { value: Scope; label: string; icon: typeof FolderKanban; available: boolean }[] = [
+      { value: 'space', label: spaceName || 'Espace', icon: FolderKanban, available: !!(spaceId || (level === 'space' && entityId)) },
+      { value: 'community', label: communityName || 'Communaute', icon: Building2, available: !!(communityId || (level === 'community' && entityId)) },
+      { value: 'global', label: 'Global', icon: Globe, available: true },
+    ];
+    return opts.filter(o => o.available);
+  }, [spaceId, communityId, spaceName, communityName, level, entityId]);
 
   // Link type toggles (persisted in localStorage)
   const [activeLinkTypes, setActiveLinkTypes] = useState<Set<string>>(() => {
@@ -67,7 +108,7 @@ export function GraphView({ level, entityId, onNodeClick }: GraphViewProps) {
   };
 
   const linkTypesArray = useMemo(() => [...activeLinkTypes], [activeLinkTypes]);
-  const { data, isLoading } = useGraphData(level, entityId, linkTypesArray);
+  const { data, isLoading } = useGraphData(scope, activeEntityId, linkTypesArray);
 
   // Observe container size
   useEffect(() => {
@@ -189,6 +230,32 @@ export function GraphView({ level, entityId, onNodeClick }: GraphViewProps) {
     <div ref={containerRef} className="relative w-full h-full min-h-[400px]">
       {/* Control panel */}
       <div className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
+        {/* Scope selector */}
+        {scopeOptions.length > 1 && (
+          <>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Perimetre</div>
+            <div className="flex flex-col gap-1">
+              {scopeOptions.map(opt => {
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setScope(opt.value)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors text-left ${
+                      scope === opt.value
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-accent text-foreground'
+                    }`}
+                  >
+                    <Icon className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="border-t my-1" />
+          </>
+        )}
         <div className="text-xs font-medium text-muted-foreground mb-1">Liens</div>
         {(['hierarchy', 'relation', 'tag'] as const).map(type => (
           <label key={type} className="flex items-center gap-2 text-sm cursor-pointer">

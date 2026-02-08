@@ -29,6 +29,8 @@ export function CommunityPage() {
         <GraphView
           level="community"
           entityId={communityId}
+          communityId={communityId}
+          communityName={community?.name}
           onNodeClick={handleNodeClick}
         />
       </div>

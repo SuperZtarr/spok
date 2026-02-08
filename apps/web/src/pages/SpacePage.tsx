@@ -773,6 +773,10 @@ export function SpacePage() {
             <GraphView
               level="space"
               entityId={spaceId}
+              spaceId={spaceId}
+              spaceName={space?.name}
+              communityId={space?.communityId || undefined}
+              communityName={space?.community?.name}
               onNodeClick={(itemId) => setEditingItemId(itemId)}
             />
           ) : itemsData?.data.length === 0 ? (

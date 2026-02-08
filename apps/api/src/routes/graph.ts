@@ -243,26 +243,43 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
-  // Global graph (all communities the user belongs to, excluding PERSONAL)
+  // Global graph (all spaces the user can access: direct memberships + community spaces)
   fastify.get<{ Querystring: { linkTypes?: string } }>(
     '/graph/global',
     async (request) => {
       const linkTypes = parseLinkTypes(request.query.linkTypes);
 
-      // Get all communities the user belongs to
+      // 1. Spaces where user is a direct member
+      const directMemberships = await fastify.prisma.spaceMembership.findMany({
+        where: { userId: request.user.userId },
+        select: { spaceId: true },
+      });
+      const directSpaceIds = directMemberships.map(m => m.spaceId);
+
+      // 2. Community memberships → all GROUP spaces of those communities
       const communityMemberships = await fastify.prisma.communityMembership.findMany({
         where: { userId: request.user.userId },
         select: { communityId: true },
       });
-
       const communityIds = communityMemberships.map(m => m.communityId);
+
+      const communitySpaces = communityIds.length > 0
+        ? await fastify.prisma.space.findMany({
+            where: {
+              communityId: { in: communityIds },
+              type: 'GROUP',
+            },
+            select: { id: true },
+          })
+        : [];
+      const communitySpaceIds = communitySpaces.map(s => s.id);
+
+      // Merge all unique space IDs
+      const allSpaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
 
       const items = await fastify.prisma.item.findMany({
         where: {
-          space: {
-            communityId: { in: communityIds },
-            type: 'GROUP',
-          },
+          spaceId: { in: allSpaceIds },
         },
         select: {
           id: true,
