@@ -120,110 +120,126 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
           )}
         </div>
       ) : (
-        <div className="divide-y divide-border flex-1 overflow-auto">
-          {filteredItems.map((item) => {
-        const Icon = TYPE_ICONS[item.type];
-        const statusLabel = statusLabels[item.status || ''] || 'Non defini';
-        const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
-        const typeLabel = typeLabelsShort[item.type] || item.type;
-        const isDone = item.status === doneStatusId;
-
-        return (
-          <div
-            key={item.id}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-accent cursor-pointer group"
-            onClick={() => onEdit(item.id)}
-          >
-            <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-            <span className="flex-1 truncate">{item.title}</span>
-
-            {item.type === 'MEETING' && item.startDate && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Calendar className="w-3 h-3" />
-                {formatDate(item.startDate)}
-              </span>
-            )}
-
-            {item.url && (
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1 text-blue-500 hover:text-blue-700 rounded hover:bg-blue-50"
-                onClick={(e) => e.stopPropagation()}
-                title="Ouvrir le lien"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            )}
-
-            {item.contributionCount !== undefined && item.contributionCount > 0 && (
-              <span
-                className="flex items-center gap-1 text-xs text-muted-foreground"
-                title={`${item.contributionCount} contribution(s)`}
-              >
-                <MessageSquare className="w-3 h-3" />
-                {item.contributionCount}
-              </span>
-            )}
-
-            <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
-              {typeLabel}
-            </Badge>
-
-            <Badge
-              className={`text-xs ${statusColor}`}
-              variant="secondary"
-            >
-              {statusLabel}
-            </Badge>
-
-            {canEdit && item.status && !isDone && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateStatus(item.id, doneStatusId);
-                }}
-              >
-                <CheckSquare className="w-4 h-4" />
-              </Button>
-            )}
-
-            {canEdit && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddChild(item.id);
-                }}
-                title="Ajouter un enfant"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            )}
-
-            {canEdit && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100 text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(item.id);
-                }}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
+        <div className="flex-1 overflow-auto">
+          {/* Header */}
+          <div className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 sticky top-0">
+            <span className="w-4" />
+            <span>Titre</span>
+            <span className="text-center">Type</span>
+            <span className="text-center">Statut</span>
+            <span className="text-center">Info</span>
+            <span className="w-20" />
           </div>
-        );
-      })}
+
+          {/* Rows */}
+          <div className="divide-y divide-border">
+            {filteredItems.map((item) => {
+              const Icon = TYPE_ICONS[item.type];
+              const statusLabel = statusLabels[item.status || ''] || 'Non défini';
+              const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
+              const typeLabel = typeLabelsShort[item.type] || item.type;
+              const isDone = item.status === doneStatusId;
+
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group"
+                  onClick={() => onEdit(item.id)}
+                >
+                  <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+
+                  <span className="truncate">{item.title}</span>
+
+                  <span className="flex justify-center">
+                    <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
+                      {typeLabel}
+                    </Badge>
+                  </span>
+
+                  <span className="flex justify-center">
+                    <Badge
+                      className={`text-xs ${statusColor}`}
+                      variant="secondary"
+                    >
+                      {statusLabel}
+                    </Badge>
+                  </span>
+
+                  <span className="flex items-center justify-center gap-1.5">
+                    {item.type === 'MEETING' && item.startDate && (
+                      <span className="text-xs text-muted-foreground" title={formatDate(item.startDate) || ''}>
+                        <Calendar className="w-3 h-3" />
+                      </span>
+                    )}
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-700"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Ouvrir le lien"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {item.contributionCount !== undefined && item.contributionCount > 0 && (
+                      <span
+                        className="flex items-center gap-0.5 text-xs text-muted-foreground"
+                        title={`${item.contributionCount} contribution(s)`}
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        {item.contributionCount}
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="flex items-center gap-0.5 w-20 justify-end">
+                    {canEdit && item.status && !isDone && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateStatus(item.id, doneStatusId);
+                        }}
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddChild(item.id);
+                        }}
+                        title="Ajouter un enfant"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 text-destructive h-7 w-7 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(item.id);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
