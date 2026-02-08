@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
-import { TYPE_LABELS, STORAGE_KEYS } from '../constants/ui';
+import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
 
@@ -332,7 +332,7 @@ export function ItemEditModal({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={canEdit ? "Modifier l'élément" : "Détail de l'élément"}>
+    <Modal isOpen={isOpen} onClose={onClose} title={canEdit ? "Modifier l'élément" : "Détail de l'élément"} size="large">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
@@ -379,15 +379,30 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Type</label>
-            <Select
-              value={type}
-              onChange={(e) => setType(e.target.value as ItemType)}
-              options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-              disabled={!canEdit}
-            />
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(TYPE_LABELS)
+                .filter(([key]) => key !== 'APPOINTMENT')
+                .map(([key, label]) => {
+                  const Icon = TYPE_ICONS[key];
+                  const isSelected = type === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => canEdit && setType(key as ItemType)}
+                      disabled={!canEdit}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                        isSelected
+                          ? 'border-primary font-semibold ring-2 ring-offset-1 ring-primary/40'
+                          : 'border-border opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {Icon && <Icon className="w-3.5 h-3.5" />}
+                      {label}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
 
           {(type === 'LINK' || type === 'DOCUMENT' || type === 'IMAGE') && (

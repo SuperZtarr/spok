@@ -8,9 +8,10 @@ export interface ModalProps {
   title: string;
   children: ReactNode;
   className?: string;
+  size?: 'default' | 'large';
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, size = 'default' }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -43,7 +44,9 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       {/* Modal content */}
       <div
         className={cn(
-          'relative z-50 w-full max-w-4xl max-h-[90vh] flex flex-col rounded-lg bg-background border shadow-lg p-6',
+          size === 'large'
+            ? 'relative z-50 w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] flex flex-col rounded-lg bg-background border shadow-lg p-6'
+            : 'relative z-50 w-full max-w-4xl max-h-[90vh] flex flex-col rounded-lg bg-background border shadow-lg p-6',
           className
         )}
         role="dialog"

@@ -114,7 +114,7 @@ export function Layout() {
     enabled: !!currentSpaceId,
   });
 
-  // Page title based on current location
+  // Page title based on current location (for header bar)
   const getPageTitle = () => {
     if (currentSpace) return currentSpace.name;
     if (location.pathname === '/') return 'Tableau de bord';
@@ -123,8 +123,24 @@ export function Layout() {
 
   // Update document title
   useEffect(() => {
-    const title = getPageTitle();
-    document.title = title === 'SPOK' ? 'SPOK' : `${title} - SPOK`;
+    const path = location.pathname;
+    let title = 'SPOK';
+
+    if (currentSpace) {
+      if (path.endsWith('/settings')) {
+        title = `SPOK — ${currentSpace.name} — Paramètres`;
+      } else if (path.endsWith('/history')) {
+        title = `SPOK — ${currentSpace.name} — Historique`;
+      } else {
+        title = `SPOK — ${currentSpace.name}`;
+      }
+    } else if (path === '/') {
+      title = 'SPOK — Tableau de bord';
+    } else if (path === '/community/settings') {
+      title = 'SPOK — Paramètres communauté';
+    }
+
+    document.title = title;
   }, [currentSpace, location.pathname]);
 
   const handleLogout = async () => {

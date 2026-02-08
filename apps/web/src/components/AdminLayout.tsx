@@ -34,7 +34,7 @@ export function AdminLayout() {
       if (location.pathname === '/admin/tests') return 'Tests';
       return 'Administration';
     };
-    document.title = `${getPageTitle()} - SPOK Admin`;
+    document.title = `SPOK Admin — ${getPageTitle()}`;
   }, [location.pathname]);
 
   return (
