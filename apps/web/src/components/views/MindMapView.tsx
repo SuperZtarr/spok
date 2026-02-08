@@ -370,15 +370,16 @@ function ProjectGroupNode({ data }: ProjectGroupNodeProps) {
 
   return (
     <div
-      className="w-full h-full rounded-xl cursor-grab active:cursor-grabbing"
+      className="w-full h-full rounded-xl"
       style={{
         border: `2px dashed ${hexColor}`,
         backgroundColor: `${hexColor}33`,
+        pointerEvents: 'none',
       }}
     >
       <div
-        className="absolute top-2 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium"
-        style={{ color: hexColor, backgroundColor: `${hexColor}22` }}
+        className="absolute top-2 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium cursor-grab active:cursor-grabbing"
+        style={{ color: hexColor, backgroundColor: `${hexColor}22`, pointerEvents: 'auto' }}
       >
         <span className="truncate max-w-[150px]">{label}</span>
         <span className="opacity-60">({childCount})</span>
