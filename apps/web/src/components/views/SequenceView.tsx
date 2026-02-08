@@ -5,7 +5,7 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS, getTypeColor, getTypeTextColor } from '../../constants/ui';
+import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 // Relation type options (same as MindMap)
@@ -486,7 +486,6 @@ export function SequenceView({
       const borderColor =
         statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
       const isDone = item.status === doneStatusId;
-      const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
       const isHighlighted = highlightType && item.type === highlightType;
       const isDimmed = highlightType && item.type !== highlightType;
       const isLinkSource = linkMode && linkSource === item.id;
