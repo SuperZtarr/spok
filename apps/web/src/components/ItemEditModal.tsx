@@ -7,7 +7,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink } from 'lucide-react';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
@@ -460,9 +460,18 @@ export function ItemEditModal({
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://..."
                 />
-              ) : url ? (
-                <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">{url}</a>
               ) : null}
+              {url && (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all"
+                >
+                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                  {url}
+                </a>
+              )}
             </div>
           )}
 
