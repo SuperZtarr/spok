@@ -358,13 +358,16 @@ export function ItemEditModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Titre</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de l'élément"
-              required
-              disabled={!canEdit}
-            />
+            {canEdit ? (
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Titre de l'élément"
+                required
+              />
+            ) : (
+              <p className="text-lg font-medium">{title}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -380,41 +383,55 @@ export function ItemEditModal({
           <div className="space-y-2">
             <label className="text-sm font-medium">Type</label>
             <div className="flex flex-wrap gap-2">
-              {Object.entries(TYPE_LABELS)
-                .filter(([key]) => key !== 'APPOINTMENT')
-                .map(([key, label]) => {
-                  const Icon = TYPE_ICONS[key];
-                  const isSelected = type === key;
+              {canEdit ? (
+                Object.entries(TYPE_LABELS)
+                  .filter(([key]) => key !== 'APPOINTMENT')
+                  .map(([key, label]) => {
+                    const Icon = TYPE_ICONS[key];
+                    const isSelected = type === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setType(key as ItemType)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                          isSelected
+                            ? 'border-primary font-semibold ring-2 ring-offset-1 ring-primary/40'
+                            : 'border-border opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        {Icon && <Icon className="w-3.5 h-3.5" />}
+                        {label}
+                      </button>
+                    );
+                  })
+              ) : (
+                (() => {
+                  const Icon = TYPE_ICONS[type];
                   return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => canEdit && setType(key as ItemType)}
-                      disabled={!canEdit}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                        isSelected
-                          ? 'border-primary font-semibold ring-2 ring-offset-1 ring-primary/40'
-                          : 'border-border opacity-60 hover:opacity-100'
-                      }`}
-                    >
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 border-primary font-semibold ring-2 ring-offset-1 ring-primary/40">
                       {Icon && <Icon className="w-3.5 h-3.5" />}
-                      {label}
-                    </button>
+                      {TYPE_LABELS[type] || type}
+                    </span>
                   );
-                })}
+                })()
+              )}
             </div>
           </div>
 
           {(type === 'LINK' || type === 'DOCUMENT' || type === 'IMAGE') && (
             <div className="space-y-2">
               <label className="text-sm font-medium">URL</label>
-              <Input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-                disabled={!canEdit}
-              />
+              {canEdit ? (
+                <Input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              ) : url ? (
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">{url}</a>
+              ) : null}
             </div>
           )}
 
@@ -422,21 +439,35 @@ export function ItemEditModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date de début</label>
-                <Input
-                  type="datetime-local"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  disabled={!canEdit}
-                />
+                {canEdit ? (
+                  <Input
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                ) : (
+                  <p className="text-sm">
+                    {startDate
+                      ? new Date(startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : <span className="text-muted-foreground">—</span>}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date de fin</label>
-                <Input
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  disabled={!canEdit}
-                />
+                {canEdit ? (
+                  <Input
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                ) : (
+                  <p className="text-sm">
+                    {endDate
+                      ? new Date(endDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : <span className="text-muted-foreground">—</span>}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -444,54 +475,78 @@ export function ItemEditModal({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Parent</label>
-              <button
-                type="button"
-                onClick={toggleParentSortMode}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
-              >
-                {parentSortMode === 'tree' ? (
-                  <>
-                    <GitBranch className="w-3 h-3" />
-                    <span>Arborescence</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowDownAZ className="w-3 h-3" />
-                    <span>A-Z</span>
-                  </>
-                )}
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={toggleParentSortMode}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
+                >
+                  {parentSortMode === 'tree' ? (
+                    <>
+                      <GitBranch className="w-3 h-3" />
+                      <span>Arborescence</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownAZ className="w-3 h-3" />
+                      <span>A-Z</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-            <Select
-              value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
-              options={parentOptions}
-              disabled={!canEdit}
-            />
+            {canEdit ? (
+              <Select
+                value={parentId}
+                onChange={(e) => setParentId(e.target.value)}
+                options={parentOptions}
+              />
+            ) : (
+              <p className="text-sm">
+                {parentId
+                  ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu'
+                  : <span className="text-muted-foreground">Aucun parent</span>}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Statut</label>
             <div className="flex flex-wrap gap-2">
-              {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
-                const isSelected = (s.id === 'undefined' && !status) || s.id === status;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => canEdit && setStatus(s.id === 'undefined' ? '' : s.id)}
-                    disabled={!canEdit}
-                    className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                      isSelected
-                        ? `${s.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`
-                        : `${s.borderColor} opacity-60 hover:opacity-100`
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
+              {canEdit ? (
+                (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
+                  const isSelected = (s.id === 'undefined' && !status) || s.id === status;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
+                      className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                        isSelected
+                          ? `${s.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`
+                          : `${s.borderColor} opacity-60 hover:opacity-100`
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })
+              ) : (
+                (() => {
+                  const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+                  const selected = statuses.find((s) =>
+                    (s.id === 'undefined' && !status) || s.id === status
+                  );
+                  return selected ? (
+                    <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`}>
+                      {selected.label}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Non défini</span>
+                  );
+                })()
+              )}
             </div>
           </div>
 

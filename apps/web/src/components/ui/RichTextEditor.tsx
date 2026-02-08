@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -24,6 +25,8 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ content, onChange, placeholder, editable = true }: RichTextEditorProps) {
+  const isUpdatingFromProp = useRef(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -41,9 +44,20 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
     content,
     editable,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      if (!isUpdatingFromProp.current) {
+        onChange(editor.getHTML());
+      }
     },
   });
+
+  // Sync content prop → editor when it changes externally
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      isUpdatingFromProp.current = true;
+      editor.commands.setContent(content, false);
+      isUpdatingFromProp.current = false;
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 
