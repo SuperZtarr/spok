@@ -10,14 +10,12 @@ import {
   CalendarRange,
   Clock,
   HelpCircle,
-  User,
 } from 'lucide-react';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS } from '../../constants/ui';
-import { stripMarkup } from '../../lib/bbcode';
+import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
 
 // Get start of today (midnight)
 function getStartOfToday(): Date {
@@ -136,122 +134,121 @@ interface PlanningItemProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   statuses: StatusConfig[];
+  typeLabels?: Record<string, { labelShort: string }>;
+  referentiels?: SpaceReferentiels;
   isHighlighted?: boolean;
   isDimmed?: boolean;
   canEdit?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, isHighlighted, isDimmed, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, referentiels, isHighlighted, isDimmed, canEdit = true }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
+  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+  const typeLabel = typeLabels[item.type]?.labelShort || item.type;
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer group ${
+      className={`grid grid-cols-[auto_1fr_5rem_5rem_6rem_auto] items-center gap-3 px-4 py-2.5 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer group ${
         isHighlighted ? 'ring-2 ring-primary ring-offset-2 scale-[1.01]' : ''
       } ${isDimmed ? 'opacity-40' : ''}`}
       onClick={() => onEdit(item.id)}
     >
       {/* Type icon */}
-      <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+      <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
-      {/* Title and description */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h4 className="font-medium truncate">{item.title}</h4>
-          {item.url && (
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-              onClick={(e) => e.stopPropagation()}
-              title="Ouvrir le lien"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          )}
-        </div>
-        {item.description && (
-          <p className="text-sm text-muted-foreground truncate mt-0.5">
-            {stripMarkup(item.description)}
-          </p>
+      {/* Title */}
+      <div className="min-w-0 flex items-center gap-2">
+        <span className="truncate">{item.title}</span>
+        {item.url && (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            title="Ouvrir le lien"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         )}
       </div>
 
+      {/* Type badge */}
+      <span className="flex justify-center">
+        <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
+          {typeLabel}
+        </Badge>
+      </span>
+
       {/* Date */}
-      {effectiveDate && (
-        <div className="flex items-center gap-1 text-sm text-muted-foreground flex-shrink-0">
-          <Calendar className="w-4 h-4" />
-          <span>{item.type === 'MEETING' ? formatDateTime(effectiveDate) : formatDate(effectiveDate)}</span>
-        </div>
-      )}
+      <span className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+        {effectiveDate ? (
+          <>
+            <Calendar className="w-3 h-3" />
+            <span>{item.type === 'MEETING' ? formatDateTime(effectiveDate) : formatDate(effectiveDate)}</span>
+          </>
+        ) : null}
+      </span>
 
       {/* Status badge */}
-      {statusConfig && (
-        <Badge
-          className={`text-xs flex-shrink-0 ${statusConfig.borderColor.split(' ')[0] || ''}`}
-          variant="secondary"
-          style={{
-            backgroundColor: statusConfig.borderColor.includes('bg-')
-              ? undefined
-              : statusConfig.borderColor.split(' ')[1]?.replace('bg-', '') || undefined,
-          }}
-        >
-          {statusConfig.label}
-        </Badge>
-      )}
-
-      {/* Assignee placeholder */}
-      <div className="flex items-center gap-1 text-sm text-muted-foreground flex-shrink-0">
-        <User className="w-4 h-4" />
-        <span className="text-xs">-</span>
-      </div>
+      <span className="flex justify-center">
+        {statusConfig && (
+          <Badge
+            className={`text-xs ${statusConfig.color}`}
+            variant="secondary"
+          >
+            {statusConfig.label}
+          </Badge>
+        )}
+      </span>
 
       {/* Quick actions */}
-      {canEdit && (
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          {item.status && item.status !== 'done' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7"
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpdateStatus(item.id, 'done');
-              }}
-              title="Marquer comme terminé"
-            >
-              <CheckSquare className="w-4 h-4" />
-            </Button>
-          )}
+      <span className="flex items-center gap-0.5 w-20 justify-end">
+        {canEdit && item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7"
+            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateStatus(item.id, 'done');
+            }}
+            title="Marquer comme terminé"
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+          </Button>
+        )}
+        {canEdit && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
             onClick={(e) => {
               e.stopPropagation();
               onAddChild(item.id);
             }}
             title="Ajouter un enfant"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </Button>
+        )}
+        {canEdit && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-destructive"
+            className="opacity-0 group-hover:opacity-100 text-destructive h-7 w-7 p-0"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(item.id);
             }}
             title="Supprimer"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </Button>
-        </div>
-      )}
+        )}
+      </span>
     </div>
   );
 }
@@ -264,11 +261,12 @@ interface PeriodSectionProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   statuses: StatusConfig[];
+  referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, highlightType, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, referentiels, highlightType, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -293,6 +291,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             onUpdateStatus={onUpdateStatus}
             onAddChild={onAddChild}
             statuses={statuses}
+            referentiels={referentiels}
             isHighlighted={highlightType ? item.type === highlightType : false}
             isDimmed={highlightType ? item.type !== highlightType : false}
             canEdit={canEdit}
@@ -373,6 +372,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           onUpdateStatus={onUpdateStatus}
           onAddChild={onAddChild}
           statuses={statuses}
+          referentiels={referentiels}
           highlightType={highlightType}
           canEdit={canEdit}
         />

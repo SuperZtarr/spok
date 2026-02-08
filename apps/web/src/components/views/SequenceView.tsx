@@ -5,7 +5,7 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
+import { TYPE_ICONS, getTypeTextColor, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 // Relation type options (same as MindMap)
@@ -799,7 +799,7 @@ export function SequenceView({
           />
         ))}
 
-        {/* Standalone items */}
+        {/* Standalone items - columnar layout */}
         {standalone.length > 0 && (
           <div className={hasAnyChains ? 'mt-6' : ''}>
             {hasAnyChains && (
@@ -807,10 +807,122 @@ export function SequenceView({
                 Éléments isolés
               </h3>
             )}
-            <div className={hasAnyChains ? 'flex flex-wrap gap-3' : 'flex flex-col items-center gap-3'}>
-              {standalone.map((item) => (
-                <div key={item.id}>{renderCard(item, hasAnyChains, registerCardRef(item.id))}</div>
-              ))}
+            <div className="border border-border rounded-lg overflow-hidden">
+              {/* Header */}
+              <div className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground bg-muted/50 border-b border-border">
+                <span className="w-4" />
+                <span>Titre</span>
+                <span className="text-center">Type</span>
+                <span className="text-center">Statut</span>
+                <span className="text-center">Info</span>
+                <span className="w-20" />
+              </div>
+              {/* Rows */}
+              <div className="divide-y divide-border">
+                {standalone.map((item) => {
+                  const Icon = TYPE_ICONS[item.type];
+                  const sLabel = statusLabels[item.status || ''] || 'Non défini';
+                  const sBorderColor = statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
+                  const isDone = item.status === doneStatusId;
+                  const isHighlighted = highlightType && item.type === highlightType;
+                  const isDimmed = highlightType && item.type !== highlightType;
+                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                  const typeLabel = typeLabels[item.type]?.labelShort || item.type;
+
+                  return (
+                    <div
+                      key={item.id}
+                      ref={registerCardRef(item.id)}
+                      data-item-id={item.id}
+                      className={`grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${
+                        isHighlighted ? 'bg-primary/5' : ''
+                      } ${isDimmed ? 'opacity-40' : ''} ${
+                        linkMode ? 'hover:ring-2 hover:ring-purple-300' : ''
+                      }`}
+                      onClick={() => handleCardClick(item.id)}
+                    >
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
+
+                      <span className="truncate">{item.title}</span>
+
+                      <span className="flex justify-center">
+                        <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
+                          {typeLabel}
+                        </Badge>
+                      </span>
+
+                      <span className="flex justify-center">
+                        <Badge variant="secondary" className={`text-xs ${sBorderColor}`}>
+                          {sLabel}
+                        </Badge>
+                      </span>
+
+                      <span className="flex items-center justify-center gap-1.5">
+                        {item.type === 'MEETING' && item.startDate && (
+                          <span className="text-xs text-muted-foreground" title={formatDate(item.startDate) || ''}>
+                            <Calendar className="w-3 h-3" />
+                          </span>
+                        )}
+                        {item.url && (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:text-blue-700"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Ouvrir le lien"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </span>
+
+                      <span className="flex items-center gap-0.5 w-20 justify-end">
+                        {canEdit && item.status && !isDone && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(item.id, doneStatusId);
+                            }}
+                          >
+                            <CheckSquare className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddChild(item.id);
+                            }}
+                            title="Ajouter un enfant"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 text-destructive h-7 w-7 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(item.id);
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

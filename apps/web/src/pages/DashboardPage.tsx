@@ -209,7 +209,7 @@ export function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Créer un espace</CardTitle>
-                <Button variant="ghost" size="icon" onClick={closeNewSpaceForm}>
+                <Button variant="ghost" size="icon" onClick={closeNewSpaceForm} title="Fermer">
                   <X className="w-4 h-4" />
                 </Button>
               </div>

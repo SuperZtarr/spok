@@ -123,12 +123,12 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
         <div className="flex-1 overflow-auto">
           {/* Header */}
           <div className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 sticky top-0">
-            <span className="w-4" />
-            <span>Titre</span>
-            <span className="text-center">Type</span>
-            <span className="text-center">Statut</span>
-            <span className="text-center">Info</span>
-            <span className="w-20" />
+            <span className="w-4" title="Type d'élément" />
+            <span title="Nom de l'élément">Titre</span>
+            <span className="text-center" title="Catégorie de l'élément">Type</span>
+            <span className="text-center" title="État d'avancement">Statut</span>
+            <span className="text-center" title="Lien, date, contributions">Info</span>
+            <span className="w-20" title="Actions rapides (survol)" />
           </div>
 
           {/* Rows */}

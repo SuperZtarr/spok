@@ -223,7 +223,7 @@ export function Layout() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               {currentCommunity ? currentCommunity.name : 'Espaces de groupe'}
             </span>
-            <Link to="/?new=space">
+            <Link to="/?new=space" title="Créer un nouvel espace">
               <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
             </Link>
           </div>
@@ -297,6 +297,7 @@ export function Layout() {
         <button
           className="absolute top-3 right-3 p-1 rounded-md hover:bg-accent md:hidden z-20"
           onClick={() => setSidebarOpen(false)}
+          title="Fermer le menu"
         >
           <X className="w-5 h-5" />
         </button>
@@ -312,6 +313,7 @@ export function Layout() {
             <button
               className="p-1 rounded-md hover:bg-accent md:hidden"
               onClick={() => setSidebarOpen(true)}
+              title="Ouvrir le menu"
             >
               <Menu className="w-5 h-5" />
             </button>

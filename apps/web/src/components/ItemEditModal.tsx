@@ -357,7 +357,7 @@ export function ItemEditModal({
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Titre</label>
+            <label className="text-sm font-medium" title="Nom principal de l'élément">Titre</label>
             {canEdit ? (
               <Input
                 value={title}
@@ -371,7 +371,7 @@ export function ItemEditModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
+            <label className="text-sm font-medium" title="Description détaillée, supporte le texte riche">Description</label>
             <RichTextEditor
               key={itemId}
               content={description}
@@ -383,7 +383,7 @@ export function ItemEditModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Parent</label>
+                <label className="text-sm font-medium" title="Élément parent dans l'arborescence">Parent</label>
                 {canEdit && (
                   <button
                     type="button"
@@ -421,7 +421,7 @@ export function ItemEditModal({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Statut</label>
+              <label className="text-sm font-medium" title="État d'avancement de l'élément">Statut</label>
               <div className="flex flex-wrap gap-2">
                 {canEdit ? (
                   (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
@@ -461,7 +461,7 @@ export function ItemEditModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Type</label>
+            <label className="text-sm font-medium" title="Catégorie de l'élément (note, tâche, projet...)">Type</label>
             <div className="flex flex-wrap gap-2">
               {canEdit ? (
                 Object.entries(TYPE_LABELS)
@@ -503,7 +503,7 @@ export function ItemEditModal({
 
           {(type === 'LINK' || type === 'DOCUMENT' || type === 'IMAGE') && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">URL</label>
+              <label className="text-sm font-medium" title="Adresse web associée à cet élément">URL</label>
               {canEdit ? (
                 <Input
                   type="url"

@@ -1026,6 +1026,7 @@ function SortableItem({
             {...listeners}
             className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
+            title="Glisser pour réorganiser"
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -1038,6 +1039,7 @@ function SortableItem({
               onToggleExpand(item.id);
             }}
             className="p-0.5 hover:bg-muted rounded"
+            title={isExpanded ? 'Réduire' : 'Développer'}
           >
             {isExpanded ? (
               <ChevronDown className="w-4 h-4" />
@@ -1330,6 +1332,7 @@ function DraggableChildItem({
             {...listeners}
             className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
+            title="Glisser pour réorganiser"
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -1342,6 +1345,7 @@ function DraggableChildItem({
               onToggleExpand(item.id);
             }}
             className="p-0.5 hover:bg-muted rounded"
+            title={isExpanded ? 'Réduire' : 'Développer'}
           >
             {isExpanded ? (
               <ChevronDown className="w-4 h-4" />
