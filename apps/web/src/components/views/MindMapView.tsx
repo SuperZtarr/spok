@@ -370,16 +370,15 @@ function ProjectGroupNode({ data }: ProjectGroupNodeProps) {
 
   return (
     <div
-      className="w-full h-full rounded-xl"
+      className="w-full h-full rounded-xl cursor-grab active:cursor-grabbing"
       style={{
         border: `2px dashed ${hexColor}`,
         backgroundColor: `${hexColor}33`,
-        pointerEvents: 'none',
       }}
     >
       <div
-        className="absolute top-2 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium cursor-grab active:cursor-grabbing"
-        style={{ color: hexColor, backgroundColor: `${hexColor}22`, pointerEvents: 'auto' }}
+        className="absolute top-2 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium"
+        style={{ color: hexColor, backgroundColor: `${hexColor}22` }}
       >
         <span className="truncate max-w-[150px]">{label}</span>
         <span className="opacity-60">({childCount})</span>
@@ -584,69 +583,168 @@ function resolveNodeOverlaps(nodes: Node[]): Node[] {
   return result;
 }
 
-// Generate background group nodes for PROJECT items that have visible children
-function generateProjectGroupNodes(
+// Compute absolute positions for nodes that may have a parentId chain
+function getAbsolutePositions(nodes: Node[]): Map<string, { x: number; y: number }> {
+  const nodeMap = new Map<string, Node>();
+  for (const n of nodes) nodeMap.set(n.id, n);
+
+  const cache = new Map<string, { x: number; y: number }>();
+
+  function resolve(nodeId: string): { x: number; y: number } {
+    if (cache.has(nodeId)) return cache.get(nodeId)!;
+    const node = nodeMap.get(nodeId);
+    if (!node) return { x: 0, y: 0 };
+
+    const pos = { x: node.position.x, y: node.position.y };
+    if (node.parentId) {
+      const parentAbs = resolve(node.parentId);
+      pos.x += parentAbs.x;
+      pos.y += parentAbs.y;
+    }
+    cache.set(nodeId, pos);
+    return pos;
+  }
+
+  for (const n of nodes) resolve(n.id);
+  return cache;
+}
+
+// Apply native ReactFlow grouping: create group nodes with parentId on members
+function applyNativeGrouping(
+  nodes: Node[],
   tree: TreeItem[],
-  nodePositions: Map<string, { x: number; y: number }>,
   statuses: StatusConfig[],
   collapsedIds: Set<string>,
 ): Node[] {
-  const groupNodes: Node[] = [];
-  const NODE_WIDTH = 150; // approximate node width
-  const NODE_HEIGHT = 40; // approximate node height
+  const APPROX_NODE_W = 150;
+  const APPROX_NODE_H = 40;
   const PADDING = 40;
 
-  function traverse(items: TreeItem[], depth: number) {
+  // Collect all PROJECT items with visible children, sorted by depth (deepest first)
+  interface ProjectInfo {
+    item: TreeItem;
+    depth: number;
+    memberIds: string[]; // project + all visible descendants
+  }
+
+  const projects: ProjectInfo[] = [];
+
+  function findProjects(items: TreeItem[], depth: number) {
     for (const item of items) {
       if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
         const descendantIds = collectVisibleDescendantIds(item, collapsedIds);
-        if (descendantIds.length === 0) continue;
-
-        // Include the project node itself in the bounding box
-        const allIds = [item.id, ...descendantIds];
-        const positions = allIds
-          .map(id => nodePositions.get(id))
-          .filter((p): p is { x: number; y: number } => !!p);
-
-        if (positions.length < 2) continue; // Need at least project + 1 child
-
-        const minX = Math.min(...positions.map(p => p.x)) - PADDING;
-        const minY = Math.min(...positions.map(p => p.y)) - PADDING;
-        const maxX = Math.max(...positions.map(p => p.x)) + NODE_WIDTH + PADDING;
-        const maxY = Math.max(...positions.map(p => p.y)) + NODE_HEIGHT + PADDING;
-
-        const statusColor = getStatusColor(item.status, statuses);
-        const hexColor = tailwindBgToHex(statusColor);
-        // Use a darker variant for the border
-        const darkerHex = hexColor.replace(/f/gi, 'a').slice(0, 7);
-
-        groupNodes.push({
-          id: `project-group-${item.id}`,
-          type: 'projectGroup',
-          position: { x: minX, y: minY },
-          style: { width: maxX - minX, height: maxY - minY },
-          zIndex: -100 + depth,
-          selectable: true,
-          draggable: true,
-          connectable: false,
-          data: {
-            label: item.title,
-            childCount: descendantIds.length,
-            hexColor: darkerHex,
-            memberIds: allIds,
-          },
-        });
+        if (descendantIds.length > 0) {
+          projects.push({
+            item,
+            depth,
+            memberIds: [item.id, ...descendantIds],
+          });
+        }
       }
-
-      // Recurse into children
       if (!collapsedIds.has(item.id)) {
-        traverse(item.children, depth + 1);
+        findProjects(item.children, depth + 1);
       }
     }
   }
 
-  traverse(tree, 0);
-  return groupNodes;
+  findProjects(tree, 0);
+  if (projects.length === 0) return nodes;
+
+  // Sort deepest first so inner groups are processed before outer groups
+  projects.sort((a, b) => b.depth - a.depth);
+
+  // Work on a mutable copy
+  let result = nodes.map(n => ({ ...n, position: { ...n.position } }));
+  const groupNodes: Node[] = [];
+
+  // Track which nodes already have a parentId (from an inner group)
+  const alreadyGrouped = new Set<string>();
+
+  for (const proj of projects) {
+    const groupId = `project-group-${proj.item.id}`;
+
+    // Build a position map for current absolute positions
+    const absPositions = getAbsolutePositions(result);
+
+    // Get absolute positions of all members
+    const memberPositions = proj.memberIds
+      .map(id => ({ id, pos: absPositions.get(id) }))
+      .filter((p): p is { id: string; pos: { x: number; y: number } } => !!p.pos);
+
+    if (memberPositions.length < 2) continue;
+
+    // Compute bounding box from absolute positions
+    const minX = Math.min(...memberPositions.map(p => p.pos.x)) - PADDING;
+    const minY = Math.min(...memberPositions.map(p => p.pos.y)) - PADDING;
+    const maxX = Math.max(...memberPositions.map(p => p.pos.x)) + APPROX_NODE_W + PADDING;
+    const maxY = Math.max(...memberPositions.map(p => p.pos.y)) + APPROX_NODE_H + PADDING;
+
+    const groupPos = { x: minX, y: minY };
+
+    // Create the group node
+    const statusColor = getStatusColor(proj.item.status, statuses);
+    const hexColor = tailwindBgToHex(statusColor);
+    const darkerHex = hexColor.replace(/f/gi, 'a').slice(0, 7);
+
+    groupNodes.push({
+      id: groupId,
+      type: 'projectGroup',
+      position: groupPos,
+      style: { width: maxX - minX, height: maxY - minY },
+      zIndex: -100 + proj.depth,
+      selectable: true,
+      draggable: true,
+      connectable: false,
+      data: {
+        label: proj.item.title,
+        childCount: proj.memberIds.length - 1,
+        hexColor: darkerHex,
+        memberIds: proj.memberIds,
+      },
+    });
+
+    // Convert member positions to relative (only if not already grouped by an inner group)
+    result = result.map(n => {
+      if (!proj.memberIds.includes(n.id)) return n;
+
+      // If already has a parentId from an inner group, skip — its position is already relative to that inner group
+      if (alreadyGrouped.has(n.id)) {
+        // But if this node IS an inner group node itself, reparent it under this outer group
+        if (n.id.startsWith('project-group-')) {
+          const absPos = absPositions.get(n.id) || n.position;
+          return {
+            ...n,
+            parentId: groupId,
+            position: { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y },
+          };
+        }
+        return n;
+      }
+
+      // Convert absolute position to relative to group
+      const absPos = absPositions.get(n.id) || n.position;
+      alreadyGrouped.add(n.id);
+      return {
+        ...n,
+        parentId: groupId,
+        position: { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y },
+      };
+    });
+
+    // Also reparent inner group nodes that are members of this outer group
+    for (const gn of groupNodes) {
+      if (gn.id === groupId) continue;
+      // Check if this inner group's project is a member of the outer group
+      const innerProjectId = gn.id.replace('project-group-', '');
+      if (proj.memberIds.includes(innerProjectId) && !gn.parentId) {
+        const absPos = absPositions.get(gn.id) || gn.position;
+        gn.parentId = groupId;
+        gn.position = { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y };
+      }
+    }
+  }
+
+  return [...groupNodes, ...result];
 }
 
 // Get the best handle position based on angle
@@ -1019,9 +1117,6 @@ function MindMapViewInner({
   // Saved node positions
   const savedPositions = useRef<Record<string, { x: number; y: number }>>({});
 
-  // Track group drag start position for moving children with the group
-  const groupDragStart = useRef<{ groupId: string; startPos: { x: number; y: number } } | null>(null);
-
   // Load saved positions from localStorage
   useEffect(() => {
     if (!positionsStorageKey) return;
@@ -1152,10 +1247,10 @@ function MindMapViewInner({
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
     const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(positionedNodes), tree, collapsedIds);
-    const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
-    const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
-    const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], nodePositions);
-    return { initialNodes: [...projectGroups, ...resolvedNodes], initialEdges: allEdges };
+    const groupedNodes = applyNativeGrouping(resolvedNodes, tree, statuses, collapsedIds);
+    const absPositions = getAbsolutePositions(groupedNodes);
+    const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], absPositions);
+    return { initialNodes: groupedNodes, initialEdges: allEdges };
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, toggleCollapse, applyPositions]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
@@ -1164,12 +1259,12 @@ function MindMapViewInner({
   // Wrap onNodesChange to recalculate edge handles when nodes are dragged
   const onNodesChange = useCallback((changes: any) => {
     onNodesChangeBase(changes);
-    // If any position change, recalculate edges
+    // If any position change, recalculate edges using absolute positions
     const hasPositionChange = changes.some((c: any) => c.type === 'position' && c.position);
     if (hasPositionChange) {
       setNodes(currentNodes => {
-        const nodePositions = new Map(currentNodes.map(n => [n.id, n.position]));
-        setEdges(currentEdges => recalculateEdgeHandles(currentEdges, nodePositions));
+        const absPositions = getAbsolutePositions(currentNodes);
+        setEdges(currentEdges => recalculateEdgeHandles(currentEdges, absPositions));
         return currentNodes;
       });
     }
@@ -1220,9 +1315,10 @@ function MindMapViewInner({
       });
     });
 
-    const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
-    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], nodePositions);
-    setNodes([...projectGroups, ...resolvedNodes, ...portalNodes]);
+    const groupedNodes = applyNativeGrouping([...resolvedNodes, ...portalNodes], tree, statuses, collapsedIds);
+    const absPositions = getAbsolutePositions(groupedNodes);
+    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions);
+    setNodes(groupedNodes);
     setEdges(allEdges);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
 
@@ -1320,80 +1416,53 @@ function MindMapViewInner({
     setTimeout(() => fitView({ padding: 0.3 }), 100);
   }, [fitView]);
 
-  // Handle node drag start - record initial position for group dragging
-  const onNodeDragStart = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.type === 'projectGroup') {
-        groupDragStart.current = {
-          groupId: draggedNode.id,
-          startPos: { ...draggedNode.position },
-        };
-      }
-    },
-    []
-  );
-
-  // Handle node drag - highlight potential drop target or move group members
+  // Handle node drag - highlight potential drop target
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      // Move group members along with the group
-      if (draggedNode.type === 'projectGroup' && groupDragStart.current) {
-        const memberIds = (draggedNode.data as any)?.memberIds as string[] | undefined;
-        if (!memberIds || memberIds.length === 0) return;
-
-        const dx = draggedNode.position.x - groupDragStart.current.startPos.x;
-        const dy = draggedNode.position.y - groupDragStart.current.startPos.y;
-        if (dx === 0 && dy === 0) return;
-
-        groupDragStart.current.startPos = { ...draggedNode.position };
-
-        const memberSet = new Set(memberIds);
-        setNodes(currentNodes => currentNodes.map(n => {
-          if (memberSet.has(n.id)) {
-            return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
-          }
-          return n;
-        }));
-        return;
-      }
-
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
       const intersecting = getIntersectingNodes(draggedNode);
       const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
       setDropTargetId(target?.id || null);
     },
-    [getIntersectingNodes, setNodes]
+    [getIntersectingNodes]
   );
 
   // Handle node drop - reparent if dropped on another node, or save position
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') {
-        // Save position for space node too
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') {
+        // Save position for space node
         if (draggedNode.id === '__space__') {
           savedPositions.current[draggedNode.id] = draggedNode.position;
           savePositions();
         }
-        // Save positions of all member nodes after a group drag
-        if (draggedNode.type === 'projectGroup') {
-          groupDragStart.current = null;
-          const memberIds = (draggedNode.data as any)?.memberIds as string[] | undefined;
-          if (memberIds) {
-            setNodes(currentNodes => {
-              const memberSet = new Set(memberIds);
-              currentNodes.forEach(n => {
-                if (memberSet.has(n.id)) {
-                  savedPositions.current[n.id] = n.position;
+        setDropTargetId(null);
+        return;
+      }
+
+      // Group drag: save absolute positions of all member nodes
+      if (draggedNode.type === 'projectGroup') {
+        const memberIds = (draggedNode.data as any)?.memberIds as string[] | undefined;
+        if (memberIds) {
+          setNodes(currentNodes => {
+            const absPositions = getAbsolutePositions(currentNodes);
+            const memberSet = new Set(memberIds);
+            currentNodes.forEach(n => {
+              if (memberSet.has(n.id)) {
+                const absPos = absPositions.get(n.id);
+                if (absPos) {
+                  savedPositions.current[n.id] = absPos;
                 }
-              });
-              savePositions();
-              return currentNodes;
+              }
             });
-          }
+            savePositions();
+            return currentNodes;
+          });
         }
         setDropTargetId(null);
         return;
       }
+
       const intersecting = getIntersectingNodes(draggedNode);
       const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
       if (target && onMove && canEdit !== false) {
@@ -1408,13 +1477,20 @@ function MindMapViewInner({
           onMove(draggedNode.id, target.id, 0);
         }
       } else {
-        // No reparenting - save the new position
-        savedPositions.current[draggedNode.id] = draggedNode.position;
-        savePositions();
+        // No reparenting - save the absolute position
+        setNodes(currentNodes => {
+          const absPositions = getAbsolutePositions(currentNodes);
+          const absPos = absPositions.get(draggedNode.id);
+          if (absPos) {
+            savedPositions.current[draggedNode.id] = absPos;
+          }
+          savePositions();
+          return currentNodes;
+        });
       }
       setDropTargetId(null);
     },
-    [getIntersectingNodes, onMove, items, savePositions]
+    [getIntersectingNodes, onMove, items, savePositions, setNodes]
   );
 
   // Reset layout function - clears saved positions
@@ -1463,9 +1539,10 @@ function MindMapViewInner({
       });
     });
 
-    const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
-    setNodes([...projectGroups, ...resolvedNodes, ...portalNodes]);
-    setEdges([...newEdges, ...relationEdges, ...portalEdges]);
+    const groupedNodes = applyNativeGrouping([...resolvedNodes, ...portalNodes], tree, statuses, collapsedIds);
+    const absPositions = getAbsolutePositions(groupedNodes);
+    setNodes(groupedNodes);
+    setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions));
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
@@ -1510,7 +1587,6 @@ function MindMapViewInner({
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeClick={canEdit !== false ? onEdgeClick : undefined}
-        onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onConnect={canEdit !== false ? onConnect : undefined}

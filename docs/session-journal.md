@@ -2,6 +2,29 @@
 
 ---
 
+#### [2026-02-08 23:40] - Groupement natif ReactFlow pour les zones projet MindMap
+
+**Demande :** Remplacer le mecanisme custom de groupement des zones projet (~200 lignes : rectangle de fond separe, drag manuel synchronise, calcul de bounding box) par le groupement natif ReactFlow v12 via `parentId`.
+
+**Actions realisees :**
+- Cree `getAbsolutePositions(nodes)` : parcourt la chaine `parentId` pour calculer la position absolue de chaque noeud (necessaire pour les edges apres groupement)
+- Cree `applyNativeGrouping(nodes, tree, statuses, collapsedIds)` : collecte les PROJECT avec enfants visibles tries par profondeur (plus profond d'abord), cree des noeuds groupe, convertit les positions des membres en relatif, met `parentId` sur chaque membre
+- Supprime `generateProjectGroupNodes()` (~60 lignes)
+- Supprime `groupDragStart` ref et le code de sync manuelle dans `onNodeDrag` (~20 lignes)
+- Supprime `onNodeDragStart` (init du group drag)
+- Modifie `ProjectGroupNode` : supprime `pointerEvents: 'none'` du div principal et `pointerEvents: 'auto'` du titre
+- Modifie la chaine de layout (useMemo, useEffect, resetLayout) : remplace `generateProjectGroupNodes` par `applyNativeGrouping` + `getAbsolutePositions`
+- Modifie `onNodesChange` : utilise `getAbsolutePositions` au lieu de `node.position`
+- Modifie `onNodeDragStop` : calcule les positions absolues avant de sauvegarder
+
+**Fichier modifie :**
+- `apps/web/src/components/views/MindMapView.tsx`
+
+**Etat :** EN COURS
+**Prochaine etape :** Verification visuelle — zones projet, drag groupe, drag enfant, edges, persistence positions, groupes imbriques, collapse/expand
+
+---
+
 #### [2026-02-08 23:15] - 4 ameliorations SPOK (breadcrumb, zoom MindMap, favicon)
 
 **Demande :** Implementer 4 ameliorations identifiees : fil d'Ariane dans ItemEditModal, zoom projet MindMap, recherche contributions (deja fait), favicon optimise.
