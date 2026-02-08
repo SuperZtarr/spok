@@ -37,6 +37,7 @@ interface KanbanViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
+  canEdit?: boolean;
 }
 
 interface KanbanColumnProps {
@@ -48,6 +49,7 @@ interface KanbanColumnProps {
   onAddChild: (parentId: string) => void;
   isOver: boolean;
   nextStatus?: string;
+  canEdit?: boolean;
 }
 
 interface KanbanCardProps {
@@ -60,9 +62,10 @@ interface KanbanCardProps {
   isDragging?: boolean;
   nextStatus?: string;
   nextStatusLabel?: string;
+  canEdit?: boolean;
 }
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, isDragging, nextStatus, nextStatusLabel }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, isDragging, nextStatus, nextStatusLabel, canEdit = true }: KanbanCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -85,14 +88,16 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       onClick={() => onEdit(item.id)}
     >
       <div className="flex items-start gap-2">
-        <div
-          {...listeners}
-          {...attributes}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
+        {canEdit && (
+          <div
+            {...listeners}
+            {...attributes}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
         <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
@@ -125,50 +130,52 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       </div>
 
       {/* Quick actions */}
-      <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        {nextStatus && (
+      {canEdit && (
+        <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {nextStatus && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateStatus(item.id, nextStatus);
+              }}
+            >
+              <CheckSquare className="w-3 h-3 mr-1" />
+              {nextStatusLabel || 'Suivant'}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs"
+            className="h-7"
             onClick={(e) => {
               e.stopPropagation();
-              onUpdateStatus(item.id, nextStatus);
+              onAddChild(item.id);
+            }}
+            title="Ajouter un enfant"
+          >
+            <Plus className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
             }}
           >
-            <CheckSquare className="w-3 h-3 mr-1" />
-            {nextStatusLabel || 'Suivant'}
+            <Trash2 className="w-3 h-3" />
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddChild(item.id);
-          }}
-          title="Ajouter un enfant"
-        >
-          <Plus className="w-3 h-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item.id);
-          }}
-        >
-          <Trash2 className="w-3 h-3" />
-        </Button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, isOver, nextStatus }: KanbanColumnProps) {
+function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, isOver, nextStatus, canEdit }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -211,6 +218,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
             onUpdateStatus={onUpdateStatus}
             onAddChild={onAddChild}
             nextStatus={nextStatus}
+            canEdit={canEdit}
           />
         ))}
 
@@ -224,7 +232,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
   );
 }
 
-export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels }: KanbanViewProps) {
+export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, canEdit = true }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -329,6 +337,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
               onAddChild={onAddChild}
               isOver={overId === status.id}
               nextStatus={nextStatusMap[status.id]?.id}
+              canEdit={canEdit}
             />
           ))}
         </div>

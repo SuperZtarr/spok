@@ -126,6 +126,7 @@ interface PlanningViewProps {
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  canEdit?: boolean;
 }
 
 interface PlanningItemProps {
@@ -137,9 +138,10 @@ interface PlanningItemProps {
   statuses: StatusConfig[];
   isHighlighted?: boolean;
   isDimmed?: boolean;
+  canEdit?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, isHighlighted, isDimmed }: PlanningItemProps) {
+function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, isHighlighted, isDimmed, canEdit = true }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -208,46 +210,48 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, stat
       </div>
 
       {/* Quick actions */}
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        {item.status && item.status !== 'done' && (
+      {canEdit && (
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {item.status && item.status !== 'done' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateStatus(item.id, 'done');
+              }}
+              title="Marquer comme terminé"
+            >
+              <CheckSquare className="w-4 h-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
             className="h-7"
             onClick={(e) => {
               e.stopPropagation();
-              onUpdateStatus(item.id, 'done');
+              onAddChild(item.id);
             }}
-            title="Marquer comme terminé"
+            title="Ajouter un enfant"
           >
-            <CheckSquare className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddChild(item.id);
-          }}
-          title="Ajouter un enfant"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item.id);
-          }}
-          title="Supprimer"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            title="Supprimer"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -261,9 +265,10 @@ interface PeriodSectionProps {
   onAddChild: (parentId: string) => void;
   statuses: StatusConfig[];
   highlightType?: ItemType;
+  canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, highlightType }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, highlightType, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -290,6 +295,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             statuses={statuses}
             isHighlighted={highlightType ? item.type === highlightType : false}
             isDimmed={highlightType ? item.type !== highlightType : false}
+            canEdit={canEdit}
           />
         ))}
       </div>
@@ -297,7 +303,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType }: PlanningViewProps) {
+export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -368,6 +374,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           onAddChild={onAddChild}
           statuses={statuses}
           highlightType={highlightType}
+          canEdit={canEdit}
         />
       ))}
     </div>

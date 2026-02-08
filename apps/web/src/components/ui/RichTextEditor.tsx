@@ -20,9 +20,10 @@ interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  editable?: boolean;
 }
 
-export function RichTextEditor({ content, onChange, placeholder }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder, editable = true }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -38,6 +39,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
       }),
     ],
     content,
+    editable,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -86,7 +88,8 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
   return (
     <div className="rounded-md border border-input shadow-sm overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-muted/30 border-b border-input flex-wrap">
+      {editable && (
+        <div className="flex items-center gap-0.5 px-2 py-1.5 bg-muted/30 border-b border-input flex-wrap">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
@@ -165,6 +168,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
           <Redo size={iconSize} />
         </ToolbarButton>
       </div>
+      )}
 
       {/* Editor */}
       <EditorContent

@@ -19,6 +19,7 @@ interface ListViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
+  canEdit?: boolean;
 }
 
 // Format date for display
@@ -34,7 +35,7 @@ function formatDate(dateString: string | null | undefined): string | null {
   });
 }
 
-export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels }: ListViewProps) {
+export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, canEdit = true }: ListViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter items based on search query
@@ -178,7 +179,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               {statusLabel}
             </Badge>
 
-            {item.status && !isDone && (
+            {canEdit && item.status && !isDone && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -192,30 +193,34 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               </Button>
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="opacity-0 group-hover:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddChild(item.id);
-              }}
-              title="Ajouter un enfant"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddChild(item.id);
+                }}
+                title="Ajouter un enfant"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="opacity-0 group-hover:opacity-100 text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(item.id);
-              }}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         );
       })}

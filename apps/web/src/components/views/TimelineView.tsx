@@ -15,6 +15,7 @@ interface TimelineViewProps {
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  canEdit?: boolean;
 }
 
 // Zoom level configuration
@@ -141,7 +142,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -658,7 +659,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                         }
                       >
                         {/* Left resize handle */}
-                        {onUpdateDates && (
+                        {canEdit && onUpdateDates && (
                           <div
                             className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-l group/handle"
                             onMouseDown={(e) => handleDragStart(
@@ -686,7 +687,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                         </div>
 
                         {/* Right resize handle */}
-                        {onUpdateDates && (
+                        {canEdit && onUpdateDates && (
                           <div
                             className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-r group/handle"
                             onMouseDown={(e) => handleDragStart(

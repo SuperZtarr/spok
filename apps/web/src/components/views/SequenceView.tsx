@@ -42,6 +42,7 @@ interface SequenceViewProps {
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  canEdit?: boolean;
 }
 
 // --- Graph types ---
@@ -374,6 +375,7 @@ export function SequenceView({
   onDeleteRelation,
   referentiels,
   highlightType,
+  canEdit = true,
 }: SequenceViewProps) {
   // Link mode state
   const [linkMode, setLinkMode] = useState(false);
@@ -569,46 +571,48 @@ export function SequenceView({
             </div>
 
             {/* Action buttons on hover */}
-            <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              {item.status && !isDone && (
+            {canEdit && (
+              <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {item.status && !isDone && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateStatus(item.id, doneStatusId);
+                    }}
+                    title="Marquer terminé"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onUpdateStatus(item.id, doneStatusId);
+                    onAddChild(item.id);
                   }}
-                  title="Marquer terminé"
+                  title="Ajouter un enfant"
                 >
-                  <CheckSquare className="w-3.5 h-3.5" />
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddChild(item.id);
-                }}
-                title="Ajouter un enfant"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(item.id);
-                }}
-                title="Supprimer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.id);
+                  }}
+                  title="Supprimer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -626,6 +630,7 @@ export function SequenceView({
       onAddChild,
       linkMode,
       linkSource,
+      canEdit,
     ]
   );
 
@@ -758,7 +763,7 @@ export function SequenceView({
         </div>
 
         {/* Link mode button */}
-        {onCreateRelation && (
+        {canEdit && onCreateRelation && (
           <div className="flex items-center gap-2">
             {linkMode && (
               <span className="text-xs text-purple-600 font-medium">
@@ -811,7 +816,7 @@ export function SequenceView({
         )}
 
         {/* Global relation connectors (cross-branch) - clickable for deletion */}
-        <SVGConnectors lines={globalLines} onClickRelation={onDeleteRelation ? handleRelationClick : undefined} />
+        <SVGConnectors lines={globalLines} onClickRelation={canEdit && onDeleteRelation ? handleRelationClick : undefined} />
       </div>
 
       {/* Relation type selection dialog */}

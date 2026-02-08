@@ -26,6 +26,7 @@ interface TypesViewProps {
   onUpdateType: (id: string, type: ItemType) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
+  canEdit?: boolean;
 }
 
 interface TypeColumnConfig {
@@ -44,6 +45,7 @@ interface TypeColumnProps {
   isOver: boolean;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
+  canEdit?: boolean;
 }
 
 interface TypeCardProps {
@@ -54,9 +56,10 @@ interface TypeCardProps {
   isDragging?: boolean;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
+  canEdit?: boolean;
 }
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels, statusColors }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -82,14 +85,16 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
       onClick={() => onEdit(item.id)}
     >
       <div className="flex items-start gap-2">
-        <div
-          {...listeners}
-          {...attributes}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
+        {canEdit && (
+          <div
+            {...listeners}
+            {...attributes}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
         <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
@@ -124,36 +129,38 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
       </div>
 
       {/* Quick actions */}
-      <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddChild(item.id);
-          }}
-          title="Ajouter un enfant"
-        >
-          <Plus className="w-3 h-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item.id);
-          }}
-        >
-          <Trash2 className="w-3 h-3" />
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddChild(item.id);
+            }}
+            title="Ajouter un enfant"
+          >
+            <Plus className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
 
-function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statusLabels, statusColors }: TypeColumnProps) {
+function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -195,6 +202,7 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statu
             onAddChild={onAddChild}
             statusLabels={statusLabels}
             statusColors={statusColors}
+            canEdit={canEdit}
           />
         ))}
 
@@ -208,7 +216,7 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statu
   );
 }
 
-export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, referentiels }: TypesViewProps) {
+export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, referentiels, canEdit = true }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -318,6 +326,7 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, r
               isOver={overId === column.id}
               statusLabels={statusLabels}
               statusColors={statusColors}
+              canEdit={canEdit}
             />
           ))}
         </div>

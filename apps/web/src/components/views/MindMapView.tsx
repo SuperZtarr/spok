@@ -36,6 +36,7 @@ interface MindMapViewProps {
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
+  canEdit?: boolean;
 }
 
 // Get status color from referentiels
@@ -155,11 +156,12 @@ interface MindMapNodeProps {
     isHighlighted: boolean;
     isDimmed: boolean;
     isDropTarget: boolean;
+    canEdit: boolean;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget } = data;
+  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -219,21 +221,23 @@ function MindMapNode({ data }: MindMapNodeProps) {
             onEdit(item.id);
           }}
           className="p-1 bg-white rounded-full shadow-md hover:bg-blue-50"
-          title="Modifier"
+          title="Voir"
         >
           <Edit2 className="w-3 h-3 text-blue-600" />
         </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddChild(item.id);
-          }}
-          className="p-1 bg-white rounded-full shadow-md hover:bg-green-50"
-          title="Ajouter un enfant"
-        >
-          <Plus className="w-3 h-3 text-green-600" />
-        </button>
-        {hasPortalSupport && (
+        {canEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddChild(item.id);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-green-50"
+            title="Ajouter un enfant"
+          >
+            <Plus className="w-3 h-3 text-green-600" />
+          </button>
+        )}
+        {canEdit && hasPortalSupport && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -557,7 +561,8 @@ function calculateLayout(
   onAddPortal: (id: string) => void,
   onToggleCollapse: (id: string) => void,
   hasPortalSupport: boolean,
-  highlightType?: string
+  highlightType?: string,
+  canEdit?: boolean
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -617,6 +622,7 @@ function calculateLayout(
         isHighlighted: highlightType ? item.type === highlightType : false,
         isDimmed: highlightType ? item.type !== highlightType : false,
         isDropTarget: false,
+        canEdit: canEdit !== false,
       },
     });
 
@@ -828,6 +834,7 @@ function MindMapViewInner({
   onCreateRelation,
   onDeleteRelation,
   referentiels,
+  canEdit,
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
@@ -945,7 +952,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
     const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
@@ -972,7 +979,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
@@ -1108,7 +1115,7 @@ function MindMapViewInner({
       }
       const intersecting = getIntersectingNodes(draggedNode);
       const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
-      if (target && onMove) {
+      if (target && onMove && canEdit !== false) {
         // Prevent dropping a parent onto its own descendant
         const isDescendant = (parentId: string, childId: string): boolean => {
           const child = items.find(i => i.id === childId);
@@ -1135,7 +1142,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
 
     // Build a map of node positions for portal placement
     const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
@@ -1219,10 +1226,10 @@ function MindMapViewInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
-        onEdgeClick={onEdgeClick}
+        onEdgeClick={canEdit !== false ? onEdgeClick : undefined}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
-        onConnect={onConnect}
+        onConnect={canEdit !== false ? onConnect : undefined}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.3 }}
@@ -1407,6 +1414,7 @@ export function MindMapView({
   onCreateRelation,
   onDeleteRelation,
   referentiels,
+  canEdit,
 }: MindMapViewProps) {
   if (items.length === 0) {
     return (
@@ -1434,6 +1442,7 @@ export function MindMapView({
           onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation}
           referentiels={referentiels}
+          canEdit={canEdit}
         />
       </ReactFlowProvider>
     </div>

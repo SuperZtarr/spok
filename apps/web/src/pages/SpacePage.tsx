@@ -146,6 +146,8 @@ export function SpacePage() {
     enabled: !!spaceId,
   });
 
+  const canEdit = space?.role !== 'VIEWER';
+
   // Load referentiels for this space
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
@@ -535,21 +537,25 @@ export function SpacePage() {
                 </Button>
               </Link>
             )}
-            <Button
-              variant={isSelectionMode ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setSelectionMode(!isSelectionMode)}
-              title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
-            >
-              <ListChecks className="w-4 h-4" />
-            </Button>
-            <Button size="sm" onClick={() => {
-              handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
-              setShowNewItem(true);
-            }}>
-              <Plus className="w-4 h-4 mr-1" />
-              Nouveau
-            </Button>
+            {canEdit && (
+              <Button
+                variant={isSelectionMode ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setSelectionMode(!isSelectionMode)}
+                title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
+              >
+                <ListChecks className="w-4 h-4" />
+              </Button>
+            )}
+            {canEdit && (
+              <Button size="sm" onClick={() => {
+                handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
+                setShowNewItem(true);
+              }}>
+                <Plus className="w-4 h-4 mr-1" />
+                Nouveau
+              </Button>
+            )}
           </div>
         </div>
 
@@ -677,6 +683,7 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
+              canEdit={canEdit}
             />
           ) : viewMode === 'sequence' ? (
             <SequenceView
@@ -690,6 +697,7 @@ export function SpacePage() {
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              canEdit={canEdit}
             />
           ) : viewMode === 'kanban' ? (
             <KanbanView
@@ -699,6 +707,7 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
+              canEdit={canEdit}
             />
           ) : viewMode === 'types' ? (
             <TypesView
@@ -708,6 +717,7 @@ export function SpacePage() {
               onUpdateType={(id, type) => updateItemMutation.mutate({ id, data: { type } })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
+              canEdit={canEdit}
             />
           ) : viewMode === 'planning' ? (
             <PlanningView
@@ -718,6 +728,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              canEdit={canEdit}
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
@@ -730,6 +741,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              canEdit={canEdit}
             />
           ) : viewMode === 'mindmap' ? (
             <MindMapView
@@ -746,6 +758,7 @@ export function SpacePage() {
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
+              canEdit={canEdit}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -790,6 +803,7 @@ export function SpacePage() {
                       isSelected={selectedIds.has(item.id)}
                       onToggleSelection={toggleSelection}
                       expandedItems={expandedItems}
+                      canEdit={canEdit}
                     />
                   ))}
                   {/* Root drop zone - at the bottom to avoid interfering with first item */}
@@ -848,6 +862,7 @@ export function SpacePage() {
         itemId={editingItemId}
         allItems={allItemsData?.data || []}
         referentiels={referentiels}
+        canEdit={canEdit}
       />
 
       {/* Selection action bar */}
@@ -914,6 +929,7 @@ function SortableItem({
   isSelected,
   onToggleSelection,
   expandedItems,
+  canEdit,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -934,6 +950,7 @@ function SortableItem({
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
   expandedItems: Set<string>;
+  canEdit?: boolean;
 }) {
   const {
     attributes,
@@ -995,7 +1012,7 @@ function SortableItem({
             onClick={(e) => e.stopPropagation()}
             className="w-4 h-4 rounded"
           />
-        ) : (
+        ) : canEdit !== false ? (
           <button
             {...attributes}
             {...listeners}
@@ -1004,7 +1021,7 @@ function SortableItem({
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
-        )}
+        ) : null}
 
         {hasChildren ? (
           <button
@@ -1043,7 +1060,7 @@ function SortableItem({
           </a>
         )}
 
-        {item.status && item.status !== 'done' && (
+        {canEdit !== false && item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
             size="sm"
@@ -1064,30 +1081,34 @@ function SortableItem({
           {STATUS_LABELS[item.status || ''] || 'Non défini'}
         </Badge>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="opacity-0 group-hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddChild(item.id);
-          }}
-          title="Ajouter un enfant"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
+        {canEdit !== false && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddChild(item.id);
+            }}
+            title="Ajouter un enfant"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="opacity-0 group-hover:opacity-100 text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item.id);
-          }}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        {canEdit !== false && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {isExpanded && hasChildren && (
@@ -1107,6 +1128,7 @@ function SortableItem({
           onToggleSelection={onToggleSelection}
           expandedItems={expandedItems}
           onToggleExpand={onToggleExpand}
+          canEdit={canEdit}
         />
       )}
     </div>
@@ -1130,6 +1152,7 @@ function ItemChildren({
   onToggleSelection,
   expandedItems,
   onToggleExpand,
+  canEdit,
 }: {
   spaceId: string;
   parentId: string;
@@ -1146,6 +1169,7 @@ function ItemChildren({
   onToggleSelection?: (id: string) => void;
   expandedItems: Set<string>;
   onToggleExpand: (id: string) => void;
+  canEdit?: boolean;
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
@@ -1181,6 +1205,7 @@ function ItemChildren({
           isSelected={globalSelectedIds.has(item.id)}
           onToggleSelection={onToggleSelection}
           expandedItems={expandedItems}
+          canEdit={canEdit}
         />
       ))}
     </>
@@ -1208,6 +1233,7 @@ function DraggableChildItem({
   isSelected,
   onToggleSelection,
   expandedItems,
+  canEdit,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1228,6 +1254,7 @@ function DraggableChildItem({
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
   expandedItems: Set<string>;
+  canEdit?: boolean;
 }) {
   const {
     attributes,
@@ -1289,7 +1316,7 @@ function DraggableChildItem({
             onClick={(e) => e.stopPropagation()}
             className="w-4 h-4 rounded"
           />
-        ) : (
+        ) : canEdit !== false ? (
           <button
             {...attributes}
             {...listeners}
@@ -1298,7 +1325,7 @@ function DraggableChildItem({
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
-        )}
+        ) : null}
 
         {hasChildren ? (
           <button
@@ -1337,7 +1364,7 @@ function DraggableChildItem({
           </a>
         )}
 
-        {item.status && item.status !== 'done' && (
+        {canEdit !== false && item.status && item.status !== 'done' && (
           <Button
             variant="ghost"
             size="sm"
@@ -1358,30 +1385,34 @@ function DraggableChildItem({
           {STATUS_LABELS[item.status || ''] || 'Non défini'}
         </Badge>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="opacity-0 group-hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddChild(item.id);
-          }}
-          title="Ajouter un enfant"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
+        {canEdit !== false && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddChild(item.id);
+            }}
+            title="Ajouter un enfant"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="opacity-0 group-hover:opacity-100 text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item.id);
-          }}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        {canEdit !== false && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {isExpanded && hasChildren && (
@@ -1401,6 +1432,7 @@ function DraggableChildItem({
           onToggleSelection={onToggleSelection}
           expandedItems={expandedItems}
           onToggleExpand={onToggleExpand}
+          canEdit={canEdit}
         />
       )}
     </div>

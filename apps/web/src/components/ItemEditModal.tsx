@@ -21,6 +21,7 @@ interface ItemEditModalProps {
   itemId: string | null;
   allItems: Item[];
   referentiels?: SpaceReferentiels;
+  canEdit?: boolean;
 }
 
 export function ItemEditModal({
@@ -30,6 +31,7 @@ export function ItemEditModal({
   itemId,
   allItems,
   referentiels,
+  canEdit = true,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
 
@@ -330,7 +332,7 @@ export function ItemEditModal({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Modifier l'élément">
+    <Modal isOpen={isOpen} onClose={onClose} title={canEdit ? "Modifier l'élément" : "Détail de l'élément"}>
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
@@ -361,6 +363,7 @@ export function ItemEditModal({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Titre de l'élément"
               required
+              disabled={!canEdit}
             />
           </div>
 
@@ -370,6 +373,7 @@ export function ItemEditModal({
               key={itemId}
               content={description}
               onChange={setDescription}
+              editable={canEdit}
             />
           </div>
 
@@ -382,6 +386,7 @@ export function ItemEditModal({
                 value,
                 label,
               }))}
+              disabled={!canEdit}
             />
           </div>
 
@@ -393,6 +398,7 @@ export function ItemEditModal({
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://..."
+                disabled={!canEdit}
               />
             </div>
           )}
@@ -405,6 +411,7 @@ export function ItemEditModal({
                   type="datetime-local"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
+                  disabled={!canEdit}
                 />
               </div>
               <div className="space-y-2">
@@ -413,6 +420,7 @@ export function ItemEditModal({
                   type="datetime-local"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  disabled={!canEdit}
                 />
               </div>
             </div>
@@ -444,6 +452,7 @@ export function ItemEditModal({
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
               options={parentOptions}
+              disabled={!canEdit}
             />
           </div>
 
@@ -456,7 +465,8 @@ export function ItemEditModal({
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
+                    onClick={() => canEdit && setStatus(s.id === 'undefined' ? '' : s.id)}
+                    disabled={!canEdit}
                     className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
                       isSelected
                         ? `${s.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`
@@ -477,15 +487,17 @@ export function ItemEditModal({
                 <Link2 className="w-4 h-4" />
                 Dépendances
               </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddRelation(!showAddRelation)}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Ajouter
-              </Button>
+              {canEdit && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAddRelation(!showAddRelation)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Ajouter
+                </Button>
+              )}
             </div>
 
             {/* Add new relation */}
@@ -560,14 +572,16 @@ export function ItemEditModal({
                       <ArrowRight className="w-3 h-3 text-muted-foreground" />
                       <span>{relation.toItem?.title || 'Élément inconnu'}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRelation(relation.id)}
-                      className="p-1 hover:bg-background rounded transition-colors text-destructive"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRelation(relation.id)}
+                        className="p-1 hover:bg-background rounded transition-colors text-destructive"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
 
@@ -661,7 +675,7 @@ export function ItemEditModal({
                               })}
                             </span>
                           </div>
-                          {(contribution.authorId === user?.id) && (
+                          {canEdit && (contribution.authorId === user?.id) && (
                             <div className="flex items-center gap-1">
                               <button
                                 type="button"
@@ -691,32 +705,36 @@ export function ItemEditModal({
             )}
 
             {/* New contribution input */}
-            <div className="space-y-2">
-              <RichTextEditor
-                key={`new-contrib-${item.contributions?.length ?? 0}`}
-                content={newContribution}
-                onChange={setNewContribution}
-                placeholder="Ajouter une contribution..."
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleAddContribution}
-                disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}
-              >
-                {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
-              </Button>
-            </div>
+            {canEdit && (
+              <div className="space-y-2">
+                <RichTextEditor
+                  key={`new-contrib-${item.contributions?.length ?? 0}`}
+                  content={newContribution}
+                  onChange={setNewContribution}
+                  placeholder="Ajouter une contribution..."
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAddContribution}
+                  disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}
+                >
+                  {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
+                </Button>
+              </div>
+            )}
           </div>
 
           </div>
 
           <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
-            <Button type="submit" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-            </Button>
+            {canEdit && (
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
+              {canEdit ? 'Annuler' : 'Fermer'}
             </Button>
           </div>
         </form>
