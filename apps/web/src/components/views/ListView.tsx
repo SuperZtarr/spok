@@ -4,7 +4,7 @@ import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS } from '../../constants/ui';
+import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 // Extended Item type with contribution count
@@ -168,7 +168,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               </span>
             )}
 
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
               {typeLabel}
             </Badge>
 

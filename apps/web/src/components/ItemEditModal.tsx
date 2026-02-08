@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus } from 'lucide-react';
-import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS } from '../constants/ui';
+import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
 
@@ -371,13 +371,42 @@ export function ItemEditModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
-            <RichTextEditor
-              key={itemId}
-              content={description}
-              onChange={setDescription}
-              editable={canEdit}
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Parent</label>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={toggleParentSortMode}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
+                >
+                  {parentSortMode === 'tree' ? (
+                    <>
+                      <GitBranch className="w-3 h-3" />
+                      <span>Arborescence</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownAZ className="w-3 h-3" />
+                      <span>A-Z</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            {canEdit ? (
+              <Select
+                value={parentId}
+                onChange={(e) => setParentId(e.target.value)}
+                options={parentOptions}
+              />
+            ) : (
+              <p className="text-sm">
+                {parentId
+                  ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu'
+                  : <span className="text-muted-foreground">Aucun parent</span>}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -389,6 +418,7 @@ export function ItemEditModal({
                   .map(([key, label]) => {
                     const Icon = TYPE_ICONS[key];
                     const isSelected = type === key;
+                    const typeColor = getTypeColor(key, referentiels?.typeLabels);
                     return (
                       <button
                         key={key}
@@ -396,7 +426,7 @@ export function ItemEditModal({
                         onClick={() => setType(key as ItemType)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
                           isSelected
-                            ? 'border-primary font-semibold ring-2 ring-offset-1 ring-primary/40'
+                            ? `${typeColor.color} ${typeColor.bgHover} font-semibold shadow-sm`
                             : 'border-border opacity-60 hover:opacity-100'
                         }`}
                       >
@@ -408,8 +438,9 @@ export function ItemEditModal({
               ) : (
                 (() => {
                   const Icon = TYPE_ICONS[type];
+                  const typeColor = getTypeColor(type, referentiels?.typeLabels);
                   return (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 border-primary font-semibold ring-2 ring-offset-1 ring-primary/40">
+                    <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeColor.color} ${typeColor.bgHover} font-semibold`}>
                       {Icon && <Icon className="w-3.5 h-3.5" />}
                       {TYPE_LABELS[type] || type}
                     </span>
@@ -473,45 +504,6 @@ export function ItemEditModal({
           )}
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Parent</label>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={toggleParentSortMode}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
-                >
-                  {parentSortMode === 'tree' ? (
-                    <>
-                      <GitBranch className="w-3 h-3" />
-                      <span>Arborescence</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownAZ className="w-3 h-3" />
-                      <span>A-Z</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-            {canEdit ? (
-              <Select
-                value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
-                options={parentOptions}
-              />
-            ) : (
-              <p className="text-sm">
-                {parentId
-                  ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu'
-                  : <span className="text-muted-foreground">Aucun parent</span>}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
             <label className="text-sm font-medium">Statut</label>
             <div className="flex flex-wrap gap-2">
               {canEdit ? (
@@ -524,7 +516,7 @@ export function ItemEditModal({
                       onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
                       className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
                         isSelected
-                          ? `${s.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`
+                          ? `${s.borderColor} font-semibold shadow-sm`
                           : `${s.borderColor} opacity-60 hover:opacity-100`
                       }`}
                     >
@@ -539,7 +531,7 @@ export function ItemEditModal({
                     (s.id === 'undefined' && !status) || s.id === status
                   );
                   return selected ? (
-                    <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold ring-2 ring-offset-1 ring-primary/40`}>
+                    <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>
                       {selected.label}
                     </span>
                   ) : (
@@ -676,6 +668,17 @@ export function ItemEditModal({
             ) : (
               <p className="text-sm text-muted-foreground">Aucune dépendance</p>
             )}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2 pt-4 border-t border-border">
+            <label className="text-sm font-medium">Description</label>
+            <RichTextEditor
+              key={itemId}
+              content={description}
+              onChange={setDescription}
+              editable={canEdit}
+            />
           </div>
 
           {/* Contributions section */}

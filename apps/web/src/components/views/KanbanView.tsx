@@ -15,7 +15,7 @@ import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar } from 
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
-import { TYPE_ICONS } from '../../constants/ui';
+import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 // Format date for display
@@ -50,6 +50,7 @@ interface KanbanColumnProps {
   isOver: boolean;
   nextStatus?: string;
   canEdit?: boolean;
+  referentiels?: SpaceReferentiels;
 }
 
 interface KanbanCardProps {
@@ -63,9 +64,10 @@ interface KanbanCardProps {
   nextStatus?: string;
   nextStatusLabel?: string;
   canEdit?: boolean;
+  referentiels?: SpaceReferentiels;
 }
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, isDragging, nextStatus, nextStatusLabel, canEdit = true }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -98,7 +100,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             <GripVertical className="w-4 h-4" />
           </div>
         )}
-        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+        <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <h4 className="text-sm font-medium truncate">{item.title}</h4>
@@ -175,7 +177,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, isOver, nextStatus, canEdit }: KanbanColumnProps) {
+function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, isOver, nextStatus, canEdit, referentiels }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -219,6 +221,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
             onAddChild={onAddChild}
             nextStatus={nextStatus}
             canEdit={canEdit}
+            referentiels={referentiels}
           />
         ))}
 
@@ -338,6 +341,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
               isOver={overId === status.id}
               nextStatus={nextStatusMap[status.id]?.id}
               canEdit={canEdit}
+              referentiels={referentiels}
             />
           ))}
         </div>
@@ -350,7 +354,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
             <div className="flex items-start gap-2">
               {(() => {
                 const Icon = TYPE_ICONS[activeItem.type];
-                return <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />;
+                return <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(activeItem.type, referentiels?.typeLabels)}`} />;
               })()}
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-medium truncate">{activeItem.title}</h4>

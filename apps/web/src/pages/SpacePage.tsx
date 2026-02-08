@@ -58,7 +58,7 @@ import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 
-import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS } from '../constants/ui';
+import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -471,16 +471,21 @@ export function SpacePage() {
       <div className="w-full h-full flex flex-col">
         {/* Toolbar */}
         <div className="flex gap-2 mb-3 flex-wrap items-center">
-          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => (
-            <Button
-              key={type}
-              variant={filter === type ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter(type)}
-            >
-              {type === 'ALL' ? 'Tous' : TYPE_LABELS[type]}
-            </Button>
-          ))}
+          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
+            const isActive = filter === t;
+            const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
+            return (
+              <Button
+                key={t}
+                variant={isActive ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter(t)}
+                className={isActive && typeColor ? `border-2 ${typeColor.color}` : ''}
+              >
+                {t === 'ALL' ? 'Tous' : TYPE_LABELS[t]}
+              </Button>
+            );
+          })}
 
           {/* Mode indicator */}
           {filter !== 'ALL' && (
@@ -564,18 +569,21 @@ export function SpacePage() {
           <div className="bg-card border rounded-lg p-4 mb-6">
             <form onSubmit={handleCreateItem} className="space-y-4">
               <div className="flex gap-2 flex-wrap">
-                {(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((type) => {
-                  const Icon = TYPE_ICONS[type];
+                {(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
+                  const Icon = TYPE_ICONS[t];
+                  const isActive = newItemType === t;
+                  const typeColor = getTypeColor(t, referentiels?.typeLabels);
                   return (
                     <Button
-                      key={type}
+                      key={t}
                       type="button"
-                      variant={newItemType === type ? 'default' : 'outline'}
+                      variant={isActive ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => handleItemTypeChange(type)}
+                      onClick={() => handleItemTypeChange(t)}
+                      className={isActive ? `border-2 ${typeColor.color}` : ''}
                     >
                       <Icon className="w-4 h-4 mr-1" />
-                      {TYPE_LABELS[type]}
+                      {TYPE_LABELS[t]}
                     </Button>
                   );
                 })}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Loader2, FileText, MessageSquare, X } from 'lucide-react';
 import { searchApi } from '../lib/api';
+import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 
 export function GlobalSearch() {
   const navigate = useNavigate();
@@ -139,7 +140,7 @@ export function GlobalSearch() {
                           )}
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-muted-foreground">{item.spaceName}</span>
-                            <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.type}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${getTypeColor(item.type).bgHover}`}>{TYPE_LABELS[item.type] || item.type}</span>
                           </div>
                         </div>
                       </div>

@@ -5,7 +5,7 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS } from '../../constants/ui';
+import { TYPE_ICONS, getTypeColor, getTypeTextColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 // Relation type options (same as MindMap)
@@ -486,6 +486,7 @@ export function SequenceView({
       const borderColor =
         statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
       const isDone = item.status === doneStatusId;
+      const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
       const isHighlighted = highlightType && item.type === highlightType;
       const isDimmed = highlightType && item.type !== highlightType;
       const isLinkSource = linkMode && linkSource === item.id;
@@ -509,7 +510,7 @@ export function SequenceView({
           onClick={() => handleCardClick(item.id)}
         >
           <div className="flex items-start gap-2">
-            <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <h3
