@@ -185,8 +185,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send({ ...space, role: 'OWNER' as Role });
   });
 
-  // Get space by ID
+  // Get space by ID (direct membership OR community membership)
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    // 1. Try direct membership
     const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
@@ -208,16 +209,45 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!membership) {
-      return reply.notFound('Space not found or access denied');
+    if (membership) {
+      return {
+        ...membership.space,
+        role: membership.role,
+        memberCount: membership.space._count.memberships,
+        itemCount: membership.space._count.items,
+      };
     }
 
-    return {
-      ...membership.space,
-      role: membership.role,
-      memberCount: membership.space._count.memberships,
-      itemCount: membership.space._count.items,
-    };
+    // 2. Try community membership → VIEWER access
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: request.params.id },
+      include: {
+        _count: { select: { memberships: true, items: true } },
+        community: { select: { id: true, name: true } },
+      },
+    });
+
+    if (space?.communityId) {
+      const communityMembership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: space.communityId,
+          },
+        },
+      });
+
+      if (communityMembership) {
+        return {
+          ...space,
+          role: 'VIEWER' as Role,
+          memberCount: space._count.memberships,
+          itemCount: space._count.items,
+        };
+      }
+    }
+
+    return reply.notFound('Space not found or access denied');
   });
 
   // Update space
@@ -372,16 +402,35 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get space members
   fastify.get<{ Params: { id: string } }>('/:id/members', async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
+    // Check direct membership
+    let hasAccess = !!(await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
           userId: request.user.userId,
           spaceId: request.params.id,
         },
       },
-    });
+    }));
 
-    if (!membership) {
+    // Fallback: community membership
+    if (!hasAccess) {
+      const space = await fastify.prisma.space.findUnique({
+        where: { id: request.params.id },
+        select: { communityId: true },
+      });
+      if (space?.communityId) {
+        hasAccess = !!(await fastify.prisma.communityMembership.findUnique({
+          where: {
+            userId_communityId: {
+              userId: request.user.userId,
+              communityId: space.communityId,
+            },
+          },
+        }));
+      }
+    }
+
+    if (!hasAccess) {
       return reply.notFound('Space not found');
     }
 

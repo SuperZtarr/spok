@@ -14,13 +14,24 @@ const querySchema = z.object({
 });
 
 export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Helper to check space access
+  // Helper to check space access (direct membership OR community membership)
   async function checkSpaceAccess(userId: string, spaceId: string) {
-    return fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: { userId, spaceId },
-      },
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: { userId_spaceId: { userId, spaceId } },
     });
+    if (membership) return membership;
+
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: spaceId },
+      select: { communityId: true },
+    });
+    if (space?.communityId) {
+      const cm = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId, communityId: space.communityId } },
+      });
+      if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+    }
+    return null;
   }
 
   // List audit logs

@@ -72,13 +72,34 @@ const updateContributionSchema = z.object({
 });
 
 export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Helper to check space access
+  // Helper to check space access (direct membership OR community membership)
   async function checkSpaceAccess(userId: string, spaceId: string) {
-    return fastify.prisma.spaceMembership.findUnique({
+    // 1. Direct space membership
+    const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: { userId, spaceId },
       },
     });
+    if (membership) return membership;
+
+    // 2. Community membership → VIEWER access
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: spaceId },
+      select: { communityId: true },
+    });
+    if (space?.communityId) {
+      const communityMembership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: { userId, communityId: space.communityId },
+        },
+      });
+      if (communityMembership) {
+        // Return a virtual VIEWER membership
+        return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      }
+    }
+
+    return null;
   }
 
   // List items
