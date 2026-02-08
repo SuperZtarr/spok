@@ -390,10 +390,11 @@ const nodeTypes = {
 
 // Layout constants for radial layout
 const NODE_WIDTH = 160;  // Approximate width of a node (including padding)
-const NODE_GAP = 40;     // Minimum gap between two adjacent nodes
-const MIN_RADIUS = 300;  // Minimum radius for any level
-const MIN_ANGLE_SPREAD = Math.PI / 4; // Minimum angle between siblings (45 degrees)
-const DEPTH_ANGLE_MULTIPLIER = 1.5; // Multiply angular spread per extra depth level
+const NODE_GAP = 30;     // Minimum gap between two adjacent nodes
+const MIN_RADIUS_ROOT = 300;  // Minimum radius for root items (around space node)
+const MIN_RADIUS_CHILD = 180; // Minimum radius for children (tighter grouping in projects)
+const MIN_ANGLE_SPREAD = Math.PI / 6; // Minimum angle between siblings (30 degrees)
+const DEPTH_ANGLE_MULTIPLIER = 1.3; // Multiply angular spread per extra depth level
 
 // Calculate the angular size needed for a subtree
 // depth: 0 = root items, 1 = their children, etc.
@@ -423,6 +424,157 @@ function collectVisibleDescendantIds(item: TreeItem, collapsedIds: Set<string>):
     ids.push(...collectVisibleDescendantIds(child, collapsedIds));
   }
   return ids;
+}
+
+// Push non-member nodes out of project group bounding boxes
+function resolveProjectGroupCollisions(
+  nodes: Node[],
+  tree: TreeItem[],
+  collapsedIds: Set<string>,
+): Node[] {
+  const APPROX_NODE_W = 150;
+  const APPROX_NODE_H = 40;
+  const GROUP_PADDING = 50;
+  const PUSH_MARGIN = 30;
+
+  // Build project group bounding boxes from node positions
+  const nodePositions = new Map(nodes.map(n => [n.id, n.position]));
+
+  interface GroupBox {
+    memberIds: Set<string>;
+    minX: number; minY: number; maxX: number; maxY: number;
+  }
+
+  const groups: GroupBox[] = [];
+
+  function findProjects(items: TreeItem[]) {
+    for (const item of items) {
+      if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
+        const descendantIds = collectVisibleDescendantIds(item, collapsedIds);
+        if (descendantIds.length === 0) continue;
+
+        const allIds = [item.id, ...descendantIds];
+        const positions = allIds
+          .map(id => nodePositions.get(id))
+          .filter((p): p is { x: number; y: number } => !!p);
+
+        if (positions.length < 2) continue;
+
+        groups.push({
+          memberIds: new Set(allIds),
+          minX: Math.min(...positions.map(p => p.x)) - GROUP_PADDING,
+          minY: Math.min(...positions.map(p => p.y)) - GROUP_PADDING,
+          maxX: Math.max(...positions.map(p => p.x)) + APPROX_NODE_W + GROUP_PADDING,
+          maxY: Math.max(...positions.map(p => p.y)) + APPROX_NODE_H + GROUP_PADDING,
+        });
+      }
+      if (!collapsedIds.has(item.id)) {
+        findProjects(item.children);
+      }
+    }
+  }
+
+  findProjects(tree);
+  if (groups.length === 0) return nodes;
+
+  // Multiple passes to handle cascading pushes
+  const result = nodes.map(n => ({ ...n, position: { ...n.position } }));
+  for (let pass = 0; pass < 3; pass++) {
+    let anyPushed = false;
+    for (const n of result) {
+      if (n.type !== 'mindmap') continue;
+
+      for (const group of groups) {
+        if (group.memberIds.has(n.id)) continue;
+
+        const { x, y } = n.position;
+        const nodeRight = x + APPROX_NODE_W;
+        const nodeBottom = y + APPROX_NODE_H;
+
+        // AABB overlap test
+        if (nodeRight > group.minX && x < group.maxX &&
+            nodeBottom > group.minY && y < group.maxY) {
+          // Push to nearest edge
+          const distToLeft = nodeRight - group.minX;
+          const distToRight = group.maxX - x;
+          const distToTop = nodeBottom - group.minY;
+          const distToBottom = group.maxY - y;
+
+          const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
+
+          if (minDist === distToLeft) {
+            n.position.x = group.minX - APPROX_NODE_W - PUSH_MARGIN;
+          } else if (minDist === distToRight) {
+            n.position.x = group.maxX + PUSH_MARGIN;
+          } else if (minDist === distToTop) {
+            n.position.y = group.minY - APPROX_NODE_H - PUSH_MARGIN;
+          } else {
+            n.position.y = group.maxY + PUSH_MARGIN;
+          }
+          anyPushed = true;
+        }
+      }
+    }
+    if (!anyPushed) break;
+  }
+
+  return result;
+}
+
+// Separate overlapping nodes so they don't stack on top of each other
+function resolveNodeOverlaps(nodes: Node[]): Node[] {
+  const NODE_W = 170;
+  const NODE_H = 48;
+  const MIN_GAP = 30; // minimum gap between any two nodes
+
+  const mindmapIndices: number[] = [];
+  const result = nodes.map((n, i) => {
+    if (n.type === 'mindmap') mindmapIndices.push(i);
+    return { ...n, position: { ...n.position } };
+  });
+
+  // Multiple passes — each pass pushes overlapping pairs apart
+  for (let pass = 0; pass < 15; pass++) {
+    let anyPushed = false;
+
+    for (let i = 0; i < mindmapIndices.length; i++) {
+      for (let j = i + 1; j < mindmapIndices.length; j++) {
+        const a = result[mindmapIndices[i]];
+        const b = result[mindmapIndices[j]];
+
+        // Required separation (node size + gap)
+        const sepX = NODE_W + MIN_GAP;
+        const sepY = NODE_H + MIN_GAP;
+
+        const dx = b.position.x - a.position.x;
+        const dy = b.position.y - a.position.y;
+
+        const overlapX = sepX - Math.abs(dx);
+        const overlapY = sepY - Math.abs(dy);
+
+        // Only overlap if BOTH axes overlap
+        if (overlapX > 0 && overlapY > 0) {
+          anyPushed = true;
+
+          // Push apart radially (away from each other) for a more natural spread
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const totalOverlap = Math.min(overlapX, overlapY);
+          const push = totalOverlap / 2 + 5;
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          a.position.x -= nx * push;
+          a.position.y -= ny * push;
+          b.position.x += nx * push;
+          b.position.y += ny * push;
+        }
+      }
+    }
+
+    if (!anyPushed) break;
+  }
+
+  return result;
 }
 
 // Generate background group nodes for PROJECT items that have visible children
@@ -591,7 +743,7 @@ function calculateLayout(
       // Children are placed around their parent
       // The actual radius is computed by the parent (passed via childRadius)
       const angle = (startAngle + endAngle) / 2;
-      const radius = childRadius || MIN_RADIUS;
+      const radius = childRadius || MIN_RADIUS_CHILD;
       x = centerX + Math.cos(angle) * radius;
       y = centerY + Math.sin(angle) * radius;
     }
@@ -638,27 +790,39 @@ function calculateLayout(
       });
     }
 
-    // Process children if not collapsed
+    // Process children if not collapsed — star layout from parent
     if (hasChildren && !isCollapsed) {
       const visibleChildren = item.children;
-      const totalSubtreeSize = visibleChildren.reduce(
-        (sum, child) => sum + calculateSubtreeSize(child, collapsedIds, depth + 1),
-        0
-      );
-
-      let currentAngle = startAngle;
-      const angleRange = endAngle - startAngle;
-
-      // Dynamic radius for children: ensure they all fit in the allocated arc
       const childCount = visibleChildren.length;
-      const requiredArc = childCount * (NODE_WIDTH + NODE_GAP);
-      const dynamicChildRadius = Math.max(MIN_RADIUS, requiredArc / angleRange);
 
-      visibleChildren.forEach(child => {
-        const childSize = calculateSubtreeSize(child, collapsedIds, depth + 1);
-        const childAngleSpan = (childSize / totalSubtreeSize) * angleRange;
-        const childStartAngle = currentAngle;
-        const childEndAngle = currentAngle + childAngleSpan;
+      // Outward direction = angle from center (0,0) to this node
+      const outwardAngle = Math.atan2(y, x);
+
+      // Fan spread: scale with number of children, clamped to [60°, 180°]
+      const MIN_FAN = Math.PI / 3;  // 60° minimum fan
+      const MAX_FAN = Math.PI;      // 180° maximum fan (outward hemisphere)
+      const fanPerChild = Math.PI / 8; // 22.5° per child
+      const fanSpread = Math.min(MAX_FAN, Math.max(MIN_FAN, childCount * fanPerChild));
+
+      const fanStart = outwardAngle - fanSpread / 2;
+
+      // Dynamic radius: ensure children don't overlap on the arc
+      const requiredArc = childCount * (NODE_WIDTH + NODE_GAP);
+      const dynamicChildRadius = Math.max(MIN_RADIUS_CHILD, requiredArc / fanSpread);
+
+      // Distribute children evenly across the fan
+      visibleChildren.forEach((child, index) => {
+        let childAngle: number;
+        if (childCount === 1) {
+          childAngle = outwardAngle; // Single child goes straight out
+        } else {
+          childAngle = fanStart + (index + 0.5) * (fanSpread / childCount);
+        }
+
+        // Each child gets a slice of the fan for its own subtree
+        const sliceWidth = fanSpread / childCount;
+        const childStartAngle = fanStart + index * sliceWidth;
+        const childEndAngle = childStartAngle + sliceWidth;
 
         processNode(
           child,
@@ -668,11 +832,9 @@ function calculateLayout(
           y,
           childStartAngle,
           childEndAngle,
-          (startAngle + endAngle) / 2,
+          outwardAngle,
           dynamicChildRadius
         );
-
-        currentAngle = childEndAngle;
       });
     }
   }
@@ -699,7 +861,7 @@ function calculateLayout(
     // Dynamic base radius: ensure all root nodes fit on the circumference
     const rootCount = tree.length;
     const requiredCircumference = rootCount * (NODE_WIDTH + NODE_GAP);
-    const dynamicBaseRadius = Math.max(MIN_RADIUS, requiredCircumference / (2 * Math.PI));
+    const dynamicBaseRadius = Math.max(MIN_RADIUS_ROOT, requiredCircumference / (2 * Math.PI));
 
     let currentAngle = -Math.PI / 2; // Start from top
     const angleRange = 2 * Math.PI;
@@ -963,10 +1125,11 @@ function MindMapViewInner({
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
-    const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
+    const resolvedNodes = resolveNodeOverlaps(resolveProjectGroupCollisions(positionedNodes, tree, collapsedIds));
+    const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], nodePositions);
-    return { initialNodes: [...projectGroups, ...positionedNodes], initialEdges: allEdges };
+    return { initialNodes: [...projectGroups, ...resolvedNodes], initialEdges: allEdges };
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, applyPositions]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
@@ -990,9 +1153,10 @@ function MindMapViewInner({
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(newNodes);
+    const resolvedNodes = resolveProjectGroupCollisions(positionedNodes, tree, collapsedIds);
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
+    const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1032,7 +1196,7 @@ function MindMapViewInner({
 
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], nodePositions);
-    setNodes([...projectGroups, ...positionedNodes, ...portalNodes]);
+    setNodes([...projectGroups, ...resolvedNodes, ...portalNodes]);
     setEdges(allEdges);
   }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
 
@@ -1203,9 +1367,10 @@ function MindMapViewInner({
       localStorage.removeItem(positionsStorageKey);
     }
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const resolvedNodes = resolveNodeOverlaps(resolveProjectGroupCollisions(newNodes, tree, collapsedIds));
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
+    const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1242,7 +1407,7 @@ function MindMapViewInner({
     });
 
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
-    setNodes([...projectGroups, ...newNodes, ...portalNodes]);
+    setNodes([...projectGroups, ...resolvedNodes, ...portalNodes]);
     setEdges([...newEdges, ...relationEdges, ...portalEdges]);
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
