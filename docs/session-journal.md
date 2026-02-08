@@ -30,3 +30,40 @@
 **Prochaine etape :** Verification visuelle puis commit si valide
 
 ---
+
+#### [2026-02-08 ~15:00] - Investigation regression profil utilisateur en production
+
+**Demande :** La modale profil utilisateur n'est plus accessible en production et l'avatar ne s'affiche plus.
+
+**Investigation :**
+- Verification exhaustive du code : Layout.tsx, UserProfileModal.tsx, Modal.tsx, routes API, stores — aucune modification par nos commits
+- Build de production : compile sans erreur
+- Git local et remote synchronises
+- Fonctionne en dev, pas en prod
+
+**Diagnostic :** Le service **web** sur Railway avait des deploiements "removed" — le frontend n'etait plus deploye. Cause probable : limites du plan Railway, nettoyage automatique ou probleme de facturation.
+
+**Resolution :** Force redeploy via commit vide (`32734c3`). Le service web a ete redeploye et tout refonctionne.
+
+**Etat :** TERMINE
+**Lecon :** En cas de "regression" en prod uniquement, verifier d'abord l'etat des deploiements Railway avant d'investiguer le code.
+
+---
+
+#### [2026-02-08 ~16:00] - Fix nginx workers OOM sur Railway
+
+**Demande :** Comprendre pourquoi 11 deploiements "removed" ce matin sur Railway (service web).
+
+**Diagnostic :** Les logs montrent que nginx lancait ~47 worker processes (`worker_processes auto;` detecte tous les CPUs du host partage Railway). Cela causait un depassement memoire → Railway arretait le conteneur → retentait → boucle de "removed".
+
+**Actions realisees :**
+- Transforme `docker/nginx.conf` d'un simple `server` block en config nginx complete
+- Ajout `worker_processes 2;` et `worker_connections 512;` pour limiter la memoire
+- Modifie `docker/Dockerfile.web` : copie vers `/etc/nginx/nginx.conf` (au lieu de `conf.d/default.conf`)
+- Ajout `error_log /dev/stderr` et `access_log /dev/stdout` pour visibilite dans Railway
+- Commits : `3f285c2` (fix workers) + `02e002c` (ajout logs)
+
+**Etat :** TERMINE
+**Lecon :** Sur Railway, nginx `worker_processes auto` cree un worker par CPU du host partage (~47), causant un OOM. Toujours forcer `worker_processes 2` pour les conteneurs Railway.
+
+---

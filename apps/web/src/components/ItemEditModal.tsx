@@ -380,43 +380,84 @@ export function ItemEditModal({
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Parent</label>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={toggleParentSortMode}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
-                >
-                  {parentSortMode === 'tree' ? (
-                    <>
-                      <GitBranch className="w-3 h-3" />
-                      <span>Arborescence</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownAZ className="w-3 h-3" />
-                      <span>A-Z</span>
-                    </>
-                  )}
-                </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Parent</label>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={toggleParentSortMode}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
+                  >
+                    {parentSortMode === 'tree' ? (
+                      <>
+                        <GitBranch className="w-3 h-3" />
+                        <span>Arborescence</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownAZ className="w-3 h-3" />
+                        <span>A-Z</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              {canEdit ? (
+                <Select
+                  value={parentId}
+                  onChange={(e) => setParentId(e.target.value)}
+                  options={parentOptions}
+                />
+              ) : (
+                <p className="text-sm">
+                  {parentId
+                    ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu'
+                    : <span className="text-muted-foreground">Aucun parent</span>}
+                </p>
               )}
             </div>
-            {canEdit ? (
-              <Select
-                value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
-                options={parentOptions}
-              />
-            ) : (
-              <p className="text-sm">
-                {parentId
-                  ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu'
-                  : <span className="text-muted-foreground">Aucun parent</span>}
-              </p>
-            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Statut</label>
+              <div className="flex flex-wrap gap-2">
+                {canEdit ? (
+                  (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
+                    const isSelected = (s.id === 'undefined' && !status) || s.id === status;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
+                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                          isSelected
+                            ? `${s.borderColor} font-semibold shadow-sm`
+                            : `${s.borderColor} opacity-60 hover:opacity-100`
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })
+                ) : (
+                  (() => {
+                    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+                    const selected = statuses.find((s) =>
+                      (s.id === 'undefined' && !status) || s.id === status
+                    );
+                    return selected ? (
+                      <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>
+                        {selected.label}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Non défini</span>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -521,45 +562,6 @@ export function ItemEditModal({
               </div>
             </div>
           )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Statut</label>
-            <div className="flex flex-wrap gap-2">
-              {canEdit ? (
-                (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
-                  const isSelected = (s.id === 'undefined' && !status) || s.id === status;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
-                      className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                        isSelected
-                          ? `${s.borderColor} font-semibold shadow-sm`
-                          : `${s.borderColor} opacity-60 hover:opacity-100`
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })
-              ) : (
-                (() => {
-                  const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-                  const selected = statuses.find((s) =>
-                    (s.id === 'undefined' && !status) || s.id === status
-                  );
-                  return selected ? (
-                    <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>
-                      {selected.label}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Non défini</span>
-                  );
-                })()
-              )}
-            </div>
-          </div>
 
           {/* Dependencies/Relations section */}
           <div className="space-y-3 pt-4 border-t border-border">
