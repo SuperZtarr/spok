@@ -84,6 +84,7 @@ export function TypeLabelsManager({ typeLabels, onChange }: TypeLabelsManagerPro
                     onClick={() => moveUp(typeId)}
                     disabled={index === 0}
                     className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                    title="Déplacer vers le haut"
                   >
                     <ChevronUp className="w-4 h-4" />
                   </button>
@@ -91,6 +92,7 @@ export function TypeLabelsManager({ typeLabels, onChange }: TypeLabelsManagerPro
                     onClick={() => moveDown(typeId)}
                     disabled={index === sortedTypes.length - 1}
                     className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                    title="Déplacer vers le bas"
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -120,11 +122,13 @@ export function TypeLabelsManager({ typeLabels, onChange }: TypeLabelsManagerPro
                   Visible
                 </label>
 
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
+                <span title={isExpanded ? 'Réduire' : 'Développer les options'}>
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </span>
               </div>
 
               {isExpanded && (

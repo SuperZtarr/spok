@@ -438,7 +438,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
           <Button variant="outline" size="sm" onClick={goToPrevious} title="Précédent">
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={goToToday}>
+          <Button variant="outline" size="sm" onClick={goToToday} title="Centrer sur la date du jour">
             Aujourd'hui
           </Button>
           <Button variant="outline" size="sm" onClick={goToNext} title="Suivant">
@@ -471,6 +471,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
               className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 min-w-[100px] text-center"
               value={zoomLevel}
               onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
+              title="Niveau de zoom"
             >
               <option value="day">Jour</option>
               <option value="week">Semaine</option>
@@ -605,6 +606,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                           toggleCollapse(item.id);
                         }}
                         className="p-0.5 hover:bg-muted rounded"
+                        title={isCollapsed ? 'Développer' : 'Réduire'}
                       >
                         {isCollapsed ? (
                           <ChevronRight className="w-4 h-4 text-muted-foreground" />

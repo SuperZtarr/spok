@@ -165,6 +165,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                   onClick={() => moveUp(index)}
                   disabled={index === 0}
                   className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                  title="Déplacer vers le haut"
                 >
                   <ChevronUp className="w-4 h-4" />
                 </button>
@@ -172,6 +173,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                   onClick={() => moveDown(index)}
                   disabled={index === sortedStatuses.length - 1}
                   className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                  title="Déplacer vers le bas"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -192,6 +194,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                 <span
                   className="flex-1 cursor-pointer hover:text-primary"
                   onClick={() => setEditingId(status.id)}
+                  title="Cliquer pour renommer"
                 >
                   {status.label}
                 </span>

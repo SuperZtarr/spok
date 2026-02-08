@@ -1273,6 +1273,7 @@ function MindMapViewInner({
           <button
             onClick={() => setLegendOpen(v => !v)}
             className="flex items-center gap-1 font-semibold text-foreground w-full"
+            title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
           >
             <ChevronRight className={`w-3 h-3 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
             Légende

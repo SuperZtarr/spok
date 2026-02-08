@@ -204,6 +204,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                           e.stopPropagation();
                           onUpdateStatus(item.id, doneStatusId);
                         }}
+                        title="Marquer terminé"
                       >
                         <CheckSquare className="w-3.5 h-3.5" />
                       </Button>
@@ -231,6 +232,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                           e.stopPropagation();
                           onDelete(item.id);
                         }}
+                        title="Supprimer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>

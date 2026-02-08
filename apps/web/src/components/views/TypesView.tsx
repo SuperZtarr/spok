@@ -91,6 +91,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
             {...attributes}
             className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
             onClick={(e) => e.stopPropagation()}
+            title="Glisser pour changer de type"
           >
             <GripVertical className="w-4 h-4" />
           </div>
@@ -151,6 +152,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
               e.stopPropagation();
               onDelete(item.id);
             }}
+            title="Supprimer"
           >
             <Trash2 className="w-3 h-3" />
           </Button>

@@ -51,6 +51,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId }: MoveToSpac
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+          title="Fermer"
         >
           <X className="w-5 h-5" />
         </button>

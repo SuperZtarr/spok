@@ -96,6 +96,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             {...attributes}
             className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
             onClick={(e) => e.stopPropagation()}
+            title="Glisser pour réorganiser"
           >
             <GripVertical className="w-4 h-4" />
           </div>
@@ -168,6 +169,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
               e.stopPropagation();
               onDelete(item.id);
             }}
+            title="Supprimer"
           >
             <Trash2 className="w-3 h-3" />
           </Button>

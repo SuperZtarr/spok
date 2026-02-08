@@ -55,6 +55,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId }: Dupli
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+          title="Fermer"
         >
           <X className="w-5 h-5" />
         </button>

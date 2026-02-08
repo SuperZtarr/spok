@@ -778,6 +778,7 @@ export function SequenceView({
                 setLinkMode(!linkMode);
                 setLinkSource(null);
               }}
+              title="Créer une relation entre deux éléments"
             >
               <Link2 className="w-4 h-4 mr-1" />
               {linkMode ? 'Annuler' : 'Lier'}
@@ -887,6 +888,7 @@ export function SequenceView({
                               e.stopPropagation();
                               onUpdateStatus(item.id, doneStatusId);
                             }}
+                            title="Marquer terminé"
                           >
                             <CheckSquare className="w-3.5 h-3.5" />
                           </Button>
@@ -914,6 +916,7 @@ export function SequenceView({
                               e.stopPropagation();
                               onDelete(item.id);
                             }}
+                            title="Supprimer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>

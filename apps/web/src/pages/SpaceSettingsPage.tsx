@@ -148,6 +148,7 @@ export function SpaceSettingsPage() {
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/spaces/${spaceId}`)}
+            title="Retour à l'espace"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Retour
@@ -162,6 +163,7 @@ export function SpaceSettingsPage() {
             variant="outline"
             onClick={handleReset}
             disabled={resetMutation.isPending}
+            title="Rétablir les paramètres par défaut"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
             Réinitialiser

@@ -138,7 +138,7 @@ export function CommunitySettingsPage() {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/')} title="Retour au tableau de bord">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour
         </Button>
@@ -220,7 +220,7 @@ export function CommunitySettingsPage() {
                 </div>
               </div>
               {canEdit && (
-                <Button size="sm" variant="outline" onClick={handleStartEdit}>
+                <Button size="sm" variant="outline" onClick={handleStartEdit} title="Modifier les informations de la communauté">
                   Modifier
                 </Button>
               )}
@@ -310,6 +310,7 @@ export function CommunitySettingsPage() {
                       variant="ghost"
                       onClick={() => handleRemoveSpace(space.id, space.name)}
                       disabled={removeSpaceMutation.isPending}
+                      title="Retirer l'espace de la communauté"
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
