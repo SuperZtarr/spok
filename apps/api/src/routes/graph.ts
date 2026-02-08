@@ -29,6 +29,12 @@ function parseLinkTypes(linkTypesParam?: string): Set<string> {
   return new Set(linkTypesParam.split(',').map(t => t.trim()));
 }
 
+interface BuildGraphOptions {
+  includeSpaceNodes?: boolean;
+  /** Map of spaceId -> communityId for grouping spaces under communities */
+  spaceCommunityMap?: Map<string, { communityId: string; communityName: string }>;
+}
+
 async function buildGraph(
   prisma: any,
   items: Array<{
@@ -42,8 +48,11 @@ async function buildGraph(
     tags: Array<{ tagId: string }>;
   }>,
   linkTypes: Set<string>,
+  options: BuildGraphOptions = {},
   maxTagLinks: number = 10
 ): Promise<GraphResponse> {
+  const { includeSpaceNodes = false, spaceCommunityMap } = options;
+
   const nodes: GraphNode[] = items.map(item => ({
     id: item.id,
     title: item.title,
@@ -58,6 +67,78 @@ async function buildGraph(
   const nodeIds = new Set(items.map(i => i.id));
   const links: GraphLink[] = [];
   let linkCounter = 0;
+
+  // Add structural nodes (space + community) for multi-space views
+  if (includeSpaceNodes && linkTypes.has('hierarchy')) {
+    // Collect unique spaces
+    const spaceMap = new Map<string, string>();
+    for (const item of items) {
+      if (!spaceMap.has(item.spaceId)) {
+        spaceMap.set(item.spaceId, item.space.name);
+      }
+    }
+
+    // Add community nodes if spaceCommunityMap is provided
+    const addedCommunities = new Set<string>();
+    if (spaceCommunityMap) {
+      for (const [, info] of spaceCommunityMap) {
+        if (!addedCommunities.has(info.communityId)) {
+          addedCommunities.add(info.communityId);
+          const communityNodeId = `community-${info.communityId}`;
+          nodes.push({
+            id: communityNodeId,
+            title: info.communityName,
+            type: 'COMMUNITY',
+            status: null,
+            spaceId: '',
+            spaceName: '',
+            parentId: null,
+            tagIds: [],
+          });
+          nodeIds.add(communityNodeId);
+        }
+      }
+    }
+
+    // Add space nodes and link them to their community (or leave as root)
+    for (const [spaceId, spaceName] of spaceMap) {
+      const spaceNodeId = `space-${spaceId}`;
+      nodes.push({
+        id: spaceNodeId,
+        title: spaceName,
+        type: 'SPACE',
+        status: null,
+        spaceId,
+        spaceName,
+        parentId: null,
+        tagIds: [],
+      });
+      nodeIds.add(spaceNodeId);
+
+      // Link space to its community
+      const communityInfo = spaceCommunityMap?.get(spaceId);
+      if (communityInfo) {
+        links.push({
+          id: `h-${linkCounter++}`,
+          source: `community-${communityInfo.communityId}`,
+          target: spaceNodeId,
+          linkType: 'hierarchy',
+        });
+      }
+    }
+
+    // Link root items (no parent or parent not in graph) to their space node
+    for (const item of items) {
+      if (!item.parentId || !nodeIds.has(item.parentId)) {
+        links.push({
+          id: `h-${linkCounter++}`,
+          source: `space-${item.spaceId}`,
+          target: item.id,
+          linkType: 'hierarchy',
+        });
+      }
+    }
+  }
 
   // Hierarchy links
   if (linkTypes.has('hierarchy')) {
@@ -220,6 +301,12 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.forbidden('Access denied');
       }
 
+      // Get community name for the spaceCommunityMap
+      const community = await fastify.prisma.community.findUnique({
+        where: { id: communityId },
+        select: { name: true },
+      });
+
       const items = await fastify.prisma.item.findMany({
         where: {
           space: {
@@ -234,20 +321,37 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           status: true,
           spaceId: true,
           parentId: true,
-          space: { select: { name: true } },
+          space: { select: { name: true, communityId: true } },
           tags: { select: { tagId: true } },
         },
       });
 
-      return buildGraph(fastify.prisma, items, linkTypes);
+      // Build spaceCommunityMap
+      const spaceCommunityMap = new Map<string, { communityId: string; communityName: string }>();
+      for (const item of items) {
+        if (!spaceCommunityMap.has(item.spaceId) && item.space.communityId) {
+          spaceCommunityMap.set(item.spaceId, {
+            communityId: item.space.communityId,
+            communityName: community?.name || '',
+          });
+        }
+      }
+
+      return buildGraph(fastify.prisma, items, linkTypes, {
+        includeSpaceNodes: true,
+        spaceCommunityMap,
+      });
     }
   );
 
   // Global graph (all spaces the user can access: direct memberships + community spaces)
-  fastify.get<{ Querystring: { linkTypes?: string } }>(
+  fastify.get<{ Querystring: { linkTypes?: string; communityIds?: string } }>(
     '/graph/global',
     async (request) => {
       const linkTypes = parseLinkTypes(request.query.linkTypes);
+      const filterCommunityIds = request.query.communityIds
+        ? request.query.communityIds.split(',').map(id => id.trim()).filter(Boolean)
+        : null; // null = no filter (show all)
 
       // 1. Spaces where user is a direct member
       const directMemberships = await fastify.prisma.spaceMembership.findMany({
@@ -261,12 +365,17 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         where: { userId: request.user.userId },
         select: { communityId: true },
       });
-      const communityIds = communityMemberships.map(m => m.communityId);
+      const allUserCommunityIds = communityMemberships.map(m => m.communityId);
 
-      const communitySpaces = communityIds.length > 0
+      // Apply community filter if provided
+      const activeCommunityIds = filterCommunityIds
+        ? allUserCommunityIds.filter(id => filterCommunityIds.includes(id))
+        : allUserCommunityIds;
+
+      const communitySpaces = activeCommunityIds.length > 0
         ? await fastify.prisma.space.findMany({
             where: {
-              communityId: { in: communityIds },
+              communityId: { in: activeCommunityIds },
               type: 'GROUP',
             },
             select: { id: true },
@@ -274,8 +383,31 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         : [];
       const communitySpaceIds = communitySpaces.map(s => s.id);
 
+      // When filtering by communities, only include direct spaces that belong to a selected community
+      let filteredDirectSpaceIds = directSpaceIds;
+      if (filterCommunityIds) {
+        const directSpacesWithCommunity = directSpaceIds.length > 0
+          ? await fastify.prisma.space.findMany({
+              where: { id: { in: directSpaceIds } },
+              select: { id: true, communityId: true },
+            })
+          : [];
+        filteredDirectSpaceIds = directSpacesWithCommunity
+          .filter(s => !s.communityId || filterCommunityIds.includes(s.communityId))
+          .map(s => s.id);
+      }
+
       // Merge all unique space IDs
-      const allSpaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
+      const allSpaceIds = [...new Set([...filteredDirectSpaceIds, ...communitySpaceIds])];
+
+      // Get community names for spaceCommunityMap
+      const communities = activeCommunityIds.length > 0
+        ? await fastify.prisma.community.findMany({
+            where: { id: { in: activeCommunityIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+      const communityNameMap = new Map(communities.map(c => [c.id, c.name]));
 
       const items = await fastify.prisma.item.findMany({
         where: {
@@ -288,12 +420,26 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           status: true,
           spaceId: true,
           parentId: true,
-          space: { select: { name: true } },
+          space: { select: { name: true, communityId: true } },
           tags: { select: { tagId: true } },
         },
       });
 
-      return buildGraph(fastify.prisma, items, linkTypes);
+      // Build spaceCommunityMap
+      const spaceCommunityMap = new Map<string, { communityId: string; communityName: string }>();
+      for (const item of items) {
+        if (!spaceCommunityMap.has(item.spaceId) && item.space.communityId) {
+          spaceCommunityMap.set(item.spaceId, {
+            communityId: item.space.communityId,
+            communityName: communityNameMap.get(item.space.communityId) || '',
+          });
+        }
+      }
+
+      return buildGraph(fastify.prisma, items, linkTypes, {
+        includeSpaceNodes: true,
+        spaceCommunityMap,
+      });
     }
   );
 };

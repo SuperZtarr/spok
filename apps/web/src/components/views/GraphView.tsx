@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { useQuery } from '@tanstack/react-query';
 import { Maximize2, FolderKanban, Building2, Globe } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useGraphData } from '../../hooks/useGraphData';
+import { communitiesApi } from '../../lib/api';
 
 const STORAGE_KEY = 'graph-link-types';
 const SCOPE_STORAGE_KEY = 'graph-scope';
+const COMMUNITY_FILTER_KEY = 'graph-community-filter';
 
 const NODE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -17,6 +20,8 @@ const NODE_COLORS: Record<string, string> = {
   CONFIG: '#64748b',
   DOCUMENT: '#78716c',
   IMAGE: '#ec4899',
+  SPACE: '#f59e0b',
+  COMMUNITY: '#ef4444',
 };
 
 const LINK_COLORS: Record<string, string> = {
@@ -82,6 +87,59 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     return opts.filter(o => o.available);
   }, [spaceId, communityId, spaceName, communityName, level, entityId]);
 
+  // Fetch user's communities for the filter (only when scope could use it)
+  const { data: userCommunities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: () => communitiesApi.list(),
+    enabled: scope === 'global' || scope === 'community',
+  });
+
+  // Community filter (persisted in localStorage) — null means "all"
+  const [selectedCommunityIds, setSelectedCommunityIds] = useState<Set<string> | null>(() => {
+    try {
+      const saved = localStorage.getItem(COMMUNITY_FILTER_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return new Set(parsed);
+      }
+    } catch { /* ignore */ }
+    return null; // null = show all
+  });
+
+  // Initialize selected communities to all when list first loads
+  useEffect(() => {
+    if (userCommunities && selectedCommunityIds === null) {
+      setSelectedCommunityIds(new Set(userCommunities.map(c => c.id)));
+    }
+  }, [userCommunities, selectedCommunityIds]);
+
+  useEffect(() => {
+    if (selectedCommunityIds) {
+      localStorage.setItem(COMMUNITY_FILTER_KEY, JSON.stringify([...selectedCommunityIds]));
+    }
+  }, [selectedCommunityIds]);
+
+  const toggleCommunity = (id: string) => {
+    setSelectedCommunityIds(prev => {
+      const current = prev || new Set(userCommunities?.map(c => c.id) || []);
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Build communityIds array for API
+  const communityIdsFilter = useMemo(() => {
+    if (scope !== 'global' || !selectedCommunityIds || !userCommunities) return undefined;
+    // Only pass filter if not all are selected
+    if (selectedCommunityIds.size === userCommunities.length) return undefined;
+    return [...selectedCommunityIds];
+  }, [scope, selectedCommunityIds, userCommunities]);
+
   // Link type toggles (persisted in localStorage)
   const [activeLinkTypes, setActiveLinkTypes] = useState<Set<string>>(() => {
     try {
@@ -108,7 +166,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   };
 
   const linkTypesArray = useMemo(() => [...activeLinkTypes], [activeLinkTypes]);
-  const { data, isLoading } = useGraphData(scope, activeEntityId, linkTypesArray);
+  const { data, isLoading } = useGraphData(scope, activeEntityId, linkTypesArray, communityIdsFilter);
 
   // Observe container size
   useEffect(() => {
@@ -156,8 +214,9 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.title || '';
-    const fontSize = Math.max(12 / globalScale, 2);
-    const nodeRadius = 5;
+    const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
+    const nodeRadius = isStructural ? (node.type === 'COMMUNITY' ? 10 : 8) : 5;
+    const fontSize = Math.max((isStructural ? 14 : 12) / globalScale, 2);
     const color = NODE_COLORS[node.type] || '#94a3b8';
 
     // Draw circle
@@ -166,15 +225,15 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5 / globalScale;
+    ctx.lineWidth = (isStructural ? 2.5 : 1.5) / globalScale;
     ctx.stroke();
 
     // Draw label
-    if (globalScale > 0.5) {
-      ctx.font = `${fontSize}px sans-serif`;
+    if (globalScale > 0.5 || isStructural) {
+      ctx.font = `${isStructural ? 'bold ' : ''}${fontSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = '#e2e8f0';
+      ctx.fillStyle = isStructural ? '#fbbf24' : '#e2e8f0';
       const maxChars = Math.max(10, Math.floor(30 / Math.max(1, 2 / globalScale)));
       const truncated = label.length > maxChars ? label.slice(0, maxChars) + '...' : label;
       ctx.fillText(truncated, node.x, node.y + nodeRadius + 2);
@@ -182,8 +241,9 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   }, []);
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
+    const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
     ctx.beginPath();
-    ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI);
+    ctx.arc(node.x, node.y, isStructural ? 12 : 8, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
   }, []);
@@ -204,6 +264,18 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   }, []);
 
   const nodeLabel = useCallback((node: any) => {
+    if (node.type === 'COMMUNITY') {
+      return `<div style="background:#1e293b;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;">
+        <strong>${node.title}</strong><br/>
+        <span style="color:#ef4444">Communaute</span>
+      </div>`;
+    }
+    if (node.type === 'SPACE') {
+      return `<div style="background:#1e293b;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;">
+        <strong>${node.title}</strong><br/>
+        <span style="color:#f59e0b">Espace</span>
+      </div>`;
+    }
     return `<div style="background:#1e293b;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;max-width:250px;">
       <strong>${node.title}</strong><br/>
       <span style="color:#94a3b8">${node.type} — ${node.spaceName}</span>
@@ -272,6 +344,28 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
             {LINK_LABELS[type]}
           </label>
         ))}
+        {/* Community filter — only in global scope with multiple communities */}
+        {scope === 'global' && userCommunities && userCommunities.length > 1 && (
+          <>
+            <div className="border-t my-1" />
+            <div className="text-xs font-medium text-muted-foreground mb-1">Communautes</div>
+            {userCommunities.map(c => (
+              <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedCommunityIds?.has(c.id) ?? true}
+                  onChange={() => toggleCommunity(c.id)}
+                  className="rounded"
+                />
+                <span
+                  className="w-2 h-2 inline-block rounded-full flex-shrink-0"
+                  style={{ backgroundColor: NODE_COLORS.COMMUNITY }}
+                />
+                <span className="truncate max-w-[120px]">{c.name}</span>
+              </label>
+            ))}
+          </>
+        )}
         <div className="pt-1 border-t">
           <Button variant="ghost" size="sm" onClick={handleFitView} className="w-full justify-start">
             <Maximize2 className="w-3.5 h-3.5 mr-1.5" />

@@ -962,8 +962,13 @@ export const graphApi = {
   community: (communityId: string, linkTypes: string[]) =>
     fetchApi<{ nodes: any[]; links: any[] }>(`/communities/${communityId}/graph?linkTypes=${linkTypes.join(',')}`),
 
-  global: (linkTypes: string[]) =>
-    fetchApi<{ nodes: any[]; links: any[] }>(`/graph/global?linkTypes=${linkTypes.join(',')}`),
+  global: (linkTypes: string[], communityIds?: string[]) => {
+    const params = new URLSearchParams({ linkTypes: linkTypes.join(',') });
+    if (communityIds && communityIds.length > 0) {
+      params.set('communityIds', communityIds.join(','));
+    }
+    return fetchApi<{ nodes: any[]; links: any[] }>(`/graph/global?${params.toString()}`);
+  },
 };
 
 export { ApiError };
