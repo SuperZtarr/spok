@@ -49,7 +49,7 @@ export function SpacesPage() {
     queryFn: () =>
       adminApi.spaces.list({
         page,
-        pageSize: 100,
+        pageSize: 1000,
         search: search || undefined,
         anomaly,
       }),
