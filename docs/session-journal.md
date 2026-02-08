@@ -67,3 +67,24 @@
 **Lecon :** Sur Railway, nginx `worker_processes auto` cree un worker par CPU du host partage (~47), causant un OOM. Toujours forcer `worker_processes 2` pour les conteneurs Railway.
 
 ---
+
+#### [2026-02-08 ~16:45] - MindMap : rayons dynamiques + blocs projet deplacables
+
+**Demande :** Eviter la superposition des noeuds dans la carte mentale quand il y a beaucoup d'items. Permettre de deplacer les blocs projet avec leurs enfants.
+
+**Actions realisees :**
+- Remplace les constantes fixes (`BASE_RADIUS=450`, `RADIUS_INCREMENT=400`) par des rayons dynamiques
+  - `dynamicBaseRadius = max(MIN_RADIUS, rootCount * (NODE_WIDTH+NODE_GAP) / 2pi)` pour les items racine
+  - `dynamicChildRadius = max(MIN_RADIUS, childCount * (NODE_WIDTH+NODE_GAP) / angleRange)` pour les enfants
+- Blocs projet maintenant draggables : quand on deplace un bloc, tous ses noeuds enfants se deplacent ensemble
+  - `ProjectGroupNode` rendu interactif (cursor grab)
+  - `onNodesChange` etendu pour detecter le drag d'un groupe et appliquer le delta a tous ses membres
+  - Positions des membres sauvegardees a la fin du drag
+
+**Fichier modifie :**
+- `apps/web/src/components/views/MindMapView.tsx`
+
+**Etat :** EN COURS
+**Prochaine etape :** Verification visuelle puis commit si valide
+
+---

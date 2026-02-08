@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, Edit2, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
 
 interface MindMapViewProps {
   items: ItemWithRelations[];
@@ -161,7 +161,7 @@ interface MindMapNodeProps {
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onEdit, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
+  const { item, hexColor, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -215,16 +215,6 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
       {/* Action buttons on hover */}
       <div className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 z-10">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(item.id);
-          }}
-          className="p-1 bg-white rounded-full shadow-md hover:bg-blue-50"
-          title="Voir"
-        >
-          <Edit2 className="w-3 h-3 text-blue-600" />
-        </button>
         {canEdit && (
           <button
             onClick={(e) => {
@@ -365,6 +355,7 @@ interface ProjectGroupNodeProps {
     label: string;
     childCount: number;
     hexColor: string;
+    memberIds: string[];
   };
 }
 
@@ -373,7 +364,7 @@ function ProjectGroupNode({ data }: ProjectGroupNodeProps) {
 
   return (
     <div
-      className="w-full h-full rounded-xl pointer-events-none"
+      className="w-full h-full rounded-xl cursor-grab active:cursor-grabbing"
       style={{
         border: `2px dashed ${hexColor}`,
         backgroundColor: `${hexColor}33`,
@@ -398,8 +389,9 @@ const nodeTypes = {
 };
 
 // Layout constants for radial layout
-const BASE_RADIUS = 450; // Base radius for first level (root items around space node)
-const RADIUS_INCREMENT = 400; // Radius for children around parent
+const NODE_WIDTH = 160;  // Approximate width of a node (including padding)
+const NODE_GAP = 40;     // Minimum gap between two adjacent nodes
+const MIN_RADIUS = 300;  // Minimum radius for any level
 const MIN_ANGLE_SPREAD = Math.PI / 4; // Minimum angle between siblings (45 degrees)
 const DEPTH_ANGLE_MULTIPLIER = 1.5; // Multiply angular spread per extra depth level
 
@@ -475,13 +467,14 @@ function generateProjectGroupNodes(
           position: { x: minX, y: minY },
           style: { width: maxX - minX, height: maxY - minY },
           zIndex: -100 + depth,
-          selectable: false,
-          draggable: false,
+          selectable: true,
+          draggable: true,
           connectable: false,
           data: {
             label: item.title,
             childCount: descendantIds.length,
             hexColor: darkerHex,
+            memberIds: allIds,
           },
         });
       }
@@ -577,7 +570,8 @@ function calculateLayout(
     centerY: number,
     startAngle: number,
     endAngle: number,
-    parentAngle?: number
+    parentAngle?: number,
+    childRadius?: number
   ) {
     const statusColor = getStatusColor(item.status, statuses);
     const hexColor = tailwindBgToHex(statusColor);
@@ -595,8 +589,9 @@ function calculateLayout(
       y = centerY;
     } else {
       // Children are placed around their parent
-      const radius = RADIUS_INCREMENT;
+      // The actual radius is computed by the parent (passed via childRadius)
       const angle = (startAngle + endAngle) / 2;
+      const radius = childRadius || MIN_RADIUS;
       x = centerX + Math.cos(angle) * radius;
       y = centerY + Math.sin(angle) * radius;
     }
@@ -654,6 +649,11 @@ function calculateLayout(
       let currentAngle = startAngle;
       const angleRange = endAngle - startAngle;
 
+      // Dynamic radius for children: ensure they all fit in the allocated arc
+      const childCount = visibleChildren.length;
+      const requiredArc = childCount * (NODE_WIDTH + NODE_GAP);
+      const dynamicChildRadius = Math.max(MIN_RADIUS, requiredArc / angleRange);
+
       visibleChildren.forEach(child => {
         const childSize = calculateSubtreeSize(child, collapsedIds, depth + 1);
         const childAngleSpan = (childSize / totalSubtreeSize) * angleRange;
@@ -668,7 +668,8 @@ function calculateLayout(
           y,
           childStartAngle,
           childEndAngle,
-          (startAngle + endAngle) / 2
+          (startAngle + endAngle) / 2,
+          dynamicChildRadius
         );
 
         currentAngle = childEndAngle;
@@ -695,6 +696,11 @@ function calculateLayout(
       0
     );
 
+    // Dynamic base radius: ensure all root nodes fit on the circumference
+    const rootCount = tree.length;
+    const requiredCircumference = rootCount * (NODE_WIDTH + NODE_GAP);
+    const dynamicBaseRadius = Math.max(MIN_RADIUS, requiredCircumference / (2 * Math.PI));
+
     let currentAngle = -Math.PI / 2; // Start from top
     const angleRange = 2 * Math.PI;
 
@@ -705,9 +711,9 @@ function calculateLayout(
       const endAngle = currentAngle + itemAngleSpan;
       const midAngle = (startAngle + endAngle) / 2;
 
-      // Position root items around the space node
-      const x = Math.cos(midAngle) * BASE_RADIUS;
-      const y = Math.sin(midAngle) * BASE_RADIUS;
+      // Position root items around the space node with dynamic radius
+      const x = Math.cos(midAngle) * dynamicBaseRadius;
+      const y = Math.sin(midAngle) * dynamicBaseRadius;
 
       // Add edge from space to root item
       const sourceHandle = getHandleFromAngle(midAngle) + '-source';
@@ -850,6 +856,9 @@ function MindMapViewInner({
   // Saved node positions
   const savedPositions = useRef<Record<string, { x: number; y: number }>>({});
 
+  // Track group drag start position for moving children with the group
+  const groupDragStart = useRef<{ groupId: string; startPos: { x: number; y: number } } | null>(null);
+
   // Load saved positions from localStorage
   useEffect(() => {
     if (!positionsStorageKey) return;
@@ -964,7 +973,68 @@ function MindMapViewInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Wrap onNodesChange to recalculate edge handles when nodes are dragged
+  // and to move group member nodes when a project group is dragged
   const onNodesChange = useCallback((changes: any) => {
+    // Check if a project group is being dragged
+    const groupDrag = changes.find((c: any) =>
+      c.type === 'position' && c.position && c.id?.startsWith('project-group-')
+    );
+
+    if (groupDrag && groupDrag.position) {
+      // On first drag event, record the start position
+      if (!groupDragStart.current || groupDragStart.current.groupId !== groupDrag.id) {
+        // Get current position of this group node
+        setNodes(currentNodes => {
+          const groupNode = currentNodes.find(n => n.id === groupDrag.id);
+          if (groupNode) {
+            groupDragStart.current = {
+              groupId: groupDrag.id,
+              startPos: { ...groupNode.position },
+            };
+          }
+          return currentNodes;
+        });
+      }
+
+      if (groupDragStart.current && groupDragStart.current.groupId === groupDrag.id) {
+        // Apply the drag normally first
+        onNodesChangeBase(changes);
+
+        // Then move all member nodes by the same delta
+        setNodes(currentNodes => {
+          const groupNode = currentNodes.find(n => n.id === groupDrag.id);
+          if (!groupNode) return currentNodes;
+
+          const memberIds = (groupNode.data as any)?.memberIds as string[] | undefined;
+          if (!memberIds || memberIds.length === 0) return currentNodes;
+
+          const dx = groupNode.position.x - groupDragStart.current!.startPos.x;
+          const dy = groupNode.position.y - groupDragStart.current!.startPos.y;
+
+          if (dx === 0 && dy === 0) return currentNodes;
+
+          // Update start position for next delta calculation
+          groupDragStart.current!.startPos = { ...groupNode.position };
+
+          const memberSet = new Set(memberIds);
+          return currentNodes.map(n => {
+            if (memberSet.has(n.id)) {
+              return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
+            }
+            return n;
+          });
+        });
+
+        // Recalculate edges
+        setNodes(currentNodes => {
+          const nodePositions = new Map(currentNodes.map(n => [n.id, n.position]));
+          setEdges(currentEdges => recalculateEdgeHandles(currentEdges, nodePositions));
+          return currentNodes;
+        });
+        return;
+      }
+    }
+
     onNodesChangeBase(changes);
     // If any position change, recalculate edges
     const hasPositionChange = changes.some((c: any) => c.type === 'position' && c.position);
@@ -1109,6 +1179,23 @@ function MindMapViewInner({
         if (draggedNode.id === '__space__') {
           savedPositions.current[draggedNode.id] = draggedNode.position;
           savePositions();
+        }
+        // Save positions of all member nodes after a group drag
+        if (draggedNode.type === 'projectGroup') {
+          groupDragStart.current = null;
+          const memberIds = (draggedNode.data as any)?.memberIds as string[] | undefined;
+          if (memberIds) {
+            setNodes(currentNodes => {
+              const memberSet = new Set(memberIds);
+              currentNodes.forEach(n => {
+                if (memberSet.has(n.id)) {
+                  savedPositions.current[n.id] = n.position;
+                }
+              });
+              savePositions();
+              return currentNodes;
+            });
+          }
         }
         setDropTargetId(null);
         return;
