@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, FlaskConical } from 'lucide-react';
+import { LogOut, Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, FlaskConical, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { Button } from './ui/Button';
@@ -32,6 +32,7 @@ export function AdminLayout() {
       if (location.pathname === '/admin/anomalies') return 'Anomalies';
       if (location.pathname === '/admin/referentiels') return 'Referentiels';
       if (location.pathname === '/admin/tests') return 'Tests';
+      if (location.pathname === '/admin/stats') return 'Statistiques';
       return 'Administration';
     };
     document.title = `SPOK Admin — ${getPageTitle()}`;
@@ -136,6 +137,18 @@ export function AdminLayout() {
             >
               <FlaskConical className="w-4 h-4" />
               Tests
+            </Link>
+
+            <Link
+              to="/admin/stats"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                isActive('/admin/stats')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Statistiques
             </Link>
           </div>
         </nav>

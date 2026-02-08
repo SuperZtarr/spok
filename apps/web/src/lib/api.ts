@@ -862,6 +862,16 @@ export const adminApi = {
       }>('/admin/referentiels'),
   },
 
+  stats: {
+    get: (period: string) =>
+      fetchApi<{
+        totals: { items: number; contributions: number; users: number; spaces: number };
+        timeSeries: Array<{ date: string; itemsCreated: number; itemsModified: number; contributions: number }>;
+        byType: Array<{ type: string; count: number }>;
+        topSpaces: Array<{ spaceId: string; spaceName: string; itemCount: number; contributionCount: number }>;
+      }>(`/admin/stats?period=${period}`),
+  },
+
   anomalies: {
     summary: () =>
       fetchApi<{

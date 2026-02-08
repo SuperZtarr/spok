@@ -40,6 +40,7 @@ import { CommunitiesPage } from './pages/admin/CommunitiesPage';
 import { AnomaliesPage } from './pages/admin/AnomaliesPage';
 import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { TestsPage } from './pages/admin/TestsPage';
+import { StatsPage } from './pages/admin/StatsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -135,6 +136,7 @@ export default function App() {
         <Route path="anomalies" element={<AnomaliesPage />} />
         <Route path="referentiels" element={<ReferentielsPage />} />
         <Route path="tests" element={<TestsPage />} />
+        <Route path="stats" element={<StatsPage />} />
       </Route>
     </Routes>
     <DevIndicator />
