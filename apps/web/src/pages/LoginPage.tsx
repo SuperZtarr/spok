@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '../components/ui
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +21,7 @@ export function LoginPage() {
     mutationFn: authApi.login,
     onSuccess: (data) => {
       setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
+      queryClient.clear();
       navigate('/');
     },
     onError: (err) => {
