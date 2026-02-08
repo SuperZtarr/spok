@@ -1,12 +1,15 @@
 # SPOK - Suivi des tâches
 
 ## En cours
-_Aucune tâche en cours_
+| Vue graphe force-directed (espace, communauté, global) avec react-force-graph-2d | en attente commit |
 
 ## À faire
 _Aucune tâche planifiée_
 
 ## Terminé récemment
+| 2026-02-08 | Groupement natif ReactFlow (parentId) pour zones projet MindMap | 381e40a |
+| 2026-02-08 | Breadcrumb ItemEditModal + zoom projet MindMap + favicon optimisé | 3aaffbb |
+| 2026-02-08 | MindMap : layout étoile + résolution collisions zones projet | 717b916 |
 | 2026-02-08 | Docs : cartographie composants + catalogue fonctionnalités | c51dcde |
 | 2026-02-08 | MindMap : rayons dynamiques + blocs projet déplaçables | 891fc2a |
 | 2026-02-08 | Dashboard : titre dédoublonné + barre d'actions sticky | 3ded0ce |

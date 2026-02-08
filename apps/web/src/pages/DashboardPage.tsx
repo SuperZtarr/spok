@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -10,6 +10,7 @@ import { Select } from '../components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import type { SpaceWithRole } from '@spok/shared';
+import { GraphView } from '../components/views/GraphView';
 
 // Reusable space card component
 function SpaceCard({ space, onJoin }: { space: SpaceWithRole; onJoin?: (id: string) => void }) {
@@ -79,9 +80,11 @@ function SpaceCard({ space, onJoin }: { space: SpaceWithRole; onJoin?: (id: stri
 
 export function DashboardPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const showNewSpace = searchParams.get('new') === 'space';
   const { currentCommunity } = useCommunityStore();
+  const [activeTab, setActiveTab] = useState<'spaces' | 'graph'>('spaces');
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -192,14 +195,48 @@ export function DashboardPage() {
     <div className="flex flex-col h-full">
       {/* Barre d'actions sticky */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex-shrink-0">
-        <div className="max-w-6xl mx-auto flex items-center justify-end">
-          <Button onClick={() => setSearchParams({ new: 'space' })}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvel espace
-          </Button>
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('spaces')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'spaces'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FolderKanban className="w-4 h-4" />
+              Espaces
+            </button>
+            <button
+              onClick={() => setActiveTab('graph')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'graph'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Network className="w-4 h-4" />
+              Graphe global
+            </button>
+          </div>
+          {activeTab === 'spaces' && (
+            <Button onClick={() => setSearchParams({ new: 'space' })}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nouvel espace
+            </Button>
+          )}
         </div>
       </div>
 
+      {activeTab === 'graph' ? (
+        <div className="flex-1 min-h-0 h-[600px]">
+          <GraphView
+            level="global"
+            onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}`, { state: { openItemId: itemId } })}
+          />
+        </div>
+      ) : (
       <div className="p-8 flex-1">
       <div className="max-w-6xl mx-auto">
 
@@ -349,6 +386,7 @@ export function DashboardPage() {
         )}
       </div>
       </div>
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { SpacePage } from './pages/SpacePage';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
+import { CommunityPage } from './pages/CommunityPage';
 import { Layout } from './components/Layout';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminRoute } from './components/AdminRoute';
@@ -116,6 +117,7 @@ export default function App() {
         <Route path="spaces/:spaceId" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
+        <Route path="communities/:communityId" element={<CommunityPage />} />
         <Route path="communities/:communityId/settings" element={<CommunitySettingsPage />} />
       </Route>
       <Route

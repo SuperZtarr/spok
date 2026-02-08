@@ -954,4 +954,16 @@ export const auditLogsApi = {
     ),
 };
 
+// Graph
+export const graphApi = {
+  space: (spaceId: string, linkTypes: string[]) =>
+    fetchApi<{ nodes: any[]; links: any[] }>(`/spaces/${spaceId}/graph?linkTypes=${linkTypes.join(',')}`),
+
+  community: (communityId: string, linkTypes: string[]) =>
+    fetchApi<{ nodes: any[]; links: any[] }>(`/communities/${communityId}/graph?linkTypes=${linkTypes.join(',')}`),
+
+  global: (linkTypes: string[]) =>
+    fetchApi<{ nodes: any[]; links: any[] }>(`/graph/global?linkTypes=${linkTypes.join(',')}`),
+};
+
 export { ApiError };

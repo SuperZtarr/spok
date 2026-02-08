@@ -57,6 +57,7 @@ import { PlanningView } from '../components/views/PlanningView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
+import { GraphView } from '../components/views/GraphView';
 
 import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
@@ -767,6 +768,12 @@ export function SpacePage() {
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
               canEdit={canEdit}
+            />
+          ) : viewMode === 'graph' ? (
+            <GraphView
+              level="space"
+              entityId={spaceId}
+              onNodeClick={(itemId) => setEditingItemId(itemId)}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">

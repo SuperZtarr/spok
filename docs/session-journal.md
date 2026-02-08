@@ -2,6 +2,43 @@
 
 ---
 
+#### [2026-02-09 00:15] - Vue graphe force-directed a 3 niveaux
+
+**Demande :** Ajouter une vue graphe force-directed dans SPOK avec `react-force-graph-2d`, a 3 niveaux (espace, communaute, global), avec liens activables (hierarchie, relations, tags communs).
+
+**Actions realisees :**
+- Installe `react-force-graph-2d` dans @spok/web
+- Cree `apps/api/src/routes/graph.ts` : 3 endpoints (space, community, global) construisant noeuds + liens (hierarchy, relation, tag)
+- Enregistre dans `apps/api/src/index.ts`
+- Ajoute `graphApi` dans `apps/web/src/lib/api.ts`
+- Cree `apps/web/src/hooks/useGraphData.ts` (React Query)
+- Cree `apps/web/src/components/views/GraphView.tsx` (~200 lignes) : ForceGraph2D, noeuds colores par type, liens colores par type, panneau de controle avec checkboxes, tooltip hover, bouton recentrer, persistence localStorage
+- Ajoute `'graph'` au type ViewMode + icone Network dans ViewModeSelector
+- Integre GraphView dans SpacePage (mode graph)
+- Cree CommunityPage (`/communities/:communityId`) avec GraphView level=community
+- Ajoute route dans App.tsx
+- Ajoute onglet "Graphe global" dans DashboardPage
+
+**Fichiers crees :**
+- `apps/api/src/routes/graph.ts`
+- `apps/web/src/hooks/useGraphData.ts`
+- `apps/web/src/components/views/GraphView.tsx`
+- `apps/web/src/pages/CommunityPage.tsx`
+
+**Fichiers modifies :**
+- `apps/api/src/index.ts`
+- `apps/web/src/lib/api.ts`
+- `apps/web/src/stores/viewMode.ts`
+- `apps/web/src/components/ViewModeSelector.tsx`
+- `apps/web/src/pages/SpacePage.tsx`
+- `apps/web/src/pages/DashboardPage.tsx`
+- `apps/web/src/App.tsx`
+
+**Etat :** EN COURS
+**Prochaine etape :** Verification visuelle puis commit si valide
+
+---
+
 #### [2026-02-08 23:40] - Groupement natif ReactFlow pour les zones projet MindMap
 
 **Demande :** Remplacer le mecanisme custom de groupement des zones projet (~200 lignes : rectangle de fond separe, drag manuel synchronise, calcul de bounding box) par le groupement natif ReactFlow v12 via `parentId`.

@@ -19,6 +19,7 @@ import { adminReferentielsRoutes } from './routes/admin/referentiels.js';
 import { adminTestsRoutes } from './routes/admin/tests.js';
 import { searchRoutes } from './routes/search.js';
 import { userRoutes } from './routes/user.js';
+import { graphRoutes } from './routes/graph.js';
 
 const envToLogger = {
   development: {
@@ -206,6 +207,7 @@ async function buildApp() {
   await app.register(adminTestsRoutes, { prefix: '/admin/tests' });
   await app.register(searchRoutes, { prefix: '/search' });
   await app.register(userRoutes, { prefix: '/user' });
+  await app.register(graphRoutes);
 
   // Health check
   app.get('/health', async () => {
