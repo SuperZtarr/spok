@@ -973,68 +973,7 @@ function MindMapViewInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Wrap onNodesChange to recalculate edge handles when nodes are dragged
-  // and to move group member nodes when a project group is dragged
   const onNodesChange = useCallback((changes: any) => {
-    // Check if a project group is being dragged
-    const groupDrag = changes.find((c: any) =>
-      c.type === 'position' && c.position && c.id?.startsWith('project-group-')
-    );
-
-    if (groupDrag && groupDrag.position) {
-      // On first drag event, record the start position
-      if (!groupDragStart.current || groupDragStart.current.groupId !== groupDrag.id) {
-        // Get current position of this group node
-        setNodes(currentNodes => {
-          const groupNode = currentNodes.find(n => n.id === groupDrag.id);
-          if (groupNode) {
-            groupDragStart.current = {
-              groupId: groupDrag.id,
-              startPos: { ...groupNode.position },
-            };
-          }
-          return currentNodes;
-        });
-      }
-
-      if (groupDragStart.current && groupDragStart.current.groupId === groupDrag.id) {
-        // Apply the drag normally first
-        onNodesChangeBase(changes);
-
-        // Then move all member nodes by the same delta
-        setNodes(currentNodes => {
-          const groupNode = currentNodes.find(n => n.id === groupDrag.id);
-          if (!groupNode) return currentNodes;
-
-          const memberIds = (groupNode.data as any)?.memberIds as string[] | undefined;
-          if (!memberIds || memberIds.length === 0) return currentNodes;
-
-          const dx = groupNode.position.x - groupDragStart.current!.startPos.x;
-          const dy = groupNode.position.y - groupDragStart.current!.startPos.y;
-
-          if (dx === 0 && dy === 0) return currentNodes;
-
-          // Update start position for next delta calculation
-          groupDragStart.current!.startPos = { ...groupNode.position };
-
-          const memberSet = new Set(memberIds);
-          return currentNodes.map(n => {
-            if (memberSet.has(n.id)) {
-              return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
-            }
-            return n;
-          });
-        });
-
-        // Recalculate edges
-        setNodes(currentNodes => {
-          const nodePositions = new Map(currentNodes.map(n => [n.id, n.position]));
-          setEdges(currentEdges => recalculateEdgeHandles(currentEdges, nodePositions));
-          return currentNodes;
-        });
-        return;
-      }
-    }
-
     onNodesChangeBase(changes);
     // If any position change, recalculate edges
     const hasPositionChange = changes.some((c: any) => c.type === 'position' && c.position);
@@ -1160,15 +1099,49 @@ function MindMapViewInner({
     [onEdit]
   );
 
-  // Handle node drag - highlight potential drop target
+  // Handle node drag start - record initial position for group dragging
+  const onNodeDragStart = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.type === 'projectGroup') {
+        groupDragStart.current = {
+          groupId: draggedNode.id,
+          startPos: { ...draggedNode.position },
+        };
+      }
+    },
+    []
+  );
+
+  // Handle node drag - highlight potential drop target or move group members
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
+      // Move group members along with the group
+      if (draggedNode.type === 'projectGroup' && groupDragStart.current) {
+        const memberIds = (draggedNode.data as any)?.memberIds as string[] | undefined;
+        if (!memberIds || memberIds.length === 0) return;
+
+        const dx = draggedNode.position.x - groupDragStart.current.startPos.x;
+        const dy = draggedNode.position.y - groupDragStart.current.startPos.y;
+        if (dx === 0 && dy === 0) return;
+
+        groupDragStart.current.startPos = { ...draggedNode.position };
+
+        const memberSet = new Set(memberIds);
+        setNodes(currentNodes => currentNodes.map(n => {
+          if (memberSet.has(n.id)) {
+            return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
+          }
+          return n;
+        }));
+        return;
+      }
+
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
       const intersecting = getIntersectingNodes(draggedNode);
       const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
       setDropTargetId(target?.id || null);
     },
-    [getIntersectingNodes]
+    [getIntersectingNodes, setNodes]
   );
 
   // Handle node drop - reparent if dropped on another node, or save position
@@ -1314,6 +1287,7 @@ function MindMapViewInner({
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onEdgeClick={canEdit !== false ? onEdgeClick : undefined}
+        onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onConnect={canEdit !== false ? onConnect : undefined}
