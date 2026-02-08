@@ -818,13 +818,6 @@ function calculateLayout(
 
       // Distribute children evenly across the fan
       visibleChildren.forEach((child, index) => {
-        let childAngle: number;
-        if (childCount === 1) {
-          childAngle = outwardAngle; // Single child goes straight out
-        } else {
-          childAngle = fanStart + (index + 0.5) * (fanSpread / childCount);
-        }
-
         // Each child gets a slice of the fan for its own subtree
         const sliceWidth = fanSpread / childCount;
         const childStartAngle = fanStart + index * sliceWidth;
@@ -1131,7 +1124,7 @@ function MindMapViewInner({
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
-    const resolvedNodes = resolveNodeOverlaps(resolveProjectGroupCollisions(positionedNodes, tree, collapsedIds));
+    const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(positionedNodes), tree, collapsedIds);
     const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], nodePositions);
@@ -1373,7 +1366,7 @@ function MindMapViewInner({
       localStorage.removeItem(positionsStorageKey);
     }
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
-    const resolvedNodes = resolveNodeOverlaps(resolveProjectGroupCollisions(newNodes, tree, collapsedIds));
+    const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(newNodes), tree, collapsedIds);
 
     // Build a map of node positions for portal placement
     const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
