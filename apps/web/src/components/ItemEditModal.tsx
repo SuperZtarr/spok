@@ -7,7 +7,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home } from 'lucide-react';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
@@ -22,6 +22,8 @@ interface ItemEditModalProps {
   allItems: Item[];
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  spaceName?: string;
+  onNavigate?: (itemId: string) => void;
 }
 
 export function ItemEditModal({
@@ -32,6 +34,8 @@ export function ItemEditModal({
   allItems,
   referentiels,
   canEdit = true,
+  spaceName,
+  onNavigate,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
 
@@ -329,6 +333,22 @@ export function ItemEditModal({
     }
   }, [allItems, itemId, parentSortMode]);
 
+  // Build breadcrumb path by walking up parentId chain
+  const breadcrumb = useMemo(() => {
+    if (!item || !allItems.length) return [];
+    const path: { id: string; title: string }[] = [];
+    let currentId = item.parentId;
+    const visited = new Set<string>();
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const parent = allItems.find((i) => i.id === currentId);
+      if (!parent) break;
+      path.unshift({ id: parent.id, title: parent.title });
+      currentId = parent.parentId;
+    }
+    return path;
+  }, [item, allItems]);
+
   if (!isOpen) return null;
 
   return (
@@ -338,6 +358,37 @@ export function ItemEditModal({
       ) : item ? (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
           <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+          {/* Breadcrumb */}
+          {(breadcrumb.length > 0 || spaceName) && (
+            <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap pb-2 border-b border-border">
+              {spaceName && (
+                <>
+                  <Home className="w-3 h-3 flex-shrink-0" />
+                  <span className="font-medium">{spaceName}</span>
+                </>
+              )}
+              {breadcrumb.map((crumb) => (
+                <span key={crumb.id} className="flex items-center gap-1">
+                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                  {onNavigate ? (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(crumb.id)}
+                      className="hover:text-primary hover:underline transition-colors"
+                    >
+                      {crumb.title}
+                    </button>
+                  ) : (
+                    <span>{crumb.title}</span>
+                  )}
+                </span>
+              ))}
+              <span className="flex items-center gap-1">
+                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <span className="font-semibold text-foreground">{item.title}</span>
+              </span>
+            </nav>
+          )}
           {/* Auteur et date de création */}
           {item.createdBy && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b border-border">

@@ -2,6 +2,27 @@
 
 ---
 
+#### [2026-02-08 23:15] - 4 ameliorations SPOK (breadcrumb, zoom MindMap, favicon)
+
+**Demande :** Implementer 4 ameliorations identifiees : fil d'Ariane dans ItemEditModal, zoom projet MindMap, recherche contributions (deja fait), favicon optimise.
+
+**Actions realisees :**
+- **Breadcrumb ItemEditModal** : ajout d'un fil d'Ariane cliquable (Espace > Parent1 > ... > Item) en haut du modal. Navigue entre items via `onNavigate`. Nouvelles props `spaceName` et `onNavigate` passees depuis SpacePage.
+- **Zoom projet MindMap** : double-clic sur un noeud PROJECT → affiche uniquement le sous-arbre de ce projet. Le noeud central affiche le nom du projet. Bouton "Vue complete" pour revenir. Etat `focusedProjectId` dans MindMapViewInner.
+- **Recherche contributions** : deja implementee, aucune modification.
+- **Favicon optimise** : redimensionne de 1536x1024 (2.2 Mo) a 32x32 (1 Ko) via Pillow.
+
+**Fichiers modifies :**
+- `apps/web/src/components/ItemEditModal.tsx`
+- `apps/web/src/pages/SpacePage.tsx`
+- `apps/web/src/components/views/MindMapView.tsx`
+- `apps/web/public/favicon.png`
+
+**Etat :** TERMINE
+**Prochaine etape :** Verification visuelle puis commit si valide
+
+---
+
 #### [2026-02-08 13:30] - Appliquer les couleurs de type des referentiels partout
 
 **Demande :** Appliquer les couleurs spécifiques du referentiel (color/bgHover par type d'item) dans toute l'application, au lieu des couleurs generiques (primary, outline, muted-foreground).
@@ -84,7 +105,23 @@
 **Fichier modifie :**
 - `apps/web/src/components/views/MindMapView.tsx`
 
-**Etat :** EN COURS
-**Prochaine etape :** Verification visuelle puis commit si valide
+**Etat :** TERMINE
+
+---
+
+#### [2026-02-08 ~18:00] - MindMap : layout étoile + collisions zones projet
+
+**Demande :** Améliorer le layout MindMap pour que les zones projet ne superposent pas d'autres éléments, et que les items soient mieux distribués.
+
+**Actions réalisées :**
+- Layout en étoile : chaque parent distribue ses enfants en éventail centré vers l'extérieur (60°-180° selon nombre d'enfants) au lieu d'hériter l'arc étroit du cercle global
+- Résolution collisions projet : les noeuds étrangers sont poussés hors des rectangles englobants des projets (appliquée en dernier pour avoir la priorité)
+- Résolution chevauchements : les noeuds trop proches sont écartés radialement (15 passes, gap minimum 30px)
+- Espacement réduit dans les projets (rayon 180px au lieu de 300px)
+- Tri des items par type (PROJECT, NOTE, TASK) puis par position
+- Zones projet transparentes aux clics (pointerEvents: none) pour permettre de saisir les items en dessous
+
+**Commits :** `717b916`, `0128134`, `b000057`, `00d7fd0`
+**Etat :** TERMINE
 
 ---

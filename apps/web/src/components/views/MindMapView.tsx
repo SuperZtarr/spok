@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, type LucideIcon } from 'lucide-react';
 
 interface MindMapViewProps {
   items: ItemWithRelations[];
@@ -1005,6 +1005,7 @@ function MindMapViewInner({
   canEdit,
 }: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [showPortalDialog, setShowPortalDialog] = useState(false);
@@ -1098,7 +1099,32 @@ function MindMapViewInner({
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
 
-  const tree = useMemo(() => buildTree(items), [items]);
+  const fullTree = useMemo(() => buildTree(items), [items]);
+
+  // When a project is focused, extract its subtree
+  const tree = useMemo(() => {
+    if (!focusedProjectId) return fullTree;
+    // Find the focused project in the full tree
+    function findNode(nodes: TreeItem[], id: string): TreeItem | null {
+      for (const node of nodes) {
+        if (node.id === id) return node;
+        const found = findNode(node.children, id);
+        if (found) return found;
+      }
+      return null;
+    }
+    const focusedNode = findNode(fullTree, focusedProjectId);
+    if (!focusedNode) return fullTree;
+    // Return children of the focused project as root items
+    return focusedNode.children.length > 0 ? focusedNode.children : [focusedNode];
+  }, [fullTree, focusedProjectId]);
+
+  // Display name: project name when focused, space name otherwise
+  const displayName = useMemo(() => {
+    if (!focusedProjectId) return spaceName;
+    const item = items.find(i => i.id === focusedProjectId);
+    return item?.title || spaceName;
+  }, [focusedProjectId, items, spaceName]);
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsedIds(prev => {
@@ -1123,14 +1149,14 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
     const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(positionedNodes), tree, collapsedIds);
     const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
     const projectGroups = generateProjectGroupNodes(tree, nodePositions, statuses, collapsedIds);
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], nodePositions);
     return { initialNodes: [...projectGroups, ...resolvedNodes], initialEdges: allEdges };
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, toggleCollapse, applyPositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, toggleCollapse, applyPositions]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -1151,7 +1177,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(newNodes);
     const resolvedNodes = resolveProjectGroupCollisions(positionedNodes, tree, collapsedIds);
 
@@ -1198,7 +1224,7 @@ function MindMapViewInner({
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], nodePositions);
     setNodes([...projectGroups, ...resolvedNodes, ...portalNodes]);
     setEdges(allEdges);
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -1262,6 +1288,37 @@ function MindMapViewInner({
     },
     [onEdit]
   );
+
+  // Double-click on a PROJECT node → zoom into its subtree
+  const onNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      if (node.type !== 'mindmap') return;
+      const item = items.find(i => i.id === node.id);
+      if (item?.type === 'PROJECT') {
+        // Check if this project has children in the tree
+        function findNode(nodes: TreeItem[], id: string): TreeItem | null {
+          for (const n of nodes) {
+            if (n.id === id) return n;
+            const found = findNode(n.children, id);
+            if (found) return found;
+          }
+          return null;
+        }
+        const treeNode = findNode(fullTree, node.id);
+        if (treeNode && treeNode.children.length > 0) {
+          setFocusedProjectId(node.id);
+          setTimeout(() => fitView({ padding: 0.3 }), 100);
+        }
+      }
+    },
+    [items, fullTree, fitView]
+  );
+
+  // Exit project focus
+  const exitProjectFocus = useCallback(() => {
+    setFocusedProjectId(null);
+    setTimeout(() => fitView({ padding: 0.3 }), 100);
+  }, [fitView]);
 
   // Handle node drag start - record initial position for group dragging
   const onNodeDragStart = useCallback(
@@ -1366,7 +1423,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
     const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(newNodes), tree, collapsedIds);
 
     // Build a map of node positions for portal placement
@@ -1411,7 +1468,7 @@ function MindMapViewInner({
     setEdges([...newEdges, ...relationEdges, ...portalEdges]);
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [tree, items, statuses, collapsedIds, spaceName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
@@ -1451,6 +1508,7 @@ function MindMapViewInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         onEdgeClick={canEdit !== false ? onEdgeClick : undefined}
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
@@ -1478,6 +1536,16 @@ function MindMapViewInner({
           maskColor="rgba(0, 0, 0, 0.1)"
         />
         <Panel position="top-right" className="flex gap-1 sm:gap-2">
+          {focusedProjectId && (
+            <button
+              onClick={exitProjectFocus}
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-primary text-primary-foreground border rounded-lg shadow-sm hover:bg-primary/90 transition-colors"
+              title="Revenir à la vue complète"
+            >
+              <Maximize2 className="w-4 h-4" />
+              <span className="text-sm hidden sm:inline">Vue complète</span>
+            </button>
+          )}
           <button
             onClick={hasCollapsedNodes ? expandAll : collapseAll}
             className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"

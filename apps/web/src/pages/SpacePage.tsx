@@ -871,6 +871,8 @@ export function SpacePage() {
         allItems={allItemsData?.data || []}
         referentiels={referentiels}
         canEdit={canEdit}
+        spaceName={space?.name}
+        onNavigate={setEditingItemId}
       />
 
       {/* Selection action bar */}
