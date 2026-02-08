@@ -7,15 +7,15 @@ Documentation de la structure et terminologie de l'interface utilisateur.
 ```
 +----------------------------------------------------------+
 |                        Header (h-14)                      |
-|  [Titre page] [Badge type] [ViewModeSelector]            |
+|  [Logo] [CommunitySelector] [GlobalSearch] [ThemeToggle]  |
 +------------+---------------------------------------------+
 |            |                                             |
 |  Sidebar   |              Main Content                   |
 |   (w-52)   |               (Outlet)                      |
 |            |                                             |
-|  - Home    |    [Vue active: List/Kanban/Sequence/Types] |
-|  - Spaces  |                                             |
-|  - User    |                                             |
+|  - Home    |    [Vue active selon ViewModeSelector]      |
+|  - Spaces  |    List/Kanban/Sequence/Types/Planning/     |
+|  - User    |    Timeline/MindMap                         |
 |            |                                             |
 +------------+---------------------------------------------+
 ```
@@ -24,12 +24,15 @@ Documentation de la structure et terminologie de l'interface utilisateur.
 
 | Page | Fichier | Route | Description |
 |------|---------|-------|-------------|
-| Tableau de bord | `DashboardPage.tsx` | `/` | Liste des spaces de l'utilisateur |
+| Tableau de bord | `DashboardPage.tsx` | `/` | Liste des spaces (personnels + communautaires) |
 | Espace | `SpacePage.tsx` | `/spaces/:id` | Items d'un space avec vues multiples |
-| Paramètres | `SpaceSettingsPage.tsx` | `/spaces/:id/settings` | Configuration du space |
+| Paramètres space | `SpaceSettingsPage.tsx` | `/spaces/:id/settings` | Configuration du space |
+| Paramètres communauté | `CommunitySettingsPage.tsx` | `/communities/:id/settings` | Configuration de la communauté |
 | Historique | `SpaceHistoryPage.tsx` | `/spaces/:id/history` | Logs d'audit |
 | Login | `LoginPage.tsx` | `/login` | Connexion |
 | Register | `RegisterPage.tsx` | `/register` | Inscription |
+| Mot de passe oublié | `ForgotPasswordPage.tsx` | `/forgot-password` | Demande de reset |
+| Reset mot de passe | `ResetPasswordPage.tsx` | `/reset-password` | Reset avec token |
 
 ### Pages Admin
 
@@ -37,21 +40,27 @@ Documentation de la structure et terminologie de l'interface utilisateur.
 |------|---------|-------|
 | Utilisateurs | `admin/UsersPage.tsx` | `/admin/users` |
 | Spaces | `admin/SpacesPage.tsx` | `/admin/spaces` |
+| Communautés | `admin/CommunitiesPage.tsx` | `/admin/communities` |
+| Référentiels | `admin/ReferentielsPage.tsx` | `/admin/referentiels` |
+| Anomalies | `admin/AnomaliesPage.tsx` | `/admin/anomalies` |
+| Tests | `admin/TestsPage.tsx` | `/admin/tests` |
 
 ## Layouts
 
 ### Layout principal (`Layout.tsx`)
 
 - **Sidebar** : Navigation gauche fixe (w-52)
-  - Lien Dashboard (icone Home)
-  - Liste des spaces (icone FolderKanban)
-  - Info utilisateur + déconnexion
+  - Logo SPOK (lien vers dashboard)
+  - Recherche globale (`GlobalSearch`)
+  - Liste des spaces (triés alphabétiquement, séparés par section)
+  - Info utilisateur + déconnexion + avatar
   - Lien admin si rôle ADMIN
 
 - **Header** : Barre supérieure sticky (h-14)
-  - Titre de la page
-  - Badge du type de space
+  - Sélecteur de communauté (`CommunitySelector`)
+  - Titre de la page + badge type
   - `ViewModeSelector` pour changer de vue
+  - Toggle thème clair/sombre
 
 - **Outlet** : Zone de contenu scrollable
 
@@ -67,8 +76,24 @@ Sélectionnables via `ViewModeSelector` dans le header.
 |-----|---------|-------------|
 | Liste | `views/ListView.tsx` | Tableau avec recherche, tri, colonnes |
 | Kanban | `views/KanbanView.tsx` | Colonnes par statut, drag & drop |
-| Séquence | `views/SequenceView.tsx` | Timeline avec relations hiérarchiques |
+| Séquence | `views/SequenceView.tsx` | Graphe avec relations hiérarchiques (ReactFlow) |
 | Types | `views/TypesView.tsx` | Colonnes par type d'item, drag & drop |
+| Planning | `views/PlanningView.tsx` | Diagramme de Gantt avec dépendances |
+| Timeline | `views/TimelineView.tsx` | Frise chronologique |
+| Carte mentale | `views/MindMapView.tsx` | Mind map interactive (ReactFlow), drag & reparent |
+
+## Système de permissions UI (canEdit)
+
+Les vues et composants reçoivent un prop `canEdit?: boolean` (défaut `true`).
+Défini dans `SpacePage.tsx` : `const canEdit = space?.role !== 'VIEWER'`.
+
+Quand `canEdit` est `false` (rôle VIEWER) :
+- Les boutons d'ajout, modification et suppression sont masqués
+- Les drag handles sont masqués (pas de réorganisation)
+- Les formulaires sont désactivés (`disabled`)
+- `ItemEditModal` affiche "Détail de l'élément" en lecture seule
+- `RichTextEditor` masque la toolbar et passe en mode non-éditable
+- Les connexions et reparenting dans MindMap/Sequence sont désactivés
 
 ## Types d'items
 
@@ -98,6 +123,7 @@ Workflow : `todo` -> `in_progress` -> `done` | `cancelled`
 | `cancelled` | Rouge | Annulé |
 
 Couleurs définies dans `STATUS_COLORS` (`constants/ui.ts`).
+Les statuts sont personnalisables par space via les référentiels.
 
 ## Composants UI de base
 
@@ -107,16 +133,17 @@ Situés dans `components/ui/`.
 |-----------|---------|-------|
 | Button | `Button.tsx` | Boutons avec variants (default, destructive, outline, secondary, ghost, link) et tailles (sm, default, lg, icon) |
 | Modal | `Modal.tsx` | Fenêtres modales avec backdrop, fermeture Escape |
-| Badge | `Badge.tsx` | Étiquettes pour types et statuts |
+| Badge | `Badge.tsx` | Etiquettes pour types et statuts |
 | Card | `Card.tsx` | Conteneurs (CardHeader, CardContent, CardTitle, CardDescription) |
 | Input | `Input.tsx` | Champs de saisie texte |
 | Select | `Select.tsx` | Listes déroulantes |
+| RichTextEditor | `RichTextEditor.tsx` | Editeur rich text TipTap (gras, italique, listes, liens, titres, undo/redo) avec mode `editable` |
 
 ## Modales
 
 | Modale | Fichier | Usage |
 |--------|---------|-------|
-| Édition item | `ItemEditModal.tsx` | Créer/modifier un item (titre, description, URL, parent, statut, type, dates) |
+| Edition item | `ItemEditModal.tsx` | Créer/modifier un item (titre, description, URL, parent, statut, type, dates, relations, contributions). Mode lecture seule si `canEdit=false` |
 | Déplacer | `MoveToSpaceModal.tsx` | Déplacer item(s) vers un autre space |
 | Dupliquer | `DuplicateToSpaceModal.tsx` | Dupliquer item(s) vers un autre space |
 | Profil | `UserProfileModal.tsx` | Voir le profil utilisateur |
@@ -137,7 +164,15 @@ Actions : déplacer, dupliquer, supprimer.
 
 ### Sélecteur de vue (`ViewModeSelector.tsx`)
 
-Boutons toggle pour basculer entre les modes de vue (List, Kanban, Sequence, Types).
+Boutons toggle pour basculer entre les 7 modes de vue.
+
+### Recherche globale (`GlobalSearch.tsx`)
+
+Recherche cross-espaces dans la sidebar. Interroge l'API `/search`.
+
+### Sélecteur de communauté (`CommunitySelector.tsx`)
+
+Dropdown dans le header pour basculer entre communautés.
 
 ## Composants Paramètres
 
@@ -170,6 +205,20 @@ Stores dans `stores/`.
 | Selection | `selection.ts` | Items sélectionnés (multi-select) |
 | View Mode | `viewMode.ts` | Mode de vue actif |
 | Space | `space.ts` | Space courant |
+| Community | `community.ts` | Communauté active |
+| Theme | `theme.ts` | Préférence thème clair/sombre |
+
+## Hooks personnalisés
+
+Situés dans `hooks/`.
+
+| Hook | Fichier | Usage |
+|------|---------|-------|
+| useItems | `useItems.ts` | React Query : CRUD items |
+| useSpaces | `useSpaces.ts` | React Query : CRUD spaces |
+| useReferentiels | `useReferentiels.ts` | React Query : référentiels |
+| useAuditLogs | `useAuditLogs.ts` | React Query : logs d'audit |
+| useSort | `useSort.ts` | Tri des colonnes (en-têtes cliquables) |
 
 ## Arborescence des fichiers
 
@@ -180,13 +229,18 @@ src/
 │   ├── SpacePage.tsx
 │   ├── SpaceSettingsPage.tsx
 │   ├── SpaceHistoryPage.tsx
+│   ├── CommunitySettingsPage.tsx
 │   ├── LoginPage.tsx
 │   ├── RegisterPage.tsx
 │   ├── ForgotPasswordPage.tsx
 │   ├── ResetPasswordPage.tsx
 │   └── admin/
 │       ├── UsersPage.tsx
-│       └── SpacesPage.tsx
+│       ├── SpacesPage.tsx
+│       ├── CommunitiesPage.tsx
+│       ├── ReferentielsPage.tsx
+│       ├── AnomaliesPage.tsx
+│       └── TestsPage.tsx
 ├── components/
 │   ├── Layout.tsx
 │   ├── AdminLayout.tsx
@@ -194,6 +248,8 @@ src/
 │   ├── ItemEditModal.tsx
 │   ├── SelectionActionBar.tsx
 │   ├── ViewModeSelector.tsx
+│   ├── GlobalSearch.tsx
+│   ├── CommunitySelector.tsx
 │   ├── MoveToSpaceModal.tsx
 │   ├── DuplicateToSpaceModal.tsx
 │   ├── UserProfileModal.tsx
@@ -204,12 +260,16 @@ src/
 │   │   ├── Badge.tsx
 │   │   ├── Card.tsx
 │   │   ├── Input.tsx
-│   │   └── Select.tsx
+│   │   ├── Select.tsx
+│   │   └── RichTextEditor.tsx
 │   ├── views/
 │   │   ├── ListView.tsx
 │   │   ├── KanbanView.tsx
 │   │   ├── SequenceView.tsx
-│   │   └── TypesView.tsx
+│   │   ├── TypesView.tsx
+│   │   ├── PlanningView.tsx
+│   │   ├── TimelineView.tsx
+│   │   └── MindMapView.tsx
 │   ├── admin/
 │   │   ├── UserFormModal.tsx
 │   │   └── SpaceDetailModal.tsx
@@ -226,14 +286,20 @@ src/
 │   ├── auth.ts
 │   ├── selection.ts
 │   ├── viewMode.ts
-│   └── space.ts
+│   ├── space.ts
+│   ├── community.ts
+│   └── theme.ts
+├── hooks/
+│   ├── useItems.ts
+│   ├── useSpaces.ts
+│   ├── useReferentiels.ts
+│   ├── useAuditLogs.ts
+│   └── useSort.ts
 ├── constants/
 │   └── ui.ts
-├── lib/
-│   ├── api.ts
-│   └── utils.ts
-└── hooks/
-    └── (custom hooks)
+└── lib/
+    ├── api.ts
+    └── utils.ts
 ```
 
 ## Conventions de nommage
@@ -246,9 +312,10 @@ src/
 ## Librairies UI
 
 - **Icones** : lucide-react
-- **Drag & Drop** : @dnd-kit
+- **Drag & Drop** : @dnd-kit (Kanban, Types, arborescence)
+- **Graphes** : ReactFlow (Sequence, MindMap)
+- **Rich Text** : TipTap (@tiptap/react, StarterKit, Underline, Link, Placeholder)
 - **Styling** : Tailwind CSS
 - **State** : Zustand
 - **Data fetching** : TanStack React Query
 - **Routing** : React Router v6
-
