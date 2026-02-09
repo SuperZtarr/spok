@@ -52,6 +52,9 @@ ex forum.sql
 # Archive folder
 _archive/
 
+# Suivi local
+docs/TODO.md
+
 # Debug/fix scripts (temporary)
 apps/api/scripts/debug-*.ts
 apps/api/scripts/fix-*.ts
