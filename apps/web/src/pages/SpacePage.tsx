@@ -681,7 +681,7 @@ export function SpacePage() {
         )}
 
         {/* Items list */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'graph' || viewMode === 'mindmap' ? ' overflow-hidden' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'graph' || viewMode === 'mindmap' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (

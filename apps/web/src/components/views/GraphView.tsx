@@ -284,22 +284,27 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Chargement du graphe...
+      <div className="relative flex-1 min-h-0 w-full">
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+          Chargement du graphe...
+        </div>
       </div>
     );
   }
 
   if (!data || data.nodes.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Aucun element a afficher dans le graphe.
+      <div className="relative flex-1 min-h-0 w-full">
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+          Aucun element a afficher dans le graphe.
+        </div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[400px]">
+    <div className="relative flex-1 min-h-0 w-full">
+      <div ref={containerRef} className="absolute inset-0">
       {/* Control panel */}
       <div className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
         {/* Scope selector */}
@@ -396,6 +401,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
         cooldownTicks={100}
         onEngineStop={() => graphRef.current?.zoomToFit(400, 50)}
       />
+      </div>
     </div>
   );
 }
