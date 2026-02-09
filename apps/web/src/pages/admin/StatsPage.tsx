@@ -116,8 +116,8 @@ export function StatsPage() {
                   />
                   <YAxis tick={{ fill: 'currentColor', fontSize: 11 }} />
                   <Tooltip
-                    labelFormatter={(d: string) => {
-                      const date = new Date(d);
+                    labelFormatter={(d) => {
+                      const date = new Date(String(d));
                       return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
                     }}
                     contentStyle={{
