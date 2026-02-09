@@ -168,21 +168,33 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   const linkTypesArray = useMemo(() => [...activeLinkTypes], [activeLinkTypes]);
   const { data, isLoading } = useGraphData(scope, activeEntityId, linkTypesArray, communityIdsFilter);
 
-  // Observe container size
+  // Compute available size from container position in viewport
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const observer = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          setDimensions({ width, height });
-        }
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const width = rect.width;
+      const height = window.innerHeight - rect.top;
+      if (width > 0 && height > 0) {
+        setDimensions({ width, height });
       }
-    });
+    };
+
+    // Initial measure (with small delay for layout to settle)
+    updateSize();
+    const timer = setTimeout(updateSize, 100);
+
+    window.addEventListener('resize', updateSize);
+    const observer = new ResizeObserver(() => updateSize());
     observer.observe(container);
-    return () => observer.disconnect();
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateSize);
+      observer.disconnect();
+    };
   }, []);
 
   // Fit view once data loads
