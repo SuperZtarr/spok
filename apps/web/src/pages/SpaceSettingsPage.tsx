@@ -264,19 +264,17 @@ export function SpaceSettingsPage() {
                   Rattacher cet espace à une communauté dont vous êtes membre
                 </p>
               </div>
-              {parentSpaceOptions.length > 1 && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Espace parent</label>
-                  <Select
-                    value={editParentId}
-                    onChange={(e) => setEditParentId(e.target.value)}
-                    options={parentSpaceOptions}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Imbriquer cet espace sous un autre espace de groupe
-                  </p>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium mb-1">Espace parent</label>
+                <Select
+                  value={editParentId}
+                  onChange={(e) => setEditParentId(e.target.value)}
+                  options={parentSpaceOptions}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Imbriquer cet espace sous un autre espace de groupe
+                </p>
+              </div>
               {hasSpaceInfoChanges && (
                 <Button
                   onClick={handleSaveSpaceInfo}

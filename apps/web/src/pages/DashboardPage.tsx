@@ -369,7 +369,7 @@ export function DashboardPage() {
                   </div>
                 )}
 
-                {newSpaceType === 'GROUP' && parentSpaceOptions.length > 1 && (
+                {newSpaceType === 'GROUP' && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Espace parent</label>
                     <Select
