@@ -27,7 +27,7 @@ export function SpaceHistoryPage() {
   const restoreMutation = useRestoreAuditLog(spaceId!);
 
   return (
-    <div className="p-6 overflow-auto h-full">
+    <div className="p-6 overflow-auto flex-1 min-h-0">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">

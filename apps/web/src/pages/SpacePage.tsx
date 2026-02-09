@@ -468,7 +468,7 @@ export function SpacePage() {
   const hasExpandedItems = expandedItems.size > 0;
 
   return (
-    <div className="p-4 h-full flex flex-col">
+    <div className="p-4 flex-1 min-h-0 flex flex-col">
       <div className="w-full h-full flex flex-col">
         {/* Toolbar */}
         <div className="flex gap-2 mb-3 flex-wrap items-center">

@@ -18,7 +18,7 @@ export function CommunityPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="px-6 py-3 border-b flex items-center gap-3">
         <h1 className="text-lg font-semibold">
           {community?.name || 'Communaute'}

@@ -135,7 +135,7 @@ export function CommunitySettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto overflow-auto h-full">
+    <div className="p-6 max-w-4xl mx-auto overflow-auto flex-1 min-h-0">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} title="Retour au tableau de bord">
