@@ -7,6 +7,7 @@ export interface Space {
   type: SpaceType;
   communityId?: string | null;
   community?: { id: string; name: string } | null;
+  parentId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,16 +25,19 @@ export interface SpaceWithRole extends Space {
   memberCount?: number;
   itemCount?: number;
   isMember?: boolean;
+  parent?: { id: string; name: string } | null;
 }
 
 export interface CreateSpaceInput {
   name: string;
   type: SpaceType;
   communityId?: string;
+  parentId?: string;
 }
 
 export interface UpdateSpaceInput {
   name?: string;
+  parentId?: string | null;
 }
 
 export interface InviteMemberInput {

@@ -69,7 +69,7 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         where,
         include: {
           _count: {
-            select: { memberships: true, items: true },
+            select: { memberships: true, items: true, children: true },
           },
           memberships: {
             where: { role: 'OWNER' },
@@ -81,6 +81,9 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
             take: 1,
           },
           community: {
+            select: { id: true, name: true },
+          },
+          parent: {
             select: { id: true, name: true },
           },
         },
@@ -98,10 +101,13 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         type: space.type,
         communityId: space.communityId,
         community: space.community,
+        parentId: space.parentId,
+        parent: space.parent,
         createdAt: space.createdAt,
         updatedAt: space.updatedAt,
         memberCount: space._count.memberships,
         itemCount: space._count.items,
+        childCount: space._count.children,
         owner: space.memberships[0]?.user || null,
       })),
       pagination: {
@@ -121,7 +127,7 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id },
       include: {
         _count: {
-          select: { memberships: true, items: true },
+          select: { memberships: true, items: true, children: true },
         },
         memberships: {
           include: {
@@ -132,6 +138,9 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
           orderBy: { joinedAt: 'asc' },
         },
         community: {
+          select: { id: true, name: true },
+        },
+        parent: {
           select: { id: true, name: true },
         },
       },
@@ -147,10 +156,13 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
       type: space.type,
       communityId: space.communityId,
       community: space.community,
+      parentId: space.parentId,
+      parent: space.parent,
       createdAt: space.createdAt,
       updatedAt: space.updatedAt,
       memberCount: space._count.memberships,
       itemCount: space._count.items,
+      childCount: space._count.children,
       members: space.memberships.map((m) => ({
         id: m.id,
         userId: m.userId,
@@ -203,9 +215,12 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         data: updateData,
         include: {
           _count: {
-            select: { memberships: true, items: true },
+            select: { memberships: true, items: true, children: true },
           },
           community: {
+            select: { id: true, name: true },
+          },
+          parent: {
             select: { id: true, name: true },
           },
         },
@@ -217,10 +232,13 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         type: space.type,
         communityId: space.communityId,
         community: space.community,
+        parentId: space.parentId,
+        parent: space.parent,
         createdAt: space.createdAt,
         updatedAt: space.updatedAt,
         memberCount: space._count.memberships,
         itemCount: space._count.items,
+        childCount: space._count.children,
       };
     }
   );

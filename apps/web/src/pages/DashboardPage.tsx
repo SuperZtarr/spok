@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, ChevronRight } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -11,6 +11,61 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/Badge';
 import type { SpaceWithRole } from '@spok/shared';
 import { GraphView } from '../components/views/GraphView';
+
+interface SpaceTreeNode extends SpaceWithRole {
+  children: SpaceTreeNode[];
+}
+
+function buildSpaceTree(spaces: SpaceWithRole[]): SpaceTreeNode[] {
+  const map = new Map<string, SpaceTreeNode>();
+  const roots: SpaceTreeNode[] = [];
+
+  spaces.forEach(s => map.set(s.id, { ...s, children: [] }));
+  spaces.forEach(s => {
+    if (s.parentId && map.has(s.parentId)) {
+      map.get(s.parentId)!.children.push(map.get(s.id)!);
+    } else {
+      roots.push(map.get(s.id)!);
+    }
+  });
+
+  return roots;
+}
+
+// Renders a space card with indented sub-spaces below it
+function SpaceCardWithChildren({
+  node,
+  onJoin,
+  level = 0,
+}: {
+  node: SpaceTreeNode;
+  onJoin?: (id: string) => void;
+  level?: number;
+}) {
+  return (
+    <>
+      {level === 0 ? (
+        <SpaceCard space={node} onJoin={onJoin} />
+      ) : (
+        <Link
+          to={`/spaces/${node.id}`}
+          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
+          style={{ paddingLeft: `${8 + level * 16}px` }}
+        >
+          <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+          <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <span className="truncate">{node.name}</span>
+          <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">
+            {node.itemCount || 0} el.
+          </span>
+        </Link>
+      )}
+      {node.children.map((child) => (
+        <SpaceCardWithChildren key={child.id} node={child} onJoin={onJoin} level={level + 1} />
+      ))}
+    </>
+  );
+}
 
 // Reusable space card component
 function SpaceCard({ space, onJoin }: { space: SpaceWithRole; onJoin?: (id: string) => void }) {
@@ -89,6 +144,7 @@ export function DashboardPage() {
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
   const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>('');
+  const [newSpaceParentId, setNewSpaceParentId] = useState<string>('');
 
   // Fetch ALL spaces (no community filter) for segmented display
   const { data: allSpaces, isLoading } = useQuery({
@@ -164,6 +220,7 @@ export function DashboardPage() {
         name: newSpaceName,
         type: newSpaceType,
         communityId: newSpaceType === 'GROUP' && newSpaceCommunityId ? newSpaceCommunityId : undefined,
+        parentId: newSpaceType === 'GROUP' && newSpaceParentId ? newSpaceParentId : undefined,
       });
     }
   };
@@ -172,13 +229,15 @@ export function DashboardPage() {
     setSearchParams({});
     setNewSpaceName('');
     setNewSpaceCommunityId('');
+    setNewSpaceParentId('');
   };
 
-  // When space type changes, reset community if personal
+  // When space type changes, reset community/parent if personal
   const handleTypeChange = (type: 'PERSONAL' | 'GROUP') => {
     setNewSpaceType(type);
     if (type === 'PERSONAL') {
       setNewSpaceCommunityId('');
+      setNewSpaceParentId('');
     } else if (currentCommunity) {
       // Pre-select the current community when creating a GROUP space
       setNewSpaceCommunityId(currentCommunity.id);
@@ -190,6 +249,15 @@ export function DashboardPage() {
     { value: '', label: 'Aucune (espace independant)' },
     ...(communities?.map(c => ({ value: c.id, label: c.name })) || []),
   ];
+
+  // Build parent space options (only GROUP spaces the user has access to)
+  const parentSpaceOptions = useMemo(() => {
+    const groupSpaces = (allSpaces || []).filter(s => s.type === 'GROUP');
+    return [
+      { value: '', label: 'Aucun (espace racine)' },
+      ...groupSpaces.map(s => ({ value: s.id, label: s.name })),
+    ];
+  }, [allSpaces]);
 
   return (
     <div className="flex flex-col h-full">
@@ -301,6 +369,20 @@ export function DashboardPage() {
                   </div>
                 )}
 
+                {newSpaceType === 'GROUP' && parentSpaceOptions.length > 1 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Espace parent</label>
+                    <Select
+                      value={newSpaceParentId}
+                      onChange={(e) => setNewSpaceParentId(e.target.value)}
+                      options={parentSpaceOptions}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Imbriquer cet espace sous un autre espace de groupe.
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button type="submit" disabled={createSpaceMutation.isPending}>
                     {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
@@ -352,36 +434,46 @@ export function DashboardPage() {
             )}
 
             {/* Community groups */}
-            {communityGroups.map((group) => (
-              <section key={group.communityId}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="w-5 h-5 text-muted-foreground" />
-                  <h2 className="text-lg font-semibold">{group.communityName}</h2>
-                  <Badge variant="outline" className="ml-1">{group.spaces.length}</Badge>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {group.spaces.map((space) => (
-                    <SpaceCard key={space.id} space={space} onJoin={handleJoinSpace} />
-                  ))}
-                </div>
-              </section>
-            ))}
+            {communityGroups.map((group) => {
+              const tree = buildSpaceTree(group.spaces);
+              return (
+                <section key={group.communityId}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building2 className="w-5 h-5 text-muted-foreground" />
+                    <h2 className="text-lg font-semibold">{group.communityName}</h2>
+                    <Badge variant="outline" className="ml-1">{group.spaces.length}</Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {tree.map((node) => (
+                      <div key={node.id}>
+                        <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
 
             {/* Independent group spaces (no community) */}
-            {independentSpaces.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="w-5 h-5 text-muted-foreground" />
-                  <h2 className="text-lg font-semibold">Espaces de groupe</h2>
-                  <Badge variant="outline" className="ml-1">{independentSpaces.length}</Badge>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {independentSpaces.map((space) => (
-                    <SpaceCard key={space.id} space={space} />
-                  ))}
-                </div>
-              </section>
-            )}
+            {independentSpaces.length > 0 && (() => {
+              const tree = buildSpaceTree(independentSpaces);
+              return (
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Users className="w-5 h-5 text-muted-foreground" />
+                    <h2 className="text-lg font-semibold">Espaces de groupe</h2>
+                    <Badge variant="outline" className="ml-1">{independentSpaces.length}</Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {tree.map((node) => (
+                      <div key={node.id}>
+                        <SpaceCardWithChildren node={node} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })()}
           </div>
         )}
       </div>

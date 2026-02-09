@@ -2,6 +2,35 @@
 
 ---
 
+#### [2026-02-09 01:15] - Hiérarchie d'espaces (parentId)
+
+**Demande :** Permettre qu'un espace ait un autre espace comme parent, créant une arborescence. Règles : seuls les GROUP peuvent être imbriqués, héritage communauté du parent, suppression cascade.
+
+**Actions réalisées :**
+- **Schéma Prisma** : ajout `parentId`, relation `SpaceHierarchy` (onDelete: Cascade), index sur `parentId`
+- **Types partagés** : ajout `parentId` dans `Space`, `parent` dans `SpaceWithRole`, `parentId` dans `CreateSpaceInput` et `UpdateSpaceInput`
+- **API spaces.ts** : création avec `parentId` (héritage communauté du parent), update avec validation circulaire (remontée chaîne parents), validation PERSONAL interdit
+- **API admin/spaces.ts** : ajout `parentId`, `parent`, `childCount` dans list/get/update
+- **API client** : `spacesApi.list()` accepte `parentId`, `spacesApi.update()` accepte `parentId`
+- **Sidebar (Layout.tsx)** : `buildSpaceTree()` + composant récursif `SpaceTreeItem` avec expand/collapse persisté localStorage
+- **Dashboard** : `SpaceCardWithChildren` pour affichage hiérarchique, sélecteur espace parent dans formulaire création
+- **SpaceSettingsPage** : sélecteur espace parent (exclut soi-même et descendants)
+
+**Fichiers modifiés :**
+- `packages/database/prisma/schema.prisma`
+- `packages/shared/src/types/space.ts`
+- `apps/api/src/routes/spaces.ts`
+- `apps/api/src/routes/admin/spaces.ts`
+- `apps/web/src/lib/api.ts`
+- `apps/web/src/hooks/useSpaces.ts`
+- `apps/web/src/components/Layout.tsx`
+- `apps/web/src/pages/DashboardPage.tsx`
+- `apps/web/src/pages/SpaceSettingsPage.tsx`
+
+**État :** EN COURS — compilation OK, en attente de vérification et commit
+
+---
+
 #### [2026-02-09 00:15] - Vue graphe force-directed a 3 niveaux
 
 **Demande :** Ajouter une vue graphe force-directed dans SPOK avec `react-force-graph-2d`, a 3 niveaux (espace, communaute, global), avec liens activables (hierarchie, relations, tags communs).
@@ -34,8 +63,55 @@
 - `apps/web/src/pages/DashboardPage.tsx`
 - `apps/web/src/App.tsx`
 
-**Etat :** EN COURS
-**Prochaine etape :** Verification visuelle puis commit si valide
+**Etat :** TERMINE
+
+---
+
+#### [2026-02-09 01:00] - Page admin Statistiques + fix hauteur graphe
+
+**Demande :** Ajouter une page Statistiques dans l'administration (/admin/stats) avec totaux, series temporelles, repartition par type et top espaces. Aussi : corriger la zone de graphe qui ne s'etend pas a toute la hauteur disponible.
+
+**Actions realisees :**
+- Installe `recharts` dans @spok/web
+- Cree `apps/api/src/routes/admin/stats.ts` : endpoint GET /admin/stats?period=7d|30d|90d|365d|all
+- Enregistre dans `apps/api/src/index.ts`
+- Ajoute `adminApi.stats` dans `apps/web/src/lib/api.ts`
+- Cree `apps/web/src/pages/admin/StatsPage.tsx` : 4 cartes totaux, LineChart activite, BarChart par type, top 10 espaces, selecteur de periode
+- Ajoute route dans App.tsx et lien sidebar dans AdminLayout.tsx
+- Fix graphe : supprime h-[600px] fixe du Dashboard, ajoute min-h-0 sur main Layout, overflow-hidden conditionnel sur SpacePage
+
+**Fichiers crees :**
+- `apps/api/src/routes/admin/stats.ts`
+- `apps/web/src/pages/admin/StatsPage.tsx`
+
+**Fichiers modifies :**
+- `apps/api/src/index.ts`, `apps/web/src/lib/api.ts`, `apps/web/src/App.tsx`
+- `apps/web/src/components/AdminLayout.tsx`, `apps/web/src/components/Layout.tsx`
+- `apps/web/src/pages/DashboardPage.tsx`, `apps/web/src/pages/SpacePage.tsx`
+
+**Etat :** TERMINE
+**Commits :** 5a2b108, 09aa5c3
+
+---
+
+#### [2026-02-09 00:40] - Filtre communautes + noeuds structurels graphe
+
+**Demande :** Ajouter des checkboxes pour filtrer par communaute dans la vue globale, et relier les items orphelins a leur espace/communaute via des noeuds structurels.
+
+**Actions realisees :**
+- API : endpoint global accepte `communityIds` pour filtrer par communautes
+- API : `buildGraph` ajoute des noeuds SPACE et COMMUNITY virtuels, lie les items racine a leur espace, et les espaces a leur communaute
+- Frontend : fetch des communautes utilisateur, checkboxes dans le panneau de controle (scope global, > 1 communaute)
+- Persistence localStorage des communautes selectionnees
+
+**Fichiers modifies :**
+- `apps/api/src/routes/graph.ts`
+- `apps/web/src/components/views/GraphView.tsx`
+- `apps/web/src/hooks/useGraphData.ts`
+- `apps/web/src/lib/api.ts`
+
+**Etat :** TERMINE
+**Commit :** 61878ae
 
 ---
 

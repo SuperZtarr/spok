@@ -314,9 +314,10 @@ export const userApi = {
 
 // Spaces
 export const spacesApi = {
-  list: (communityId?: string) => {
+  list: (communityId?: string, parentId?: string) => {
     const params = new URLSearchParams();
     if (communityId !== undefined) params.set('communityId', communityId);
+    if (parentId !== undefined) params.set('parentId', parentId);
     const query = params.toString();
     return fetchApi<SpaceWithRole[]>(`/spaces${query ? `?${query}` : ''}`);
   },
@@ -329,7 +330,7 @@ export const spacesApi = {
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: { name?: string; communityId?: string | null }) =>
+  update: (id: string, data: { name?: string; communityId?: string | null; parentId?: string | null }) =>
     fetchApi<SpaceWithRole>(`/spaces/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),

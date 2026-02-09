@@ -10,11 +10,13 @@ const createSpaceSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['PERSONAL', 'GROUP']),
   communityId: z.string().optional(),
+  parentId: z.string().optional(),
 });
 
 const updateSpaceSchema = z.object({
   name: z.string().min(1).optional(),
   communityId: z.string().nullable().optional(),
+  parentId: z.string().nullable().optional(),
 });
 
 const inviteSchema = z.object({
@@ -33,7 +35,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
 
   // List user's spaces (including visible community spaces)
-  fastify.get<{ Querystring: { communityId?: string } }>('/', async (request) => {
+  fastify.get<{ Querystring: { communityId?: string; parentId?: string } }>('/', async (request) => {
     const { communityId } = request.query;
 
     // Build filter based on communityId parameter
@@ -71,6 +73,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
               select: { memberships: true, items: true },
             },
             community: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            parent: {
               select: {
                 id: true,
                 name: true,
@@ -117,6 +125,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           community: {
             select: { id: true, name: true },
           },
+          parent: {
+            select: { id: true, name: true },
+          },
         },
         orderBy: { name: 'asc' },
       });
@@ -139,18 +150,43 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof createSpaceSchema> }>('/', async (request, reply) => {
     const body = createSpaceSchema.parse(request.body);
 
-    // Only GROUP spaces can be associated with a community
-    if (body.communityId && body.type === 'PERSONAL') {
-      return reply.badRequest('Personal spaces cannot be associated with a community');
+    // PERSONAL spaces cannot be nested or have communities
+    if (body.type === 'PERSONAL') {
+      if (body.communityId) {
+        return reply.badRequest('Personal spaces cannot be associated with a community');
+      }
+      if (body.parentId) {
+        return reply.badRequest('Les espaces personnels ne peuvent pas être imbriqués');
+      }
+    }
+
+    let communityId = body.communityId;
+
+    // If parentId is specified, validate parent and inherit communityId
+    if (body.parentId) {
+      const parentSpace = await fastify.prisma.space.findUnique({
+        where: { id: body.parentId },
+      });
+
+      if (!parentSpace) {
+        return reply.notFound('Espace parent introuvable');
+      }
+
+      if (parentSpace.type !== 'GROUP') {
+        return reply.badRequest('Seuls les espaces de groupe peuvent avoir des sous-espaces');
+      }
+
+      // Inherit communityId from parent (ignore what was passed)
+      communityId = parentSpace.communityId || undefined;
     }
 
     // Verify user is member of the community if specified
-    if (body.communityId) {
+    if (communityId) {
       const communityMembership = await fastify.prisma.communityMembership.findUnique({
         where: {
           userId_communityId: {
             userId: request.user.userId,
-            communityId: body.communityId,
+            communityId,
           },
         },
       });
@@ -164,7 +200,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         name: body.name,
         type: body.type,
-        communityId: body.communityId,
+        communityId,
+        parentId: body.parentId,
         memberships: {
           create: {
             userId: request.user.userId,
@@ -174,6 +211,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       },
       include: {
         community: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        parent: {
           select: {
             id: true,
             name: true,
@@ -204,6 +247,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             community: {
               select: { id: true, name: true },
             },
+            parent: {
+              select: { id: true, name: true },
+            },
           },
         },
       },
@@ -224,6 +270,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       include: {
         _count: { select: { memberships: true, items: true } },
         community: { select: { id: true, name: true } },
+        parent: { select: { id: true, name: true } },
       },
     });
 
@@ -279,13 +326,57 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Les espaces personnels ne peuvent pas être rattachés à une communauté');
       }
 
+      // Cannot nest personal spaces
+      if (body.parentId && membership.space.type === 'PERSONAL') {
+        return reply.badRequest('Les espaces personnels ne peuvent pas être imbriqués');
+      }
+
+      // Validate parentId if provided
+      let communityIdOverride: string | null | undefined = body.communityId;
+      if (body.parentId !== undefined) {
+        if (body.parentId !== null) {
+          // Cannot set self as parent
+          if (body.parentId === request.params.id) {
+            return reply.badRequest('Un espace ne peut pas être son propre parent');
+          }
+
+          const parentSpace = await fastify.prisma.space.findUnique({
+            where: { id: body.parentId },
+          });
+
+          if (!parentSpace) {
+            return reply.notFound('Espace parent introuvable');
+          }
+
+          if (parentSpace.type !== 'GROUP') {
+            return reply.badRequest('Seuls les espaces de groupe peuvent avoir des sous-espaces');
+          }
+
+          // Check circular reference: walk up the chain
+          let currentParentId: string | null = parentSpace.parentId;
+          while (currentParentId) {
+            if (currentParentId === request.params.id) {
+              return reply.badRequest('Référence circulaire détectée');
+            }
+            const ancestor = await fastify.prisma.space.findUnique({
+              where: { id: currentParentId },
+              select: { parentId: true },
+            });
+            currentParentId = ancestor?.parentId || null;
+          }
+
+          // Inherit communityId from parent
+          communityIdOverride = parentSpace.communityId;
+        }
+      }
+
       // Verify user is member of the target community
-      if (body.communityId) {
+      if (communityIdOverride) {
         const communityMembership = await fastify.prisma.communityMembership.findUnique({
           where: {
             userId_communityId: {
               userId: request.user.userId,
-              communityId: body.communityId,
+              communityId: communityIdOverride,
             },
           },
         });
@@ -295,14 +386,22 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      const updateData: Record<string, unknown> = {};
+      if (body.name !== undefined) updateData.name = body.name;
+      if (body.parentId !== undefined) updateData.parentId = body.parentId;
+      if (communityIdOverride !== undefined) updateData.communityId = communityIdOverride;
+
       const space = await fastify.prisma.space.update({
         where: { id: request.params.id },
-        data: {
-          name: body.name,
-          communityId: body.communityId,
-        },
+        data: updateData,
         include: {
           community: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          parent: {
             select: {
               id: true,
               name: true,

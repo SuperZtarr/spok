@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Home, FolderKanban, Plus, Shield, User, Menu, X } from 'lucide-react';
+import { LogOut, Home, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
@@ -12,6 +12,95 @@ import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
 import { CommunitySelector } from './CommunitySelector';
 import { GlobalSearch } from './GlobalSearch';
+import type { SpaceWithRole } from '@spok/shared';
+
+interface SpaceTreeNode extends SpaceWithRole {
+  children: SpaceTreeNode[];
+}
+
+function buildSpaceTree(spaces: SpaceWithRole[]): SpaceTreeNode[] {
+  const map = new Map<string, SpaceTreeNode>();
+  const roots: SpaceTreeNode[] = [];
+
+  spaces.forEach(s => map.set(s.id, { ...s, children: [] }));
+  spaces.forEach(s => {
+    if (s.parentId && map.has(s.parentId)) {
+      map.get(s.parentId)!.children.push(map.get(s.id)!);
+    } else {
+      roots.push(map.get(s.id)!);
+    }
+  });
+
+  return roots;
+}
+
+function SpaceTreeItem({
+  node,
+  level,
+  currentSpaceId,
+  expandedIds,
+  onToggle,
+}: {
+  node: SpaceTreeNode;
+  level: number;
+  currentSpaceId: string | null;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  const hasChildren = node.children.length > 0;
+  const isExpanded = expandedIds.has(node.id);
+
+  return (
+    <>
+      <div
+        className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm ${
+          currentSpaceId === node.id
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'hover:bg-accent'
+        }`}
+        style={{ paddingLeft: `${12 + level * 16}px` }}
+      >
+        {hasChildren ? (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggle(node.id);
+            }}
+            className="p-0.5 rounded hover:bg-accent flex-shrink-0"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+          </button>
+        ) : (
+          <span className="w-4 flex-shrink-0" />
+        )}
+        <Link
+          to={`/spaces/${node.id}`}
+          className="flex items-center gap-2 flex-1 min-w-0"
+        >
+          <FolderKanban className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">{node.name}</span>
+        </Link>
+      </div>
+      {hasChildren && isExpanded && (
+        node.children.map((child) => (
+          <SpaceTreeItem
+            key={child.id}
+            node={child}
+            level={level + 1}
+            currentSpaceId={currentSpaceId}
+            expandedIds={expandedIds}
+            onToggle={onToggle}
+          />
+        ))
+      )}
+    </>
+  );
+}
 
 export function Layout() {
   const navigate = useNavigate();
@@ -21,6 +110,26 @@ export function Layout() {
   const { initTheme } = useThemeStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Expand/collapse state for space tree (persisted in localStorage)
+  const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('spok-expanded-spaces');
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const toggleSpaceExpand = useCallback((id: string) => {
+    setExpandedSpaceIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      localStorage.setItem('spok-expanded-spaces', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
 
   // Resizable sidebar (desktop only)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -87,21 +196,26 @@ export function Layout() {
     enabled: !!currentCommunity, // Only fetch when community is selected
   });
 
-  // Separate personal and community/group spaces
-  const { mySpaces, communitySpaces } = useMemo(() => {
+  // Separate personal and community/group spaces, then build trees
+  const { mySpaces, communitySpaceTree } = useMemo(() => {
     const sortByName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 
+    let personalList: SpaceWithRole[];
+    let groupList: SpaceWithRole[];
+
     if (currentCommunity) {
-      return {
-        mySpaces: (personalSpaces?.filter(s => s.type === 'PERSONAL') || []).sort(sortByName),
-        communitySpaces: (spaces || []).slice().sort(sortByName),
-      };
+      personalList = (personalSpaces?.filter(s => s.type === 'PERSONAL') || []).sort(sortByName);
+      groupList = (spaces || []).slice().sort(sortByName);
+    } else {
+      const all = spaces || [];
+      personalList = all.filter(s => s.type === 'PERSONAL').sort(sortByName);
+      groupList = all.filter(s => s.type !== 'PERSONAL').sort(sortByName);
     }
-    const all = spaces || [];
+
     return {
-      mySpaces: all.filter(s => s.type === 'PERSONAL').sort(sortByName),
-      communitySpaces: all.filter(s => s.type !== 'PERSONAL').sort(sortByName),
+      mySpaces: personalList,
+      communitySpaceTree: buildSpaceTree(groupList),
     };
   }, [currentCommunity, spaces, personalSpaces]);
 
@@ -227,20 +341,16 @@ export function Layout() {
               <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
             </Link>
           </div>
-          {communitySpaces.length > 0 ? (
-            communitySpaces.map((space) => (
-              <Link
-                key={space.id}
-                to={`/spaces/${space.id}`}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
-                  currentSpaceId === space.id
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'hover:bg-accent'
-                }`}
-              >
-                <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{space.name}</span>
-              </Link>
+          {communitySpaceTree.length > 0 ? (
+            communitySpaceTree.map((node) => (
+              <SpaceTreeItem
+                key={node.id}
+                node={node}
+                level={0}
+                currentSpaceId={currentSpaceId}
+                expandedIds={expandedSpaceIds}
+                onToggle={toggleSpaceExpand}
+              />
             ))
           ) : (
             <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>

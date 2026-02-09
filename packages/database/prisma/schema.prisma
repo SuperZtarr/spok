@@ -39,6 +39,12 @@ model Space {
   updatedAt   DateTime  @updatedAt
 
   community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
+
+  // Hiérarchie d'espaces
+  parentId  String?
+  parent    Space?  @relation("SpaceHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Space[] @relation("SpaceHierarchy")
+
   memberships SpaceMembership[]
   items       Item[]
   modules     SpaceModule[]
@@ -46,6 +52,7 @@ model Space {
   auditLogs   AuditLog[]
 
   @@index([communityId])
+  @@index([parentId])
   @@map("spaces")
 }
 

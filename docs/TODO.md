@@ -1,12 +1,15 @@
 # SPOK - Suivi des tâches
 
 ## En cours
-_Aucune tâche en cours_
+- Hiérarchie d'espaces (parentId) — implémentation terminée, en attente de commit
 
 ## À faire
 _Aucune tâche planifiée_
 
 ## Terminé récemment
+| 2026-02-09 | Page admin Statistiques (totaux, activite, repartition, top espaces) | 5a2b108 |
+| 2026-02-09 | Fix graphe occupe toute la hauteur disponible | 09aa5c3 |
+| 2026-02-09 | Filtre communautes graphe global + noeuds structurels espace/communaute | 61878ae |
 | 2026-02-09 | Vue graphe force-directed a 3 niveaux (espace, communaute, global) | c1f79e4 |
 | 2026-02-08 | Groupement natif ReactFlow (parentId) pour zones projet MindMap | 381e40a |
 | 2026-02-08 | Breadcrumb ItemEditModal + zoom projet MindMap + favicon optimisé | 3aaffbb |

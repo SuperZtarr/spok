@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, RotateCcw, Save, Loader2, Building2 } from 'lucide-react';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace } from '../hooks/useSpaces';
-import { communitiesApi } from '../lib/api';
+import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -29,6 +29,12 @@ export function SpaceSettingsPage() {
     queryFn: () => communitiesApi.list(),
   });
 
+  // Fetch all spaces for parent selector
+  const { data: allSpaces } = useQuery({
+    queryKey: ['spaces', 'all'],
+    queryFn: () => spacesApi.list(),
+  });
+
   const [localStatuses, setLocalStatuses] = useState<StatusConfig[] | null>(null);
   const [localTypeLabels, setLocalTypeLabels] = useState<Record<string, TypeLabelConfig> | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -36,6 +42,7 @@ export function SpaceSettingsPage() {
   // Space info state
   const [editName, setEditName] = useState('');
   const [editCommunityId, setEditCommunityId] = useState<string>('');
+  const [editParentId, setEditParentId] = useState<string>('');
 
   // Initialize local state when data loads
   useEffect(() => {
@@ -50,6 +57,7 @@ export function SpaceSettingsPage() {
     if (space && !editName) {
       setEditName(space.name);
       setEditCommunityId(space.communityId || '');
+      setEditParentId(space.parentId || '');
     }
   }, [space, editName]);
 
@@ -90,10 +98,12 @@ export function SpaceSettingsPage() {
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
 
-    const updates: { name?: string; communityId?: string | null } = {};
+    const updates: { name?: string; communityId?: string | null; parentId?: string | null } = {};
     if (editName !== space.name) updates.name = editName;
     const newCommunityId = editCommunityId || null;
     if (newCommunityId !== space.communityId) updates.communityId = newCommunityId;
+    const newParentId = editParentId || null;
+    if (newParentId !== (space.parentId || null)) updates.parentId = newParentId;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -102,13 +112,37 @@ export function SpaceSettingsPage() {
 
   const hasSpaceInfoChanges = space && (
     editName !== space.name ||
-    (editCommunityId || null) !== space.communityId
+    (editCommunityId || null) !== space.communityId ||
+    (editParentId || null) !== (space.parentId || null)
   );
 
   const communityOptions = [
     { value: '', label: 'Aucune communauté' },
     ...(communities?.map((c) => ({ value: c.id, label: c.name })) || []),
   ];
+
+  // Build parent space options, excluding self and descendants
+  const parentSpaceOptions = useMemo(() => {
+    if (!allSpaces || !spaceId) return [{ value: '', label: 'Aucun (espace racine)' }];
+
+    // Collect all descendant IDs to exclude
+    const excludeIds = new Set<string>([spaceId]);
+    const findDescendants = (parentId: string) => {
+      for (const s of allSpaces) {
+        if (s.parentId === parentId && !excludeIds.has(s.id)) {
+          excludeIds.add(s.id);
+          findDescendants(s.id);
+        }
+      }
+    };
+    findDescendants(spaceId);
+
+    const eligible = allSpaces.filter(s => s.type === 'GROUP' && !excludeIds.has(s.id));
+    return [
+      { value: '', label: 'Aucun (espace racine)' },
+      ...eligible.map(s => ({ value: s.id, label: s.name })),
+    ];
+  }, [allSpaces, spaceId]);
 
   // Check permissions
   const canEdit = space?.role === 'OWNER' || space?.role === 'ADMIN';
@@ -230,6 +264,19 @@ export function SpaceSettingsPage() {
                   Rattacher cet espace à une communauté dont vous êtes membre
                 </p>
               </div>
+              {parentSpaceOptions.length > 1 && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Espace parent</label>
+                  <Select
+                    value={editParentId}
+                    onChange={(e) => setEditParentId(e.target.value)}
+                    options={parentSpaceOptions}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Imbriquer cet espace sous un autre espace de groupe
+                  </p>
+                </div>
+              )}
               {hasSpaceInfoChanges && (
                 <Button
                   onClick={handleSaveSpaceInfo}
