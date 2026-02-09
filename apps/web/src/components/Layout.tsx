@@ -447,8 +447,8 @@ export function Layout() {
           </div>
         </header>
 
-        {/* Page content - scrollable */}
-        <main className="flex-1 overflow-auto min-h-0">
+        {/* Page content */}
+        <main className="flex-1 flex flex-col min-h-0">
           <Outlet />
         </main>
       </div>

@@ -260,7 +260,7 @@ export function DashboardPage() {
   }, [allSpaces]);
 
   return (
-    <div className={`flex flex-col h-full${activeTab === 'graph' ? ' overflow-hidden' : ''}`}>
+    <div className={`flex flex-col h-full${activeTab === 'graph' ? ' overflow-hidden' : ' overflow-auto'}`}>
       {/* Barre d'actions sticky */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex-shrink-0">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -298,7 +298,7 @@ export function DashboardPage() {
       </div>
 
       {activeTab === 'graph' ? (
-        <div style={{ height: 'calc(100vh - 56px - 54px)' }}>
+        <div className="flex-1 min-h-0">
           <GraphView
             level="global"
             onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}`, { state: { openItemId: itemId } })}
