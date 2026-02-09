@@ -298,7 +298,7 @@ export function DashboardPage() {
       </div>
 
       {activeTab === 'graph' ? (
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div style={{ height: 'calc(100vh - 56px - 54px)' }}>
           <GraphView
             level="global"
             onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}`, { state: { openItemId: itemId } })}
