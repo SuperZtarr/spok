@@ -60,22 +60,24 @@ export function StatsPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Statistiques</h1>
-        <div className="flex items-center gap-1 bg-accent/50 rounded-lg p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                period === p.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent text-muted-foreground'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Statistiques</h1>
+          <div className="flex items-center gap-1 bg-accent/50 rounded-lg p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  period === p.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent text-muted-foreground'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

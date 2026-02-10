@@ -39,7 +39,7 @@ export function AdminLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         <div className="p-4 border-b border-border">
@@ -162,8 +162,8 @@ export function AdminLayout() {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col bg-background">
-        <main className="flex-1 overflow-auto">
+      <div className="flex-1 flex flex-col min-h-0 bg-background">
+        <main className="flex-1 overflow-auto min-h-0">
           <Outlet />
         </main>
       </div>

@@ -145,46 +145,48 @@ export function UsersPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Utilisateurs</h1>
-        <Button onClick={() => setModalUserId(null)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouvel utilisateur
-        </Button>
-      </div>
-
-      {anomaly && (
-        <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
-          <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
-          <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
-            Filtre anomalie : {anomalyLabels[anomaly] || anomaly}
-          </span>
-          <button
-            onClick={clearAnomaly}
-            className="ml-auto p-1 rounded hover:bg-orange-200 dark:hover:bg-orange-800 text-orange-500"
-            title="Retirer le filtre"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom ou email..."
-              className="pl-10"
-            />
-          </div>
-          <Button type="submit" variant="secondary">
-            Rechercher
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Utilisateurs</h1>
+          <Button onClick={() => setModalUserId(null)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvel utilisateur
           </Button>
         </div>
-      </form>
+
+        {anomaly && (
+          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+            <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+            <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
+              Filtre anomalie : {anomalyLabels[anomaly] || anomaly}
+            </span>
+            <button
+              onClick={clearAnomaly}
+              className="ml-auto p-1 rounded hover:bg-orange-200 dark:hover:bg-orange-800 text-orange-500"
+              title="Retirer le filtre"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSearch}>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher par nom ou email..."
+                className="pl-10"
+              />
+            </div>
+            <Button type="submit" variant="secondary">
+              Rechercher
+            </Button>
+          </div>
+        </form>
+      </div>
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>

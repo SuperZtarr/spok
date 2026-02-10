@@ -13,24 +13,26 @@ export function ReferentielsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Referentiels</h1>
-          {data && (
-            <p className="text-sm text-muted-foreground mt-1">
-              {data.defaults.statuses.length} statuts, {Object.keys(data.defaults.typeLabels).length} types d'items
-              {' '}— {data.customizedCount} espace{data.customizedCount > 1 ? 's' : ''} personnalise{data.customizedCount > 1 ? 's' : ''}
-            </p>
-          )}
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Referentiels</h1>
+            {data && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {data.defaults.statuses.length} statuts, {Object.keys(data.defaults.typeLabels).length} types d'items
+                {' '}— {data.customizedCount} espace{data.customizedCount > 1 ? 's' : ''} personnalise{data.customizedCount > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isFetching}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
       </div>
 
       {isLoading && (

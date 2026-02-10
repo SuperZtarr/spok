@@ -80,30 +80,32 @@ export function CommunitiesPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Communautes</h1>
-        <Button onClick={() => setModalCommunityId(null)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouvelle communaute
-        </Button>
-      </div>
-
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom..."
-              className="pl-10"
-            />
-          </div>
-          <Button type="submit" variant="secondary">
-            Rechercher
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Communautes</h1>
+          <Button onClick={() => setModalCommunityId(null)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvelle communaute
           </Button>
         </div>
-      </form>
+
+        <form onSubmit={handleSearch}>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher par nom..."
+                className="pl-10"
+              />
+            </div>
+            <Button type="submit" variant="secondary">
+              Rechercher
+            </Button>
+          </div>
+        </form>
+      </div>
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>

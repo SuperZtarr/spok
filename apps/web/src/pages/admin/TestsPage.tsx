@@ -66,37 +66,39 @@ export function TestsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Tests de non-regression</h1>
-          {data && (
-            <p className="text-sm text-muted-foreground mt-1">
-              <span className="text-green-600 font-medium">{data.summary.passed} pass</span>
-              {data.summary.failed > 0 && (
-                <span className="text-red-600 font-medium ml-3">{data.summary.failed} fail</span>
-              )}
-              {data.summary.warnings > 0 && (
-                <span className="text-orange-600 font-medium ml-3">{data.summary.warnings} warning</span>
-              )}
-              <span className="ml-3">
-                — {data.totalDurationMs}ms
-                — {new Date(data.executedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </span>
-            </p>
-          )}
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Tests de non-regression</h1>
+            {data && (
+              <p className="text-sm text-muted-foreground mt-1">
+                <span className="text-green-600 font-medium">{data.summary.passed} pass</span>
+                {data.summary.failed > 0 && (
+                  <span className="text-red-600 font-medium ml-3">{data.summary.failed} fail</span>
+                )}
+                {data.summary.warnings > 0 && (
+                  <span className="text-orange-600 font-medium ml-3">{data.summary.warnings} warning</span>
+                )}
+                <span className="ml-3">
+                  — {data.totalDurationMs}ms
+                  — {new Date(data.executedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleRun}
+            disabled={isFetching}
+          >
+            {isFetching ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4 mr-2" />
+            )}
+            {isFetching ? 'Execution...' : 'Lancer les tests'}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRun}
-          disabled={isFetching}
-        >
-          {isFetching ? (
-            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Play className="w-4 h-4 mr-2" />
-          )}
-          {isFetching ? 'Execution...' : 'Lancer les tests'}
-        </Button>
       </div>
 
       {/* Summary bar */}
