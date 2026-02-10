@@ -2,6 +2,25 @@
 
 ---
 
+#### [2026-02-10 21:45] - Landing Page publique
+
+**Demande :** Créer une page d'accueil publique visible par les visiteurs non connectés, avec header (logo + connexion/inscription), hero, section fonctionnalités (6 blocs), section vues disponibles (6 modes), et footer.
+
+**Actions réalisées :**
+- Créé `apps/web/src/pages/LandingPage.tsx` : page complète avec header sticky, hero, 6 cartes fonctionnalités (icônes Lucide), 6 vues présentées, footer
+- Modifié `apps/web/src/App.tsx` : ajout composant `HomeRoute` qui affiche LandingPage si non connecté, Layout (dashboard) si connecté. Import LandingPage.
+- Style cohérent avec le design system existant (CSS vars HSL, Tailwind, classes Button réutilisées sur des Link)
+
+**Fichiers créés :**
+- `apps/web/src/pages/LandingPage.tsx`
+
+**Fichiers modifiés :**
+- `apps/web/src/App.tsx`
+
+**État :** EN COURS — compilation OK, dev serveurs actifs, en attente de vérification utilisateur et commit
+
+---
+
 #### [2026-02-10 21:25] - Optimistic Locking avec résolution de conflit
 
 **Demande :** Implémenter l'optimistic locking sur les items pour détecter les conflits d'édition concurrente et proposer un dialogue de résolution champ par champ.

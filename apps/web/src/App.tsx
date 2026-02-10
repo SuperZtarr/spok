@@ -25,6 +25,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
@@ -60,6 +61,20 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+function HomeRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  return (
+    <ProtectedRoute>
+      <Layout />
+    </ProtectedRoute>
+  );
 }
 
 export default function App() {
@@ -108,11 +123,7 @@ export default function App() {
       />
       <Route
         path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
+        element={<HomeRoute />}
       >
         <Route index element={<DashboardPage />} />
         <Route path="spaces/:spaceId" element={<SpacePage />} />
