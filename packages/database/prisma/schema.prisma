@@ -173,6 +173,7 @@ enum ItemType {
   CONFIG
   DOCUMENT
   IMAGE
+  BUG
 }
 
 // Relations entre éléments

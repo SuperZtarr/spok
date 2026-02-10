@@ -140,6 +140,14 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     visible: true,
     order: 8,
   },
+  BUG: {
+    label: 'Anomalies',
+    labelShort: 'Bug',
+    color: 'border-red-400',
+    bgHover: 'bg-red-50',
+    visible: true,
+    order: 9,
+  },
 };
 
 // =============================================================================
