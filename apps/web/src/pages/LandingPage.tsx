@@ -83,11 +83,15 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-4 py-20 text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Structurez, liez, planifiez
+        <img src="/logo.png" alt="SPOK" className="mx-auto mb-6 h-40 w-auto sm:h-56" />
+        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+          SPOK
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-          SPOK est l'outil collaboratif pour organiser vos projets, relier vos idées
+        <p className="mt-2 text-xl font-medium tracking-wide text-muted-foreground sm:text-2xl">
+          Single Point Of Knowledge
+        </p>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+          L'outil collaboratif pour organiser vos projets, relier vos idées
           et visualiser l'ensemble sous plusieurs angles.
         </p>
         <div className="mt-8 flex justify-center gap-3">
