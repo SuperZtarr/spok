@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
+import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import {
   ReactFlow,
   Node,
@@ -20,7 +20,14 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, ChevronRight, ChevronDown, FolderOpen, RotateCcw, ChevronsUpDown, ChevronsDownUp, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, type LucideIcon } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, FolderOpen, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, type LucideIcon } from 'lucide-react';
+import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
+
+export interface MindMapViewHandle {
+  expandAll: () => void;
+  collapseAll: () => void;
+  hasCollapsedNodes: boolean;
+}
 
 interface MindMapViewProps {
   items: ItemWithRelations[];
@@ -266,22 +273,6 @@ function MindMapNode({ data }: MindMapNodeProps) {
             <ExternalLink className="w-3 h-3 text-indigo-600" />
           </button>
         )}
-        {hasChildren && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleCollapse(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-orange-50"
-            title={isCollapsed ? `Déplier (${childCount})` : `Replier (${childCount})`}
-          >
-            {isCollapsed ? (
-              <ChevronsUpDown className="w-3 h-3 text-orange-600" />
-            ) : (
-              <ChevronsDownUp className="w-3 h-3 text-orange-600" />
-            )}
-          </button>
-        )}
         {hasChildren && !isCollapsed && (
           <button
             onClick={(e) => {
@@ -400,31 +391,14 @@ const nodeTypes = {
   projectGroup: ProjectGroupNode,
 };
 
-// Layout constants for radial layout
-const NODE_WIDTH = 160;  // Approximate width of a node (including padding)
-const NODE_GAP = 30;     // Minimum gap between two adjacent nodes
-const MIN_RADIUS_ROOT = 300;  // Minimum radius for root items (around space node)
-const MIN_RADIUS_CHILD = 180; // Minimum radius for children (tighter grouping in projects)
-const MIN_ANGLE_SPREAD = Math.PI / 6; // Minimum angle between siblings (30 degrees)
-const DEPTH_ANGLE_MULTIPLIER = 1.3; // Multiply angular spread per extra depth level
+// Layout constant for d3 radial tree
+const RADIAL_STEP = 350; // pixels between depth levels
 
-// Calculate the angular size needed for a subtree
-// depth: 0 = root items, 1 = their children, etc.
-function calculateSubtreeSize(item: TreeItem, collapsedIds: Set<string>, depth: number = 0): number {
-  // Deeper nodes get a wider minimum angle so siblings are more spaced out
-  const depthMultiplier = Math.pow(DEPTH_ANGLE_MULTIPLIER, Math.max(0, depth - 1));
-  const minSpread = MIN_ANGLE_SPREAD * depthMultiplier;
-
-  if (item.children.length === 0 || collapsedIds.has(item.id)) {
-    return minSpread;
-  }
-
-  let totalSize = 0;
-  item.children.forEach(child => {
-    totalSize += calculateSubtreeSize(child, collapsedIds, depth + 1);
-  });
-
-  return Math.max(totalSize, minSpread);
+// Data structure for d3 hierarchy
+interface LayoutDatum {
+  id: string;
+  item?: TreeItem;
+  children?: LayoutDatum[];
 }
 
 // Collect all visible descendant IDs (not behind a collapsed node)
@@ -438,156 +412,6 @@ function collectVisibleDescendantIds(item: TreeItem, collapsedIds: Set<string>):
   return ids;
 }
 
-// Push non-member nodes out of project group bounding boxes
-function resolveProjectGroupCollisions(
-  nodes: Node[],
-  tree: TreeItem[],
-  collapsedIds: Set<string>,
-): Node[] {
-  const APPROX_NODE_W = 150;
-  const APPROX_NODE_H = 40;
-  const GROUP_PADDING = 50;
-  const PUSH_MARGIN = 30;
-
-  // Build project group bounding boxes from node positions
-  const nodePositions = new Map(nodes.map(n => [n.id, n.position]));
-
-  interface GroupBox {
-    memberIds: Set<string>;
-    minX: number; minY: number; maxX: number; maxY: number;
-  }
-
-  const groups: GroupBox[] = [];
-
-  function findProjects(items: TreeItem[]) {
-    for (const item of items) {
-      if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
-        const descendantIds = collectVisibleDescendantIds(item, collapsedIds);
-        if (descendantIds.length === 0) continue;
-
-        const allIds = [item.id, ...descendantIds];
-        const positions = allIds
-          .map(id => nodePositions.get(id))
-          .filter((p): p is { x: number; y: number } => !!p);
-
-        if (positions.length < 2) continue;
-
-        groups.push({
-          memberIds: new Set(allIds),
-          minX: Math.min(...positions.map(p => p.x)) - GROUP_PADDING,
-          minY: Math.min(...positions.map(p => p.y)) - GROUP_PADDING,
-          maxX: Math.max(...positions.map(p => p.x)) + APPROX_NODE_W + GROUP_PADDING,
-          maxY: Math.max(...positions.map(p => p.y)) + APPROX_NODE_H + GROUP_PADDING,
-        });
-      }
-      if (!collapsedIds.has(item.id)) {
-        findProjects(item.children);
-      }
-    }
-  }
-
-  findProjects(tree);
-  if (groups.length === 0) return nodes;
-
-  // Multiple passes to handle cascading pushes
-  const result = nodes.map(n => ({ ...n, position: { ...n.position } }));
-  for (let pass = 0; pass < 3; pass++) {
-    let anyPushed = false;
-    for (const n of result) {
-      if (n.type !== 'mindmap') continue;
-
-      for (const group of groups) {
-        if (group.memberIds.has(n.id)) continue;
-
-        const { x, y } = n.position;
-        const nodeRight = x + APPROX_NODE_W;
-        const nodeBottom = y + APPROX_NODE_H;
-
-        // AABB overlap test
-        if (nodeRight > group.minX && x < group.maxX &&
-            nodeBottom > group.minY && y < group.maxY) {
-          // Push to nearest edge
-          const distToLeft = nodeRight - group.minX;
-          const distToRight = group.maxX - x;
-          const distToTop = nodeBottom - group.minY;
-          const distToBottom = group.maxY - y;
-
-          const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
-
-          if (minDist === distToLeft) {
-            n.position.x = group.minX - APPROX_NODE_W - PUSH_MARGIN;
-          } else if (minDist === distToRight) {
-            n.position.x = group.maxX + PUSH_MARGIN;
-          } else if (minDist === distToTop) {
-            n.position.y = group.minY - APPROX_NODE_H - PUSH_MARGIN;
-          } else {
-            n.position.y = group.maxY + PUSH_MARGIN;
-          }
-          anyPushed = true;
-        }
-      }
-    }
-    if (!anyPushed) break;
-  }
-
-  return result;
-}
-
-// Separate overlapping nodes so they don't stack on top of each other
-function resolveNodeOverlaps(nodes: Node[]): Node[] {
-  const NODE_W = 170;
-  const NODE_H = 48;
-  const MIN_GAP = 30; // minimum gap between any two nodes
-
-  const mindmapIndices: number[] = [];
-  const result = nodes.map((n, i) => {
-    if (n.type === 'mindmap') mindmapIndices.push(i);
-    return { ...n, position: { ...n.position } };
-  });
-
-  // Multiple passes — each pass pushes overlapping pairs apart
-  for (let pass = 0; pass < 15; pass++) {
-    let anyPushed = false;
-
-    for (let i = 0; i < mindmapIndices.length; i++) {
-      for (let j = i + 1; j < mindmapIndices.length; j++) {
-        const a = result[mindmapIndices[i]];
-        const b = result[mindmapIndices[j]];
-
-        // Required separation (node size + gap)
-        const sepX = NODE_W + MIN_GAP;
-        const sepY = NODE_H + MIN_GAP;
-
-        const dx = b.position.x - a.position.x;
-        const dy = b.position.y - a.position.y;
-
-        const overlapX = sepX - Math.abs(dx);
-        const overlapY = sepY - Math.abs(dy);
-
-        // Only overlap if BOTH axes overlap
-        if (overlapX > 0 && overlapY > 0) {
-          anyPushed = true;
-
-          // Push apart radially (away from each other) for a more natural spread
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const totalOverlap = Math.min(overlapX, overlapY);
-          const push = totalOverlap / 2 + 5;
-          const nx = dx / dist;
-          const ny = dy / dist;
-
-          a.position.x -= nx * push;
-          a.position.y -= ny * push;
-          b.position.x += nx * push;
-          b.position.y += ny * push;
-        }
-      }
-    }
-
-    if (!anyPushed) break;
-  }
-
-  return result;
-}
 
 // Compute absolute positions for nodes that may have a parentId chain
 function getAbsolutePositions(nodes: Node[]): Map<string, { x: number; y: number }> {
@@ -626,11 +450,11 @@ function applyNativeGrouping(
   const APPROX_NODE_H = 40;
   const PADDING = 40;
 
-  // Collect all PROJECT items with visible children, sorted by depth (deepest first)
+  // Collect all PROJECT items with visible children
   interface ProjectInfo {
     item: TreeItem;
     depth: number;
-    memberIds: string[]; // project + all visible descendants
+    directChildIds: string[]; // only direct children (not deep descendants)
   }
 
   const projects: ProjectInfo[] = [];
@@ -638,13 +462,9 @@ function applyNativeGrouping(
   function findProjects(items: TreeItem[], depth: number) {
     for (const item of items) {
       if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
-        const descendantIds = collectVisibleDescendantIds(item, collapsedIds);
-        if (descendantIds.length > 0) {
-          projects.push({
-            item,
-            depth,
-            memberIds: [item.id, ...descendantIds],
-          });
+        const directChildIds = item.children.map(c => c.id);
+        if (directChildIds.length > 0) {
+          projects.push({ item, depth, directChildIds });
         }
       }
       if (!collapsedIds.has(item.id)) {
@@ -668,12 +488,13 @@ function applyNativeGrouping(
 
   for (const proj of projects) {
     const groupId = `project-group-${proj.item.id}`;
+    const memberIds = [proj.item.id, ...proj.directChildIds];
 
-    // Build a position map for current absolute positions
-    const absPositions = getAbsolutePositions(result);
+    // Build a position map for current absolute positions (include group nodes for nested resolution)
+    const absPositions = getAbsolutePositions([...groupNodes, ...result]);
 
-    // Get absolute positions of all members
-    const memberPositions = proj.memberIds
+    // Get absolute positions of members (project + direct children only)
+    const memberPositions = memberIds
       .map(id => ({ id, pos: absPositions.get(id) }))
       .filter((p): p is { id: string; pos: { x: number; y: number } } => !!p.pos);
 
@@ -687,7 +508,7 @@ function applyNativeGrouping(
 
     const groupPos = { x: minX, y: minY };
 
-    // Create the group node
+    // Create the group node (always top-level, no nesting)
     const statusColor = getStatusColor(proj.item.status, statuses);
     const hexColor = tailwindBgToHex(statusColor);
     const darkerHex = hexColor.replace(/f/gi, 'a').slice(0, 7);
@@ -703,29 +524,16 @@ function applyNativeGrouping(
       connectable: false,
       data: {
         label: proj.item.title,
-        childCount: proj.memberIds.length - 1,
+        childCount: proj.directChildIds.length,
         hexColor: darkerHex,
-        memberIds: proj.memberIds,
+        memberIds,
       },
     });
 
-    // Convert member positions to relative (only if not already grouped by an inner group)
+    // Convert member positions to relative (skip nodes already grouped by a deeper group)
     result = result.map(n => {
-      if (!proj.memberIds.includes(n.id)) return n;
-
-      // If already has a parentId from an inner group, skip — its position is already relative to that inner group
-      if (alreadyGrouped.has(n.id)) {
-        // But if this node IS an inner group node itself, reparent it under this outer group
-        if (n.id.startsWith('project-group-')) {
-          const absPos = absPositions.get(n.id) || n.position;
-          return {
-            ...n,
-            parentId: groupId,
-            position: { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y },
-          };
-        }
-        return n;
-      }
+      if (!memberIds.includes(n.id)) return n;
+      if (alreadyGrouped.has(n.id)) return n;
 
       // Convert absolute position to relative to group
       const absPos = absPositions.get(n.id) || n.position;
@@ -736,37 +544,9 @@ function applyNativeGrouping(
         position: { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y },
       };
     });
-
-    // Also reparent inner group nodes that are members of this outer group
-    for (const gn of groupNodes) {
-      if (gn.id === groupId) continue;
-      // Check if this inner group's project is a member of the outer group
-      const innerProjectId = gn.id.replace('project-group-', '');
-      if (proj.memberIds.includes(innerProjectId) && !gn.parentId) {
-        const absPos = absPositions.get(gn.id) || gn.position;
-        gn.parentId = groupId;
-        gn.position = { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y };
-      }
-    }
   }
 
   return [...groupNodes, ...result];
-}
-
-// Get the best handle position based on angle
-function getHandleFromAngle(angle: number): string {
-  // Normalize angle to 0-2PI
-  const normalizedAngle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-
-  if (normalizedAngle >= Math.PI * 7/4 || normalizedAngle < Math.PI * 1/4) {
-    return 'right';
-  } else if (normalizedAngle >= Math.PI * 1/4 && normalizedAngle < Math.PI * 3/4) {
-    return 'bottom';
-  } else if (normalizedAngle >= Math.PI * 3/4 && normalizedAngle < Math.PI * 5/4) {
-    return 'left';
-  } else {
-    return 'top';
-  }
 }
 
 // Recalculate edge handles based on actual node positions
@@ -804,7 +584,7 @@ function recalculateEdgeHandles(edges: Edge[], nodePositions: Map<string, { x: n
   });
 }
 
-// Calculate node positions using radial/star layout
+// Calculate node positions using d3-hierarchy radial tree layout
 function calculateLayout(
   tree: TreeItem[],
   items: ItemWithRelations[],
@@ -823,47 +603,83 @@ function calculateLayout(
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-
   const SPACE_NODE_ID = '__space__';
 
-  function processNode(
-    item: TreeItem,
-    depth: number,
-    parentId: string | null,
-    centerX: number,
-    centerY: number,
-    startAngle: number,
-    endAngle: number,
-    parentAngle?: number,
-    childRadius?: number
-  ) {
+  // Build d3 hierarchy data
+  function buildDatum(item: TreeItem): LayoutDatum {
+    const isCollapsed = collapsedIds.has(item.id);
+    return {
+      id: item.id,
+      item,
+      children: isCollapsed || item.children.length === 0
+        ? undefined
+        : item.children.map(buildDatum),
+    };
+  }
+
+  const rootDatum: LayoutDatum = {
+    id: SPACE_NODE_ID,
+    children: tree.length > 0 ? tree.map(buildDatum) : undefined,
+  };
+
+  const root = hierarchy(rootDatum);
+
+  // Compute d3 radial tree layout
+  const maxDepth = root.height || 1;
+  const maxRadius = Math.max(300, maxDepth * RADIAL_STEP);
+
+  const layout = d3Tree<LayoutDatum>()
+    .size([2 * Math.PI, maxRadius])
+    .separation((a, b) => (a.parent === b.parent ? 1.5 : 3) / Math.max(1, a.depth * 0.7));
+
+  layout(root);
+
+  // Space node at center
+  nodes.push({
+    id: SPACE_NODE_ID,
+    type: 'space',
+    position: { x: -70, y: -25 },
+    data: { label: spaceName, spaceName, itemCount: totalItemCount },
+  });
+
+  // Helper: get best edge handles from dx/dy between two positions
+  function getBestHandles(parentPos: { x: number; y: number }, childPos: { x: number; y: number }) {
+    const dx = childPos.x - parentPos.x;
+    const dy = childPos.y - parentPos.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx > 0
+        ? { sourceHandle: 'right-source', targetHandle: 'left' }
+        : { sourceHandle: 'left-source', targetHandle: 'right' };
+    }
+    return dy > 0
+      ? { sourceHandle: 'bottom-source', targetHandle: 'top' }
+      : { sourceHandle: 'top-source', targetHandle: 'bottom' };
+  }
+
+  // Convert d3 nodes to ReactFlow nodes
+  const nodePositionMap = new Map<string, { x: number; y: number }>();
+  nodePositionMap.set(SPACE_NODE_ID, { x: -70, y: -25 });
+
+  root.descendants().forEach(d3Node => {
+    if (d3Node.data.id === SPACE_NODE_ID) return;
+
+    const item = d3Node.data.item!;
     const statusColor = getStatusColor(item.status, statuses);
     const hexColor = tailwindBgToHex(statusColor);
     const hasChildren = item.children.length > 0;
     const isCollapsed = collapsedIds.has(item.id);
     const childCount = countDescendants(item);
 
-    // Calculate position based on angle and radius
-    // depth 1 = root items (around space node), depth 2+ = children
-    let x: number, y: number;
-
-    if (depth === 1) {
-      // Root items are placed at centerX, centerY (already calculated by caller)
-      x = centerX;
-      y = centerY;
-    } else {
-      // Children are placed around their parent
-      // The actual radius is computed by the parent (passed via childRadius)
-      const angle = (startAngle + endAngle) / 2;
-      const radius = childRadius || MIN_RADIUS_CHILD;
-      x = centerX + Math.cos(angle) * radius;
-      y = centerY + Math.sin(angle) * radius;
-    }
+    // Convert polar to cartesian (offset -π/2 to start from top)
+    const angle = (d3Node.x ?? 0) - Math.PI / 2;
+    const radius = d3Node.y ?? 0;
+    const pos = { x: radius * Math.cos(angle) - 75, y: radius * Math.sin(angle) - 20 };
+    nodePositionMap.set(item.id, pos);
 
     nodes.push({
       id: item.id,
       type: 'mindmap',
-      position: { x: x - 75, y: y - 20 }, // Center the node (approximate node size)
+      position: pos,
       data: {
         label: item.title,
         item,
@@ -875,7 +691,7 @@ function calculateLayout(
         onAddPortal,
         onToggleCollapse,
         onReorganizeChildren,
-        isRoot: depth === 0,
+        isRoot: d3Node.depth === 1,
         hasChildren,
         isCollapsed,
         childCount,
@@ -887,187 +703,51 @@ function calculateLayout(
       },
     });
 
-    // Add edge from parent
-    if (parentId && parentAngle !== undefined) {
-      const childAngle = (startAngle + endAngle) / 2;
-      const sourceHandle = getHandleFromAngle(childAngle) + '-source';
-      const targetHandle = getHandleFromAngle(childAngle + Math.PI); // Opposite side
-
-      edges.push({
-        id: `${parentId}-${item.id}`,
-        source: parentId,
-        target: item.id,
-        sourceHandle,
-        targetHandle,
-        type: 'default',
-        style: { stroke: '#94a3b8', strokeWidth: 2 },
-      });
+    // Edge from parent
+    if (d3Node.parent) {
+      const parentId = d3Node.parent.data.id;
+      const parentPos = nodePositionMap.get(parentId);
+      if (parentPos) {
+        const { sourceHandle, targetHandle } = getBestHandles(parentPos, pos);
+        edges.push({
+          id: `${parentId}-${item.id}`,
+          source: parentId,
+          target: item.id,
+          sourceHandle,
+          targetHandle,
+          type: 'default',
+          style: {
+            stroke: parentId === SPACE_NODE_ID ? 'hsl(var(--primary))' : '#94a3b8',
+            strokeWidth: 2,
+          },
+        });
+      }
     }
-
-    // Process children if not collapsed — star layout from parent
-    if (hasChildren && !isCollapsed) {
-      const visibleChildren = item.children;
-      const childCount = visibleChildren.length;
-
-      // Outward direction = angle from center (0,0) to this node
-      const outwardAngle = Math.atan2(y, x);
-
-      // Fan spread: scale with number of children, clamped to [60°, 180°]
-      const MIN_FAN = Math.PI / 3;  // 60° minimum fan
-      const MAX_FAN = Math.PI;      // 180° maximum fan (outward hemisphere)
-      const fanPerChild = Math.PI / 8; // 22.5° per child
-      const fanSpread = Math.min(MAX_FAN, Math.max(MIN_FAN, childCount * fanPerChild));
-
-      const fanStart = outwardAngle - fanSpread / 2;
-
-      // Dynamic radius: ensure children don't overlap on the arc
-      const requiredArc = childCount * (NODE_WIDTH + NODE_GAP);
-      const dynamicChildRadius = Math.max(MIN_RADIUS_CHILD, requiredArc / fanSpread);
-
-      // Distribute children evenly across the fan
-      visibleChildren.forEach((child, index) => {
-        // Each child gets a slice of the fan for its own subtree
-        const sliceWidth = fanSpread / childCount;
-        const childStartAngle = fanStart + index * sliceWidth;
-        const childEndAngle = childStartAngle + sliceWidth;
-
-        processNode(
-          child,
-          depth + 1,
-          item.id,
-          x,
-          y,
-          childStartAngle,
-          childEndAngle,
-          outwardAngle,
-          dynamicChildRadius
-        );
-      });
-    }
-  }
-
-  // Add central space node
-  nodes.push({
-    id: SPACE_NODE_ID,
-    type: 'space',
-    position: { x: -70, y: -25 }, // Center the space node
-    data: {
-      label: spaceName,
-      spaceName,
-      itemCount: totalItemCount,
-    },
   });
 
-  // Process all root nodes around the space node
-  if (tree.length > 0) {
-    const totalSubtreeSize = tree.reduce(
-      (sum, item) => sum + calculateSubtreeSize(item, collapsedIds, 0),
-      0
-    );
-
-    // Dynamic base radius: ensure all root nodes fit on the circumference
-    const rootCount = tree.length;
-    const requiredCircumference = rootCount * (NODE_WIDTH + NODE_GAP);
-    const dynamicBaseRadius = Math.max(MIN_RADIUS_ROOT, requiredCircumference / (2 * Math.PI));
-
-    let currentAngle = -Math.PI / 2; // Start from top
-    const angleRange = 2 * Math.PI;
-
-    tree.forEach(rootItem => {
-      const itemSize = calculateSubtreeSize(rootItem, collapsedIds, 0);
-      const itemAngleSpan = (itemSize / totalSubtreeSize) * angleRange;
-      const startAngle = currentAngle;
-      const endAngle = currentAngle + itemAngleSpan;
-      const midAngle = (startAngle + endAngle) / 2;
-
-      // Position root items around the space node with dynamic radius
-      const x = Math.cos(midAngle) * dynamicBaseRadius;
-      const y = Math.sin(midAngle) * dynamicBaseRadius;
-
-      // Add edge from space to root item
-      const sourceHandle = getHandleFromAngle(midAngle) + '-source';
-      const targetHandle = getHandleFromAngle(midAngle + Math.PI);
-
-      edges.push({
-        id: `${SPACE_NODE_ID}-${rootItem.id}`,
-        source: SPACE_NODE_ID,
-        target: rootItem.id,
-        sourceHandle,
-        targetHandle,
-        type: 'default',
-        style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
-      });
-
-      // Pass null as parentId since we already added the edge above
-      processNode(rootItem, 1, null, x, y, startAngle, endAngle, midAngle);
-
-      currentAngle = endAngle;
-    });
-  }
-
-  // Create edges for relations (not parent-child)
+  // Create relation edges
   const relationEdges: Edge[] = [];
   const nodeIds = new Set(nodes.map(n => n.id));
-  const nodePositions = new Map(nodes.map(n => [n.id, n.position]));
-
-  // Helper to get best handles based on relative positions
-  const getBestHandles = (sourceId: string, targetId: string): { sourceHandle: string; targetHandle: string } => {
-    const sourcePos = nodePositions.get(sourceId);
-    const targetPos = nodePositions.get(targetId);
-
-    if (!sourcePos || !targetPos) {
-      return { sourceHandle: 'right-source', targetHandle: 'left' };
-    }
-
-    const dx = targetPos.x - sourcePos.x;
-    const dy = targetPos.y - sourcePos.y;
-
-    // Determine primary direction
-    if (Math.abs(dx) > Math.abs(dy)) {
-      // Horizontal - use left/right handles
-      if (dx > 0) {
-        return { sourceHandle: 'right-source', targetHandle: 'left' };
-      } else {
-        return { sourceHandle: 'left-source', targetHandle: 'right' };
-      }
-    } else {
-      // Vertical - use top/bottom handles
-      if (dy > 0) {
-        return { sourceHandle: 'bottom-source', targetHandle: 'top' };
-      } else {
-        return { sourceHandle: 'top-source', targetHandle: 'bottom' };
-      }
-    }
-  };
 
   items.forEach(item => {
-    // Relations from this item
     item.relationsFrom?.forEach(relation => {
-      // Only create edge if both nodes exist in the current view
       if (nodeIds.has(relation.fromItemId) && nodeIds.has(relation.toItemId)) {
-        const { sourceHandle, targetHandle } = getBestHandles(relation.fromItemId, relation.toItemId);
+        const sourcePos = nodePositionMap.get(relation.fromItemId);
+        const targetPos = nodePositionMap.get(relation.toItemId);
+        const handles = sourcePos && targetPos
+          ? getBestHandles(sourcePos, targetPos)
+          : { sourceHandle: 'right-source', targetHandle: 'left' };
 
         relationEdges.push({
           id: `relation-${relation.id}`,
           source: relation.fromItemId,
           target: relation.toItemId,
-          sourceHandle,
-          targetHandle,
+          ...handles,
           type: 'default',
           animated: true,
-          style: {
-            stroke: '#8b5cf6',
-            strokeWidth: 2,
-            strokeDasharray: '5,5',
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: '#8b5cf6',
-          },
-          data: {
-            relationId: relation.id,
-            type: relation.type,
-          },
+          style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
+          data: { relationId: relation.id, type: relation.type },
           label: relation.type === 'relates' ? '' : relation.type,
           labelStyle: { fontSize: 10, fill: '#8b5cf6' },
           labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
@@ -1110,14 +790,15 @@ function MindMapViewInner({
   onDeleteRelation,
   referentiels,
   canEdit,
-}: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'>) {
+  innerRef,
+}: Omit<MindMapViewProps, 'onDelete' | 'onUpdateStatus'> & { innerRef?: React.Ref<MindMapViewHandle> }) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [showPortalDialog, setShowPortalDialog] = useState(false);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
-  const { fitView, getIntersectingNodes } = useReactFlow();
+  const { fitView, getIntersectingNodes, getNodes } = useReactFlow();
 
   // localStorage keys
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
@@ -1244,6 +925,8 @@ function MindMapViewInner({
 
   // Ref-based wrapper to avoid circular dependency with useMemo → useNodesState → setNodes
   const reorganizeRef = useRef<(id: string) => void>(() => {});
+  // Track descendant offsets during drag-with-children
+  const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }>; startPos: { x: number; y: number } } | null>(null);
   const handleReorganizeChildren = useCallback((id: string) => reorganizeRef.current(id), []);
 
   // Apply saved positions to nodes (override calculated positions with user-dragged ones)
@@ -1259,8 +942,7 @@ function MindMapViewInner({
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
-    const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(positionedNodes), tree, collapsedIds);
-    const groupedNodes = applyNativeGrouping(resolvedNodes, tree, statuses, collapsedIds);
+    const groupedNodes = applyNativeGrouping(positionedNodes, tree, statuses, collapsedIds);
     const absPositions = getAbsolutePositions(groupedNodes);
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], absPositions);
     return { initialNodes: groupedNodes, initialEdges: allEdges };
@@ -1271,86 +953,90 @@ function MindMapViewInner({
 
   // Assign the actual reorganize implementation to the ref (after setNodes/setEdges are available)
   reorganizeRef.current = (parentId: string) => {
-    setNodes(currentNodes => {
-      const absPositions = getAbsolutePositions(currentNodes);
-      const spacePos = absPositions.get('__space__') || { x: -70, y: -25 };
-      const parentAbsPos = absPositions.get(parentId);
-      if (!parentAbsPos) return currentNodes;
+    // Find the tree node and its visible children
+    function findTreeNode(ns: TreeItem[], id: string): TreeItem | null {
+      for (const n of ns) {
+        if (n.id === id) return n;
+        const f = findTreeNode(n.children, id);
+        if (f) return f;
+      }
+      return null;
+    }
 
-      function findTreeNode(ns: TreeItem[], id: string): TreeItem | null {
-        for (const n of ns) {
-          if (n.id === id) return n;
-          const f = findTreeNode(n.children, id);
-          if (f) return f;
+    const treeNode = findTreeNode(fullTree, parentId);
+    if (!treeNode || treeNode.children.length === 0) return;
+
+    const visibleChildren = collapsedIds.has(parentId) ? [] : treeNode.children;
+    if (visibleChildren.length === 0) return;
+
+    // Get the parent's current absolute position
+    const currentNodes = getNodes();
+    const absPositions = getAbsolutePositions(currentNodes);
+    const parentPosRaw = absPositions.get(parentId);
+    if (!parentPosRaw) return;
+    const parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
+
+    // Distribute children in a fan around the parent
+    const childCount = visibleChildren.length;
+    const radius = RADIAL_STEP;
+    const angleSpread = Math.min(Math.PI * 1.5, childCount * (Math.PI / 4));
+    const startAngle = -angleSpread / 2;
+
+    // Recursively reposition a subtree
+    function repositionSubtree(item: TreeItem, cx: number, cy: number, depth: number) {
+      // Save new absolute position
+      savedPositions.current[item.id] = { x: cx, y: cy };
+
+      // Recurse into visible children
+      if (!collapsedIds.has(item.id) && item.children.length > 0) {
+        const kids = item.children;
+        const subRadius = RADIAL_STEP * 0.8;
+        const subSpread = Math.min(Math.PI, kids.length * (Math.PI / 5));
+        const subStart = -subSpread / 2;
+        // Direction from grandparent to this node
+        const dirAngle = Math.atan2(cy - parentPos.y, cx - parentPos.x);
+        for (let i = 0; i < kids.length; i++) {
+          const a = kids.length === 1 ? dirAngle : dirAngle + subStart + (i * subSpread) / Math.max(1, kids.length - 1);
+          const nx = cx + subRadius * Math.cos(a);
+          const ny = cy + subRadius * Math.sin(a);
+          repositionSubtree(kids[i], nx, ny, depth + 1);
         }
-        return null;
       }
+    }
 
-      const treeNode = findTreeNode(fullTree, parentId);
-      if (!treeNode || treeNode.children.length === 0 || collapsedIds.has(parentId)) return currentNodes;
+    // Compute direction from center to parent for outward fan
+    const spacePos = absPositions.get('__space__') || { x: 0, y: 0 };
+    const baseAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
 
-      // Collect new absolute positions for all descendants
-      const newPositions = new Map<string, { x: number; y: number }>();
+    for (let i = 0; i < childCount; i++) {
+      const angle = childCount === 1
+        ? baseAngle
+        : baseAngle + startAngle + (i * angleSpread) / Math.max(1, childCount - 1);
+      const cx = parentPos.x + radius * Math.cos(angle);
+      const cy = parentPos.y + radius * Math.sin(angle);
+      repositionSubtree(visibleChildren[i], cx, cy, 1);
+    }
+    savePositions();
 
-      // Recursive: each level computes its own outward direction from space center
-      function reorganize(parent: TreeItem, parentPos: { x: number; y: number }) {
-        if (parent.children.length === 0 || collapsedIds.has(parent.id)) return;
-
-        const children = parent.children;
-        const childCount = children.length;
-
-        // Outward direction: from space center to this parent
-        const outwardAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
-
-        const fanPerChild = Math.PI / 8;
-        const fanSpread = Math.min(Math.PI, Math.max(Math.PI / 3, childCount * fanPerChild));
-        const fanStart = outwardAngle - fanSpread / 2;
-
-        const requiredArc = childCount * (NODE_WIDTH + NODE_GAP);
-        const radius = Math.max(MIN_RADIUS_CHILD, requiredArc / fanSpread);
-
-        children.forEach((child, index) => {
-          const sliceWidth = fanSpread / childCount;
-          const childAngle = fanStart + (index + 0.5) * sliceWidth;
-          const newPos = {
-            x: parentPos.x + Math.cos(childAngle) * radius,
-            y: parentPos.y + Math.sin(childAngle) * radius,
-          };
-
-          newPositions.set(child.id, newPos);
-          savedPositions.current[child.id] = newPos;
-
-          // Recurse into this child's subtree
-          reorganize(child, newPos);
-        });
-      }
-
-      reorganize(treeNode, parentAbsPos);
-      // Anchor parent so it doesn't jump on next re-layout
-      savedPositions.current[parentId] = parentAbsPos;
-      savePositions();
-
-      // Directly update node positions (skip re-layout to avoid collision resolution interference)
-      const updatedNodes = currentNodes.map(n => {
-        const newAbsPos = newPositions.get(n.id);
-        if (!newAbsPos) return n;
-
-        // If node is in a ReactFlow group, compute relative position
+    // Re-apply positions to nodes without full d3 recalc
+    setNodes(currentNodes => {
+      const updated = currentNodes.map(n => {
+        const saved = savedPositions.current[n.id];
+        if (!saved) return n;
+        // If node has parentId (in a group), convert absolute to relative
         if (n.parentId) {
-          const groupAbs = absPositions.get(n.parentId);
-          if (groupAbs) {
-            return { ...n, position: { x: newAbsPos.x - groupAbs.x, y: newAbsPos.y - groupAbs.y } };
+          const parentNode = currentNodes.find(p => p.id === n.parentId);
+          if (parentNode) {
+            const parentAbs = absPositions.get(n.parentId) || parentNode.position;
+            return { ...n, position: { x: saved.x - parentAbs.x, y: saved.y - parentAbs.y } };
           }
         }
-
-        return { ...n, position: newAbsPos };
+        return { ...n, position: saved };
       });
-
-      // Recalculate edges with new positions
-      const newAbsPositions = getAbsolutePositions(updatedNodes);
-      setEdges(curEdges => recalculateEdgeHandles(curEdges, newAbsPositions));
-
-      return updatedNodes;
+      // Recalculate edges
+      const newAbsPositions = getAbsolutePositions(updated);
+      setEdges(currentEdges => recalculateEdgeHandles(currentEdges, newAbsPositions));
+      return updated;
     });
   };
 
@@ -1372,10 +1058,9 @@ function MindMapViewInner({
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(newNodes);
-    const resolvedNodes = resolveProjectGroupCollisions(positionedNodes, tree, collapsedIds);
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
+    const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1413,7 +1098,7 @@ function MindMapViewInner({
       });
     });
 
-    const groupedNodes = applyNativeGrouping([...resolvedNodes, ...portalNodes], tree, statuses, collapsedIds);
+    const groupedNodes = applyNativeGrouping([...positionedNodes, ...portalNodes], tree, statuses, collapsedIds);
     const absPositions = getAbsolutePositions(groupedNodes);
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions);
     setNodes(groupedNodes);
@@ -1514,15 +1199,89 @@ function MindMapViewInner({
     setTimeout(() => fitView({ padding: 0.3 }), 100);
   }, [fitView]);
 
-  // Handle node drag - highlight potential drop target
+  // Handle node drag start - capture descendant offsets for drag-with-children
+  const onNodeDragStart = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
+
+      // Find tree node and collect visible descendant IDs
+      function findTreeNode(ns: TreeItem[], id: string): TreeItem | null {
+        for (const n of ns) {
+          if (n.id === id) return n;
+          const f = findTreeNode(n.children, id);
+          if (f) return f;
+        }
+        return null;
+      }
+      const treeNode = findTreeNode(fullTree, draggedNode.id);
+      if (!treeNode || treeNode.children.length === 0) {
+        dragDescendants.current = null;
+        return;
+      }
+
+      const descendantIds = collectVisibleDescendantIds(treeNode, collapsedIds);
+      if (descendantIds.length === 0) {
+        dragDescendants.current = null;
+        return;
+      }
+
+      // Compute absolute positions and offsets from dragged node
+      const currentNodes = getNodes();
+      const absPositions = getAbsolutePositions(currentNodes);
+      const draggedAbsPos = absPositions.get(draggedNode.id);
+      if (!draggedAbsPos) {
+        dragDescendants.current = null;
+        return;
+      }
+
+      const offsets = new Map<string, { dx: number; dy: number }>();
+      for (const id of descendantIds) {
+        const pos = absPositions.get(id);
+        if (pos) {
+          offsets.set(id, { dx: pos.x - draggedAbsPos.x, dy: pos.y - draggedAbsPos.y });
+        }
+      }
+
+      dragDescendants.current = { ids: descendantIds, offsets, startPos: { ...draggedAbsPos } };
+    },
+    [fullTree, collapsedIds, getNodes]
+  );
+
+  // Handle node drag - move descendants and highlight potential drop target
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
       if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
+
+      // Move descendants with the dragged node
+      if (dragDescendants.current && dragDescendants.current.offsets.size > 0) {
+        const currentNodes = getNodes();
+        const absPositions = getAbsolutePositions(currentNodes);
+        const draggedAbsPos = absPositions.get(draggedNode.id);
+        if (draggedAbsPos) {
+          const { offsets } = dragDescendants.current;
+          setNodes(prevNodes => prevNodes.map(n => {
+            const offset = offsets.get(n.id);
+            if (!offset) return n;
+            // Compute new absolute position based on dragged node's current position + offset
+            const newAbsX = draggedAbsPos.x + offset.dx;
+            const newAbsY = draggedAbsPos.y + offset.dy;
+            // If this node has a parentId, convert absolute to relative
+            if (n.parentId) {
+              const parentAbs = absPositions.get(n.parentId);
+              if (parentAbs) {
+                return { ...n, position: { x: newAbsX - parentAbs.x, y: newAbsY - parentAbs.y } };
+              }
+            }
+            return { ...n, position: { x: newAbsX, y: newAbsY } };
+          }));
+        }
+      }
+
       const intersecting = getIntersectingNodes(draggedNode);
       const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
       setDropTargetId(target?.id || null);
     },
-    [getIntersectingNodes]
+    [getIntersectingNodes, getNodes, setNodes]
   );
 
   // Handle node drop - reparent if dropped on another node, or save position
@@ -1534,6 +1293,7 @@ function MindMapViewInner({
           savedPositions.current[draggedNode.id] = draggedNode.position;
           savePositions();
         }
+        dragDescendants.current = null;
         setDropTargetId(null);
         return;
       }
@@ -1557,6 +1317,7 @@ function MindMapViewInner({
             return currentNodes;
           });
         }
+        dragDescendants.current = null;
         setDropTargetId(null);
         return;
       }
@@ -1575,17 +1336,28 @@ function MindMapViewInner({
           onMove(draggedNode.id, target.id, 0);
         }
       } else {
-        // No reparenting - save the absolute position
+        // No reparenting - save absolute positions for dragged node AND descendants
         setNodes(currentNodes => {
           const absPositions = getAbsolutePositions(currentNodes);
+          // Save dragged node position
           const absPos = absPositions.get(draggedNode.id);
           if (absPos) {
             savedPositions.current[draggedNode.id] = absPos;
+          }
+          // Save descendant positions
+          if (dragDescendants.current) {
+            for (const id of dragDescendants.current.ids) {
+              const descAbsPos = absPositions.get(id);
+              if (descAbsPos) {
+                savedPositions.current[id] = descAbsPos;
+              }
+            }
           }
           savePositions();
           return currentNodes;
         });
       }
+      dragDescendants.current = null;
       setDropTargetId(null);
     },
     [getIntersectingNodes, onMove, items, savePositions, setNodes]
@@ -1598,10 +1370,9 @@ function MindMapViewInner({
       localStorage.removeItem(positionsStorageKey);
     }
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
-    const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(newNodes), tree, collapsedIds);
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(resolvedNodes.map(n => [n.id, n.position]));
+    const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1637,7 +1408,7 @@ function MindMapViewInner({
       });
     });
 
-    const groupedNodes = applyNativeGrouping([...resolvedNodes, ...portalNodes], tree, statuses, collapsedIds);
+    const groupedNodes = applyNativeGrouping([...newNodes, ...portalNodes], tree, statuses, collapsedIds);
     const absPositions = getAbsolutePositions(groupedNodes);
     setNodes(groupedNodes);
     setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions));
@@ -1675,6 +1446,12 @@ function MindMapViewInner({
 
   const hasCollapsedNodes = collapsedIds.size > 0;
 
+  useImperativeHandle(innerRef, () => ({
+    expandAll,
+    collapseAll,
+    hasCollapsedNodes,
+  }), [expandAll, collapseAll, hasCollapsedNodes]);
+
   return (
     <>
       <ReactFlow
@@ -1685,6 +1462,7 @@ function MindMapViewInner({
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeClick={canEdit !== false ? onEdgeClick : undefined}
+        onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onConnect={canEdit !== false ? onConnect : undefined}
@@ -1720,14 +1498,6 @@ function MindMapViewInner({
               <span className="text-sm hidden sm:inline">Vue complète</span>
             </button>
           )}
-          <button
-            onClick={hasCollapsedNodes ? expandAll : collapseAll}
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
-            title={hasCollapsedNodes ? 'Tout étendre' : 'Tout replier'}
-          >
-            {hasCollapsedNodes ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
-            <span className="text-sm hidden sm:inline">{hasCollapsedNodes ? 'Étendre' : 'Replier'}</span>
-          </button>
           <button
             onClick={resetLayout}
             className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
@@ -1869,7 +1639,7 @@ function MindMapViewInner({
   );
 }
 
-export function MindMapView({
+export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(function MindMapView({
   items,
   spaceName = 'Espace',
   spaceId,
@@ -1884,7 +1654,7 @@ export function MindMapView({
   onDeleteRelation,
   referentiels,
   canEdit,
-}: MindMapViewProps) {
+}, ref) {
   if (items.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -1912,8 +1682,9 @@ export function MindMapView({
           onDeleteRelation={onDeleteRelation}
           referentiels={referentiels}
           canEdit={canEdit}
+          innerRef={ref}
         />
       </ReactFlowProvider>
     </div>
   );
-}
+});

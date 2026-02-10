@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -53,6 +53,7 @@ import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
 import { TimelineView } from '../components/views/TimelineView';
 import { MindMapView } from '../components/views/MindMapView';
+import type { MindMapViewHandle } from '../components/views/MindMapView';
 import { PlanningView } from '../components/views/PlanningView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
@@ -132,6 +133,7 @@ export function SpacePage() {
   };
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
+  const mindmapRef = useRef<MindMapViewHandle>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -535,26 +537,40 @@ export function SpacePage() {
             )
           )}
 
-          <div className="h-6 w-px bg-border mx-2" />
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={hasExpandedItems ? collapseAll : expandAll}
-            title={hasExpandedItems ? 'Tout réduire' : 'Tout étendre'}
-          >
-            {hasExpandedItems ? (
+          {(viewMode === 'tree' || viewMode === 'mindmap') && (() => {
+            const isMindmap = viewMode === 'mindmap';
+            const isExpanded = isMindmap ? !mindmapRef.current?.hasCollapsedNodes : hasExpandedItems;
+            const handleClick = () => {
+              if (isMindmap) {
+                isExpanded ? mindmapRef.current?.collapseAll() : mindmapRef.current?.expandAll();
+              } else {
+                isExpanded ? collapseAll() : expandAll();
+              }
+            };
+            return (
               <>
-                <ChevronsDownUp className="w-4 h-4 mr-1" />
-                Réduire
+                <div className="h-6 w-px bg-border mx-2" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClick}
+                  title={isExpanded ? 'Tout réduire' : 'Tout étendre'}
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronsDownUp className="w-4 h-4 mr-1" />
+                      Réduire
+                    </>
+                  ) : (
+                    <>
+                      <ChevronsUpDown className="w-4 h-4 mr-1" />
+                      Étendre
+                    </>
+                  )}
+                </Button>
               </>
-            ) : (
-              <>
-                <ChevronsUpDown className="w-4 h-4 mr-1" />
-                Étendre
-              </>
-            )}
-          </Button>
+            );
+          })()}
 
           <div className="h-6 w-px bg-border mx-2" />
 
@@ -786,6 +802,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'mindmap' ? (
             <MindMapView
+              ref={mindmapRef}
               items={allItemsData?.data || []}
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
