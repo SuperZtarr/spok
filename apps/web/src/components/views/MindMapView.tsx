@@ -47,7 +47,7 @@ function getStatusColor(status: string | null | undefined, statuses: StatusConfi
   }
   const statusConfig = statuses.find(s => s.id === status);
   if (!statusConfig) return 'bg-gray-100';
-  const colorMatch = statusConfig.color.match(/bg-[a-z]+-\d+/);
+  const colorMatch = statusConfig.color.match(/bg-[a-z]+(?:-\d+)?/);
   return colorMatch ? colorMatch[0] : 'bg-gray-100';
 }
 
@@ -88,8 +88,27 @@ function tailwindBgToHex(bgClass: string): string {
     'bg-emerald-200': '#a7f3d0',
     'bg-amber-100': '#fef3c7',
     'bg-amber-200': '#fde68a',
+    'bg-black': '#000000',
+    'bg-gray-400': '#9ca3af',
+    'bg-gray-900': '#111827',
+    'bg-slate-300': '#cbd5e1',
+    'bg-orange-400': '#fb923c',
+    'bg-yellow-400': '#facc15',
+    'bg-green-400': '#4ade80',
+    'bg-red-400': '#f87171',
   };
   return colorMap[bgClass] || '#f3f4f6';
+}
+
+// Determine if text should be light or dark based on background hex color
+function getContrastTextColor(hexColor: string): string {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  // Perceived luminance formula
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? '#1f2937' : '#ffffff';
 }
 
 // Build tree structure
@@ -150,10 +169,12 @@ interface MindMapNodeProps {
     item: TreeItem;
     statusColor: string;
     hexColor: string;
+    textColor: string;
     onEdit: (id: string) => void;
     onAddChild: (id: string) => void;
     onAddPortal: (id: string) => void;
     onToggleCollapse: (id: string) => void;
+    onReorganizeChildren: (id: string) => void;
     isRoot: boolean;
     hasChildren: boolean;
     isCollapsed: boolean;
@@ -167,7 +188,7 @@ interface MindMapNodeProps {
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, onAddChild, onAddPortal, onToggleCollapse, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
+  const { item, hexColor, textColor, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -175,7 +196,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
       className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isRoot ? 'border-primary border-3' : 'border-gray-300'
       } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
-      style={{ backgroundColor: hexColor }}
+      style={{ backgroundColor: hexColor, color: textColor }}
     >
       {/* Handles on all sides for radial connections */}
       <Handle type="target" position={Position.Top} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="top" />
@@ -200,14 +221,14 @@ function MindMapNode({ data }: MindMapNodeProps) {
             title={isCollapsed ? 'Déplier' : 'Replier'}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4" style={{ color: textColor }} />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-600" />
+              <ChevronDown className="w-4 h-4" style={{ color: textColor }} />
             )}
           </button>
         ) : null}
 
-        <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
+        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
 
         <span className="text-sm font-medium whitespace-nowrap">{item.title}</span>
 
@@ -259,6 +280,18 @@ function MindMapNode({ data }: MindMapNodeProps) {
             ) : (
               <ChevronsDownUp className="w-3 h-3 text-orange-600" />
             )}
+          </button>
+        )}
+        {hasChildren && !isCollapsed && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorganizeChildren(item.id);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-blue-50"
+            title="Réorganiser les enfants"
+          >
+            <RotateCcw className="w-3 h-3 text-blue-600" />
           </button>
         )}
       </div>
@@ -783,6 +816,7 @@ function calculateLayout(
   onAddChild: (id: string) => void,
   onAddPortal: (id: string) => void,
   onToggleCollapse: (id: string) => void,
+  onReorganizeChildren: (id: string) => void,
   hasPortalSupport: boolean,
   highlightType?: string,
   canEdit?: boolean
@@ -835,10 +869,12 @@ function calculateLayout(
         item,
         statusColor,
         hexColor,
+        textColor: getContrastTextColor(hexColor),
         onEdit,
         onAddChild,
         onAddPortal,
         onToggleCollapse,
+        onReorganizeChildren,
         isRoot: depth === 0,
         hasChildren,
         isCollapsed,
@@ -1206,6 +1242,10 @@ function MindMapViewInner({
     });
   }, []);
 
+  // Ref-based wrapper to avoid circular dependency with useMemo → useNodesState → setNodes
+  const reorganizeRef = useRef<(id: string) => void>(() => {});
+  const handleReorganizeChildren = useCallback((id: string) => reorganizeRef.current(id), []);
+
   // Apply saved positions to nodes (override calculated positions with user-dragged ones)
   const applyPositions = useCallback((nodes: Node[]): Node[] => {
     const sp = savedPositions.current;
@@ -1217,7 +1257,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(nodes);
     const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(positionedNodes), tree, collapsedIds);
     const groupedNodes = applyNativeGrouping(resolvedNodes, tree, statuses, collapsedIds);
@@ -1228,6 +1268,91 @@ function MindMapViewInner({
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Assign the actual reorganize implementation to the ref (after setNodes/setEdges are available)
+  reorganizeRef.current = (parentId: string) => {
+    setNodes(currentNodes => {
+      const absPositions = getAbsolutePositions(currentNodes);
+      const spacePos = absPositions.get('__space__') || { x: -70, y: -25 };
+      const parentAbsPos = absPositions.get(parentId);
+      if (!parentAbsPos) return currentNodes;
+
+      function findTreeNode(ns: TreeItem[], id: string): TreeItem | null {
+        for (const n of ns) {
+          if (n.id === id) return n;
+          const f = findTreeNode(n.children, id);
+          if (f) return f;
+        }
+        return null;
+      }
+
+      const treeNode = findTreeNode(fullTree, parentId);
+      if (!treeNode || treeNode.children.length === 0 || collapsedIds.has(parentId)) return currentNodes;
+
+      // Collect new absolute positions for all descendants
+      const newPositions = new Map<string, { x: number; y: number }>();
+
+      // Recursive: each level computes its own outward direction from space center
+      function reorganize(parent: TreeItem, parentPos: { x: number; y: number }) {
+        if (parent.children.length === 0 || collapsedIds.has(parent.id)) return;
+
+        const children = parent.children;
+        const childCount = children.length;
+
+        // Outward direction: from space center to this parent
+        const outwardAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
+
+        const fanPerChild = Math.PI / 8;
+        const fanSpread = Math.min(Math.PI, Math.max(Math.PI / 3, childCount * fanPerChild));
+        const fanStart = outwardAngle - fanSpread / 2;
+
+        const requiredArc = childCount * (NODE_WIDTH + NODE_GAP);
+        const radius = Math.max(MIN_RADIUS_CHILD, requiredArc / fanSpread);
+
+        children.forEach((child, index) => {
+          const sliceWidth = fanSpread / childCount;
+          const childAngle = fanStart + (index + 0.5) * sliceWidth;
+          const newPos = {
+            x: parentPos.x + Math.cos(childAngle) * radius,
+            y: parentPos.y + Math.sin(childAngle) * radius,
+          };
+
+          newPositions.set(child.id, newPos);
+          savedPositions.current[child.id] = newPos;
+
+          // Recurse into this child's subtree
+          reorganize(child, newPos);
+        });
+      }
+
+      reorganize(treeNode, parentAbsPos);
+      // Anchor parent so it doesn't jump on next re-layout
+      savedPositions.current[parentId] = parentAbsPos;
+      savePositions();
+
+      // Directly update node positions (skip re-layout to avoid collision resolution interference)
+      const updatedNodes = currentNodes.map(n => {
+        const newAbsPos = newPositions.get(n.id);
+        if (!newAbsPos) return n;
+
+        // If node is in a ReactFlow group, compute relative position
+        if (n.parentId) {
+          const groupAbs = absPositions.get(n.parentId);
+          if (groupAbs) {
+            return { ...n, position: { x: newAbsPos.x - groupAbs.x, y: newAbsPos.y - groupAbs.y } };
+          }
+        }
+
+        return { ...n, position: newAbsPos };
+      });
+
+      // Recalculate edges with new positions
+      const newAbsPositions = getAbsolutePositions(updatedNodes);
+      setEdges(curEdges => recalculateEdgeHandles(curEdges, newAbsPositions));
+
+      return updatedNodes;
+    });
+  };
 
   // Wrap onNodesChange to recalculate edge handles when nodes are dragged
   const onNodesChange = useCallback((changes: any) => {
@@ -1245,7 +1370,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
     const positionedNodes = applyPositions(newNodes);
     const resolvedNodes = resolveProjectGroupCollisions(positionedNodes, tree, collapsedIds);
 
@@ -1293,7 +1418,7 @@ function MindMapViewInner({
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions);
     setNodes(groupedNodes);
     setEdges(allEdges);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -1472,7 +1597,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
     const resolvedNodes = resolveProjectGroupCollisions(resolveNodeOverlaps(newNodes), tree, collapsedIds);
 
     // Build a map of node positions for portal placement

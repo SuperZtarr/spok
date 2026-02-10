@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -162,10 +162,11 @@ export function SpacePage() {
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', spaceId, filter, viewMode],
+    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, viewMode],
     queryFn: () =>
       itemsApi.list(spaceId!, {
-        type: filter === 'ALL' ? undefined : filter,
+        // Tree views load all items (highlight instead of filter)
+        type: filter === 'ALL' || isTreeView ? undefined : filter,
         // Tree views need all items (no parentId filter) to build the full hierarchy
         // Flat views also need all items
         // Only filter by parentId for non-tree, non-flat views
@@ -209,6 +210,20 @@ export function SpacePage() {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
   });
+
+  const handleDelete = useCallback((id: string) => {
+    const allItems = allItemsData?.data || itemsData?.data || [];
+    const item = allItems.find((i: Item) => i.id === id);
+    const title = item?.title || 'cet élément';
+    const childCount = allItems.filter((i: Item) => i.parentId === id).length;
+    let message = `Supprimer "${title}" ?`;
+    if (childCount > 0) {
+      message += `\n\nAttention : ${childCount} élément${childCount > 1 ? 's' : ''} enfant${childCount > 1 ? 's' : ''} ${childCount > 1 ? 'seront déplacés' : 'sera déplacé'} à la racine.`;
+    }
+    if (confirm(message)) {
+      deleteItemMutation.mutate(id);
+    }
+  }, [allItemsData?.data, itemsData?.data, deleteItemMutation]);
 
   const updateItemMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
@@ -705,7 +720,7 @@ export function SpacePage() {
             <ListView
               items={itemsData?.data || []}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
@@ -716,7 +731,7 @@ export function SpacePage() {
               items={allItemsData?.data || []}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
@@ -729,7 +744,7 @@ export function SpacePage() {
             <KanbanView
               items={itemsData?.data || []}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
@@ -739,7 +754,7 @@ export function SpacePage() {
             <TypesView
               items={itemsData?.data || []}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateType={(id, type) => handleInlineUpdate(id, { type })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
@@ -749,7 +764,7 @@ export function SpacePage() {
             <PlanningView
               items={allItemsData?.data || []}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
@@ -761,7 +776,7 @@ export function SpacePage() {
               items={allItemsData?.data || []}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => handleInlineUpdate(id, { startDate, endDate })}
               onAddChild={handleAddChild}
@@ -777,7 +792,7 @@ export function SpacePage() {
               communitySpaces={communitySpaces || []}
               highlightType={filter !== 'ALL' ? filter : undefined}
               onEdit={setEditingItemId}
-              onDelete={(id) => deleteItemMutation.mutate(id)}
+              onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
@@ -826,7 +841,7 @@ export function SpacePage() {
                       isExpanded={expandedItems.has(item.id)}
                       onToggleExpand={toggleExpanded}
                       onEdit={setEditingItemId}
-                      onDelete={(id) => deleteItemMutation.mutate(id)}
+                      onDelete={handleDelete}
                       onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
                       onAddChild={handleAddChild}
                       spaceId={spaceId!}
@@ -840,6 +855,7 @@ export function SpacePage() {
                       onToggleSelection={toggleSelection}
                       expandedItems={expandedItems}
                       canEdit={canEdit}
+                      highlightType={filter !== 'ALL' ? filter : undefined}
                     />
                   ))}
                   {/* Root drop zone - at the bottom to avoid interfering with first item */}
@@ -968,6 +984,7 @@ function SortableItem({
   onToggleSelection,
   expandedItems,
   canEdit,
+  highlightType,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -989,6 +1006,7 @@ function SortableItem({
   onToggleSelection?: (id: string) => void;
   expandedItems: Set<string>;
   canEdit?: boolean;
+  highlightType?: string;
 }) {
   const {
     attributes,
@@ -999,10 +1017,12 @@ function SortableItem({
     isDragging,
   } = useSortable({ id: item.id });
 
+  const isDimmed = highlightType && item.type !== highlightType;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.5 : isDimmed ? 0.35 : 1,
   };
 
   const Icon = TYPE_ICONS[item.type];
@@ -1169,6 +1189,7 @@ function SortableItem({
           expandedItems={expandedItems}
           onToggleExpand={onToggleExpand}
           canEdit={canEdit}
+          highlightType={highlightType}
         />
       )}
     </div>
@@ -1193,6 +1214,7 @@ function ItemChildren({
   expandedItems,
   onToggleExpand,
   canEdit,
+  highlightType,
 }: {
   spaceId: string;
   parentId: string;
@@ -1210,6 +1232,7 @@ function ItemChildren({
   expandedItems: Set<string>;
   onToggleExpand: (id: string) => void;
   canEdit?: boolean;
+  highlightType?: string;
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
@@ -1246,6 +1269,7 @@ function ItemChildren({
           onToggleSelection={onToggleSelection}
           expandedItems={expandedItems}
           canEdit={canEdit}
+          highlightType={highlightType}
         />
       ))}
     </>
@@ -1274,6 +1298,7 @@ function DraggableChildItem({
   onToggleSelection,
   expandedItems,
   canEdit,
+  highlightType,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1295,6 +1320,7 @@ function DraggableChildItem({
   onToggleSelection?: (id: string) => void;
   expandedItems: Set<string>;
   canEdit?: boolean;
+  highlightType?: string;
 }) {
   const {
     attributes,
@@ -1305,10 +1331,12 @@ function DraggableChildItem({
     isDragging,
   } = useSortable({ id: item.id });
 
+  const isDimmed = highlightType && item.type !== highlightType;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.5 : isDimmed ? 0.35 : 1,
   };
 
   const Icon = TYPE_ICONS[item.type];
@@ -1475,6 +1503,7 @@ function DraggableChildItem({
           expandedItems={expandedItems}
           onToggleExpand={onToggleExpand}
           canEdit={canEdit}
+          highlightType={highlightType}
         />
       )}
     </div>

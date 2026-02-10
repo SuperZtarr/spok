@@ -40,8 +40,8 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   {
     id: 'blocked',
     label: 'Bloqué',
-    color: 'bg-gray-900 text-white',
-    borderColor: 'border-gray-900 bg-gray-100',
+    color: 'bg-black text-white',
+    borderColor: 'border-black bg-gray-100',
     order: 4,
     visible: true,
   },
