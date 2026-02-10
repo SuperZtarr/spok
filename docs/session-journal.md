@@ -2,6 +2,33 @@
 
 ---
 
+#### [2026-02-10 21:25] - Optimistic Locking avec résolution de conflit
+
+**Demande :** Implémenter l'optimistic locking sur les items pour détecter les conflits d'édition concurrente et proposer un dialogue de résolution champ par champ.
+
+**Actions réalisées :**
+- **Types partagés** (`packages/shared/src/types/`) : ajout `updatedAt` dans `UpdateItemInput`, types `ConflictField` et `ConflictErrorResponse` dans `api.ts`
+- **API** (`apps/api/src/routes/items.ts`) : ajout `updatedAt` au schéma Zod `updateItemSchema`, détection de conflit dans PATCH /:id (compare dates, construit liste des champs modifiés, renvoie 409 avec détail)
+- **Frontend helper** (`apps/web/src/lib/api.ts`) : fonction `isConflictError()` pour détecter les 409 CONFLICT_DETECTED
+- **Composant ConflictDialog** (`apps/web/src/components/ConflictDialog.tsx`) : modal de résolution avec radio par champ (serveur/mien), boutons raccourcis "tout garder du serveur/les miennes"
+- **ItemEditModal** : inclut `item.updatedAt` dans le payload, détecte 409 via `isConflictError`, affiche ConflictDialog, résolution → re-mutation sans updatedAt (force overwrite)
+- **SpacePage** : helper `handleInlineUpdate` passe `updatedAt` pour les updates inline, sur 409 invalide les queries (auto-reload)
+
+**Fichiers créés :**
+- `apps/web/src/components/ConflictDialog.tsx`
+
+**Fichiers modifiés :**
+- `packages/shared/src/types/item.ts`
+- `packages/shared/src/types/api.ts`
+- `apps/api/src/routes/items.ts`
+- `apps/web/src/lib/api.ts`
+- `apps/web/src/components/ItemEditModal.tsx`
+- `apps/web/src/pages/SpacePage.tsx`
+
+**État :** EN COURS — compilation OK, dev serveurs démarrés, en attente de vérification utilisateur et commit
+
+---
+
 #### [2026-02-09 01:15] - Hiérarchie d'espaces (parentId)
 
 **Demande :** Permettre qu'un espace ait un autre espace comme parent, créant une arborescence. Règles : seuls les GROUP peuvent être imbriqués, héritage communauté du parent, suppression cascade.

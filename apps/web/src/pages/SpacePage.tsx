@@ -211,12 +211,29 @@ export function SpacePage() {
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
       itemsApi.update(spaceId!, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
+    onError: (error) => {
+      // On conflict for inline updates, simply reload data
+      if (error instanceof Error && 'statusCode' in error && (error as any).statusCode === 409) {
+        queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      }
+    },
   });
+
+  // Helper: find item updatedAt for optimistic locking on inline updates
+  const getItemUpdatedAt = (id: string): string | undefined => {
+    const allItems = allItemsData?.data || itemsData?.data || [];
+    const found = allItems.find((i: Item) => i.id === id);
+    return found?.updatedAt;
+  };
+
+  const handleInlineUpdate = (id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null }) => {
+    updateItemMutation.mutate({ id, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
+  };
 
   const moveItemMutation = useMutation({
     mutationFn: ({ id, parentId, position }: { id: string; parentId?: string | null; position: number }) =>
@@ -689,7 +706,7 @@ export function SpacePage() {
               items={itemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -700,7 +717,7 @@ export function SpacePage() {
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
@@ -713,7 +730,7 @@ export function SpacePage() {
               items={itemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -723,7 +740,7 @@ export function SpacePage() {
               items={itemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateType={(id, type) => updateItemMutation.mutate({ id, data: { type } })}
+              onUpdateType={(id, type) => handleInlineUpdate(id, { type })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -733,7 +750,7 @@ export function SpacePage() {
               items={allItemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
@@ -745,8 +762,8 @@ export function SpacePage() {
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
-              onUpdateDates={(id, startDate, endDate) => updateItemMutation.mutate({ id, data: { startDate, endDate } })}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onUpdateDates={(id, startDate, endDate) => handleInlineUpdate(id, { startDate, endDate })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
@@ -761,7 +778,7 @@ export function SpacePage() {
               highlightType={filter !== 'ALL' ? filter : undefined}
               onEdit={setEditingItemId}
               onDelete={(id) => deleteItemMutation.mutate(id)}
-              onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
@@ -810,7 +827,7 @@ export function SpacePage() {
                       onToggleExpand={toggleExpanded}
                       onEdit={setEditingItemId}
                       onDelete={(id) => deleteItemMutation.mutate(id)}
-                      onUpdateStatus={(id, status) => updateItemMutation.mutate({ id, data: { status } })}
+                      onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
                       onAddChild={handleAddChild}
                       spaceId={spaceId!}
                       isOver={overId === item.id}

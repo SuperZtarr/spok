@@ -982,4 +982,8 @@ export const graphApi = {
   },
 };
 
+export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {
+  return error instanceof ApiError && error.statusCode === 409 && (error.details as any)?.code === 'CONFLICT_DETECTED';
+}
+
 export { ApiError };

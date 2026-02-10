@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { itemsApi } from '../lib/api';
+import { itemsApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import { ConflictDialog } from './ConflictDialog';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
@@ -57,6 +58,11 @@ export function ItemEditModal({
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
   const [editingContributionContent, setEditingContributionContent] = useState('');
 
+  // Conflict state
+  const [conflictData, setConflictData] = useState<{
+    conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>;
+  } | null>(null);
+
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
   const [newRelationType, setNewRelationType] = useState<'depends' | 'blocks'>('depends');
@@ -111,12 +117,18 @@ export function ItemEditModal({
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      setConflictData(null);
       onClose();
+    },
+    onError: (error) => {
+      if (isConflictError(error)) {
+        setConflictData({ conflicts: error.details.conflicts });
+      }
     },
   });
 
@@ -213,7 +225,10 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string } = {};
+
+    // Include updatedAt for optimistic locking
+    updates.updatedAt = item.updatedAt;
 
     if (type !== item.type) {
       updates.type = type;
@@ -876,6 +891,26 @@ export function ItemEditModal({
         <div className="py-8 text-center text-muted-foreground">
           Élément introuvable
         </div>
+      )}
+      {/* Conflict resolution dialog */}
+      {conflictData && (
+        <ConflictDialog
+          isOpen={!!conflictData}
+          onClose={() => setConflictData(null)}
+          conflicts={conflictData.conflicts}
+          onResolve={(resolvedFields) => {
+            // Force overwrite with resolved fields (no updatedAt = skip check)
+            setConflictData(null);
+            updateMutation.mutate(resolvedFields as any);
+          }}
+          onKeepServer={() => {
+            // Discard local changes, reload from server
+            setConflictData(null);
+            queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+            queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+            onClose();
+          }}
+        />
       )}
     </Modal>
   );

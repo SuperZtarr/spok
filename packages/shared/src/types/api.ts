@@ -23,3 +23,18 @@ export interface ItemFilterParams extends PaginationParams {
   parentId?: string | null;
   search?: string;
 }
+
+export interface ConflictField {
+  field: string;
+  label: string;
+  serverValue: unknown;
+  clientValue: unknown;
+}
+
+export interface ConflictErrorResponse {
+  statusCode: 409;
+  code: 'CONFLICT_DETECTED';
+  message: string;
+  serverUpdatedAt: string;
+  conflicts: ConflictField[];
+}

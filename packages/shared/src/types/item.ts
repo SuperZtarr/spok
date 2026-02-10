@@ -72,6 +72,7 @@ export interface UpdateItemInput {
   endDate?: string | null;
   parentId?: string | null;
   tagIds?: string[];
+  updatedAt?: string;
 }
 
 export interface ItemRelation {

@@ -30,6 +30,7 @@ const updateItemSchema = z.object({
   endDate: z.string().datetime().nullable().optional(),
   parentId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
+  updatedAt: z.string().datetime().optional(),
 });
 
 const createRelationSchema = z.object({
@@ -291,7 +292,67 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = updateItemSchema.parse(request.body);
-      const { tagIds, ...updateData } = body;
+      const { tagIds, updatedAt: clientUpdatedAt, ...updateData } = body;
+
+      // Optimistic locking: if client sends updatedAt, compare with server
+      if (clientUpdatedAt) {
+        const serverUpdatedAt = existingItem.updatedAt.toISOString();
+        const clientDate = new Date(clientUpdatedAt).toISOString();
+
+        if (serverUpdatedAt !== clientDate) {
+          // Build list of conflicting fields (only fields the client is trying to change)
+          const FIELD_LABELS: Record<string, string> = {
+            type: 'Type',
+            title: 'Titre',
+            description: 'Description',
+            url: 'URL',
+            status: 'Statut',
+            priority: 'Priorité',
+            dueDate: 'Date d\'échéance',
+            startDate: 'Date de début',
+            endDate: 'Date de fin',
+            parentId: 'Parent',
+          };
+
+          const conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }> = [];
+
+          for (const [field, clientValue] of Object.entries(updateData)) {
+            // Skip content (not comparable) and fields not in labels
+            if (field === 'content' || !FIELD_LABELS[field]) continue;
+
+            const serverValue = (existingItem as any)[field];
+            // Normalize for comparison: dates to ISO, null/undefined equivalence
+            const normalizeValue = (v: unknown) => {
+              if (v === undefined || v === null || v === '') return null;
+              if (v instanceof Date) return v.toISOString();
+              return v;
+            };
+
+            const normalizedServer = normalizeValue(serverValue);
+            const normalizedClient = normalizeValue(clientValue);
+
+            if (normalizedServer !== normalizedClient) {
+              conflicts.push({
+                field,
+                label: FIELD_LABELS[field],
+                serverValue: normalizedServer,
+                clientValue: normalizedClient,
+              });
+            }
+          }
+
+          // Only return 409 if there are actual field conflicts
+          if (conflicts.length > 0) {
+            return reply.status(409).send({
+              statusCode: 409,
+              code: 'CONFLICT_DETECTED',
+              message: 'Cet élément a été modifié par un autre utilisateur depuis votre dernière lecture.',
+              serverUpdatedAt,
+              conflicts,
+            });
+          }
+        }
+      }
 
       // Save state before update for audit
       const beforeState = serializeItemForAudit(existingItem);
