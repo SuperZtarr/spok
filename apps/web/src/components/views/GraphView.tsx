@@ -52,7 +52,7 @@ interface GraphViewProps {
   highlightColor?: { border: string; bg: string };
 }
 
-export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus, highlightColor }: GraphViewProps) {
+export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus }: GraphViewProps) {
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });

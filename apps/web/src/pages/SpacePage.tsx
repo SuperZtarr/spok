@@ -171,7 +171,8 @@ export function SpacePage() {
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
   // Determine if we should filter or highlight
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'graph' || viewMode === 'sunburst';
+  // isTreeView already covers mindmap, tree, timeline, text — no need to repeat timeline here
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'graph' || viewMode === 'sunburst';
   const activeTypeFilter = filterMode === 'type' && filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -552,7 +553,7 @@ export function SpacePage() {
         <div className="flex flex-col gap-2 mb-3 sticky top-0 z-10 bg-background pb-2">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
           {/* Mode indicator - always visible */}
-          {(isHighlightMode || viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'graph' || viewMode === 'sunburst') ? (
+          {isHighlightMode ? (
             <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
               <span className="w-2 h-2 rounded-full bg-yellow-400" />
               <span className="hidden sm:inline">Lumière</span>
@@ -625,7 +626,7 @@ export function SpacePage() {
               const total = space?.itemCount || 0;
               const filtered = itemsData?.total ?? itemsData?.data?.length ?? total;
               const hasFilter = (filterMode === 'type' && filter !== 'ALL') || (filterMode === 'status' && statusFilter !== 'ALL');
-              if (hasFilter && !isHighlightMode && viewMode !== 'mindmap' && viewMode !== 'tree') {
+              if (hasFilter && !isHighlightMode) {
                 return `${filtered}/${total} éléments`;
               }
               return `${total} éléments`;
