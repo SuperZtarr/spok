@@ -2,6 +2,49 @@
 
 ---
 
+#### [2026-02-11 11:00] - Corrections supplémentaires + données Commercial
+
+**Réalisations additionnelles :**
+
+1. **Noeud central espace dans le graphe** — Le graphe au niveau espace affiche maintenant un noeud SPACE central relié aux items racines. Commit `163ee31`.
+
+2. **Insertion données "Commercial"** — Script d'insertion en prod : 13 catégories (PROJECT) + 41 produits (NOTE) dans l'espace Commercial, avec marquage ⛔ pour les items interdits (verboten).
+
+3. **Fix restauration d'items supprimés** — Deux bugs corrigés :
+   - Le POST /restore envoyait Content-Type: application/json sans body → Fastify rejetait avec 400. Ajout de `body: JSON.stringify({})`. Commit `596125f`.
+   - Si le parent ou le créateur d'un item supprimé n'existait plus, la restauration plantait. L'item est maintenant placé à la racine. Commit `3d63987`.
+
+**Commits poussés :** `163ee31`, `3d63987`, `596125f`
+
+**État :** TERMINÉ
+
+---
+
+#### [2026-02-11 10:30] - Résumé de session
+
+**Réalisations de la session :**
+
+1. **Vue Sunburst interactive** — Nouvelle visualisation D3.js dans le Dashboard (onglet Sunburst) montrant la hiérarchie Global → Communautés → Espaces → Items → Enfants en anneaux concentriques. Hover = surbrillance + breadcrumb, click = navigation. Commit `518a5dc` + fix TS `07cb44c`.
+
+2. **Fix défilement des pages** — Ajout `overflow-auto` sur le main du Layout pour permettre le scroll sur toutes les pages. Les pages plein écran (graphe, mindmap, sunburst) forcent `h-full overflow-hidden`. Commit `b489309`.
+
+3. **Fix graphe grand écran** — Restauration de `flex flex-col` sur le main du Layout pour que les vues plein écran s'étirent correctement via flex-1. Commit `e7ce847`.
+
+4. **Noeud central espace dans le graphe** — Le graphe au niveau espace affiche maintenant un noeud SPACE central relié aux items racines. Commit `163ee31`.
+
+5. **Insertion données "Commercial"** — Script d'insertion en prod : 13 catégories (PROJECT) + 41 produits (NOTE) avec marquage ⛔ pour les items interdits.
+
+**Commits poussés en prod :** `518a5dc`, `07cb44c`, `b489309`, `e7ce847`, `163ee31`
+
+**État des tâches en cours :**
+- Upload d'images R2 : code prêt, en attente config Cloudflare
+- Landing page publique : code prêt, en attente vérification
+- Optimistic locking : code prêt, en attente vérification
+
+**État :** TERMINÉ
+
+---
+
 #### [2026-02-11 09:45] - Vue Sunburst interactive dans le Dashboard
 
 **Demande :** Ajouter une visualisation Sunburst (D3.js) dans le Dashboard, montrant la hierarchie complete des donnees SPOK sous forme d'anneaux concentriques (Global → Communautes → Espaces → Items → Enfants → Contributions).
