@@ -273,22 +273,24 @@ export function Layout() {
     <>
       {/* Header sidebar */}
       <div className="p-4 border-b border-border flex-shrink-0">
-        <Link to="/"><img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" /></Link>
+        <Link to="/" className="block mb-3"><img src="/logo.png" alt="SPOK" className="w-full h-auto max-h-32 object-contain object-left" /></Link>
         <button
           onClick={() => setIsProfileOpen(true)}
-          className="w-full flex items-center justify-between p-2 rounded-md hover:bg-accent transition-colors text-left"
+          className={`w-full flex items-center p-2 rounded-md hover:bg-accent transition-colors text-left ${sidebarWidth < 200 ? 'justify-center' : 'justify-between'}`}
           title="Voir le profil"
         >
-          <div>
-            <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
-            </p>
-          </div>
+          {sidebarWidth >= 200 && (
+            <div className="min-w-0 flex-1 mr-2">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+              </p>
+            </div>
+          )}
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+            <img src={user.avatarUrl} alt={user.name} className={`rounded-full object-cover flex-shrink-0 ${sidebarWidth < 200 ? 'w-9 h-9' : 'w-7 h-7'}`} />
           ) : (
-            <User className="w-4 h-4 text-muted-foreground" />
+            <User className={`text-muted-foreground flex-shrink-0 ${sidebarWidth < 200 ? 'w-7 h-7' : 'w-4 h-4'}`} />
           )}
         </button>
       </div>
@@ -418,7 +420,7 @@ export function Layout() {
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
         <header className="h-14 border-b border-border bg-card flex items-center gap-2 md:gap-3 px-3 md:px-6 flex-shrink-0">
-          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 min-w-0">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
             {/* Hamburger menu (mobile) */}
             <button
               className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
@@ -427,9 +429,9 @@ export function Layout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-base md:text-lg font-semibold truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">{getPageTitle()}</h2>
+            <h2 className="text-base md:text-lg font-semibold truncate max-w-[120px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-none">{getPageTitle()}</h2>
             {currentSpace && (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
                 {currentSpace.community && (
                   <span className="text-xs text-muted-foreground px-2 py-1 bg-primary/10 text-primary rounded">
                     {currentSpace.community.name}

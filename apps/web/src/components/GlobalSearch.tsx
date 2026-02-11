@@ -77,10 +77,10 @@ export function GlobalSearch() {
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Mobile: icon button that expands to input */}
+      {/* Icon button: always visible when not expanded */}
       {!isExpanded && (
         <button
-          className="sm:hidden p-1.5 rounded-md hover:bg-accent text-muted-foreground"
+          className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
           onClick={() => {
             setIsExpanded(true);
             setTimeout(() => inputRef.current?.focus(), 50);
@@ -90,8 +90,8 @@ export function GlobalSearch() {
           <Search className="w-4 h-4" />
         </button>
       )}
-      {/* Input: always visible on sm+, toggled on mobile */}
-      <div className={`relative ${isExpanded ? 'block' : 'hidden sm:block'}`}>
+      {/* Input: only visible when expanded */}
+      <div className={`relative ${isExpanded ? 'block' : 'hidden'}`}>
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           ref={inputRef}
