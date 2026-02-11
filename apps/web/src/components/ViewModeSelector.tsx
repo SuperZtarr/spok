@@ -1,4 +1,4 @@
-import { List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Network, FileText } from 'lucide-react';
+import { List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Network, FileText, CircleDot } from 'lucide-react';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { cn } from '../lib/utils';
 
@@ -13,13 +13,14 @@ const ICONS: Record<string, typeof List> = {
   GanttChart,
   CalendarCheck,
   Network,
+  CircleDot,
 };
 
 export function ViewModeSelector() {
   const { mode, setMode } = useViewModeStore();
 
   return (
-    <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+    <div className="flex flex-wrap items-center gap-0.5 bg-muted rounded-lg p-1">
       {VIEW_MODES.map((viewMode) => {
         const Icon = ICONS[viewMode.icon];
         const isActive = mode === viewMode.value;
@@ -29,7 +30,7 @@ export function ViewModeSelector() {
             key={viewMode.value}
             onClick={() => setMode(viewMode.value)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              'flex items-center gap-1.5 px-1.5 md:px-2 py-1 rounded-md text-sm font-medium transition-colors',
               isActive
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -37,7 +38,7 @@ export function ViewModeSelector() {
             title={viewMode.label}
           >
             <Icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{viewMode.label}</span>
+            <span className="hidden xl:inline">{viewMode.label}</span>
           </button>
         );
       })}

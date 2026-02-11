@@ -480,12 +480,77 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Sunburst hierarchy: Global → Communities → Spaces → Items → Children
-  fastify.get<{ Querystring: { communityIds?: string } }>(
+  fastify.get<{ Querystring: { communityIds?: string; spaceId?: string } }>(
     '/graph/sunburst',
-    async (request) => {
+    async (request, reply) => {
+      const filterSpaceId = request.query.spaceId || null;
       const filterCommunityIds = request.query.communityIds
         ? request.query.communityIds.split(',').map(id => id.trim()).filter(Boolean)
         : null;
+
+      // Space-scoped mode: return item hierarchy for a single space
+      if (filterSpaceId) {
+        // Verify access
+        const membership = await fastify.prisma.spaceMembership.findUnique({
+          where: { userId_spaceId: { userId: request.user.userId, spaceId: filterSpaceId } },
+        });
+        if (!membership) {
+          const spaceCheck = await fastify.prisma.space.findUnique({
+            where: { id: filterSpaceId },
+            select: { communityId: true },
+          });
+          if (spaceCheck?.communityId) {
+            const communityMembership = await fastify.prisma.communityMembership.findUnique({
+              where: { userId_communityId: { userId: request.user.userId, communityId: spaceCheck.communityId } },
+            });
+            if (!communityMembership) return reply.code(403).send({ error: 'Access denied' });
+          } else {
+            return reply.code(403).send({ error: 'Access denied' });
+          }
+        }
+
+        const spaceInfo = await fastify.prisma.space.findUnique({
+          where: { id: filterSpaceId },
+          select: { id: true, name: true },
+        });
+
+        const items = await fastify.prisma.item.findMany({
+          where: { spaceId: filterSpaceId },
+          select: {
+            id: true, title: true, type: true, spaceId: true, parentId: true,
+            _count: { select: { contributions: true } },
+          },
+        });
+
+        function buildSpaceItemTree(spaceItems: typeof items, parentId: string | null): SunburstNode[] {
+          const children = spaceItems.filter(i => i.parentId === parentId);
+          return children.map(item => {
+            const subChildren = buildSpaceItemTree(spaceItems, item.id);
+            const node: SunburstNode = {
+              name: item.title,
+              id: item.id,
+              nodeType: 'item',
+              itemType: item.type,
+            };
+            if (subChildren.length > 0) {
+              node.children = subChildren;
+            } else {
+              node.value = Math.max(1, item._count.contributions);
+            }
+            return node;
+          });
+        }
+
+        const itemTree = buildSpaceItemTree(items, null);
+        const root: SunburstNode = {
+          name: spaceInfo?.name || 'Espace',
+          id: filterSpaceId,
+          nodeType: 'space',
+          children: itemTree.length > 0 ? itemTree : undefined,
+          value: itemTree.length === 0 ? 1 : undefined,
+        };
+        return root;
+      }
 
       // 1. Spaces where user is a direct member
       const directMemberships = await fastify.prisma.spaceMembership.findMany({

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type RefCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { hierarchy, partition, HierarchyRectangularNode } from 'd3-hierarchy';
@@ -58,16 +58,69 @@ function getAncestorChain(node: HierarchyRectangularNode<SunburstNode>): Hierarc
   return chain;
 }
 
-export function SunburstView() {
+interface SunburstViewProps {
+  spaceId?: string;
+  spaceName?: string;
+  onNodeClick?: (itemId: string) => void;
+}
+
+export function SunburstView({ spaceId, spaceName, onNodeClick }: SunburstViewProps = {}) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [hoveredNode, setHoveredNode] = useState<HierarchyRectangularNode<SunburstNode> | null>(null);
 
-  // Community filter
+  // Callback ref to attach ResizeObserver when the container mounts
+  const containerCallbackRef: RefCallback<HTMLDivElement> = useCallback((node) => {
+    // Cleanup previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    containerRef.current = node;
+    if (!node) return;
+
+    const updateSize = () => {
+      const rect = node.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      if (w > 0 && h > 0) setDimensions({ width: w, height: h });
+    };
+
+    updateSize();
+    setTimeout(updateSize, 100);
+
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(node);
+    observerRef.current = observer;
+
+    const handleResize = () => updateSize();
+    window.addEventListener('resize', handleResize);
+    // Store cleanup ref
+    (node as any).__cleanupResize = () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Cleanup window resize listener on unmount
+  useEffect(() => {
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+      if (containerRef.current && (containerRef.current as any).__cleanupResize) {
+        (containerRef.current as any).__cleanupResize();
+      }
+    };
+  }, []);
+
+  // Community filter (global mode only)
   const { data: userCommunities } = useQuery({
     queryKey: ['communities'],
     queryFn: () => communitiesApi.list(),
+    enabled: !spaceId,
   });
 
   const [selectedCommunityIds, setSelectedCommunityIds] = useState<Set<string> | null>(() => {
@@ -109,32 +162,10 @@ export function SunburstView() {
     return [...selectedCommunityIds];
   }, [selectedCommunityIds, userCommunities]);
 
-  const { data: sunburstData, isLoading } = useSunburstData(communityIdsFilter);
-
-  // Resize
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      const w = rect.width;
-      const h = window.innerHeight - rect.top;
-      if (w > 0 && h > 0) setDimensions({ width: w, height: h });
-    };
-
-    updateSize();
-    const timer = setTimeout(updateSize, 100);
-    window.addEventListener('resize', updateSize);
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updateSize);
-      observer.disconnect();
-    };
-  }, []);
+  const { data: sunburstData, isLoading } = useSunburstData(
+    spaceId ? undefined : communityIdsFilter,
+    spaceId
+  );
 
   // Build partition layout
   const { root, slices } = useMemo(() => {
@@ -167,12 +198,16 @@ export function SunburstView() {
 
   const handleClick = useCallback((d: HierarchyRectangularNode<SunburstNode>) => {
     const data = d.data;
+    if (spaceId && onNodeClick && data.nodeType === 'item') {
+      onNodeClick(data.id);
+      return;
+    }
     if (data.nodeType === 'space') {
       navigate(`/spaces/${data.id}`);
     } else if (data.nodeType === 'community' && data.id !== 'personal') {
       navigate(`/communities/${data.id}`);
     }
-  }, [navigate]);
+  }, [navigate, spaceId, onNodeClick]);
 
   // Breadcrumb info
   const breadcrumb = useMemo(() => {
@@ -204,10 +239,11 @@ export function SunburstView() {
 
   const cx = dimensions.width / 2;
   const cy = dimensions.height / 2;
+  const centerLabel = spaceId ? (spaceName || 'Espace') : 'SPOK';
 
   return (
     <div className="relative flex-1 min-h-0 w-full">
-      <div ref={containerRef} className="absolute inset-0">
+      <div ref={containerCallbackRef} className="absolute inset-0">
         {/* Breadcrumb overlay */}
         {breadcrumb && (
           <div className="absolute top-3 left-3 z-10 bg-card/90 backdrop-blur border rounded-lg px-3 py-2 shadow-lg max-w-md">
@@ -232,8 +268,8 @@ export function SunburstView() {
           </div>
         )}
 
-        {/* Community filter panel */}
-        {userCommunities && userCommunities.length > 1 && (
+        {/* Community filter panel (global mode only) */}
+        {!spaceId && userCommunities && userCommunities.length > 1 && (
           <div className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 shadow-lg">
             <div className="text-xs font-medium text-muted-foreground mb-2">Communautes</div>
             {userCommunities.map(c => (
@@ -261,7 +297,7 @@ export function SunburstView() {
         <div className="absolute bottom-3 left-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-2 shadow-lg">
           <div className="text-[10px] font-medium text-muted-foreground mb-1">Legende</div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            {Object.entries(NODE_TYPE_COLORS).filter(([k]) => k !== 'global').map(([key, color]) => (
+            {!spaceId && Object.entries(NODE_TYPE_COLORS).filter(([k]) => k !== 'global').map(([key, color]) => (
               <div key={key} className="flex items-center gap-1.5 text-[10px]">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                 <span className="capitalize">{key === 'community' ? 'Communaute' : 'Espace'}</span>
@@ -311,7 +347,7 @@ export function SunburstView() {
               dy="0.35em"
               className="fill-foreground font-semibold text-sm pointer-events-none"
             >
-              SPOK
+              {centerLabel}
             </text>
           </g>
         </svg>

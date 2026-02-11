@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X, MessageSquare } from 'lucide-react';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -33,6 +33,47 @@ function formatDate(dateString: string | null | undefined): string | null {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function ImageThumbnail({ url }: { url: string }) {
+  const [showPreview, setShowPreview] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setPosition({ top: rect.bottom + 8, left: rect.left });
+    }
+    setShowPreview(true);
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="relative flex-shrink-0"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setShowPreview(false)}
+    >
+      <img
+        src={url}
+        alt=""
+        className="w-6 h-6 object-cover rounded border border-border"
+      />
+      {showPreview && (
+        <div
+          className="fixed z-50 p-1 bg-background border border-border rounded-lg shadow-xl"
+          style={{ top: position.top, left: position.left }}
+        >
+          <img
+            src={url}
+            alt=""
+            className="max-w-xs max-h-48 object-contain rounded"
+          />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, canEdit = true }: ListViewProps) {
@@ -139,6 +180,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;
               const isDone = item.status === doneStatusId;
+              const hasImage = item.type === 'IMAGE' && item.url;
 
               return (
                 <div
@@ -146,7 +188,11 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                   className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group"
                   onClick={() => onEdit(item.id)}
                 >
-                  <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  {hasImage ? (
+                    <ImageThumbnail url={item.url!} />
+                  ) : (
+                    <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  )}
 
                   <span className="truncate">{item.title}</span>
 
