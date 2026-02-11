@@ -24,7 +24,7 @@ const updateItemSchema = z.object({
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
   url: z.string().url().nullable().optional(),
-  status: z.string().optional(),
+  status: z.string().nullable().optional(),
   priority: z.number().int().min(1).max(4).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   startDate: z.string().datetime().nullable().optional(),

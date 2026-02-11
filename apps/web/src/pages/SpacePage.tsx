@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
@@ -136,6 +137,8 @@ export function SpacePage() {
   };
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
+  const [filterMode, setFilterMode] = useState<'type' | 'status'>('type');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const mindmapRef = useRef<MindMapViewHandle>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -524,27 +527,66 @@ export function SpacePage() {
         {/* Toolbar */}
         <div className="flex flex-col gap-2 mb-3">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
-          {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
-            const isActive = filter === t;
-            const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
-            return (
-              <Button
-                key={t}
-                variant={isActive ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilter(t)}
-                className={`text-xs flex-shrink-0 ${isActive && typeColor ? `border-2 ${typeColor.color}` : ''}`}
-              >
-                {t === 'ALL' ? 'Tous' : TYPE_LABELS[t]}
-              </Button>
-            );
-          })}
+          {/* Toggle Type / Statut */}
+          <div className="flex items-center bg-muted rounded-md p-0.5 flex-shrink-0 mr-1">
+            <button
+              onClick={() => { setFilterMode('type'); setStatusFilter('ALL'); }}
+              className={`px-2 py-1 text-xs rounded font-medium transition-colors ${filterMode === 'type' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Type
+            </button>
+            <button
+              onClick={() => { setFilterMode('status'); setFilter('ALL'); }}
+              className={`px-2 py-1 text-xs rounded font-medium transition-colors ${filterMode === 'status' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Statut
+            </button>
+          </div>
+
+          {filterMode === 'type' ? (
+            <>
+              {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
+                const isActive = filter === t;
+                const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
+                return (
+                  <Button
+                    key={t}
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilter(t)}
+                    className={`text-xs flex-shrink-0 ${isActive && typeColor ? `border-2 ${typeColor.color}` : ''}`}
+                  >
+                    {t === 'ALL' ? 'Tous' : TYPE_LABELS[t]}
+                  </Button>
+                );
+              })}
+            </>
+          ) : (
+            <>
+              {[{ id: 'ALL', label: 'Tous', borderColor: '', color: '' }, ...(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).filter(s => s.visible)].map((s) => {
+                const isActive = statusFilter === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setStatusFilter(s.id)}
+                    className={`px-3 py-1.5 text-xs rounded-md border-2 transition-all flex-shrink-0 font-medium ${
+                      isActive
+                        ? s.id === 'ALL' ? 'bg-primary text-primary-foreground border-primary' : `${s.borderColor} font-semibold shadow-sm`
+                        : s.id === 'ALL' ? 'border-border hover:bg-accent' : `${s.borderColor} opacity-60 hover:opacity-100`
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
           </div>
           <div className="flex gap-2 flex-wrap items-center">
 
           {/* Mode indicator */}
-          {filter !== 'ALL' && (
-            viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'mindmap' ? (
+          {((filterMode === 'type' && filter !== 'ALL') || (filterMode === 'status' && statusFilter !== 'ALL')) && (
+            viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'mindmap' || viewMode === 'tree' ? (
               <span className="text-xs ml-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-100 text-yellow-700 border border-yellow-300">
                 <span className="w-2 h-2 rounded-full bg-yellow-400" />
                 Mise en lumière
@@ -782,6 +824,7 @@ export function SpacePage() {
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
               canEdit={canEdit}
             />
           ) : viewMode === 'kanban' ? (
@@ -813,6 +856,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
               canEdit={canEdit}
             />
           ) : viewMode === 'timeline' ? (
@@ -826,6 +870,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
               canEdit={canEdit}
             />
           ) : viewMode === 'mindmap' ? (
@@ -836,6 +881,7 @@ export function SpacePage() {
               spaceId={spaceId}
               communitySpaces={communitySpaces || []}
               highlightType={filter !== 'ALL' ? filter : undefined}
+              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -907,6 +953,7 @@ export function SpacePage() {
                       expandedItems={expandedItems}
                       canEdit={canEdit}
                       highlightType={filter !== 'ALL' ? filter : undefined}
+                      highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
                     />
                   ))}
                   {/* Root drop zone - at the bottom to avoid interfering with first item */}
@@ -1047,6 +1094,7 @@ function SortableItem({
   expandedItems,
   canEdit,
   highlightType,
+  highlightStatus,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1069,6 +1117,7 @@ function SortableItem({
   expandedItems: Set<string>;
   canEdit?: boolean;
   highlightType?: string;
+  highlightStatus?: string;
 }) {
   const {
     attributes,
@@ -1079,7 +1128,7 @@ function SortableItem({
     isDragging,
   } = useSortable({ id: item.id });
 
-  const isDimmed = highlightType && item.type !== highlightType;
+  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1252,6 +1301,7 @@ function SortableItem({
           onToggleExpand={onToggleExpand}
           canEdit={canEdit}
           highlightType={highlightType}
+          highlightStatus={highlightStatus}
         />
       )}
     </div>
@@ -1277,6 +1327,7 @@ function ItemChildren({
   onToggleExpand,
   canEdit,
   highlightType,
+  highlightStatus,
 }: {
   spaceId: string;
   parentId: string;
@@ -1295,6 +1346,7 @@ function ItemChildren({
   onToggleExpand: (id: string) => void;
   canEdit?: boolean;
   highlightType?: string;
+  highlightStatus?: string;
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
@@ -1332,6 +1384,7 @@ function ItemChildren({
           expandedItems={expandedItems}
           canEdit={canEdit}
           highlightType={highlightType}
+          highlightStatus={highlightStatus}
         />
       ))}
     </>
@@ -1350,6 +1403,7 @@ function DraggableChildItem({
   onUpdateStatus,
   onAddChild,
   spaceId,
+  highlightStatus,
   isOver,
   dropMode,
   onMove,
@@ -1383,6 +1437,7 @@ function DraggableChildItem({
   expandedItems: Set<string>;
   canEdit?: boolean;
   highlightType?: string;
+  highlightStatus?: string;
 }) {
   const {
     attributes,
@@ -1393,7 +1448,7 @@ function DraggableChildItem({
     isDragging,
   } = useSortable({ id: item.id });
 
-  const isDimmed = highlightType && item.type !== highlightType;
+  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1566,6 +1621,7 @@ function DraggableChildItem({
           onToggleExpand={onToggleExpand}
           canEdit={canEdit}
           highlightType={highlightType}
+          highlightStatus={highlightStatus}
         />
       )}
     </div>

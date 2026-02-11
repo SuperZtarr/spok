@@ -15,6 +15,7 @@ interface TimelineViewProps {
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  highlightStatus?: string;
   canEdit?: boolean;
 }
 
@@ -142,7 +143,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType, highlightStatus, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -582,8 +583,8 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);
               const hasDate = !!(item.startDate || item.dueDate);
-              const isHighlighted = highlightType && item.type === highlightType;
-              const isDimmed = highlightType && item.type !== highlightType;
+              const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+              const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
 
               return (
                 <div

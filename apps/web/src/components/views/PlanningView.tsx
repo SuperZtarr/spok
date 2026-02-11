@@ -124,6 +124,7 @@ interface PlanningViewProps {
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  highlightStatus?: string;
   canEdit?: boolean;
 }
 
@@ -263,10 +264,11 @@ interface PeriodSectionProps {
   statuses: StatusConfig[];
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  highlightStatus?: string;
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, referentiels, highlightType, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, referentiels, highlightType, highlightStatus, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -292,8 +294,8 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             onAddChild={onAddChild}
             statuses={statuses}
             referentiels={referentiels}
-            isHighlighted={highlightType ? item.type === highlightType : false}
-            isDimmed={highlightType ? item.type !== highlightType : false}
+            isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
+            isDimmed={(highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false)}
             canEdit={canEdit}
           />
         ))}
@@ -302,7 +304,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType, highlightStatus, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -374,6 +376,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           statuses={statuses}
           referentiels={referentiels}
           highlightType={highlightType}
+          highlightStatus={highlightStatus}
           canEdit={canEdit}
         />
       ))}

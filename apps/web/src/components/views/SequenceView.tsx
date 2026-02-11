@@ -42,6 +42,7 @@ interface SequenceViewProps {
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
+  highlightStatus?: string;
   canEdit?: boolean;
 }
 
@@ -375,6 +376,7 @@ export function SequenceView({
   onDeleteRelation,
   referentiels,
   highlightType,
+  highlightStatus,
   canEdit = true,
 }: SequenceViewProps) {
   // Link mode state
@@ -486,8 +488,8 @@ export function SequenceView({
       const borderColor =
         statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
       const isDone = item.status === doneStatusId;
-      const isHighlighted = highlightType && item.type === highlightType;
-      const isDimmed = highlightType && item.type !== highlightType;
+      const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+      const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
       const isLinkSource = linkMode && linkSource === item.id;
 
       const itemDependsOn = dependsOnMap.get(item.id) || [];
