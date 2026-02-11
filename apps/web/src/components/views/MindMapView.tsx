@@ -35,6 +35,7 @@ interface MindMapViewProps {
   spaceId?: string;
   communitySpaces?: SpaceWithRole[];
   highlightType?: string;
+  highlightStatus?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -613,6 +614,7 @@ function calculateLayout(
   onReorganizeChildren: (id: string) => void,
   hasPortalSupport: boolean,
   highlightType?: string,
+  highlightStatus?: string,
   canEdit?: boolean
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
@@ -711,8 +713,8 @@ function calculateLayout(
         isCollapsed,
         childCount,
         hasPortalSupport,
-        isHighlighted: highlightType ? item.type === highlightType : false,
-        isDimmed: highlightType ? item.type !== highlightType : false,
+        isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
+        isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false),
         isDropTarget: false,
         canEdit: canEdit !== false,
       },
@@ -798,6 +800,7 @@ function MindMapViewInner({
   spaceId,
   communitySpaces = [],
   highlightType,
+  highlightStatus,
   onEdit,
   onDelete,
   onAddChild,
@@ -956,7 +959,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(nodes);
     const groupedNodes = applyNativeGrouping(positionedNodes, tree, statuses, collapsedIds);
     const absPositions = getAbsolutePositions(groupedNodes);
@@ -1072,7 +1075,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
@@ -1385,7 +1388,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, highlightStatus, canEdit);
 
     // Build a map of node positions for portal placement
     const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
@@ -1430,7 +1433,7 @@ function MindMapViewInner({
     setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions));
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
@@ -1661,6 +1664,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   spaceId,
   communitySpaces,
   highlightType,
+  highlightStatus,
   onEdit,
   onDelete,
   onUpdateStatus: _onUpdateStatus,
@@ -1691,6 +1695,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           spaceId={spaceId}
           communitySpaces={communitySpaces}
           highlightType={highlightType}
+          highlightStatus={highlightStatus}
           onEdit={onEdit}
           onDelete={onDelete}
           onAddChild={onAddChild}

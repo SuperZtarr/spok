@@ -62,9 +62,12 @@ interface SunburstViewProps {
   spaceId?: string;
   spaceName?: string;
   onNodeClick?: (itemId: string) => void;
+  highlightType?: string;
+  highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
 }
 
-export function SunburstView({ spaceId, spaceName, onNodeClick }: SunburstViewProps = {}) {
+export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus, highlightColor }: SunburstViewProps = {}) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -323,15 +326,33 @@ export function SunburstView({ spaceId, spaceName, onNodeClick }: SunburstViewPr
               const path = arcGenerator(d);
               if (!path) return null;
 
-              const isHighlighted = !hoveredNode || isAncestorOf(d, hoveredNode) || isAncestorOf(hoveredNode, d) || d === hoveredNode;
+              const isHoverHighlighted = !hoveredNode || isAncestorOf(d, hoveredNode) || isAncestorOf(hoveredNode, d) || d === hoveredNode;
               const color = getNodeColor(d);
+
+              // Filter highlight: dim items that don't match the active filter
+              const hasFilterHighlight = !!(highlightType || highlightStatus);
+              const isItem = d.data.nodeType === 'item';
+              const matchesFilter = !hasFilterHighlight || !isItem ||
+                (highlightType && d.data.itemType === highlightType) ||
+                (highlightStatus && (d.data.status === highlightStatus || (highlightStatus === 'undefined' && !d.data.status)));
+              const filterDimmed = hasFilterHighlight && isItem && !matchesFilter;
+
+              // Combine both highlight logics
+              let opacity: number;
+              if (filterDimmed) {
+                opacity = 0.1;
+              } else if (hoveredNode) {
+                opacity = isHoverHighlighted ? 0.9 : 0.15;
+              } else {
+                opacity = 0.85;
+              }
 
               return (
                 <path
                   key={d.data.id + '-' + d.depth}
                   d={path}
                   fill={color}
-                  fillOpacity={hoveredNode ? (isHighlighted ? 0.9 : 0.15) : 0.85}
+                  fillOpacity={opacity}
                   stroke="var(--background)"
                   strokeWidth={0.5}
                   onMouseEnter={() => setHoveredNode(d)}

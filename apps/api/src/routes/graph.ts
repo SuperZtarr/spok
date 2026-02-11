@@ -517,7 +517,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         const items = await fastify.prisma.item.findMany({
           where: { spaceId: filterSpaceId },
           select: {
-            id: true, title: true, type: true, spaceId: true, parentId: true,
+            id: true, title: true, type: true, status: true, spaceId: true, parentId: true,
             _count: { select: { contributions: true } },
           },
         });
@@ -531,6 +531,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
               id: item.id,
               nodeType: 'item',
               itemType: item.type,
+              status: item.status,
             };
             if (subChildren.length > 0) {
               node.children = subChildren;
@@ -614,6 +615,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           id: true,
           title: true,
           type: true,
+          status: true,
           spaceId: true,
           parentId: true,
           _count: { select: { contributions: true } },
@@ -637,6 +639,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
             id: item.id,
             nodeType: 'item',
             itemType: item.type,
+            status: item.status,
           };
           if (subChildren.length > 0) {
             node.children = subChildren;

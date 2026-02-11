@@ -47,9 +47,12 @@ interface GraphViewProps {
   communityId?: string;
   communityName?: string;
   onNodeClick: (itemId: string, spaceId: string) => void;
+  highlightType?: string;
+  highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
 }
 
-export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick }: GraphViewProps) {
+export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus, highlightColor }: GraphViewProps) {
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -224,12 +227,27 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     graphRef.current?.zoomToFit(400, 50);
   };
 
+  const hasHighlight = !!(highlightType || highlightStatus);
+
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.title || '';
     const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
     const nodeRadius = isStructural ? (node.type === 'COMMUNITY' ? 10 : 8) : 5;
     const fontSize = Math.max((isStructural ? 14 : 12) / globalScale, 2);
     const color = NODE_COLORS[node.type] || '#94a3b8';
+
+    // Determine if this node matches the highlight filter
+    const isItemNode = !isStructural;
+    const matchesHighlight = !hasHighlight || isStructural ||
+      (highlightType && node.type === highlightType) ||
+      (highlightStatus && (node.status === highlightStatus || (highlightStatus === 'undefined' && !node.status)));
+    const dimmed = hasHighlight && isItemNode && !matchesHighlight;
+
+    // Save context and apply dimming
+    ctx.save();
+    if (dimmed) {
+      ctx.globalAlpha = 0.15;
+    }
 
     // Draw circle
     ctx.beginPath();
@@ -250,7 +268,9 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
       const truncated = label.length > maxChars ? label.slice(0, maxChars) + '...' : label;
       ctx.fillText(truncated, node.x, node.y + nodeRadius + 2);
     }
-  }, []);
+
+    ctx.restore();
+  }, [hasHighlight, highlightType, highlightStatus]);
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
     const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
@@ -261,8 +281,25 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   }, []);
 
   const linkColor = useCallback((link: any) => {
+    if (hasHighlight) {
+      const source = typeof link.source === 'object' ? link.source : null;
+      const target = typeof link.target === 'object' ? link.target : null;
+      if (source && target) {
+        const sourceStructural = source.type === 'SPACE' || source.type === 'COMMUNITY';
+        const targetStructural = target.type === 'SPACE' || target.type === 'COMMUNITY';
+        const sourceMatch = sourceStructural ||
+          (highlightType && source.type === highlightType) ||
+          (highlightStatus && (source.status === highlightStatus || (highlightStatus === 'undefined' && !source.status)));
+        const targetMatch = targetStructural ||
+          (highlightType && target.type === highlightType) ||
+          (highlightStatus && (target.status === highlightStatus || (highlightStatus === 'undefined' && !target.status)));
+        if (!sourceMatch || !targetMatch) {
+          return 'rgba(100,116,139,0.1)';
+        }
+      }
+    }
     return LINK_COLORS[link.linkType] || '#475569';
-  }, []);
+  }, [hasHighlight, highlightType, highlightStatus]);
 
   const linkWidth = useCallback((link: any) => {
     if (link.linkType === 'hierarchy') return 1.5;

@@ -3,6 +3,7 @@ export interface SunburstNode {
   id: string;
   nodeType: 'global' | 'community' | 'space' | 'item';
   itemType?: string;
+  status?: string | null;
   value?: number;
   children?: SunburstNode[];
 }

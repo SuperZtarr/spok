@@ -23,6 +23,9 @@ interface TextViewProps {
   onEdit: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  highlightType?: string;
+  highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
 }
 
 function formatDate(dateString: string | null | undefined): string | null {
@@ -70,7 +73,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, onEdit, referentiels }: TextViewProps) {
+export function TextView({ items, onEdit, referentiels, highlightType, highlightStatus, highlightColor }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -151,16 +154,19 @@ export function TextView({ items, onEdit, referentiels }: TextViewProps) {
             const hasDescription = !!item.description?.trim();
             const contributions = item.contributions || [];
             const hasContent = hasDescription || contributions.length > 0;
+            const hasHighlight = !!(highlightType || highlightStatus);
+            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+            const isHighlighted = hasHighlight && !isDimmed;
 
             return (
               <div
                 key={item.id}
-                className="group"
+                className={`group transition-opacity ${isDimmed ? 'opacity-35' : ''}`}
                 style={{ marginLeft: `${depth * 32}px` }}
               >
                 {/* Item header */}
                 <div
-                  className="flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors"
+                  className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
                   <span className={`flex-shrink-0 ${typeColor.color.replace('border-', 'text-').replace('400', '500')}`}>
