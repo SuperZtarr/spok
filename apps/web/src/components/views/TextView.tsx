@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, X, FileText, MessageSquare, User, Clock } from 'lucide-react';
+import { Search, X, FileText, MessageSquare, User } from 'lucide-react';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -182,32 +182,34 @@ export function TextView({ items, onEdit, referentiels, canEdit = true }: TextVi
                   )}
                 </div>
 
-                {/* Description */}
+                {/* Description & Contributions */}
                 {hasContent && (
                   <div className="pl-7 pb-3">
                     {hasDescription && (
-                      <div className="text-sm text-muted-foreground leading-relaxed mt-1 prose prose-sm max-w-none">
-                        {stripMarkup(item.description!)}
-                      </div>
+                      <div
+                        className="prose prose-sm dark:prose-invert max-w-none text-foreground mt-1"
+                        dangerouslySetInnerHTML={{ __html: item.description! }}
+                      />
                     )}
 
                     {/* Contributions */}
                     {contributions.length > 0 && (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-3 space-y-3">
                         {contributions.map((contrib) => (
                           <div
                             key={contrib.id}
-                            className="border-l-2 border-muted pl-3 py-1"
+                            className="border-l-2 border-primary/30 pl-3 py-1"
                           >
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                               <User className="w-3 h-3" />
                               <span className="font-medium">{contrib.author.name}</span>
-                              <Clock className="w-3 h-3 ml-1" />
+                              <span>·</span>
                               <span>{formatDate(contrib.createdAt)}</span>
                             </div>
-                            <div className="text-sm leading-relaxed">
-                              {stripMarkup(contrib.content)}
-                            </div>
+                            <div
+                              className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                              dangerouslySetInnerHTML={{ __html: contrib.content }}
+                            />
                           </div>
                         ))}
                       </div>
