@@ -33,7 +33,7 @@ export function ViewModeSelector() {
             key={viewMode.value}
             onClick={() => setMode(viewMode.value)}
             className={cn(
-              'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors flex-shrink-0',
+              'flex items-center gap-1.5 px-1.5 md:px-2 py-1.5 rounded-md text-sm font-medium transition-colors flex-shrink-0',
               isActive
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'

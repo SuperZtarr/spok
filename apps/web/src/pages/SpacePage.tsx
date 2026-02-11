@@ -522,7 +522,8 @@ export function SpacePage() {
     <div className={`p-4 flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
       <div className={`w-full flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
-        <div className="flex gap-2 mb-3 flex-wrap items-center">
+        <div className="flex flex-col gap-2 mb-3">
+          <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
           {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
             const isActive = filter === t;
             const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
@@ -532,12 +533,14 @@ export function SpacePage() {
                 variant={isActive ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter(t)}
-                className={isActive && typeColor ? `border-2 ${typeColor.color}` : ''}
+                className={`text-xs flex-shrink-0 ${isActive && typeColor ? `border-2 ${typeColor.color}` : ''}`}
               >
                 {t === 'ALL' ? 'Tous' : TYPE_LABELS[t]}
               </Button>
             );
           })}
+          </div>
+          <div className="flex gap-2 flex-wrap items-center">
 
           {/* Mode indicator */}
           {filter !== 'ALL' && (
@@ -627,6 +630,7 @@ export function SpacePage() {
                 Nouveau
               </Button>
             )}
+          </div>
           </div>
         </div>
 

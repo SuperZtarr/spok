@@ -10,6 +10,7 @@ export function GlobalSearch() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,16 +43,20 @@ export function GlobalSearch() {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        if (!query) setIsExpanded(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [query]);
 
   // Close on Escape
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsOpen(false);
+      setIsExpanded(false);
+      setQuery('');
+      setDebouncedQuery('');
       inputRef.current?.blur();
     }
   }, []);
@@ -72,7 +77,21 @@ export function GlobalSearch() {
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="relative">
+      {/* Mobile: icon button that expands to input */}
+      {!isExpanded && (
+        <button
+          className="sm:hidden p-1.5 rounded-md hover:bg-accent text-muted-foreground"
+          onClick={() => {
+            setIsExpanded(true);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+          title="Rechercher"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+      )}
+      {/* Input: always visible on sm+, toggled on mobile */}
+      <div className={`relative ${isExpanded ? 'block' : 'hidden sm:block'}`}>
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           ref={inputRef}
@@ -84,7 +103,7 @@ export function GlobalSearch() {
             if (debouncedQuery.length >= 2) setIsOpen(true);
           }}
           placeholder="Rechercher..."
-          className="w-36 sm:w-48 md:w-64 h-8 pl-8 pr-8 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-36 sm:w-36 md:w-48 lg:w-64 h-8 pl-8 pr-8 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
         />
         {query && (
           <button

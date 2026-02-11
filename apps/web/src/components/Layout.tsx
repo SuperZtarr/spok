@@ -417,19 +417,19 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="h-14 border-b border-border bg-card flex items-center gap-3 px-4 md:px-6 flex-shrink-0">
-          <div className="flex items-center gap-3 flex-shrink-0">
+        <header className="h-14 border-b border-border bg-card flex items-center gap-2 md:gap-3 px-3 md:px-6 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 min-w-0">
             {/* Hamburger menu (mobile) */}
             <button
-              className="p-1 rounded-md hover:bg-accent md:hidden"
+              className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
               onClick={() => setSidebarOpen(true)}
               title="Ouvrir le menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-lg font-semibold truncate">{getPageTitle()}</h2>
+            <h2 className="text-base md:text-lg font-semibold truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">{getPageTitle()}</h2>
             {currentSpace && (
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 {currentSpace.community && (
                   <span className="text-xs text-muted-foreground px-2 py-1 bg-primary/10 text-primary rounded">
                     {currentSpace.community.name}
@@ -441,7 +441,7 @@ export function Layout() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3 min-w-0 flex-1 justify-end">
+          <div className="flex items-center gap-1.5 md:gap-3 min-w-0 flex-1 justify-end">
             <GlobalSearch />
             {currentSpace && <ViewModeSelector />}
           </div>
