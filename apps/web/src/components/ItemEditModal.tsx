@@ -118,7 +118,7 @@ export function ItemEditModal({
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -236,7 +236,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -265,7 +265,7 @@ export function ItemEditModal({
     }
 
     if (status !== (item.status || '')) {
-      updates.status = status || null;
+      updates.status = status || undefined;
     }
 
     // Handle dueDate changes

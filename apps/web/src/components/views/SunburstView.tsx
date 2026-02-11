@@ -67,7 +67,7 @@ interface SunburstViewProps {
   highlightColor?: { border: string; bg: string };
 }
 
-export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus, highlightColor }: SunburstViewProps = {}) {
+export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus }: SunburstViewProps = {}) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
