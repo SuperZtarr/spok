@@ -2,6 +2,36 @@
 
 ---
 
+#### [2026-02-11 01:00] - Upload d'images via Cloudflare R2
+
+**Demande :** Permettre l'upload d'images par drag & drop sur les items de type IMAGE, stockage sur Cloudflare R2 (S3-compatible), prévisualisation, et fallback URL externe.
+
+**Actions réalisées :**
+- Installé `@aws-sdk/client-s3` dans `@spok/api`
+- Ajouté variables R2 dans `.env.example` (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL)
+- Créé `apps/api/src/utils/r2.ts` : S3Client R2, `isR2Configured()`, `processImage()` (sharp 1920px WebP 82), `uploadImageToR2()`, `deleteImageFromR2()`
+- Ajouté route `POST /:id/image` dans `apps/api/src/routes/items.ts` : authentification, validation MIME/taille, process+upload R2, suppression ancienne image, mise à jour item.url
+- Ajouté `itemsApi.uploadImage()` dans `apps/web/src/lib/api.ts` (FormData + fetch)
+- Créé `apps/web/src/components/ui/ImageUploadZone.tsx` : zone drag & drop, prévisualisation, bouton supprimer, spinner upload, validation client
+- Modifié `apps/web/src/components/ItemEditModal.tsx` : mutation upload, ImageUploadZone pour type IMAGE, fallback URL externe dans `<details>`, affichage `<img>` en lecture seule, section URL séparée pour LINK/DOCUMENT
+
+**Fichiers créés :**
+- `apps/api/src/utils/r2.ts`
+- `apps/web/src/components/ui/ImageUploadZone.tsx`
+
+**Fichiers modifiés :**
+- `apps/api/package.json` (+ @aws-sdk/client-s3)
+- `.env.example` (+ variables R2)
+- `apps/api/src/routes/items.ts` (+ import r2, + route POST /:id/image)
+- `apps/web/src/lib/api.ts` (+ itemsApi.uploadImage)
+- `apps/web/src/components/ItemEditModal.tsx` (+ ImageUploadZone, mutation upload, sections IMAGE vs LINK/DOCUMENT)
+
+**État :** EN COURS — compilation OK, code prêt, non committé. Reporté à demain pour test + commit.
+
+**Pré-requis pour test :** Configurer un bucket R2 Cloudflare + renseigner les variables dans `.env`
+
+---
+
 #### [2026-02-10 21:45] - Landing Page publique
 
 **Demande :** Créer une page d'accueil publique visible par les visiteurs non connectés, avec header (logo + connexion/inscription), hero, section fonctionnalités (6 blocs), section vues disponibles (6 modes), et footer.

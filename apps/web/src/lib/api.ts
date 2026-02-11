@@ -488,6 +488,25 @@ export const itemsApi = {
     fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`, {
       method: 'DELETE',
     }),
+
+  uploadImage: async (spaceId: string, itemId: string, file: File): Promise<Item> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/spaces/${spaceId}/items/${itemId}/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload image', error);
+    }
+
+    return response.json();
+  },
 };
 
 // Tags

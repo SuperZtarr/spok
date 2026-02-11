@@ -12,6 +12,7 @@ import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Lin
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
+import { ImageUploadZone } from './ui/ImageUploadZone';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -155,6 +156,16 @@ export function ItemEditModal({
     mutationFn: (contributionId: string) =>
       itemsApi.deleteContribution(spaceId, itemId!, contributionId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+    },
+  });
+
+  // Image upload mutation
+  const uploadImageMutation = useMutation({
+    mutationFn: (file: File) => itemsApi.uploadImage(spaceId, itemId!, file),
+    onSuccess: (updatedItem) => {
+      setUrl(updatedItem.url || '');
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
     },
   });
@@ -567,7 +578,49 @@ export function ItemEditModal({
             </div>
           </div>
 
-          {(type === 'LINK' || type === 'DOCUMENT' || type === 'IMAGE') && (
+          {type === 'IMAGE' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium" title="Image associée à cet élément">Image</label>
+              {canEdit ? (
+                <>
+                  <ImageUploadZone
+                    currentUrl={url || null}
+                    onUpload={(file) => uploadImageMutation.mutate(file)}
+                    onRemove={() => setUrl('')}
+                    isUploading={uploadImageMutation.isPending}
+                  />
+                  {uploadImageMutation.isError && (
+                    <p className="text-sm text-destructive">
+                      {(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}
+                    </p>
+                  )}
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer hover:text-foreground transition-colors">
+                      URL externe (optionnel)
+                    </summary>
+                    <div className="mt-2">
+                      <Input
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </details>
+                </>
+              ) : url ? (
+                <img
+                  src={url}
+                  alt="Image"
+                  className="w-full max-h-80 object-contain rounded-lg border border-border bg-muted"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucune image</p>
+              )}
+            </div>
+          )}
+
+          {(type === 'LINK' || type === 'DOCUMENT') && (
             <div className="space-y-2">
               <label className="text-sm font-medium" title="Adresse web associée à cet élément">URL</label>
               {canEdit ? (

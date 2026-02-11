@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit, serializeRelationForAudit } from '../utils/audit.js';
+import { isR2Configured, processImage, uploadImageToR2, deleteImageFromR2 } from '../utils/r2.js';
 
 const createItemSchema = z.object({
   type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']),
@@ -1051,6 +1052,80 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       targetSpaceId,
     };
   });
+
+  // ============================================
+  // IMAGE UPLOAD
+  // ============================================
+
+  const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 Mo
+
+  // POST /:id/image — upload image to R2
+  fastify.post<{ Params: { spaceId: string; id: string } }>(
+    '/:id/image',
+    async (request, reply) => {
+      if (!isR2Configured()) {
+        return reply.badRequest('Le stockage R2 n\'est pas configuré. Contactez l\'administrateur.');
+      }
+
+      const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
+      if (!membership) {
+        return reply.notFound('Space not found');
+      }
+
+      if (membership.role === 'VIEWER') {
+        return reply.forbidden('Viewers cannot upload images');
+      }
+
+      const item = await fastify.prisma.item.findFirst({
+        where: {
+          id: request.params.id,
+          spaceId: request.params.spaceId,
+        },
+      });
+
+      if (!item) {
+        return reply.notFound('Item not found');
+      }
+
+      const file = await request.file();
+      if (!file) {
+        return reply.badRequest('Aucun fichier envoyé');
+      }
+
+      if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
+        return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+      }
+
+      const buffer = await file.toBuffer();
+      if (buffer.length > MAX_IMAGE_SIZE) {
+        return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
+      }
+
+      // Process and upload
+      const processed = await processImage(buffer);
+      const cdnUrl = await uploadImageToR2(processed, item.id);
+
+      // Delete old R2 image if replacing
+      if (item.url) {
+        await deleteImageFromR2(item.url).catch(() => {});
+      }
+
+      // Update item URL
+      const updated = await fastify.prisma.item.update({
+        where: { id: item.id },
+        data: { url: cdnUrl },
+        include: {
+          tags: { include: { tag: true } },
+        },
+      });
+
+      return {
+        ...updated,
+        tags: updated.tags.map((t) => t.tag),
+      };
+    }
+  );
 
   // ============================================
   // CONTRIBUTIONS
