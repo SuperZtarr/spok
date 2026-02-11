@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Upload, X, Loader2, Image as ImageIcon, ClipboardPaste } from 'lucide-react';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
@@ -81,6 +81,31 @@ export function ImageUploadZone({
     [validateAndUpload]
   );
 
+  // Support Ctrl+V paste from clipboard (screenshots)
+  useEffect(() => {
+    if (disabled || isUploading || (currentUrl && !isUploading)) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          if (blob) {
+            const file = new File([blob], `capture-${Date.now()}.png`, { type: blob.type });
+            validateAndUpload(file);
+          }
+          return;
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [disabled, isUploading, currentUrl, validateAndUpload]);
+
   // Display uploaded image
   if (currentUrl && !isUploading) {
     return (
@@ -131,10 +156,12 @@ export function ImageUploadZone({
             )}
             <div className="text-center">
               <span className="text-sm text-muted-foreground">
-                Glissez une image ici ou{' '}
-                <span className="text-primary font-medium">cliquez pour sélectionner</span>
+                Glissez une image, <span className="text-primary font-medium">cliquez pour sélectionner</span>
               </span>
-              <p className="text-xs text-muted-foreground/70 mt-1">
+              <p className="text-xs text-muted-foreground/70 mt-1 flex items-center justify-center gap-1">
+                <ClipboardPaste className="w-3 h-3" /> ou Ctrl+V pour coller une capture
+              </p>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 JPEG, PNG, WebP, GIF — max 5 Mo
               </p>
             </div>
