@@ -196,7 +196,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
       }`}
     >
       {/* Column header */}
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-border sticky top-0 z-10 bg-muted/95 backdrop-blur-sm rounded-t-lg">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">{column.label}</h3>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">

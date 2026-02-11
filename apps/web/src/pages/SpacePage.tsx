@@ -549,7 +549,7 @@ export function SpacePage() {
     <div className={`p-4 flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
       <div className={`w-full flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
-        <div className="flex flex-col gap-2 mb-3">
+        <div className="flex flex-col gap-2 mb-3 sticky top-0 z-10 bg-background pb-2">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
           {/* Mode indicator - always visible */}
           {(isHighlightMode || viewMode === 'mindmap' || viewMode === 'tree') ? (
