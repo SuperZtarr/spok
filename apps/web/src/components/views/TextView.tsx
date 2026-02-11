@@ -57,19 +57,20 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   }
 
   // Flatten tree in order
+  type TreeNode = ItemWithContributions & { _children: TreeNode[] };
   const result: ItemWithContributions[] = [];
-  const flatten = (nodes: (ItemWithContributions & { _children: ItemWithContributions[] })[], depth: number) => {
+  const flatten = (nodes: TreeNode[], depth: number) => {
     for (const node of nodes) {
       (node as any)._depth = depth;
       result.push(node);
       flatten(node._children, depth + 1);
     }
   };
-  flatten(roots, 0);
+  flatten(roots as TreeNode[], 0);
   return result;
 }
 
-export function TextView({ items, onEdit, referentiels, canEdit = true }: TextViewProps) {
+export function TextView({ items, onEdit, referentiels }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {

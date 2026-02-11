@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { hierarchy, partition, HierarchyRectangularNode } from 'd3-hierarchy';
 import { arc as d3arc } from 'd3-shape';
-import { interpolate } from 'd3-interpolate';
-import { Building2 } from 'lucide-react';
 import { useSunburstData } from '../../hooks/useSunburstData';
 import { communitiesApi } from '../../lib/api';
 import type { SunburstNode } from '@spok/shared';
