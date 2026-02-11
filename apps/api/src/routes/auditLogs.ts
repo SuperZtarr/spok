@@ -235,6 +235,28 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
           return reply.conflict('Item already exists - may have been restored previously');
         }
 
+        // Check if the parent still exists, otherwise reset to root
+        let parentId = before.parentId as string | null;
+        if (parentId) {
+          const parentExists = await fastify.prisma.item.findUnique({
+            where: { id: parentId },
+            select: { id: true },
+          });
+          if (!parentExists) {
+            parentId = null;
+          }
+        }
+
+        // Check if the original creator still exists
+        let createdById = before.createdById as string;
+        const creatorExists = await fastify.prisma.user.findUnique({
+          where: { id: createdById },
+          select: { id: true },
+        });
+        if (!creatorExists) {
+          createdById = request.user.userId;
+        }
+
         // Recreate the item
         const restoredItem = await fastify.prisma.item.create({
           data: {
@@ -249,8 +271,8 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             position: before.position as number,
             dueDate: before.dueDate ? new Date(before.dueDate as string) : null,
             spaceId: request.params.spaceId,
-            createdById: before.createdById as string,
-            parentId: before.parentId as string | null,
+            createdById,
+            parentId,
           } as any,
         });
 
