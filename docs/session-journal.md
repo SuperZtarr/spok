@@ -2,6 +2,36 @@
 
 ---
 
+#### [2026-02-11 09:45] - Vue Sunburst interactive dans le Dashboard
+
+**Demande :** Ajouter une visualisation Sunburst (D3.js) dans le Dashboard, montrant la hierarchie complete des donnees SPOK sous forme d'anneaux concentriques (Global → Communautes → Espaces → Items → Enfants → Contributions).
+
+**Actions realisees :**
+- Installe `d3-shape`, `d3-interpolate` + types dans @spok/web
+- Cree `packages/shared/src/types/graph.ts` : interface `SunburstNode`
+- Ajoute endpoint `GET /graph/sunburst?communityIds=...` dans `apps/api/src/routes/graph.ts` : construit l'arbre recursif, valeur feuilles = max(1, contributionCount)
+- Ajoute `graphApi.sunburst()` dans `apps/web/src/lib/api.ts`
+- Cree `apps/web/src/hooks/useSunburstData.ts` (React Query)
+- Cree `apps/web/src/components/views/SunburstView.tsx` (~250 lignes) : d3-hierarchy.partition + d3-shape.arc, hover surbrillance chemin + breadcrumb %, click navigation, filtre communautes, legende, ResizeObserver
+- Ajoute 3e onglet "Sunburst" (icone CircleDot) dans `apps/web/src/pages/DashboardPage.tsx`
+
+**Fichiers crees :**
+- `packages/shared/src/types/graph.ts`
+- `apps/web/src/hooks/useSunburstData.ts`
+- `apps/web/src/components/views/SunburstView.tsx`
+
+**Fichiers modifies :**
+- `packages/shared/src/types/index.ts`
+- `apps/api/src/routes/graph.ts`
+- `apps/web/src/lib/api.ts`
+- `apps/web/src/pages/DashboardPage.tsx`
+- `apps/web/package.json` + `pnpm-lock.yaml`
+
+**Etat :** TERMINE
+**Commit :** 518a5dc
+
+---
+
 #### [2026-02-11 01:00] - Upload d'images via Cloudflare R2
 
 **Demande :** Permettre l'upload d'images par drag & drop sur les items de type IMAGE, stockage sur Cloudflare R2 (S3-compatible), prévisualisation, et fallback URL externe.
