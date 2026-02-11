@@ -982,6 +982,7 @@ export const auditLogsApi = {
       `/spaces/${spaceId}/audit-logs/${logId}/restore`,
       {
         method: 'POST',
+        body: JSON.stringify({}),
       }
     ),
 };
