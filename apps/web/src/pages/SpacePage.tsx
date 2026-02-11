@@ -60,6 +60,7 @@ import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 
 import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
@@ -138,6 +139,7 @@ export function SpacePage() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
 
   // Clear selection when leaving the page or changing space
   useEffect(() => {
@@ -223,17 +225,22 @@ export function SpacePage() {
 
   const handleDelete = useCallback((id: string) => {
     const allItems = allItemsData?.data || itemsData?.data || [];
-    const item = allItems.find((i: Item) => i.id === id);
-    const title = item?.title || 'cet élément';
-    const childCount = allItems.filter((i: Item) => i.parentId === id).length;
-    let message = `Supprimer "${title}" ?`;
-    if (childCount > 0) {
-      message += `\n\nAttention : ${childCount} élément${childCount > 1 ? 's' : ''} enfant${childCount > 1 ? 's' : ''} ${childCount > 1 ? 'seront déplacés' : 'sera déplacé'} à la racine.`;
+    const item = allItems.find((i: Item) => i.id === id) as (Item & { childCount?: number; contributionCount?: number }) | undefined;
+    setDeletingItem({
+      id,
+      title: item?.title || 'cet élément',
+      type: item?.type || 'NOTE',
+      childCount: item?.childCount || allItems.filter((i: Item) => i.parentId === id).length,
+      contributionCount: item?.contributionCount || 0,
+    });
+  }, [allItemsData?.data, itemsData?.data]);
+
+  const confirmDelete = useCallback(() => {
+    if (deletingItem) {
+      deleteItemMutation.mutate(deletingItem.id);
+      setDeletingItem(null);
     }
-    if (confirm(message)) {
-      deleteItemMutation.mutate(id);
-    }
-  }, [allItemsData?.data, itemsData?.data, deleteItemMutation]);
+  }, [deletingItem, deleteItemMutation]);
 
   const updateItemMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
@@ -971,6 +978,17 @@ export function SpacePage() {
         isOpen={showDuplicateModal}
         onClose={() => setShowDuplicateModal(false)}
         currentSpaceId={spaceId!}
+      />
+
+      {/* Delete confirmation modal */}
+      <DeleteConfirmModal
+        isOpen={!!deletingItem}
+        onClose={() => setDeletingItem(null)}
+        onConfirm={confirmDelete}
+        itemTitle={deletingItem?.title || ''}
+        itemType={deletingItem?.type || 'NOTE'}
+        childCount={deletingItem?.childCount || 0}
+        contributionCount={deletingItem?.contributionCount || 0}
       />
     </div>
   );
