@@ -8,6 +8,7 @@ import {
   Settings,
   File,
   Image,
+  Bug,
 } from 'lucide-react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
 import { DEFAULT_TYPE_LABELS } from '@spok/shared';
@@ -25,6 +26,7 @@ export const TYPE_ICONS: Record<string, typeof FileText> = {
   CONFIG: Settings,
   DOCUMENT: File,
   IMAGE: Image,
+  BUG: Bug,
   // Legacy fallback
   APPOINTMENT: Calendar,
 };
@@ -42,6 +44,7 @@ export const TYPE_LABELS: Record<string, string> = {
   CONFIG: 'Configuration',
   DOCUMENT: 'Document',
   IMAGE: 'Image',
+  BUG: 'Anomalie',
   // Legacy fallback
   APPOINTMENT: 'Rendez-vous',
 };
@@ -57,6 +60,7 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   CONFIG: 'Config',
   DOCUMENT: 'Doc',
   IMAGE: 'Image',
+  BUG: 'Bug',
   // Legacy fallback
   APPOINTMENT: 'RDV',
 };
@@ -125,6 +129,7 @@ export const TYPE_COLUMNS: { id: ItemType; label: string; color: string; bgHover
   { id: 'CONFIG', label: 'Config', color: 'border-gray-400', bgHover: 'bg-gray-50' },
   { id: 'DOCUMENT', label: 'Documents', color: 'border-amber-400', bgHover: 'bg-amber-50' },
   { id: 'IMAGE', label: 'Images', color: 'border-pink-400', bgHover: 'bg-pink-50' },
+  { id: 'BUG', label: 'Anomalies', color: 'border-red-400', bgHover: 'bg-red-50' },
 ];
 
 // =============================================================================
