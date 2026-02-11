@@ -442,8 +442,14 @@ export function Layout() {
             )}
           </div>
           <div className="flex items-center gap-1.5 md:gap-3 min-w-0 flex-1 justify-end">
-            <GlobalSearch />
-            {currentSpace && <ViewModeSelector />}
+            <div className="flex-shrink-0">
+              <GlobalSearch />
+            </div>
+            {currentSpace && (
+              <div className="min-w-0 flex-1">
+                <ViewModeSelector />
+              </div>
+            )}
           </div>
         </header>
 
