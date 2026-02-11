@@ -419,7 +419,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Delete item
-  fastify.delete<{ Params: { spaceId: string; id: string } }>('/:id', async (request, reply) => {
+  fastify.delete<{ Params: { spaceId: string; id: string }; Querystring: { deleteChildren?: string } }>('/:id', async (request, reply) => {
     const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');
@@ -441,6 +441,32 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!item) {
       return reply.notFound('Item not found');
+    }
+
+    const deleteChildren = request.query.deleteChildren === 'true';
+
+    if (deleteChildren) {
+      // Recursively collect all descendant IDs
+      const collectDescendantIds = async (parentId: string): Promise<string[]> => {
+        const children = await fastify.prisma.item.findMany({
+          where: { parentId, spaceId: request.params.spaceId },
+          select: { id: true },
+        });
+        const ids: string[] = [];
+        for (const child of children) {
+          ids.push(child.id);
+          ids.push(...await collectDescendantIds(child.id));
+        }
+        return ids;
+      };
+
+      const descendantIds = await collectDescendantIds(request.params.id);
+
+      if (descendantIds.length > 0) {
+        await fastify.prisma.item.deleteMany({
+          where: { id: { in: descendantIds } },
+        });
+      }
     }
 
     // Save state before delete for audit

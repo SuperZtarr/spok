@@ -424,8 +424,8 @@ export const itemsApi = {
       body: JSON.stringify(data),
     }),
 
-  delete: (spaceId: string, id: string) =>
-    fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${id}`, {
+  delete: (spaceId: string, id: string, options?: { deleteChildren?: boolean }) =>
+    fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${id}${options?.deleteChildren ? '?deleteChildren=true' : ''}`, {
       method: 'DELETE',
     }),
 

@@ -217,7 +217,8 @@ export function SpacePage() {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: (id: string) => itemsApi.delete(spaceId!, id),
+    mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren?: boolean }) =>
+      itemsApi.delete(spaceId!, id, { deleteChildren }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
@@ -235,9 +236,9 @@ export function SpacePage() {
     });
   }, [allItemsData?.data, itemsData?.data]);
 
-  const confirmDelete = useCallback(() => {
+  const confirmDelete = useCallback((options: { deleteChildren: boolean }) => {
     if (deletingItem) {
-      deleteItemMutation.mutate(deletingItem.id);
+      deleteItemMutation.mutate({ id: deletingItem.id, deleteChildren: options.deleteChildren });
       setDeletingItem(null);
     }
   }, [deletingItem, deleteItemMutation]);
