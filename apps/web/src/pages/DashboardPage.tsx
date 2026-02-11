@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, ChevronRight } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, CircleDot, ChevronRight } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/Badge';
 import type { SpaceWithRole } from '@spok/shared';
 import { GraphView } from '../components/views/GraphView';
+import { SunburstView } from '../components/views/SunburstView';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -139,7 +140,7 @@ export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const showNewSpace = searchParams.get('new') === 'space';
   const { currentCommunity } = useCommunityStore();
-  const [activeTab, setActiveTab] = useState<'spaces' | 'graph'>('spaces');
+  const [activeTab, setActiveTab] = useState<'spaces' | 'graph' | 'sunburst'>('spaces');
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -260,7 +261,7 @@ export function DashboardPage() {
   }, [allSpaces]);
 
   return (
-    <div className={`flex flex-col flex-1 min-h-0${activeTab === 'graph' ? ' overflow-hidden' : ' overflow-auto'}`}>
+    <div className={`flex flex-col flex-1 min-h-0${activeTab === 'graph' || activeTab === 'sunburst' ? ' overflow-hidden' : ' overflow-auto'}`}>
       {/* Barre d'actions sticky */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex-shrink-0">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -287,6 +288,17 @@ export function DashboardPage() {
               <Network className="w-4 h-4" />
               Graphe global
             </button>
+            <button
+              onClick={() => setActiveTab('sunburst')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'sunburst'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <CircleDot className="w-4 h-4" />
+              Sunburst
+            </button>
           </div>
           {activeTab === 'spaces' && (
             <Button onClick={() => setSearchParams({ new: 'space' })}>
@@ -303,6 +315,10 @@ export function DashboardPage() {
             level="global"
             onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}`, { state: { openItemId: itemId } })}
           />
+        </div>
+      ) : activeTab === 'sunburst' ? (
+        <div className="flex-1 min-h-0 flex flex-col">
+          <SunburstView />
         </div>
       ) : (
       <div className="p-8 flex-1">

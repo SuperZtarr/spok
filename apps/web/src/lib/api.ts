@@ -38,6 +38,7 @@ import type {
   ContributionWithAuthor,
   CreateContributionInput,
   UpdateContributionInput,
+  SunburstNode,
 } from '@spok/shared';
 
 // API URL is injected at build time via VITE_API_URL environment variable
@@ -999,6 +1000,15 @@ export const graphApi = {
       params.set('communityIds', communityIds.join(','));
     }
     return fetchApi<{ nodes: any[]; links: any[] }>(`/graph/global?${params.toString()}`);
+  },
+
+  sunburst: (communityIds?: string[]) => {
+    const params = new URLSearchParams();
+    if (communityIds && communityIds.length > 0) {
+      params.set('communityIds', communityIds.join(','));
+    }
+    const query = params.toString();
+    return fetchApi<SunburstNode>(`/graph/sunburst${query ? `?${query}` : ''}`);
   },
 };
 

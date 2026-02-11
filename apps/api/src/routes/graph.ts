@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import type { SunburstNode } from '@spok/shared';
 
 interface GraphNode {
   id: string;
@@ -440,6 +441,181 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         includeSpaceNodes: true,
         spaceCommunityMap,
       });
+    }
+  );
+
+  // Sunburst hierarchy: Global → Communities → Spaces → Items → Children
+  fastify.get<{ Querystring: { communityIds?: string } }>(
+    '/graph/sunburst',
+    async (request) => {
+      const filterCommunityIds = request.query.communityIds
+        ? request.query.communityIds.split(',').map(id => id.trim()).filter(Boolean)
+        : null;
+
+      // 1. Spaces where user is a direct member
+      const directMemberships = await fastify.prisma.spaceMembership.findMany({
+        where: { userId: request.user.userId },
+        select: { spaceId: true },
+      });
+      const directSpaceIds = directMemberships.map(m => m.spaceId);
+
+      // 2. Community memberships → all GROUP spaces
+      const communityMemberships = await fastify.prisma.communityMembership.findMany({
+        where: { userId: request.user.userId },
+        select: { communityId: true },
+      });
+      const allUserCommunityIds = communityMemberships.map(m => m.communityId);
+
+      const activeCommunityIds = filterCommunityIds
+        ? allUserCommunityIds.filter(id => filterCommunityIds.includes(id))
+        : allUserCommunityIds;
+
+      const communitySpaces = activeCommunityIds.length > 0
+        ? await fastify.prisma.space.findMany({
+            where: { communityId: { in: activeCommunityIds }, type: 'GROUP' },
+            select: { id: true, name: true, communityId: true },
+          })
+        : [];
+
+      // When filtering by communities, only include direct spaces in selected communities
+      let directSpacesInfo: Array<{ id: string; name: string; communityId: string | null }> = [];
+      if (directSpaceIds.length > 0) {
+        directSpacesInfo = await fastify.prisma.space.findMany({
+          where: { id: { in: directSpaceIds } },
+          select: { id: true, name: true, communityId: true },
+        });
+        if (filterCommunityIds) {
+          directSpacesInfo = directSpacesInfo.filter(
+            s => !s.communityId || filterCommunityIds.includes(s.communityId)
+          );
+        }
+      }
+
+      // Merge all unique spaces
+      const allSpacesMap = new Map<string, { id: string; name: string; communityId: string | null }>();
+      for (const s of communitySpaces) allSpacesMap.set(s.id, s);
+      for (const s of directSpacesInfo) if (!allSpacesMap.has(s.id)) allSpacesMap.set(s.id, s);
+
+      const allSpaceIds = [...allSpacesMap.keys()];
+
+      // Get community names
+      const communities = activeCommunityIds.length > 0
+        ? await fastify.prisma.community.findMany({
+            where: { id: { in: activeCommunityIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+      const communityNameMap = new Map(communities.map(c => [c.id, c.name]));
+
+      // Fetch items with contribution count
+      const items = await fastify.prisma.item.findMany({
+        where: { spaceId: { in: allSpaceIds } },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          spaceId: true,
+          parentId: true,
+          _count: { select: { contributions: true } },
+        },
+      });
+
+      // Build item tree per space
+      const itemsBySpace = new Map<string, typeof items>();
+      for (const item of items) {
+        const list = itemsBySpace.get(item.spaceId) || [];
+        list.push(item);
+        itemsBySpace.set(item.spaceId, list);
+      }
+
+      function buildItemTree(spaceItems: typeof items, parentId: string | null): SunburstNode[] {
+        const children = spaceItems.filter(i => i.parentId === parentId);
+        return children.map(item => {
+          const subChildren = buildItemTree(spaceItems, item.id);
+          const node: SunburstNode = {
+            name: item.title,
+            id: item.id,
+            nodeType: 'item',
+            itemType: item.type,
+          };
+          if (subChildren.length > 0) {
+            node.children = subChildren;
+          } else {
+            node.value = Math.max(1, item._count.contributions);
+          }
+          return node;
+        });
+      }
+
+      // Group spaces by community
+      const spacesByCommunity = new Map<string, Array<{ id: string; name: string }>>();
+      const personalSpaces: Array<{ id: string; name: string }> = [];
+
+      for (const [, space] of allSpacesMap) {
+        if (space.communityId && communityNameMap.has(space.communityId)) {
+          const list = spacesByCommunity.get(space.communityId) || [];
+          list.push({ id: space.id, name: space.name });
+          spacesByCommunity.set(space.communityId, list);
+        } else {
+          personalSpaces.push({ id: space.id, name: space.name });
+        }
+      }
+
+      const communityNodes: SunburstNode[] = [];
+
+      // Community nodes
+      for (const [communityId, spaces] of spacesByCommunity) {
+        const spaceNodes: SunburstNode[] = spaces.map(space => {
+          const spaceItems = itemsBySpace.get(space.id) || [];
+          const itemTree = buildItemTree(spaceItems, null);
+          return {
+            name: space.name,
+            id: space.id,
+            nodeType: 'space' as const,
+            children: itemTree.length > 0 ? itemTree : undefined,
+            value: itemTree.length === 0 ? 1 : undefined,
+          };
+        });
+
+        communityNodes.push({
+          name: communityNameMap.get(communityId) || 'Communauté',
+          id: communityId,
+          nodeType: 'community',
+          children: spaceNodes.length > 0 ? spaceNodes : undefined,
+          value: spaceNodes.length === 0 ? 1 : undefined,
+        });
+      }
+
+      // Personal/independent spaces node
+      if (personalSpaces.length > 0) {
+        const spaceNodes: SunburstNode[] = personalSpaces.map(space => {
+          const spaceItems = itemsBySpace.get(space.id) || [];
+          const itemTree = buildItemTree(spaceItems, null);
+          return {
+            name: space.name,
+            id: space.id,
+            nodeType: 'space' as const,
+            children: itemTree.length > 0 ? itemTree : undefined,
+            value: itemTree.length === 0 ? 1 : undefined,
+          };
+        });
+
+        communityNodes.push({
+          name: 'Personnel',
+          id: 'personal',
+          nodeType: 'community',
+          children: spaceNodes,
+        });
+      }
+
+      const root: SunburstNode = {
+        name: 'SPOK',
+        id: 'root',
+        nodeType: 'global',
+        children: communityNodes,
+      };
+
+      return root;
     }
   );
 };
