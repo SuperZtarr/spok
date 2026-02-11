@@ -263,6 +263,11 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      const spaceInfo = await fastify.prisma.space.findUnique({
+        where: { id: spaceId },
+        select: { name: true },
+      });
+
       const items = await fastify.prisma.item.findMany({
         where: { spaceId },
         select: {
@@ -277,7 +282,37 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      return buildGraph(fastify.prisma, items, linkTypes);
+      const graph = await buildGraph(fastify.prisma, items, linkTypes);
+
+      // Add a central space node and link root items to it
+      const spaceNodeId = `space-${spaceId}`;
+      graph.nodes.unshift({
+        id: spaceNodeId,
+        title: spaceInfo?.name || 'Espace',
+        type: 'SPACE',
+        status: null,
+        spaceId,
+        spaceName: spaceInfo?.name || '',
+        parentId: null,
+        tagIds: [],
+      });
+
+      if (linkTypes.has('hierarchy')) {
+        const nodeIds = new Set(items.map(i => i.id));
+        let linkCounter = graph.links.length;
+        for (const item of items) {
+          if (!item.parentId || !nodeIds.has(item.parentId)) {
+            graph.links.push({
+              id: `h-${linkCounter++}`,
+              source: spaceNodeId,
+              target: item.id,
+              linkType: 'hierarchy',
+            });
+          }
+        }
+      }
+
+      return graph;
     }
   );
 
