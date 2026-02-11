@@ -170,16 +170,40 @@ export function SpacePage() {
   // Flat views (kanban, types, planning, list) show all items without hierarchy filtering
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
+  // Determine if we should filter or highlight
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline';
+  const activeTypeFilter = filterMode === 'type' && filter !== 'ALL' ? filter : undefined;
+  const activeStatusFilter = filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined;
+
+  // Pre-compute highlight color for matched items (border + bg)
+  const highlightColor = useMemo(() => {
+    if (activeTypeFilter) {
+      const tc = getTypeColor(activeTypeFilter, referentiels?.typeLabels);
+      return { border: tc.color, bg: tc.bgHover };
+    }
+    if (activeStatusFilter) {
+      const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+      const s = statuses.find(st => st.id === activeStatusFilter);
+      if (s) {
+        // borderColor is like "border-orange-300 bg-orange-50", extract both parts
+        const parts = s.borderColor.split(' ');
+        return { border: parts[0] || '', bg: parts[1] || '' };
+      }
+    }
+    return undefined;
+  }, [activeTypeFilter, activeStatusFilter, referentiels]);
+
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, viewMode],
+    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, filterMode, viewMode],
     queryFn: () =>
       itemsApi.list(spaceId!, {
-        // Tree views load all items (highlight instead of filter)
-        type: filter === 'ALL' || isTreeView ? undefined : filter,
+        // Tree/highlight views load all items (highlight instead of filter)
+        type: activeTypeFilter && !isHighlightMode ? activeTypeFilter : undefined,
+        status: activeStatusFilter && !isHighlightMode ? (activeStatusFilter === 'undefined' ? 'none' : activeStatusFilter) : undefined,
         // Tree views need all items (no parentId filter) to build the full hierarchy
         // Flat views also need all items
-        // Only filter by parentId for non-tree, non-flat views
-        parentId: filter === 'ALL' && !isFlatView && !isTreeView ? null : undefined,
+        // Only filter by parentId for non-tree, non-flat views when no filter active
+        parentId: !activeTypeFilter && !activeStatusFilter && !isFlatView && !isTreeView ? null : undefined,
         pageSize: 5000,
       }),
     enabled: !!spaceId,
@@ -527,6 +551,19 @@ export function SpacePage() {
         {/* Toolbar */}
         <div className="flex flex-col gap-2 mb-3">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
+          {/* Mode indicator - always visible */}
+          {(isHighlightMode || viewMode === 'mindmap' || viewMode === 'tree') ? (
+            <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
+              <span className="w-2 h-2 rounded-full bg-yellow-400" />
+              <span className="hidden sm:inline">Lumière</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-blue-300 bg-blue-50 text-blue-700 shadow-sm flex-shrink-0">
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="hidden sm:inline">Filtre</span>
+            </span>
+          )}
+
           {/* Toggle Type / Statut */}
           <div className="flex items-center bg-muted rounded-md p-0.5 flex-shrink-0 mr-1">
             <button
@@ -549,15 +586,17 @@ export function SpacePage() {
                 const isActive = filter === t;
                 const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
                 return (
-                  <Button
+                  <button
                     key={t}
-                    variant={isActive ? 'default' : 'outline'}
-                    size="sm"
                     onClick={() => setFilter(t)}
-                    className={`text-xs flex-shrink-0 ${isActive && typeColor ? `border-2 ${typeColor.color}` : ''}`}
+                    className={`inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium transition-all flex-shrink-0 whitespace-nowrap border ${
+                      isActive
+                        ? t === 'ALL' ? 'bg-primary text-primary-foreground border-primary shadow-sm' : `border-2 ${typeColor?.color} ${typeColor?.bgHover} font-semibold shadow-sm`
+                        : t === 'ALL' ? 'border-input bg-background shadow-sm hover:bg-accent' : `border ${typeColor?.color} opacity-60 hover:opacity-100`
+                    }`}
                   >
                     {t === 'ALL' ? 'Tous' : TYPE_LABELS[t]}
-                  </Button>
+                  </button>
                 );
               })}
             </>
@@ -569,10 +608,10 @@ export function SpacePage() {
                   <button
                     key={s.id}
                     onClick={() => setStatusFilter(s.id)}
-                    className={`px-3 py-1.5 text-xs rounded-md border-2 transition-all flex-shrink-0 font-medium ${
+                    className={`inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium transition-all flex-shrink-0 whitespace-nowrap border ${
                       isActive
-                        ? s.id === 'ALL' ? 'bg-primary text-primary-foreground border-primary' : `${s.borderColor} font-semibold shadow-sm`
-                        : s.id === 'ALL' ? 'border-border hover:bg-accent' : `${s.borderColor} opacity-60 hover:opacity-100`
+                        ? s.id === 'ALL' ? 'bg-primary text-primary-foreground border-primary shadow-sm' : `border-2 ${s.borderColor} font-semibold shadow-sm`
+                        : s.id === 'ALL' ? 'border-input bg-background shadow-sm hover:bg-accent' : `border ${s.borderColor} opacity-60 hover:opacity-100`
                     }`}
                   >
                     {s.label}
@@ -581,23 +620,17 @@ export function SpacePage() {
               })}
             </>
           )}
-          </div>
-          <div className="flex gap-2 flex-wrap items-center">
-
-          {/* Mode indicator */}
-          {((filterMode === 'type' && filter !== 'ALL') || (filterMode === 'status' && statusFilter !== 'ALL')) && (
-            viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'mindmap' || viewMode === 'tree' ? (
-              <span className="text-xs ml-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-100 text-yellow-700 border border-yellow-300">
-                <span className="w-2 h-2 rounded-full bg-yellow-400" />
-                Mise en lumière
-              </span>
-            ) : (
-              <span className="text-xs ml-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-300">
-                <span className="w-2 h-2 rounded-full bg-blue-400" />
-                Filtre actif
-              </span>
-            )
-          )}
+          <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
+            {(() => {
+              const total = space?.itemCount || 0;
+              const filtered = itemsData?.total ?? itemsData?.data?.length ?? total;
+              const hasFilter = (filterMode === 'type' && filter !== 'ALL') || (filterMode === 'status' && statusFilter !== 'ALL');
+              if (hasFilter && !isHighlightMode && viewMode !== 'mindmap' && viewMode !== 'tree') {
+                return `${filtered}/${total} éléments`;
+              }
+              return `${total} éléments`;
+            })()}
+          </span>
 
           {(viewMode === 'tree' || viewMode === 'mindmap') && (() => {
             const isMindmap = viewMode === 'mindmap';
@@ -611,12 +644,13 @@ export function SpacePage() {
             };
             return (
               <>
-                <div className="h-6 w-px bg-border mx-2" />
+                <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleClick}
                   title={isExpanded ? 'Tout réduire' : 'Tout étendre'}
+                  className="flex-shrink-0"
                 >
                   {isExpanded ? (
                     <>
@@ -634,13 +668,7 @@ export function SpacePage() {
             );
           })()}
 
-          <div className="h-6 w-px bg-border mx-2" />
-
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {space?.itemCount || 0} élément{(space?.itemCount || 0) > 1 ? 's' : ''}
-          </span>
-
-          <div className="ml-auto flex gap-1">
+          <div className="ml-auto flex gap-1 flex-shrink-0">
             <Link to={`/spaces/${spaceId}/history`}>
               <Button variant="ghost" size="sm" title="Historique des modifications">
                 <History className="w-4 h-4" />
@@ -811,6 +839,9 @@ export function SpacePage() {
               onEdit={setEditingItemId}
               referentiels={referentiels}
               canEdit={canEdit}
+              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
+              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightColor={highlightColor}
             />
           ) : viewMode === 'sequence' ? (
             <SequenceView
@@ -823,8 +854,9 @@ export function SpacePage() {
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
-              highlightType={filter !== 'ALL' ? filter : undefined}
-              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
+              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightColor={highlightColor}
               canEdit={canEdit}
             />
           ) : viewMode === 'kanban' ? (
@@ -855,8 +887,9 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
-              highlightType={filter !== 'ALL' ? filter : undefined}
-              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
+              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightColor={highlightColor}
               canEdit={canEdit}
             />
           ) : viewMode === 'timeline' ? (
@@ -869,8 +902,9 @@ export function SpacePage() {
               onUpdateDates={(id, startDate, endDate) => handleInlineUpdate(id, { startDate, endDate })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
-              highlightType={filter !== 'ALL' ? filter : undefined}
-              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
+              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightColor={highlightColor}
               canEdit={canEdit}
             />
           ) : viewMode === 'mindmap' ? (
@@ -880,8 +914,8 @@ export function SpacePage() {
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
               communitySpaces={communitySpaces || []}
-              highlightType={filter !== 'ALL' ? filter : undefined}
-              highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
+              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -952,8 +986,9 @@ export function SpacePage() {
                       onToggleSelection={toggleSelection}
                       expandedItems={expandedItems}
                       canEdit={canEdit}
-                      highlightType={filter !== 'ALL' ? filter : undefined}
-                      highlightStatus={statusFilter !== 'ALL' ? statusFilter : undefined}
+                      highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
+                      highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+                      highlightColor={highlightColor}
                     />
                   ))}
                   {/* Root drop zone - at the bottom to avoid interfering with first item */}
@@ -1095,6 +1130,7 @@ function SortableItem({
   canEdit,
   highlightType,
   highlightStatus,
+  highlightColor,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1118,6 +1154,7 @@ function SortableItem({
   canEdit?: boolean;
   highlightType?: string;
   highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
 }) {
   const {
     attributes,
@@ -1128,7 +1165,9 @@ function SortableItem({
     isDragging,
   } = useSortable({ id: item.id });
 
+  const hasHighlight = !!(highlightType || highlightStatus);
   const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+  const isHighlighted = hasHighlight && !isDimmed;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1169,7 +1208,7 @@ function SortableItem({
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-all duration-150 ${
           isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 shadow-md' : ''
-        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
+        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
@@ -1302,6 +1341,7 @@ function SortableItem({
           canEdit={canEdit}
           highlightType={highlightType}
           highlightStatus={highlightStatus}
+          highlightColor={highlightColor}
         />
       )}
     </div>
@@ -1328,6 +1368,7 @@ function ItemChildren({
   canEdit,
   highlightType,
   highlightStatus,
+  highlightColor,
 }: {
   spaceId: string;
   parentId: string;
@@ -1347,6 +1388,7 @@ function ItemChildren({
   canEdit?: boolean;
   highlightType?: string;
   highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
@@ -1385,6 +1427,7 @@ function ItemChildren({
           canEdit={canEdit}
           highlightType={highlightType}
           highlightStatus={highlightStatus}
+          highlightColor={highlightColor}
         />
       ))}
     </>
@@ -1415,6 +1458,7 @@ function DraggableChildItem({
   expandedItems,
   canEdit,
   highlightType,
+  highlightColor,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1438,6 +1482,7 @@ function DraggableChildItem({
   canEdit?: boolean;
   highlightType?: string;
   highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
 }) {
   const {
     attributes,
@@ -1448,7 +1493,9 @@ function DraggableChildItem({
     isDragging,
   } = useSortable({ id: item.id });
 
+  const hasHighlight = !!(highlightType || highlightStatus);
   const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+  const isHighlighted = hasHighlight && !isDimmed;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1489,7 +1536,7 @@ function DraggableChildItem({
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-all duration-150 ${
           isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 shadow-md' : ''
-        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''}`}
+        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
@@ -1622,6 +1669,7 @@ function DraggableChildItem({
           canEdit={canEdit}
           highlightType={highlightType}
           highlightStatus={highlightStatus}
+          highlightColor={highlightColor}
         />
       )}
     </div>

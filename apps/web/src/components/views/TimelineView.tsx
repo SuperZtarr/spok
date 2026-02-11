@@ -16,6 +16,7 @@ interface TimelineViewProps {
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
   canEdit?: boolean;
 }
 
@@ -143,7 +144,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType, highlightStatus, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -590,7 +591,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                 <div
                   key={item.id}
                   className={`flex border-b hover:bg-muted/30 group ${
-                    isHighlighted ? 'bg-primary/10 ring-1 ring-primary ring-inset' : ''
+                    isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
                   } ${isDimmed ? 'opacity-40' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
