@@ -171,7 +171,7 @@ export function SpacePage() {
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
   // Determine if we should filter or highlight
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline';
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'timeline' || viewMode === 'graph' || viewMode === 'sunburst';
   const activeTypeFilter = filterMode === 'type' && filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -552,7 +552,7 @@ export function SpacePage() {
         <div className="flex flex-col gap-2 mb-3 sticky top-0 z-10 bg-background pb-2">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
           {/* Mode indicator - always visible */}
-          {(isHighlightMode || viewMode === 'mindmap' || viewMode === 'tree') ? (
+          {(isHighlightMode || viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'graph' || viewMode === 'sunburst') ? (
             <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
               <span className="w-2 h-2 rounded-full bg-yellow-400" />
               <span className="hidden sm:inline">Lumière</span>
@@ -935,12 +935,18 @@ export function SpacePage() {
               communityId={space?.communityId || undefined}
               communityName={space?.community?.name}
               onNodeClick={(itemId) => setEditingItemId(itemId)}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              highlightColor={highlightColor}
             />
           ) : viewMode === 'sunburst' ? (
             <SunburstView
               spaceId={spaceId}
               spaceName={space?.name}
               onNodeClick={(itemId) => setEditingItemId(itemId)}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              highlightColor={highlightColor}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
