@@ -66,7 +66,7 @@ interface SunburstViewProps {
 
 export function SunburstView({ spaceId, spaceName, onNodeClick }: SunburstViewProps = {}) {
   const navigate = useNavigate();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [hoveredNode, setHoveredNode] = useState<HierarchyRectangularNode<SunburstNode> | null>(null);
