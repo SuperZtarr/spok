@@ -394,7 +394,7 @@ export const communitiesApi = {
 
 // Items
 export const itemsApi = {
-  list: (spaceId: string, params?: ItemFilterParams) => {
+  list: (spaceId: string, params?: ItemFilterParams & { include?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
@@ -402,6 +402,7 @@ export const itemsApi = {
     if (params?.status) searchParams.set('status', params.status);
     if (params?.parentId !== undefined) searchParams.set('parentId', params.parentId || '');
     if (params?.search) searchParams.set('search', params.search);
+    if (params?.include) searchParams.set('include', params.include);
 
     const query = searchParams.toString();
     return fetchApi<PaginatedResponse<Item>>(`/spaces/${spaceId}/items${query ? `?${query}` : ''}`);

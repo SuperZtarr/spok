@@ -44,6 +44,7 @@ const querySchema = z.object({
   status: z.string().optional(),
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
+  include: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(5000).default(20),
 });
@@ -114,7 +115,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const query = querySchema.parse(request.query);
-      const { page, pageSize, type, status, parentId, search } = query;
+      const { page, pageSize, type, status, parentId, search, include } = query;
+
+      const includeContributions = include?.split(',').includes('contributions');
 
       const where: any = { spaceId: request.params.spaceId };
 
@@ -125,20 +128,31 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         where.title = { contains: search, mode: 'insensitive' };
       }
 
+      const prismaInclude: any = {
+        tags: { include: { tag: true } },
+        children: { select: { id: true } },
+        _count: { select: { children: true, contributions: true } },
+        relationsFrom: {
+          include: { toItem: { select: { id: true, title: true, type: true } } },
+        },
+        relationsTo: {
+          include: { fromItem: { select: { id: true, title: true, type: true } } },
+        },
+      };
+
+      if (includeContributions) {
+        prismaInclude.contributions = {
+          include: {
+            author: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        };
+      }
+
       const [items, total] = await Promise.all([
         fastify.prisma.item.findMany({
           where,
-          include: {
-            tags: { include: { tag: true } },
-            children: { select: { id: true } },
-            _count: { select: { children: true, contributions: true } },
-            relationsFrom: {
-              include: { toItem: { select: { id: true, title: true, type: true } } },
-            },
-            relationsTo: {
-              include: { fromItem: { select: { id: true, title: true, type: true } } },
-            },
-          },
+          include: prismaInclude,
           orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
           skip: (page - 1) * pageSize,
           take: pageSize,
@@ -147,11 +161,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       ]);
 
       return {
-        data: items.map((item) => ({
+        data: items.map((item: any) => ({
           ...item,
-          tags: item.tags.map((t) => t.tag),
+          tags: item.tags.map((t: any) => t.tag),
           childCount: item._count.children,
           contributionCount: item._count.contributions,
+          ...(includeContributions && item.contributions ? { contributions: item.contributions } : {}),
         })),
         total,
         page,

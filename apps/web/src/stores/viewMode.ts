@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'graph';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'graph' | 'text';
 
 export const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
   { value: 'list', label: 'Liste', icon: 'List' },
   { value: 'tree', label: 'Arborescence', icon: 'GitBranch' },
+  { value: 'text', label: 'Texte', icon: 'FileText' },
   { value: 'sequence', label: 'Séquence', icon: 'ArrowDownUp' },
   { value: 'kanban', label: 'Kanban', icon: 'Columns3' },
   { value: 'types', label: 'Types', icon: 'LayoutGrid' },

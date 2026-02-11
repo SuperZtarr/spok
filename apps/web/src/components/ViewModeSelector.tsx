@@ -1,10 +1,11 @@
-import { List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Network } from 'lucide-react';
+import { List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Network, FileText } from 'lucide-react';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { cn } from '../lib/utils';
 
 const ICONS: Record<string, typeof List> = {
   List,
   GitBranch,
+  FileText,
   ArrowDownUp,
   Columns3,
   Share2,

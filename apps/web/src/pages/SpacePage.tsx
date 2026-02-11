@@ -59,6 +59,7 @@ import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 import { GraphView } from '../components/views/GraphView';
+import { TextView } from '../components/views/TextView';
 
 import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
@@ -158,8 +159,8 @@ export function SpacePage() {
   // Load spaces from the same community (for portal feature in mindmap)
   const { data: communitySpaces } = useSpaces(space?.communityId || undefined);
 
-  // Tree-based views (mindmap, tree, timeline) need ALL items to rebuild hierarchy
-  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline';
+  // Tree-based views (mindmap, tree, timeline, text) need ALL items to rebuild hierarchy
+  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
   // Flat views (kanban, types, planning, list) show all items without hierarchy filtering
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
 
@@ -189,6 +190,13 @@ export function SpacePage() {
     queryKey: ['items', spaceId, 'all'],
     queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000 }),
     enabled: !!spaceId,
+  });
+
+  // Load all items with contributions for text view
+  const { data: textViewData } = useQuery({
+    queryKey: ['items', spaceId, 'all-with-contributions'],
+    queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions' }),
+    enabled: !!spaceId && viewMode === 'text',
   });
 
   const createItemMutation = useMutation({
@@ -739,6 +747,13 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              referentiels={referentiels}
+              canEdit={canEdit}
+            />
+          ) : viewMode === 'text' ? (
+            <TextView
+              items={textViewData?.data || allItemsData?.data || []}
+              onEdit={setEditingItemId}
               referentiels={referentiels}
               canEdit={canEdit}
             />
