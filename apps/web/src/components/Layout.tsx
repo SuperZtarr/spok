@@ -417,8 +417,8 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="h-14 border-b border-border bg-card flex items-center gap-3 px-4 md:px-6 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {/* Hamburger menu (mobile) */}
             <button
               className="p-1 rounded-md hover:bg-accent md:hidden"
@@ -441,7 +441,7 @@ export function Layout() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1 justify-end">
             <GlobalSearch />
             {currentSpace && <ViewModeSelector />}
           </div>
