@@ -60,6 +60,7 @@ import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
+import { SunburstView } from '../components/views/SunburstView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 
 import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
@@ -518,8 +519,8 @@ export function SpacePage() {
   const hasExpandedItems = expandedItems.size > 0;
 
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <div className="flex gap-2 mb-3 flex-wrap items-center">
           {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
@@ -745,7 +746,7 @@ export function SpacePage() {
         )}
 
         {/* Items list */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'graph' || viewMode === 'mindmap' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
@@ -849,6 +850,12 @@ export function SpacePage() {
               spaceName={space?.name}
               communityId={space?.communityId || undefined}
               communityName={space?.community?.name}
+              onNodeClick={(itemId) => setEditingItemId(itemId)}
+            />
+          ) : viewMode === 'sunburst' ? (
+            <SunburstView
+              spaceId={spaceId}
+              spaceName={space?.name}
               onNodeClick={(itemId) => setEditingItemId(itemId)}
             />
           ) : itemsData?.data.length === 0 ? (
