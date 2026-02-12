@@ -9,7 +9,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home } from 'lucide-react';
-import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
+import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
@@ -552,36 +552,40 @@ export function ItemEditModal({
             <label className="text-sm font-medium" title="Catégorie de l'élément (note, tâche, projet...)">Type</label>
             <div className="flex flex-wrap gap-2">
               {canEdit ? (
-                Object.entries(TYPE_LABELS)
-                  .filter(([key]) => key !== 'APPOINTMENT')
-                  .map(([key, label]) => {
-                    const Icon = TYPE_ICONS[key];
-                    const isSelected = type === key;
-                    const typeColor = getTypeColor(key, referentiels?.typeLabels);
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setType(key as ItemType)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                          isSelected
-                            ? `${typeColor.color} ${typeColor.bgHover} font-semibold shadow-sm`
-                            : 'border-border opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        {Icon && <Icon className="w-3.5 h-3.5" />}
-                        {label}
-                      </button>
-                    );
-                  })
+                (() => {
+                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                  return Object.entries(typeLabels)
+                    .filter(([, config]) => config.visible)
+                    .sort(([, a], [, b]) => a.order - b.order)
+                    .map(([key, config]) => {
+                      const Icon = TYPE_ICONS[key];
+                      const isSelected = type === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setType(key as ItemType)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                            isSelected
+                              ? `${config.color} ${config.bgHover} font-semibold shadow-sm`
+                              : 'border-border opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          {Icon && <Icon className="w-3.5 h-3.5" />}
+                          {config.labelShort}
+                        </button>
+                      );
+                    });
+                })()
               ) : (
                 (() => {
+                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                  const config = typeLabels[type];
                   const Icon = TYPE_ICONS[type];
-                  const typeColor = getTypeColor(type, referentiels?.typeLabels);
                   return (
-                    <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeColor.color} ${typeColor.bgHover} font-semibold`}>
+                    <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${config?.color || 'border-border'} ${config?.bgHover || ''} font-semibold`}>
                       {Icon && <Icon className="w-3.5 h-3.5" />}
-                      {TYPE_LABELS[type] || type}
+                      {config?.labelShort || TYPE_LABELS[type] || type}
                     </span>
                   );
                 })()
