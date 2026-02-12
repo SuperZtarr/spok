@@ -394,8 +394,24 @@ function PortalNode({ data }: PortalNodeProps) {
 }
 
 // Project group node component (invisible container for native ReactFlow grouping)
-function ProjectGroupNode() {
-  return <div className="w-full h-full" />;
+function ProjectGroupNode({ data }: { data: { label?: string; hexColor?: string } }) {
+  return (
+    <div className="w-full h-full relative" style={{ pointerEvents: 'none' }}>
+      {/* Drag handle — only this bar captures mouse events */}
+      <div
+        className="absolute -top-5 left-0 right-0 flex items-center gap-1 px-2 py-0.5 rounded-t text-[10px] font-medium truncate cursor-grab active:cursor-grabbing dragHandle"
+        style={{
+          pointerEvents: 'auto',
+          backgroundColor: data.hexColor || '#e2e8f0',
+          color: '#475569',
+          opacity: 0.85,
+        }}
+      >
+        <FolderOpen className="w-3 h-3 flex-shrink-0" />
+        <span className="truncate">{data.label || 'Projet'}</span>
+      </div>
+    </div>
+  );
 }
 
 const nodeTypes = {
@@ -476,9 +492,9 @@ function applyNativeGrouping(
   function findProjects(items: TreeItem[], depth: number) {
     for (const item of items) {
       if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
-        const directChildIds = item.children.map(c => c.id);
-        if (directChildIds.length > 0) {
-          projects.push({ item, depth, directChildIds });
+        const visibleDescendantIds = collectVisibleDescendantIds(item, collapsedIds);
+        if (visibleDescendantIds.length > 0) {
+          projects.push({ item, depth, directChildIds: visibleDescendantIds });
         }
       }
       if (!collapsedIds.has(item.id)) {
@@ -531,10 +547,12 @@ function applyNativeGrouping(
       id: groupId,
       type: 'projectGroup',
       position: groupPos,
-      style: { width: maxX - minX, height: maxY - minY },
+      style: { width: maxX - minX, height: maxY - minY, pointerEvents: 'none' as const },
       zIndex: -100 + proj.depth,
-      selectable: true,
+      selectable: false,
       draggable: true,
+      dragHandle: '.dragHandle',
+      focusable: false,
       connectable: false,
       data: {
         label: proj.item.title,
