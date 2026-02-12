@@ -12,13 +12,8 @@ import {
   DragStartEvent,
   DragOverEvent,
   useDroppable,
+  useDraggable,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
   Plus,
   FileText,
@@ -324,6 +319,16 @@ export function SpacePage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
+  const pointerYRef = useRef(0);
+
+  // Track pointer position for accurate drop zone detection
+  useEffect(() => {
+    if (!activeId) return;
+    const handler = (e: PointerEvent) => { pointerYRef.current = e.clientY; };
+    window.addEventListener('pointermove', handler);
+    return () => window.removeEventListener('pointermove', handler);
+  }, [activeId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -337,47 +342,58 @@ export function SpacePage() {
     setActiveId(event.active.id as string);
   };
 
-  // Track if Shift key is held for nest mode
-  const [shiftHeld, setShiftHeld] = useState(false);
-
-  // Listen for Shift key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setShiftHeld(true);
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setShiftHeld(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
   const handleDragOver = (event: DragOverEvent) => {
-    const overId = event.over?.id as string | null;
-    setOverId(overId);
+    const currentOverId = event.over?.id as string | null;
+    setOverId(currentOverId);
 
-    // Default = nest (make child), Shift held = reorder
-    if (event.over) {
-      setDropMode(shiftHeld ? 'reorder' : 'nest');
+    if (!event.over || !currentOverId || currentOverId === 'root') {
+      setDropMode('nest');
+      setDropPosition('nest');
+      return;
+    }
+
+    // Find the actual DOM element for accurate position detection
+    // dnd-kit's event.over.rect can be stale when sortable transforms are applied
+    const overElement = document.querySelector(`[data-item-id="${currentOverId}"]`) as HTMLElement | null;
+    const liveRect = overElement?.getBoundingClientRect();
+    const pointerY = pointerYRef.current;
+
+    if (!liveRect || liveRect.height === 0) {
+      setDropMode('nest');
+      setDropPosition('nest');
+      return;
+    }
+
+    // Top 25% = insert before, bottom 25% = insert after, center 50% = nest
+    const relativeY = pointerY - liveRect.top;
+    const ratio = relativeY / liveRect.height;
+
+    if (ratio < 0.25) {
+      setDropMode('reorder');
+      setDropPosition('before');
+    } else if (ratio > 0.75) {
+      setDropMode('reorder');
+      setDropPosition('after');
+    } else {
+      setDropMode('nest');
+      setDropPosition('nest');
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     const currentDropMode = dropMode;
+    const currentDropPosition = dropPosition;
     setActiveId(null);
     setOverId(null);
     setDropMode('nest');
+    setDropPosition('nest');
 
     if (!over || active.id === over.id) return;
 
     // Use allItemsData to find any item (including children)
     const allItems = allItemsData?.data || [];
-    const rootItems = itemsData?.data || [];
+    const rootItemsList = itemsData?.data || [];
     const activeItem = allItems.find((item: Item) => item.id === active.id);
 
     if (!activeItem) return;
@@ -393,13 +409,13 @@ export function SpacePage() {
     }
 
     const overItem = allItems.find((item: Item) => item.id === over.id);
-    // Find position among siblings
-    const siblings = overItem?.parentId
-      ? allItems.filter((item: Item) => item.parentId === overItem.parentId)
-      : rootItems;
-    const overIndex = siblings.findIndex((item: Item) => item.id === over.id);
-
     if (!overItem) return;
+
+    // Find position among siblings
+    const siblings = overItem.parentId
+      ? allItems.filter((item: Item) => item.parentId === overItem.parentId)
+      : rootItemsList;
+    const overIndex = siblings.findIndex((item: Item) => item.id === over.id);
 
     if (currentDropMode === 'nest') {
       // Make the active item a child of the over item
@@ -412,10 +428,11 @@ export function SpacePage() {
       setExpandedItems((prev) => new Set([...prev, over.id as string]));
     } else {
       // Reorder at the same level (move to same parent as overItem)
+      const targetPosition = currentDropPosition === 'after' ? overIndex + 1 : overIndex;
       moveItemMutation.mutate({
         id: active.id as string,
         parentId: overItem.parentId ?? null,
-        position: overIndex >= 0 ? overIndex : 0,
+        position: targetPosition >= 0 ? targetPosition : 0,
       });
     }
   };
@@ -424,6 +441,7 @@ export function SpacePage() {
     setActiveId(null);
     setOverId(null);
     setDropMode('nest');
+    setDropPosition('nest');
   };
 
   const activeItem = activeId ? allItemsData?.data?.find((item: Item) => item.id === activeId) : null;
@@ -965,13 +983,10 @@ export function SpacePage() {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              <SortableContext
-                items={rootItems.map((item: Item) => item.id)}
-                strategy={verticalListSortingStrategy}
-              >
+              <div>
                 <div className="py-2">
                   {rootItems.map((item: Item & { childCount?: number }, index: number) => (
-                    <SortableItem
+                    <TreeItem
                       key={item.id}
                       item={item}
                       depth={0}
@@ -984,10 +999,10 @@ export function SpacePage() {
                       onAddChild={handleAddChild}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
-                      dropMode={overId === item.id ? dropMode : undefined}
                       onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
                       globalOverId={overId}
                       globalDropMode={dropMode}
+                      globalDropPosition={dropPosition}
                       isSelectionMode={isSelectionMode}
                       isSelected={selectedIds.has(item.id)}
                       onToggleSelection={toggleSelection}
@@ -1003,41 +1018,16 @@ export function SpacePage() {
                     <RootDropZone isOver={overId === 'root'} />
                   )}
                 </div>
-              </SortableContext>
-              <DragOverlay>
+              </div>
+              <DragOverlay dropAnimation={null}>
                 {activeItem ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-card border-2 border-primary rounded-md shadow-xl">
-                      {TYPE_ICONS[activeItem.type] && (
-                        <span className="w-4 h-4 text-muted-foreground">
-                          {(() => { const Icon = TYPE_ICONS[activeItem.type]; return <Icon className="w-4 h-4" />; })()}
-                        </span>
-                      )}
-                      <span className="truncate font-medium">{activeItem.title}</span>
-                    </div>
-                    <div className={`text-xs px-3 py-2 rounded-md shadow-lg ${
-                      dropMode === 'nest'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-white'
-                    }`}>
-                      {dropMode === 'nest' ? (
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1 font-semibold">
-                            <span>↳</span>
-                            <span>Mode: Imbriquer comme enfant</span>
-                          </div>
-                          <div className="opacity-75 text-[10px]">Maintenez Shift pour réordonner</div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1 font-semibold">
-                            <span>↕</span>
-                            <span>Mode: Réordonner</span>
-                          </div>
-                          <div className="opacity-75 text-[10px]">Relâchez Shift pour imbriquer</div>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-card border-2 border-primary rounded-md shadow-xl max-w-xs">
+                    {TYPE_ICONS[activeItem.type] && (
+                      <span className="w-4 h-4 text-muted-foreground">
+                        {(() => { const Icon = TYPE_ICONS[activeItem.type]; return <Icon className="w-4 h-4" />; })()}
+                      </span>
+                    )}
+                    <span className="truncate font-medium">{activeItem.title}</span>
                   </div>
                 ) : null}
               </DragOverlay>
@@ -1113,8 +1103,8 @@ function RootDropZone({ isOver }: { isOver: boolean }) {
   );
 }
 
-// Sortable item component
-function SortableItem({
+// Tree item component - uses useDraggable + useDroppable (no transform/reorder animations)
+function TreeItem({
   item,
   depth,
   orderNumber,
@@ -1126,10 +1116,10 @@ function SortableItem({
   onAddChild,
   spaceId,
   isOver,
-  dropMode,
   onMove,
   globalOverId,
   globalDropMode,
+  globalDropPosition,
   isSelectionMode,
   isSelected,
   onToggleSelection,
@@ -1150,10 +1140,10 @@ function SortableItem({
   onAddChild: (parentId: string) => void;
   spaceId: string;
   isOver: boolean;
-  dropMode?: 'reorder' | 'nest';
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
+  globalDropPosition?: 'before' | 'after' | 'nest';
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
@@ -1163,24 +1153,24 @@ function SortableItem({
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
 }) {
+  // Draggable (for the grip handle)
   const {
     attributes,
     listeners,
-    setNodeRef,
-    transform,
-    transition,
+    setNodeRef: setDragRef,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useDraggable({ id: item.id });
+
+  // Droppable (for receiving drops)
+  const {
+    setNodeRef: setDropRef,
+  } = useDroppable({ id: item.id });
 
   const hasHighlight = !!(highlightType || highlightStatus);
   const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
   const isHighlighted = hasHighlight && !isDimmed;
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : isDimmed ? 0.35 : 1,
-  };
+  const currentDropPosition = isOver ? (globalDropPosition || 'nest') : null;
 
   const Icon = TYPE_ICONS[item.type];
   const hasChildren = (item.childCount || 0) > 0;
@@ -1194,28 +1184,20 @@ function SortableItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      {/* Drop indicator for reorder mode - place above this item */}
-      {isOver && dropMode === 'reorder' && (
-        <div className="relative mx-3 my-1">
-          <div className="h-1 bg-primary rounded-full" />
+    <div style={{ opacity: isDragging ? 0.4 : isDimmed ? 0.35 : 1 }}>
+      {/* Line before this item (insert before) */}
+      {currentDropPosition === 'before' && (
+        <div className="relative mx-3 h-0.5" style={{ marginLeft: `${12 + depth * 24}px` }}>
+          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
           <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded whitespace-nowrap">
-            Placer ici
-          </span>
-        </div>
-      )}
-      {/* Nest indicator - becomes child of this item */}
-      {isOver && dropMode === 'nest' && (
-        <div className="mx-3 mb-1 px-3 py-1 bg-blue-100 border-2 border-dashed border-blue-500 rounded-md text-xs text-blue-700 flex items-center gap-1">
-          <span>↳</span>
-          <span>Imbriquer comme enfant de "{item.title}"</span>
         </div>
       )}
       <div
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-all duration-150 ${
-          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 shadow-md' : ''
-        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''}`}
+        ref={setDropRef}
+        data-item-id={item.id}
+        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-colors duration-150 ${
+          currentDropPosition === 'nest' ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-400' : ''
+        } ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
@@ -1229,6 +1211,7 @@ function SortableItem({
           />
         ) : canEdit !== false ? (
           <button
+            ref={setDragRef}
             {...attributes}
             {...listeners}
             className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
@@ -1328,6 +1311,14 @@ function SortableItem({
         )}
       </div>
 
+      {/* Line after this item (insert after) */}
+      {currentDropPosition === 'after' && (
+        <div className="relative mx-3 h-0.5" style={{ marginLeft: `${12 + depth * 24}px` }}>
+          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
+        </div>
+      )}
+
       {isExpanded && hasChildren && (
         <ItemChildren
           spaceId={spaceId}
@@ -1341,6 +1332,7 @@ function SortableItem({
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
+          globalDropPosition={globalDropPosition}
           isSelectionMode={isSelectionMode}
           onToggleSelection={onToggleSelection}
           expandedItems={expandedItems}
@@ -1368,6 +1360,7 @@ function ItemChildren({
   onMove,
   globalOverId,
   globalDropMode,
+  globalDropPosition,
   isSelectionMode,
   onToggleSelection,
   expandedItems,
@@ -1388,6 +1381,7 @@ function ItemChildren({
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
+  globalDropPosition?: 'before' | 'after' | 'nest';
   isSelectionMode?: boolean;
   onToggleSelection?: (id: string) => void;
   expandedItems: Set<string>;
@@ -1410,7 +1404,7 @@ function ItemChildren({
   return (
     <>
       {data.data.map((item: Item & { childCount?: number }, index: number) => (
-        <DraggableChildItem
+        <TreeItem
           key={item.id}
           item={item}
           depth={depth}
@@ -1423,10 +1417,10 @@ function ItemChildren({
           onAddChild={onAddChild}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
-          dropMode={globalOverId === item.id ? globalDropMode : undefined}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
+          globalDropPosition={globalDropPosition}
           isSelectionMode={isSelectionMode}
           isSelected={globalSelectedIds.has(item.id)}
           onToggleSelection={onToggleSelection}
@@ -1438,247 +1432,5 @@ function ItemChildren({
         />
       ))}
     </>
-  );
-}
-
-// Draggable child item component (uses useDraggable instead of useSortable)
-function DraggableChildItem({
-  item,
-  depth,
-  orderNumber,
-  isExpanded,
-  onToggleExpand,
-  onEdit,
-  onDelete,
-  onUpdateStatus,
-  onAddChild,
-  spaceId,
-  highlightStatus,
-  isOver,
-  dropMode,
-  onMove,
-  globalOverId,
-  globalDropMode,
-  isSelectionMode,
-  isSelected,
-  onToggleSelection,
-  expandedItems,
-  canEdit,
-  highlightType,
-  highlightColor,
-}: {
-  item: Item & { childCount?: number; tags?: any[] };
-  depth: number;
-  orderNumber: string;
-  isExpanded: boolean;
-  onToggleExpand: (id: string) => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  onUpdateStatus: (id: string, status: string) => void;
-  onAddChild: (parentId: string) => void;
-  spaceId: string;
-  isOver: boolean;
-  dropMode?: 'reorder' | 'nest';
-  onMove: (id: string, parentId: string | null, position: number) => void;
-  globalOverId: string | null;
-  globalDropMode: 'reorder' | 'nest';
-  isSelectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelection?: (id: string) => void;
-  expandedItems: Set<string>;
-  canEdit?: boolean;
-  highlightType?: string;
-  highlightStatus?: string;
-  highlightColor?: { border: string; bg: string };
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
-
-  const hasHighlight = !!(highlightType || highlightStatus);
-  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
-  const isHighlighted = hasHighlight && !isDimmed;
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : isDimmed ? 0.35 : 1,
-  };
-
-  const Icon = TYPE_ICONS[item.type];
-  const hasChildren = (item.childCount || 0) > 0;
-
-  const handleClick = () => {
-    if (isSelectionMode && onToggleSelection) {
-      onToggleSelection(item.id);
-    } else {
-      onEdit(item.id);
-    }
-  };
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      {/* Drop indicator for reorder mode - place above this item */}
-      {isOver && dropMode === 'reorder' && (
-        <div className="relative mx-3 my-1" style={{ marginLeft: `${12 + depth * 24}px` }}>
-          <div className="h-1 bg-primary rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded whitespace-nowrap">
-            Placer ici
-          </span>
-        </div>
-      )}
-      {/* Nest indicator - becomes child of this item */}
-      {isOver && dropMode === 'nest' && (
-        <div className="mx-3 mb-1 px-3 py-1 bg-blue-100 border-2 border-dashed border-blue-500 rounded-md text-xs text-blue-700 flex items-center gap-1" style={{ marginLeft: `${12 + depth * 24}px` }}>
-          <span>↳</span>
-          <span>Imbriquer comme enfant de "{item.title}"</span>
-        </div>
-      )}
-      <div
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-all duration-150 ${
-          isOver && dropMode === 'nest' ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 shadow-md' : ''
-        } ${isOver && dropMode === 'reorder' ? 'border-t-2 border-primary bg-primary/5' : ''} ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''}`}
-        style={{ paddingLeft: `${12 + depth * 24}px` }}
-        onClick={handleClick}
-      >
-        {isSelectionMode ? (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelection?.(item.id)}
-            onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded"
-          />
-        ) : canEdit !== false ? (
-          <button
-            {...attributes}
-            {...listeners}
-            className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
-            onClick={(e) => e.stopPropagation()}
-            title="Glisser pour réorganiser"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        ) : null}
-
-        {hasChildren ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand(item.id);
-            }}
-            className="p-0.5 hover:bg-muted rounded"
-            title={isExpanded ? 'Réduire' : 'Développer'}
-          >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-        ) : (
-          <div className="w-5" />
-        )}
-
-        <span className="text-xs text-muted-foreground font-mono min-w-[1.5rem]">{orderNumber}</span>
-
-        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-        <span className="flex-1 truncate">{item.title}</span>
-
-        {item.url && (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            title="Ouvrir le lien"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        )}
-
-        {canEdit !== false && item.status && item.status !== 'done' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateStatus(item.id, 'done');
-            }}
-          >
-            <CheckSquare className="w-4 h-4" />
-          </Button>
-        )}
-
-        <Badge
-          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
-          variant="secondary"
-        >
-          {STATUS_LABELS[item.status || ''] || 'Non défini'}
-        </Badge>
-
-        {canEdit !== false && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddChild(item.id);
-            }}
-            title="Ajouter un enfant"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        )}
-
-        {canEdit !== false && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100 text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-
-      {isExpanded && hasChildren && (
-        <ItemChildren
-          spaceId={spaceId}
-          parentId={item.id}
-          depth={depth + 1}
-          parentOrderNumber={orderNumber}
-          onEditItem={onEdit}
-          onDelete={onDelete}
-          onUpdateStatus={onUpdateStatus}
-          onAddChild={onAddChild}
-          onMove={onMove}
-          globalOverId={globalOverId}
-          globalDropMode={globalDropMode}
-          isSelectionMode={isSelectionMode}
-          onToggleSelection={onToggleSelection}
-          expandedItems={expandedItems}
-          onToggleExpand={onToggleExpand}
-          canEdit={canEdit}
-          highlightType={highlightType}
-          highlightStatus={highlightStatus}
-          highlightColor={highlightColor}
-        />
-      )}
-    </div>
   );
 }
