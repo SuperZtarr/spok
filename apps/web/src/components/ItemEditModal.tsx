@@ -165,8 +165,9 @@ export function ItemEditModal({
     mutationFn: (file: File) => itemsApi.uploadImage(spaceId, itemId!, file),
     onSuccess: (updatedItem) => {
       setUrl(updatedItem.url || '');
+      // Only invalidate the list (for thumbnails etc.), NOT the individual item query
+      // Invalidating ['item', ...] would trigger the useEffect that resets all form fields
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
     },
   });
 
