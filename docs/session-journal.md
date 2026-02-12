@@ -2,6 +2,30 @@
 
 ---
 
+#### [2026-02-12 ~14:00] - Ergonomie dates + auto-fill titre + durées meeting/période
+
+**Demande :** Suite de la session précédente. Compléter les boutons de durée pour MEETING (date de fin = date début + durée sélectionnée) et ajouter la même fonctionnalité pour PERIOD. Garder le DateTimeField modifiable dans tous les cas.
+
+**Précisions utilisateur :**
+- Ne pas remplacer le DateTimeField par les boutons de durée, mais les combiner
+- Les boutons de durée pré-remplissent la date de fin, le DateTimeField reste modifiable
+- PERIOD aussi a besoin de boutons de durée (1j, 2j, 3j, 5j, 1 sem., 2 sem., 1 mois, 3 mois)
+
+**Actions réalisées :**
+- Défini `MEETING_DURATIONS` (15min → 4h) et `PERIOD_DURATIONS` (1j → 3 mois) comme constantes
+- Section "Date de fin" : boutons de durée affichés au-dessus du DateTimeField pour MEETING et PERIOD (visibles seulement si startDate est définie)
+- Bouton sélectionné mis en surbrillance (comparaison de la durée actuelle avec la durée du bouton)
+- L'auto-fill titre (session précédente) inclus dans le même commit
+- Build OK
+
+**Fichier modifié :**
+- `apps/web/src/components/ItemEditModal.tsx`
+
+**État :** TERMINÉ
+**Commit :** `3122e92`
+
+---
+
 #### [2026-02-11 11:00] - Corrections supplémentaires + données Commercial
 
 **Réalisations additionnelles :**
