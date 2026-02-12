@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels } from '@spok/shared';
@@ -14,6 +14,9 @@ import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
 import { FileUploadZone } from './ui/FileUploadZone';
+import { DateTimeField } from './ui/DateTimeField';
+import { diffMs, addHours, addDays, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
+import { formatDate, formatDateTime } from '../lib/utils';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -199,6 +202,47 @@ export function ItemEditModal({
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
     },
   });
+
+  // --- Date linking logic ---
+  const handleStartDateChange = useCallback((newStart: string) => {
+    const hadDuration = startDate && endDate;
+    const duration = hadDuration ? diffMs(startDate, endDate) : 0;
+
+    setStartDate(newStart);
+
+    if (!newStart) {
+      // Clear start → clear end too
+      setEndDate('');
+      return;
+    }
+
+    if (hadDuration && duration > 0) {
+      // Maintain the same duration
+      const newEnd = new Date(fromDatetimeLocal(newStart).getTime() + duration);
+      setEndDate(toDatetimeLocal(newEnd));
+    } else if (!endDate) {
+      // Start set, no end yet → set default end
+      const start = fromDatetimeLocal(newStart);
+      if (type === 'MEETING') {
+        setEndDate(toDatetimeLocal(addHours(start, 1)));
+      } else if (type === 'PERIOD' || type === 'PROJECT') {
+        setEndDate(toDatetimeLocal(addDays(start, 1)));
+      }
+      // TASK: no auto endDate
+    }
+  }, [startDate, endDate, type]);
+
+  const handleEndDateChange = useCallback((newEnd: string) => {
+    if (newEnd && startDate) {
+      const s = fromDatetimeLocal(startDate);
+      const e = fromDatetimeLocal(newEnd);
+      if (e < s) {
+        // End before start → move start to match
+        setStartDate(newEnd);
+      }
+    }
+    setEndDate(newEnd);
+  }, [startDate]);
 
   const handleAddRelation = () => {
     if (newRelationTargetId) {
@@ -707,39 +751,59 @@ export function ItemEditModal({
           )}
 
           {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2 relative">
                 <label className="text-sm font-medium">Date de début</label>
                 {canEdit ? (
-                  <Input
-                    type="datetime-local"
+                  <DateTimeField
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={handleStartDateChange}
+                    showTime={type === 'MEETING' || type === 'TASK'}
                   />
                 ) : (
                   <p className="text-sm">
                     {startDate
-                      ? new Date(startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate))
                       : <span className="text-muted-foreground">—</span>}
                   </p>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <label className="text-sm font-medium">Date de fin</label>
                 {canEdit ? (
-                  <Input
-                    type="datetime-local"
+                  <DateTimeField
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={handleEndDateChange}
+                    showTime={type === 'MEETING' || type === 'TASK'}
+                    minDate={startDate}
                   />
                 ) : (
                   <p className="text-sm">
                     {endDate
-                      ? new Date(endDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate))
                       : <span className="text-muted-foreground">—</span>}
                   </p>
                 )}
               </div>
+            </div>
+          )}
+
+          {(type === 'TASK') && (
+            <div className="space-y-2 relative">
+              <label className="text-sm font-medium">Échéance</label>
+              {canEdit ? (
+                <DateTimeField
+                  value={dueDate}
+                  onChange={setDueDate}
+                  showTime={false}
+                />
+              ) : (
+                <p className="text-sm">
+                  {dueDate
+                    ? formatDate(dueDate)
+                    : <span className="text-muted-foreground">—</span>}
+                </p>
+              )}
             </div>
           )}
 
