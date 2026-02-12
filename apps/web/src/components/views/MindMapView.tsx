@@ -394,31 +394,10 @@ function PortalNode({ data }: PortalNodeProps) {
 }
 
 // Project group node component (invisible container for native ReactFlow grouping)
-function ProjectGroupNode({ data }: { data: { label?: string; hexColor?: string } }) {
-  return (
-    <div className="w-full h-full relative" style={{ pointerEvents: 'none' }}>
-      {/* Drag handle — only this bar captures mouse events */}
-      <div
-        className="absolute -top-5 left-0 right-0 flex items-center gap-1 px-2 py-0.5 rounded-t text-[10px] font-medium truncate cursor-grab active:cursor-grabbing dragHandle"
-        style={{
-          pointerEvents: 'auto',
-          backgroundColor: data.hexColor || '#e2e8f0',
-          color: '#475569',
-          opacity: 0.85,
-        }}
-      >
-        <FolderOpen className="w-3 h-3 flex-shrink-0" />
-        <span className="truncate">{data.label || 'Projet'}</span>
-      </div>
-    </div>
-  );
-}
-
 const nodeTypes = {
   mindmap: MindMapNode,
   space: SpaceNode,
   portal: PortalNode,
-  projectGroup: ProjectGroupNode,
 };
 
 // Layout constant for d3 radial tree
@@ -467,118 +446,6 @@ function getAbsolutePositions(nodes: Node[]): Map<string, { x: number; y: number
 
   for (const n of nodes) resolve(n.id);
   return cache;
-}
-
-// Apply native ReactFlow grouping: create group nodes with parentId on members
-function applyNativeGrouping(
-  nodes: Node[],
-  tree: TreeItem[],
-  statuses: StatusConfig[],
-  collapsedIds: Set<string>,
-): Node[] {
-  const APPROX_NODE_W = 150;
-  const APPROX_NODE_H = 40;
-  const PADDING = 40;
-
-  // Collect all PROJECT items with visible children
-  interface ProjectInfo {
-    item: TreeItem;
-    depth: number;
-    directChildIds: string[]; // only direct children (not deep descendants)
-  }
-
-  const projects: ProjectInfo[] = [];
-
-  function findProjects(items: TreeItem[], depth: number) {
-    for (const item of items) {
-      if (item.type === 'PROJECT' && item.children.length > 0 && !collapsedIds.has(item.id)) {
-        const visibleDescendantIds = collectVisibleDescendantIds(item, collapsedIds);
-        if (visibleDescendantIds.length > 0) {
-          projects.push({ item, depth, directChildIds: visibleDescendantIds });
-        }
-      }
-      if (!collapsedIds.has(item.id)) {
-        findProjects(item.children, depth + 1);
-      }
-    }
-  }
-
-  findProjects(tree, 0);
-  if (projects.length === 0) return nodes;
-
-  // Sort deepest first so inner groups are processed before outer groups
-  projects.sort((a, b) => b.depth - a.depth);
-
-  // Work on a mutable copy
-  let result = nodes.map(n => ({ ...n, position: { ...n.position } }));
-  const groupNodes: Node[] = [];
-
-  // Track which nodes already have a parentId (from an inner group)
-  const alreadyGrouped = new Set<string>();
-
-  for (const proj of projects) {
-    const groupId = `project-group-${proj.item.id}`;
-    const memberIds = [proj.item.id, ...proj.directChildIds];
-
-    // Build a position map for current absolute positions (include group nodes for nested resolution)
-    const absPositions = getAbsolutePositions([...groupNodes, ...result]);
-
-    // Get absolute positions of members (project + direct children only)
-    const memberPositions = memberIds
-      .map(id => ({ id, pos: absPositions.get(id) }))
-      .filter((p): p is { id: string; pos: { x: number; y: number } } => !!p.pos);
-
-    if (memberPositions.length < 2) continue;
-
-    // Compute bounding box from absolute positions
-    const minX = Math.min(...memberPositions.map(p => p.pos.x)) - PADDING;
-    const minY = Math.min(...memberPositions.map(p => p.pos.y)) - PADDING;
-    const maxX = Math.max(...memberPositions.map(p => p.pos.x)) + APPROX_NODE_W + PADDING;
-    const maxY = Math.max(...memberPositions.map(p => p.pos.y)) + APPROX_NODE_H + PADDING;
-
-    const groupPos = { x: minX, y: minY };
-
-    // Create the group node (always top-level, no nesting)
-    const statusColor = getStatusColor(proj.item.status, statuses);
-    const hexColor = tailwindBgToHex(statusColor);
-    const darkerHex = hexColor.replace(/f/gi, 'a').slice(0, 7);
-
-    groupNodes.push({
-      id: groupId,
-      type: 'projectGroup',
-      position: groupPos,
-      style: { width: maxX - minX, height: maxY - minY, pointerEvents: 'none' as const },
-      zIndex: -100 + proj.depth,
-      selectable: false,
-      draggable: true,
-      dragHandle: '.dragHandle',
-      focusable: false,
-      connectable: false,
-      data: {
-        label: proj.item.title,
-        childCount: proj.directChildIds.length,
-        hexColor: darkerHex,
-        memberIds,
-      },
-    });
-
-    // Convert member positions to relative (skip nodes already grouped by a deeper group)
-    result = result.map(n => {
-      if (!memberIds.includes(n.id)) return n;
-      if (alreadyGrouped.has(n.id)) return n;
-
-      // Convert absolute position to relative to group
-      const absPos = absPositions.get(n.id) || n.position;
-      alreadyGrouped.add(n.id);
-      return {
-        ...n,
-        parentId: groupId,
-        position: { x: absPos.x - groupPos.x, y: absPos.y - groupPos.y },
-      };
-    });
-  }
-
-  return [...groupNodes, ...result];
 }
 
 // Recalculate edge handles based on actual node positions
@@ -979,10 +846,9 @@ function MindMapViewInner({
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(nodes);
-    const groupedNodes = applyNativeGrouping(positionedNodes, tree, statuses, collapsedIds);
-    const absPositions = getAbsolutePositions(groupedNodes);
-    const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], absPositions);
-    return { initialNodes: groupedNodes, initialEdges: allEdges };
+    const posMap = new Map(positionedNodes.map(n => [n.id, n.position]));
+    const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], posMap);
+    return { initialNodes: positionedNodes, initialEdges: allEdges };
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, toggleCollapse, applyPositions]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
@@ -1097,7 +963,7 @@ function MindMapViewInner({
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(positionedNodes.map(n => [n.id, n.position]));
+    const portalPosMap = new Map(positionedNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1105,7 +971,7 @@ function MindMapViewInner({
 
     portals.forEach((portal, index) => {
       const targetSpace = communitySpaces.find(s => s.id === portal.spaceId);
-      const parentPos = nodePositions.get(portal.parentItemId);
+      const parentPos = portalPosMap.get(portal.parentItemId);
       if (!targetSpace || !parentPos) return;
 
       // Position portal to the right and slightly below the parent
@@ -1135,10 +1001,10 @@ function MindMapViewInner({
       });
     });
 
-    const groupedNodes = applyNativeGrouping([...positionedNodes, ...portalNodes], tree, statuses, collapsedIds);
-    const absPositions = getAbsolutePositions(groupedNodes);
-    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions);
-    setNodes(groupedNodes);
+    const allNodes = [...positionedNodes, ...portalNodes];
+    const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
+    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], edgePosMap);
+    setNodes(allNodes);
     setEdges(allEdges);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
 
@@ -1198,7 +1064,7 @@ function MindMapViewInner({
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       // Don't try to edit the space node, portal nodes, or project group nodes
-      if (node.id !== '__space__' && node.type !== 'portal' && node.type !== 'projectGroup') {
+      if (node.id !== '__space__' && node.type !== 'portal') {
         onEdit(node.id);
       }
     },
@@ -1239,7 +1105,7 @@ function MindMapViewInner({
   // Handle node drag start - capture descendant offsets for drag-with-children
   const onNodeDragStart = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
 
       // Find tree node and collect visible descendant IDs
       function findTreeNode(ns: TreeItem[], id: string): TreeItem | null {
@@ -1287,7 +1153,7 @@ function MindMapViewInner({
   // Handle node drag - move descendants and highlight potential drop target
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal' || draggedNode.type === 'projectGroup') return;
+      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
 
       // Move descendants with the dragged node
       if (dragDescendants.current && dragDescendants.current.offsets.size > 0) {
@@ -1315,7 +1181,7 @@ function MindMapViewInner({
       }
 
       const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
+      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
       setDropTargetId(target?.id || null);
     },
     [getIntersectingNodes, getNodes, setNodes]
@@ -1335,32 +1201,8 @@ function MindMapViewInner({
         return;
       }
 
-      // Group drag: save absolute positions of all member nodes
-      if (draggedNode.type === 'projectGroup') {
-        const memberIds = (draggedNode.data as any)?.memberIds as string[] | undefined;
-        if (memberIds) {
-          setNodes(currentNodes => {
-            const absPositions = getAbsolutePositions(currentNodes);
-            const memberSet = new Set(memberIds);
-            currentNodes.forEach(n => {
-              if (memberSet.has(n.id)) {
-                const absPos = absPositions.get(n.id);
-                if (absPos) {
-                  savedPositions.current[n.id] = absPos;
-                }
-              }
-            });
-            savePositions();
-            return currentNodes;
-          });
-        }
-        dragDescendants.current = null;
-        setDropTargetId(null);
-        return;
-      }
-
       const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.type !== 'projectGroup' && n.id !== draggedNode.id);
+      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
       if (target && onMove && canEdit !== false) {
         // Prevent dropping a parent onto its own descendant
         const isDescendant = (parentId: string, childId: string): boolean => {
@@ -1409,7 +1251,7 @@ function MindMapViewInner({
     const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, highlightType, highlightStatus, canEdit);
 
     // Build a map of node positions for portal placement
-    const nodePositions = new Map(newNodes.map(n => [n.id, n.position]));
+    const resetPosMap = new Map(newNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1417,7 +1259,7 @@ function MindMapViewInner({
 
     portals.forEach((portal, index) => {
       const targetSpace = communitySpaces.find(s => s.id === portal.spaceId);
-      const parentPos = nodePositions.get(portal.parentItemId);
+      const parentPos = resetPosMap.get(portal.parentItemId);
       if (!targetSpace || !parentPos) return;
 
       const offsetX = 200;
@@ -1445,10 +1287,10 @@ function MindMapViewInner({
       });
     });
 
-    const groupedNodes = applyNativeGrouping([...newNodes, ...portalNodes], tree, statuses, collapsedIds);
-    const absPositions = getAbsolutePositions(groupedNodes);
-    setNodes(groupedNodes);
-    setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], absPositions));
+    const allNodes = [...newNodes, ...portalNodes];
+    const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
+    setNodes(allNodes);
+    setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], resetEdgePosMap));
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
@@ -1519,7 +1361,6 @@ function MindMapViewInner({
         <MiniMap
           className="hidden md:block"
           nodeColor={(node) => {
-            if (node.type === 'projectGroup') return 'transparent';
             return node.data?.hexColor as string || '#f3f4f6';
           }}
           maskColor="rgba(0, 0, 0, 0.1)"
