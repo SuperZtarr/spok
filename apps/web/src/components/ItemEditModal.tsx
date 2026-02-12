@@ -41,6 +41,21 @@ const PERIOD_DURATIONS = [
   { label: '3 mois', ms: 90 * DAY },
 ];
 
+const TASK_DURATIONS = [
+  { label: '15 min', ms: 15 * 60 * 1000 },
+  { label: '30 min', ms: 30 * 60 * 1000 },
+  { label: '45 min', ms: 45 * 60 * 1000 },
+  { label: '1h', ms: 60 * 60 * 1000 },
+  { label: '1h30', ms: 90 * 60 * 1000 },
+  { label: '2h', ms: 2 * 60 * 60 * 1000 },
+  { label: '3h', ms: 3 * 60 * 60 * 1000 },
+  { label: '4h', ms: 4 * 60 * 60 * 1000 },
+  { label: '1 jour', ms: DAY },
+  { label: '2 jours', ms: 2 * DAY },
+  { label: '1 sem.', ms: 7 * DAY },
+  { label: '2 sem.', ms: 14 * DAY },
+];
+
 const PROJECT_DURATIONS = [
   { label: '1 mois', ms: 30 * DAY },
   { label: '3 mois', ms: 90 * DAY },
@@ -285,14 +300,13 @@ export function ItemEditModal({
       const needsDefault = !endDate || (endDate && fromDatetimeLocal(endDate) <= fromDatetimeLocal(newStart));
       if (needsDefault) {
         const start = fromDatetimeLocal(newStart);
-        if (type === 'MEETING') {
+        if (type === 'MEETING' || type === 'TASK') {
           setEndDate(toDatetimeLocal(addHours(start, 1)));
         } else if (type === 'PROJECT') {
           setEndDate(toDatetimeLocal(addMonths(start, 1)));
         } else if (type === 'PERIOD') {
           setEndDate(toDatetimeLocal(addDays(start, 1)));
         }
-        // TASK: no auto endDate
       }
     }
   }, [startDate, endDate, type]);
@@ -847,9 +861,9 @@ export function ItemEditModal({
                 <label className="text-sm font-medium">Date de fin</label>
                 {canEdit ? (
                   <div className="space-y-2">
-                    {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT') && startDate && (
+                    {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
                       <div className="flex flex-wrap gap-1.5">
-                        {(type === 'MEETING' ? MEETING_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
+                        {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
                           const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
                           return (
                             <button
@@ -875,7 +889,7 @@ export function ItemEditModal({
                       value={endDate}
                       onChange={handleEndDateChange}
                       showTime={type === 'MEETING' || type === 'TASK'}
-                      showPresets={type !== 'MEETING' && type !== 'PROJECT'}
+                      showPresets={type !== 'MEETING' && type !== 'PROJECT' && type !== 'TASK'}
                       minDate={startDate}
                     />
                   </div>
