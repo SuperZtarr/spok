@@ -52,6 +52,44 @@ export async function uploadImageToR2(buffer: Buffer, itemId: string): Promise<s
   return `${R2_PUBLIC_URL}/${key}`;
 }
 
+export async function uploadFileToR2(
+  buffer: Buffer,
+  itemId: string,
+  originalFilename: string,
+  contentType: string
+): Promise<string> {
+  const client = getS3Client();
+  // Sanitize filename: keep only alphanumeric, dots, hyphens, underscores
+  const sanitized = originalFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const key = `items/${itemId}/${Date.now()}-${sanitized}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ContentDisposition: `inline; filename="${sanitized}"`,
+    })
+  );
+
+  return `${R2_PUBLIC_URL}/${key}`;
+}
+
+export async function deleteFileFromR2(url: string): Promise<void> {
+  if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) return;
+
+  const key = url.slice(R2_PUBLIC_URL.length + 1);
+  const client = getS3Client();
+
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    })
+  );
+}
+
 export async function deleteImageFromR2(url: string): Promise<void> {
   if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) return;
 

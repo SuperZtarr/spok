@@ -190,7 +190,7 @@ async function buildApp() {
   });
 
   await app.register(sensible);
-  await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+  await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
 
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);

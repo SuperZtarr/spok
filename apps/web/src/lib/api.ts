@@ -509,6 +509,25 @@ export const itemsApi = {
 
     return response.json();
   },
+
+  uploadDocument: async (spaceId: string, itemId: string, file: File): Promise<Item> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/spaces/${spaceId}/items/${itemId}/document`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload document', error);
+    }
+
+    return response.json();
+  },
 };
 
 // Tags

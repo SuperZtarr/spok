@@ -13,6 +13,7 @@ import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, getTypeColor } from '../constant
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
+import { FileUploadZone } from './ui/FileUploadZone';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -167,6 +168,15 @@ export function ItemEditModal({
       setUrl(updatedItem.url || '');
       // Only invalidate the list (for thumbnails etc.), NOT the individual item query
       // Invalidating ['item', ...] would trigger the useEffect that resets all form fields
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  // Document upload mutation
+  const uploadDocumentMutation = useMutation({
+    mutationFn: (file: File) => itemsApi.uploadDocument(spaceId, itemId!, file),
+    onSuccess: (updatedItem) => {
+      setUrl(updatedItem.url || '');
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
   });
@@ -621,7 +631,53 @@ export function ItemEditModal({
             </div>
           )}
 
-          {(type === 'LINK' || type === 'DOCUMENT') && (
+          {type === 'DOCUMENT' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium" title="Fichier associé à cet élément">Fichier</label>
+              {canEdit ? (
+                <>
+                  <FileUploadZone
+                    currentUrl={url || null}
+                    onUpload={(file) => uploadDocumentMutation.mutate(file)}
+                    onRemove={() => setUrl('')}
+                    isUploading={uploadDocumentMutation.isPending}
+                  />
+                  {uploadDocumentMutation.isError && (
+                    <p className="text-sm text-destructive">
+                      {(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}
+                    </p>
+                  )}
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer hover:text-foreground transition-colors">
+                      URL externe (optionnel)
+                    </summary>
+                    <div className="mt-2">
+                      <Input
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </details>
+                </>
+              ) : url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all"
+                >
+                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                  Télécharger le fichier
+                </a>
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucun fichier</p>
+              )}
+            </div>
+          )}
+
+          {type === 'LINK' && (
             <div className="space-y-2">
               <label className="text-sm font-medium" title="Adresse web associée à cet élément">URL</label>
               {canEdit ? (
