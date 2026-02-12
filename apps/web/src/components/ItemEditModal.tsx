@@ -862,6 +862,7 @@ export function ItemEditModal({
                       value={endDate}
                       onChange={handleEndDateChange}
                       showTime={type === 'MEETING' || type === 'TASK'}
+                      showPresets={type !== 'MEETING'}
                       minDate={startDate}
                     />
                   </div>
