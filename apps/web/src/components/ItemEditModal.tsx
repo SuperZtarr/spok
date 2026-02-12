@@ -18,6 +18,29 @@ import { DateTimeField } from './ui/DateTimeField';
 import { diffMs, addHours, addDays, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import { formatDate, formatDateTime } from '../lib/utils';
 
+const MEETING_DURATIONS = [
+  { label: '15 min', ms: 15 * 60 * 1000 },
+  { label: '30 min', ms: 30 * 60 * 1000 },
+  { label: '45 min', ms: 45 * 60 * 1000 },
+  { label: '1h', ms: 60 * 60 * 1000 },
+  { label: '1h30', ms: 90 * 60 * 1000 },
+  { label: '2h', ms: 2 * 60 * 60 * 1000 },
+  { label: '3h', ms: 3 * 60 * 60 * 1000 },
+  { label: '4h', ms: 4 * 60 * 60 * 1000 },
+];
+
+const DAY = 24 * 60 * 60 * 1000;
+const PERIOD_DURATIONS = [
+  { label: '1 jour', ms: DAY },
+  { label: '2 jours', ms: 2 * DAY },
+  { label: '3 jours', ms: 3 * DAY },
+  { label: '5 jours', ms: 5 * DAY },
+  { label: '1 sem.', ms: 7 * DAY },
+  { label: '2 sem.', ms: 14 * DAY },
+  { label: '1 mois', ms: 30 * DAY },
+  { label: '3 mois', ms: 90 * DAY },
+];
+
 type ParentSortMode = 'tree' | 'alpha';
 
 interface ItemEditModalProps {
@@ -202,6 +225,35 @@ export function ItemEditModal({
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
     },
   });
+
+  // --- Auto-fill title from file/URL ---
+  /** Extract a clean name from a filename (remove extension) */
+  const fileNameToTitle = useCallback((filename: string): string => {
+    const name = filename.replace(/\.[^.]+$/, ''); // remove extension
+    return name.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+  }, []);
+
+  /** Extract a readable title from a URL (domain or last path segment) */
+  const urlToTitle = useCallback((rawUrl: string): string => {
+    try {
+      const u = new URL(rawUrl);
+      const path = u.pathname.replace(/\/$/, '');
+      if (path && path !== '/') {
+        const last = path.split('/').pop() || '';
+        const decoded = decodeURIComponent(last).replace(/\.[^.]+$/, '');
+        if (decoded) return decoded.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const autoFillTitle = useCallback((name: string) => {
+    if (!title || title.trim() === '') {
+      setTitle(name);
+    }
+  }, [title]);
 
   // --- Date linking logic ---
   const handleStartDateChange = useCallback((newStart: string) => {
@@ -644,7 +696,10 @@ export function ItemEditModal({
                 <>
                   <ImageUploadZone
                     currentUrl={url || null}
-                    onUpload={(file) => uploadImageMutation.mutate(file)}
+                    onUpload={(file) => {
+                      autoFillTitle(fileNameToTitle(file.name));
+                      uploadImageMutation.mutate(file);
+                    }}
                     onRemove={() => setUrl('')}
                     isUploading={uploadImageMutation.isPending}
                   />
@@ -686,7 +741,10 @@ export function ItemEditModal({
                 <>
                   <FileUploadZone
                     currentUrl={url || null}
-                    onUpload={(file) => uploadDocumentMutation.mutate(file)}
+                    onUpload={(file) => {
+                      autoFillTitle(fileNameToTitle(file.name));
+                      uploadDocumentMutation.mutate(file);
+                    }}
                     onRemove={() => setUrl('')}
                     isUploading={uploadDocumentMutation.isPending}
                   />
@@ -732,7 +790,11 @@ export function ItemEditModal({
                 <Input
                   type="url"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    const extracted = urlToTitle(e.target.value);
+                    if (extracted) autoFillTitle(extracted);
+                  }}
                   placeholder="https://..."
                 />
               ) : null}
@@ -771,12 +833,38 @@ export function ItemEditModal({
               <div className="space-y-2 relative">
                 <label className="text-sm font-medium">Date de fin</label>
                 {canEdit ? (
-                  <DateTimeField
-                    value={endDate}
-                    onChange={handleEndDateChange}
-                    showTime={type === 'MEETING' || type === 'TASK'}
-                    minDate={startDate}
-                  />
+                  <div className="space-y-2">
+                    {(type === 'MEETING' || type === 'PERIOD') && startDate && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(type === 'MEETING' ? MEETING_DURATIONS : PERIOD_DURATIONS).map((d) => {
+                          const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                          return (
+                            <button
+                              key={d.ms}
+                              type="button"
+                              onClick={() => {
+                                const end = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                                setEndDate(toDatetimeLocal(end));
+                              }}
+                              className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
+                                isSelected
+                                  ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <DateTimeField
+                      value={endDate}
+                      onChange={handleEndDateChange}
+                      showTime={type === 'MEETING' || type === 'TASK'}
+                      minDate={startDate}
+                    />
+                  </div>
                 ) : (
                   <p className="text-sm">
                     {endDate
