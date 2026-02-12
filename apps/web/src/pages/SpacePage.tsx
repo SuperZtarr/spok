@@ -547,10 +547,10 @@ export function SpacePage() {
   const hasExpandedItems = expandedItems.size > 0;
 
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
-        <div className="flex flex-col gap-2 mb-3 sticky top-0 z-10 bg-background pb-2">
+        <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
           {/* Mode indicator - always visible */}
           {isHighlightMode ? (
@@ -821,7 +821,7 @@ export function SpacePage() {
         )}
 
         {/* Items list */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (

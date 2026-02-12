@@ -1,5 +1,5 @@
-import { useMemo, useState, useRef } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X, MessageSquare } from 'lucide-react';
+import { useMemo, useState, useRef, useCallback } from 'react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X, MessageSquare, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -76,8 +76,22 @@ function ImageThumbnail({ url }: { url: string }) {
   );
 }
 
+type SortField = 'title' | 'type' | 'status' | 'parent' | 'date' | 'contributions';
+type SortDir = 'asc' | 'desc';
+
 export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, canEdit = true }: ListViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const toggleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }, [sortField]);
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {
@@ -88,6 +102,49 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
       stripMarkup(item.description || '').toLowerCase().includes(query)
     );
   }, [items, searchQuery]);
+
+  // Sort filtered items
+  const sortedItems = useMemo(() => {
+    if (!sortField) return filteredItems;
+    const mul = sortDir === 'asc' ? 1 : -1;
+    return [...filteredItems].sort((a, b) => {
+      switch (sortField) {
+        case 'title':
+          return mul * a.title.localeCompare(b.title, 'fr');
+        case 'type':
+          return mul * a.type.localeCompare(b.type);
+        case 'status': {
+          const sa = a.status || '';
+          const sb = b.status || '';
+          return mul * sa.localeCompare(sb);
+        }
+        case 'parent': {
+          const pa = (a.parentId && parentNames[a.parentId]) || '';
+          const pb = (b.parentId && parentNames[b.parentId]) || '';
+          return mul * pa.localeCompare(pb, 'fr');
+        }
+        case 'date': {
+          const da = a.startDate || a.createdAt || '';
+          const db = b.startDate || b.createdAt || '';
+          return mul * da.localeCompare(db);
+        }
+        case 'contributions': {
+          const ca = (a as ItemWithContributions).contributionCount || 0;
+          const cb = (b as ItemWithContributions).contributionCount || 0;
+          return mul * (ca - cb);
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [filteredItems, sortField, sortDir]);
+
+  // Build parent name map
+  const parentNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    items.forEach(item => { map[item.id] = item.title; });
+    return map;
+  }, [items]);
 
   // Build status and type maps from referentiels
   const { statusLabels, statusColors, typeLabelsShort } = useMemo(() => {
@@ -145,7 +202,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
       </div>
 
       {/* Items list */}
-      {filteredItems.length === 0 ? (
+      {sortedItems.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
           {searchQuery ? (
@@ -161,20 +218,37 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
-          {/* Header */}
-          <div className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 sticky top-0">
-            <span className="w-4" title="Type d'élément" />
-            <span title="Nom de l'élément">Titre</span>
-            <span className="text-center" title="Catégorie de l'élément">Type</span>
-            <span className="text-center" title="État d'avancement">Statut</span>
-            <span className="text-center" title="Lien, date, contributions">Info</span>
-            <span className="w-20" title="Actions rapides (survol)" />
+        <>
+          {/* Header — fixed outside scroll */}
+          <div className="grid grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0">
+            <span className="w-4" />
+            <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
+              Titre
+              {sortField === 'title' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+            </button>
+            <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left truncate" onClick={() => toggleSort('parent')}>
+              Parent
+              {sortField === 'parent' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+            </button>
+            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('type')}>
+              Type
+              {sortField === 'type' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+            </button>
+            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('status')}>
+              Statut
+              {sortField === 'status' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+            </button>
+            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('date')}>
+              Info
+              {sortField === 'date' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+            </button>
+            <span className="w-20" />
           </div>
 
-          {/* Rows */}
+          {/* Rows — scrollable */}
+          <div className="flex-1 overflow-auto">
           <div className="divide-y divide-border">
-            {filteredItems.map((item) => {
+            {sortedItems.map((item) => {
               const Icon = TYPE_ICONS[item.type];
               const statusLabel = statusLabels[item.status || ''] || 'Non défini';
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
@@ -185,7 +259,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               return (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group"
+                  className="grid grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group"
                   onClick={() => onEdit(item.id)}
                 >
                   {hasImage ? (
@@ -195,6 +269,10 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                   )}
 
                   <span className="truncate">{item.title}</span>
+
+                  <span className="truncate text-xs text-muted-foreground" title={item.parentId ? parentNames[item.parentId] || '' : ''}>
+                    {item.parentId ? parentNames[item.parentId] || '' : ''}
+                  </span>
 
                   <span className="flex justify-center">
                     <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
@@ -288,7 +366,8 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               );
             })}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
