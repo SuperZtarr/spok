@@ -15,7 +15,7 @@ import { RichTextEditor } from './ui/RichTextEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
 import { FileUploadZone } from './ui/FileUploadZone';
 import { DateTimeField } from './ui/DateTimeField';
-import { diffMs, addHours, addDays, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
+import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import { formatDate, formatDateTime } from '../lib/utils';
 
 const MEETING_DURATIONS = [
@@ -39,6 +39,14 @@ const PERIOD_DURATIONS = [
   { label: '2 sem.', ms: 14 * DAY },
   { label: '1 mois', ms: 30 * DAY },
   { label: '3 mois', ms: 90 * DAY },
+];
+
+const PROJECT_DURATIONS = [
+  { label: '1 mois', ms: 30 * DAY },
+  { label: '3 mois', ms: 90 * DAY },
+  { label: '6 mois', ms: 180 * DAY },
+  { label: '1 an', ms: 365 * DAY },
+  { label: '2 ans', ms: 730 * DAY },
 ];
 
 type ParentSortMode = 'tree' | 'alpha';
@@ -272,15 +280,20 @@ export function ItemEditModal({
       // Maintain the same duration
       const newEnd = new Date(fromDatetimeLocal(newStart).getTime() + duration);
       setEndDate(toDatetimeLocal(newEnd));
-    } else if (!endDate) {
-      // Start set, no end yet → set default end
-      const start = fromDatetimeLocal(newStart);
-      if (type === 'MEETING') {
-        setEndDate(toDatetimeLocal(addHours(start, 1)));
-      } else if (type === 'PERIOD' || type === 'PROJECT') {
-        setEndDate(toDatetimeLocal(addDays(start, 1)));
+    } else {
+      // Set default end if empty or before new start
+      const needsDefault = !endDate || (endDate && fromDatetimeLocal(endDate) <= fromDatetimeLocal(newStart));
+      if (needsDefault) {
+        const start = fromDatetimeLocal(newStart);
+        if (type === 'MEETING') {
+          setEndDate(toDatetimeLocal(addHours(start, 1)));
+        } else if (type === 'PROJECT') {
+          setEndDate(toDatetimeLocal(addMonths(start, 1)));
+        } else if (type === 'PERIOD') {
+          setEndDate(toDatetimeLocal(addDays(start, 1)));
+        }
+        // TASK: no auto endDate
       }
-      // TASK: no auto endDate
     }
   }, [startDate, endDate, type]);
 
@@ -834,9 +847,9 @@ export function ItemEditModal({
                 <label className="text-sm font-medium">Date de fin</label>
                 {canEdit ? (
                   <div className="space-y-2">
-                    {(type === 'MEETING' || type === 'PERIOD') && startDate && (
+                    {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT') && startDate && (
                       <div className="flex flex-wrap gap-1.5">
-                        {(type === 'MEETING' ? MEETING_DURATIONS : PERIOD_DURATIONS).map((d) => {
+                        {(type === 'MEETING' ? MEETING_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
                           const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
                           return (
                             <button
@@ -862,7 +875,7 @@ export function ItemEditModal({
                       value={endDate}
                       onChange={handleEndDateChange}
                       showTime={type === 'MEETING' || type === 'TASK'}
-                      showPresets={type !== 'MEETING'}
+                      showPresets={type !== 'MEETING' && type !== 'PROJECT'}
                       minDate={startDate}
                     />
                   </div>
