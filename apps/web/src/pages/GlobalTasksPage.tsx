@@ -19,7 +19,7 @@ import type { Item } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { ItemEditModal } from '../components/ItemEditModal';
-import { STATUS_LABELS, STATUS_COLORS } from '../constants/ui';
+import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from '../constants/ui';
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
   1: { label: 'Critique', color: 'bg-red-100 text-red-800' },
@@ -90,6 +90,7 @@ export function GlobalTasksPage() {
   // Filter state — arrays for multi-select
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['TASK']);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
@@ -180,6 +181,7 @@ export function GlobalTasksPage() {
   });
 
   // Build comma-separated filter strings
+  const typeParam = selectedTypes.join(',') || undefined;
   const statusParam = selectedStatuses.join(',') || undefined;
   const priorityParam = selectedPriorities.join(',') || undefined;
   const spaceParam = selectedSpaces.join(',') || undefined;
@@ -189,6 +191,7 @@ export function GlobalTasksPage() {
     queryKey: [
       'global-tasks',
       debouncedSearch,
+      typeParam,
       statusParam,
       priorityParam,
       spaceParam,
@@ -200,6 +203,7 @@ export function GlobalTasksPage() {
     queryFn: () =>
       userTasksApi.list({
         search: debouncedSearch || undefined,
+        type: typeParam,
         status: statusParam,
         priority: priorityParam,
         spaceId: spaceParam,
@@ -233,6 +237,18 @@ export function GlobalTasksPage() {
   );
 
   // Filter options
+  const typeOptions = [
+    { id: 'TASK', label: TYPE_LABELS['TASK'] || 'Tâche', color: 'bg-green-100 text-green-800 border-green-300' },
+    { id: 'PROJECT', label: TYPE_LABELS['PROJECT'] || 'Projet', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+    { id: 'NOTE', label: TYPE_LABELS['NOTE'] || 'Note', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+    { id: 'MEETING', label: TYPE_LABELS['MEETING'] || 'Réunion', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+    { id: 'BUG', label: TYPE_LABELS['BUG'] || 'Anomalie', color: 'bg-red-100 text-red-800 border-red-300' },
+    { id: 'DOCUMENT', label: TYPE_LABELS['DOCUMENT'] || 'Document', color: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
+    { id: 'PERIOD', label: TYPE_LABELS['PERIOD'] || 'Période', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+    { id: 'LINK', label: TYPE_LABELS['LINK'] || 'Lien', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+    { id: 'IMAGE', label: TYPE_LABELS['IMAGE'] || 'Image', color: 'bg-pink-100 text-pink-800 border-pink-300' },
+  ];
+
   const statusOptions = [
     { id: 'none', label: 'Non defini', color: 'bg-gray-100 text-gray-500 border-gray-300' },
     { id: 'todo', label: 'A faire', color: 'bg-blue-100 text-blue-800 border-blue-300' },
@@ -248,7 +264,11 @@ export function GlobalTasksPage() {
     { id: '4', label: 'Basse', color: 'bg-blue-100 text-blue-800 border-blue-300' },
   ];
 
+  // Type filter differs from default (TASK only) → counts as active filter
+  const isTypeFiltered = !(selectedTypes.length === 1 && selectedTypes[0] === 'TASK');
+
   const hasAnyFilter =
+    isTypeFiltered ||
     selectedStatuses.length > 0 ||
     selectedPriorities.length > 0 ||
     selectedSpaces.length > 0 ||
@@ -256,6 +276,7 @@ export function GlobalTasksPage() {
     debouncedSearch.length > 0;
 
   const clearAllFilters = () => {
+    setSelectedTypes(['TASK']);
     setSelectedStatuses([]);
     setSelectedPriorities([]);
     setSelectedSpaces([]);
@@ -272,7 +293,7 @@ export function GlobalTasksPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const activeFilterCount =
-    selectedStatuses.length + selectedPriorities.length + selectedDueDates.length + selectedSpaces.length;
+    (isTypeFiltered ? selectedTypes.length : 0) + selectedStatuses.length + selectedPriorities.length + selectedDueDates.length + selectedSpaces.length;
 
   const SortHeader = ({
     label,
@@ -371,6 +392,7 @@ export function GlobalTasksPage() {
 
         {/* Filter rows — always visible on sm+, toggle on mobile */}
         <div className={`space-y-2 ${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+          {renderFilterRow('Type', typeOptions, selectedTypes, (id) => setSelectedTypes((prev) => toggleValue(prev, id)), true)}
           {renderFilterRow('Statut', statusOptions, selectedStatuses, (id) => setSelectedStatuses((prev) => toggleValue(prev, id)))}
           {renderFilterRow('Priorite', priorityOptions, selectedPriorities, (id) => setSelectedPriorities((prev) => toggleValue(prev, id)))}
           {renderFilterRow('Echeance', DUE_DATE_OPTIONS, selectedDueDates, (id) => setSelectedDueDates((prev) => toggleValue(prev, id)))}
@@ -440,6 +462,13 @@ export function GlobalTasksPage() {
                   {/* Title */}
                   <div className="flex items-center gap-2 min-w-0">
                     <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    {(selectedTypes.length !== 1) && (
+                      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                        typeOptions.find((t) => t.id === task.type)?.color || 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {TYPE_LABELS[task.type] || task.type}
+                      </span>
+                    )}
                     <span className="truncate font-medium text-sm">
                       {task.title}
                     </span>
@@ -546,6 +575,14 @@ export function GlobalTasksPage() {
                   </div>
                   {/* Meta row */}
                   <div className="flex items-center gap-2 flex-wrap ml-6">
+                    {/* Type badge (shown when multiple types selected) */}
+                    {(selectedTypes.length !== 1) && (
+                      <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full ${
+                        typeOptions.find((t) => t.id === task.type)?.color || 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {TYPE_LABELS[task.type] || task.type}
+                      </span>
+                    )}
                     {/* Space badge */}
                     <button
                       className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"

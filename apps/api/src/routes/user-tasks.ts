@@ -3,11 +3,12 @@ import { FastifyPluginAsync } from 'fastify';
 export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
-  // GET /user/tasks — List all TASK items across user's accessible spaces
+  // GET /user/tasks — List items across user's accessible spaces
   // Supports multi-value filters via comma-separated strings:
-  //   status=todo,in_progress  priority=1,2  spaceId=id1,id2
+  //   type=TASK,PROJECT  status=todo,in_progress  priority=1,2  spaceId=id1,id2
   fastify.get<{
     Querystring: {
+      type?: string;
       status?: string;
       priority?: string;
       spaceId?: string;
@@ -22,6 +23,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     };
   }>('/tasks', async (request) => {
     const {
+      type: typeFilter,
       status,
       priority: priorityStr,
       spaceId: filterSpaceId,
@@ -78,9 +80,22 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // 2. Build where clause
-    const where: Record<string, unknown> = {
-      type: 'TASK',
-    };
+    const where: Record<string, unknown> = {};
+
+    // Type filter (supports multiple comma-separated values, defaults to TASK)
+    if (typeFilter) {
+      const validTypes = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'];
+      const typeList = typeFilter.split(',').filter((t) => validTypes.includes(t));
+      if (typeList.length === 1) {
+        where.type = typeList[0];
+      } else if (typeList.length > 1) {
+        where.type = { in: typeList };
+      } else {
+        where.type = 'TASK';
+      }
+    } else {
+      where.type = 'TASK';
+    }
 
     // Space access filter
     if (accessibleSpaceIds) {

@@ -315,6 +315,7 @@ export const userApi = {
 
 // User Tasks (global across spaces)
 export interface GlobalTaskFilters {
+  type?: string;
   status?: string;
   priority?: string;
   spaceId?: string;
@@ -354,6 +355,7 @@ export interface GlobalTask {
 export const userTasksApi = {
   list: (params?: GlobalTaskFilters) => {
     const sp = new URLSearchParams();
+    if (params?.type) sp.set('type', params.type);
     if (params?.status) sp.set('status', params.status);
     if (params?.priority) sp.set('priority', params.priority);
     if (params?.spaceId) sp.set('spaceId', params.spaceId);
