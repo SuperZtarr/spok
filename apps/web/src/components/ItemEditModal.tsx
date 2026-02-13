@@ -512,15 +512,16 @@ export function ItemEditModal({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={canEdit ? "Modifier l'élément" : "Détail de l'élément"} size="large">
-      {isLoading ? (
-        <div className="py-8 text-center text-muted-foreground">Chargement...</div>
-      ) : item ? (
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-          {/* Breadcrumb */}
-          {(breadcrumb.length > 0 || spaceName) && (
-            <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap pb-2 border-b border-border">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span className="font-semibold text-lg flex-shrink-0">
+            {canEdit ? "Modifier" : "Détail"}
+          </span>
+          {item && (breadcrumb.length > 0 || spaceName) && (
+            <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap min-w-0">
               {spaceName && (
                 <>
                   <Home className="w-3 h-3 flex-shrink-0" />
@@ -543,56 +544,53 @@ export function ItemEditModal({
                   )}
                 </span>
               ))}
-              <span className="flex items-center gap-1">
-                <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                <span className="font-semibold text-foreground">{item.title}</span>
-              </span>
+              {item && (
+                <span className="flex items-center gap-1">
+                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                  <span className="font-semibold text-foreground">{item.title}</span>
+                </span>
+              )}
             </nav>
           )}
-          {/* Auteur et date de création */}
-          {item.createdBy && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b border-border">
-              <User className="w-4 h-4" />
-              <span>Créé par <strong className="text-foreground">{item.createdBy.name}</strong></span>
+          {item?.createdBy && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto flex-shrink-0">
+              <User className="w-3 h-3" />
+              <span>{item.createdBy.name}</span>
               <span>•</span>
               <span>
                 {new Date(item.createdAt).toLocaleDateString('fr-FR', {
                   day: '2-digit',
-                  month: 'long',
+                  month: 'short',
                   year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
                 })}
               </span>
             </div>
           )}
+        </div>
+      }
+      size="large"
+    >
+      {isLoading ? (
+        <div className="py-8 text-center text-muted-foreground">Chargement...</div>
+      ) : item ? (
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" title="Nom principal de l'élément">Titre</label>
-            {canEdit ? (
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titre de l'élément"
-                required
-              />
-            ) : (
-              <p className="text-lg font-medium">{title}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium" title="Description détaillée, supporte le texte riche">Description</label>
-            <RichTextEditor
-              key={itemId}
-              content={description}
-              onChange={setDescription}
-              editable={canEdit}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium" title="Nom principal de l'élément">Titre</label>
+              {canEdit ? (
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Titre de l'élément"
+                  required
+                />
+              ) : (
+                <p className="text-lg font-medium">{title}</p>
+              )}
+            </div>
+            <div className="space-y-2 sm:min-w-[200px]">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium" title="Élément parent dans l'arborescence">Parent</label>
                 {canEdit && (
@@ -630,7 +628,19 @@ export function ItemEditModal({
                 </p>
               )}
             </div>
+          </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium" title="Description détaillée, supporte le texte riche">Description</label>
+            <RichTextEditor
+              key={itemId}
+              content={description}
+              onChange={setDescription}
+              editable={canEdit}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium" title="État d'avancement de l'élément">Statut</label>
               <div className="flex flex-wrap gap-2">
@@ -669,54 +679,54 @@ export function ItemEditModal({
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" title="Catégorie de l'élément (note, tâche, projet...)">Type</label>
-            <div className="flex flex-wrap gap-2">
-              {canEdit ? (
-                (() => {
-                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                  return Object.entries(typeLabels)
-                    .filter(([, config]) => config.visible)
-                    .sort(([, a], [, b]) => a.order - b.order)
-                    .map(([key, config]) => {
-                      const Icon = TYPE_ICONS[key];
-                      const isSelected = type === key;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setType(key as ItemType)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                            isSelected
-                              ? `${config.color} ${config.bgHover} font-semibold shadow-sm`
-                              : 'border-border opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          {Icon && <Icon className="w-3.5 h-3.5" />}
-                          {config.labelShort}
-                        </button>
-                      );
-                    });
-                })()
-              ) : (
-                (() => {
-                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                  const config = typeLabels[type];
-                  const Icon = TYPE_ICONS[type];
-                  return (
-                    <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${config?.color || 'border-border'} ${config?.bgHover || ''} font-semibold`}>
-                      {Icon && <Icon className="w-3.5 h-3.5" />}
-                      {config?.labelShort || TYPE_LABELS[type] || type}
-                    </span>
-                  );
-                })()
-              )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium" title="Catégorie de l'élément (note, tâche, projet...)">Type</label>
+              <div className="flex flex-wrap gap-2">
+                {canEdit ? (
+                  (() => {
+                    const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                    return Object.entries(typeLabels)
+                      .filter(([, config]) => config.visible)
+                      .sort(([, a], [, b]) => a.order - b.order)
+                      .map(([key, config]) => {
+                        const Icon = TYPE_ICONS[key];
+                        const isSelected = type === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setType(key as ItemType)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
+                              isSelected
+                                ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
+                                : 'opacity-70 hover:opacity-100'
+                            }`}
+                          >
+                            {Icon && <Icon className="w-3.5 h-3.5" />}
+                            {config.labelShort}
+                          </button>
+                        );
+                      });
+                  })()
+                ) : (
+                  (() => {
+                    const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                    const config = typeLabels[type];
+                    const Icon = TYPE_ICONS[type];
+                    return (
+                      <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${config?.color || 'border-border'} ${config?.bgHover || ''} font-semibold`}>
+                        {Icon && <Icon className="w-3.5 h-3.5" />}
+                        {config?.labelShort || TYPE_LABELS[type] || type}
+                      </span>
+                    );
+                  })()
+                )}
+              </div>
             </div>
           </div>
 
-          {type === 'IMAGE' && (
+          {type === 'IMAGE' ? (
             <div className="space-y-2">
               <label className="text-sm font-medium" title="Image associée à cet élément">Image</label>
               {canEdit ? (
@@ -759,9 +769,14 @@ export function ItemEditModal({
                 <p className="text-sm text-muted-foreground">Aucune image</p>
               )}
             </div>
-          )}
+          ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Image</label>
+              <img src={url} alt="Image" className="w-full max-h-40 object-contain rounded-lg border border-border bg-muted" />
+            </div>
+          ) : null}
 
-          {type === 'DOCUMENT' && (
+          {type === 'DOCUMENT' ? (
             <div className="space-y-2">
               <label className="text-sm font-medium" title="Fichier associé à cet élément">Fichier</label>
               {canEdit ? (
@@ -808,40 +823,40 @@ export function ItemEditModal({
                 <p className="text-sm text-muted-foreground">Aucun fichier</p>
               )}
             </div>
-          )}
+          ) : null}
 
-          {type === 'LINK' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Adresse web associée à cet élément">URL</label>
-              {canEdit ? (
-                <Input
-                  type="url"
-                  value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    const extracted = urlToTitle(e.target.value);
-                    if (extracted) autoFillTitle(extracted);
-                  }}
-                  placeholder="https://..."
-                />
-              ) : null}
-              {url && (
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all"
-                >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                  {url}
-                </a>
-              )}
-            </div>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium" title="Adresse web associée à cet élément">URL</label>
+            {type === 'LINK' && canEdit ? (
+              <Input
+                type="url"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  const extracted = urlToTitle(e.target.value);
+                  if (extracted) autoFillTitle(extracted);
+                }}
+                placeholder="https://..."
+              />
+            ) : null}
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all"
+              >
+                <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                {url}
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Aucune URL</p>
+            )}
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2 relative">
-              <label className="text-sm font-medium">Date de début</label>
+              <label className="text-sm font-medium">Début</label>
               {canEdit ? (
                 <DateTimeField
                   value={startDate}
@@ -857,7 +872,7 @@ export function ItemEditModal({
               )}
             </div>
             <div className="space-y-2 relative">
-              <label className="text-sm font-medium">Date de fin</label>
+              <label className="text-sm font-medium">Fin</label>
               {canEdit ? (
                 <div className="space-y-2">
                   {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
@@ -900,9 +915,6 @@ export function ItemEditModal({
                 </p>
               )}
             </div>
-          </div>
-
-          {(type === 'TASK') && (
             <div className="space-y-2 relative">
               <label className="text-sm font-medium">Échéance</label>
               {canEdit ? (
@@ -919,7 +931,7 @@ export function ItemEditModal({
                 </p>
               )}
             </div>
-          )}
+          </div>
 
           {/* Dependencies/Relations section */}
           <div className="space-y-3 pt-4 border-t border-border">

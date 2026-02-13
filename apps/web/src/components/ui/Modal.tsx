@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   className?: string;
   size?: 'small' | 'default' | 'large';
@@ -56,10 +56,10 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <h2 id="modal-title" className="text-lg font-semibold">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0 gap-3">
+          <div id="modal-title" className="flex-1 min-w-0">
             {title}
-          </h2>
+          </div>
           <button
             onClick={onClose}
             className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
