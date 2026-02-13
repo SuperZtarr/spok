@@ -86,20 +86,21 @@ Internal packages use `workspace:*` protocol. When importing:
 - **Web** : port 3000 (configuré dans `apps/web/vite.config.ts` avec `strictPort: true`)
 - **API** : port 3001 (configuré via `API_PORT`)
 
+### Démarrage / Arrêt
+```bash
+pnpm dev:start   # Tout-en-un : Docker, kill ports, build packages, dev
+pnpm dev:stop    # Arrêt propre (tue les processus node sur 3000/3001)
+```
+Les scripts PowerShell sont dans `scripts/dev-start.ps1` et `scripts/dev-stop.ps1`.
+
 ### Redémarrage des services
-Après chaque développement nécessitant un redémarrage, exécuter `pnpm dev` en arrière-plan.
+Après chaque développement nécessitant un redémarrage : `pnpm dev:stop` puis `pnpm dev:start`.
 
 **Redémarrage nécessaire après** :
-- Modifications du schéma Prisma → `pnpm db:generate` puis `pnpm dev`
-- Ajout/suppression de dépendances → `pnpm install` puis `pnpm dev`
+- Modifications du schéma Prisma → `pnpm db:generate` puis `pnpm dev:start`
+- Ajout/suppression de dépendances → `pnpm install` puis `pnpm dev:start`
 - Modifications de `vite.config.ts` ou fichiers de configuration
 - Modifications des fichiers `.env`
 
 **Pas de redémarrage nécessaire** (rechargement automatique) :
 - Modifications de code TypeScript/React (tsx watch + Vite HMR)
-
-### Avant de redémarrer
-Libérer les ports si nécessaire :
-```powershell
-powershell -Command "Get-NetTCPConnection -LocalPort 3000,3001 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id \$_ -Force -ErrorAction SilentlyContinue }"
-```

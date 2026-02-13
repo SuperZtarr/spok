@@ -5,6 +5,7 @@
   "description": "Application modulaire multi-utilisateurs pour structurer, relier, évaluer et planifier",
   "scripts": {
     "dev:start": "powershell -ExecutionPolicy Bypass -File scripts/dev-start.ps1",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/dev-stop.ps1",
     "predev": "pnpm run build:packages",
     "dev": "concurrently --kill-others-on-fail --names api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:api": "pnpm --filter @spok/api dev",
