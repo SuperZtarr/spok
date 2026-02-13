@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -15,6 +15,7 @@ import {
   Link as LinkIcon,
   Undo,
   Redo,
+  GripHorizontal,
 } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -22,10 +23,45 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   editable?: boolean;
+  resizable?: boolean;
+  minHeight?: number;
+  defaultMaxHeight?: number;
 }
 
-export function RichTextEditor({ content, onChange, placeholder, editable = true }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300 }: RichTextEditorProps) {
   const isUpdatingFromProp = useRef(false);
+  const [editorHeight, setEditorHeight] = useState<number | null>(null);
+  const isDragging = useRef(false);
+  const startY = useRef(0);
+  const startHeight = useRef(0);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    startY.current = e.clientY;
+    startHeight.current = editorContainerRef.current?.offsetHeight ?? defaultMaxHeight;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const delta = e.clientY - startY.current;
+      const newHeight = Math.max(minHeight, startHeight.current + delta);
+      setEditorHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [minHeight, defaultMaxHeight]);
 
   const editor = useEditor({
     extensions: [
@@ -185,10 +221,30 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
       )}
 
       {/* Editor */}
-      <EditorContent
-        editor={editor}
-        className="prose prose-sm dark:prose-invert max-w-none p-3 min-h-[120px] max-h-[300px] overflow-y-auto focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[96px]"
-      />
+      <div
+        ref={editorContainerRef}
+        style={editorHeight != null
+          ? { height: `${editorHeight}px` }
+          : { minHeight: `${minHeight}px`, maxHeight: `${defaultMaxHeight}px` }
+        }
+        className="overflow-y-auto"
+      >
+        <EditorContent
+          editor={editor}
+          className="prose prose-sm dark:prose-invert max-w-none p-3 min-h-full focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[96px]"
+        />
+      </div>
+
+      {/* Resize handle */}
+      {resizable && editable && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="flex items-center justify-center h-5 cursor-row-resize bg-muted/30 border-t border-input hover:bg-muted/50 transition-colors"
+          title="Glisser pour redimensionner"
+        >
+          <GripHorizontal size={14} className="text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 }
