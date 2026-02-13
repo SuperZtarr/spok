@@ -11,6 +11,7 @@ import {
   ChevronRight,
   AlertCircle,
   X,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { userTasksApi, spacesApi, itemsApi } from '../lib/api';
 import type { GlobalTaskFilters, GlobalTask } from '../lib/api';
@@ -71,7 +72,7 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-all whitespace-nowrap flex-shrink-0 ${
         active
           ? color || 'bg-primary/15 text-primary border-primary/40'
           : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground/40 hover:text-foreground'
@@ -268,6 +269,11 @@ export function GlobalTasksPage() {
   const total = tasksData?.total || 0;
   const totalPages = tasksData?.totalPages || 0;
 
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount =
+    selectedStatuses.length + selectedPriorities.length + selectedDueDates.length + selectedSpaces.length;
+
   const SortHeader = ({
     label,
     field,
@@ -291,115 +297,90 @@ export function GlobalTasksPage() {
     </button>
   );
 
+  // Render a filter row (shared between mobile/desktop)
+  // scrollable: if true, chips scroll horizontally instead of wrapping (for long lists like spaces)
+  const renderFilterRow = (label: string, options: { id: string; label: string; color?: string }[], selected: string[], toggle: (id: string) => void, scrollable = false) => (
+    <div className={`flex items-start gap-2 ${scrollable ? '' : 'flex-wrap'}`}>
+      <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0 pt-1 hidden sm:block">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground flex-shrink-0 pt-1 sm:hidden">{label}</span>
+      <div className={`flex gap-1.5 ${scrollable ? 'overflow-x-auto pb-1 min-w-0 flex-1 scrollbar-thin' : 'flex-wrap'}`}>
+        {options.map((opt) => (
+          <FilterChip
+            key={opt.id}
+            label={opt.label}
+            active={selected.includes(opt.id)}
+            color={selected.includes(opt.id) ? opt.color : undefined}
+            onClick={() => {
+              toggle(opt.id);
+              setPage(1);
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-4 flex-shrink-0">
-        <div className="flex items-center gap-3 mb-3">
-          <CheckSquare className="w-6 h-6 text-primary" />
-          <h1 className="text-xl font-bold">Mes taches</h1>
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3">
+          <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+          <h1 className="text-lg sm:text-xl font-bold">Mes taches</h1>
           {total > 0 && (
-            <span className="text-sm text-muted-foreground">
-              ({total} tache{total > 1 ? 's' : ''})
+            <span className="text-xs sm:text-sm text-muted-foreground">
+              ({total})
             </span>
           )}
-          {hasAnyFilter && (
+          <div className="ml-auto flex items-center gap-2">
+            {hasAnyFilter && (
+              <button
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-3 h-3" />
+                <span className="hidden sm:inline">Effacer les filtres</span>
+              </button>
+            )}
+            {/* Mobile filter toggle */}
             <button
-              onClick={clearAllFilters}
-              className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="sm:hidden inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border border-border hover:bg-accent transition-colors"
             >
-              <X className="w-3 h-3" />
-              Effacer les filtres
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px]">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          )}
+          </div>
         </div>
 
         {/* Search */}
-        <div className="relative max-w-[400px] mb-3">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher..."
-            className="pl-10 h-8 text-sm"
+            className="pl-10 h-8 text-sm w-full sm:max-w-[400px]"
           />
         </div>
 
-        {/* Filter rows */}
-        <div className="space-y-2">
-          {/* Status */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Statut</span>
-            {statusOptions.map((opt) => (
-              <FilterChip
-                key={opt.id}
-                label={opt.label}
-                active={selectedStatuses.includes(opt.id)}
-                color={selectedStatuses.includes(opt.id) ? opt.color : undefined}
-                onClick={() => {
-                  setSelectedStatuses((prev) => toggleValue(prev, opt.id));
-                  setPage(1);
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Priority */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Priorite</span>
-            {priorityOptions.map((opt) => (
-              <FilterChip
-                key={opt.id}
-                label={opt.label}
-                active={selectedPriorities.includes(opt.id)}
-                color={selectedPriorities.includes(opt.id) ? opt.color : undefined}
-                onClick={() => {
-                  setSelectedPriorities((prev) => toggleValue(prev, opt.id));
-                  setPage(1);
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Due date */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Echeance</span>
-            {DUE_DATE_OPTIONS.map((opt) => (
-              <FilterChip
-                key={opt.id}
-                label={opt.label}
-                active={selectedDueDates.includes(opt.id)}
-                color={selectedDueDates.includes(opt.id) ? opt.color : undefined}
-                onClick={() => {
-                  setSelectedDueDates((prev) => toggleValue(prev, opt.id));
-                  setPage(1);
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Spaces */}
-          {spaces && spaces.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Espaces</span>
-              {spaces.map((s) => (
-                <FilterChip
-                  key={s.id}
-                  label={s.name}
-                  active={selectedSpaces.includes(s.id)}
-                  onClick={() => {
-                    setSelectedSpaces((prev) => toggleValue(prev, s.id));
-                    setPage(1);
-                  }}
-                />
-              ))}
-            </div>
-          )}
+        {/* Filter rows — always visible on sm+, toggle on mobile */}
+        <div className={`space-y-2 ${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+          {renderFilterRow('Statut', statusOptions, selectedStatuses, (id) => setSelectedStatuses((prev) => toggleValue(prev, id)))}
+          {renderFilterRow('Priorite', priorityOptions, selectedPriorities, (id) => setSelectedPriorities((prev) => toggleValue(prev, id)))}
+          {renderFilterRow('Echeance', DUE_DATE_OPTIONS, selectedDueDates, (id) => setSelectedDueDates((prev) => toggleValue(prev, id)))}
+          {spaces && spaces.length > 0 &&
+            renderFilterRow('Espaces', spaces.map((s) => ({ id: s.id, label: s.name })), selectedSpaces, (id) => setSelectedSpaces((prev) => toggleValue(prev, id)), true)}
         </div>
       </div>
 
-      {/* Table header */}
-      <div className="grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
+      {/* Table header — hidden on mobile */}
+      <div className="hidden md:grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
         <SortHeader label="Titre" field="title" />
         <SortHeader label="Espace" field="spaceName" />
         <SortHeader label="Statut" field="status" />
@@ -408,7 +389,32 @@ export function GlobalTasksPage() {
         <SortHeader label="Cree le" field="createdAt" />
       </div>
 
-      {/* Table body */}
+      {/* Mobile sort bar */}
+      <div className="md:hidden flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/50 flex-shrink-0 overflow-x-auto">
+        <span className="text-[10px] font-medium text-muted-foreground uppercase flex-shrink-0">Tri:</span>
+        {([
+          { label: 'Echeance', field: 'dueDate' as SortField },
+          { label: 'Statut', field: 'status' as SortField },
+          { label: 'Priorite', field: 'priority' as SortField },
+          { label: 'Titre', field: 'title' as SortField },
+        ]).map((s) => (
+          <button
+            key={s.field}
+            onClick={() => toggleSort(s.field)}
+            className={`inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap transition-colors ${
+              sortBy === s.field
+                ? 'bg-primary/10 text-primary border-primary/40 font-medium'
+                : 'text-muted-foreground border-border'
+            }`}
+          >
+            {s.label}
+            {sortBy === s.field &&
+              (sortDir === 'asc' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />)}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -420,107 +426,174 @@ export function GlobalTasksPage() {
             <p>Aucune tache trouvee</p>
           </div>
         ) : (
-          tasks.map((task: GlobalTask) => (
-            <div
-              key={task.id}
-              className="grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-3 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
-              onClick={() =>
-                setEditingTask({ itemId: task.id, spaceId: task.spaceId })
-              }
-            >
-              {/* Title */}
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="truncate font-medium text-sm">
-                  {task.title}
-                </span>
-                {task.parent && (
-                  <span className="text-xs text-muted-foreground truncate flex-shrink-0">
-                    ← {task.parent.title}
-                  </span>
-                )}
-              </div>
-
-              {/* Space */}
-              <div>
-                <button
-                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-full"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/spaces/${task.spaceId}`);
-                  }}
-                  title={task.spaceName}
+          <>
+            {/* Desktop table rows */}
+            <div className="hidden md:block">
+              {tasks.map((task: GlobalTask) => (
+                <div
+                  key={task.id}
+                  className="grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-3 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
+                  onClick={() =>
+                    setEditingTask({ itemId: task.id, spaceId: task.spaceId })
+                  }
                 >
-                  <FolderKanban className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{task.spaceName}</span>
-                </button>
-              </div>
-
-              {/* Status */}
-              <div>
-                {task.status ? (
-                  <span
-                    className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                      STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {STATUS_LABELS[task.status] || task.status}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground/50">-</span>
-                )}
-              </div>
-
-              {/* Priority */}
-              <div>
-                {task.priority ? (
-                  <span
-                    className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                      PRIORITY_LABELS[task.priority]?.color ||
-                      'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {PRIORITY_LABELS[task.priority]?.label || `P${task.priority}`}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground/50">-</span>
-                )}
-              </div>
-
-              {/* Due date */}
-              <div>
-                {task.dueDate ? (
-                  <span
-                    className={`inline-flex items-center gap-1 text-xs ${
-                      isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
-                        ? 'text-red-600 font-medium'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
-                      <AlertCircle className="w-3 h-3" />
+                  {/* Title */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate font-medium text-sm">
+                      {task.title}
+                    </span>
+                    {task.parent && (
+                      <span className="text-xs text-muted-foreground truncate flex-shrink-0">
+                        ← {task.parent.title}
+                      </span>
                     )}
-                    {formatDate(task.dueDate)}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground/50">-</span>
-                )}
-              </div>
+                  </div>
 
-              {/* Created at */}
-              <div className="text-xs text-muted-foreground">
-                {formatDate(task.createdAt)}
-              </div>
+                  {/* Space */}
+                  <div>
+                    <button
+                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/spaces/${task.spaceId}`);
+                      }}
+                      title={task.spaceName}
+                    >
+                      <FolderKanban className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{task.spaceName}</span>
+                    </button>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    {task.status ? (
+                      <span
+                        className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+                          STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {STATUS_LABELS[task.status] || task.status}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">-</span>
+                    )}
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    {task.priority ? (
+                      <span
+                        className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+                          PRIORITY_LABELS[task.priority]?.color ||
+                          'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {PRIORITY_LABELS[task.priority]?.label || `P${task.priority}`}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">-</span>
+                    )}
+                  </div>
+
+                  {/* Due date */}
+                  <div>
+                    {task.dueDate ? (
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs ${
+                          isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
+                            ? 'text-red-600 font-medium'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
+                          <AlertCircle className="w-3 h-3" />
+                        )}
+                        {formatDate(task.dueDate)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">-</span>
+                    )}
+                  </div>
+
+                  {/* Created at */}
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(task.createdAt)}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))
+
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-border/50">
+              {tasks.map((task: GlobalTask) => (
+                <div
+                  key={task.id}
+                  className="px-4 py-3 hover:bg-muted/30 cursor-pointer transition-colors active:bg-muted/50"
+                  onClick={() =>
+                    setEditingTask({ itemId: task.id, spaceId: task.spaceId })
+                  }
+                >
+                  {/* Title row */}
+                  <div className="flex items-start gap-2 mb-1.5">
+                    <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{task.title}</p>
+                      {task.parent && (
+                        <p className="text-xs text-muted-foreground truncate">← {task.parent.title}</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Meta row */}
+                  <div className="flex items-center gap-2 flex-wrap ml-6">
+                    {/* Space badge */}
+                    <button
+                      className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/spaces/${task.spaceId}`);
+                      }}
+                    >
+                      <FolderKanban className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate max-w-[100px]">{task.spaceName}</span>
+                    </button>
+                    {/* Status */}
+                    {task.status && (
+                      <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full ${STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-600'}`}>
+                        {STATUS_LABELS[task.status] || task.status}
+                      </span>
+                    )}
+                    {/* Priority */}
+                    {task.priority && (
+                      <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full ${PRIORITY_LABELS[task.priority]?.color || 'bg-gray-100 text-gray-600'}`}>
+                        {PRIORITY_LABELS[task.priority]?.label || `P${task.priority}`}
+                      </span>
+                    )}
+                    {/* Due date */}
+                    {task.dueDate && (
+                      <span className={`inline-flex items-center gap-0.5 text-[11px] ${
+                        isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
+                          ? 'text-red-600 font-medium' : 'text-muted-foreground'
+                      }`}>
+                        {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
+                          <AlertCircle className="w-3 h-3" />
+                        )}
+                        {formatDate(task.dueDate)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="border-t border-border px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <span className="text-sm text-muted-foreground">
-            Page {page} / {totalPages}
+        <div className="border-t border-border px-4 sm:px-6 py-3 flex items-center justify-between flex-shrink-0">
+          <span className="text-xs sm:text-sm text-muted-foreground">
+            {page} / {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <Button
