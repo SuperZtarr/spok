@@ -135,6 +135,7 @@ export function SpacePage() {
   const [filterMode, setFilterMode] = useState<'type' | 'status'>('type');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const mindmapRef = useRef<MindMapViewHandle>(null);
+  const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -565,8 +566,8 @@ export function SpacePage() {
   const hasExpandedItems = expandedItems.size > 0;
 
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -653,10 +654,16 @@ export function SpacePage() {
 
           {(viewMode === 'tree' || viewMode === 'mindmap') && (() => {
             const isMindmap = viewMode === 'mindmap';
-            const isExpanded = isMindmap ? !mindmapRef.current?.hasCollapsedNodes : hasExpandedItems;
+            const isExpanded = isMindmap ? mindmapExpanded : hasExpandedItems;
             const handleClick = () => {
               if (isMindmap) {
-                isExpanded ? mindmapRef.current?.collapseAll() : mindmapRef.current?.expandAll();
+                if (isExpanded) {
+                  mindmapRef.current?.collapseAll();
+                  setMindmapExpanded(false);
+                } else {
+                  mindmapRef.current?.expandAll();
+                  setMindmapExpanded(true);
+                }
               } else {
                 isExpanded ? collapseAll() : expandAll();
               }
