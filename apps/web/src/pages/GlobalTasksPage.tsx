@@ -10,13 +10,13 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  X,
 } from 'lucide-react';
 import { userTasksApi, spacesApi, itemsApi } from '../lib/api';
 import type { GlobalTaskFilters, GlobalTask } from '../lib/api';
 import type { Item } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { STATUS_LABELS, STATUS_COLORS } from '../constants/ui';
 
@@ -26,6 +26,14 @@ const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
   3: { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800' },
   4: { label: 'Basse', color: 'bg-blue-100 text-blue-800' },
 };
+
+const DUE_DATE_OPTIONS: { id: string; label: string; color: string }[] = [
+  { id: 'overdue', label: 'En retard', color: 'bg-red-100 text-red-800 border-red-300' },
+  { id: 'today', label: "Aujourd'hui", color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  { id: 'week', label: 'Cette semaine', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  { id: 'month', label: 'Ce mois', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { id: 'none', label: 'Sans echeance', color: 'bg-gray-100 text-gray-600 border-gray-300' },
+];
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -41,18 +49,50 @@ function isOverdue(dateStr: string | null): boolean {
   return new Date(dateStr) < new Date(new Date().toDateString());
 }
 
+// Toggle a value in a Set-like array
+function toggleValue<T>(arr: T[], value: T): T[] {
+  return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+}
+
 type SortField = GlobalTaskFilters['sortBy'];
+
+// Multi-select toggle button component
+function FilterChip({
+  label,
+  active,
+  color,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  color?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+        active
+          ? color || 'bg-primary/15 text-primary border-primary/40'
+          : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground/40 hover:text-foreground'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
 export function GlobalTasksPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // Filter state
+  // Filter state — arrays for multi-select
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
-  const [spaceFilter, setSpaceFilter] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
+  const [selectedDueDates, setSelectedDueDates] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortField>('dueDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
@@ -72,20 +112,86 @@ export function GlobalTasksPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch spaces for filter dropdown
+  // Compute due date range from selected presets
+  const dueDateParams = useMemo(() => {
+    if (selectedDueDates.length === 0) return {};
+    // If 'none' is selected alone
+    if (selectedDueDates.length === 1 && selectedDueDates[0] === 'none') {
+      return { noDueDate: true as const };
+    }
+    // Compute the widest range covering all selected presets
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let minFrom: Date | null = null;
+    let maxTo: Date | null = null;
+    let hasNone = false;
+
+    for (const preset of selectedDueDates) {
+      if (preset === 'none') {
+        hasNone = true;
+        continue;
+      }
+      switch (preset) {
+        case 'overdue': {
+          const yesterday = new Date(today.getTime() - 1);
+          if (!maxTo || yesterday > maxTo) maxTo = yesterday;
+          // overdue has no minFrom (all past)
+          minFrom = null; // earliest possible
+          break;
+        }
+        case 'today': {
+          const endOfDay = new Date(today);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (minFrom === undefined) minFrom = new Date(today);
+          if (!maxTo || endOfDay > maxTo) maxTo = endOfDay;
+          break;
+        }
+        case 'week': {
+          const endOfWeek = new Date(today);
+          endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+          endOfWeek.setHours(23, 59, 59, 999);
+          if (minFrom === undefined) minFrom = new Date(today);
+          if (!maxTo || endOfWeek > maxTo) maxTo = endOfWeek;
+          break;
+        }
+        case 'month': {
+          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+          if (minFrom === undefined) minFrom = new Date(today);
+          if (!maxTo || endOfMonth > maxTo) maxTo = endOfMonth;
+          break;
+        }
+      }
+    }
+
+    // If both date range and 'none' are selected, we can't do both in one query
+    // So we ignore noDueDate when combined with date ranges
+    const result: { dueDateFrom?: string; dueDateTo?: string; noDueDate?: boolean } = {};
+    if (minFrom) result.dueDateFrom = minFrom.toISOString();
+    if (maxTo) result.dueDateTo = maxTo.toISOString();
+    if (hasNone && !minFrom && !maxTo) result.noDueDate = true;
+    return result;
+  }, [selectedDueDates]);
+
+  // Fetch spaces for filter
   const { data: spaces } = useQuery({
     queryKey: ['spaces'],
     queryFn: () => spacesApi.list(),
   });
+
+  // Build comma-separated filter strings
+  const statusParam = selectedStatuses.join(',') || undefined;
+  const priorityParam = selectedPriorities.join(',') || undefined;
+  const spaceParam = selectedSpaces.join(',') || undefined;
 
   // Fetch tasks
   const { data: tasksData, isLoading } = useQuery({
     queryKey: [
       'global-tasks',
       debouncedSearch,
-      statusFilter,
-      priorityFilter,
-      spaceFilter,
+      statusParam,
+      priorityParam,
+      spaceParam,
+      selectedDueDates,
       sortBy,
       sortDir,
       page,
@@ -93,9 +199,10 @@ export function GlobalTasksPage() {
     queryFn: () =>
       userTasksApi.list({
         search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        priority: priorityFilter ? parseInt(priorityFilter, 10) : undefined,
-        spaceId: spaceFilter || undefined,
+        status: statusParam,
+        priority: priorityParam,
+        spaceId: spaceParam,
+        ...dueDateParams,
         sortBy,
         sortDir,
         page,
@@ -103,7 +210,7 @@ export function GlobalTasksPage() {
       }),
   });
 
-  // Fetch allItems for space when editing a task (needed by ItemEditModal)
+  // Fetch allItems for space when editing a task
   const { data: spaceItemsData } = useQuery({
     queryKey: ['items', editingTask?.spaceId, { pageSize: 5000 }],
     queryFn: () => itemsApi.list(editingTask!.spaceId, { pageSize: 5000 }),
@@ -124,39 +231,38 @@ export function GlobalTasksPage() {
     [sortBy]
   );
 
-  // Status options
-  const statusOptions = useMemo(
-    () => [
-      { value: '', label: 'Tous les statuts' },
-      { value: 'none', label: 'Non defini' },
-      { value: 'todo', label: 'A faire' },
-      { value: 'in_progress', label: 'En cours' },
-      { value: 'done', label: 'Termine' },
-      { value: 'cancelled', label: 'Annule' },
-    ],
-    []
-  );
+  // Filter options
+  const statusOptions = [
+    { id: 'none', label: 'Non defini', color: 'bg-gray-100 text-gray-500 border-gray-300' },
+    { id: 'todo', label: 'A faire', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+    { id: 'in_progress', label: 'En cours', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    { id: 'done', label: 'Termine', color: 'bg-green-100 text-green-800 border-green-300' },
+    { id: 'cancelled', label: 'Annule', color: 'bg-red-100 text-red-800 border-red-300' },
+  ];
 
-  // Priority options
-  const priorityOptions = useMemo(
-    () => [
-      { value: '', label: 'Toutes' },
-      { value: '1', label: 'Critique' },
-      { value: '2', label: 'Haute' },
-      { value: '3', label: 'Moyenne' },
-      { value: '4', label: 'Basse' },
-    ],
-    []
-  );
+  const priorityOptions = [
+    { id: '1', label: 'Critique', color: 'bg-red-100 text-red-800 border-red-300' },
+    { id: '2', label: 'Haute', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+    { id: '3', label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    { id: '4', label: 'Basse', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  ];
 
-  // Space options
-  const spaceOptions = useMemo(
-    () => [
-      { value: '', label: 'Tous les espaces' },
-      ...(spaces || []).map((s) => ({ value: s.id, label: s.name })),
-    ],
-    [spaces]
-  );
+  const hasAnyFilter =
+    selectedStatuses.length > 0 ||
+    selectedPriorities.length > 0 ||
+    selectedSpaces.length > 0 ||
+    selectedDueDates.length > 0 ||
+    debouncedSearch.length > 0;
+
+  const clearAllFilters = () => {
+    setSelectedStatuses([]);
+    setSelectedPriorities([]);
+    setSelectedSpaces([]);
+    setSelectedDueDates([]);
+    setSearch('');
+    setDebouncedSearch('');
+    setPage(1);
+  };
 
   const tasks = tasksData?.data || [];
   const total = tasksData?.total || 0;
@@ -197,46 +303,98 @@ export function GlobalTasksPage() {
               ({total} tache{total > 1 ? 's' : ''})
             </span>
           )}
+          {hasAnyFilter && (
+            <button
+              onClick={clearAllFilters}
+              className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3 h-3" />
+              Effacer les filtres
+            </button>
+          )}
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher..."
-              className="pl-10 h-8 text-sm"
-            />
+        {/* Search */}
+        <div className="relative max-w-[400px] mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher..."
+            className="pl-10 h-8 text-sm"
+          />
+        </div>
+
+        {/* Filter rows */}
+        <div className="space-y-2">
+          {/* Status */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Statut</span>
+            {statusOptions.map((opt) => (
+              <FilterChip
+                key={opt.id}
+                label={opt.label}
+                active={selectedStatuses.includes(opt.id)}
+                color={selectedStatuses.includes(opt.id) ? opt.color : undefined}
+                onClick={() => {
+                  setSelectedStatuses((prev) => toggleValue(prev, opt.id));
+                  setPage(1);
+                }}
+              />
+            ))}
           </div>
-          <Select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            options={statusOptions}
-            className="h-8 text-sm w-[160px]"
-          />
-          <Select
-            value={priorityFilter}
-            onChange={(e) => {
-              setPriorityFilter(e.target.value);
-              setPage(1);
-            }}
-            options={priorityOptions}
-            className="h-8 text-sm w-[130px]"
-          />
-          <Select
-            value={spaceFilter}
-            onChange={(e) => {
-              setSpaceFilter(e.target.value);
-              setPage(1);
-            }}
-            options={spaceOptions}
-            className="h-8 text-sm w-[200px]"
-          />
+
+          {/* Priority */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Priorite</span>
+            {priorityOptions.map((opt) => (
+              <FilterChip
+                key={opt.id}
+                label={opt.label}
+                active={selectedPriorities.includes(opt.id)}
+                color={selectedPriorities.includes(opt.id) ? opt.color : undefined}
+                onClick={() => {
+                  setSelectedPriorities((prev) => toggleValue(prev, opt.id));
+                  setPage(1);
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Due date */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Echeance</span>
+            {DUE_DATE_OPTIONS.map((opt) => (
+              <FilterChip
+                key={opt.id}
+                label={opt.label}
+                active={selectedDueDates.includes(opt.id)}
+                color={selectedDueDates.includes(opt.id) ? opt.color : undefined}
+                onClick={() => {
+                  setSelectedDueDates((prev) => toggleValue(prev, opt.id));
+                  setPage(1);
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Spaces */}
+          {spaces && spaces.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0">Espaces</span>
+              {spaces.map((s) => (
+                <FilterChip
+                  key={s.id}
+                  label={s.name}
+                  active={selectedSpaces.includes(s.id)}
+                  onClick={() => {
+                    setSelectedSpaces((prev) => toggleValue(prev, s.id));
+                    setPage(1);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

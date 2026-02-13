@@ -316,11 +316,12 @@ export const userApi = {
 // User Tasks (global across spaces)
 export interface GlobalTaskFilters {
   status?: string;
-  priority?: number;
+  priority?: string;
   spaceId?: string;
   search?: string;
   dueDateFrom?: string;
   dueDateTo?: string;
+  noDueDate?: boolean;
   sortBy?: 'dueDate' | 'status' | 'spaceName' | 'createdAt' | 'priority' | 'title';
   sortDir?: 'asc' | 'desc';
   page?: number;
@@ -354,11 +355,12 @@ export const userTasksApi = {
   list: (params?: GlobalTaskFilters) => {
     const sp = new URLSearchParams();
     if (params?.status) sp.set('status', params.status);
-    if (params?.priority) sp.set('priority', params.priority.toString());
+    if (params?.priority) sp.set('priority', params.priority);
     if (params?.spaceId) sp.set('spaceId', params.spaceId);
     if (params?.search) sp.set('search', params.search);
     if (params?.dueDateFrom) sp.set('dueDateFrom', params.dueDateFrom);
     if (params?.dueDateTo) sp.set('dueDateTo', params.dueDateTo);
+    if (params?.noDueDate) sp.set('noDueDate', 'true');
     if (params?.sortBy) sp.set('sortBy', params.sortBy);
     if (params?.sortDir) sp.set('sortDir', params.sortDir);
     if (params?.page) sp.set('page', params.page.toString());

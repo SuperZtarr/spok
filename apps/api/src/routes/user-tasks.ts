@@ -4,6 +4,8 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   // GET /user/tasks — List all TASK items across user's accessible spaces
+  // Supports multi-value filters via comma-separated strings:
+  //   status=todo,in_progress  priority=1,2  spaceId=id1,id2
   fastify.get<{
     Querystring: {
       status?: string;
@@ -12,6 +14,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       search?: string;
       dueDateFrom?: string;
       dueDateTo?: string;
+      noDueDate?: string;
       sortBy?: string;
       sortDir?: string;
       page?: string;
@@ -25,6 +28,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       search,
       dueDateFrom,
       dueDateTo,
+      noDueDate,
       sortBy = 'createdAt',
       sortDir = 'desc',
       page: pageStr = '1',
@@ -33,7 +37,6 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
 
     const page = Math.max(1, parseInt(pageStr, 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(pageSizeStr, 10)));
-    const priority = priorityStr ? parseInt(priorityStr, 10) : undefined;
     const skip = (page - 1) * pageSize;
 
     // 1. Resolve accessible spaceIds based on user role
@@ -43,7 +46,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     });
     const isAdmin = user?.globalRole === 'ADMIN';
 
-    let spaceIds: string[] | undefined;
+    let accessibleSpaceIds: string[] | undefined;
     if (!isAdmin) {
       // Direct space memberships
       const directMemberships = await fastify.prisma.spaceMembership.findMany({
@@ -68,8 +71,8 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
         communitySpaceIds = communitySpaces.map((s) => s.id);
       }
 
-      spaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
-      if (spaceIds.length === 0) {
+      accessibleSpaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
+      if (accessibleSpaceIds.length === 0) {
         return { data: [], total: 0, page, pageSize, totalPages: 0 };
       }
     }
@@ -80,29 +83,66 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     // Space access filter
-    if (spaceIds) {
-      where.spaceId = { in: spaceIds };
+    if (accessibleSpaceIds) {
+      where.spaceId = { in: accessibleSpaceIds };
     }
 
-    // Optional space filter
+    // Optional space filter (supports multiple comma-separated IDs)
     if (filterSpaceId) {
-      where.spaceId = filterSpaceId;
-    }
-
-    if (status) {
-      if (status === 'none') {
-        where.status = null;
-      } else {
-        where.status = status;
+      const spaceIdList = filterSpaceId.split(',').filter(Boolean);
+      if (spaceIdList.length === 1) {
+        // Single space — also intersect with accessible spaces
+        where.spaceId = spaceIdList[0];
+      } else if (spaceIdList.length > 1) {
+        // Multiple spaces — intersect with accessible ones
+        if (accessibleSpaceIds) {
+          const accessibleSet = new Set(accessibleSpaceIds);
+          const filtered = spaceIdList.filter((id) => accessibleSet.has(id));
+          where.spaceId = { in: filtered };
+        } else {
+          where.spaceId = { in: spaceIdList };
+        }
       }
     }
 
-    if (priority && priority >= 1 && priority <= 4) {
-      where.priority = priority;
+    // Status filter (supports multiple comma-separated values, 'none' = null)
+    if (status) {
+      const statusList = status.split(',').filter(Boolean);
+      const hasNone = statusList.includes('none');
+      const realStatuses = statusList.filter((s) => s !== 'none');
+
+      if (hasNone && realStatuses.length > 0) {
+        // Combine null + specific statuses
+        where.OR = [
+          { status: null },
+          { status: { in: realStatuses } },
+        ];
+      } else if (hasNone) {
+        where.status = null;
+      } else if (realStatuses.length === 1) {
+        where.status = realStatuses[0];
+      } else if (realStatuses.length > 1) {
+        where.status = { in: realStatuses };
+      }
     }
 
-    // Due date range
-    if (dueDateFrom || dueDateTo) {
+    // Priority filter (supports multiple comma-separated values)
+    if (priorityStr) {
+      const priorities = priorityStr
+        .split(',')
+        .map((p) => parseInt(p, 10))
+        .filter((p) => p >= 1 && p <= 4);
+      if (priorities.length === 1) {
+        where.priority = priorities[0];
+      } else if (priorities.length > 1) {
+        where.priority = { in: priorities };
+      }
+    }
+
+    // Due date filters
+    if (noDueDate === 'true') {
+      where.dueDate = null;
+    } else if (dueDateFrom || dueDateTo) {
       const dueDateFilter: Record<string, Date> = {};
       if (dueDateFrom) dueDateFilter.gte = new Date(dueDateFrom);
       if (dueDateTo) dueDateFilter.lte = new Date(dueDateTo);
@@ -111,10 +151,25 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Text search
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+      // If we already have an OR (from status filter), we need AND to combine
+      if (where.OR) {
+        const statusOr = where.OR;
+        delete where.OR;
+        where.AND = [
+          { OR: statusOr as Record<string, unknown>[] },
+          {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        ];
+      } else {
+        where.OR = [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
     }
 
     // 3. Sort

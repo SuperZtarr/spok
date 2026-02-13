@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, CircleDot, ChevronRight } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, CircleDot, ChevronRight, CheckSquare } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -298,6 +298,13 @@ export function DashboardPage() {
             >
               <CircleDot className="w-4 h-4" />
               Sunburst
+            </button>
+            <button
+              onClick={() => navigate('/tasks')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <CheckSquare className="w-4 h-4" />
+              Mes tâches
             </button>
           </div>
           {activeTab === 'spaces' && (

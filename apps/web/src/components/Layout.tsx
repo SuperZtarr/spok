@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Home, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, CheckSquare } from 'lucide-react';
+import { LogOut, Home, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
@@ -306,17 +306,6 @@ export function Layout() {
         >
           <Home className="w-4 h-4" />
           Tableau de bord
-        </Link>
-        <Link
-          to="/tasks"
-          className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-            location.pathname === '/tasks'
-              ? 'bg-primary/10 text-primary font-medium'
-              : 'hover:bg-accent'
-          }`}
-        >
-          <CheckSquare className="w-4 h-4" />
-          Mes taches
         </Link>
 
         {/* Personal spaces */}
