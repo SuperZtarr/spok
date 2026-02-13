@@ -2,6 +2,25 @@
 
 ---
 
+#### [2026-02-13 ~10:00] - Drop sur noeud central MindMap → rattacher à la racine
+
+**Demande :** Quand on drop un item sur le noeud central de la carte mentale, rattacher l'élément à la racine de l'espace (parentId = null).
+
+**Actions réalisées :**
+- Supprimé le filtre `n.id !== '__space__'` dans onNodeDrag et onNodeDragStop pour autoriser le noeud central comme cible de drop
+- Ajouté la logique : si cible = `__space__` et item a un parent → `onMove(id, null, 0)`
+- Ajouté feedback visuel sur SpaceNode (ring + scale) quand un item le survole
+- Étendu l'effet highlight pour couvrir le type `space` en plus de `mindmap`
+- TypeScript OK, zéro erreur
+
+**Fichier modifié :**
+- `apps/web/src/components/views/MindMapView.tsx`
+
+**État :** TERMINÉ
+**Commit :** `d86f4ee`
+
+---
+
 #### [2026-02-12 ~14:00] - Ergonomie dates + auto-fill titre + durées meeting/période
 
 **Demande :** Suite de la session précédente. Compléter les boutons de durée pour MEETING (date de fin = date début + durée sélectionnée) et ajouter la même fonctionnalité pour PERIOD. Garder le DateTimeField modifiable dans tous les cas.
