@@ -16,6 +16,7 @@ interface UpdateSpaceBody {
   name?: string;
   type?: 'PERSONAL' | 'GROUP';
   communityId?: string | null;
+  parentId?: string | null;
 }
 
 interface AddMemberBody {
@@ -205,10 +206,12 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Personal spaces cannot be associated with a community');
       }
 
-      const updateData: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null } = {};
+      const { parentId } = request.body;
+      const updateData: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null; parentId?: string | null } = {};
       if (name) updateData.name = name;
       if (type) updateData.type = type;
       if (communityId !== undefined) updateData.communityId = communityId;
+      if (parentId !== undefined) updateData.parentId = parentId;
 
       const space = await fastify.prisma.space.update({
         where: { id },

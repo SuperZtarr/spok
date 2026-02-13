@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, Trash2, Save, Building2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
@@ -29,6 +29,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
   const [editName, setEditName] = useState('');
   const [editType, setEditType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
   const [editCommunityId, setEditCommunityId] = useState<string>('');
+  const [editParentId, setEditParentId] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberSearch, setNewMemberSearch] = useState('');
@@ -44,10 +45,39 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     queryFn: () => adminApi.communities.list({ pageSize: 100 }),
   });
 
+  const { data: allSpacesData } = useQuery({
+    queryKey: ['admin', 'spaces', 'all'],
+    queryFn: () => adminApi.spaces.list({ pageSize: 500 }),
+  });
+
   const communityOptions = [
     { value: '', label: 'Aucune communauté' },
     ...(communitiesData?.data.map((c) => ({ value: c.id, label: c.name })) || []),
   ];
+
+  // Build parent space options, excluding self and descendants
+  const parentSpaceOptions = useMemo(() => {
+    const allSpaces = allSpacesData?.data || [];
+    if (!spaceId) return [{ value: '', label: 'Aucun (espace racine)' }];
+
+    const excludeIds = new Set<string>([spaceId]);
+    const findDescendants = (parentId: string) => {
+      for (const s of allSpaces) {
+        if (s.parentId === parentId && !excludeIds.has(s.id)) {
+          excludeIds.add(s.id);
+          findDescendants(s.id);
+        }
+      }
+    };
+    findDescendants(spaceId);
+
+    return [
+      { value: '', label: 'Aucun (espace racine)' },
+      ...allSpaces
+        .filter(s => !excludeIds.has(s.id))
+        .map(s => ({ value: s.id, label: s.name })),
+    ];
+  }, [allSpacesData?.data, spaceId]);
 
   const { data: usersData } = useQuery({
     queryKey: ['admin', 'users', { search: newMemberSearch }],
@@ -56,7 +86,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null }) =>
+    mutationFn: (data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null; parentId?: string | null }) =>
       adminApi.spaces.update(spaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
@@ -100,16 +130,19 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       setEditName(space.name);
       setEditType(space.type);
       setEditCommunityId(space.communityId || '');
+      setEditParentId(space.parentId || '');
       setIsEditing(true);
     }
   };
 
   const handleSaveEdit = () => {
-    const data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null } = {};
+    const data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null; parentId?: string | null } = {};
     if (editName !== space?.name) data.name = editName;
     if (editType !== space?.type) data.type = editType;
     const newCommunityId = editCommunityId || null;
     if (newCommunityId !== space?.communityId) data.communityId = newCommunityId;
+    const newParentId = editParentId || null;
+    if (newParentId !== (space?.parentId || null)) data.parentId = newParentId;
     if (Object.keys(data).length > 0) {
       updateMutation.mutate(data);
     } else {
@@ -171,6 +204,14 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
                     />
                   </div>
                 )}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Espace parent</label>
+                  <Select
+                    value={editParentId}
+                    onChange={(e) => setEditParentId(e.target.value)}
+                    options={parentSpaceOptions}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -216,6 +257,12 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
                     </span>
                   </div>
                 )}
+                <div>
+                  <span className="text-muted-foreground">Parent:</span>{' '}
+                  <span className="font-medium">
+                    {space.parent ? space.parent.name : <span className="text-muted-foreground/50">Aucun (racine)</span>}
+                  </span>
+                </div>
                 <div>
                   <span className="text-muted-foreground">Elements:</span>{' '}
                   <span className="font-medium">{space.itemCount}</span>

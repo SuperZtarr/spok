@@ -664,6 +664,8 @@ interface AdminSpace {
   type: 'PERSONAL' | 'GROUP';
   communityId: string | null;
   community: { id: string; name: string } | null;
+  parentId: string | null;
+  parent: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
   memberCount: number;
@@ -785,7 +787,7 @@ export const adminApi = {
 
     get: (id: string) => fetchApi<AdminSpaceDetail>(`/admin/spaces/${id}`),
 
-    update: (id: string, data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null }) =>
+    update: (id: string, data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null; parentId?: string | null }) =>
       fetchApi<AdminSpace>(`/admin/spaces/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
