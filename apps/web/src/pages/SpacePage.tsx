@@ -252,11 +252,16 @@ export function SpacePage() {
   const handleDelete = useCallback((id: string) => {
     const allItems = allItemsData?.data || itemsData?.data || [];
     const item = allItems.find((i: Item) => i.id === id) as (Item & { childCount?: number; contributionCount?: number }) | undefined;
+    // Count all descendants recursively, not just direct children
+    const countDescendants = (parentId: string): number => {
+      const children = allItems.filter((i: Item) => i.parentId === parentId);
+      return children.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
+    };
     setDeletingItem({
       id,
       title: item?.title || 'cet élément',
       type: item?.type || 'NOTE',
-      childCount: item?.childCount || allItems.filter((i: Item) => i.parentId === id).length,
+      childCount: countDescendants(id),
       contributionCount: item?.contributionCount || 0,
     });
   }, [allItemsData?.data, itemsData?.data]);

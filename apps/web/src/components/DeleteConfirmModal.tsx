@@ -53,7 +53,7 @@ export function DeleteConfirmModal({
               }`}>
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>{childCount}</strong> élément{childCount > 1 ? 's' : ''} enfant{childCount > 1 ? 's' : ''}{' '}
+                  <strong>{childCount}</strong> descendant{childCount > 1 ? 's' : ''}{' '}
                   {deleteChildren
                     ? (childCount > 1 ? 'seront aussi supprimés' : 'sera aussi supprimé')
                     : (childCount > 1 ? 'seront déplacés' : 'sera déplacé') + ' à la racine'
@@ -83,7 +83,7 @@ export function DeleteConfirmModal({
               className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
             />
             <span className="text-sm">
-              Supprimer aussi les {childCount} enfant{childCount > 1 ? 's' : ''}
+              Supprimer aussi les {childCount} descendant{childCount > 1 ? 's' : ''}
             </span>
           </label>
         )}
