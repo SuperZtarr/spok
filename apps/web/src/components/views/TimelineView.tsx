@@ -362,7 +362,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
     const today = startOfDay(new Date());
     const itemStart = hasDate ? startOfDay(new Date(itemStartDate)) : today;
     const itemEnd = hasDate
-      ? startOfDay(new Date(item.endDate || item.dueDate || itemStartDate))
+      ? startOfDay(new Date(item.endDate || today))
       : today;
 
     const startOffset = differenceInDays(itemStart, visibleStartDate);
@@ -658,7 +658,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                           width: barStyle.width,
                         }}
                         title={barStyle.hasDate
-                          ? `${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${formatDateShort(new Date(item.endDate || item.dueDate || item.startDate!))}`
+                          ? `${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${item.endDate ? formatDateShort(new Date(item.endDate)) : "aujourd'hui"}`
                           : `${item.title}\n(Sans date - cliquer pour définir)`
                         }
                       >
