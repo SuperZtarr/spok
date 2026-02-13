@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
-  closestCenter,
+  pointerWithin,
   PointerSensor,
   useSensor,
   useSensors,
@@ -364,14 +364,14 @@ export function SpacePage() {
       return;
     }
 
-    // Top 25% = insert before, bottom 25% = insert after, center 50% = nest
+    // Top third = insert before, middle third = nest, bottom third = insert after
     const relativeY = pointerY - liveRect.top;
     const ratio = relativeY / liveRect.height;
 
-    if (ratio < 0.25) {
+    if (ratio < 0.33) {
       setDropMode('reorder');
       setDropPosition('before');
-    } else if (ratio > 0.75) {
+    } else if (ratio > 0.67) {
       setDropMode('reorder');
       setDropPosition('after');
     } else {
@@ -977,7 +977,7 @@ export function SpacePage() {
             /* Tree view (default) */
             <DndContext
               sensors={sensors}
-              collisionDetection={closestCenter}
+              collisionDetection={pointerWithin}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
