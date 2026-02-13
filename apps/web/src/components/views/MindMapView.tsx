@@ -310,15 +310,16 @@ interface SpaceNodeProps {
     label: string;
     spaceName: string;
     itemCount: number;
+    isDropTarget?: boolean;
   };
 }
 
 function SpaceNode({ data }: SpaceNodeProps) {
-  const { spaceName, itemCount } = data;
+  const { spaceName, itemCount, isDropTarget } = data;
 
   return (
     <div
-      className="px-6 py-3 rounded-xl shadow-lg border-3 border-primary bg-primary/10 min-w-[140px] cursor-default"
+      className={`px-6 py-3 rounded-xl shadow-lg border-3 border-primary bg-primary/10 min-w-[140px] cursor-default transition-all ${isDropTarget ? 'ring-3 ring-primary ring-offset-2 scale-110' : ''}`}
     >
       {/* Handles on all sides for radial connections */}
       <Handle type="source" position={Position.Top} className="!bg-primary !w-3 !h-3" id="top-source" />
@@ -1077,7 +1078,7 @@ function MindMapViewInner({
   // Update drop target highlight on nodes
   useEffect(() => {
     setNodes(nds => nds.map(n => {
-      if (n.type !== 'mindmap') return n;
+      if (n.type !== 'mindmap' && n.type !== 'space') return n;
       const isTarget = n.id === dropTargetId;
       if (n.data?.isDropTarget === isTarget) return n;
       return { ...n, data: { ...n.data, isDropTarget: isTarget } };
@@ -1247,7 +1248,7 @@ function MindMapViewInner({
       }
 
       const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
+      const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
       setDropTargetId(target?.id || null);
     },
     [getIntersectingNodes, getNodes, setNodes]
@@ -1268,17 +1269,25 @@ function MindMapViewInner({
       }
 
       const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.id !== '__space__' && n.type !== 'portal' && n.id !== draggedNode.id);
+      const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
       if (target && onMove && canEdit !== false) {
-        // Prevent dropping a parent onto its own descendant
-        const isDescendant = (parentId: string, childId: string): boolean => {
-          const child = items.find(i => i.id === childId);
-          if (!child || !child.parentId) return false;
-          if (child.parentId === parentId) return true;
-          return isDescendant(parentId, child.parentId);
-        };
-        if (!isDescendant(draggedNode.id, target.id)) {
-          onMove(draggedNode.id, target.id, 0);
+        if (target.id === '__space__') {
+          // Drop on central node → move to root (parentId = null)
+          const draggedItem = items.find(i => i.id === draggedNode.id);
+          if (draggedItem?.parentId) {
+            onMove(draggedNode.id, null, 0);
+          }
+        } else {
+          // Prevent dropping a parent onto its own descendant
+          const isDescendant = (parentId: string, childId: string): boolean => {
+            const child = items.find(i => i.id === childId);
+            if (!child || !child.parentId) return false;
+            if (child.parentId === parentId) return true;
+            return isDescendant(parentId, child.parentId);
+          };
+          if (!isDescendant(draggedNode.id, target.id)) {
+            onMove(draggedNode.id, target.id, 0);
+          }
         }
       } else {
         // No reparenting - save absolute positions for dragged node AND descendants
