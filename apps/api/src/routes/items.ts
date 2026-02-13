@@ -200,7 +200,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           ...itemData,
           dueDate: itemData.dueDate ? new Date(itemData.dueDate) : undefined,
-          startDate: itemData.startDate ? new Date(itemData.startDate) : undefined,
+          startDate: itemData.startDate ? new Date(itemData.startDate) : new Date(),
           endDate: itemData.endDate ? new Date(itemData.endDate) : undefined,
           spaceId: request.params.spaceId,
           createdById: request.user.userId,
@@ -384,13 +384,18 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      // Auto-set endDate to now when status changes to 'done', unless already defined
+      const autoEndDate = updateData.status === 'done' && updateData.endDate === undefined && !existingItem.endDate
+        ? new Date()
+        : undefined;
+
       const item = await fastify.prisma.item.update({
         where: { id: request.params.id },
         data: {
           ...updateData,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
           startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : undefined,
-          endDate: updateData.endDate === null ? null : updateData.endDate ? new Date(updateData.endDate) : undefined,
+          endDate: updateData.endDate === null ? null : updateData.endDate ? new Date(updateData.endDate) : (autoEndDate || undefined),
           tags: tagIds
             ? {
                 create: tagIds.map((tagId) => ({ tagId })),

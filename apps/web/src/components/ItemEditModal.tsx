@@ -839,70 +839,68 @@ export function ItemEditModal({
             </div>
           )}
 
-          {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2 relative">
-                <label className="text-sm font-medium">Date de début</label>
-                {canEdit ? (
-                  <DateTimeField
-                    value={startDate}
-                    onChange={handleStartDateChange}
-                    showTime={type === 'MEETING' || type === 'TASK'}
-                  />
-                ) : (
-                  <p className="text-sm">
-                    {startDate
-                      ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate))
-                      : <span className="text-muted-foreground">—</span>}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2 relative">
-                <label className="text-sm font-medium">Date de fin</label>
-                {canEdit ? (
-                  <div className="space-y-2">
-                    {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
-                          const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
-                          return (
-                            <button
-                              key={d.ms}
-                              type="button"
-                              onClick={() => {
-                                const end = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                                setEndDate(toDatetimeLocal(end));
-                              }}
-                              className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
-                                isSelected
-                                  ? 'border-primary bg-primary/10 font-semibold text-primary'
-                                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                              }`}
-                            >
-                              {d.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <DateTimeField
-                      value={endDate}
-                      onChange={handleEndDateChange}
-                      showTime={type === 'MEETING' || type === 'TASK'}
-                      showPresets={type !== 'MEETING' && type !== 'PROJECT' && type !== 'TASK'}
-                      minDate={startDate}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-sm">
-                    {endDate
-                      ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate))
-                      : <span className="text-muted-foreground">—</span>}
-                  </p>
-                )}
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 relative">
+              <label className="text-sm font-medium">Date de début</label>
+              {canEdit ? (
+                <DateTimeField
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  showTime={type === 'MEETING' || type === 'TASK'}
+                />
+              ) : (
+                <p className="text-sm">
+                  {startDate
+                    ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate))
+                    : <span className="text-muted-foreground">—</span>}
+                </p>
+              )}
             </div>
-          )}
+            <div className="space-y-2 relative">
+              <label className="text-sm font-medium">Date de fin</label>
+              {canEdit ? (
+                <div className="space-y-2">
+                  {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
+                        const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                        return (
+                          <button
+                            key={d.ms}
+                            type="button"
+                            onClick={() => {
+                              const end = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                              setEndDate(toDatetimeLocal(end));
+                            }}
+                            className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <DateTimeField
+                    value={endDate}
+                    onChange={handleEndDateChange}
+                    showTime={type === 'MEETING' || type === 'TASK'}
+                    showPresets={type !== 'MEETING' && type !== 'PROJECT' && type !== 'TASK'}
+                    minDate={startDate}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm">
+                  {endDate
+                    ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate))
+                    : <span className="text-muted-foreground">—</span>}
+                </p>
+              )}
+            </div>
+          </div>
 
           {(type === 'TASK') && (
             <div className="space-y-2 relative">
