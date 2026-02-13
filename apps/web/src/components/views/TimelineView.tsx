@@ -12,6 +12,7 @@ interface TimelineViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
+  onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -144,7 +145,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onAddChild: _onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onCreateRelation, onAddChild: _onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -160,6 +161,15 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
     type: 'start' | 'end';
     initialX: number;
     initialDate: Date;
+  } | null>(null);
+
+  // Drag state for creating relations
+  const [relationDrag, setRelationDrag] = useState<{
+    fromItemId: string;
+    fromX: number;
+    fromY: number;
+    currentX: number;
+    currentY: number;
   } | null>(null);
 
   const zoomConfig = ZOOM_CONFIGS[zoomLevel];
@@ -353,6 +363,81 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
       };
     }
   }, [dragging, handleDragMove, handleDragEnd]);
+
+  // Ref for the scrollable timeline area (used for relation drag coordinate calculations)
+  const timelineAreaRef = useRef<HTMLDivElement>(null);
+
+  // Handle relation drag start (barLeft & barWidth passed from template to avoid getBarStyle dependency)
+  const handleRelationDragStart = useCallback((e: React.MouseEvent, itemId: string, barLeft: number, barWidth: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = flatItems.findIndex(i => i.id === itemId);
+    if (idx === -1) return;
+
+    const endX = barLeft + barWidth;
+    const centerY = idx * 40 + 20; // ROW_HEIGHT / 2
+    setRelationDrag({
+      fromItemId: itemId,
+      fromX: endX,
+      fromY: centerY,
+      currentX: endX,
+      currentY: centerY,
+    });
+  }, [flatItems]);
+
+  // Handle relation drag move
+  const handleRelationDragMove = useCallback((e: MouseEvent) => {
+    if (!relationDrag) return;
+    const area = timelineAreaRef.current;
+    if (!area) return;
+    const rect = area.getBoundingClientRect();
+    // Coordinates relative to the timeline area, offset by 288px for the label column
+    setRelationDrag(prev => prev ? {
+      ...prev,
+      currentX: e.clientX - rect.left - 288,
+      currentY: e.clientY - rect.top,
+    } : null);
+  }, [relationDrag]);
+
+  // Handle relation drag end
+  const handleRelationDragEnd = useCallback((e: MouseEvent) => {
+    if (!relationDrag || !onCreateRelation) {
+      setRelationDrag(null);
+      return;
+    }
+
+    const area = timelineAreaRef.current;
+    if (!area) { setRelationDrag(null); return; }
+    const rect = area.getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const targetIdx = Math.floor(relY / 40); // ROW_HEIGHT
+
+    if (targetIdx >= 0 && targetIdx < flatItems.length) {
+      const targetItem = flatItems[targetIdx];
+      if (targetItem.id !== relationDrag.fromItemId) {
+        onCreateRelation(relationDrag.fromItemId, targetItem.id, 'depends');
+      }
+    }
+
+    setRelationDrag(null);
+  }, [relationDrag, flatItems, onCreateRelation]);
+
+  // Effect for relation drag listeners
+  useEffect(() => {
+    if (relationDrag) {
+      window.addEventListener('mousemove', handleRelationDragMove);
+      window.addEventListener('mouseup', handleRelationDragEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleRelationDragMove);
+        window.removeEventListener('mouseup', handleRelationDragEnd);
+      };
+    }
+  }, [relationDrag, handleRelationDragMove, handleRelationDragEnd]);
+
+  // Compute hovered row index during relation drag
+  const relationDragTargetIdx = relationDrag
+    ? Math.floor(relationDrag.currentY / 40)
+    : -1;
 
   const getBarStyle = (item: Item) => {
     const itemStartDate = item.startDate || item.dueDate;
@@ -576,8 +661,8 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
               <p>Aucun élément</p>
               <p className="text-sm">Créez des éléments pour les voir dans le planning</p>
             </div>
-          ) : (<div className="relative">
-            {flatItems.map((item) => {
+          ) : (<div className="relative" ref={timelineAreaRef}>
+            {flatItems.map((item, itemIndex) => {
               const barStyle = getBarStyle(item);
               const Icon = TYPE_ICONS[item.type];
               const statusColor = getStatusColor(item.status, statuses);
@@ -644,7 +729,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                     {/* Item bar */}
                     {barStyle && (
                       <div
-                        className={`absolute top-1 h-8 rounded transition-all ${statusColor} ${
+                        className={`absolute top-1 h-8 rounded transition-all group/bar ${statusColor} ${
                           barStyle.hasDate
                             ? 'shadow-md border border-black/20'
                             : 'border-2 border-dashed border-gray-400 opacity-60'
@@ -652,7 +737,11 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                           hoveredItem === item.id || dragging?.itemId === item.id
                             ? 'ring-2 ring-primary shadow-xl opacity-100'
                             : 'hover:shadow-lg hover:opacity-100'
-                        } ${dragging?.itemId === item.id ? 'cursor-grabbing' : ''}`}
+                        } ${dragging?.itemId === item.id ? 'cursor-grabbing' : ''} ${
+                          relationDrag && relationDragTargetIdx === itemIndex && item.id !== relationDrag.fromItemId
+                            ? 'ring-2 ring-green-500 shadow-xl'
+                            : ''
+                        }`}
                         style={{
                           left: barStyle.left + 1,
                           width: barStyle.width,
@@ -705,8 +794,73 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                             <div className="w-0.5 h-4 bg-black/30 group-hover/handle:bg-black/50 rounded" />
                           </div>
                         )}
+
+                        {/* Relation connector handle */}
+                        {canEdit && onCreateRelation && (
+                          <div
+                            className="absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-70 hover:!opacity-100 transition-opacity z-10 flex items-center justify-center"
+                            onMouseDown={(e) => handleRelationDragStart(e, item.id, barStyle.left + 1, barStyle.width)}
+                            title="Glisser vers un élément pour créer une liaison"
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    {/* Due date marker (red diamond) */}
+                    {item.dueDate && (() => {
+                      const dueDateObj = startOfDay(new Date(item.dueDate));
+                      const dueOffset = differenceInDays(dueDateObj, visibleStartDate);
+                      // Only render if visible
+                      if (dueOffset < -1 || dueOffset > zoomConfig.days + 1) return null;
+                      const dueX = dueOffset * dayWidth + dayWidth / 2;
+                      const barEnd = barStyle ? barStyle.left + 1 + barStyle.width : null;
+                      return (
+                        <>
+                          {/* Arrow line from bar end to due date marker */}
+                          {barEnd !== null && Math.abs(dueX - barEnd) > 10 && (
+                            <svg
+                              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                              style={{ overflow: 'visible' }}
+                            >
+                              <line
+                                x1={barEnd}
+                                y1={20}
+                                x2={dueX}
+                                y2={20}
+                                stroke="hsl(var(--destructive))"
+                                strokeWidth={1.5}
+                                strokeDasharray="4 2"
+                                opacity={0.6}
+                              />
+                              {/* Small arrowhead */}
+                              <polygon
+                                points={dueX > barEnd
+                                  ? `${dueX - 5},${17} ${dueX},${20} ${dueX - 5},${23}`
+                                  : `${dueX + 5},${17} ${dueX},${20} ${dueX + 5},${23}`
+                                }
+                                fill="hsl(var(--destructive))"
+                                opacity={0.6}
+                              />
+                            </svg>
+                          )}
+                          {/* Diamond marker */}
+                          <div
+                            className="absolute top-1 z-10 pointer-events-none"
+                            style={{ left: dueX - 6 }}
+                            title={`Échéance : ${formatDateShort(dueDateObj)}`}
+                          >
+                            <svg width="12" height="32" viewBox="0 0 12 32">
+                              {/* Vertical line */}
+                              <line x1="6" y1="0" x2="6" y2="32" stroke="hsl(var(--destructive))" strokeWidth="1.5" opacity="0.5" />
+                              {/* Diamond */}
+                              <polygon points="6,4 10,10 6,16 2,10" fill="hsl(var(--destructive))" opacity="0.8" />
+                            </svg>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -753,6 +907,44 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                     />
                   );
                 })}
+              </svg>
+            )}
+
+            {/* Temporary relation drag line */}
+            {relationDrag && (
+              <svg
+                className="absolute top-0 pointer-events-none z-20"
+                style={{ left: 288, width: zoomConfig.days * dayWidth, height: flatItems.length * ROW_HEIGHT }}
+              >
+                <line
+                  x1={relationDrag.fromX}
+                  y1={relationDrag.fromY}
+                  x2={relationDrag.currentX}
+                  y2={relationDrag.currentY}
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  strokeDasharray="6 3"
+                  opacity={0.8}
+                />
+                <circle
+                  cx={relationDrag.fromX}
+                  cy={relationDrag.fromY}
+                  r={4}
+                  fill="hsl(var(--primary))"
+                />
+                {/* Target indicator */}
+                {relationDragTargetIdx >= 0 && relationDragTargetIdx < flatItems.length &&
+                  flatItems[relationDragTargetIdx].id !== relationDrag.fromItemId && (
+                  <circle
+                    cx={relationDrag.currentX}
+                    cy={relationDrag.currentY}
+                    r={6}
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    opacity={0.8}
+                  />
+                )}
               </svg>
             )}
           </div>)}
