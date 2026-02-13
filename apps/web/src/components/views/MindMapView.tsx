@@ -343,20 +343,29 @@ interface PortalNodeProps {
     space: SpaceWithRole;
     onRemove: (portalId: string) => void;
     portalId: string;
+    isChildSpace?: boolean;
   };
 }
 
 function PortalNode({ data }: PortalNodeProps) {
-  const { space, onRemove, portalId } = data;
+  const { space, onRemove, portalId, isChildSpace } = data;
 
   const handleClick = () => {
-    // Open in new tab
-    window.open(`/spaces/${space.id}`, '_blank');
+    // Navigate to the space (same tab for child spaces, new tab for portals)
+    if (isChildSpace) {
+      window.location.href = `/spaces/${space.id}`;
+    } else {
+      window.open(`/spaces/${space.id}`, '_blank');
+    }
   };
 
   return (
     <div
-      className="px-4 py-3 rounded-xl shadow-lg border-2 border-dashed border-indigo-400 bg-indigo-50 min-w-[120px] cursor-pointer hover:bg-indigo-100 hover:border-indigo-500 transition-all group"
+      className={`px-4 py-3 rounded-xl shadow-lg border-2 min-w-[120px] cursor-pointer transition-all group ${
+        isChildSpace
+          ? 'border-solid border-indigo-500 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-600 hover:shadow-xl'
+          : 'border-dashed border-indigo-400 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-500'
+      }`}
       onClick={handleClick}
     >
       {/* Handles for connections */}
@@ -371,24 +380,32 @@ function PortalNode({ data }: PortalNodeProps) {
       <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-3 !h-3" id="right-source" />
 
       <div className="flex items-center gap-2">
-        <ExternalLink className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+        {isChildSpace ? (
+          <FolderOpen className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+        ) : (
+          <ExternalLink className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+        )}
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-indigo-700">{space.name}</span>
-          <span className="text-xs text-indigo-500">Portail</span>
+          <span className="text-xs text-indigo-500">
+            {isChildSpace ? 'Sous-espace' : 'Portail'}
+          </span>
         </div>
       </div>
 
-      {/* Remove button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(portalId);
-        }}
-        className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Supprimer le portail"
-      >
-        <X className="w-3 h-3 text-red-500" />
-      </button>
+      {/* Remove button (hidden for auto child space portals) */}
+      {!isChildSpace && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(portalId);
+          }}
+          className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Supprimer le portail"
+        >
+          <X className="w-3 h-3 text-red-500" />
+        </button>
+      )}
     </div>
   );
 }
@@ -757,6 +774,11 @@ function MindMapViewInner({
     return communitySpaces.filter(s => s.id !== spaceId);
   }, [communitySpaces, spaceId]);
 
+  // Child spaces of the current space (for automatic portal nodes)
+  const childSpaces = useMemo(() => {
+    return communitySpaces.filter(s => s.parentId === spaceId);
+  }, [communitySpaces, spaceId]);
+
   // Open portal dialog for a specific item
   const handleAddPortal = useCallback((parentItemId: string) => {
     setPendingPortalParentId(parentItemId);
@@ -1001,12 +1023,56 @@ function MindMapViewInner({
       });
     });
 
+    // Add automatic portal nodes for child spaces, attached to the central space node
+    const SPACE_NODE_ID = '__space__';
+    const spacePos = portalPosMap.get(SPACE_NODE_ID) || { x: -70, y: -25 };
+    const childSpaceRadius = 180;
+    childSpaces.forEach((childSpace, index) => {
+      const childPortalId = `child-space-${childSpace.id}`;
+      // Distribute child space portals in a fan below the center node
+      const totalChildren = childSpaces.length;
+      const angleSpread = Math.min(Math.PI * 0.8, totalChildren * (Math.PI / 4));
+      const startAngle = Math.PI / 2 - angleSpread / 2; // centered below
+      const angle = totalChildren === 1
+        ? Math.PI / 2
+        : startAngle + (index * angleSpread) / Math.max(1, totalChildren - 1);
+
+      const cx = spacePos.x + childSpaceRadius * Math.cos(angle);
+      const cy = spacePos.y + childSpaceRadius * Math.sin(angle);
+
+      // Use saved position if available
+      const savedPos = savedPositions.current[childPortalId];
+      const pos = savedPos || { x: cx, y: cy };
+
+      portalNodes.push({
+        id: childPortalId,
+        type: 'portal',
+        position: pos,
+        data: {
+          space: childSpace,
+          onRemove: () => {}, // Cannot remove auto child space portals
+          portalId: childPortalId,
+          isChildSpace: true, // Flag to hide remove button
+        },
+      });
+
+      portalEdges.push({
+        id: `edge-space-${childPortalId}`,
+        source: SPACE_NODE_ID,
+        target: childPortalId,
+        sourceHandle: 'bottom-source',
+        targetHandle: 'top',
+        type: 'default',
+        style: { stroke: '#6366f1', strokeWidth: 2, strokeDasharray: '5,5' },
+      });
+    });
+
     const allNodes = [...positionedNodes, ...portalNodes];
     const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], edgePosMap);
     setNodes(allNodes);
     setEdges(allEdges);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, removePortal, applyPositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
