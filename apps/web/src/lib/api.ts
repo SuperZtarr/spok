@@ -313,6 +313,61 @@ export const userApi = {
     fetchApi<{ success: boolean }>('/user/avatar', { method: 'DELETE' }),
 };
 
+// User Tasks (global across spaces)
+export interface GlobalTaskFilters {
+  status?: string;
+  priority?: number;
+  spaceId?: string;
+  search?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  sortBy?: 'dueDate' | 'status' | 'spaceName' | 'createdAt' | 'priority' | 'title';
+  sortDir?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GlobalTask {
+  id: string;
+  title: string;
+  type: string;
+  status: string | null;
+  priority: number | null;
+  dueDate: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  spaceId: string;
+  createdById: string;
+  parentId: string | null;
+  description: string | null;
+  spaceName: string;
+  createdByName: string;
+  space: { id: string; name: string };
+  createdBy: { id: string; name: string };
+  parent: { id: string; title: string } | null;
+  tags: { id: string; name: string; color: string | null }[];
+}
+
+export const userTasksApi = {
+  list: (params?: GlobalTaskFilters) => {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.set('status', params.status);
+    if (params?.priority) sp.set('priority', params.priority.toString());
+    if (params?.spaceId) sp.set('spaceId', params.spaceId);
+    if (params?.search) sp.set('search', params.search);
+    if (params?.dueDateFrom) sp.set('dueDateFrom', params.dueDateFrom);
+    if (params?.dueDateTo) sp.set('dueDateTo', params.dueDateTo);
+    if (params?.sortBy) sp.set('sortBy', params.sortBy);
+    if (params?.sortDir) sp.set('sortDir', params.sortDir);
+    if (params?.page) sp.set('page', params.page.toString());
+    if (params?.pageSize) sp.set('pageSize', params.pageSize.toString());
+    const query = sp.toString();
+    return fetchApi<PaginatedResponse<GlobalTask>>(`/user/tasks${query ? `?${query}` : ''}`);
+  },
+};
+
 // Spaces
 export const spacesApi = {
   list: (communityId?: string, parentId?: string) => {

@@ -32,6 +32,7 @@ import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
+import { GlobalTasksPage } from './pages/GlobalTasksPage';
 import { Layout } from './components/Layout';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminRoute } from './components/AdminRoute';
@@ -126,6 +127,7 @@ export default function App() {
         element={<HomeRoute />}
       >
         <Route index element={<DashboardPage />} />
+        <Route path="tasks" element={<GlobalTasksPage />} />
         <Route path="spaces/:spaceId" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
