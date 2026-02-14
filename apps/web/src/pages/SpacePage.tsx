@@ -941,6 +941,7 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => handleInlineUpdate(id, { startDate, endDate })}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
+              onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               onAddChild={handleAddChild}
               referentiels={referentiels}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}

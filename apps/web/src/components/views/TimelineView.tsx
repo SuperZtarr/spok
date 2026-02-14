@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -13,6 +13,7 @@ interface TimelineViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
+  onDeleteRelation?: (itemId: string, relationId: string) => void;
   onAddChild: (parentId: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -82,6 +83,16 @@ function getMonthName(date: Date): string {
   return date.toLocaleDateString('fr-FR', { month: 'short' });
 }
 
+// Relation types (same as MindMapView)
+const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
+  { id: 'relates', label: 'Est lié à', Icon: Link2, description: 'Lien simple entre deux éléments', color: 'text-purple-500' },
+  { id: 'blocks', label: 'Bloque', Icon: Ban, description: 'A doit être terminé avant B', color: 'text-red-500' },
+  { id: 'depends', label: 'Dépend de', Icon: ArrowLeft, description: 'A nécessite B pour avancer', color: 'text-orange-500' },
+  { id: 'duplicates', label: 'Duplique', Icon: Copy, description: 'A est un doublon de B', color: 'text-gray-500' },
+  { id: 'implements', label: 'Implémente', Icon: Cog, description: 'A réalise/concrétise B', color: 'text-blue-500' },
+  { id: 'tests', label: 'Teste', Icon: FlaskConical, description: 'A valide le bon fonctionnement de B', color: 'text-green-500' },
+];
+
 // Get status color from referentiels
 function getStatusColor(status: string | null | undefined, statuses: StatusConfig[]): string {
   if (!status) {
@@ -145,12 +156,14 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onCreateRelation, onAddChild: _onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
     const today = new Date();
-    return startOfDay(addDays(today, -7));
+    // Center today in the view at init
+    const offset = Math.floor(ZOOM_CONFIGS['month'].days / 2);
+    return startOfDay(addDays(today, -offset));
   });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -171,6 +184,9 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
     currentX: number;
     currentY: number;
   } | null>(null);
+
+  // Pending connection awaiting type selection
+  const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
 
   const zoomConfig = ZOOM_CONFIGS[zoomLevel];
 
@@ -246,7 +262,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
   const goToToday = () => {
     const today = new Date();
     // Center today in the view
-    const offset = Math.floor(zoomConfig.days / 4);
+    const offset = Math.floor(zoomConfig.days / 2);
     setVisibleStartDate(startOfDay(addDays(today, -offset)));
   };
 
@@ -399,7 +415,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
     } : null);
   }, [relationDrag]);
 
-  // Handle relation drag end
+  // Handle relation drag end - open type selection modal
   const handleRelationDragEnd = useCallback((e: MouseEvent) => {
     if (!relationDrag || !onCreateRelation) {
       setRelationDrag(null);
@@ -415,12 +431,24 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
     if (targetIdx >= 0 && targetIdx < flatItems.length) {
       const targetItem = flatItems[targetIdx];
       if (targetItem.id !== relationDrag.fromItemId) {
-        onCreateRelation(relationDrag.fromItemId, targetItem.id, 'depends');
+        setPendingConnection({ source: relationDrag.fromItemId, target: targetItem.id });
       }
     }
 
     setRelationDrag(null);
   }, [relationDrag, flatItems, onCreateRelation]);
+
+  // Handle relation type selection from modal
+  const handleRelationTypeSelect = useCallback((type: string) => {
+    if (pendingConnection) {
+      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type);
+      setPendingConnection(null);
+    }
+  }, [pendingConnection, onCreateRelation]);
+
+  // Get item titles for relation dialog
+  const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
+  const pendingTargetItem = pendingConnection ? items.find(i => i.id === pendingConnection.target) : null;
 
   // Effect for relation drag listeners
   useEffect(() => {
@@ -485,7 +513,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
   const dependencyArrows = useMemo(() => {
     if (!relations || relations.length === 0) return [];
 
-    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string }[] = [];
+    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string; relationId: string; fromItemId: string }[] = [];
     const rowIndexMap = new Map<string, number>();
     flatItems.forEach((item, idx) => rowIndexMap.set(item.id, idx));
 
@@ -507,7 +535,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
       const toX = toBar.left;
       const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
 
-      arrows.push({ fromX, fromY, toX, toY, type: rel.type });
+      arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId });
     }
 
     return arrows;
@@ -588,7 +616,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
             {/* Month row (for quarter/year zoom) */}
             {showMonthRow && (
               <div className="flex border-b">
-                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
+                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
                   Mois
                 </div>
                 <div className="flex">
@@ -608,7 +636,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
             {/* Week row (for day/week/month zoom) */}
             {showWeekRow && (
               <div className="flex border-b">
-                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50">
+                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
                   Semaine
                 </div>
                 <div className="flex">
@@ -627,7 +655,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
 
             {/* Days row */}
             <div className="flex">
-              <div className="w-72 flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50">
+              <div className="w-72 flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50 sticky left-0 z-20">
                 Élément
               </div>
               <div className="flex">
@@ -683,7 +711,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                 >
                   {/* Item label */}
                   <div
-                    className="w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50"
+                    className="w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50 sticky left-0 z-10 bg-background"
                     style={{ paddingLeft: `${8 + item.depth * 20}px` }}
                   >
                     {hasChildren ? (
@@ -706,11 +734,23 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                     )}
                     <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <span
-                      className={`truncate text-sm ${!hasDate ? 'text-muted-foreground' : ''}`}
+                      className={`truncate text-sm flex-1 ${!hasDate ? 'text-muted-foreground' : ''}`}
                       onClick={() => onEdit(item.id)}
                     >
                       {item.title}
                     </span>
+                    {canEdit && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddChild(item.id);
+                        }}
+                        className="p-0.5 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        title="Ajouter un enfant"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Timeline bar area */}
@@ -869,8 +909,8 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
             {/* Dependency arrows SVG overlay */}
             {dependencyArrows.length > 0 && (
               <svg
-                className="absolute top-0 pointer-events-none"
-                style={{ left: 288, width: zoomConfig.days * dayWidth, height: flatItems.length * ROW_HEIGHT }}
+                className="absolute top-0"
+                style={{ left: 288, width: zoomConfig.days * dayWidth, height: flatItems.length * ROW_HEIGHT, pointerEvents: 'none' }}
               >
                 <defs>
                   <marker id="arrowhead-depends" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
@@ -884,6 +924,8 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                   const isBlocks = arrow.type === 'blocks';
                   const color = isBlocks ? 'hsl(var(--destructive))' : 'hsl(var(--primary))';
                   const markerId = isBlocks ? 'arrowhead-blocks' : 'arrowhead-depends';
+                  const relType = RELATION_TYPES.find(t => t.id === arrow.type);
+                  const relLabel = relType?.label || arrow.type;
 
                   // Curved path: from end of source bar to start of target bar
                   const dx = arrow.toX - arrow.fromX;
@@ -896,15 +938,34 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                     : `M ${arrow.fromX} ${arrow.fromY} C ${midX} ${arrow.fromY}, ${midX} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
 
                   return (
-                    <path
-                      key={idx}
-                      d={path}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth={1.5}
-                      strokeOpacity={0.6}
-                      markerEnd={`url(#${markerId})`}
-                    />
+                    <g key={idx}>
+                      {/* Visible arrow */}
+                      <path
+                        d={path}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={1.5}
+                        strokeOpacity={0.6}
+                        markerEnd={`url(#${markerId})`}
+                      />
+                      {/* Invisible wider clickable path */}
+                      {canEdit && onDeleteRelation && (
+                        <path
+                          d={path}
+                          fill="none"
+                          stroke="transparent"
+                          strokeWidth={12}
+                          style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                          onClick={() => {
+                            if (confirm(`Supprimer la relation "${relLabel}" ?`)) {
+                              onDeleteRelation(arrow.fromItemId, arrow.relationId);
+                            }
+                          }}
+                        >
+                          <title>{`${relLabel} - Cliquer pour supprimer`}</title>
+                        </path>
+                      )}
+                    </g>
                   );
                 })}
               </svg>
@@ -950,6 +1011,42 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
           </div>)}
         </div>
       </div>
+
+      {/* Relation type selection modal */}
+      {pendingConnection && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Type de relation</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium">{pendingSourceItem?.title}</span>
+              {' → '}
+              <span className="font-medium">{pendingTargetItem?.title}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {RELATION_TYPES.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => handleRelationTypeSelect(type.id)}
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors text-left group"
+                  title={type.description}
+                >
+                  <type.Icon className={`w-4 h-4 ${type.color}`} />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{type.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{type.description}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setPendingConnection(null)}
+              className="mt-4 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
