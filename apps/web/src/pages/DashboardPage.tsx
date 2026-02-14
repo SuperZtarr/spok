@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, CircleDot, ChevronRight, CheckSquare } from 'lucide-react';
