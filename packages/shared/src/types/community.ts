@@ -4,12 +4,13 @@ export interface Community {
   id: string;
   name: string;
   description?: string;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CommunityWithRole extends Community {
-  role: CommunityRole;
+  role: CommunityRole | null;
   memberCount?: number;
   spaceCount?: number;
 }
@@ -34,11 +35,13 @@ export interface CommunityMember {
 export interface CreateCommunityInput {
   name: string;
   description?: string;
+  isPublic?: boolean;
 }
 
 export interface UpdateCommunityInput {
   name?: string;
   description?: string;
+  isPublic?: boolean;
 }
 
 export interface InviteCommunityMemberInput {
@@ -51,6 +54,7 @@ export interface AdminCommunity {
   id: string;
   name: string;
   description?: string;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
   memberCount: number;

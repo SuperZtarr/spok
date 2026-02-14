@@ -5,6 +5,7 @@ import type { CommunityRole } from '@spok/shared';
 const updateCommunitySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  isPublic: z.boolean().optional(),
 });
 
 const inviteSchema = z.object({
@@ -39,6 +40,34 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
+  // List public communities the user has NOT joined
+  fastify.get('/public', async (request) => {
+    const myMemberships = await fastify.prisma.communityMembership.findMany({
+      where: { userId: request.user.userId },
+      select: { communityId: true },
+    });
+    const myIds = myMemberships.map((m) => m.communityId);
+
+    const communities = await fastify.prisma.community.findMany({
+      where: {
+        isPublic: true,
+        id: { notIn: myIds },
+      },
+      include: {
+        _count: {
+          select: { memberships: true, spaces: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return communities.map((c) => ({
+      ...c,
+      memberCount: c._count.memberships,
+      spaceCount: c._count.spaces,
+    }));
+  });
+
   // Get community by ID
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
@@ -59,15 +88,34 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!membership) {
+    if (membership) {
+      return {
+        ...membership.community,
+        role: membership.role,
+        memberCount: membership.community._count.memberships,
+        spaceCount: membership.community._count.spaces,
+      };
+    }
+
+    // Non-member: allow access if community is public
+    const community = await fastify.prisma.community.findUnique({
+      where: { id: request.params.id },
+      include: {
+        _count: {
+          select: { memberships: true, spaces: true },
+        },
+      },
+    });
+
+    if (!community || !community.isPublic) {
       return reply.notFound('Community not found or access denied');
     }
 
     return {
-      ...membership.community,
-      role: membership.role,
-      memberCount: membership.community._count.memberships,
-      spaceCount: membership.community._count.spaces,
+      ...community,
+      role: null,
+      memberCount: community._count.memberships,
+      spaceCount: community._count.spaces,
     };
   });
 
@@ -93,6 +141,11 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = updateCommunitySchema.parse(request.body);
+
+      // Only OWNER can change visibility
+      if (body.isPublic !== undefined && membership.role !== 'OWNER') {
+        return reply.forbidden('Only the owner can change community visibility');
+      }
 
       const community = await fastify.prisma.community.update({
         where: { id: request.params.id },
@@ -124,6 +177,45 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     await fastify.prisma.community.delete({
       where: { id: request.params.id },
+    });
+
+    return { success: true };
+  });
+
+  // Join a public community
+  fastify.post<{ Params: { id: string } }>('/:id/join', async (request, reply) => {
+    const community = await fastify.prisma.community.findUnique({
+      where: { id: request.params.id },
+    });
+
+    if (!community) {
+      return reply.notFound('Community not found');
+    }
+
+    if (!community.isPublic) {
+      return reply.forbidden('This community is private. You need an invitation to join.');
+    }
+
+    // Check if already a member
+    const existing = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+    });
+
+    if (existing) {
+      return reply.conflict('Already a member of this community');
+    }
+
+    await fastify.prisma.communityMembership.create({
+      data: {
+        userId: request.user.userId,
+        communityId: request.params.id,
+        role: 'MEMBER',
+      },
     });
 
     return { success: true };

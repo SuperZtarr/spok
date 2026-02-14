@@ -14,6 +14,7 @@ export function CommunitySettingsPage() {
 
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editIsPublic, setEditIsPublic] = useState(false);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
@@ -53,7 +54,7 @@ export function CommunitySettingsPage() {
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string }) =>
+    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean }) =>
       communitiesApi.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
@@ -86,14 +87,16 @@ export function CommunitySettingsPage() {
     if (community) {
       setEditName(community.name);
       setEditDescription(community.description || '');
+      setEditIsPublic(community.isPublic);
       setIsEditingInfo(true);
     }
   };
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string } = {};
+    const updates: { name?: string; description?: string; isPublic?: boolean } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
+    if (editIsPublic !== community?.isPublic && community?.role === 'OWNER') updates.isPublic = editIsPublic;
     if (Object.keys(updates).length > 0) {
       updateCommunityMutation.mutate(updates);
     } else {
@@ -173,6 +176,20 @@ export function CommunitySettingsPage() {
                   placeholder="Description de la communauté"
                 />
               </div>
+              {community?.role === 'OWNER' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isPublic"
+                    checked={editIsPublic}
+                    onChange={(e) => setEditIsPublic(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  <label htmlFor="isPublic" className="text-sm">
+                    Communauté publique (visible et accessible à tous les utilisateurs)
+                  </label>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -217,6 +234,12 @@ export function CommunitySettingsPage() {
                 <div>
                   <span className="text-muted-foreground">Espaces:</span>{' '}
                   <span className="font-medium">{communitySpaces.length}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Visibilité:</span>{' '}
+                  <span className={`font-medium ${community.isPublic ? 'text-green-600' : ''}`}>
+                    {community.isPublic ? 'Publique' : 'Privée'}
+                  </span>
                 </div>
               </div>
               {canEdit && (

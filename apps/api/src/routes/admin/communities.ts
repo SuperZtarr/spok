@@ -6,6 +6,7 @@ const createCommunitySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   ownerEmail: z.string().email().optional(),
+  isPublic: z.boolean().optional(),
 });
 
 interface ListCommunitiesQuery {
@@ -126,7 +127,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /admin/communities - Create a new community
   fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', async (request, reply) => {
-    const { name, description, ownerEmail } = createCommunitySchema.parse(request.body);
+    const { name, description, ownerEmail, isPublic } = createCommunitySchema.parse(request.body);
 
     // Determine the owner: specified user or current admin
     let ownerId = request.user.userId;
@@ -147,6 +148,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         name,
         description,
+        isPublic: isPublic ?? false,
         memberships: {
           create: {
             userId: ownerId,
@@ -169,11 +171,11 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // PATCH /admin/communities/:id - Update a community
-  fastify.patch<{ Params: CommunityParams; Body: { name?: string; description?: string } }>(
+  fastify.patch<{ Params: CommunityParams; Body: { name?: string; description?: string; isPublic?: boolean } }>(
     '/:id',
     async (request, reply) => {
       const { id } = request.params;
-      const { name, description } = request.body;
+      const { name, description, isPublic } = request.body;
 
       const community = await fastify.prisma.community.findUnique({
         where: { id },
@@ -188,6 +190,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           ...(name && { name }),
           ...(description !== undefined && { description }),
+          ...(isPublic !== undefined && { isPublic }),
         },
         include: {
           _count: {

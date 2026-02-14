@@ -27,6 +27,7 @@ import type {
   AuditLog,
   AuditLogFilters,
   AuditLogListResponse,
+  Community,
   CommunityWithRole,
   CommunityMember,
   CreateCommunityInput,
@@ -449,6 +450,14 @@ export const communitiesApi = {
     fetchApi<CommunityMember>(`/communities/${id}/members/${memberId}`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    }),
+
+  listPublic: () =>
+    fetchApi<Array<Community & { memberCount: number; spaceCount: number }>>('/communities/public'),
+
+  join: (id: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/join`, {
+      method: 'POST',
     }),
 };
 

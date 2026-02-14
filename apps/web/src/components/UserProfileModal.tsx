@@ -377,7 +377,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 >
                   <span>{community.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {COMMUNITY_ROLE_LABELS[community.role] || community.role}
+                    {community.role ? (COMMUNITY_ROLE_LABELS[community.role] || community.role) : ''}
                   </span>
                 </div>
               ))}
