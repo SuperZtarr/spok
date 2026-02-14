@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, ChevronsDownUp, ChevronsUpDown, type LucideIcon } from 'lucide-react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -140,11 +140,23 @@ function buildTree(items: Item[]): TreeItem[] {
   return rootItems;
 }
 
-function flattenTree(items: TreeItem[], collapsedIds: Set<string>): TreeItem[] {
+function itemHasDate(item: Item): boolean {
+  return !!(item.startDate || item.endDate || item.dueDate);
+}
+
+function subtreeHasDate(item: TreeItem): boolean {
+  if (itemHasDate(item)) return true;
+  return item.children.some(child => subtreeHasDate(child));
+}
+
+function flattenTree(items: TreeItem[], collapsedIds: Set<string>, compactMode: boolean = false): TreeItem[] {
   const result: TreeItem[] = [];
 
   function traverse(items: TreeItem[]) {
     items.forEach(item => {
+      // In compact mode, skip items that have no dates in their entire subtree
+      if (compactMode && !subtreeHasDate(item)) return;
+
       result.push(item);
       if (item.children.length > 0 && !collapsedIds.has(item.id)) {
         traverse(item.children);
@@ -167,6 +179,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
   });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [compactMode, setCompactMode] = useState(false);
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{
@@ -195,7 +208,7 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
   }, [referentiels]);
 
   const tree = useMemo(() => buildTree(items), [items]);
-  const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
+  const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
   const itemsWithDatesCount = useMemo(() => {
     return items.filter(item => item.startDate || item.dueDate).length;
@@ -569,6 +582,20 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
           <span className="text-sm text-muted-foreground">
             {items.length} ({itemsWithDatesCount} planifiés)
           </span>
+
+          {/* Compact mode toggle */}
+          <Button
+            variant={compactMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCompactMode(prev => !prev)}
+            title={compactMode ? 'Afficher tous les éléments' : 'Masquer les éléments sans date'}
+          >
+            {compactMode ? (
+              <ChevronsUpDown className="w-4 h-4" />
+            ) : (
+              <ChevronsDownUp className="w-4 h-4" />
+            )}
+          </Button>
 
           {/* Zoom controls */}
           <div className="flex items-center gap-1 border rounded-md">
