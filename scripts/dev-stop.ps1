@@ -1,29 +1,39 @@
-# dev-stop.ps1 — Arret propre de l'environnement SPOK
+# dev-stop.ps1 — Arrêt de l'environnement SPOK (Docker)
 # Usage : pnpm dev:stop
 
-Write-Host "Arret des processus SPOK..." -ForegroundColor Cyan
+# Déterminer le répertoire racine du projet (parent de scripts/)
+$projectRoot = Split-Path -Parent $PSScriptRoot
 
-$ports = @(3000, 3001)
-$stopped = 0
-foreach ($port in $ports) {
-    $connections = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
-    if ($connections) {
-        $pids = $connections | Select-Object -ExpandProperty OwningProcess -Unique
-        foreach ($p in $pids) {
-            $proc = Get-Process -Id $p -ErrorAction SilentlyContinue
-            if ($proc -and $proc.ProcessName -eq "node") {
-                Stop-Process -Id $p -Force -ErrorAction SilentlyContinue
-                Write-Host "  Port ${port}: PID $p (node) arrete" -ForegroundColor Yellow
-                $stopped++
-            } else {
-                Write-Host "  Port ${port}: PID $p ($($proc.ProcessName)) ignore (pas node)" -ForegroundColor DarkGray
+Write-Host "Arret des conteneurs SPOK..." -ForegroundColor Cyan
+
+Push-Location $projectRoot
+docker compose -f docker/docker-compose.dev.yml down
+Pop-Location
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Conteneurs arretes" -ForegroundColor Green
+} else {
+    Write-Host "Erreur lors de l'arret des conteneurs" -ForegroundColor Red
+
+    # Fallback : tuer les processus node sur les ports 3000/3001
+    Write-Host "Tentative de liberation des ports..." -ForegroundColor Yellow
+    $ports = @(3000, 3001)
+    $freed = 0
+    foreach ($port in $ports) {
+        $connections = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
+        if ($connections) {
+            $pids = $connections | Select-Object -ExpandProperty OwningProcess -Unique
+            foreach ($pid in $pids) {
+                $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+                if ($proc -and $proc.ProcessName -eq "node") {
+                    Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                    Write-Host "  Port ${port}: PID $pid (node) arrete" -ForegroundColor Yellow
+                    $freed++
+                }
             }
         }
     }
-}
-
-if ($stopped -eq 0) {
-    Write-Host "  Aucun processus SPOK en cours" -ForegroundColor Green
-} else {
-    Write-Host "  $stopped processus arretes" -ForegroundColor Green
+    if ($freed -gt 0) {
+        Write-Host "$freed processus arretes" -ForegroundColor Green
+    }
 }

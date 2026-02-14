@@ -9,14 +9,28 @@ RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 
 WORKDIR /app
 
-# Copier les fichiers de configuration pnpm
+# Copier les fichiers de configuration pnpm (workspace complet)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
 COPY packages/database/package.json ./packages/database/
 COPY packages/shared/package.json ./packages/shared/
 
+# Forcer le hoisting pour éviter les symlinks pnpm (incompatibles avec Docker)
+RUN echo "node-linker=hoisted" > .npmrc
+
 # Installer les dépendances
 RUN pnpm install
+
+# Créer les symlinks workspace manuellement (hoisted mode ne les crée pas)
+RUN mkdir -p node_modules/@spok && \
+    ln -s /app/packages/database node_modules/@spok/database && \
+    ln -s /app/packages/shared node_modules/@spok/shared && \
+    ln -s /app/apps/api node_modules/@spok/api && \
+    ln -s /app/apps/web node_modules/@spok/web
+
+# Ajouter les binaires au PATH (tsc, prisma, tsx depuis node_modules/.bin)
+ENV PATH="/app/node_modules/.bin:${PATH}"
 
 # Copier les fichiers de configuration TypeScript
 COPY tsconfig.base.json ./
@@ -30,14 +44,14 @@ COPY packages/database ./packages/database
 COPY packages/shared ./packages/shared
 
 # Générer le client Prisma
-RUN pnpm --filter @spok/database generate
+RUN PRISMA_GENERATE_SKIP_AUTOINSTALL=true prisma generate --schema=packages/database/prisma/schema.prisma
 
 # Builder les packages partagés
-RUN pnpm --filter @spok/shared build
-RUN pnpm --filter @spok/database build
+RUN tsc --project packages/shared/tsconfig.json
+RUN tsc --project packages/database/tsconfig.json
 
 EXPOSE 3001
-EXPOSE 9229
 
-# Script de démarrage avec hot reload
-CMD ["sh", "-c", "pnpm --filter @spok/database db:push && pnpm --filter @spok/api dev"]
+# Script de démarrage : push schema puis hot reload
+# On lance tsx directement depuis le root node_modules/.bin pour éviter les shims pnpm
+CMD ["sh", "-c", "prisma db push --schema=packages/database/prisma/schema.prisma && cd apps/api && tsx watch src/index.ts"]
