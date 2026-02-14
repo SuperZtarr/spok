@@ -2,6 +2,49 @@
 
 ---
 
+#### [2026-02-14 ~14:00] - Fix build + verification endDate activites en prod
+
+**Demande :** Corriger erreur de build prod (useEffect manquant) et verifier/corriger les endDate des activites importees depuis ProjeQtOr en production.
+
+**Actions realisees :**
+- Fix build: ajout de `useEffect` dans l'import React de `DashboardPage.tsx` (oublie lors du fix de pre-selection communaute) - commit `487be18`, merge master, push origin
+- Creation du script `apps/api/scripts/fix-activity-enddate.ts` pour corriger les endDate manquantes des items activity en prod
+- Execution du script sur la base Railway (`ballast.proxy.rlwy.net:31323`)
+
+**Resultat du diagnostic prod :**
+- 223 items activity existent en prod
+- 17/18 avec une doneDate dans le SQL avaient deja un endDate en base (correct)
+- 1 item non trouve en base (supprime)
+- 206 items sans endDate = activites sans doneDate dans le SQL source (non terminees)
+- **Conclusion : les endDate etaient deja correctes en prod.** L'import avait ete fait avec la bonne version du script (`import-activity.ts` ligne 473 : `endDate: parseDate(act.doneDate)`)
+
+**URL base de production Railway :** `ballast.proxy.rlwy.net:31323` (URL publique proxy)
+
+**Etat :** TERMINE
+
+---
+
+#### [2026-02-14 ~15:00] - Fix endDate activites en prod depuis planningelement
+
+**Demande :** Les activites importees depuis ProjeQtOr n'ont pas de date de fin en prod (ex: vacances). La table `activity` de ProjeQtOr ne contient pas les dates planifiees - elles sont dans `planningelement`.
+
+**Actions realisees :**
+- Analyse du dump complet ProjeQtOr (`projeqtor.db5001374373_hosting-data_io.sql`, 27 Mo)
+- Identification de la table `planningelement` avec colonnes `plannedStartDate`, `plannedEndDate`, `realStartDate`, `realEndDate`, etc.
+- Reecriture du script `fix-activity-enddate.ts` pour parser `planningelement` et faire la correspondance via `refType='Activity'` + `refId` = `legacyId`
+- Logique de selection: real > planned > validated > initial
+- Execution sur la base Railway prod (`ballast.proxy.rlwy.net:31323`)
+
+**Resultat:**
+- 223 items activity en base, 246 planningelement Activity dans le dump
+- **204 endDate mises a jour** (0 startDate car toutes deja renseignees)
+- 17 deja a jour, 23 non trouves (supprimes), 2 sans date planning, 0 erreur
+
+**Etat :** TERMINE
+**Prochaine etape :** aucune
+
+---
+
 #### [2026-02-12 ~14:00] - Ergonomie dates + auto-fill titre + durées meeting/période
 
 **Demande :** Suite de la session précédente. Compléter les boutons de durée pour MEETING (date de fin = date début + durée sélectionnée) et ajouter la même fonctionnalité pour PERIOD. Garder le DateTimeField modifiable dans tous les cas.
