@@ -144,8 +144,15 @@ export function DashboardPage() {
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
-  const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>('');
+  const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>(currentCommunity?.id || '');
   const [newSpaceParentId, setNewSpaceParentId] = useState<string>('');
+
+  // Pre-select current community when the form opens
+  useEffect(() => {
+    if (showNewSpace && newSpaceType === 'GROUP' && currentCommunity) {
+      setNewSpaceCommunityId(currentCommunity.id);
+    }
+  }, [showNewSpace, currentCommunity]);
 
   // Fetch ALL spaces (no community filter) for segmented display
   const { data: allSpaces, isLoading } = useQuery({

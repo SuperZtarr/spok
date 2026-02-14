@@ -4,7 +4,7 @@ import { createAuditLog, serializeItemForAudit, serializeRelationForAudit } from
 import { isR2Configured, processImage, uploadImageToR2, deleteImageFromR2, uploadFileToR2, deleteFileFromR2 } from '../utils/r2.js';
 
 const createItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG']),
   title: z.string().min(1),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
@@ -19,7 +19,7 @@ const createItemSchema = z.object({
 });
 
 const updateItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG']).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
@@ -40,7 +40,7 @@ const createRelationSchema = z.object({
 });
 
 const querySchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE']).optional(),
+  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG']).optional(),
   status: z.string().optional(),
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),

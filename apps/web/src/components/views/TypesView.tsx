@@ -99,7 +99,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
         <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
-            <h4 className="text-sm font-medium truncate">{item.title}</h4>
+            <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
             {item.url && (
               <a
                 href={item.url}

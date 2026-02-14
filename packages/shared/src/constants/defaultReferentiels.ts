@@ -16,16 +16,16 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   {
     id: 'todo',
     label: 'À faire',
-    color: 'bg-orange-100 text-orange-800',
-    borderColor: 'border-orange-300 bg-orange-50',
+    color: 'bg-yellow-100 text-yellow-800',
+    borderColor: 'border-yellow-300 bg-yellow-50',
     order: 1,
     visible: true,
   },
   {
     id: 'in_progress',
     label: 'En cours',
-    color: 'bg-yellow-100 text-yellow-800',
-    borderColor: 'border-yellow-300 bg-yellow-50',
+    color: 'bg-orange-100 text-orange-800',
+    borderColor: 'border-orange-300 bg-orange-50',
     order: 2,
     visible: true,
   },
@@ -158,6 +158,33 @@ export const DEFAULT_REFERENTIELS: SpaceReferentiels = {
   statuses: DEFAULT_STATUSES,
   typeLabels: DEFAULT_TYPE_LABELS,
 };
+
+// =============================================================================
+// STATUS HELPERS - Conversion StatusConfig[] → Record<string, string>
+// =============================================================================
+
+export function buildStatusColorMap(
+  statuses: StatusConfig[] = DEFAULT_STATUSES,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  statuses.forEach((s) => {
+    map[s.id] = s.color;
+  });
+  if (!map['none'] && map['undefined']) {
+    map['none'] = map['undefined'];
+  }
+  return map;
+}
+
+export function buildStatusLabelMap(
+  statuses: StatusConfig[] = DEFAULT_STATUSES,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  statuses.forEach((s) => {
+    map[s.id] = s.label;
+  });
+  return map;
+}
 
 // =============================================================================
 // COLOR PALETTES - Palettes de couleurs disponibles
