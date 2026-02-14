@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
@@ -59,7 +59,7 @@ import { TextView } from '../components/views/TextView';
 import { SunburstView } from '../components/views/SunburstView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 
-import { TYPE_ICONS, TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
+import { TYPE_ICONS, TYPE_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -157,6 +157,15 @@ export function SpacePage() {
   // Load referentiels for this space
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
+
+  const statusColorMap = useMemo(
+    () => buildStatusColorMap(referentiels?.statuses),
+    [referentiels],
+  );
+  const statusLabelMap = useMemo(
+    () => buildStatusLabelMap(referentiels?.statuses),
+    [referentiels],
+  );
 
   // Load spaces from the same community (for portal feature in mindmap)
   const { data: communitySpaces } = useSpaces(space?.communityId || undefined);
@@ -1024,6 +1033,8 @@ export function SpacePage() {
                       highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
                       highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
                       highlightColor={highlightColor}
+                      statusColorMap={statusColorMap}
+                      statusLabelMap={statusLabelMap}
                     />
                   ))}
                   {/* Root drop zone - at the bottom to avoid interfering with first item */}
@@ -1141,6 +1152,8 @@ function TreeItem({
   highlightType,
   highlightStatus,
   highlightColor,
+  statusColorMap,
+  statusLabelMap,
 }: {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
@@ -1165,6 +1178,8 @@ function TreeItem({
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  statusColorMap: Record<string, string>;
+  statusLabelMap: Record<string, string>;
 }) {
   // Draggable (for the grip handle)
   const {
@@ -1288,10 +1303,10 @@ function TreeItem({
         )}
 
         <Badge
-          className={`text-xs ${STATUS_COLORS[item.status || 'none']}`}
+          className={`text-xs ${statusColorMap[item.status || 'none'] || statusColorMap['undefined'] || 'bg-gray-100 text-gray-500'}`}
           variant="secondary"
         >
-          {STATUS_LABELS[item.status || ''] || 'Non défini'}
+          {statusLabelMap[item.status || ''] || statusLabelMap['undefined'] || 'Non défini'}
         </Badge>
 
         {canEdit !== false && (
@@ -1354,6 +1369,8 @@ function TreeItem({
           highlightType={highlightType}
           highlightStatus={highlightStatus}
           highlightColor={highlightColor}
+          statusColorMap={statusColorMap}
+          statusLabelMap={statusLabelMap}
         />
       )}
     </div>
@@ -1382,6 +1399,8 @@ function ItemChildren({
   highlightType,
   highlightStatus,
   highlightColor,
+  statusColorMap,
+  statusLabelMap,
 }: {
   spaceId: string;
   parentId: string;
@@ -1403,6 +1422,8 @@ function ItemChildren({
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  statusColorMap: Record<string, string>;
+  statusLabelMap: Record<string, string>;
 }) {
   const { data } = useQuery({
     queryKey: ['items', spaceId, 'children', parentId],
@@ -1442,6 +1463,8 @@ function ItemChildren({
           highlightType={highlightType}
           highlightStatus={highlightStatus}
           highlightColor={highlightColor}
+          statusColorMap={statusColorMap}
+          statusLabelMap={statusLabelMap}
         />
       ))}
     </>

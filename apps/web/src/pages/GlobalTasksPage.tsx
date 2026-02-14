@@ -19,7 +19,11 @@ import type { Item } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { ItemEditModal } from '../components/ItemEditModal';
-import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from '../constants/ui';
+import { TYPE_LABELS } from '../constants/ui';
+import { DEFAULT_STATUSES, buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
+
+const STATUS_COLOR_MAP = buildStatusColorMap();
+const STATUS_LABEL_MAP = buildStatusLabelMap();
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
   1: { label: 'Critique', color: 'bg-red-100 text-red-800' },
@@ -249,13 +253,14 @@ export function GlobalTasksPage() {
     { id: 'IMAGE', label: TYPE_LABELS['IMAGE'] || 'Image', color: 'bg-pink-100 text-pink-800 border-pink-300' },
   ];
 
-  const statusOptions = [
-    { id: 'none', label: 'Non defini', color: 'bg-gray-100 text-gray-500 border-gray-300' },
-    { id: 'todo', label: 'A faire', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-    { id: 'in_progress', label: 'En cours', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-    { id: 'done', label: 'Termine', color: 'bg-green-100 text-green-800 border-green-300' },
-    { id: 'cancelled', label: 'Annule', color: 'bg-red-100 text-red-800 border-red-300' },
-  ];
+  const statusOptions = DEFAULT_STATUSES
+    .filter(s => s.visible)
+    .sort((a, b) => a.order - b.order)
+    .map(s => ({
+      id: s.id === 'undefined' ? 'none' : s.id,
+      label: s.label,
+      color: `${s.color} ${s.borderColor.split(' ')[0]}`,
+    }));
 
   const priorityOptions = [
     { id: '1', label: 'Critique', color: 'bg-red-100 text-red-800 border-red-300' },
@@ -499,10 +504,10 @@ export function GlobalTasksPage() {
                     {task.status ? (
                       <span
                         className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                          STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-600'
+                          STATUS_COLOR_MAP[task.status] || 'bg-gray-100 text-gray-600'
                         }`}
                       >
-                        {STATUS_LABELS[task.status] || task.status}
+                        {STATUS_LABEL_MAP[task.status] || task.status}
                       </span>
                     ) : (
                       <span className="text-xs text-muted-foreground/50">-</span>
@@ -596,8 +601,8 @@ export function GlobalTasksPage() {
                     </button>
                     {/* Status */}
                     {task.status && (
-                      <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full ${STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-600'}`}>
-                        {STATUS_LABELS[task.status] || task.status}
+                      <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full ${STATUS_COLOR_MAP[task.status] || 'bg-gray-100 text-gray-600'}`}>
+                        {STATUS_LABEL_MAP[task.status] || task.status}
                       </span>
                     )}
                     {/* Priority */}

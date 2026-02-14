@@ -66,57 +66,6 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
 };
 
 // =============================================================================
-// STATUS LABELS - Libellés des statuts
-// =============================================================================
-export const STATUS_LABELS: Record<string, string> = {
-  todo: 'À faire',
-  in_progress: 'En cours',
-  done: 'Terminé',
-  cancelled: 'Annulé',
-};
-
-// =============================================================================
-// STATUS COLORS - Couleurs des badges de statut
-// =============================================================================
-export const STATUS_COLORS: Record<string, string> = {
-  todo: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  done: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  none: 'bg-gray-100 text-gray-500 border-dashed',
-};
-
-// Couleurs alternatives pour les bordures (SequenceView)
-export const STATUS_BORDER_COLORS: Record<string, string> = {
-  todo: 'border-blue-300 bg-blue-50',
-  in_progress: 'border-yellow-300 bg-yellow-50',
-  done: 'border-green-300 bg-green-50',
-  cancelled: 'border-red-300 bg-red-50',
-  none: 'border-gray-200 bg-white',
-};
-
-// =============================================================================
-// STATUS OPTIONS - Options pour les selects/dropdowns
-// =============================================================================
-export const STATUS_OPTIONS = [
-  { value: 'todo', label: 'À faire' },
-  { value: 'in_progress', label: 'En cours' },
-  { value: 'done', label: 'Terminé' },
-  { value: 'cancelled', label: 'Annulé' },
-] as const;
-
-// =============================================================================
-// KANBAN COLUMNS - Configuration des colonnes Kanban (par statut)
-// =============================================================================
-export const KANBAN_COLUMNS: { id: string; label: string; color: string; bgHover: string }[] = [
-  { id: 'undefined', label: 'Non défini', color: 'border-slate-400', bgHover: 'bg-slate-100' },
-  { id: 'todo', label: 'À faire', color: 'border-blue-300', bgHover: 'bg-blue-100' },
-  { id: 'in_progress', label: 'En cours', color: 'border-yellow-400', bgHover: 'bg-yellow-100' },
-  { id: 'done', label: 'Terminé', color: 'border-green-400', bgHover: 'bg-green-100' },
-  { id: 'cancelled', label: 'Annulé', color: 'border-red-400', bgHover: 'bg-red-100' },
-];
-
-// =============================================================================
 // TYPE COLUMNS - Configuration des colonnes Types (par type d'item)
 // =============================================================================
 export const TYPE_COLUMNS: { id: ItemType; label: string; color: string; bgHover: string }[] = [
