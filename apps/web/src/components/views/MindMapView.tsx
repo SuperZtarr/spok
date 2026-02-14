@@ -42,6 +42,7 @@ interface MindMapViewProps {
   onAddChild: (parentId: string) => void;
   onMove?: (id: string, parentId: string | null, position: number) => void;
   onMoveToSpace?: (itemId: string) => void;
+  onDuplicateToSpace?: (itemId: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
@@ -186,6 +187,7 @@ interface MindMapNodeProps {
     onToggleCollapse: (id: string) => void;
     onReorganizeChildren: (id: string) => void;
     onMoveToSpace?: (id: string) => void;
+    onDuplicateToSpace?: (id: string) => void;
     isRoot: boolean;
     hasChildren: boolean;
     isCollapsed: boolean;
@@ -199,7 +201,7 @@ interface MindMapNodeProps {
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onDelete, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
+  const { item, hexColor, textColor, onDelete, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -299,6 +301,18 @@ function MindMapNode({ data }: MindMapNodeProps) {
             title="Déplacer vers un autre espace"
           >
             <FolderInput className="w-3 h-3 text-orange-500" />
+          </button>
+        )}
+        {onDuplicateToSpace && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicateToSpace(item.id);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-purple-50"
+            title="Dupliquer"
+          >
+            <Copy className="w-3 h-3 text-purple-500" />
           </button>
         )}
         {canEdit && (
@@ -530,6 +544,7 @@ function calculateLayout(
   onToggleCollapse: (id: string) => void,
   onReorganizeChildren: (id: string) => void,
   onMoveToSpace: ((id: string) => void) | undefined,
+  onDuplicateToSpace: ((id: string) => void) | undefined,
   hasPortalSupport: boolean,
   highlightType?: string,
   highlightStatus?: string,
@@ -627,6 +642,7 @@ function calculateLayout(
         onToggleCollapse,
         onReorganizeChildren,
         onMoveToSpace,
+        onDuplicateToSpace,
         isRoot: d3Node.depth === 1,
         hasChildren,
         isCollapsed,
@@ -725,6 +741,7 @@ function MindMapViewInner({
   onAddChild,
   onMove,
   onMoveToSpace,
+  onDuplicateToSpace,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
@@ -884,7 +901,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, hasPortalSupport, highlightType, highlightStatus, canEdit);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, hasPortalSupport, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(nodes);
     const posMap = new Map(positionedNodes.map(n => [n.id, n.position]));
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], posMap);
@@ -999,7 +1016,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, hasPortalSupport, highlightType, highlightStatus, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, hasPortalSupport, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
@@ -1340,7 +1357,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, hasPortalSupport, highlightType, highlightStatus, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, hasPortalSupport, highlightType, highlightStatus, canEdit);
 
     // Build a map of node positions for portal placement
     const resetPosMap = new Map(newNodes.map(n => [n.id, n.position]));
@@ -1622,6 +1639,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   onAddChild,
   onMove,
   onMoveToSpace,
+  onDuplicateToSpace,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
@@ -1653,6 +1671,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           onAddChild={onAddChild}
           onMove={onMove}
           onMoveToSpace={onMoveToSpace}
+          onDuplicateToSpace={onDuplicateToSpace}
           onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation}
           referentiels={referentiels}

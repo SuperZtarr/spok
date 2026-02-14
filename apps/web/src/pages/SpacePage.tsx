@@ -140,6 +140,7 @@ export function SpacePage() {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
+  const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
 
   // Clear selection when leaving the page or changing space
@@ -965,6 +966,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
               onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
@@ -1099,11 +1101,19 @@ export function SpacePage() {
         itemIds={moveItemId ? [moveItemId] : undefined}
       />
 
-      {/* Duplicate to space modal */}
+      {/* Duplicate to space modal (selection mode) */}
       <DuplicateToSpaceModal
         isOpen={showDuplicateModal}
         onClose={() => setShowDuplicateModal(false)}
         currentSpaceId={spaceId!}
+      />
+
+      {/* Duplicate to space modal (single item from MindMap) */}
+      <DuplicateToSpaceModal
+        isOpen={!!duplicateItemId}
+        onClose={() => setDuplicateItemId(null)}
+        currentSpaceId={spaceId!}
+        itemIds={duplicateItemId ? [duplicateItemId] : undefined}
       />
 
       {/* Delete confirmation modal */}

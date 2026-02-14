@@ -9,13 +9,17 @@ interface DuplicateToSpaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentSpaceId: string;
+  itemIds?: string[];  // Si fourni, utilise ces IDs au lieu du selection store
 }
 
-export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId }: DuplicateToSpaceModalProps) {
+export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: DuplicateToSpaceModalProps) {
   const queryClient = useQueryClient();
   const { selectedIds, clearSelection } = useSelectionStore();
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>(currentSpaceId);
   const [includeChildren, setIncludeChildren] = useState(true);
+
+  // Utiliser les itemIds en prop si fournis, sinon le selection store
+  const effectiveIds = itemIds || Array.from(selectedIds);
 
   const { data: spaces, isLoading: spacesLoading } = useQuery({
     queryKey: ['spaces'],
@@ -26,7 +30,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId }: Dupli
   const bulkDuplicateMutation = useMutation({
     mutationFn: () =>
       itemsApi.bulkDuplicate(currentSpaceId, {
-        itemIds: Array.from(selectedIds),
+        itemIds: effectiveIds,
         targetSpaceId: selectedSpaceId,
         includeChildren,
       }),
@@ -38,7 +42,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId }: Dupli
       queryClient.invalidateQueries({ queryKey: ['space', currentSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', selectedSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['auditLogs', selectedSpaceId] });
-      clearSelection();
+      if (!itemIds) clearSelection();
       onClose();
     },
   });
@@ -68,7 +72,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId }: Dupli
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">
-          {selectedIds.size} élément{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+          {effectiveIds.length} élément{effectiveIds.length > 1 ? 's' : ''} sélectionné{effectiveIds.length > 1 ? 's' : ''}
         </p>
 
         {spacesLoading ? (
