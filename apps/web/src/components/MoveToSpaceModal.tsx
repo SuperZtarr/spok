@@ -9,13 +9,17 @@ interface MoveToSpaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentSpaceId: string;
+  itemIds?: string[];  // Si fourni, utilise ces IDs au lieu du selection store
 }
 
-export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId }: MoveToSpaceModalProps) {
+export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: MoveToSpaceModalProps) {
   const queryClient = useQueryClient();
   const { selectedIds, clearSelection } = useSelectionStore();
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
   const [includeChildren, setIncludeChildren] = useState(true);
+
+  // Utiliser les itemIds en prop si fournis, sinon le selection store
+  const effectiveIds = itemIds || Array.from(selectedIds);
 
   const { data: spaces, isLoading: spacesLoading } = useQuery({
     queryKey: ['spaces'],
@@ -26,7 +30,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId }: MoveToSpac
   const bulkMoveMutation = useMutation({
     mutationFn: () =>
       itemsApi.bulkMove(currentSpaceId, {
-        itemIds: Array.from(selectedIds),
+        itemIds: effectiveIds,
         targetSpaceId: selectedSpaceId,
         includeChildren,
       }),
@@ -35,7 +39,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId }: MoveToSpac
       queryClient.invalidateQueries({ queryKey: ['items', selectedSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', currentSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', selectedSpaceId] });
-      clearSelection();
+      if (!itemIds) clearSelection();
       onClose();
     },
   });
@@ -64,7 +68,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId }: MoveToSpac
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">
-          {selectedIds.size} élément{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+          {effectiveIds.length} élément{effectiveIds.length > 1 ? 's' : ''} sélectionné{effectiveIds.length > 1 ? 's' : ''}
         </p>
 
         {spacesLoading ? (
