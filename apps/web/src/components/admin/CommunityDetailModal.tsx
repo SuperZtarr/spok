@@ -33,6 +33,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
   // Info editing
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editIsPublic, setEditIsPublic] = useState(false);
   const [ownerEmail, setOwnerEmail] = useState('');
 
   // Add member
@@ -56,6 +57,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     if (community) {
       setEditName(community.name);
       setEditDescription(community.description || '');
+      setEditIsPublic(community.isPublic);
     }
   }, [community]);
 
@@ -74,7 +76,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   // Create community
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string; ownerEmail?: string }) =>
+    mutationFn: (data: { name: string; description?: string; ownerEmail?: string; isPublic?: boolean }) =>
       adminApi.communities.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
@@ -85,7 +87,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   // Update community
   const updateMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string }) =>
+    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean }) =>
       adminApi.communities.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'community', communityId] });
@@ -150,13 +152,15 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
       name: editName,
       description: editDescription || undefined,
       ownerEmail: ownerEmail || undefined,
+      isPublic: editIsPublic,
     });
   };
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string } = {};
+    const updates: { name?: string; description?: string; isPublic?: boolean } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
+    if (editIsPublic !== community?.isPublic) updates.isPublic = editIsPublic;
     if (Object.keys(updates).length > 0) {
       updateMutation.mutate(updates);
     }
@@ -164,7 +168,8 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   const hasInfoChanges = community && (
     editName !== community.name ||
-    editDescription !== (community.description || '')
+    editDescription !== (community.description || '') ||
+    editIsPublic !== community.isPublic
   );
 
   const handleAddMember = (email: string) => {
@@ -236,6 +241,19 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
             />
           </div>
 
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="createIsPublic"
+              checked={editIsPublic}
+              onChange={(e) => setEditIsPublic(e.target.checked)}
+              className="rounded border-border"
+            />
+            <label htmlFor="createIsPublic" className="text-sm">
+              Communauté publique (visible et accessible à tous)
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Proprietaire (email)</label>
             <Input
@@ -291,6 +309,18 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder="Description (optionnel)"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editIsPublic"
+                  checked={editIsPublic}
+                  onChange={(e) => setEditIsPublic(e.target.checked)}
+                  className="rounded border-border"
+                />
+                <label htmlFor="editIsPublic" className="text-sm">
+                  Communauté publique (visible et accessible à tous)
+                </label>
               </div>
               <div className="text-sm text-muted-foreground">
                 Cree le {new Date(community.createdAt).toLocaleDateString('fr-FR')}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -11,6 +11,7 @@ interface AdminCommunity {
   id: string;
   name: string;
   description?: string;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
   memberCount: number;
@@ -117,6 +118,7 @@ export function CommunitiesPage() {
                 <tr>
                   <SortHeader label="Nom" column="name" />
                   <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Visibilité</th>
                   <SortHeader label="Membres" column="members" />
                   <SortHeader label="Espaces" column="spaces" />
                   <SortHeader label="Date creation" column="createdAt" />
@@ -134,6 +136,16 @@ export function CommunitiesPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {community.description || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                        community.isPublic
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                        {community.isPublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        {community.isPublic ? 'Publique' : 'Privée'}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
@@ -167,7 +179,7 @@ export function CommunitiesPage() {
                 ))}
                 {sortedCommunities.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                       Aucune communaute trouvee
                     </td>
                   </tr>
