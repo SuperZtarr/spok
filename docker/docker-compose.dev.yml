@@ -23,27 +23,31 @@ services:
       dockerfile: docker/Dockerfile.api.dev
     container_name: spok-api-dev
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
+      # Surcharger DATABASE_URL pour le réseau Docker interne
       DATABASE_URL: postgresql://spok:spok@postgres:5432/spok?schema=public
       API_PORT: "3001"
       API_HOST: "0.0.0.0"
-      JWT_SECRET: "dev-secret-change-in-production"
-      JWT_REFRESH_SECRET: "dev-refresh-secret-change-in-production"
       CORS_ORIGIN: "http://localhost:3000"
       NODE_ENV: development
-      # Debug Node.js
-      NODE_OPTIONS: "--inspect=0.0.0.0:9229"
     ports:
       - "3001:3001"
-      - "9229:9229"  # Port debug Node.js
     volumes:
       # Monter le code source pour hot reload
       - ../apps/api/src:/app/apps/api/src:ro
       - ../packages/shared/src:/app/packages/shared/src:ro
-      - ../packages/database/prisma:/app/packages/database/prisma:ro
+      - ../packages/database/prisma:/app/packages/database/prisma
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   web:
     build:
@@ -53,13 +57,15 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: "http://localhost:3001"
+      VITE_API_PROXY_TARGET: "http://api:3001"
       VITE_DEV_MODE: "true"
     ports:
       - "3000:3000"
     volumes:
-      # Monter le code source pour hot reload
+      # Monter le code source pour hot reload (Vite HMR)
       - ../apps/web/src:/app/apps/web/src:ro
       - ../apps/web/index.html:/app/apps/web/index.html:ro
+      - ../apps/web/public:/app/apps/web/public:ro
       - ../packages/shared/src:/app/packages/shared/src:ro
     depends_on:
       - api

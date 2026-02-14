@@ -2,6 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// En Docker, le proxy pointe vers le service "api" du réseau Docker
+// En local, il pointe vers localhost:3001
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -15,10 +19,15 @@ export default defineConfig({
     strictPort: true, // Ne pas chercher un autre port si 3000 est occupé
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: apiProxyTarget,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+    },
+    watch: {
+      // Polling nécessaire pour les volumes Docker sur Windows
+      usePolling: true,
+      interval: 1000,
     },
   },
 });
