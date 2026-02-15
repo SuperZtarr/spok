@@ -32,6 +32,7 @@ interface DashboardMindMapViewProps {
 }
 
 interface TreeDatum {
+  [key: string]: unknown;
   id: string;
   name: string;
   type: 'central' | 'community' | 'personal-group' | 'independent-group' | 'space';
@@ -368,7 +369,7 @@ function DashboardMindMapInner({
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    const data = node.data as TreeDatum;
+    const data = node.data as unknown as TreeDatum;
     if (data.type === 'space' && data.entityId) {
       navigate(`/spaces/${data.entityId}`);
     } else if (data.type === 'community' && data.entityId) {
