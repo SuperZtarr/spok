@@ -46,7 +46,7 @@ model Space {
 
   // Hiérarchie d'espaces
   parentId  String?
-  parent    Space?  @relation("SpaceHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  parent    Space?  @relation("SpaceHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Space[] @relation("SpaceHierarchy")
 
   memberships SpaceMembership[]
@@ -259,17 +259,19 @@ model AuditLog {
   action    String
   entity    String
   entityId  String
-  spaceId   String
+  spaceId   String?
+  batchId   String?
   changes   Json?
   userId    String
   createdAt DateTime @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id])
+  space Space? @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
   @@index([entity, entityId])
   @@index([userId])
   @@index([spaceId, createdAt])
+  @@index([batchId])
   @@map("audit_logs")
 }
 

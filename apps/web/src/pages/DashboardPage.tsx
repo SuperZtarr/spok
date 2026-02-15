@@ -13,6 +13,7 @@ import type { SpaceWithRole } from '@spok/shared';
 import { GraphView } from '../components/views/GraphView';
 import { SunburstView } from '../components/views/SunburstView';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -46,7 +47,7 @@ function SpaceCardWithChildren({
   node: SpaceTreeNode;
   onJoin?: (id: string) => void;
   onLeave?: (id: string) => void;
-  onDelete?: (id: string, name: string) => void;
+  onDelete?: (id: string, deleteChildren: boolean) => void;
   communityRoles?: Map<string, string>;
   level?: number;
 }) {
@@ -81,7 +82,7 @@ function SpaceCardWithChildren({
 }
 
 // Reusable space card component
-function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: SpaceWithRole; onJoin?: (id: string) => void; onLeave?: (id: string) => void; onDelete?: (id: string, name: string) => void; canDelete?: boolean }) {
+function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: SpaceWithRole; onJoin?: (id: string) => void; onLeave?: (id: string) => void; onDelete?: (id: string, deleteChildren: boolean) => void; canDelete?: boolean }) {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isMember = space.isMember !== false;
@@ -197,17 +198,15 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: Spa
   );
 
   const deleteModal = canDelete && onDelete && (
-    <ConfirmModal
+    <SpaceDeleteConfirmModal
       isOpen={showDeleteModal}
       onClose={() => setShowDeleteModal(false)}
-      onConfirm={() => {
-        onDelete(space.id, space.name);
+      onConfirm={(deleteChildren) => {
+        onDelete(space.id, deleteChildren);
         setShowDeleteModal(false);
       }}
-      title="Supprimer l'espace"
-      message={`Vous êtes sur le point de supprimer l'espace « ${space.name} ».`}
-      warning="Cette action est irréversible. Tous les éléments, relations et contributions seront définitivement perdus."
-      confirmLabel="Supprimer"
+      spaceId={space.id}
+      spaceName={space.name}
     />
   );
 
@@ -300,14 +299,15 @@ export function DashboardPage() {
 
   // Delete space mutation
   const deleteSpaceMutation = useMutation({
-    mutationFn: spacesApi.delete,
+    mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren: boolean }) =>
+      spacesApi.delete(id, deleteChildren),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
     },
   });
 
-  const handleDeleteSpace = (spaceId: string) => {
-    deleteSpaceMutation.mutate(spaceId);
+  const handleDeleteSpace = (spaceId: string, deleteChildren: boolean) => {
+    deleteSpaceMutation.mutate({ id: spaceId, deleteChildren });
   };
 
   // Fetch communities for the select dropdown

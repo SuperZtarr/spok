@@ -453,6 +453,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const deleteChildren = request.query.deleteChildren === 'true';
+    const batchId = crypto.randomUUID();
 
     if (deleteChildren) {
       // Recursively collect all descendant IDs
@@ -472,9 +473,29 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const descendantIds = await collectDescendantIds(request.params.id);
 
       if (descendantIds.length > 0) {
+        // Fetch full data for each descendant BEFORE deleting (for audit)
+        const descendants = await fastify.prisma.item.findMany({
+          where: { id: { in: descendantIds } },
+        });
+
         await fastify.prisma.item.deleteMany({
           where: { id: { in: descendantIds } },
         });
+
+        // Audit log for EACH descendant individually
+        for (const descendant of descendants) {
+          await createAuditLog(fastify.prisma, {
+            action: 'DELETE',
+            entity: 'Item',
+            entityId: descendant.id,
+            userId: request.user.userId,
+            spaceId: request.params.spaceId,
+            batchId,
+            changes: {
+              before: serializeItemForAudit(descendant),
+            },
+          });
+        }
       }
     }
 
@@ -485,13 +506,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: request.params.id },
     });
 
-    // Audit log for DELETE
+    // Audit log for DELETE (parent item)
     await createAuditLog(fastify.prisma, {
       action: 'DELETE',
       entity: 'Item',
       entityId: item.id,
       userId: request.user.userId,
       spaceId: request.params.spaceId,
+      batchId: deleteChildren ? batchId : undefined,
       changes: {
         before: beforeState,
       },

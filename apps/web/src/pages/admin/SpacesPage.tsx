@@ -6,6 +6,7 @@ import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { SpaceDetailModal } from '../../components/admin/SpaceDetailModal';
+import { SpaceDeleteConfirmModal } from '../../components/SpaceDeleteConfirmModal';
 import { useSort } from '../../hooks/useSort';
 
 const anomalyLabels: Record<string, string> = {
@@ -59,22 +60,19 @@ export function SpacesPage() {
     setSearchParams({});
   };
 
+  const [spaceToDelete, setSpaceToDelete] = useState<AdminSpace | null>(null);
+
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => adminApi.spaces.delete(id),
+    mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren: boolean }) =>
+      adminApi.spaces.delete(id, deleteChildren),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
+      setSpaceToDelete(null);
     },
   });
 
-  const handleDelete = async (space: AdminSpace) => {
-    const message =
-      space.type === 'PERSONAL'
-        ? `Attention: Supprimer l'espace personnel "${space.name}" ? Cette action est irreversible et supprimera tous les elements de cet espace.`
-        : `Supprimer l'espace "${space.name}" ? Cette action est irreversible.`;
-
-    if (confirm(message)) {
-      deleteMutation.mutate(space.id);
-    }
+  const handleDelete = (space: AdminSpace) => {
+    setSpaceToDelete(space);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -265,6 +263,20 @@ export function SpacesPage() {
         <SpaceDetailModal
           spaceId={selectedSpaceId}
           onClose={() => setSelectedSpaceId(null)}
+        />
+      )}
+
+      {spaceToDelete && (
+        <SpaceDeleteConfirmModal
+          isOpen={!!spaceToDelete}
+          onClose={() => setSpaceToDelete(null)}
+          onConfirm={(deleteChildren) => {
+            deleteMutation.mutate({ id: spaceToDelete.id, deleteChildren });
+          }}
+          spaceId={spaceToDelete.id}
+          spaceName={spaceToDelete.name}
+          isPending={deleteMutation.isPending}
+          isAdmin
         />
       )}
     </div>
