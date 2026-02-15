@@ -1,17 +1,20 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, Users, FolderKanban, Plus, Trash2, Loader2, Save, Camera, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, Plus, Trash2, Loader2, Save, Camera, ImageIcon } from 'lucide-react';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
+import { useAuthStore } from '../stores/auth';
 
 export function CommunitySettingsPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -24,13 +27,6 @@ export function CommunitySettingsPage() {
   const { data: community, isLoading: communityLoading } = useQuery({
     queryKey: ['community', communityId],
     queryFn: () => communitiesApi.get(communityId!),
-    enabled: !!communityId,
-  });
-
-  // Fetch community members
-  const { data: members } = useQuery({
-    queryKey: ['community', communityId, 'members'],
-    queryFn: () => communitiesApi.getMembers(communityId!),
     enabled: !!communityId,
   });
 
@@ -265,7 +261,7 @@ export function CommunitySettingsPage() {
                 )}
                 <div>
                   <span className="text-muted-foreground">Membres:</span>{' '}
-                  <span className="font-medium">{members?.length || 0}</span>
+                  <span className="font-medium">{community.memberCount || 0}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Espaces:</span>{' '}
@@ -467,32 +463,15 @@ export function CommunitySettingsPage() {
         </div>
 
         {/* Members section */}
-        <div className="bg-card border rounded-lg p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5" />
-            Membres ({members?.length || 0})
-          </h2>
-
-          {members && members.length > 0 ? (
-            <div className="border border-border rounded-lg divide-y divide-border">
-              {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3">
-                  <div>
-                    <div className="font-medium">{member.name}</div>
-                    <div className="text-xs text-muted-foreground">{member.email}</div>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {member.role === 'OWNER' ? 'Propriétaire' : member.role === 'ADMIN' ? 'Admin' : 'Membre'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Aucun membre.
-            </p>
-          )}
-        </div>
+        {user && (
+          <div className="bg-card border rounded-lg p-6">
+            <CommunityMembersManager
+              communityId={communityId!}
+              currentUserRole={community.role || 'MEMBER'}
+              currentUserId={user.id}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
