@@ -82,7 +82,11 @@ function SpaceTreeItem({
           to={`/spaces/${node.id}`}
           className="flex items-center gap-2 flex-1 min-w-0"
         >
-          <FolderKanban className="w-4 h-4 flex-shrink-0" />
+          {node.avatarUrl ? (
+            <img src={node.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <FolderKanban className="w-4 h-4 flex-shrink-0" />
+          )}
           <span className="truncate">{node.name}</span>
         </Link>
       </div>
@@ -324,7 +328,11 @@ export function Layout() {
                     : 'hover:bg-accent'
                 }`}
               >
-                <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                {space.avatarUrl ? (
+                  <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                )}
                 <span className="truncate">{space.name}</span>
               </Link>
             ))}

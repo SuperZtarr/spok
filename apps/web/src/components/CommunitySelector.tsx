@@ -83,7 +83,11 @@ export function CommunitySelector() {
       >
         {currentCommunity ? (
           <>
-            <Building2 className="w-4 h-4 flex-shrink-0" />
+            {currentCommunity.avatarUrl ? (
+              <img src={currentCommunity.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <Building2 className="w-4 h-4 flex-shrink-0" />
+            )}
             <span className="truncate flex-1 text-left">{currentCommunity.name}</span>
           </>
         ) : (
@@ -122,7 +126,11 @@ export function CommunitySelector() {
                     onClick={() => handleSelect(community)}
                     className="flex items-center gap-2 flex-1 text-left"
                   >
-                    <Building2 className="w-4 h-4" />
+                    {community.avatarUrl ? (
+                      <img src={community.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <Building2 className="w-4 h-4" />
+                    )}
                     <span className="truncate">{community.name}</span>
                     {community.isPublic && (
                       <span title="Publique"><Eye className="w-3 h-3 text-muted-foreground" /></span>

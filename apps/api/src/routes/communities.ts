@@ -1,6 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { CommunityRole } from '@spok/shared';
+import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
+
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const updateCommunitySchema = z.object({
   name: z.string().min(1).optional(),
@@ -487,4 +490,156 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       };
     }
   );
+
+  // Upload community avatar
+  fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+    const membership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+      include: { community: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    const file = await request.file();
+    if (!file) return reply.badRequest('Aucun fichier envoyé');
+    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
+      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+    }
+
+    const buffer = await file.toBuffer();
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
+    }
+
+    const processed = await processAvatar(buffer);
+    let avatarUrl: string;
+
+    if (isR2Configured()) {
+      if (membership.community.avatarUrl?.startsWith('http')) {
+        await deleteFileFromR2(membership.community.avatarUrl);
+      }
+      avatarUrl = await uploadEntityImage(processed, `communities/${request.params.id}/avatar`);
+    } else {
+      avatarUrl = `data:image/webp;base64,${processed.toString('base64')}`;
+    }
+
+    const community = await fastify.prisma.community.update({
+      where: { id: request.params.id },
+      data: { avatarUrl },
+      select: { avatarUrl: true },
+    });
+
+    return { avatarUrl: community.avatarUrl };
+  });
+
+  // Delete community avatar
+  fastify.delete<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+    const membership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+      include: { community: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    if (membership.community.avatarUrl?.startsWith('http')) {
+      await deleteFileFromR2(membership.community.avatarUrl);
+    }
+
+    await fastify.prisma.community.update({
+      where: { id: request.params.id },
+      data: { avatarUrl: null },
+    });
+
+    return { success: true };
+  });
+
+  // Upload community cover
+  fastify.post<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+    const membership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+      include: { community: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    const file = await request.file();
+    if (!file) return reply.badRequest('Aucun fichier envoyé');
+    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
+      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+    }
+
+    const buffer = await file.toBuffer();
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
+    }
+
+    const processed = await processCover(buffer);
+    let coverUrl: string;
+
+    if (isR2Configured()) {
+      if (membership.community.coverUrl?.startsWith('http')) {
+        await deleteFileFromR2(membership.community.coverUrl);
+      }
+      coverUrl = await uploadEntityImage(processed, `communities/${request.params.id}/cover`);
+    } else {
+      coverUrl = `data:image/webp;base64,${processed.toString('base64')}`;
+    }
+
+    const community = await fastify.prisma.community.update({
+      where: { id: request.params.id },
+      data: { coverUrl },
+      select: { coverUrl: true },
+    });
+
+    return { coverUrl: community.coverUrl };
+  });
+
+  // Delete community cover
+  fastify.delete<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+    const membership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+      include: { community: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    if (membership.community.coverUrl?.startsWith('http')) {
+      await deleteFileFromR2(membership.community.coverUrl);
+    }
+
+    await fastify.prisma.community.update({
+      where: { id: request.params.id },
+      data: { coverUrl: null },
+    });
+
+    return { success: true };
+  });
 };

@@ -36,6 +36,36 @@ export async function processImage(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+export async function processAvatar(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .resize(256, 256, { fit: 'cover' })
+    .webp({ quality: 80 })
+    .toBuffer();
+}
+
+export async function processCover(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .resize(1200, 400, { fit: 'cover', withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+}
+
+export async function uploadEntityImage(buffer: Buffer, keyPrefix: string): Promise<string> {
+  const client = getS3Client();
+  const key = `${keyPrefix}.webp`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: 'image/webp',
+    })
+  );
+
+  return `${R2_PUBLIC_URL}/${key}`;
+}
+
 export async function uploadImageToR2(buffer: Buffer, itemId: string): Promise<string> {
   const client = getS3Client();
   const key = `items/${itemId}/${Date.now()}.webp`;

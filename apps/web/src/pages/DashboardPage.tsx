@@ -88,11 +88,20 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: Spa
   const canLeave = isMember && space.role !== 'OWNER' && space.type !== 'PERSONAL';
 
   const cardContent = (
-    <Card className={`transition-colors h-full ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'}`}>
+    <Card className={`transition-colors h-full overflow-hidden ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'}`}>
+      {space.coverUrl && (
+        <div className="h-24 overflow-hidden">
+          <img src={space.coverUrl} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <FolderKanban className={`w-5 h-5 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />
+            {space.avatarUrl ? (
+              <img src={space.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <FolderKanban className={`w-5 h-5 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />
+            )}
             <CardTitle className="text-lg">{space.name}</CardTitle>
           </div>
           {isMember ? (
@@ -577,7 +586,11 @@ export function DashboardPage() {
               return (
                 <section key={group.communityId}>
                   <div className="flex items-center gap-2 mb-4">
-                    <Building2 className="w-5 h-5 text-muted-foreground" />
+                    {group.spaces[0]?.community?.avatarUrl ? (
+                      <img src={group.spaces[0].community.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                    ) : (
+                      <Building2 className="w-5 h-5 text-muted-foreground" />
+                    )}
                     <h2 className="text-lg font-semibold">{group.communityName}</h2>
                     <Badge variant="outline" className="ml-1">{group.spaces.length}</Badge>
                   </div>

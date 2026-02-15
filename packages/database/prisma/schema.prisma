@@ -35,6 +35,8 @@ model Space {
   name        String
   type        SpaceType
   communityId String?
+  avatarUrl   String?
+  coverUrl    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -72,6 +74,8 @@ model Community {
   name        String
   description String?
   isPublic    Boolean  @default(false)
+  avatarUrl   String?
+  coverUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

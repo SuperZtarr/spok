@@ -6,8 +6,10 @@ export interface Space {
   name: string;
   type: SpaceType;
   communityId?: string | null;
-  community?: { id: string; name: string } | null;
+  community?: { id: string; name: string; avatarUrl?: string | null } | null;
   parentId?: string | null;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

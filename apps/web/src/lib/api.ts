@@ -423,6 +423,50 @@ export const spacesApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  uploadAvatar: async (id: string, file: File): Promise<{ avatarUrl: string }> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/spaces/${id}/avatar`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload avatar', error);
+    }
+
+    return response.json();
+  },
+
+  deleteAvatar: (id: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/avatar`, { method: 'DELETE' }),
+
+  uploadCover: async (id: string, file: File): Promise<{ coverUrl: string }> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/spaces/${id}/cover`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload couverture', error);
+    }
+
+    return response.json();
+  },
+
+  deleteCover: (id: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/cover`, { method: 'DELETE' }),
 };
 
 // Communities
@@ -473,6 +517,50 @@ export const communitiesApi = {
     fetchApi<{ success: boolean }>(`/communities/${id}/leave`, {
       method: 'POST',
     }),
+
+  uploadAvatar: async (id: string, file: File): Promise<{ avatarUrl: string }> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/communities/${id}/avatar`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload avatar', error);
+    }
+
+    return response.json();
+  },
+
+  deleteAvatar: (id: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/avatar`, { method: 'DELETE' }),
+
+  uploadCover: async (id: string, file: File): Promise<{ coverUrl: string }> => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/communities/${id}/cover`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.message || 'Erreur upload couverture', error);
+    }
+
+    return response.json();
+  },
+
+  deleteCover: (id: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/cover`, { method: 'DELETE' }),
 };
 
 // Items

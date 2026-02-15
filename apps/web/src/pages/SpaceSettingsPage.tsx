@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, X } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
@@ -24,6 +25,41 @@ export function SpaceSettingsPage() {
   const checkUsageMutation = useCheckStatusUsage(spaceId!);
   const updateSpaceMutation = useUpdateSpace(spaceId!);
   const deleteSpaceMutation = useDeleteSpace();
+  const queryClient = useQueryClient();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Image mutations
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (file: File) => spacesApi.uploadAvatar(spaceId!, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const deleteAvatarMutation = useMutation({
+    mutationFn: () => spacesApi.deleteAvatar(spaceId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const uploadCoverMutation = useMutation({
+    mutationFn: (file: File) => spacesApi.uploadCover(spaceId!, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const deleteCoverMutation = useMutation({
+    mutationFn: () => spacesApi.deleteCover(spaceId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
 
   // Fetch communities user belongs to
   const { data: communities } = useQuery({
@@ -306,6 +342,84 @@ export function SpaceSettingsPage() {
             </div>
           </div>
         )}
+
+        {/* Images */}
+        <div className="bg-card border rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <ImageIcon className="w-5 h-5" />
+            Images
+          </h2>
+          <div className="space-y-6">
+            {/* Avatar */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Avatar</label>
+              <div className="flex items-center gap-4">
+                <div
+                  className="relative group cursor-pointer"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  {space?.avatarUrl ? (
+                    <img
+                      src={space.avatarUrl}
+                      alt="Avatar de l'espace"
+                      className="w-16 h-16 rounded-full object-cover border border-border"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadAvatarMutation.isPending ? (
+                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs text-muted-foreground">
+                    256 × 256 px, rond. Cliquez pour modifier.
+                  </p>
+                  {space?.avatarUrl && (
+                    <button
+                      onClick={() => deleteAvatarMutation.mutate()}
+                      disabled={deleteAvatarMutation.isPending}
+                      className="text-xs text-destructive hover:underline self-start"
+                    >
+                      Supprimer l'avatar
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadAvatarMutation.mutate(file);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Cover */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Image de couverture</label>
+              <p className="text-xs text-muted-foreground mb-2">
+                1200 × 400 px recommandé. Affichée en bandeau sur la carte du Dashboard.
+              </p>
+              <ImageUploadZone
+                currentUrl={space?.coverUrl}
+                onUpload={(file) => uploadCoverMutation.mutate(file)}
+                onRemove={() => deleteCoverMutation.mutate()}
+                isUploading={uploadCoverMutation.isPending}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Statuses */}
         <div className="bg-card border rounded-lg p-6">

@@ -5,6 +5,9 @@ import { itemsRoutes } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
+import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
+
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const createSpaceSchema = z.object({
   name: z.string().min(1),
@@ -76,6 +79,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
               select: {
                 id: true,
                 name: true,
+                avatarUrl: true,
               },
             },
             parent: {
@@ -681,4 +685,157 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   );
+
+  // Upload space avatar
+  fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+      include: { space: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    const file = await request.file();
+    if (!file) return reply.badRequest('Aucun fichier envoyé');
+    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
+      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+    }
+
+    const buffer = await file.toBuffer();
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
+    }
+
+    const processed = await processAvatar(buffer);
+    let avatarUrl: string;
+
+    if (isR2Configured()) {
+      // Delete old avatar from R2 if exists
+      if (membership.space.avatarUrl?.startsWith('http')) {
+        await deleteFileFromR2(membership.space.avatarUrl);
+      }
+      avatarUrl = await uploadEntityImage(processed, `spaces/${request.params.id}/avatar`);
+    } else {
+      avatarUrl = `data:image/webp;base64,${processed.toString('base64')}`;
+    }
+
+    const space = await fastify.prisma.space.update({
+      where: { id: request.params.id },
+      data: { avatarUrl },
+      select: { avatarUrl: true },
+    });
+
+    return { avatarUrl: space.avatarUrl };
+  });
+
+  // Delete space avatar
+  fastify.delete<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+      include: { space: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    if (membership.space.avatarUrl?.startsWith('http')) {
+      await deleteFileFromR2(membership.space.avatarUrl);
+    }
+
+    await fastify.prisma.space.update({
+      where: { id: request.params.id },
+      data: { avatarUrl: null },
+    });
+
+    return { success: true };
+  });
+
+  // Upload space cover
+  fastify.post<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+      include: { space: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    const file = await request.file();
+    if (!file) return reply.badRequest('Aucun fichier envoyé');
+    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
+      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+    }
+
+    const buffer = await file.toBuffer();
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
+    }
+
+    const processed = await processCover(buffer);
+    let coverUrl: string;
+
+    if (isR2Configured()) {
+      if (membership.space.coverUrl?.startsWith('http')) {
+        await deleteFileFromR2(membership.space.coverUrl);
+      }
+      coverUrl = await uploadEntityImage(processed, `spaces/${request.params.id}/cover`);
+    } else {
+      coverUrl = `data:image/webp;base64,${processed.toString('base64')}`;
+    }
+
+    const space = await fastify.prisma.space.update({
+      where: { id: request.params.id },
+      data: { coverUrl },
+      select: { coverUrl: true },
+    });
+
+    return { coverUrl: space.coverUrl };
+  });
+
+  // Delete space cover
+  fastify.delete<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+      include: { space: true },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      return reply.forbidden('Permissions insuffisantes');
+    }
+
+    if (membership.space.coverUrl?.startsWith('http')) {
+      await deleteFileFromR2(membership.space.coverUrl);
+    }
+
+    await fastify.prisma.space.update({
+      where: { id: request.params.id },
+      data: { coverUrl: null },
+    });
+
+    return { success: true };
+  });
 };
