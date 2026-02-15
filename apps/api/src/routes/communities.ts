@@ -6,6 +6,12 @@ import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializ
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+const createCommunitySchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  isPublic: z.boolean().optional(),
+});
+
 const updateCommunitySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
@@ -20,6 +26,37 @@ const inviteSchema = z.object({
 export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // All routes require authentication
   fastify.addHook('preHandler', fastify.authenticate);
+
+  // Create a new community
+  fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', async (request, reply) => {
+    const body = createCommunitySchema.parse(request.body);
+
+    const community = await fastify.prisma.community.create({
+      data: {
+        name: body.name,
+        description: body.description,
+        isPublic: body.isPublic ?? false,
+        memberships: {
+          create: {
+            userId: request.user.userId,
+            role: 'OWNER',
+          },
+        },
+      },
+      include: {
+        _count: {
+          select: { memberships: true, spaces: true },
+        },
+      },
+    });
+
+    return reply.status(201).send({
+      ...community,
+      role: 'OWNER' as CommunityRole,
+      memberCount: community._count.memberships,
+      spaceCount: community._count.spaces,
+    });
+  });
 
   // List user's communities
   fastify.get('/', async (request) => {
