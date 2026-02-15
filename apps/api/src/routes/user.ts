@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';
 import sharp from 'sharp';
-import { generateTokens } from './auth.js';
+import { generateTokens, sendVerificationEmail } from './auth.js';
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -56,23 +56,35 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    const updateData: { name?: string; email?: string } = {};
+    const updateData: { name?: string; email?: string; emailVerified?: boolean } = {};
     if (data.name) updateData.name = data.name;
     if (data.email) updateData.email = data.email;
+
+    // If email is changing, reset verification
+    const isEmailChanging = data.email && data.email !== request.user.email;
+    if (isEmailChanging) {
+      updateData.emailVerified = false;
+    }
 
     const user = await fastify.prisma.user.update({
       where: { id: request.user.userId },
       data: updateData,
-      select: { name: true, email: true },
+      select: { name: true, email: true, emailVerified: true },
     });
 
-    // If email changed, regenerate tokens (JWT contains email)
-    if (data.email && data.email !== request.user.email) {
+    // If email changed, regenerate tokens and send verification email
+    if (isEmailChanging) {
       const tokens = await generateTokens(fastify, request.user.userId, user.email);
-      return { name: user.name, email: user.email, tokens };
+
+      // Send verification email for the new address (fire-and-forget)
+      sendVerificationEmail(fastify, request.user.userId, user.email, user.name).catch((error) => {
+        fastify.log.error(error, 'Failed to send verification email after email change');
+      });
+
+      return { name: user.name, email: user.email, emailVerified: user.emailVerified, tokens };
     }
 
-    return { name: user.name, email: user.email };
+    return { name: user.name, email: user.email, emailVerified: user.emailVerified };
   });
 
   // PATCH /user/password — change password

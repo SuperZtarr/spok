@@ -10,8 +10,9 @@ datasource db {
 // Utilisateur
 model User {
   id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
+  email         String     @unique
+  emailVerified Boolean    @default(false)
+  passwordHash  String
   name         String
   avatarUrl    String?
   globalRole        GlobalRole @default(USER)
@@ -24,7 +25,8 @@ model User {
   createdItems           Item[]
   contributions          Contribution[]
   auditLogs              AuditLog[]
-  passwordResetTokens    PasswordResetToken[]
+  passwordResetTokens        PasswordResetToken[]
+  emailVerificationTokens    EmailVerificationToken[]
 
   @@map("users")
 }
@@ -281,6 +283,21 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// Email verification tokens
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 // Password reset tokens

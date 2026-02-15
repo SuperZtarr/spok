@@ -25,6 +25,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
@@ -122,6 +123,7 @@ export default function App() {
           </PublicRoute>
         }
       />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route
         path="/"
         element={<HomeRoute />}

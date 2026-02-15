@@ -21,6 +21,7 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 export interface AuthUser {
   id: string;
   email: string;
+  emailVerified: boolean;
   name: string;
   globalRole: GlobalRole;
   themePreference: ThemePreference;
@@ -49,6 +50,7 @@ export interface JWTPayload {
 export interface AdminUser {
   id: string;
   email: string;
+  emailVerified: boolean;
   name: string;
   globalRole: GlobalRole;
   createdAt: string;

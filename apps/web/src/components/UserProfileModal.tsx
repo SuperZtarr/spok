@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X, Lock } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X, Lock, CheckCircle } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser } from '@spok/shared';
@@ -96,7 +96,10 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     setSavingEmail(true);
     try {
       const result = await userApi.updateProfile({ email: trimmed });
-      updateUser({ email: result.email });
+      updateUser({
+        email: result.email,
+        ...(result.emailVerified !== undefined && { emailVerified: result.emailVerified }),
+      });
       if (result.tokens) {
         updateTokens(result.tokens.accessToken, result.tokens.refreshToken);
       }
@@ -259,6 +262,15 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               <div className="flex items-center gap-1 group/email flex-1 min-w-0">
                 <span className="text-muted-foreground flex-shrink-0">Email :</span>
                 <span className="font-medium truncate">{user.email}</span>
+                {user.emailVerified ? (
+                  <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-0.5 flex-shrink-0" title="Email vérifié">
+                    <CheckCircle className="w-3 h-3" />
+                  </span>
+                ) : (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0" title="Email non vérifié">
+                    Non vérifié
+                  </span>
+                )}
                 <button
                   onClick={() => { setEmailValue(user.email); setEditingEmail(true); }}
                   className="p-1 text-muted-foreground opacity-0 group-hover/email:opacity-100 hover:bg-accent rounded transition-opacity flex-shrink-0"

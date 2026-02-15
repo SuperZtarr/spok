@@ -12,6 +12,7 @@ import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
 import { CommunitySelector } from './CommunitySelector';
 import { GlobalSearch } from './GlobalSearch';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
 import type { SpaceWithRole } from '@spok/shared';
 
 interface SpaceTreeNode extends SpaceWithRole {
@@ -468,6 +469,7 @@ export function Layout() {
 
         {/* Page content */}
         <main className="flex-1 flex flex-col min-h-0 overflow-auto">
+          <EmailVerificationBanner />
           <Outlet />
         </main>
       </div>

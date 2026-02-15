@@ -75,11 +75,17 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const authUser: AuthUser = {
       id: user.id,
       email: user.email,
+      emailVerified: false,
       name: user.name,
       globalRole: user.globalRole,
       themePreference: user.themePreference as AuthUser['themePreference'],
       avatarUrl: user.avatarUrl ?? undefined,
     };
+
+    // Send verification email (fire-and-forget)
+    sendVerificationEmail(fastify, user.id, user.email, user.name).catch((error) => {
+      fastify.log.error(error, 'Failed to send verification email');
+    });
 
     const response: AuthResponse = {
       user: authUser,
@@ -111,6 +117,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const authUser: AuthUser = {
       id: user.id,
       email: user.email,
+      emailVerified: user.emailVerified,
       name: user.name,
       globalRole: user.globalRole,
       themePreference: user.themePreference as AuthUser['themePreference'],
@@ -170,6 +177,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       select: {
         id: true,
         email: true,
+        emailVerified: true,
         name: true,
         globalRole: true,
         themePreference: true,
@@ -288,7 +296,114 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true, message: 'Mot de passe mis à jour avec succès' };
   });
+
+  // Verify email
+  const verifyEmailSchema = z.object({
+    token: z.string(),
+  });
+
+  fastify.post<{ Body: z.infer<typeof verifyEmailSchema> }>('/verify-email', async (request, reply) => {
+    const { token } = verifyEmailSchema.parse(request.body);
+
+    const verificationToken = await fastify.prisma.emailVerificationToken.findUnique({
+      where: { token },
+    });
+
+    if (!verificationToken) {
+      return reply.badRequest('Token invalide ou expiré');
+    }
+
+    if (verificationToken.expiresAt < new Date()) {
+      await fastify.prisma.emailVerificationToken.delete({
+        where: { id: verificationToken.id },
+      });
+      return reply.badRequest('Token invalide ou expiré');
+    }
+
+    if (verificationToken.used) {
+      return reply.badRequest('Ce lien a déjà été utilisé');
+    }
+
+    // Mark email as verified
+    await fastify.prisma.user.update({
+      where: { id: verificationToken.userId },
+      data: { emailVerified: true },
+    });
+
+    // Mark token as used
+    await fastify.prisma.emailVerificationToken.update({
+      where: { id: verificationToken.id },
+      data: { used: true },
+    });
+
+    return { success: true, message: 'Email vérifié avec succès' };
+  });
+
+  // Resend verification email
+  fastify.post('/resend-verification', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: request.user.userId },
+    });
+
+    if (!user) {
+      return reply.notFound('Utilisateur non trouvé');
+    }
+
+    if (user.emailVerified) {
+      return reply.badRequest('Votre email est déjà vérifié');
+    }
+
+    try {
+      await sendVerificationEmail(fastify, user.id, user.email, user.name);
+    } catch (error) {
+      fastify.log.error(error, 'Failed to send verification email');
+      return reply.internalServerError("Erreur lors de l'envoi de l'email");
+    }
+
+    return { success: true, message: 'Email de vérification envoyé' };
+  });
 };
+
+export async function sendVerificationEmail(
+  fastify: any,
+  userId: string,
+  email: string,
+  name: string
+): Promise<void> {
+  // Delete any existing verification tokens for this user
+  await fastify.prisma.emailVerificationToken.deleteMany({
+    where: { userId },
+  });
+
+  // Create verification token (24h expiry)
+  const token = randomBytes(32).toString('hex');
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 24);
+
+  await fastify.prisma.emailVerificationToken.create({
+    data: {
+      token,
+      userId,
+      expiresAt,
+    },
+  });
+
+  const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM || 'SPOK <noreply@resend.dev>',
+    to: email,
+    subject: 'Vérifiez votre adresse email - SPOK',
+    html: `
+      <h1>Bienvenue sur SPOK !</h1>
+      <p>Bonjour ${name},</p>
+      <p>Merci de vous être inscrit. Veuillez vérifier votre adresse email en cliquant sur le lien ci-dessous :</p>
+      <p><a href="${verifyUrl}">Vérifier mon email</a></p>
+      <p>Ce lien expire dans 24 heures.</p>
+      <p>Si vous n'avez pas créé de compte SPOK, ignorez cet email.</p>
+    `,
+  });
+}
 
 export async function generateTokens(
   fastify: any,

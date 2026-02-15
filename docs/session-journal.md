@@ -36,3 +36,14 @@
 - **Prod Railway** : push sur `origin/master` declenche le deploiement automatique.
 
 ---
+
+#### [2025-02-15] - Fix build Railway après unification ItemActionMenu
+
+**Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)
+**Actions réalisées :**
+- Supprimé l'import inutilisé `CheckSquare` dans `TypesView.tsx`
+- Supprimé l'import inutilisé `X` dans `SpaceSettingsPage.tsx`
+- Commit `1e97a24`, merge fast-forward dans master, push origin
+**État :** TERMINÉ
+
+---

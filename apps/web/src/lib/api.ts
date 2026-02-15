@@ -263,12 +263,24 @@ export const authApi = {
       body: JSON.stringify({ refreshToken }),
     }),
 
-  me: () => fetchApi<{ id: string; email: string; name: string; globalRole: GlobalRole; themePreference: ThemePreference; avatarUrl?: string }>('/auth/me'),
+  me: () => fetchApi<{ id: string; email: string; emailVerified: boolean; name: string; globalRole: GlobalRole; themePreference: ThemePreference; avatarUrl?: string }>('/auth/me'),
 
   logout: (refreshToken: string) =>
     fetchApi<{ success: boolean }>('/auth/logout', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
+    }),
+
+  verifyEmail: (token: string) =>
+    fetchApi<{ success: boolean; message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+
+  resendVerification: () =>
+    fetchApi<{ success: boolean; message: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({}),
     }),
 };
 
@@ -284,7 +296,7 @@ export const userApi = {
     }),
 
   updateProfile: (data: { name?: string; email?: string }) =>
-    fetchApi<{ name: string; email: string; tokens?: { accessToken: string; refreshToken: string } }>('/user/profile', {
+    fetchApi<{ name: string; email: string; emailVerified?: boolean; tokens?: { accessToken: string; refreshToken: string } }>('/user/profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
