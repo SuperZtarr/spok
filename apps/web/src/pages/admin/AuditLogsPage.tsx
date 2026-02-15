@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { History, Search, RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, ArrowUp, ArrowDown, Filter } from 'lucide-react';
+import { History, RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -44,7 +44,7 @@ export function AuditLogsPage() {
   const [batchFilter, setBatchFilter] = useState('');
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [showPurgeModal, setShowPurgeModal] = useState(false);
-  const [purgeDays, setPurgeDays] = useState(90);
+  const [purgeDays] = useState(90);
 
   const pageSize = 50;
 
@@ -206,20 +206,14 @@ export function AuditLogsPage() {
           value={entityFilter}
           onChange={(e) => { setEntityFilter(e.target.value); setPage(1); }}
           className="w-40"
-        >
-          {ENTITY_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+          options={ENTITY_OPTIONS}
+        />
         <Select
           value={actionFilter}
           onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
           className="w-48"
-        >
-          {ACTION_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+          options={ACTION_OPTIONS}
+        />
         <Input
           placeholder="Filtrer par batchId..."
           value={batchFilter}
@@ -255,7 +249,7 @@ export function AuditLogsPage() {
               </tr>
             </thead>
             <tbody>
-              {groupedLogs.map((group, idx) => {
+              {groupedLogs.map((group) => {
                 if (group.type === 'single') {
                   const log = group.log;
                   return (
