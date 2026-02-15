@@ -11,7 +11,7 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus, CheckSquare, FolderInput, Copy } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';

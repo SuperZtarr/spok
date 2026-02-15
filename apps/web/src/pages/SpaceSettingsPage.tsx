@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, X } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
