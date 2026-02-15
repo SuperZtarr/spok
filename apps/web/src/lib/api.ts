@@ -444,6 +444,17 @@ export const spacesApi = {
       body: JSON.stringify(data),
     }),
 
+  removeMember: (id: string, memberId: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/members/${memberId}`, {
+      method: 'DELETE',
+    }),
+
+  updateMemberRole: (id: string, memberId: string, role: string) =>
+    fetchApi<SpaceMember>(`/spaces/${id}/members/${memberId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+
   uploadAvatar: async (id: string, file: File): Promise<{ avatarUrl: string }> => {
     const token = localStorage.getItem('accessToken');
     const formData = new FormData();
@@ -492,6 +503,12 @@ export const spacesApi = {
 // Communities
 export const communitiesApi = {
   list: () => fetchApi<CommunityWithRole[]>('/communities'),
+
+  create: (data: CreateCommunityInput) =>
+    fetchApi<CommunityWithRole>('/communities', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   get: (id: string) => fetchApi<CommunityWithRole>(`/communities/${id}`),
 

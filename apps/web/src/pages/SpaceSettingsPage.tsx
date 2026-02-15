@@ -7,16 +7,19 @@ import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
+import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
+import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
 import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
 
 export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   const { data: space, isLoading: spaceLoading } = useSpace(spaceId!);
   const { data: referentielsData, isLoading: referentielsLoading } = useReferentiels(spaceId!);
@@ -420,6 +423,18 @@ export function SpaceSettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Members */}
+        {space?.type === 'GROUP' && user && (
+          <div className="bg-card border rounded-lg p-6">
+            <SpaceMembersManager
+              spaceId={spaceId!}
+              currentUserRole={space.role || 'VIEWER'}
+              currentUserId={user.id}
+              spaceType={space.type}
+            />
+          </div>
+        )}
 
         {/* Statuses */}
         <div className="bg-card border rounded-lg p-6">

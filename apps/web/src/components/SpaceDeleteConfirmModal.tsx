@@ -48,7 +48,7 @@ export function SpaceDeleteConfirmModal({
     }
   }, [isOpen, spaceId, isAdmin]);
 
-  const hasChildren = preview && (preview.childSpaces.length > 0 || preview.directItemCount > 0);
+  const _hasChildren = preview && (preview.childSpaces.length > 0 || preview.directItemCount > 0);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Supprimer l'espace "${spaceName}"`} size="small">

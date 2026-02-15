@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye, LogOut } from 'lucide-react';
+import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye, LogOut, Plus, Loader2 } from 'lucide-react';
 import { useCommunityStore } from '../stores/community';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useState, useRef, useEffect } from 'react';
@@ -13,6 +13,8 @@ export function CommunitySelector() {
   const { currentCommunity, setCurrentCommunity } = useCommunityStore();
   const [isOpen, setIsOpen] = useState(false);
   const [leaveTarget, setLeaveTarget] = useState<CommunityWithRole | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newCommunityName, setNewCommunityName] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: communities } = useQuery({
@@ -39,6 +41,18 @@ export function CommunitySelector() {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
       queryClient.invalidateQueries({ queryKey: ['communities-public'] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (name: string) => communitiesApi.create({ name }),
+    onSuccess: (community) => {
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      setNewCommunityName('');
+      setShowCreateForm(false);
+      setCurrentCommunity(community);
+      setIsOpen(false);
+      navigate(`/communities/${community.id}/settings`);
     },
   });
 
@@ -78,11 +92,7 @@ export function CommunitySelector() {
     }
   };
 
-  const hasContent = (communities && communities.length > 0) || (publicCommunities && publicCommunities.length > 0);
-
-  if (!hasContent) {
-    return null;
-  }
+  // Always show the selector — users can create communities even when none exist
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -179,6 +189,70 @@ export function CommunitySelector() {
                 </div>
               ))}
             </>
+          )}
+
+          <div className="border-t border-border my-1" />
+
+          {showCreateForm ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newCommunityName.trim()) {
+                  createMutation.mutate(newCommunityName.trim());
+                }
+              }}
+              className="px-3 py-2 space-y-2"
+            >
+              <input
+                type="text"
+                value={newCommunityName}
+                onChange={(e) => setNewCommunityName(e.target.value)}
+                placeholder="Nom de la communauté"
+                className="w-full px-2 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowCreateForm(false);
+                    setNewCommunityName('');
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={!newCommunityName.trim() || createMutation.isPending}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {createMutation.isPending ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Plus className="w-3 h-3" />
+                  )}
+                  Créer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setNewCommunityName('');
+                  }}
+                  className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-accent transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+              {createMutation.isError && (
+                <p className="text-xs text-destructive">Erreur lors de la création.</p>
+              )}
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center gap-2 w-full px-3 py-2 hover:bg-accent transition-colors text-sm text-primary"
+            >
+              <Plus className="w-4 h-4" />
+              Créer une communauté
+            </button>
           )}
 
           {publicCommunities && publicCommunities.length > 0 && (

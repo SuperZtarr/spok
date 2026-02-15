@@ -937,6 +937,113 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Remove member from space
+  fastify.delete<{ Params: { id: string; memberId: string } }>(
+    '/:id/members/:memberId',
+    async (request, reply) => {
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: {
+          userId_spaceId: {
+            userId: request.user.userId,
+            spaceId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership) {
+        return reply.notFound('Space not found');
+      }
+
+      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+        return reply.forbidden('Insufficient permissions');
+      }
+
+      const memberToRemove = await fastify.prisma.spaceMembership.findUnique({
+        where: { id: request.params.memberId },
+      });
+
+      if (!memberToRemove || memberToRemove.spaceId !== request.params.id) {
+        return reply.notFound('Member not found');
+      }
+
+      if (memberToRemove.role === 'OWNER') {
+        return reply.forbidden('Cannot remove the space owner');
+      }
+
+      if (memberToRemove.role === 'ADMIN' && membership.role !== 'OWNER') {
+        return reply.forbidden('Only the owner can remove admins');
+      }
+
+      await fastify.prisma.spaceMembership.delete({
+        where: { id: request.params.memberId },
+      });
+
+      return { success: true };
+    }
+  );
+
+  // Update member role in space
+  fastify.patch<{ Params: { id: string; memberId: string }; Body: { role: string } }>(
+    '/:id/members/:memberId',
+    async (request, reply) => {
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: {
+          userId_spaceId: {
+            userId: request.user.userId,
+            spaceId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership) {
+        return reply.notFound('Space not found');
+      }
+
+      if (membership.role !== 'OWNER') {
+        return reply.forbidden('Only the owner can change member roles');
+      }
+
+      const memberToUpdate = await fastify.prisma.spaceMembership.findUnique({
+        where: { id: request.params.memberId },
+      });
+
+      if (!memberToUpdate || memberToUpdate.spaceId !== request.params.id) {
+        return reply.notFound('Member not found');
+      }
+
+      if (memberToUpdate.role === 'OWNER') {
+        return reply.forbidden("Cannot change the owner's role");
+      }
+
+      if (request.body.role === 'OWNER') {
+        return reply.forbidden('Cannot promote to owner');
+      }
+
+      const updated = await fastify.prisma.spaceMembership.update({
+        where: { id: request.params.memberId },
+        data: { role: request.body.role as any },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      return {
+        id: updated.id,
+        userId: updated.userId,
+        email: updated.user.email,
+        name: updated.user.name,
+        role: updated.role,
+        joinedAt: updated.joinedAt,
+      };
+    }
+  );
+
   // Upload space avatar
   fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({
