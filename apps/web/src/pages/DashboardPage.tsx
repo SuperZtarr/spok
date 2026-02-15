@@ -12,6 +12,7 @@ import { Badge } from '../components/ui/Badge';
 import type { SpaceWithRole } from '@spok/shared';
 import { GraphView } from '../components/views/GraphView';
 import { SunburstView } from '../components/views/SunburstView';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -81,6 +82,8 @@ function SpaceCardWithChildren({
 
 // Reusable space card component
 function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: SpaceWithRole; onJoin?: (id: string) => void; onLeave?: (id: string) => void; onDelete?: (id: string, name: string) => void; canDelete?: boolean }) {
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isMember = space.isMember !== false;
   const canLeave = isMember && space.role !== 'OWNER' && space.type !== 'PERSONAL';
 
@@ -143,9 +146,7 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: Spa
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (window.confirm(`Quitter l'espace "${space.name}" ?`)) {
-                    onLeave(space.id);
-                  }
+                  setShowLeaveModal(true);
                 }}
               >
                 <LogOut className="w-3 h-3" />
@@ -158,9 +159,7 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: Spa
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (window.confirm(`Supprimer l'espace "${space.name}" ? Cette action est irréversible et supprimera tous ses éléments.`)) {
-                    onDelete(space.id, space.name);
-                  }
+                  setShowDeleteModal(true);
                 }}
               >
                 <Trash2 className="w-3 h-3" />
@@ -173,11 +172,41 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: Spa
     </Card>
   );
 
+  const leaveModal = canLeave && onLeave && (
+    <ConfirmModal
+      isOpen={showLeaveModal}
+      onClose={() => setShowLeaveModal(false)}
+      onConfirm={() => {
+        onLeave(space.id);
+        setShowLeaveModal(false);
+      }}
+      title="Quitter l'espace"
+      message={`Vous êtes sur le point de quitter l'espace « ${space.name} ».`}
+      confirmLabel="Quitter"
+      icon="leave"
+    />
+  );
+
+  const deleteModal = canDelete && onDelete && (
+    <ConfirmModal
+      isOpen={showDeleteModal}
+      onClose={() => setShowDeleteModal(false)}
+      onConfirm={() => {
+        onDelete(space.id, space.name);
+        setShowDeleteModal(false);
+      }}
+      title="Supprimer l'espace"
+      message={`Vous êtes sur le point de supprimer l'espace « ${space.name} ».`}
+      warning="Cette action est irréversible. Tous les éléments, relations et contributions seront définitivement perdus."
+      confirmLabel="Supprimer"
+    />
+  );
+
   if (isMember) {
-    return <Link to={`/spaces/${space.id}`}>{cardContent}</Link>;
+    return <>{leaveModal}{deleteModal}<Link to={`/spaces/${space.id}`}>{cardContent}</Link></>;
   }
 
-  return cardContent;
+  return <>{leaveModal}{deleteModal}{cardContent}</>;
 }
 
 export function DashboardPage() {

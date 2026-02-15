@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle } from 'lucide-react';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
@@ -152,15 +153,12 @@ export function SpaceSettingsPage() {
   const communityRole = communities?.find(c => c.id === space?.communityId)?.role;
   const canDelete = space?.role === 'OWNER' || (communityRole && ['OWNER', 'ADMIN'].includes(communityRole));
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const handleDeleteSpace = async () => {
     if (!space) return;
-    const msg = space.type === 'PERSONAL'
-      ? `Supprimer l'espace personnel "${space.name}" ? Cette action est irréversible et supprimera tous ses éléments.`
-      : `Supprimer l'espace "${space.name}" ? Cette action est irréversible et supprimera tous ses éléments.`;
-    if (window.confirm(msg)) {
-      await deleteSpaceMutation.mutateAsync(space.id);
-      navigate('/');
-    }
+    await deleteSpaceMutation.mutateAsync(space.id);
+    navigate('/');
   };
 
   if (spaceLoading || referentielsLoading) {
@@ -343,7 +341,7 @@ export function SpaceSettingsPage() {
             <Button
               variant="outline"
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleDeleteSpace}
+              onClick={() => setShowDeleteModal(true)}
               disabled={deleteSpaceMutation.isPending}
             >
               {deleteSpaceMutation.isPending ? (
@@ -354,6 +352,22 @@ export function SpaceSettingsPage() {
               Supprimer cet espace
             </Button>
           </div>
+        )}
+
+        {canDelete && space && (
+          <ConfirmModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={() => {
+              setShowDeleteModal(false);
+              handleDeleteSpace();
+            }}
+            title="Supprimer l'espace"
+            message={`Vous êtes sur le point de supprimer l'espace « ${space.name} ».`}
+            warning="Cette action est irréversible. Tous les éléments, relations et contributions seront définitivement perdus."
+            confirmLabel="Supprimer"
+            isPending={deleteSpaceMutation.isPending}
+          />
         )}
       </div>
     </div>

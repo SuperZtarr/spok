@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { AuditLogItem } from './AuditLogItem';
 import { AuditLogDetail } from './AuditLogDetail';
 import { AuditFilters } from './AuditFilters';
+import { ConfirmModal } from '../ConfirmModal';
 import { ChevronLeft, ChevronRight, History } from 'lucide-react';
 
 interface AuditLogListProps {
@@ -31,12 +32,10 @@ export function AuditLogList({
   isLoading,
 }: AuditLogListProps) {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<AuditLog | null>(null);
 
   const handleRestore = (log: AuditLog) => {
-    if (window.confirm('Voulez-vous vraiment restaurer cet état ? Cette action créera une nouvelle entrée dans l\'historique.')) {
-      onRestore(log);
-      setSelectedLog(null);
-    }
+    setRestoreTarget(log);
   };
 
   return (
@@ -106,6 +105,26 @@ export function AuditLogList({
         onClose={() => setSelectedLog(null)}
         onRestore={handleRestore}
         isRestoring={isRestoring}
+      />
+
+      {/* Restore confirmation modal */}
+      <ConfirmModal
+        isOpen={!!restoreTarget}
+        onClose={() => setRestoreTarget(null)}
+        onConfirm={() => {
+          if (restoreTarget) {
+            onRestore(restoreTarget);
+            setSelectedLog(null);
+            setRestoreTarget(null);
+          }
+        }}
+        title="Restaurer cet état"
+        message="Vous êtes sur le point de restaurer un état précédent de cet élément."
+        warning="Cette action créera une nouvelle entrée dans l'historique."
+        confirmLabel="Restaurer"
+        confirmVariant="default"
+        isPending={isRestoring}
+        icon="warning"
       />
     </div>
   );
