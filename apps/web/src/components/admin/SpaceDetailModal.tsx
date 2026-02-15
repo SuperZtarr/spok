@@ -75,6 +75,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       { value: '', label: 'Aucun (espace racine)' },
       ...allSpaces
         .filter(s => !excludeIds.has(s.id))
+        .sort((a, b) => a.name.localeCompare(b.name))
         .map(s => ({ value: s.id, label: s.name })),
     ];
   }, [allSpacesData?.data, spaceId]);
