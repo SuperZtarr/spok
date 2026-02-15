@@ -30,6 +30,8 @@ import {
   History,
   ChevronsUpDown,
   ChevronsDownUp,
+  FolderInput,
+  Copy,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -58,6 +60,7 @@ import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
 import { SunburstView } from '../components/views/SunburstView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
+import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 
 import { TYPE_ICONS, TYPE_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
@@ -872,6 +875,8 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -879,6 +884,11 @@ export function SpacePage() {
             <TextView
               items={textViewData?.data || allItemsData?.data || []}
               onEdit={setEditingItemId}
+              onDelete={handleDelete}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               referentiels={referentiels}
               canEdit={canEdit}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
@@ -893,6 +903,8 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
@@ -908,6 +920,8 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -918,6 +932,8 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateType={(id, type) => handleInlineUpdate(id, { type })}
               onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -928,6 +944,8 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               referentiels={referentiels}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
               highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
@@ -945,6 +963,8 @@ export function SpacePage() {
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               referentiels={referentiels}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
               highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
@@ -1024,6 +1044,8 @@ export function SpacePage() {
                       onDelete={handleDelete}
                       onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
                       onAddChild={handleAddChild}
+                      onMoveToSpace={(id) => setMoveItemId(id)}
+                      onDuplicateToSpace={(id) => setDuplicateItemId(id)}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
@@ -1159,6 +1181,8 @@ function TreeItem({
   onDelete,
   onUpdateStatus,
   onAddChild,
+  onMoveToSpace,
+  onDuplicateToSpace,
   spaceId,
   isOver,
   onMove,
@@ -1185,6 +1209,8 @@ function TreeItem({
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
@@ -1309,20 +1335,6 @@ function TreeItem({
           </a>
         )}
 
-        {canEdit !== false && item.status && item.status !== 'done' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateStatus(item.id, 'done');
-            }}
-          >
-            <CheckSquare className="w-4 h-4" />
-          </Button>
-        )}
-
         <Badge
           className={`text-xs ${statusColorMap[item.status || 'none'] || statusColorMap['undefined'] || 'bg-gray-100 text-gray-500'}`}
           variant="secondary"
@@ -1331,32 +1343,27 @@ function TreeItem({
         </Badge>
 
         {canEdit !== false && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddChild(item.id);
-            }}
-            title="Ajouter un enfant"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        )}
-
-        {canEdit !== false && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100 text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <ItemActionMenu
+              groups={[
+                {
+                  actions: [
+                    ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
+                    { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                  ],
+                },
+                {
+                  actions: [
+                    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                  ],
+                },
+                {
+                  actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+                },
+              ].filter(g => g.actions.length > 0)}
+            />
+          </div>
         )}
       </div>
 
@@ -1378,6 +1385,8 @@ function TreeItem({
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
           onAddChild={onAddChild}
+          onMoveToSpace={onMoveToSpace}
+          onDuplicateToSpace={onDuplicateToSpace}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
@@ -1408,6 +1417,8 @@ function ItemChildren({
   onDelete,
   onUpdateStatus,
   onAddChild,
+  onMoveToSpace,
+  onDuplicateToSpace,
   onMove,
   globalOverId,
   globalDropMode,
@@ -1431,6 +1442,8 @@ function ItemChildren({
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -1470,6 +1483,8 @@ function ItemChildren({
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
           onAddChild={onAddChild}
+          onMoveToSpace={onMoveToSpace}
+          onDuplicateToSpace={onDuplicateToSpace}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           onMove={onMove}

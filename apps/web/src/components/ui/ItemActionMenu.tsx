@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 export interface ItemAction {
   id: string;
@@ -23,19 +24,50 @@ interface ItemActionMenuProps {
 
 export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: ItemActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  // Close on click outside
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+  // Calculate dropdown position from trigger
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const dropdownWidth = 200;
+    setPosition({
+      top: rect.bottom + 4,
+      left: side === 'right' ? rect.left : rect.right - dropdownWidth,
+    });
+  }, [side]);
+
+  const openMenu = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+    updatePosition();
+    setIsOpen(true);
+  }, [updatePosition]);
+
+  const scheduleClose = useCallback(() => {
+    closeTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 150);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -49,27 +81,39 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
+  // Close on scroll (parent containers)
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleScroll() {
+      setIsOpen(false);
+    }
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [isOpen]);
+
   const filteredGroups = groups.filter(g => g.actions.length > 0);
   if (filteredGroups.length === 0) return null;
 
   return (
-    <div className="relative" ref={menuRef}>
+    <>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
+        ref={triggerRef}
+        onMouseEnter={openMenu}
+        onMouseLeave={scheduleClose}
+        onClick={(e) => e.stopPropagation()}
         className={triggerClassName || 'p-1 rounded hover:bg-accent transition-colors'}
         title="Actions"
       >
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className={`absolute top-full mt-1 ${
-            side === 'right' ? 'left-0' : 'right-0'
-          } bg-popover border rounded-md shadow-lg py-1 z-50 min-w-[200px]`}
+          ref={dropdownRef}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          style={{ position: 'fixed', top: position.top, left: position.left, zIndex: 99999 }}
+          className="bg-white dark:bg-gray-900 border rounded-md shadow-lg py-1 min-w-[200px]"
         >
           {filteredGroups.map((group, groupIndex) => (
             <div key={groupIndex}>
@@ -103,8 +147,9 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
               })}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

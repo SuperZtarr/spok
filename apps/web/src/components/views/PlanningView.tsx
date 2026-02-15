@@ -10,10 +10,12 @@ import {
   CalendarRange,
   Clock,
   HelpCircle,
+  FolderInput,
+  Copy,
 } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
 
@@ -122,6 +124,8 @@ interface PlanningViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   highlightStatus?: string;
@@ -135,6 +139,8 @@ interface PlanningItemProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   typeLabels?: Record<string, { labelShort: string }>;
   referentiels?: SpaceReferentiels;
@@ -144,7 +150,7 @@ interface PlanningItemProps {
   canEdit?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, referentiels, isHighlighted, isDimmed, highlightColor, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, statuses, referentiels, isHighlighted, isDimmed, highlightColor, canEdit = true }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -207,49 +213,28 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, stat
         )}
       </span>
 
-      {/* Quick actions */}
-      <span className="flex items-center gap-0.5 w-20 justify-end">
-        {canEdit && item.status && item.status !== 'done' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateStatus(item.id, 'done');
-            }}
-            title="Marquer comme terminé"
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-          </Button>
-        )}
+      {/* Action menu */}
+      <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
         {canEdit && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddChild(item.id);
-            }}
-            title="Ajouter un enfant"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </Button>
-        )}
-        {canEdit && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100 text-destructive h-7 w-7 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            title="Supprimer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
+          <ItemActionMenu
+            groups={[
+              {
+                actions: [
+                  ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
+                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                ],
+              },
+              {
+                actions: [
+                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                ],
+              },
+              {
+                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+              },
+            ].filter(g => g.actions.length > 0)}
+          />
         )}
       </span>
     </div>
@@ -263,6 +248,8 @@ interface PeriodSectionProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -271,7 +258,7 @@ interface PeriodSectionProps {
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, statuses, referentiels, highlightType, highlightStatus, highlightColor, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -295,6 +282,8 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             onDelete={onDelete}
             onUpdateStatus={onUpdateStatus}
             onAddChild={onAddChild}
+            onMoveToSpace={onMoveToSpace}
+            onDuplicateToSpace={onDuplicateToSpace}
             statuses={statuses}
             referentiels={referentiels}
             isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
@@ -308,7 +297,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -377,6 +366,8 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
           onAddChild={onAddChild}
+          onMoveToSpace={onMoveToSpace}
+          onDuplicateToSpace={onDuplicateToSpace}
           statuses={statuses}
           referentiels={referentiels}
           highlightType={highlightType}

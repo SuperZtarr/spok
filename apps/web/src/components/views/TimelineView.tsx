@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, ChevronsDownUp, ChevronsUpDown, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, ChevronsDownUp, ChevronsUpDown, Trash2, CheckSquare, FolderInput, type LucideIcon } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -15,6 +16,8 @@ interface TimelineViewProps {
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   highlightStatus?: string;
@@ -168,7 +171,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>, compactMode: 
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, onUpdateStatus: _onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -206,6 +209,12 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
+
+  const doneStatusId = useMemo(() => {
+    const visibleStatuses = statuses.filter((s) => s.visible).sort((a, b) => a.order - b.order);
+    const doneStatus = visibleStatuses.find((s) => s.id === 'done');
+    return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
+  }, [statuses]);
 
   const tree = useMemo(() => buildTree(items), [items]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
@@ -767,16 +776,27 @@ export function TimelineView({ items, relations, onEdit, onDelete: _onDelete, on
                       {item.title}
                     </span>
                     {canEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAddChild(item.id);
-                        }}
-                        className="p-0.5 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        title="Ajouter un enfant"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <ItemActionMenu
+                          groups={[
+                            {
+                              actions: [
+                                ...(item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
+                                { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                                ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                              ],
+                            },
+                            {
+                              actions: [
+                                ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                              ],
+                            },
+                            {
+                              actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+                            },
+                          ].filter(g => g.actions.length > 0)}
+                        />
+                      </div>
                     )}
                   </div>
 

@@ -11,10 +11,10 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, CheckSquare, FolderInput, Copy } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
-import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
@@ -25,6 +25,8 @@ interface TypesViewProps {
   onDelete: (id: string) => void;
   onUpdateType: (id: string, type: ItemType) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -42,6 +44,8 @@ interface TypeColumnProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   isOver: boolean;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
@@ -53,13 +57,15 @@ interface TypeCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   isDragging?: boolean;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
   canEdit?: boolean;
 }
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -129,40 +135,34 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, isDragging, statusLabels
         </div>
       </div>
 
-      {/* Quick actions */}
+      {/* Action menu */}
       {canEdit && (
-        <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddChild(item.id);
-            }}
-            title="Ajouter un enfant"
-          >
-            <Plus className="w-3 h-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            title="Supprimer"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
+        <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ItemActionMenu
+            groups={[
+              {
+                actions: [
+                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                ],
+              },
+              {
+                actions: [
+                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                ],
+              },
+              {
+                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+              },
+            ].filter(g => g.actions.length > 0)}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
+function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -202,6 +202,8 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statu
             onEdit={onEdit}
             onDelete={onDelete}
             onAddChild={onAddChild}
+            onMoveToSpace={onMoveToSpace}
+            onDuplicateToSpace={onDuplicateToSpace}
             statusLabels={statusLabels}
             statusColors={statusColors}
             canEdit={canEdit}
@@ -218,7 +220,7 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, isOver, statu
   );
 }
 
-export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, referentiels, canEdit = true }: TypesViewProps) {
+export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, canEdit = true }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -325,6 +327,8 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, r
               onEdit={onEdit}
               onDelete={onDelete}
               onAddChild={onAddChild}
+              onMoveToSpace={onMoveToSpace}
+              onDuplicateToSpace={onDuplicateToSpace}
               isOver={overId === column.id}
               statusLabels={statusLabels}
               statusColors={statusColors}

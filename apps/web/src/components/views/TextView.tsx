@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Search, X, FileText, MessageSquare, User } from 'lucide-react';
+import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -21,6 +22,11 @@ interface ItemWithContributions extends Item {
 interface TextViewProps {
   items: ItemWithContributions[];
   onEdit: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onUpdateStatus?: (id: string, status: string) => void;
+  onAddChild?: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   highlightType?: string;
@@ -73,7 +79,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, onEdit, referentiels, highlightType, highlightStatus, highlightColor }: TextViewProps) {
+export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -86,6 +92,13 @@ export function TextView({ items, onEdit, referentiels, highlightType, highlight
     });
     sColors['none'] = 'bg-gray-100 text-gray-500 border-dashed';
     return { statusLabels: sLabels, statusColors: sColors };
+  }, [referentiels]);
+
+  const doneStatusId = useMemo(() => {
+    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    const visibleStatuses = statuses.filter((s) => s.visible).sort((a, b) => a.order - b.order);
+    const doneStatus = visibleStatuses.find((s) => s.id === 'done');
+    return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
   }, [referentiels]);
 
   // Build hierarchical order then filter
@@ -186,6 +199,31 @@ export function TextView({ items, onEdit, referentiels, highlightType, highlight
                       <MessageSquare className="w-3.5 h-3.5" />
                       {contributions.length}
                     </span>
+                  )}
+                  {canEdit && (onDelete || onAddChild) && (
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <ItemActionMenu
+                        groups={[
+                          {
+                            actions: [
+                              ...(onUpdateStatus && item.status && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
+                              ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) }] : []),
+                              ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                            ],
+                          },
+                          {
+                            actions: [
+                              ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                            ],
+                          },
+                          {
+                            actions: [
+                              ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] : []),
+                            ],
+                          },
+                        ].filter(g => g.actions.length > 0)}
+                      />
+                    </div>
                   )}
                 </div>
 

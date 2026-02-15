@@ -1,6 +1,7 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical } from 'lucide-react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, FolderInput } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -38,6 +39,8 @@ interface SequenceViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
@@ -373,6 +376,8 @@ export function SequenceView({
   onDelete,
   onUpdateStatus,
   onAddChild,
+  onMoveToSpace,
+  onDuplicateToSpace,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
@@ -574,47 +579,28 @@ export function SequenceView({
               )}
             </div>
 
-            {/* Action buttons on hover */}
+            {/* Action menu on hover */}
             {canEdit && (
-              <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                {item.status && !isDone && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onUpdateStatus(item.id, doneStatusId);
-                    }}
-                    title="Marquer terminé"
-                  >
-                    <CheckSquare className="w-3.5 h-3.5" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddChild(item.id);
-                  }}
-                  title="Ajouter un enfant"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(item.id);
-                  }}
-                  title="Supprimer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <ItemActionMenu
+                  groups={[
+                    {
+                      actions: [
+                        ...(item.status && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
+                        { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                        ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                      ],
+                    },
+                    {
+                      actions: [
+                        ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                      ],
+                    },
+                    {
+                      actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+                    },
+                  ].filter(g => g.actions.length > 0)}
+                />
               </div>
             )}
           </div>
@@ -634,6 +620,8 @@ export function SequenceView({
       onDelete,
       onUpdateStatus,
       onAddChild,
+      onMoveToSpace,
+      onDuplicateToSpace,
       linkMode,
       linkSource,
       canEdit,
@@ -884,48 +872,27 @@ export function SequenceView({
                         )}
                       </span>
 
-                      <span className="flex items-center gap-0.5 w-20 justify-end">
-                        {canEdit && item.status && !isDone && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onUpdateStatus(item.id, doneStatusId);
-                            }}
-                            title="Marquer terminé"
-                          >
-                            <CheckSquare className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                      <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
                         {canEdit && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddChild(item.id);
-                            }}
-                            title="Ajouter un enfant"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
-                        {canEdit && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 text-destructive h-7 w-7 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(item.id);
-                            }}
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <ItemActionMenu
+                            groups={[
+                              {
+                                actions: [
+                                  ...(item.status && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
+                                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                                ],
+                              },
+                              {
+                                actions: [
+                                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                                ],
+                              },
+                              {
+                                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+                              },
+                            ].filter(g => g.actions.length > 0)}
+                          />
                         )}
                       </span>
                     </div>

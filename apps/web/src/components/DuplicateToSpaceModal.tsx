@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, Copy, Loader2 } from 'lucide-react';
+import { X, Copy, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import { Button } from './ui/Button';
 import { useSelectionStore } from '../stores/selection';
@@ -17,6 +17,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
   const { selectedIds, clearSelection } = useSelectionStore();
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>(currentSpaceId);
   const [includeChildren, setIncludeChildren] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Utiliser les itemIds en prop si fournis, sinon le selection store
   const effectiveIds = itemIds || Array.from(selectedIds);
@@ -49,6 +50,15 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
 
   // All spaces are available for duplication (including current)
   const availableSpaces = spaces || [];
+
+  const filteredSpaces = useMemo(() => {
+    if (!searchQuery.trim()) return availableSpaces;
+    const query = searchQuery.toLowerCase();
+    return availableSpaces.filter((s) =>
+      s.name.toLowerCase().includes(query) ||
+      (s.community?.name && s.community.name.toLowerCase().includes(query))
+    );
+  }, [availableSpaces, searchQuery]);
 
   if (!isOpen) return null;
 
@@ -85,8 +95,25 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
           </p>
         ) : (
           <>
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Rechercher un espace..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                autoFocus
+              />
+            </div>
+
+            {filteredSpaces.length === 0 ? (
+              <p className="text-muted-foreground text-center py-6 text-sm">
+                Aucun espace trouvé
+              </p>
+            ) : (
             <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
-              {availableSpaces.map((space) => (
+              {filteredSpaces.map((space) => (
                 <label
                   key={space.id}
                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -117,6 +144,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
                 </label>
               ))}
             </div>
+            )}
 
             <label className="flex items-center gap-2 mb-6 text-sm">
               <input
