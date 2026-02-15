@@ -5,12 +5,14 @@ import { useCommunityStore } from '../stores/community';
 import { communitiesApi } from '../lib/api';
 import { useState, useRef, useEffect } from 'react';
 import type { CommunityWithRole } from '@spok/shared';
+import { ConfirmModal } from './ConfirmModal';
 
 export function CommunitySelector() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCommunity, setCurrentCommunity } = useCommunityStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [leaveTarget, setLeaveTarget] = useState<CommunityWithRole | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: communities } = useQuery({
@@ -146,13 +148,8 @@ export function CommunitySelector() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm(`Quitter la communauté "${community.name}" ? Vous serez aussi retiré de ses espaces.`)) {
-                          if (currentCommunity?.id === community.id) {
-                            setCurrentCommunity(null);
-                          }
-                          leaveMutation.mutate(community.id);
-                          setIsOpen(false);
-                        }
+                        setLeaveTarget(community);
+                        setIsOpen(false);
                       }}
                       disabled={leaveMutation.isPending}
                       className="p-1 hover:bg-destructive/10 rounded transition-colors text-destructive"
@@ -201,6 +198,25 @@ export function CommunitySelector() {
           )}
         </div>
       )}
+      <ConfirmModal
+        isOpen={!!leaveTarget}
+        onClose={() => setLeaveTarget(null)}
+        onConfirm={() => {
+          if (leaveTarget) {
+            if (currentCommunity?.id === leaveTarget.id) {
+              setCurrentCommunity(null);
+            }
+            leaveMutation.mutate(leaveTarget.id);
+            setLeaveTarget(null);
+          }
+        }}
+        title="Quitter la communauté"
+        message={`Vous êtes sur le point de quitter la communauté « ${leaveTarget?.name} ».`}
+        warning="Vous serez aussi retiré de tous les espaces de cette communauté."
+        confirmLabel="Quitter"
+        isPending={leaveMutation.isPending}
+        icon="leave"
+      />
     </div>
   );
 }
