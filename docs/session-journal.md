@@ -37,6 +37,50 @@
 
 ---
 
+#### [2026-02-15] - Images avatar et couverture pour espaces et communautés
+
+**Demande :** Implémenter l'upload d'images d'illustration (avatar + couverture) pour les espaces et communautés, avec affichage sur Dashboard, sidebar et CommunitySelector. Organisation R2 structurée par entité.
+**Actions réalisées :**
+- Schema Prisma : ajout avatarUrl/coverUrl aux modèles Space et Community
+- Types partagés : ajout des champs aux interfaces Space, Community, AdminCommunity
+- Utilitaire R2 : processAvatar (256x256), processCover (1200x400), uploadEntityImage générique
+- Routes API : 8 nouvelles routes (POST/DELETE avatar et cover pour espaces et communautés)
+- Client API frontend : uploadAvatar/deleteAvatar/uploadCover/deleteCover dans spacesApi et communitiesApi
+- SpaceSettingsPage : section Images (avatar rond cliquable + couverture via ImageUploadZone)
+- CommunitySettingsPage : même section Images
+- DashboardPage : cover en bandeau sur les cartes, avatar à la place de FolderKanban, avatar communauté dans les en-têtes de section
+- Layout sidebar : avatar espace dans SpaceTreeItem et liste espaces personnels
+- CommunitySelector : avatar communauté dans la sélection active et la liste déroulante
+**État :** TERMINÉ
+**Commit :** 1258856
+
+---
+
+#### [2026-02-15] - Menu dropdown réutilisable pour actions d'items
+
+**Demande :** Créer un menu dropdown avec actions groupées par catégorie, réutilisable dans toutes les vues, pour remplacer les hover buttons sur les nœuds/lignes/cartes.
+**Actions réalisées :**
+- Nouveau composant `ItemActionMenu.tsx` : bouton trigger ⋮, dropdown avec groupes séparés, labels de catégorie, variant danger, fermeture click-outside + Escape
+- MindMapView : 6 hover buttons → 1 menu ⋮ avec 3 groupes (Créer, Organiser, Supprimer)
+- KanbanView : 3 hover buttons → 1 menu ⋮ en coin supérieur droit avec 2 groupes
+- ListView : 3 hover buttons → 1 menu ⋮ avec 2 groupes
+- Nettoyage imports Button inutilisés dans KanbanView et ListView
+**État :** TERMINÉ
+**Commit :** 671368c
+
+---
+
+#### [2026-02-15] - Analyse fonctionnelle + mise à jour TODO
+
+**Demande :** Analyse fonctionnelle de l'organisation Communautés/Espaces/Items — identifier incohérences, manques et améliorations. Puis ajout à la TODO.
+**Actions réalisées :**
+- Analyse parallèle (data model, frontend UX, types partagés) via 3 agents
+- Identifié 2 incohérences, 6 manques fonctionnels, 7 améliorations
+- Ajout de tous les items dans `docs/TODO.md` section "À faire"
+**État :** TERMINÉ
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)
