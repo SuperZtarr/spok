@@ -8,6 +8,7 @@ export const ITEM_TYPES = [
   'CONFIG',
   'DOCUMENT',
   'IMAGE',
+  'BUG',
 ] as const;
 
 export const SPACE_TYPES = ['PERSONAL', 'GROUP'] as const;
