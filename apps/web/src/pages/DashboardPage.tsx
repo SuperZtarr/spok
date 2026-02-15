@@ -44,6 +44,7 @@ function SpaceCardWithChildren({
   onLeave,
   onDelete,
   onAddChildSpace,
+  onMoveToParent,
   communityRoles,
   level = 0,
 }: {
@@ -52,6 +53,7 @@ function SpaceCardWithChildren({
   onLeave?: (id: string) => void;
   onDelete?: (id: string, deleteChildren: boolean) => void;
   onAddChildSpace?: (parentId: string) => void;
+  onMoveToParent?: (spaceId: string, newParentId: string) => void;
   communityRoles?: Map<string, string>;
   level?: number;
 }) {
@@ -63,7 +65,7 @@ function SpaceCardWithChildren({
   return (
     <>
       {level === 0 ? (
-        <SpaceCard space={node} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} canDelete={!!canDelete} onAddChildSpace={onAddChildSpace} />
+        <SpaceCard space={node} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} canDelete={!!canDelete} onAddChildSpace={onAddChildSpace} onMoveToParent={onMoveToParent} />
       ) : (
         <Link
           to={`/spaces/${node.id}`}
@@ -79,17 +81,18 @@ function SpaceCardWithChildren({
         </Link>
       )}
       {node.children.map((child) => (
-        <SpaceCardWithChildren key={child.id} node={child} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} onAddChildSpace={onAddChildSpace} communityRoles={communityRoles} level={level + 1} />
+        <SpaceCardWithChildren key={child.id} node={child} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} onAddChildSpace={onAddChildSpace} onMoveToParent={onMoveToParent} communityRoles={communityRoles} level={level + 1} />
       ))}
     </>
   );
 }
 
 // Reusable space card component
-function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpace }: { space: SpaceWithRole; onJoin?: (id: string) => void; onLeave?: (id: string) => void; onDelete?: (id: string, deleteChildren: boolean) => void; canDelete?: boolean; onAddChildSpace?: (parentId: string) => void }) {
+function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpace, onMoveToParent }: { space: SpaceWithRole; onJoin?: (id: string) => void; onLeave?: (id: string) => void; onDelete?: (id: string, deleteChildren: boolean) => void; canDelete?: boolean; onAddChildSpace?: (parentId: string) => void; onMoveToParent?: (spaceId: string, newParentId: string) => void }) {
   const navigate = useNavigate();
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const isMember = space.isMember !== false;
   const canLeave = isMember && space.role !== 'OWNER' && space.type !== 'PERSONAL';
   const canManage = isMember && ['OWNER', 'ADMIN'].includes(space.role);
@@ -152,8 +155,39 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
     return groups;
   }, [space, isMember, canLeave, canDelete, canManage, navigate, onLeave, onDelete, onAddChildSpace]);
 
+  const isDraggable = isMember && space.type === 'GROUP';
+  const isDropTarget = space.type === 'GROUP' && onMoveToParent;
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/spok-space-id', space.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!isDropTarget) return;
+    const draggedId = e.dataTransfer.types.includes('application/spok-space-id');
+    if (draggedId) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const draggedSpaceId = e.dataTransfer.getData('application/spok-space-id');
+    if (draggedSpaceId && draggedSpaceId !== space.id && onMoveToParent) {
+      onMoveToParent(draggedSpaceId, space.id);
+    }
+  };
+
   const cardContent = (
-    <Card className={`group transition-colors h-full overflow-hidden ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'}`}>
+    <Card className={`group transition-colors h-full overflow-hidden ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'} ${isDragOver ? 'ring-2 ring-primary border-primary bg-primary/5' : ''}`}>
       {space.coverUrl && (
         <div className="h-24 overflow-hidden">
           <img src={space.coverUrl} alt="" className="w-full h-full object-cover" />
@@ -254,11 +288,19 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
     />
   );
 
+  const dragDropProps = {
+    draggable: isDraggable,
+    onDragStart: isDraggable ? handleDragStart : undefined,
+    onDragOver: isDropTarget ? handleDragOver : undefined,
+    onDragLeave: isDropTarget ? handleDragLeave : undefined,
+    onDrop: isDropTarget ? handleDrop : undefined,
+  };
+
   if (isMember) {
-    return <>{leaveModal}{deleteModal}<Link to={`/spaces/${space.id}`}>{cardContent}</Link></>;
+    return <div {...dragDropProps}>{leaveModal}{deleteModal}<Link to={`/spaces/${space.id}`}>{cardContent}</Link></div>;
   }
 
-  return <>{leaveModal}{deleteModal}{cardContent}</>;
+  return <div {...dragDropProps}>{leaveModal}{deleteModal}{cardContent}</div>;
 }
 
 export function DashboardPage() {
@@ -358,6 +400,22 @@ export function DashboardPage() {
     setNewSpaceType('GROUP');
     setNewSpaceParentId(parentId);
     setSearchParams({ new: 'space' });
+  };
+
+  // Move space to new parent (drag & drop)
+  const moveToParentMutation = useMutation({
+    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string }) =>
+      spacesApi.update(spaceId, { parentId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+    onError: (error) => {
+      alert(`Erreur: ${error.message}`);
+    },
+  });
+
+  const handleMoveToParent = (spaceId: string, newParentId: string) => {
+    moveToParentMutation.mutate({ spaceId, parentId: newParentId });
   };
 
   // Fetch communities for the select dropdown
@@ -633,9 +691,60 @@ export function DashboardPage() {
             {/* Community groups */}
             {communityGroups.map((group) => {
               const tree = buildSpaceTree(group.spaces);
+              const communityRole = communityRoles.get(group.communityId);
+              const isCommunityOwnerOrAdmin = communityRole === 'OWNER' || communityRole === 'ADMIN';
+              const communityActionGroups: ItemActionGroup[] = [];
+
+              // Navigation actions
+              const communityNavActions: ItemActionGroup['actions'] = [];
+              if (isCommunityOwnerOrAdmin) {
+                communityNavActions.push({
+                  id: 'community-settings',
+                  label: 'Paramètres',
+                  icon: Settings,
+                  onClick: () => navigate(`/communities/${group.communityId}/settings`),
+                });
+              }
+              communityNavActions.push({
+                id: 'community-add-space',
+                label: 'Ajouter un espace',
+                icon: FolderPlus,
+                onClick: () => {
+                  setNewSpaceType('GROUP');
+                  setNewSpaceCommunityId(group.communityId);
+                  setNewSpaceParentId('');
+                  setSearchParams({ new: 'space' });
+                },
+              });
+              if (communityNavActions.length > 0) {
+                communityActionGroups.push({ actions: communityNavActions });
+              }
+
+              // Danger actions
+              const communityDangerActions: ItemActionGroup['actions'] = [];
+              if (communityRole && communityRole !== 'OWNER') {
+                communityDangerActions.push({
+                  id: 'community-leave',
+                  label: 'Quitter',
+                  icon: LogOut,
+                  onClick: () => {
+                    if (confirm(`Quitter la communauté « ${group.communityName} » ?`)) {
+                      communitiesApi.leave(group.communityId).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['communities'] });
+                        queryClient.invalidateQueries({ queryKey: ['spaces'] });
+                      });
+                    }
+                  },
+                  variant: 'danger',
+                });
+              }
+              if (communityDangerActions.length > 0) {
+                communityActionGroups.push({ actions: communityDangerActions });
+              }
+
               return (
                 <section key={group.communityId}>
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="group/community flex items-center gap-2 mb-4">
                     {group.spaces[0]?.community?.avatarUrl ? (
                       <img src={group.spaces[0].community.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
                     ) : (
@@ -643,11 +752,19 @@ export function DashboardPage() {
                     )}
                     <h2 className="text-lg font-semibold">{group.communityName}</h2>
                     <Badge variant="outline" className="ml-1">{group.spaces.length}</Badge>
+                    {communityActionGroups.length > 0 && (
+                      <div className="opacity-0 group-hover/community:opacity-100 transition-opacity">
+                        <ItemActionMenu
+                          groups={communityActionGroups}
+                          triggerClassName="p-1 rounded hover:bg-accent transition-colors"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {tree.map((node) => (
                       <div key={node.id}>
-                        <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} onLeave={handleLeaveSpace} onDelete={handleDeleteSpace} onAddChildSpace={handleAddChildSpace} communityRoles={communityRoles} />
+                        <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} onLeave={handleLeaveSpace} onDelete={handleDeleteSpace} onAddChildSpace={handleAddChildSpace} onMoveToParent={handleMoveToParent} communityRoles={communityRoles} />
                       </div>
                     ))}
                   </div>
@@ -668,7 +785,7 @@ export function DashboardPage() {
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {tree.map((node) => (
                       <div key={node.id}>
-                        <SpaceCardWithChildren node={node} onDelete={handleDeleteSpace} onAddChildSpace={handleAddChildSpace} />
+                        <SpaceCardWithChildren node={node} onDelete={handleDeleteSpace} onAddChildSpace={handleAddChildSpace} onMoveToParent={handleMoveToParent} />
                       </div>
                     ))}
                   </div>
