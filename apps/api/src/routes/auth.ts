@@ -112,6 +112,25 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.unauthorized('Email ou mot de passe incorrect');
     }
 
+    // Ensure user has a personal space (fix for legacy users created without one)
+    const hasPersonalSpace = await fastify.prisma.spaceMembership.findFirst({
+      where: { userId: user.id, space: { type: 'PERSONAL' } },
+    });
+    if (!hasPersonalSpace) {
+      await fastify.prisma.space.create({
+        data: {
+          name: 'Mon espace personnel',
+          type: 'PERSONAL',
+          memberships: {
+            create: {
+              userId: user.id,
+              role: 'OWNER',
+            },
+          },
+        },
+      });
+    }
+
     const tokens = await generateTokens(fastify, user.id, user.email);
 
     const authUser: AuthUser = {
