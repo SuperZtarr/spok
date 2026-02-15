@@ -21,6 +21,7 @@ import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole 
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
 import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, Trash2, type LucideIcon } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 
 export interface MindMapViewHandle {
@@ -253,80 +254,32 @@ function MindMapNode({ data }: MindMapNodeProps) {
         )}
       </div>
 
-      {/* Action buttons on hover */}
-      <div className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 z-10">
-        {canEdit && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddChild(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-green-50"
-            title="Ajouter un enfant"
-          >
-            <Plus className="w-3 h-3 text-green-600" />
-          </button>
-        )}
-        {canEdit && hasPortalSupport && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddPortal(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-indigo-50"
-            title="Ajouter un portail vers un autre espace"
-          >
-            <ExternalLink className="w-3 h-3 text-indigo-600" />
-          </button>
-        )}
-        {hasChildren && !isCollapsed && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onReorganizeChildren(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-blue-50"
-            title="Réorganiser les enfants"
-          >
-            <RotateCcw className="w-3 h-3 text-blue-600" />
-          </button>
-        )}
-        {canEdit && onMoveToSpace && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveToSpace(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-orange-50"
-            title="Déplacer vers un autre espace"
-          >
-            <FolderInput className="w-3 h-3 text-orange-500" />
-          </button>
-        )}
-        {onDuplicateToSpace && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicateToSpace(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-purple-50"
-            title="Dupliquer"
-          >
-            <Copy className="w-3 h-3 text-purple-500" />
-          </button>
-        )}
-        {canEdit && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            className="p-1 bg-white rounded-full shadow-md hover:bg-red-50"
-            title="Supprimer"
-          >
-            <Trash2 className="w-3 h-3 text-red-500" />
-          </button>
-        )}
+      {/* Action menu on hover */}
+      <div className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <ItemActionMenu
+          groups={[
+            ...(canEdit ? [{
+              label: 'Créer',
+              actions: [
+                { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                ...(hasPortalSupport ? [{ id: 'add-portal', label: 'Ajouter un portail', icon: ExternalLink, onClick: () => onAddPortal(item.id) }] : []),
+              ],
+            }] : []),
+            {
+              label: 'Organiser',
+              actions: [
+                ...(hasChildren && !isCollapsed ? [{ id: 'reorganize', label: 'Réorganiser les enfants', icon: RotateCcw, onClick: () => onReorganizeChildren(item.id) }] : []),
+                ...(canEdit && onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+              ],
+            },
+            ...(canEdit ? [{
+              actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+            }] : []),
+          ].filter(g => g.actions.length > 0)}
+          triggerClassName="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
+          side="right"
+        />
       </div>
     </div>
   );

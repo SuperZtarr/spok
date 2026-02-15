@@ -1,8 +1,9 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X, MessageSquare, ArrowUp, ArrowDown } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { Button } from '../ui/Button';
+
 import { Badge } from '../ui/Badge';
 import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
@@ -318,48 +319,21 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                     )}
                   </span>
 
-                  <span className="flex items-center gap-0.5 w-20 justify-end">
-                    {canEdit && item.status && !isDone && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onUpdateStatus(item.id, doneStatusId);
-                        }}
-                        title="Marquer terminé"
-                      >
-                        <CheckSquare className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
+                  <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
                     {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAddChild(item.id);
-                        }}
-                        title="Ajouter un enfant"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                    {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 text-destructive h-7 w-7 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(item.id);
-                        }}
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <ItemActionMenu
+                        groups={[
+                          {
+                            actions: [
+                              ...(item.status && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
+                              { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                            ],
+                          },
+                          {
+                            actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+                          },
+                        ]}
+                      />
                     )}
                   </span>
                 </div>

@@ -12,9 +12,9 @@ import {
   useDraggable,
 } from '@dnd-kit/core';
 import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { Button } from '../ui/Button';
 import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
@@ -84,7 +84,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
+      className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
       }`}
       onClick={() => onEdit(item.id)}
@@ -132,47 +132,22 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
         </div>
       </div>
 
-      {/* Quick actions */}
+      {/* Action menu */}
       {canEdit && (
-        <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {nextStatus && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpdateStatus(item.id, nextStatus);
-              }}
-            >
-              <CheckSquare className="w-3 h-3 mr-1" />
-              {nextStatusLabel || 'Suivant'}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddChild(item.id);
-            }}
-            title="Ajouter un enfant"
-          >
-            <Plus className="w-3 h-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            title="Supprimer"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ItemActionMenu
+            groups={[
+              {
+                actions: [
+                  ...(nextStatus ? [{ id: 'next-status', label: nextStatusLabel || 'Suivant', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, nextStatus) }] : []),
+                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                ],
+              },
+              {
+                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
+              },
+            ]}
+          />
         </div>
       )}
     </div>
