@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -32,6 +32,7 @@ import {
   ChevronsDownUp,
   FolderInput,
   Copy,
+  FolderPlus,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -60,12 +61,14 @@ import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
 import { SunburstView } from '../components/views/SunburstView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
+import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 
 import { TYPE_ICONS, TYPE_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { mode: viewMode } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
@@ -145,6 +148,7 @@ export function SpacePage() {
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
+  const [convertingItem, setConvertingItem] = useState<{id: string; title: string; childCount: number} | null>(null);
 
   // Clear selection when leaving the page or changing space
   useEffect(() => {
@@ -287,6 +291,20 @@ export function SpacePage() {
     }
   }, [deletingItem, deleteItemMutation]);
 
+  const handleConvertToSpace = useCallback((id: string) => {
+    const allItems = allItemsData?.data || itemsData?.data || [];
+    const item = allItems.find((i: Item) => i.id === id);
+    const countDescendants = (parentId: string): number => {
+      const children = allItems.filter((i: Item) => i.parentId === parentId);
+      return children.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
+    };
+    setConvertingItem({
+      id,
+      title: item?.title || 'cet élément',
+      childCount: countDescendants(id),
+    });
+  }, [allItemsData?.data, itemsData?.data]);
+
   const updateItemMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
       itemsApi.update(spaceId!, id, data),
@@ -333,6 +351,21 @@ export function SpacePage() {
       itemsApi.deleteRelation(spaceId!, itemId, relationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  const convertToSpaceMutation = useMutation({
+    mutationFn: ({ itemId, spaceName }: { itemId: string; spaceName: string }) =>
+      itemsApi.convertToSpace(spaceId!, itemId, {
+        spaceName,
+        communityId: space?.communityId || undefined,
+      }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      setConvertingItem(null);
+      navigate(`/spaces/${result.space.id}`);
     },
   });
 
@@ -877,6 +910,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -889,6 +923,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
@@ -905,6 +940,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
@@ -922,6 +958,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -934,6 +971,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -946,6 +984,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
               highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
@@ -965,6 +1004,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
               highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
@@ -987,6 +1027,7 @@ export function SpacePage() {
               onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
@@ -1046,6 +1087,7 @@ export function SpacePage() {
                       onAddChild={handleAddChild}
                       onMoveToSpace={(id) => setMoveItemId(id)}
                       onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+                      onConvertToSpace={handleConvertToSpace}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
@@ -1138,6 +1180,20 @@ export function SpacePage() {
         itemIds={duplicateItemId ? [duplicateItemId] : undefined}
       />
 
+      {/* Convert to space modal */}
+      <ConvertToSpaceModal
+        isOpen={!!convertingItem}
+        onClose={() => setConvertingItem(null)}
+        onConfirm={(spaceName) => {
+          if (convertingItem) {
+            convertToSpaceMutation.mutate({ itemId: convertingItem.id, spaceName });
+          }
+        }}
+        itemTitle={convertingItem?.title || ''}
+        childCount={convertingItem?.childCount || 0}
+        isPending={convertToSpaceMutation.isPending}
+      />
+
       {/* Delete confirmation modal */}
       <DeleteConfirmModal
         isOpen={!!deletingItem}
@@ -1183,6 +1239,7 @@ function TreeItem({
   onAddChild,
   onMoveToSpace,
   onDuplicateToSpace,
+  onConvertToSpace,
   spaceId,
   isOver,
   onMove,
@@ -1211,6 +1268,7 @@ function TreeItem({
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
@@ -1356,6 +1414,7 @@ function TreeItem({
                 {
                   actions: [
                     ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                    ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                   ],
                 },
                 {
@@ -1387,6 +1446,7 @@ function TreeItem({
           onAddChild={onAddChild}
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
+          onConvertToSpace={onConvertToSpace}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
@@ -1419,6 +1479,7 @@ function ItemChildren({
   onAddChild,
   onMoveToSpace,
   onDuplicateToSpace,
+  onConvertToSpace,
   onMove,
   globalOverId,
   globalDropMode,
@@ -1444,6 +1505,7 @@ function ItemChildren({
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -1485,6 +1547,7 @@ function ItemChildren({
           onAddChild={onAddChild}
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
+          onConvertToSpace={onConvertToSpace}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           onMove={onMove}

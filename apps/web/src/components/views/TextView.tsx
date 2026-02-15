@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy } from 'lucide-react';
+import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -27,6 +27,7 @@ interface TextViewProps {
   onAddChild?: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   highlightType?: string;
@@ -79,7 +80,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor }: TextViewProps) {
+export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -214,6 +215,7 @@ export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                           {
                             actions: [
                               ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                              ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                             ],
                           },
                           {

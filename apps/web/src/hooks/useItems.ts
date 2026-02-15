@@ -54,3 +54,17 @@ export function useDeleteItem(spaceId: string) {
     },
   });
 }
+
+export function useConvertItemToSpace(spaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ itemId, data }: { itemId: string; data: { spaceName: string; communityId?: string; parentSpaceId?: string } }) =>
+      itemsApi.convertToSpace(spaceId, itemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+}

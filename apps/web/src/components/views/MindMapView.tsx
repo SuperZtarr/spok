@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, Trash2, CheckSquare, type LucideIcon } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, Trash2, CheckSquare, type LucideIcon } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 
@@ -44,6 +44,7 @@ interface MindMapViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   onMoveToSpace?: (itemId: string) => void;
   onDuplicateToSpace?: (itemId: string) => void;
+  onConvertToSpace?: (itemId: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
@@ -190,6 +191,7 @@ interface MindMapNodeProps {
     onReorganizeChildren: (id: string) => void;
     onMoveToSpace?: (id: string) => void;
     onDuplicateToSpace?: (id: string) => void;
+    onConvertToSpace?: (id: string) => void;
     doneStatusId: string;
     isRoot: boolean;
     hasChildren: boolean;
@@ -204,7 +206,7 @@ interface MindMapNodeProps {
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
+  const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -273,6 +275,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
                   ...(canEdit && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
                   ...(hasChildren && !isCollapsed ? [{ id: 'reorganize', label: 'Réorganiser les enfants', icon: RotateCcw, onClick: () => onReorganizeChildren(item.id) }] : []),
                   ...(canEdit && onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                  ...(canEdit && onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                 ],
               },
               ...(canEdit ? [{
@@ -502,6 +505,7 @@ function calculateLayout(
   onReorganizeChildren: (id: string) => void,
   onMoveToSpace: ((id: string) => void) | undefined,
   onDuplicateToSpace: ((id: string) => void) | undefined,
+  onConvertToSpace: ((id: string) => void) | undefined,
   hasPortalSupport: boolean,
   doneStatusId: string,
   highlightType?: string,
@@ -602,6 +606,7 @@ function calculateLayout(
         onReorganizeChildren,
         onMoveToSpace,
         onDuplicateToSpace,
+        onConvertToSpace,
         doneStatusId,
         isRoot: d3Node.depth === 1,
         hasChildren,
@@ -702,6 +707,7 @@ function MindMapViewInner({
   onMove,
   onMoveToSpace,
   onDuplicateToSpace,
+  onConvertToSpace,
   onCreateRelation,
   onDeleteRelation,
   onUpdateStatus,
@@ -868,7 +874,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(nodes);
     const posMap = new Map(positionedNodes.map(n => [n.id, n.position]));
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], posMap);
@@ -983,7 +989,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
@@ -1324,7 +1330,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
 
     // Build a map of node positions for portal placement
     const resetPosMap = new Map(newNodes.map(n => [n.id, n.position]));
@@ -1607,6 +1613,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   onMove,
   onMoveToSpace,
   onDuplicateToSpace,
+  onConvertToSpace,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
@@ -1640,6 +1647,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           onMove={onMove}
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
+          onConvertToSpace={onConvertToSpace}
           onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation}
           referentiels={referentiels}

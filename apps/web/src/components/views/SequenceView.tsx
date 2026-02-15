@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, FolderInput } from 'lucide-react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, FolderInput, FolderPlus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
@@ -41,6 +41,7 @@ interface SequenceViewProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   referentiels?: SpaceReferentiels;
@@ -378,6 +379,7 @@ export function SequenceView({
   onAddChild,
   onMoveToSpace,
   onDuplicateToSpace,
+  onConvertToSpace,
   onCreateRelation,
   onDeleteRelation,
   referentiels,
@@ -594,6 +596,7 @@ export function SequenceView({
                     {
                       actions: [
                         ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                        ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                       ],
                     },
                     {
@@ -622,6 +625,7 @@ export function SequenceView({
       onAddChild,
       onMoveToSpace,
       onDuplicateToSpace,
+      onConvertToSpace,
       linkMode,
       linkSource,
       canEdit,
@@ -886,6 +890,7 @@ export function SequenceView({
                               {
                                 actions: [
                                   ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                                 ],
                               },
                               {

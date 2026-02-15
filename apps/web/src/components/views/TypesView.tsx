@@ -11,7 +11,7 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
@@ -27,6 +27,7 @@ interface TypesViewProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -46,6 +47,7 @@ interface TypeColumnProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   isOver: boolean;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
@@ -59,13 +61,14 @@ interface TypeCardProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
   canEdit?: boolean;
 }
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -149,6 +152,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
               {
                 actions: [
                   ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                 ],
               },
               {
@@ -162,7 +166,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   );
 }
 
-function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
+function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -204,6 +208,7 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace
             onAddChild={onAddChild}
             onMoveToSpace={onMoveToSpace}
             onDuplicateToSpace={onDuplicateToSpace}
+            onConvertToSpace={onConvertToSpace}
             statusLabels={statusLabels}
             statusColors={statusColors}
             canEdit={canEdit}
@@ -220,7 +225,7 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace
   );
 }
 
-export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, canEdit = true }: TypesViewProps) {
+export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -329,6 +334,7 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, o
               onAddChild={onAddChild}
               onMoveToSpace={onMoveToSpace}
               onDuplicateToSpace={onDuplicateToSpace}
+              onConvertToSpace={onConvertToSpace}
               isOver={overId === column.id}
               statusLabels={statusLabels}
               statusColors={statusColors}

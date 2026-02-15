@@ -667,6 +667,15 @@ export const itemsApi = {
       }
     ),
 
+  convertToSpace: (spaceId: string, itemId: string, data: { spaceName: string; communityId?: string; parentSpaceId?: string }) =>
+    fetchApi<{ space: { id: string; name: string }; movedCount: number }>(
+      `/spaces/${spaceId}/items/${itemId}/convert-to-space`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
   // Contributions
   listContributions: (spaceId: string, itemId: string) =>
     fetchApi<ContributionWithAuthor[]>(`/spaces/${spaceId}/items/${itemId}/contributions`),
