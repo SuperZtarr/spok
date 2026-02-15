@@ -5,6 +5,7 @@ import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { CommunityDetailModal } from '../../components/admin/CommunityDetailModal';
+import { CommunityDeleteConfirmModal } from '../../components/CommunityDeleteConfirmModal';
 import { useSort } from '../../hooks/useSort';
 
 interface AdminCommunity {
@@ -39,18 +40,20 @@ export function CommunitiesPage() {
     queryFn: () => adminApi.communities.list({ page, pageSize: 20, search: search || undefined }),
   });
 
+  const [communityToDelete, setCommunityToDelete] = useState<AdminCommunity | null>(null);
+
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => adminApi.communities.delete(id),
+    mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren: boolean }) =>
+      adminApi.communities.delete(id, deleteChildren),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
+      setCommunityToDelete(null);
     },
   });
 
-  const handleDelete = async (community: AdminCommunity) => {
-    if (confirm(`Supprimer la communaute "${community.name}" ? Les espaces associes perdront leur lien avec cette communaute.`)) {
-      deleteMutation.mutate(community.id);
-    }
+  const handleDelete = (community: AdminCommunity) => {
+    setCommunityToDelete(community);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -223,6 +226,20 @@ export function CommunitiesPage() {
         <CommunityDetailModal
           communityId={modalCommunityId}
           onClose={() => setModalCommunityId(undefined)}
+        />
+      )}
+
+      {communityToDelete && (
+        <CommunityDeleteConfirmModal
+          isOpen={!!communityToDelete}
+          onClose={() => setCommunityToDelete(null)}
+          onConfirm={(deleteChildren) => {
+            deleteMutation.mutate({ id: communityToDelete.id, deleteChildren });
+          }}
+          communityId={communityToDelete.id}
+          communityName={communityToDelete.name}
+          isPending={deleteMutation.isPending}
+          isAdmin
         />
       )}
     </div>

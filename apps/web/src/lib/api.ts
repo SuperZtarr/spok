@@ -413,8 +413,16 @@ export const spacesApi = {
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) =>
-    fetchApi<{ success: boolean }>(`/spaces/${id}`, {
+  deletePreview: (id: string) =>
+    fetchApi<{
+      childSpaces: Array<{ id: string; name: string; itemCount: number }>;
+      directItemCount: number;
+      totalItemCount: number;
+      totalContributionCount: number;
+    }>(`/spaces/${id}/delete-preview`),
+
+  delete: (id: string, deleteChildren = false) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}${deleteChildren ? '?deleteChildren=true' : ''}`, {
       method: 'DELETE',
     }),
 
@@ -493,8 +501,15 @@ export const communitiesApi = {
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) =>
-    fetchApi<{ success: boolean }>(`/communities/${id}`, {
+  deletePreview: (id: string) =>
+    fetchApi<{
+      spaces: Array<{ id: string; name: string; itemCount: number }>;
+      totalItemCount: number;
+      totalMemberCount: number;
+    }>(`/communities/${id}/delete-preview`),
+
+  delete: (id: string, deleteChildren = false) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}${deleteChildren ? '?deleteChildren=true' : ''}`, {
       method: 'DELETE',
     }),
 
@@ -975,8 +990,16 @@ export const adminApi = {
         body: JSON.stringify(data),
       }),
 
-    delete: (id: string) =>
-      fetchApi<{ success: boolean }>(`/admin/spaces/${id}`, {
+    deletePreview: (id: string) =>
+      fetchApi<{
+        childSpaces: Array<{ id: string; name: string; itemCount: number }>;
+        directItemCount: number;
+        totalItemCount: number;
+        totalContributionCount: number;
+      }>(`/admin/spaces/${id}/delete-preview`),
+
+    delete: (id: string, deleteChildren = false) =>
+      fetchApi<{ success: boolean }>(`/admin/spaces/${id}${deleteChildren ? '?deleteChildren=true' : ''}`, {
         method: 'DELETE',
       }),
 
@@ -1024,8 +1047,15 @@ export const adminApi = {
         body: JSON.stringify(data),
       }),
 
-    delete: (id: string) =>
-      fetchApi<{ success: boolean }>(`/admin/communities/${id}`, {
+    deletePreview: (id: string) =>
+      fetchApi<{
+        spaces: Array<{ id: string; name: string; itemCount: number }>;
+        totalItemCount: number;
+        totalMemberCount: number;
+      }>(`/admin/communities/${id}/delete-preview`),
+
+    delete: (id: string, deleteChildren = false) =>
+      fetchApi<{ success: boolean }>(`/admin/communities/${id}${deleteChildren ? '?deleteChildren=true' : ''}`, {
         method: 'DELETE',
       }),
 
@@ -1134,6 +1164,83 @@ export const adminApi = {
         };
       }>(`/admin/anomalies/${category}${query ? `?${query}` : ''}`);
     },
+  },
+
+  auditLogs: {
+    list: (params?: {
+      entity?: string;
+      action?: string;
+      userId?: string;
+      spaceId?: string;
+      communityId?: string;
+      batchId?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.entity) searchParams.set('entity', params.entity);
+      if (params?.action) searchParams.set('action', params.action);
+      if (params?.userId) searchParams.set('userId', params.userId);
+      if (params?.spaceId) searchParams.set('spaceId', params.spaceId);
+      if (params?.communityId) searchParams.set('communityId', params.communityId);
+      if (params?.batchId) searchParams.set('batchId', params.batchId);
+      if (params?.from) searchParams.set('from', params.from);
+      if (params?.to) searchParams.set('to', params.to);
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      const query = searchParams.toString();
+      return fetchApi<{
+        data: Array<{
+          id: string;
+          action: string;
+          entity: string;
+          entityId: string;
+          spaceId: string | null;
+          batchId: string | null;
+          userId: string;
+          changes: Record<string, unknown>;
+          createdAt: string;
+          user: { id: string; name: string; email: string };
+          space: { id: string; name: string } | null;
+        }>;
+        total: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+      }>(`/admin/audit-logs${query ? `?${query}` : ''}`);
+    },
+
+    stats: () =>
+      fetchApi<{
+        totalCount: number;
+        entityBreakdown: Array<{ entity: string; count: number }>;
+        actionBreakdown: Array<{ action: string; count: number }>;
+        batchCount: number;
+        dailyActivity: Record<string, number>;
+        estimatedSizeMB: number;
+      }>('/admin/audit-logs/stats'),
+
+    restore: (id: string) =>
+      fetchApi<{ success: boolean; restored: unknown; entity: string }>(`/admin/audit-logs/${id}/restore`, {
+        method: 'POST',
+      }),
+
+    batchRestore: (batchId: string) =>
+      fetchApi<{
+        success: boolean;
+        batchId: string;
+        summary: { restored: number; skipped: number; errors: number; total: number };
+        details: Array<{ logId: string; entity: string; entityId: string; status: string; message?: string }>;
+      }>(`/admin/audit-logs/batch/${batchId}/restore`, {
+        method: 'POST',
+      }),
+
+    purge: (olderThanDays: number) =>
+      fetchApi<{ success: boolean; purged: number; olderThan: string }>(`/admin/audit-logs/purge?olderThanDays=${olderThanDays}`, {
+        method: 'DELETE',
+      }),
   },
 };
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon } from 'lucide-react';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
@@ -191,9 +191,9 @@ export function SpaceSettingsPage() {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const handleDeleteSpace = async () => {
+  const handleDeleteSpace = async (deleteChildren: boolean) => {
     if (!space) return;
-    await deleteSpaceMutation.mutateAsync(space.id);
+    await deleteSpaceMutation.mutateAsync({ id: space.id, deleteChildren });
     navigate('/');
   };
 
@@ -469,17 +469,15 @@ export function SpaceSettingsPage() {
         )}
 
         {canDelete && space && (
-          <ConfirmModal
+          <SpaceDeleteConfirmModal
             isOpen={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
-            onConfirm={() => {
+            onConfirm={(deleteChildren) => {
               setShowDeleteModal(false);
-              handleDeleteSpace();
+              handleDeleteSpace(deleteChildren);
             }}
-            title="Supprimer l'espace"
-            message={`Vous êtes sur le point de supprimer l'espace « ${space.name} ».`}
-            warning="Cette action est irréversible. Tous les éléments, relations et contributions seront définitivement perdus."
-            confirmLabel="Supprimer"
+            spaceId={space.id}
+            spaceName={space.name}
             isPending={deleteSpaceMutation.isPending}
           />
         )}

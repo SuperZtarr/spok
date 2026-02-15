@@ -6,7 +6,8 @@ export interface AuditLogData {
   entity: AuditEntity;
   entityId: string;
   userId: string;
-  spaceId: string;
+  spaceId: string | null;
+  batchId?: string;
   changes: {
     before?: Record<string, unknown>;
     after?: Record<string, unknown>;
@@ -23,6 +24,7 @@ export async function createAuditLog(
       entity: data.entity,
       entityId: data.entityId,
       spaceId: data.spaceId,
+      batchId: data.batchId || null,
       userId: data.userId,
       changes: data.changes as any,
     },
@@ -45,6 +47,8 @@ export function serializeItemForAudit(item: Record<string, unknown>): Record<str
     priority: item.priority,
     position: item.position,
     dueDate: item.dueDate,
+    startDate: item.startDate,
+    endDate: item.endDate,
     parentId: item.parentId,
     spaceId: item.spaceId,
     createdById: item.createdById,
@@ -62,5 +66,38 @@ export function serializeRelationForAudit(relation: Record<string, unknown>): Re
     fromItemId: relation.fromItemId,
     toItemId: relation.toItemId,
     type: relation.type,
+  };
+}
+
+/**
+ * Serialize a space for audit logging
+ */
+export function serializeSpaceForAudit(space: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: space.id,
+    name: space.name,
+    type: space.type,
+    communityId: space.communityId,
+    parentId: space.parentId,
+    avatarUrl: space.avatarUrl,
+    coverUrl: space.coverUrl,
+    createdAt: space.createdAt,
+    updatedAt: space.updatedAt,
+  };
+}
+
+/**
+ * Serialize a community for audit logging
+ */
+export function serializeCommunityForAudit(community: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: community.id,
+    name: community.name,
+    description: community.description,
+    isPublic: community.isPublic,
+    avatarUrl: community.avatarUrl,
+    coverUrl: community.coverUrl,
+    createdAt: community.createdAt,
+    updatedAt: community.updatedAt,
   };
 }

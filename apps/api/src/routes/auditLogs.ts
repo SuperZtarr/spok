@@ -3,10 +3,11 @@ import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 
 const querySchema = z.object({
-  entity: z.enum(['Item', 'ItemRelation']).optional(),
+  entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community']).optional(),
   action: z.enum(['CREATE', 'UPDATE', 'DELETE', 'MOVE', 'BULK_MOVE', 'ADD_RELATION', 'DELETE_RELATION']).optional(),
   entityId: z.string().optional(),
   userId: z.string().optional(),
+  batchId: z.string().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -45,7 +46,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const query = querySchema.parse(request.query);
-    const { page, pageSize, entity, action, entityId, userId, from, to } = query;
+    const { page, pageSize, entity, action, entityId, userId, batchId, from, to } = query;
 
     const where: any = { spaceId: request.params.spaceId };
 
@@ -53,6 +54,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
     if (action) where.action = action;
     if (entityId) where.entityId = entityId;
     if (userId) where.userId = userId;
+    if (batchId) where.batchId = batchId;
     if (from || to) {
       where.createdAt = {};
       if (from) where.createdAt.gte = new Date(from);

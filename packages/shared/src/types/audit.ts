@@ -7,7 +7,7 @@ export type AuditAction =
   | 'ADD_RELATION'
   | 'DELETE_RELATION';
 
-export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution';
+export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community';
 
 export interface AuditLogChanges {
   before?: Record<string, unknown>;
@@ -19,7 +19,8 @@ export interface AuditLog {
   action: AuditAction;
   entity: AuditEntity;
   entityId: string;
-  spaceId: string;
+  spaceId: string | null;
+  batchId?: string | null;
   changes: AuditLogChanges | null;
   userId: string;
   user?: {
@@ -35,6 +36,7 @@ export interface AuditLogFilters {
   action?: AuditAction;
   entityId?: string;
   userId?: string;
+  batchId?: string;
   from?: string;
   to?: string;
   page?: number;
@@ -47,4 +49,18 @@ export interface AuditLogListResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+// Delete preview types
+export interface SpaceDeletePreview {
+  childSpaces: Array<{ id: string; name: string; itemCount: number }>;
+  directItemCount: number;
+  totalItemCount: number;
+  totalContributionCount: number;
+}
+
+export interface CommunityDeletePreview {
+  spaces: Array<{ id: string; name: string; itemCount: number }>;
+  totalItemCount: number;
+  totalMemberCount: number;
 }
