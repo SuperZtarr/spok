@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye, LogOut } from 'lucide-react';
 import { useCommunityStore } from '../stores/community';
-import { communitiesApi } from '../lib/api';
+import { communitiesApi, spacesApi } from '../lib/api';
 import { useState, useRef, useEffect } from 'react';
 import type { CommunityWithRole } from '@spok/shared';
 import { ConfirmModal } from './ConfirmModal';
@@ -63,9 +63,19 @@ export function CommunitySelector() {
     }
   }, [communities, currentCommunity, setCurrentCommunity]);
 
-  const handleSelect = (community: CommunityWithRole | null) => {
+  const handleSelect = async (community: CommunityWithRole | null) => {
     setCurrentCommunity(community);
     setIsOpen(false);
+    if (community) {
+      try {
+        const spaces = await spacesApi.list(community.id);
+        if (spaces.length > 0) {
+          navigate(`/spaces/${spaces[0].id}`);
+        }
+      } catch {
+        // Silently fail — user stays on current page
+      }
+    }
   };
 
   const hasContent = (communities && communities.length > 0) || (publicCommunities && publicCommunities.length > 0);
