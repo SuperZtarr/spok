@@ -251,11 +251,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Send email
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const from = process.env.EMAIL_FROM || 'SPOK <noreply@resend.dev>';
 
     try {
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'SPOK <noreply@resend.dev>',
+      fastify.log.info({ to: email, from }, 'Sending password reset email');
+      const { data: emailData, error: emailError } = await resend.emails.send({
+        from,
         to: email,
         subject: 'Réinitialisation de votre mot de passe SPOK',
         html: `
@@ -268,6 +270,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
         `,
       });
+
+      if (emailError) {
+        fastify.log.error({ emailError, to: email, from }, 'Resend API error sending password reset email');
+        return reply.internalServerError('Erreur lors de l\'envoi de l\'email');
+      }
+
+      fastify.log.info({ emailId: emailData?.id, to: email }, 'Password reset email sent successfully');
     } catch (error) {
       fastify.log.error(error, 'Failed to send password reset email');
       return reply.internalServerError('Erreur lors de l\'envoi de l\'email');
@@ -408,9 +417,12 @@ export async function sendVerificationEmail(
   });
 
   const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+  const from = process.env.EMAIL_FROM || 'SPOK <noreply@resend.dev>';
 
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM || 'SPOK <noreply@resend.dev>',
+  fastify.log.info({ to: email, from }, 'Sending verification email');
+
+  const { data, error } = await resend.emails.send({
+    from,
     to: email,
     subject: 'Vérifiez votre adresse email - SPOK',
     html: `
@@ -422,6 +434,13 @@ export async function sendVerificationEmail(
       <p>Si vous n'avez pas créé de compte SPOK, ignorez cet email.</p>
     `,
   });
+
+  if (error) {
+    fastify.log.error({ error, to: email, from }, 'Resend API error sending verification email');
+    throw new Error(`Resend error: ${error.message}`);
+  }
+
+  fastify.log.info({ emailId: data?.id, to: email }, 'Verification email sent successfully');
 }
 
 export async function generateTokens(
