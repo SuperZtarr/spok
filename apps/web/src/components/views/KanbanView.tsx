@@ -11,7 +11,7 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -38,6 +38,7 @@ interface KanbanViewProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -51,6 +52,7 @@ interface KanbanColumnProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   isOver: boolean;
   nextStatus?: string;
   canEdit?: boolean;
@@ -66,6 +68,7 @@ interface KanbanCardProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
   nextStatus?: string;
   nextStatusLabel?: string;
@@ -73,7 +76,7 @@ interface KanbanCardProps {
   referentiels?: SpaceReferentiels;
 }
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
   const Icon = TYPE_ICONS[item.type];
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -153,6 +156,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
               {
                 actions: [
                   ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                 ],
               },
               {
@@ -166,7 +170,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, isOver, nextStatus, canEdit, referentiels }: KanbanColumnProps) {
+function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, nextStatus, canEdit, referentiels }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -210,6 +214,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
             onAddChild={onAddChild}
             onMoveToSpace={onMoveToSpace}
             onDuplicateToSpace={onDuplicateToSpace}
+            onConvertToSpace={onConvertToSpace}
             nextStatus={nextStatus}
             canEdit={canEdit}
             referentiels={referentiels}
@@ -226,7 +231,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
   );
 }
 
-export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, canEdit = true }: KanbanViewProps) {
+export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -331,6 +336,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
               onAddChild={onAddChild}
               onMoveToSpace={onMoveToSpace}
               onDuplicateToSpace={onDuplicateToSpace}
+              onConvertToSpace={onConvertToSpace}
               isOver={overId === status.id}
               nextStatus={nextStatusMap[status.id]?.id}
               canEdit={canEdit}

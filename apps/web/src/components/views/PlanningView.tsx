@@ -11,6 +11,7 @@ import {
   Clock,
   HelpCircle,
   FolderInput,
+  FolderPlus,
   Copy,
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
@@ -126,6 +127,7 @@ interface PlanningViewProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   highlightStatus?: string;
@@ -141,6 +143,7 @@ interface PlanningItemProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   typeLabels?: Record<string, { labelShort: string }>;
   referentiels?: SpaceReferentiels;
@@ -150,7 +153,7 @@ interface PlanningItemProps {
   canEdit?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, statuses, referentiels, isHighlighted, isDimmed, highlightColor, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, highlightColor, canEdit = true }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -228,6 +231,7 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMo
               {
                 actions: [
                   ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
                 ],
               },
               {
@@ -250,6 +254,7 @@ interface PeriodSectionProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -258,7 +263,7 @@ interface PeriodSectionProps {
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -284,6 +289,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             onAddChild={onAddChild}
             onMoveToSpace={onMoveToSpace}
             onDuplicateToSpace={onDuplicateToSpace}
+            onConvertToSpace={onConvertToSpace}
             statuses={statuses}
             referentiels={referentiels}
             isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
@@ -297,7 +303,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -368,6 +374,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           onAddChild={onAddChild}
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
+          onConvertToSpace={onConvertToSpace}
           statuses={statuses}
           referentiels={referentiels}
           highlightType={highlightType}

@@ -81,6 +81,26 @@
 
 ---
 
+#### [2026-02-15] - Suppressions sécurisées + audit global + restauration
+
+**Demande :** Toute suppression (items, espaces, communautés) doit passer par un audit log complet avec état avant suppression, modales de confirmation listant les enfants, choix cascade vs orphan, et restauration possible depuis l'admin.
+**Actions réalisées :**
+- Schema Prisma : Space.parent onDelete SetNull, AuditLog.spaceId nullable, batchId
+- Types partagés : AuditEntity étendu (Space/Community), types DeletePreview
+- Helpers audit : serializeSpaceForAudit, serializeCommunityForAudit, batchId
+- Fix items : audit individuel de chaque enfant avec batchId
+- Espaces : preview endpoint + DELETE refactoré avec audit + deleteChildren
+- Communautés : preview endpoint + DELETE refactoré avec audit + deleteChildren
+- Admin : même logique pour espaces et communautés admin
+- Route admin /audit-logs : filtres, stats, restauration batch, purge
+- Frontend : SpaceDeleteConfirmModal, CommunityDeleteConfirmModal
+- Intégration dans Dashboard, SpaceSettings, admin Spaces/Communities
+- Page admin AuditLogsPage avec table paginée, filtres, stats, restauration batch
+**État :** TERMINÉ
+**Commit :** 5e9afd2
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)
