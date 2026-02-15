@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye } from 'lucide-react';
+import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye, LogOut } from 'lucide-react';
 import { useCommunityStore } from '../stores/community';
 import { communitiesApi } from '../lib/api';
 import { useState, useRef, useEffect } from 'react';
@@ -28,6 +28,15 @@ export function CommunitySelector() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
       queryClient.invalidateQueries({ queryKey: ['communities-public'] });
+    },
+  });
+
+  const leaveMutation = useMutation({
+    mutationFn: (communityId: string) => communitiesApi.leave(communityId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities-public'] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
     },
   });
 
@@ -131,6 +140,25 @@ export function CommunitySelector() {
                       title="Paramètres de la communauté"
                     >
                       <Settings className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {community.role === 'MEMBER' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Quitter la communauté "${community.name}" ? Vous serez aussi retiré de ses espaces.`)) {
+                          if (currentCommunity?.id === community.id) {
+                            setCurrentCommunity(null);
+                          }
+                          leaveMutation.mutate(community.id);
+                          setIsOpen(false);
+                        }
+                      }}
+                      disabled={leaveMutation.isPending}
+                      className="p-1 hover:bg-destructive/10 rounded transition-colors text-destructive"
+                      title="Quitter la communauté"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>

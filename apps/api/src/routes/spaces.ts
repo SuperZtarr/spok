@@ -416,26 +416,49 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete space
   fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: request.params.id },
+    });
+
+    if (!space) {
+      return reply.notFound('Space not found');
+    }
+
+    // Check space membership
+    const spaceMembership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
           userId: request.user.userId,
           spaceId: request.params.id,
         },
       },
-      include: { space: true },
     });
 
-    if (!membership) {
-      return reply.notFound('Space not found');
+    let canDelete = false;
+
+    // Space OWNER can always delete (including personal spaces)
+    if (spaceMembership?.role === 'OWNER') {
+      canDelete = true;
     }
 
-    if (membership.role !== 'OWNER') {
-      return reply.forbidden('Only the owner can delete a space');
+    // Community OWNER or ADMIN can delete community spaces
+    if (!canDelete && space.communityId) {
+      const communityMembership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: space.communityId,
+          },
+        },
+      });
+
+      if (communityMembership && ['OWNER', 'ADMIN'].includes(communityMembership.role)) {
+        canDelete = true;
+      }
     }
 
-    if (membership.space.type === 'PERSONAL') {
-      return reply.forbidden('Cannot delete personal space');
+    if (!canDelete) {
+      return reply.forbidden('Insufficient permissions to delete this space');
     }
 
     await fastify.prisma.space.delete({
@@ -494,6 +517,32 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         spaceId: request.params.id,
         role: 'MEMBER',
       },
+    });
+
+    return { success: true };
+  });
+
+  // Leave a space
+  fastify.post<{ Params: { id: string } }>('/:id/leave', async (request, reply) => {
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+    });
+
+    if (!membership) {
+      return reply.notFound('Not a member of this space');
+    }
+
+    if (membership.role === 'OWNER') {
+      return reply.forbidden('The owner cannot leave the space');
+    }
+
+    await fastify.prisma.spaceMembership.delete({
+      where: { id: membership.id },
     });
 
     return { success: true };

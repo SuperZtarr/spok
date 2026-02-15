@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2 } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle } from 'lucide-react';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
-import { useSpace, useUpdateSpace } from '../hooks/useSpaces';
+import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -22,6 +22,7 @@ export function SpaceSettingsPage() {
   const resetMutation = useResetReferentiels(spaceId!);
   const checkUsageMutation = useCheckStatusUsage(spaceId!);
   const updateSpaceMutation = useUpdateSpace(spaceId!);
+  const deleteSpaceMutation = useDeleteSpace();
 
   // Fetch communities user belongs to
   const { data: communities } = useQuery({
@@ -146,6 +147,21 @@ export function SpaceSettingsPage() {
 
   // Check permissions
   const canEdit = space?.role === 'OWNER' || space?.role === 'ADMIN';
+
+  // Check delete permission: space OWNER or community OWNER/ADMIN
+  const communityRole = communities?.find(c => c.id === space?.communityId)?.role;
+  const canDelete = space?.role === 'OWNER' || (communityRole && ['OWNER', 'ADMIN'].includes(communityRole));
+
+  const handleDeleteSpace = async () => {
+    if (!space) return;
+    const msg = space.type === 'PERSONAL'
+      ? `Supprimer l'espace personnel "${space.name}" ? Cette action est irréversible et supprimera tous ses éléments.`
+      : `Supprimer l'espace "${space.name}" ? Cette action est irréversible et supprimera tous ses éléments.`;
+    if (window.confirm(msg)) {
+      await deleteSpaceMutation.mutateAsync(space.id);
+      navigate('/');
+    }
+  };
 
   if (spaceLoading || referentielsLoading) {
     return (
@@ -313,6 +329,32 @@ export function SpaceSettingsPage() {
             />
           )}
         </div>
+
+        {/* Danger Zone */}
+        {canDelete && (
+          <div className="border border-destructive/30 rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Zone de danger
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              La suppression d'un espace est irréversible. Tous les éléments, relations et contributions seront définitivement perdus.
+            </p>
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDeleteSpace}
+              disabled={deleteSpaceMutation.isPending}
+            >
+              {deleteSpaceMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Supprimer cet espace
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

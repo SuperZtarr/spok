@@ -221,6 +221,51 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     return { success: true };
   });
 
+  // Leave a community (cascade: also removes space memberships)
+  fastify.post<{ Params: { id: string } }>('/:id/leave', async (request, reply) => {
+    const membership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+    });
+
+    if (!membership) {
+      return reply.notFound('Not a member of this community');
+    }
+
+    if (membership.role === 'OWNER') {
+      return reply.forbidden('The owner cannot leave the community');
+    }
+
+    // Find all spaces in this community
+    const communitySpaces = await fastify.prisma.space.findMany({
+      where: { communityId: request.params.id },
+      select: { id: true },
+    });
+
+    const spaceIds = communitySpaces.map((s) => s.id);
+
+    // Remove space memberships in this community's spaces
+    if (spaceIds.length > 0) {
+      await fastify.prisma.spaceMembership.deleteMany({
+        where: {
+          userId: request.user.userId,
+          spaceId: { in: spaceIds },
+        },
+      });
+    }
+
+    // Remove community membership
+    await fastify.prisma.communityMembership.delete({
+      where: { id: membership.id },
+    });
+
+    return { success: true };
+  });
+
   // Get community members
   fastify.get<{ Params: { id: string } }>('/:id/members', async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({

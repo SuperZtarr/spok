@@ -136,9 +136,13 @@ async function fetchApi<T>(
   const token = localStorage.getItem('accessToken');
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...((options.headers as Record<string, string>) || {}),
   };
+
+  // Only set Content-Type: application/json when there is a body
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -407,6 +411,11 @@ export const spacesApi = {
       method: 'POST',
     }),
 
+  leave: (id: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/leave`, {
+      method: 'POST',
+    }),
+
   getMembers: (id: string) => fetchApi<SpaceMember[]>(`/spaces/${id}/members`),
 
   invite: (id: string, data: { email: string; role: string }) =>
@@ -457,6 +466,11 @@ export const communitiesApi = {
 
   join: (id: string) =>
     fetchApi<{ success: boolean }>(`/communities/${id}/join`, {
+      method: 'POST',
+    }),
+
+  leave: (id: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/leave`, {
       method: 'POST',
     }),
 };

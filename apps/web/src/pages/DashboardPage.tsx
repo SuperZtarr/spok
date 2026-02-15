@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, Network, CircleDot, ChevronRight, CheckSquare } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, Network, CircleDot, ChevronRight, CheckSquare } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -37,16 +37,27 @@ function buildSpaceTree(spaces: SpaceWithRole[]): SpaceTreeNode[] {
 function SpaceCardWithChildren({
   node,
   onJoin,
+  onLeave,
+  onDelete,
+  communityRoles,
   level = 0,
 }: {
   node: SpaceTreeNode;
   onJoin?: (id: string) => void;
+  onLeave?: (id: string) => void;
+  onDelete?: (id: string, name: string) => void;
+  communityRoles?: Map<string, string>;
   level?: number;
 }) {
+  const canDelete = node.role === 'OWNER' || (
+    node.communityId && communityRoles?.get(node.communityId) &&
+    ['OWNER', 'ADMIN'].includes(communityRoles.get(node.communityId)!)
+  );
+
   return (
     <>
       {level === 0 ? (
-        <SpaceCard space={node} onJoin={onJoin} />
+        <SpaceCard space={node} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} canDelete={!!canDelete} />
       ) : (
         <Link
           to={`/spaces/${node.id}`}
@@ -62,15 +73,16 @@ function SpaceCardWithChildren({
         </Link>
       )}
       {node.children.map((child) => (
-        <SpaceCardWithChildren key={child.id} node={child} onJoin={onJoin} level={level + 1} />
+        <SpaceCardWithChildren key={child.id} node={child} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} communityRoles={communityRoles} level={level + 1} />
       ))}
     </>
   );
 }
 
 // Reusable space card component
-function SpaceCard({ space, onJoin }: { space: SpaceWithRole; onJoin?: (id: string) => void }) {
+function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete }: { space: SpaceWithRole; onJoin?: (id: string) => void; onLeave?: (id: string) => void; onDelete?: (id: string, name: string) => void; canDelete?: boolean }) {
   const isMember = space.isMember !== false;
+  const canLeave = isMember && space.role !== 'OWNER' && space.type !== 'PERSONAL';
 
   const cardContent = (
     <Card className={`transition-colors h-full ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'}`}>
@@ -122,6 +134,40 @@ function SpaceCard({ space, onJoin }: { space: SpaceWithRole; onJoin?: (id: stri
             <LogIn className="w-4 h-4 mr-2" />
             Rejoindre
           </Button>
+        )}
+        {(canLeave || canDelete) && (
+          <div className="mt-2 flex items-center gap-3">
+            {canLeave && onLeave && (
+              <button
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (window.confirm(`Quitter l'espace "${space.name}" ?`)) {
+                    onLeave(space.id);
+                  }
+                }}
+              >
+                <LogOut className="w-3 h-3" />
+                Quitter
+              </button>
+            )}
+            {canDelete && onDelete && (
+              <button
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (window.confirm(`Supprimer l'espace "${space.name}" ? Cette action est irréversible et supprimera tous ses éléments.`)) {
+                    onDelete(space.id, space.name);
+                  }
+                }}
+              >
+                <Trash2 className="w-3 h-3" />
+                Supprimer
+              </button>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -202,11 +248,44 @@ export function DashboardPage() {
     joinSpaceMutation.mutate(spaceId);
   };
 
+  // Leave space mutation
+  const leaveSpaceMutation = useMutation({
+    mutationFn: spacesApi.leave,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const handleLeaveSpace = (spaceId: string) => {
+    leaveSpaceMutation.mutate(spaceId);
+  };
+
+  // Delete space mutation
+  const deleteSpaceMutation = useMutation({
+    mutationFn: spacesApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const handleDeleteSpace = (spaceId: string) => {
+    deleteSpaceMutation.mutate(spaceId);
+  };
+
   // Fetch communities for the select dropdown
   const { data: communities } = useQuery({
     queryKey: ['communities'],
     queryFn: communitiesApi.list,
   });
+
+  // Build community role map for delete permission check
+  const communityRoles = useMemo(() => {
+    const map = new Map<string, string>();
+    communities?.forEach(c => {
+      if (c.role) map.set(c.id, c.role);
+    });
+    return map;
+  }, [communities]);
 
   const createSpaceMutation = useMutation({
     mutationFn: spacesApi.create,
@@ -457,7 +536,7 @@ export function DashboardPage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {personalSpaces.map((space) => (
-                    <SpaceCard key={space.id} space={space} />
+                    <SpaceCard key={space.id} space={space} onDelete={handleDeleteSpace} canDelete={space.role === 'OWNER'} />
                   ))}
                 </div>
               </section>
@@ -476,7 +555,7 @@ export function DashboardPage() {
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {tree.map((node) => (
                       <div key={node.id}>
-                        <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} />
+                        <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} onLeave={handleLeaveSpace} onDelete={handleDeleteSpace} communityRoles={communityRoles} />
                       </div>
                     ))}
                   </div>
@@ -497,7 +576,7 @@ export function DashboardPage() {
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {tree.map((node) => (
                       <div key={node.id}>
-                        <SpaceCardWithChildren node={node} />
+                        <SpaceCardWithChildren node={node} onDelete={handleDeleteSpace} />
                       </div>
                     ))}
                   </div>
