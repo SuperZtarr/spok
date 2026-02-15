@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, Network, CircleDot, ChevronRight, CheckSquare, Settings, FolderInput, FolderPlus } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, Network, CircleDot, ChevronRight, CheckSquare, Settings, FolderInput, FolderPlus, GitBranch } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -14,6 +14,7 @@ import { GraphView } from '../components/views/GraphView';
 import { SunburstView } from '../components/views/SunburstView';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
+import { DashboardMindMapView } from '../components/views/DashboardMindMapView';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '../components/ui/ItemActionMenu';
 
@@ -309,7 +310,7 @@ export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const showNewSpace = searchParams.get('new') === 'space';
   const { currentCommunity } = useCommunityStore();
-  const [activeTab, setActiveTab] = useState<'spaces' | 'graph' | 'sunburst'>('spaces');
+  const [activeTab, setActiveTab] = useState<'spaces' | 'graph' | 'sunburst' | 'mindmap'>('spaces');
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -493,7 +494,7 @@ export function DashboardPage() {
   }, [allSpaces]);
 
   return (
-    <div className={`flex flex-col${activeTab === 'graph' || activeTab === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
+    <div className={`flex flex-col${activeTab === 'graph' || activeTab === 'sunburst' || activeTab === 'mindmap' ? ' h-full overflow-hidden' : ''}`}>
       {/* Barre d'actions sticky */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex-shrink-0">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -532,6 +533,17 @@ export function DashboardPage() {
               Sunburst
             </button>
             <button
+              onClick={() => setActiveTab('mindmap')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'mindmap'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <GitBranch className="w-4 h-4" />
+              Carte mentale
+            </button>
+            <button
               onClick={() => navigate('/tasks')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
             >
@@ -558,6 +570,14 @@ export function DashboardPage() {
       ) : activeTab === 'sunburst' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <SunburstView />
+        </div>
+      ) : activeTab === 'mindmap' ? (
+        <div className="flex-1 min-h-0 flex flex-col">
+          <DashboardMindMapView
+            communityGroups={communityGroups}
+            personalSpaces={personalSpaces}
+            independentSpaces={independentSpaces}
+          />
         </div>
       ) : (
       <div className="p-8 flex-1">
