@@ -5,7 +5,7 @@ import { communitiesApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { ConfirmModal } from '../ConfirmModal';
-import type { CommunityMember } from '@spok/shared';
+import type { CommunityMember, CommunityRole } from '@spok/shared';
 
 interface CommunityMembersManagerProps {
   communityId: string;
@@ -31,7 +31,7 @@ export function CommunityMembersManager({
 }: CommunityMembersManagerProps) {
   const queryClient = useQueryClient();
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('MEMBER');
+  const [inviteRole, setInviteRole] = useState<CommunityRole>('MEMBER');
   const [removingMember, setRemovingMember] = useState<CommunityMember | null>(null);
 
   const { data: members, isLoading } = useQuery({
@@ -40,7 +40,7 @@ export function CommunityMembersManager({
   });
 
   const inviteMutation = useMutation({
-    mutationFn: (data: { email: string; role: string }) => communitiesApi.invite(communityId, data),
+    mutationFn: (data: { email: string; role: CommunityRole }) => communitiesApi.invite(communityId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
       setInviteEmail('');
@@ -57,7 +57,7 @@ export function CommunityMembersManager({
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
+    mutationFn: ({ memberId, role }: { memberId: string; role: CommunityRole }) =>
       communitiesApi.updateMemberRole(communityId, memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
@@ -96,7 +96,7 @@ export function CommunityMembersManager({
           <div className="relative">
             <select
               value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value)}
+              onChange={(e) => setInviteRole(e.target.value as CommunityRole)}
               className="h-9 px-3 pr-8 text-sm border border-border rounded-md bg-background appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {ROLE_OPTIONS.map((opt) => (
@@ -168,7 +168,7 @@ export function CommunityMembersManager({
                       onChange={(e) =>
                         updateRoleMutation.mutate({
                           memberId: member.id,
-                          role: e.target.value,
+                          role: e.target.value as CommunityRole,
                         })
                       }
                       disabled={updateRoleMutation.isPending}
