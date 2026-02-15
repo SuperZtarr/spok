@@ -39,10 +39,14 @@ export const adminTestsRoutes: FastifyPluginAsync = async (fastify) => {
     const prisma = fastify.prisma;
     const startAll = Date.now();
 
-    // Helper
+    // Helper — handles raw query results like [{count: bigint}] or [{total: bigint}]
     const toNum = (v: unknown): number => {
       if (typeof v === 'number') return v;
-      if (Array.isArray(v) && v[0]?.count !== undefined) return Number(v[0].count);
+      if (Array.isArray(v) && v.length > 0) {
+        const row = v[0] as Record<string, unknown>;
+        if (row?.count !== undefined) return Number(row.count);
+        if (row?.total !== undefined) return Number(row.total);
+      }
       return Number(v) || 0;
     };
 
