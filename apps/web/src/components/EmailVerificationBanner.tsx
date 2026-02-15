@@ -26,7 +26,7 @@ export function EmailVerificationBanner() {
         </span>
         {sent ? (
           <span className="text-green-600 dark:text-green-400 font-medium">
-            Email envoyé !
+            Email envoyé ! Pensez à vérifier vos courriers indésirables.
           </span>
         ) : (
           <button
