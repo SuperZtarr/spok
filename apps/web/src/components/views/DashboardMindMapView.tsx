@@ -16,7 +16,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useNavigate } from 'react-router-dom';
 import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
-import { Building2, FolderKanban, User, Globe, Users } from 'lucide-react';
+import { Building2, FolderKanban, User, Globe, Users, RotateCcw } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';
 
 // --- Types ---
@@ -175,7 +175,10 @@ function buildTreeData(
   return root;
 }
 
-function computeLayout(treeData: TreeDatum): { nodes: Node[]; edges: Edge[] } {
+function computeLayout(
+  treeData: TreeDatum,
+  savedPositions?: Record<string, { x: number; y: number }>,
+): { nodes: Node[]; edges: Edge[] } {
   if (treeData.children.length === 0) {
     return {
       nodes: [{
@@ -213,7 +216,12 @@ function computeLayout(treeData: TreeDatum): { nodes: Node[]; edges: Edge[] } {
     const datum = d3Node.data;
     let x: number, y: number;
 
-    if (d3Node.depth === 0) {
+    // Use saved position if available
+    const saved = savedPositions?.[datum.id];
+    if (saved) {
+      x = saved.x;
+      y = saved.y;
+    } else if (d3Node.depth === 0) {
       x = 0;
       y = 0;
     } else {
@@ -432,6 +440,18 @@ function isDescendantOf(treeData: TreeDatum, sourceId: string, targetId: string)
   return descendants.includes(targetId);
 }
 
+// --- Position persistence ---
+
+const POSITIONS_STORAGE_KEY = 'dashboard-mindmap-positions';
+
+function loadSavedPositions(): Record<string, { x: number; y: number }> {
+  try {
+    const stored = localStorage.getItem(POSITIONS_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch { /* ignore */ }
+  return {};
+}
+
 // --- Main Component ---
 
 function DashboardMindMapInner({
@@ -441,20 +461,28 @@ function DashboardMindMapInner({
   onMoveSpace,
 }: DashboardMindMapViewProps) {
   const navigate = useNavigate();
-  const { getIntersectingNodes, getNodes } = useReactFlow();
+  const { getIntersectingNodes, getNodes, fitView } = useReactFlow();
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }> } | null>(null);
+  const savedPositions = useRef<Record<string, { x: number; y: number }>>(loadSavedPositions());
 
-  const { initialNodes, initialEdges, treeData } = useMemo(() => {
-    const tree = buildTreeData(communityGroups, personalSpaces, independentSpaces);
-    const { nodes, edges } = computeLayout(tree);
-    return { initialNodes: nodes, initialEdges: edges, treeData: tree };
+  const savePositions = useCallback(() => {
+    localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(savedPositions.current));
+  }, []);
+
+  const treeData = useMemo(() => {
+    return buildTreeData(communityGroups, personalSpaces, independentSpaces);
   }, [communityGroups, personalSpaces, independentSpaces]);
+
+  const { initialNodes, initialEdges } = useMemo(() => {
+    const { nodes, edges } = computeLayout(treeData, savedPositions.current);
+    return { initialNodes: nodes, initialEdges: edges };
+  }, [treeData]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update when data changes
+  // Update when data changes (tree structure changed, e.g. after reparent)
   useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
@@ -556,15 +584,37 @@ function DashboardMindMapInner({
     }
   }, [getIntersectingNodes, setNodes]);
 
-  // Drag stop: reparent space if dropped on another space
+  // Drag stop: reparent if dropped on target, otherwise save position
   const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
     const data = draggedNode.data as unknown as TreeDatum;
-    if (data.type !== 'space' || !onMoveSpace) {
+
+    // For non-space nodes (community, group), just save positions
+    if (data.type !== 'space') {
+      // Save dragged node position (center of node)
+      savedPositions.current[draggedNode.id] = {
+        x: draggedNode.position.x + 75,
+        y: draggedNode.position.y + 20,
+      };
+      // Save descendant positions
+      if (dragDescendants.current) {
+        const currentNodes = getNodes();
+        const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
+        for (const id of dragDescendants.current.ids) {
+          const n = nodeMap.get(id);
+          if (n) {
+            const w = (n.data as unknown as TreeDatum).type === 'central' ? 140 : 150;
+            const h = (n.data as unknown as TreeDatum).type === 'central' ? 50 : 40;
+            savedPositions.current[id] = { x: n.position.x + w / 2, y: n.position.y + h / 2 };
+          }
+        }
+      }
+      savePositions();
       dragDescendants.current = null;
       setDropTargetId(null);
       return;
     }
 
+    // Space nodes: check for drop target
     const intersecting = getIntersectingNodes(draggedNode);
     const descendantIds = dragDescendants.current?.ids || [];
     const target = intersecting.find(n => {
@@ -574,27 +624,52 @@ function DashboardMindMapInner({
       return d.type === 'space' || d.type === 'community' || d.type === 'personal-group' || d.type === 'independent-group';
     });
 
-    if (target) {
+    if (target && onMoveSpace) {
       const targetData = target.data as unknown as TreeDatum;
       const draggedEntityId = data.entityId;
 
       if (targetData.type === 'space') {
-        // Drop on another space → reparent
         const targetEntityId = targetData.entityId;
         if (draggedEntityId && targetEntityId && !isDescendantOf(treeData, draggedNode.id, target.id)) {
           onMoveSpace(draggedEntityId, targetEntityId);
         }
       } else {
-        // Drop on community/group node → remove parent (set to root)
         if (draggedEntityId) {
           onMoveSpace(draggedEntityId, null);
         }
       }
+    } else {
+      // No reparenting — save positions for dragged node + descendants
+      savedPositions.current[draggedNode.id] = {
+        x: draggedNode.position.x + 75,
+        y: draggedNode.position.y + 20,
+      };
+      if (dragDescendants.current) {
+        const currentNodes = getNodes();
+        const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
+        for (const id of dragDescendants.current.ids) {
+          const n = nodeMap.get(id);
+          if (n) {
+            savedPositions.current[id] = { x: n.position.x + 75, y: n.position.y + 20 };
+          }
+        }
+      }
+      savePositions();
     }
 
     dragDescendants.current = null;
     setDropTargetId(null);
-  }, [getIntersectingNodes, onMoveSpace, treeData]);
+  }, [getIntersectingNodes, getNodes, onMoveSpace, treeData, savePositions]);
+
+  // Reset layout: clear saved positions and recalculate
+  const resetLayout = useCallback(() => {
+    savedPositions.current = {};
+    localStorage.removeItem(POSITIONS_STORAGE_KEY);
+    const { nodes: newNodes, edges: newEdges } = computeLayout(treeData);
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setTimeout(() => fitView({ padding: 0.3 }), 50);
+  }, [treeData, setNodes, setEdges, fitView]);
 
   return (
     <ReactFlow
@@ -624,6 +699,17 @@ function DashboardMindMapInner({
         nodeColor={getMiniMapNodeColor}
         maskColor="rgba(0, 0, 0, 0.1)"
       />
+      {/* Reset layout button */}
+      <div className="absolute top-3 right-3 z-10">
+        <button
+          onClick={resetLayout}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/90 hover:bg-white border border-border rounded-md shadow-sm text-muted-foreground hover:text-foreground transition-colors"
+          title="Réinitialiser la disposition"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Réinitialiser
+        </button>
+      </div>
     </ReactFlow>
   );
 }
