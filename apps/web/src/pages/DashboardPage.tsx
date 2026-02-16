@@ -156,8 +156,8 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
     return groups;
   }, [space, isMember, canLeave, canDelete, canManage, navigate, onLeave, onDelete, onAddChildSpace]);
 
-  const isDraggable = isMember && space.type === 'GROUP';
-  const isDropTarget = space.type === 'GROUP' && onMoveToParent;
+  const isDraggable = isMember;
+  const isDropTarget = !!onMoveToParent;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/spok-space-id', space.id);
@@ -577,6 +577,7 @@ export function DashboardPage() {
             communityGroups={communityGroups}
             personalSpaces={personalSpaces}
             independentSpaces={independentSpaces}
+            onMoveSpace={handleMoveToParent}
           />
         </div>
       ) : (
