@@ -31,7 +31,7 @@ interface DashboardMindMapViewProps {
   communityGroups: CommunityGroup[];
   personalSpaces: SpaceWithRole[];
   independentSpaces: SpaceWithRole[];
-  onMoveSpace?: (spaceId: string, newParentId: string) => void;
+  onMoveSpace?: (spaceId: string, newParentId: string | null) => void;
 }
 
 interface TreeDatum {
@@ -62,7 +62,7 @@ const HANDLE_CLASS = '!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hove
 
 // --- Layout ---
 
-const RADIAL_STEP = 300;
+const RADIAL_STEP = 350;
 
 function buildTreeData(
   communityGroups: CommunityGroup[],
@@ -190,11 +190,18 @@ function computeLayout(treeData: TreeDatum): { nodes: Node[]; edges: Edge[] } {
 
   const root = hierarchy(treeData);
   const maxDepth = root.height;
-  const maxRadius = Math.max(300, maxDepth * RADIAL_STEP);
+  const leafCount = root.leaves().length;
+  const maxRadius = Math.max(400, maxDepth * RADIAL_STEP, leafCount * 40);
 
   const layout = d3Tree<TreeDatum>()
     .size([2 * Math.PI, maxRadius])
-    .separation((a, b) => (a.parent === b.parent ? 1.5 : 2.5) / Math.max(1, a.depth * 0.8));
+    .separation((a, b) => {
+      const base = a.parent === b.parent ? 2 : 3;
+      // Increase separation for nodes with children to avoid overlap
+      const aSize = (a.data.children?.length || 0) > 0 ? 1.5 : 1;
+      const bSize = (b.data.children?.length || 0) > 0 ? 1.5 : 1;
+      return (base * Math.max(aSize, bSize)) / Math.max(1, a.depth * 0.7);
+    });
 
   layout(root);
 
@@ -290,17 +297,20 @@ function CentralNode({ data }: { data: TreeDatum }) {
   );
 }
 
-function CommunityNode({ data }: { data: TreeDatum }) {
+function CommunityNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } }) {
   const nodeType = data.type as string;
   const isCommunity = nodeType === 'community';
   const isPersonal = nodeType === 'personal-group';
   const Icon = isCommunity ? Building2 : isPersonal ? User : Users;
   const colors = NODE_COLORS[nodeType] || NODE_COLORS['community'];
+  const isDropTarget = data.isDropTarget as boolean;
 
   return (
     <div
-      className="px-4 py-2.5 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group"
-      style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+      className={`px-4 py-2.5 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+        isDropTarget ? 'ring-4 ring-green-400 !border-green-500 scale-110' : ''
+      }`}
+      style={{ backgroundColor: isDropTarget ? '#dcfce7' : colors.bg, borderColor: isDropTarget ? '#22c55e' : colors.border }}
     >
       {/* Handles on all sides */}
       <Handle type="target" position={Position.Top} id="top" className={HANDLE_CLASS} />
@@ -474,7 +484,8 @@ function DashboardMindMapInner({
   // Drag start: capture descendant offsets for drag-with-children
   const onNodeDragStart = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
     const data = draggedNode.data as unknown as TreeDatum;
-    if (data.type !== 'space') {
+    // Allow dragging spaces, communities, and group nodes with their children
+    if (data.type === 'central') {
       dragDescendants.current = null;
       return;
     }
@@ -513,7 +524,7 @@ function DashboardMindMapInner({
   // Drag: move descendants + highlight drop target
   const onNodeDrag = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
     const data = draggedNode.data as unknown as TreeDatum;
-    if (data.type !== 'space') return;
+    if (data.type === 'central') return;
 
     // Move descendants along with dragged node
     if (dragDescendants.current && dragDescendants.current.offsets.size > 0) {
@@ -531,16 +542,18 @@ function DashboardMindMapInner({
       }));
     }
 
-    // Highlight potential drop target (only space nodes)
-    const intersecting = getIntersectingNodes(draggedNode);
-    const descendantIds = dragDescendants.current?.ids || [];
-    const target = intersecting.find(n => {
-      if (n.id === draggedNode.id) return false;
-      if (descendantIds.includes(n.id)) return false;
-      const d = n.data as unknown as TreeDatum;
-      return d.type === 'space';
-    });
-    setDropTargetId(target?.id || null);
+    // Highlight potential drop target only for space nodes being dragged
+    if (data.type === 'space') {
+      const intersecting = getIntersectingNodes(draggedNode);
+      const descendantIds = dragDescendants.current?.ids || [];
+      const target = intersecting.find(n => {
+        if (n.id === draggedNode.id) return false;
+        if (descendantIds.includes(n.id)) return false;
+        const d = n.data as unknown as TreeDatum;
+        return d.type === 'space' || d.type === 'community' || d.type === 'personal-group' || d.type === 'independent-group';
+      });
+      setDropTargetId(target?.id || null);
+    }
   }, [getIntersectingNodes, setNodes]);
 
   // Drag stop: reparent space if dropped on another space
@@ -558,17 +571,24 @@ function DashboardMindMapInner({
       if (n.id === draggedNode.id) return false;
       if (descendantIds.includes(n.id)) return false;
       const d = n.data as unknown as TreeDatum;
-      return d.type === 'space';
+      return d.type === 'space' || d.type === 'community' || d.type === 'personal-group' || d.type === 'independent-group';
     });
 
     if (target) {
       const targetData = target.data as unknown as TreeDatum;
       const draggedEntityId = data.entityId;
-      const targetEntityId = targetData.entityId;
 
-      // Prevent dropping on own descendant
-      if (draggedEntityId && targetEntityId && !isDescendantOf(treeData, draggedNode.id, target.id)) {
-        onMoveSpace(draggedEntityId, targetEntityId);
+      if (targetData.type === 'space') {
+        // Drop on another space → reparent
+        const targetEntityId = targetData.entityId;
+        if (draggedEntityId && targetEntityId && !isDescendantOf(treeData, draggedNode.id, target.id)) {
+          onMoveSpace(draggedEntityId, targetEntityId);
+        }
+      } else {
+        // Drop on community/group node → remove parent (set to root)
+        if (draggedEntityId) {
+          onMoveSpace(draggedEntityId, null);
+        }
       }
     }
 
