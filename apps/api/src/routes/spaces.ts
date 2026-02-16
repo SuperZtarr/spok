@@ -306,6 +306,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch<{ Params: { id: string }; Body: z.infer<typeof updateSpaceSchema> }>(
     '/:id',
     async (request, reply) => {
+      // Check if user is global admin
+      const currentUser = await fastify.prisma.user.findUnique({
+        where: { id: request.user.userId },
+        select: { globalRole: true },
+      });
+      const isGlobalAdmin = currentUser?.globalRole === 'ADMIN';
+
       const membership = await fastify.prisma.spaceMembership.findUnique({
         where: {
           userId_spaceId: {
@@ -316,23 +323,35 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         include: { space: true },
       });
 
-      if (!membership) {
+      // Global admin can bypass membership check
+      let space = membership?.space;
+      if (!membership && !isGlobalAdmin) {
         return reply.notFound('Space not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!isGlobalAdmin && !['OWNER', 'ADMIN'].includes(membership!.role)) {
         return reply.forbidden('Insufficient permissions');
+      }
+
+      // If global admin without membership, load space directly
+      if (!space) {
+        space = await fastify.prisma.space.findUnique({
+          where: { id: request.params.id },
+        });
+        if (!space) {
+          return reply.notFound('Space not found');
+        }
       }
 
       const body = updateSpaceSchema.parse(request.body);
 
       // Cannot assign community to personal space
-      if (body.communityId && membership.space.type === 'PERSONAL') {
+      if (body.communityId && space.type === 'PERSONAL') {
         return reply.badRequest('Les espaces personnels ne peuvent pas être rattachés à une communauté');
       }
 
       // Cannot nest personal spaces
-      if (body.parentId && membership.space.type === 'PERSONAL') {
+      if (body.parentId && space.type === 'PERSONAL') {
         return reply.badRequest('Les espaces personnels ne peuvent pas être imbriqués');
       }
 
@@ -375,8 +394,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      // Verify user is member of the target community
-      if (communityIdOverride) {
+      // Verify user is member of the target community (skip for global admin)
+      if (communityIdOverride && !isGlobalAdmin) {
         const communityMembership = await fastify.prisma.communityMembership.findUnique({
           where: {
             userId_communityId: {
@@ -396,7 +415,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.parentId !== undefined) updateData.parentId = body.parentId;
       if (communityIdOverride !== undefined) updateData.communityId = communityIdOverride;
 
-      const space = await fastify.prisma.space.update({
+      const updatedSpace = await fastify.prisma.space.update({
         where: { id: request.params.id },
         data: updateData,
         include: {
@@ -415,7 +434,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      return space;
+      return updatedSpace;
     }
   );
 
