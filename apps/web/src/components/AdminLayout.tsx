@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, FlaskConical, BarChart3, History } from 'lucide-react';
+import { LogOut, Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { Button } from './ui/Button';
@@ -29,9 +29,8 @@ export function AdminLayout() {
       if (location.pathname === '/admin/users') return 'Utilisateurs';
       if (location.pathname === '/admin/spaces') return 'Espaces';
       if (location.pathname === '/admin/communities') return 'Communautes';
-      if (location.pathname === '/admin/anomalies') return 'Anomalies';
+      if (location.pathname === '/admin/anomalies') return 'Diagnostics';
       if (location.pathname === '/admin/referentiels') return 'Referentiels';
-      if (location.pathname === '/admin/tests') return 'Tests';
       if (location.pathname === '/admin/stats') return 'Statistiques';
       if (location.pathname === '/admin/audit-logs') return 'Audit Logs';
       return 'Administration';
@@ -113,7 +112,7 @@ export function AdminLayout() {
               }`}
             >
               <AlertTriangle className="w-4 h-4" />
-              Anomalies
+              Diagnostics
             </Link>
 
             <Link
@@ -126,18 +125,6 @@ export function AdminLayout() {
             >
               <Settings className="w-4 h-4" />
               Referentiels
-            </Link>
-
-            <Link
-              to="/admin/tests"
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                isActive('/admin/tests')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent'
-              }`}
-            >
-              <FlaskConical className="w-4 h-4" />
-              Tests
             </Link>
 
             <Link

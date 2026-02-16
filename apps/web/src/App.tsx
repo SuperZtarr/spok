@@ -42,7 +42,6 @@ import { SpacesPage } from './pages/admin/SpacesPage';
 import { CommunitiesPage } from './pages/admin/CommunitiesPage';
 import { AnomaliesPage } from './pages/admin/AnomaliesPage';
 import { ReferentielsPage } from './pages/admin/ReferentielsPage';
-import { TestsPage } from './pages/admin/TestsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 
@@ -151,7 +150,6 @@ export default function App() {
         <Route path="communities" element={<CommunitiesPage />} />
         <Route path="anomalies" element={<AnomaliesPage />} />
         <Route path="referentiels" element={<ReferentielsPage />} />
-        <Route path="tests" element={<TestsPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
       </Route>

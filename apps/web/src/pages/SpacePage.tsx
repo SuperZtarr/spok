@@ -654,7 +654,7 @@ export function SpacePage() {
 
           {filterMode === 'type' ? (
             <>
-              {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
+              {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'] as const).map((t) => {
                 const isActive = filter === t;
                 const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
                 return (
