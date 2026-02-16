@@ -52,6 +52,7 @@ export function ForgotPasswordPage() {
             <CardTitle className="text-2xl">Email envoyé</CardTitle>
             <CardDescription>
               Si un compte existe avec cet email, vous recevrez un lien de réinitialisation.
+              Pensez à vérifier vos courriers indésirables (spam).
             </CardDescription>
           </CardHeader>
           <CardContent>
