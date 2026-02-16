@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   Node,
@@ -8,6 +8,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   ReactFlowProvider,
   Handle,
   Position,
@@ -30,6 +31,7 @@ interface DashboardMindMapViewProps {
   communityGroups: CommunityGroup[];
   personalSpaces: SpaceWithRole[];
   independentSpaces: SpaceWithRole[];
+  onMoveSpace?: (spaceId: string, newParentId: string) => void;
 }
 
 interface TreeDatum {
@@ -329,14 +331,17 @@ function CommunityNode({ data }: { data: TreeDatum }) {
   );
 }
 
-function SpaceNode({ data }: { data: TreeDatum }) {
+function SpaceNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } }) {
   const colors = NODE_COLORS['space'];
   const hasChildren = (data.children as TreeDatum[])?.length > 0;
+  const isDropTarget = data.isDropTarget as boolean;
 
   return (
     <div
-      className="px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group"
-      style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+        isDropTarget ? 'ring-4 ring-green-400 !border-green-500 scale-110' : ''
+      }`}
+      style={{ backgroundColor: isDropTarget ? '#dcfce7' : colors.bg, borderColor: isDropTarget ? '#22c55e' : colors.border }}
     >
       {/* Handles on all sides */}
       <Handle type="target" position={Position.Top} id="top" className={HANDLE_CLASS} />
@@ -389,19 +394,51 @@ function getMiniMapNodeColor(node: Node): string {
   return colors?.bg || '#f3f4f6';
 }
 
+// --- Helpers for drag with children ---
+
+function collectDescendantIds(datum: TreeDatum): string[] {
+  const ids: string[] = [];
+  for (const child of datum.children) {
+    ids.push(child.id);
+    ids.push(...collectDescendantIds(child));
+  }
+  return ids;
+}
+
+function findTreeDatum(datum: TreeDatum, id: string): TreeDatum | null {
+  if (datum.id === id) return datum;
+  for (const child of datum.children) {
+    const found = findTreeDatum(child, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Check if targetId is a descendant of sourceId in the tree
+function isDescendantOf(treeData: TreeDatum, sourceId: string, targetId: string): boolean {
+  const sourceNode = findTreeDatum(treeData, sourceId);
+  if (!sourceNode) return false;
+  const descendants = collectDescendantIds(sourceNode);
+  return descendants.includes(targetId);
+}
+
 // --- Main Component ---
 
 function DashboardMindMapInner({
   communityGroups,
   personalSpaces,
   independentSpaces,
+  onMoveSpace,
 }: DashboardMindMapViewProps) {
   const navigate = useNavigate();
+  const { getIntersectingNodes, getNodes } = useReactFlow();
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }> } | null>(null);
 
-  const { initialNodes, initialEdges } = useMemo(() => {
-    const treeData = buildTreeData(communityGroups, personalSpaces, independentSpaces);
-    const { nodes, edges } = computeLayout(treeData);
-    return { initialNodes: nodes, initialEdges: edges };
+  const { initialNodes, initialEdges, treeData } = useMemo(() => {
+    const tree = buildTreeData(communityGroups, personalSpaces, independentSpaces);
+    const { nodes, edges } = computeLayout(tree);
+    return { initialNodes: nodes, initialEdges: edges, treeData: tree };
   }, [communityGroups, personalSpaces, independentSpaces]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -413,6 +450,18 @@ function DashboardMindMapInner({
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
+  // Mark drop target node in data so SpaceNode can render highlight
+  useEffect(() => {
+    setNodes(prev => prev.map(n => {
+      const data = n.data as unknown as TreeDatum;
+      const shouldHighlight = n.id === dropTargetId;
+      if ((data.isDropTarget as boolean) !== shouldHighlight) {
+        return { ...n, data: { ...n.data, isDropTarget: shouldHighlight } };
+      }
+      return n;
+    }));
+  }, [dropTargetId, setNodes]);
+
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     const data = node.data as unknown as TreeDatum;
     if (data.type === 'space' && data.entityId) {
@@ -422,6 +471,111 @@ function DashboardMindMapInner({
     }
   }, [navigate]);
 
+  // Drag start: capture descendant offsets for drag-with-children
+  const onNodeDragStart = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
+    const data = draggedNode.data as unknown as TreeDatum;
+    if (data.type !== 'space') {
+      dragDescendants.current = null;
+      return;
+    }
+
+    const treeDatum = findTreeDatum(treeData, draggedNode.id);
+    if (!treeDatum || treeDatum.children.length === 0) {
+      dragDescendants.current = null;
+      return;
+    }
+
+    const descendantIds = collectDescendantIds(treeDatum);
+    if (descendantIds.length === 0) {
+      dragDescendants.current = null;
+      return;
+    }
+
+    const currentNodes = getNodes();
+    const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
+    const draggedPos = nodeMap.get(draggedNode.id)?.position;
+    if (!draggedPos) {
+      dragDescendants.current = null;
+      return;
+    }
+
+    const offsets = new Map<string, { dx: number; dy: number }>();
+    for (const id of descendantIds) {
+      const n = nodeMap.get(id);
+      if (n) {
+        offsets.set(id, { dx: n.position.x - draggedPos.x, dy: n.position.y - draggedPos.y });
+      }
+    }
+
+    dragDescendants.current = { ids: descendantIds, offsets };
+  }, [treeData, getNodes]);
+
+  // Drag: move descendants + highlight drop target
+  const onNodeDrag = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
+    const data = draggedNode.data as unknown as TreeDatum;
+    if (data.type !== 'space') return;
+
+    // Move descendants along with dragged node
+    if (dragDescendants.current && dragDescendants.current.offsets.size > 0) {
+      const { offsets } = dragDescendants.current;
+      setNodes(prevNodes => prevNodes.map(n => {
+        const offset = offsets.get(n.id);
+        if (!offset) return n;
+        return {
+          ...n,
+          position: {
+            x: draggedNode.position.x + offset.dx,
+            y: draggedNode.position.y + offset.dy,
+          },
+        };
+      }));
+    }
+
+    // Highlight potential drop target (only space nodes)
+    const intersecting = getIntersectingNodes(draggedNode);
+    const descendantIds = dragDescendants.current?.ids || [];
+    const target = intersecting.find(n => {
+      if (n.id === draggedNode.id) return false;
+      if (descendantIds.includes(n.id)) return false;
+      const d = n.data as unknown as TreeDatum;
+      return d.type === 'space';
+    });
+    setDropTargetId(target?.id || null);
+  }, [getIntersectingNodes, setNodes]);
+
+  // Drag stop: reparent space if dropped on another space
+  const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
+    const data = draggedNode.data as unknown as TreeDatum;
+    if (data.type !== 'space' || !onMoveSpace) {
+      dragDescendants.current = null;
+      setDropTargetId(null);
+      return;
+    }
+
+    const intersecting = getIntersectingNodes(draggedNode);
+    const descendantIds = dragDescendants.current?.ids || [];
+    const target = intersecting.find(n => {
+      if (n.id === draggedNode.id) return false;
+      if (descendantIds.includes(n.id)) return false;
+      const d = n.data as unknown as TreeDatum;
+      return d.type === 'space';
+    });
+
+    if (target) {
+      const targetData = target.data as unknown as TreeDatum;
+      const draggedEntityId = data.entityId;
+      const targetEntityId = targetData.entityId;
+
+      // Prevent dropping on own descendant
+      if (draggedEntityId && targetEntityId && !isDescendantOf(treeData, draggedNode.id, target.id)) {
+        onMoveSpace(draggedEntityId, targetEntityId);
+      }
+    }
+
+    dragDescendants.current = null;
+    setDropTargetId(null);
+  }, [getIntersectingNodes, onMoveSpace, treeData]);
+
   return (
     <ReactFlow
       nodes={nodes}
@@ -429,6 +583,9 @@ function DashboardMindMapInner({
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
+      onNodeDragStart={onNodeDragStart}
+      onNodeDrag={onNodeDrag}
+      onNodeDragStop={onNodeDragStop}
       nodeTypes={nodeTypes}
       fitView
       fitViewOptions={{ padding: 0.3 }}
