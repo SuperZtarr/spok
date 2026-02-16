@@ -403,9 +403,9 @@ export function DashboardPage() {
     setSearchParams({ new: 'space' });
   };
 
-  // Move space to new parent (drag & drop)
+  // Move space to new parent (drag & drop) or remove parent (null)
   const moveToParentMutation = useMutation({
-    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string }) =>
+    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string | null }) =>
       spacesApi.update(spaceId, { parentId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
@@ -415,7 +415,7 @@ export function DashboardPage() {
     },
   });
 
-  const handleMoveToParent = (spaceId: string, newParentId: string) => {
+  const handleMoveToParent = (spaceId: string, newParentId: string | null) => {
     moveToParentMutation.mutate({ spaceId, parentId: newParentId });
   };
 
