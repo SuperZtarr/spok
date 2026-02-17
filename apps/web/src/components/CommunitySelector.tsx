@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye, LogOut, Plus, Loader2 } from 'lucide-react';
 import { useCommunityStore } from '../stores/community';
 import { communitiesApi, spacesApi } from '../lib/api';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import type { CommunityWithRole } from '@spok/shared';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -55,6 +55,16 @@ export function CommunitySelector() {
       navigate(`/communities/${community.id}/settings`);
     },
   });
+
+  const sortedCommunities = useMemo(
+    () => communities?.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })),
+    [communities],
+  );
+
+  const sortedPublicCommunities = useMemo(
+    () => publicCommunities?.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })),
+    [publicCommunities],
+  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -131,11 +141,11 @@ export function CommunitySelector() {
             Tous les espaces
           </button>
 
-          {communities && communities.length > 0 && (
+          {sortedCommunities && sortedCommunities.length > 0 && (
             <>
               <div className="border-t border-border my-1" />
 
-              {communities.map((community) => (
+              {sortedCommunities.map((community) => (
                 <div
                   key={community.id}
                   className={`flex items-center gap-2 w-full px-3 py-2 hover:bg-accent transition-colors text-sm ${
@@ -255,14 +265,14 @@ export function CommunitySelector() {
             </button>
           )}
 
-          {publicCommunities && publicCommunities.length > 0 && (
+          {sortedPublicCommunities && sortedPublicCommunities.length > 0 && (
             <>
               <div className="border-t border-border my-1" />
               <div className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Communautés publiques
               </div>
 
-              {publicCommunities.map((community) => (
+              {sortedPublicCommunities.map((community) => (
                 <div
                   key={community.id}
                   className="flex items-center gap-2 w-full px-3 py-2 hover:bg-accent transition-colors text-sm"
