@@ -27,6 +27,7 @@ import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 export interface MindMapViewHandle {
   expandAll: () => void;
   collapseAll: () => void;
+  resetLayout: () => void;
   hasCollapsedNodes: boolean;
 }
 
@@ -1410,8 +1411,9 @@ function MindMapViewInner({
   useImperativeHandle(innerRef, () => ({
     expandAll,
     collapseAll,
+    resetLayout,
     hasCollapsedNodes,
-  }), [expandAll, collapseAll, hasCollapsedNodes]);
+  }), [expandAll, collapseAll, resetLayout, hasCollapsedNodes]);
 
   return (
     <>
@@ -1447,8 +1449,8 @@ function MindMapViewInner({
           }}
           maskColor="rgba(0, 0, 0, 0.1)"
         />
-        <Panel position="top-right" className="flex gap-1 sm:gap-2">
-          {focusedProjectId && (
+        {focusedProjectId && (
+          <Panel position="top-right" className="flex gap-1 sm:gap-2">
             <button
               onClick={exitProjectFocus}
               className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-primary text-primary-foreground border rounded-lg shadow-sm hover:bg-primary/90 transition-colors"
@@ -1457,16 +1459,8 @@ function MindMapViewInner({
               <Maximize2 className="w-4 h-4" />
               <span className="text-sm hidden sm:inline">Vue complète</span>
             </button>
-          )}
-          <button
-            onClick={resetLayout}
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
-            title="Réorganiser les éléments"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span className="text-sm hidden sm:inline">Réorganiser</span>
-          </button>
-        </Panel>
+          </Panel>
+        )}
         <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-2 text-xs max-w-[220px]">
           <button
             onClick={() => setLegendOpen(v => !v)}

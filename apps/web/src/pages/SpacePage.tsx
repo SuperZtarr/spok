@@ -33,6 +33,7 @@ import {
   FolderInput,
   Copy,
   FolderPlus,
+  RotateCcw,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -745,6 +746,22 @@ export function SpacePage() {
               </>
             );
           })()}
+
+          {viewMode === 'mindmap' && (
+            <>
+              <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => mindmapRef.current?.resetLayout()}
+                title="Réorganiser les éléments"
+                className="flex-shrink-0"
+              >
+                <RotateCcw className="w-4 h-4 mr-1" />
+                Réorganiser
+              </Button>
+            </>
+          )}
 
           <div className="ml-auto flex gap-1 flex-shrink-0">
             <Link to={`/spaces/${spaceId}/history`}>
