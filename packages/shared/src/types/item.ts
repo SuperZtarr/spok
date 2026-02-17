@@ -20,6 +20,7 @@ export interface Item {
   spaceId: string;
   createdById: string;
   parentId?: string | null;
+  tags?: Tag[];
 }
 
 export interface MoveItemInput {

@@ -17,6 +17,7 @@ import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
+import { TagBadge } from '../ui/TagBadge';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -131,6 +132,13 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
               {stripMarkup(item.description)}
             </p>
+          )}
+          {item.tags && item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {item.tags.map((tag) => (
+                <TagBadge key={tag.id} tag={tag} size="sm" />
+              ))}
+            </div>
           )}
           {item.type === 'MEETING' && item.startDate && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">

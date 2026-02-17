@@ -5,6 +5,7 @@ import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 
 import { Badge } from '../ui/Badge';
+import { TagBadge } from '../ui/TagBadge';
 import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
@@ -272,7 +273,19 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                     <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   )}
 
-                  <span className="truncate">{item.title}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate">{item.title}</span>
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {item.tags.slice(0, 3).map((tag) => (
+                          <TagBadge key={tag.id} tag={tag} size="sm" />
+                        ))}
+                        {item.tags.length > 3 && (
+                          <span className="text-[10px] text-muted-foreground">+{item.tags.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <span className="truncate text-xs text-muted-foreground" title={item.parentId ? parentNames[item.parentId] || '' : ''}>
                     {item.parentId ? parentNames[item.parentId] || '' : ''}

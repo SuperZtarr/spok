@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, isConflictError } from '../lib/api';
-import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon } from 'lucide-react';
+import { TagSelector } from './ui/TagSelector';
+import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
@@ -104,6 +106,10 @@ export function ItemEditModal({
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
 
+  // Tags state
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [originalTagIds, setOriginalTagIds] = useState<string[]>([]);
+
   // Contributions state
   const [newContribution, setNewContribution] = useState('');
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
@@ -164,6 +170,9 @@ export function ItemEditModal({
       } else {
         setEndDate('');
       }
+      const tagIds = item.tags?.map((t: Tag) => t.id) || [];
+      setSelectedTagIds(tagIds);
+      setOriginalTagIds(tagIds);
     }
   }, [item]);
 
@@ -370,7 +379,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -421,6 +430,13 @@ export function ItemEditModal({
     const currentEndDate = item.endDate ? new Date(item.endDate).toISOString() : null;
     if (newEndDate !== currentEndDate) {
       updates.endDate = newEndDate;
+    }
+
+    // Handle tag changes
+    const sortedCurrent = [...selectedTagIds].sort();
+    const sortedOriginal = [...originalTagIds].sort();
+    if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) {
+      updates.tagIds = selectedTagIds;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -938,6 +954,31 @@ export function ItemEditModal({
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Tags section */}
+          <div className="space-y-2 pt-4 border-t border-border">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <TagIcon className="w-4 h-4" />
+              Tags
+            </label>
+            {canEdit ? (
+              <TagSelector
+                spaceId={spaceId}
+                value={selectedTagIds}
+                onChange={setSelectedTagIds}
+              />
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {item?.tags && item.tags.length > 0 ? (
+                  item.tags.map((tag: Tag) => (
+                    <TagBadge key={tag.id} tag={tag} />
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">Aucun tag</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Dependencies/Relations section */}
