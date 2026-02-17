@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, StatusConfig, SpaceWithRole } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, Trash2, CheckSquare, type LucideIcon } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, Trash2, CheckSquare, Pin, PinOff, type LucideIcon } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 
@@ -203,11 +203,13 @@ interface MindMapNodeProps {
     isDimmed: boolean;
     isDropTarget: boolean;
     canEdit: boolean;
+    isPinned: boolean;
+    onTogglePin: (id: string) => void;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit } = data;
+  const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isDropTarget, canEdit, isPinned, onTogglePin } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
@@ -258,8 +260,25 @@ function MindMapNode({ data }: MindMapNodeProps) {
           </span>
         )}
 
-        {/* Action menu inside the node */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-auto">
+        {/* Pin + Action menu */}
+        <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePin(item.id);
+            }}
+            className={`p-0.5 rounded transition-opacity ${isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            title={isPinned ? 'Désépingler (autoriser le repositionnement)' : 'Épingler (fixer la position)'}
+          >
+            {isPinned ? (
+              <Pin className="w-3.5 h-3.5" style={{ color: textColor }} />
+            ) : (
+              <PinOff className="w-3.5 h-3.5 opacity-50" style={{ color: textColor }} />
+            )}
+          </button>
+
+          {/* Action menu inside the node */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={[
               ...(canEdit ? [{
@@ -286,6 +305,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
             triggerClassName="p-0.5 rounded hover:bg-black/10 transition-colors"
             side="right"
           />
+          </div>
         </div>
       </div>
     </div>
@@ -511,7 +531,9 @@ function calculateLayout(
   doneStatusId: string,
   highlightType?: string,
   highlightStatus?: string,
-  canEdit?: boolean
+  canEdit?: boolean,
+  pinnedIdsSet?: Set<string>,
+  onTogglePin?: (id: string) => void
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -618,6 +640,8 @@ function calculateLayout(
         isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false),
         isDropTarget: false,
         canEdit: canEdit !== false,
+        isPinned: pinnedIdsSet?.has(item.id) || false,
+        onTogglePin: onTogglePin || (() => {}),
       },
     });
 
@@ -727,9 +751,13 @@ function MindMapViewInner({
   // localStorage keys
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
   const positionsStorageKey = spaceId ? `mindmap-positions-${spaceId}` : null;
+  const pinnedStorageKey = spaceId ? `mindmap-pinned-${spaceId}` : null;
 
   // Saved node positions
   const savedPositions = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Pinned node IDs (protected from reorganization)
+  const pinnedIds = useRef<Set<string>>(new Set());
 
   // Load saved positions from localStorage
   useEffect(() => {
@@ -742,10 +770,42 @@ function MindMapViewInner({
     } catch { /* ignore */ }
   }, [positionsStorageKey]);
 
+  // Load pinned IDs from localStorage
+  useEffect(() => {
+    if (!pinnedStorageKey) return;
+    try {
+      const stored = localStorage.getItem(pinnedStorageKey);
+      if (stored) {
+        pinnedIds.current = new Set(JSON.parse(stored));
+      }
+    } catch { /* ignore */ }
+  }, [pinnedStorageKey]);
+
   const savePositions = useCallback(() => {
     if (!positionsStorageKey) return;
     localStorage.setItem(positionsStorageKey, JSON.stringify(savedPositions.current));
   }, [positionsStorageKey]);
+
+  const savePinned = useCallback(() => {
+    if (!pinnedStorageKey) return;
+    localStorage.setItem(pinnedStorageKey, JSON.stringify([...pinnedIds.current]));
+  }, [pinnedStorageKey]);
+
+  const togglePin = useCallback((id: string) => {
+    if (pinnedIds.current.has(id)) {
+      pinnedIds.current.delete(id);
+    } else {
+      pinnedIds.current.add(id);
+    }
+    savePinned();
+    // Update node data in-place without full layout recalc
+    setNodesRef.current(nds => nds.map(n => {
+      if (n.type !== 'mindmap') return n;
+      const isPinned = pinnedIds.current.has(n.id);
+      if (n.data?.isPinned === isPinned) return n;
+      return { ...n, data: { ...n.data, isPinned } };
+    }));
+  }, [savePinned]);
 
   // Portals state
   const [portals, setPortals] = useState<PortalState[]>([]);
@@ -859,6 +919,7 @@ function MindMapViewInner({
   }, []);
 
   // Ref-based wrapper to avoid circular dependency with useMemo → useNodesState → setNodes
+  const setNodesRef = useRef<React.Dispatch<React.SetStateAction<Node[]>>>(() => {});
   const reorganizeRef = useRef<(id: string) => void>(() => {});
   // Track descendant offsets during drag-with-children
   const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }>; startPos: { x: number; y: number } } | null>(null);
@@ -875,7 +936,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit, pinnedIds.current, togglePin);
     const positionedNodes = applyPositions(nodes);
     const posMap = new Map(positionedNodes.map(n => [n.id, n.position]));
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], posMap);
@@ -884,6 +945,7 @@ function MindMapViewInner({
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  setNodesRef.current = setNodes;
 
   // Assign the actual reorganize implementation to the ref (after setNodes/setEdges are available)
   reorganizeRef.current = (parentId: string) => {
@@ -910,30 +972,42 @@ function MindMapViewInner({
     if (!parentPosRaw) return;
     const parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
 
-    // Distribute children in a fan around the parent
-    const childCount = visibleChildren.length;
+    // Separate pinned and unpinned children
+    const unpinnedChildren = visibleChildren.filter(c => !pinnedIds.current.has(c.id));
+    const unpinnedCount = unpinnedChildren.length;
     const radius = RADIAL_STEP;
-    const angleSpread = Math.min(Math.PI * 1.5, childCount * (Math.PI / 4));
+    const angleSpread = Math.min(Math.PI * 1.5, unpinnedCount * (Math.PI / 4));
     const startAngle = -angleSpread / 2;
 
-    // Recursively reposition a subtree
-    function repositionSubtree(item: TreeItem, cx: number, cy: number, depth: number) {
+    // Recursively reposition a subtree (respects pinned nodes)
+    function repositionSubtree(item: TreeItem, cx: number, cy: number, anchorPos: { x: number; y: number }) {
       // Save new absolute position
       savedPositions.current[item.id] = { x: cx, y: cy };
 
       // Recurse into visible children
       if (!collapsedIds.has(item.id) && item.children.length > 0) {
         const kids = item.children;
+        const unpinnedKids = kids.filter(k => !pinnedIds.current.has(k.id));
         const subRadius = RADIAL_STEP * 0.8;
-        const subSpread = Math.min(Math.PI, kids.length * (Math.PI / 5));
+        const subSpread = Math.min(Math.PI, unpinnedKids.length * (Math.PI / 5));
         const subStart = -subSpread / 2;
         // Direction from grandparent to this node
-        const dirAngle = Math.atan2(cy - parentPos.y, cx - parentPos.x);
+        const dirAngle = Math.atan2(cy - anchorPos.y, cx - anchorPos.x);
+        let unpinnedIdx = 0;
         for (let i = 0; i < kids.length; i++) {
-          const a = kids.length === 1 ? dirAngle : dirAngle + subStart + (i * subSpread) / Math.max(1, kids.length - 1);
-          const nx = cx + subRadius * Math.cos(a);
-          const ny = cy + subRadius * Math.sin(a);
-          repositionSubtree(kids[i], nx, ny, depth + 1);
+          if (pinnedIds.current.has(kids[i].id)) {
+            // Pinned child: keep its current position, but reorganize its children
+            const pinnedPos = absPositions.get(kids[i].id);
+            if (pinnedPos) {
+              repositionSubtree(kids[i], pinnedPos.x, pinnedPos.y, { x: cx, y: cy });
+            }
+          } else {
+            const a = unpinnedKids.length === 1 ? dirAngle : dirAngle + subStart + (unpinnedIdx * subSpread) / Math.max(1, unpinnedKids.length - 1);
+            const nx = cx + subRadius * Math.cos(a);
+            const ny = cy + subRadius * Math.sin(a);
+            repositionSubtree(kids[i], nx, ny, { x: cx, y: cy });
+            unpinnedIdx++;
+          }
         }
       }
     }
@@ -942,13 +1016,24 @@ function MindMapViewInner({
     const spacePos = absPositions.get('__space__') || { x: 0, y: 0 };
     const baseAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
 
-    for (let i = 0; i < childCount; i++) {
-      const angle = childCount === 1
-        ? baseAngle
-        : baseAngle + startAngle + (i * angleSpread) / Math.max(1, childCount - 1);
-      const cx = parentPos.x + radius * Math.cos(angle);
-      const cy = parentPos.y + radius * Math.sin(angle);
-      repositionSubtree(visibleChildren[i], cx, cy, 1);
+    // Reposition unpinned children in fan; pinned children keep position but reorganize their own children
+    let unpinnedIdx = 0;
+    for (let i = 0; i < visibleChildren.length; i++) {
+      if (pinnedIds.current.has(visibleChildren[i].id)) {
+        // Pinned: keep position, but reorganize descendants
+        const pinnedPos = absPositions.get(visibleChildren[i].id);
+        if (pinnedPos) {
+          repositionSubtree(visibleChildren[i], pinnedPos.x, pinnedPos.y, parentPos);
+        }
+      } else {
+        const angle = unpinnedCount === 1
+          ? baseAngle
+          : baseAngle + startAngle + (unpinnedIdx * angleSpread) / Math.max(1, unpinnedCount - 1);
+        const cx = parentPos.x + radius * Math.cos(angle);
+        const cy = parentPos.y + radius * Math.sin(angle);
+        repositionSubtree(visibleChildren[i], cx, cy, parentPos);
+        unpinnedIdx++;
+      }
     }
     savePositions();
 
@@ -990,7 +1075,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit, pinnedIds.current, togglePin);
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
@@ -1325,16 +1410,84 @@ function MindMapViewInner({
     [getIntersectingNodes, onMove, items, savePositions, setNodes]
   );
 
-  // Reset layout function - clears saved positions
+  // Reset layout function - clears saved positions but preserves pinned positions
   const resetLayout = useCallback(() => {
+    // Save pinned positions before clearing
+    const pinnedPositions: Record<string, { x: number; y: number }> = {};
+    // Also get current absolute positions from ReactFlow nodes as fallback
+    const currentNodes = getNodes();
+    const currentAbsPositions = getAbsolutePositions(currentNodes);
+    for (const id of pinnedIds.current) {
+      const saved = savedPositions.current[id] || (currentAbsPositions.get(id) ? { x: currentAbsPositions.get(id)!.x, y: currentAbsPositions.get(id)!.y } : null);
+      if (saved) {
+        pinnedPositions[id] = saved;
+      }
+    }
     savedPositions.current = {};
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, canEdit, pinnedIds.current, togglePin);
+
+    // Restore pinned positions and shift their descendants accordingly
+    // Build a map of d3-calculated positions for all nodes
+    const d3PosMap = new Map(newNodes.map(n => [n.id, { x: n.position.x, y: n.position.y }]));
+
+    // Collect all descendant IDs for each pinned node
+    function getDescendantIds(nodeId: string, treeItems: TreeItem[]): string[] {
+      function findNode(items: TreeItem[], id: string): TreeItem | null {
+        for (const item of items) {
+          if (item.id === id) return item;
+          const found = findNode(item.children, id);
+          if (found) return found;
+        }
+        return null;
+      }
+      function collectIds(item: TreeItem): string[] {
+        const ids: string[] = [];
+        for (const child of item.children) {
+          ids.push(child.id);
+          ids.push(...collectIds(child));
+        }
+        return ids;
+      }
+      const node = findNode(treeItems, nodeId);
+      return node ? collectIds(node) : [];
+    }
+
+    // For each pinned node, compute offset (pinned position - d3 position) and apply to descendants
+    const offsetMap = new Map<string, { dx: number; dy: number }>();
+    for (const [id, pinnedPos] of Object.entries(pinnedPositions)) {
+      const d3Pos = d3PosMap.get(id);
+      if (!d3Pos) continue;
+      const dx = pinnedPos.x - d3Pos.x;
+      const dy = pinnedPos.y - d3Pos.y;
+      if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) continue;
+      // Apply offset to all descendants (unless they are also pinned)
+      const descIds = getDescendantIds(id, fullTree);
+      for (const descId of descIds) {
+        if (!pinnedPositions[descId] && !offsetMap.has(descId)) {
+          offsetMap.set(descId, { dx, dy });
+        }
+      }
+    }
+
+    Object.assign(savedPositions.current, pinnedPositions);
+    const repositionedNodes = newNodes.map(n => {
+      const pinned = pinnedPositions[n.id];
+      if (pinned) return { ...n, position: pinned };
+      const offset = offsetMap.get(n.id);
+      if (offset) {
+        const shifted = { x: n.position.x + offset.dx, y: n.position.y + offset.dy };
+        savedPositions.current[n.id] = shifted;
+        return { ...n, position: shifted };
+      }
+      return n;
+    });
+    savePositions();
 
     // Build a map of node positions for portal placement
-    const resetPosMap = new Map(newNodes.map(n => [n.id, n.position]));
+    const resetPosMap = new Map(repositionedNodes.map(n => [n.id, n.position]));
 
     // Add portal nodes positioned relative to their parent item
     const portalNodes: Node[] = [];
@@ -1370,13 +1523,13 @@ function MindMapViewInner({
       });
     });
 
-    const allNodes = [...newNodes, ...portalNodes];
+    const allNodes = [...repositionedNodes, ...portalNodes];
     const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     setNodes(allNodes);
     setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], resetEdgePosMap));
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, setNodes, setEdges, fitView, portals, communitySpaces, removePortal]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, togglePin, savePositions]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
