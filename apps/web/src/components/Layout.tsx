@@ -441,7 +441,7 @@ export function Layout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-base md:text-lg font-semibold truncate max-w-[120px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-none">{getPageTitle()}</h2>
+            <h2 className="text-lg md:text-xl font-bold truncate max-w-[150px] sm:max-w-[220px] md:max-w-none">{getPageTitle()}</h2>
             {currentSpace && (
               <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
                 {currentSpace.community && (
