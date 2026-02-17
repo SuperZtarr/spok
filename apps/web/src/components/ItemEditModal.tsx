@@ -651,7 +651,14 @@ export function ItemEditModal({
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => setStatus(s.id === 'undefined' ? '' : s.id)}
+                        onClick={() => {
+                          const newStatus = s.id === 'undefined' ? '' : s.id;
+                          setStatus(newStatus);
+                          // Auto-set endDate when marking as done or cancelled
+                          if ((newStatus === 'done' || newStatus === 'cancelled') && !endDate) {
+                            setEndDate(toDatetimeLocal(new Date()));
+                          }
+                        }}
                         className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
                           isSelected
                             ? `${s.borderColor} font-semibold shadow-sm`

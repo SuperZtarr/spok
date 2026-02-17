@@ -390,8 +390,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Auto-set endDate to now when status changes to 'done', unless already defined
-      const autoEndDate = updateData.status === 'done' && updateData.endDate === undefined && !existingItem.endDate
+      // Auto-set endDate to now when status changes to 'done' or 'cancelled', unless already defined
+      const autoEndDate = (updateData.status === 'done' || updateData.status === 'cancelled') && updateData.endDate === undefined && !existingItem.endDate
         ? new Date()
         : undefined;
 
