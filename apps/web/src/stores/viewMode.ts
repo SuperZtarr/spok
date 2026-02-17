@@ -3,18 +3,26 @@ import { persist } from 'zustand/middleware';
 
 export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'graph' | 'text' | 'sunburst';
 
-export const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
-  { value: 'list', label: 'Liste', icon: 'List' },
-  { value: 'tree', label: 'Arborescence', icon: 'GitBranch' },
-  { value: 'text', label: 'Texte', icon: 'FileText' },
-  { value: 'sequence', label: 'Séquence', icon: 'ArrowDownUp' },
-  { value: 'kanban', label: 'Kanban', icon: 'Columns3' },
-  { value: 'types', label: 'Types', icon: 'LayoutGrid' },
-  { value: 'planning', label: 'Planning', icon: 'CalendarCheck' },
-  { value: 'timeline', label: 'Gantt', icon: 'GanttChart' },
-  { value: 'mindmap', label: 'Carte mentale', icon: 'Share2' },
-  { value: 'graph', label: 'Graphe', icon: 'Network' },
-  { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot' },
+export type ViewCategory = 'basic' | 'planning' | 'exploration';
+
+export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
+  { value: 'basic', label: 'Basique' },
+  { value: 'planning', label: 'Planification' },
+  { value: 'exploration', label: 'Exploration' },
+];
+
+export const VIEW_MODES: { value: ViewMode; label: string; icon: string; category: ViewCategory }[] = [
+  { value: 'list', label: 'Liste', icon: 'List', category: 'basic' },
+  { value: 'tree', label: 'Arborescence', icon: 'GitBranch', category: 'basic' },
+  { value: 'kanban', label: 'Kanban', icon: 'Columns3', category: 'basic' },
+  { value: 'text', label: 'Texte', icon: 'FileText', category: 'basic' },
+  { value: 'planning', label: 'Planning', icon: 'CalendarCheck', category: 'planning' },
+  { value: 'timeline', label: 'Gantt', icon: 'GanttChart', category: 'planning' },
+  { value: 'sequence', label: 'Séquence', icon: 'ArrowDownUp', category: 'planning' },
+  { value: 'types', label: 'Types', icon: 'LayoutGrid', category: 'planning' },
+  { value: 'mindmap', label: 'Carte mentale', icon: 'Share2', category: 'exploration' },
+  { value: 'graph', label: 'Graphe', icon: 'Network', category: 'exploration' },
+  { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', category: 'exploration' },
 ];
 
 interface ViewModeState {
