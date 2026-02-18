@@ -158,9 +158,6 @@ export function ViewModeSelector() {
 
     // Space categories
     const activeCategoryModes = VIEW_MODES.filter(v => v.category === openCategory);
-    // Get current space ID from URL
-    const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
-    const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
 
     return (
       <>
