@@ -1,26 +1,6 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
-
-function DevIndicator() {
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      document.title = '[DEV] SPOK';
-      document.body.classList.add('dev-mode');
-    }
-    return () => {
-      document.body.classList.remove('dev-mode');
-    };
-  }, []);
-
-  if (!import.meta.env.DEV) return null;
-
-  return (
-    <div className="fixed bottom-2 right-2 z-[9999] bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded pointer-events-none opacity-80">
-      DEV
-    </div>
-  );
-}
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -154,7 +134,6 @@ export default function App() {
         <Route path="audit-logs" element={<AuditLogsPage />} />
       </Route>
     </Routes>
-    <DevIndicator />
   </>
   );
 }

@@ -3,9 +3,10 @@ import { persist } from 'zustand/middleware';
 
 export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'graph' | 'text' | 'sunburst';
 
-export type ViewCategory = 'basic' | 'planning' | 'exploration';
+export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
 export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
+  { value: 'dashboard', label: 'Tableau de bord' },
   { value: 'basic', label: 'Basique' },
   { value: 'planning', label: 'Planification' },
   { value: 'exploration', label: 'Exploration' },

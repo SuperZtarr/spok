@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, Network, CircleDot, ChevronRight, CheckSquare, Settings, FolderInput, FolderPlus, GitBranch } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -17,6 +17,7 @@ import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { DashboardMindMapView } from '../components/views/DashboardMindMapView';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '../components/ui/ItemActionMenu';
+import { useDashboardTabStore } from '../stores/dashboardTab';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -310,7 +311,7 @@ export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const showNewSpace = searchParams.get('new') === 'space';
   const { currentCommunity } = useCommunityStore();
-  const [activeTab, setActiveTab] = useState<'spaces' | 'graph' | 'sunburst' | 'mindmap'>('spaces');
+  const { tab } = useDashboardTabStore();
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -494,84 +495,19 @@ export function DashboardPage() {
   }, [allSpaces]);
 
   return (
-    <div className={`flex flex-col${activeTab === 'graph' || activeTab === 'sunburst' || activeTab === 'mindmap' ? ' h-full overflow-hidden' : ''}`}>
-      {/* Barre d'actions sticky */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex-shrink-0">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-            <button
-              onClick={() => setActiveTab('spaces')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'spaces'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <FolderKanban className="w-4 h-4" />
-              Espaces
-            </button>
-            <button
-              onClick={() => setActiveTab('graph')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'graph'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Network className="w-4 h-4" />
-              Graphe global
-            </button>
-            <button
-              onClick={() => setActiveTab('sunburst')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'sunburst'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <CircleDot className="w-4 h-4" />
-              Sunburst
-            </button>
-            <button
-              onClick={() => setActiveTab('mindmap')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'mindmap'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <GitBranch className="w-4 h-4" />
-              Carte mentale
-            </button>
-            <button
-              onClick={() => navigate('/tasks')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <CheckSquare className="w-4 h-4" />
-              Mes tâches
-            </button>
-          </div>
-          {activeTab === 'spaces' && (
-            <Button onClick={() => setSearchParams({ new: 'space' })}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nouvel espace
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {activeTab === 'graph' ? (
+    <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' ? ' h-full overflow-hidden' : ''}`}>
+      {tab === 'graph' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <GraphView
             level="global"
             onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}`, { state: { openItemId: itemId } })}
           />
         </div>
-      ) : activeTab === 'sunburst' ? (
+      ) : tab === 'sunburst' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <SunburstView />
         </div>
-      ) : activeTab === 'mindmap' ? (
+      ) : tab === 'mindmap' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <DashboardMindMapView
             communityGroups={communityGroups}
@@ -583,6 +519,13 @@ export function DashboardPage() {
       ) : (
       <div className="p-8 flex-1">
       <div className="max-w-6xl mx-auto">
+        {/* Action bar */}
+        <div className="flex items-center justify-end mb-6">
+          <Button onClick={() => setSearchParams({ new: 'space' })}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvel espace
+          </Button>
+        </div>
 
         {/* New space form */}
         {showNewSpace && (

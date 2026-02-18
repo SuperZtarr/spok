@@ -10,7 +10,6 @@ export function GlobalSearch() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,18 +42,16 @@ export function GlobalSearch() {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
-        if (!query) setIsExpanded(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [query]);
+  }, []);
 
   // Close on Escape
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsOpen(false);
-      setIsExpanded(false);
       setQuery('');
       setDebouncedQuery('');
       inputRef.current?.blur();
@@ -77,22 +74,8 @@ export function GlobalSearch() {
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Icon button: always visible when not expanded */}
-      {!isExpanded && (
-        <button
-          className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
-          onClick={() => {
-            setIsExpanded(true);
-            setTimeout(() => inputRef.current?.focus(), 50);
-          }}
-          title="Rechercher"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-      )}
-      {/* Input: only visible when expanded */}
-      <div className={`relative ${isExpanded ? 'block' : 'hidden'}`}>
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
         <input
           ref={inputRef}
           type="text"
@@ -103,7 +86,7 @@ export function GlobalSearch() {
             if (debouncedQuery.length >= 2) setIsOpen(true);
           }}
           placeholder="Rechercher..."
-          className="w-36 sm:w-36 md:w-48 lg:w-64 h-8 pl-8 pr-8 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-36 sm:w-40 md:w-48 lg:w-56 h-8 pl-8 pr-8 text-sm rounded-full bg-muted/40 border-0 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring/50 focus:bg-muted/60 transition-colors"
         />
         {query && (
           <button
@@ -112,7 +95,7 @@ export function GlobalSearch() {
               setDebouncedQuery('');
               setIsOpen(false);
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
             title="Effacer la recherche"
           >
             <X className="w-3.5 h-3.5" />
@@ -121,7 +104,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-80 sm:w-96 max-h-96 overflow-y-auto rounded-md border border-border bg-card shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-h-96 overflow-y-auto rounded-xl border border-border/50 bg-card shadow-lg z-50">
           {isLoading && (
             <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -140,14 +123,14 @@ export function GlobalSearch() {
               {/* Items */}
               {data.items.length > 0 && (
                 <div>
-                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/50 border-b border-border">
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/50 border-b border-border/50">
                     Items ({data.totalItems})
                   </div>
                   {data.items.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.spaceId, item.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b border-border/50 last:border-0"
+                      className="w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors border-b border-border/30 last:border-0"
                     >
                       <div className="flex items-start gap-2">
                         <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -172,14 +155,14 @@ export function GlobalSearch() {
               {/* Contributions */}
               {data.contributions.length > 0 && (
                 <div>
-                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/50 border-b border-border">
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/50 border-b border-border/50">
                     Contributions ({data.totalContributions})
                   </div>
                   {data.contributions.map((c) => (
                     <button
                       key={c.id}
                       onClick={() => handleResultClick(c.spaceId, c.itemId)}
-                      className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b border-border/50 last:border-0"
+                      className="w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors border-b border-border/30 last:border-0"
                     >
                       <div className="flex items-start gap-2">
                         <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />

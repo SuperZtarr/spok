@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Home, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
@@ -13,6 +13,8 @@ import { UserProfileModal } from './UserProfileModal';
 import { CommunitySelector } from './CommunitySelector';
 import { GlobalSearch } from './GlobalSearch';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
+import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import type { SpaceWithRole } from '@spok/shared';
 
 interface SpaceTreeNode extends SpaceWithRole {
@@ -233,37 +235,61 @@ export function Layout() {
     enabled: !!currentSpaceId,
   });
 
+  // Current view/function name helpers
+  const { mode } = useViewModeStore();
+  const { tab } = useDashboardTabStore();
+
+  const getCurrentFunctionLabel = () => {
+    const path = location.pathname;
+    if (path.endsWith('/settings')) return 'Paramètres';
+    if (path.endsWith('/history')) return 'Historique';
+    if (currentSpace) {
+      const viewMode = VIEW_MODES.find(v => v.value === mode);
+      return viewMode?.label || '';
+    }
+    if (path === '/') {
+      const dashTab = DASHBOARD_TABS.find(t => t.value === tab);
+      return dashTab?.label || '';
+    }
+    if (path === '/tasks') return 'Mes tâches';
+    return '';
+  };
+
   // Page title based on current location (for header bar)
   const getPageTitle = () => {
-    if (currentSpace) return currentSpace.name;
-    if (location.pathname === '/') return 'Tableau de bord';
-    if (location.pathname === '/tasks') return 'Mes taches';
+    const fnLabel = getCurrentFunctionLabel();
+    if (currentSpace) {
+      return fnLabel ? `${currentSpace.name} — ${fnLabel}` : currentSpace.name;
+    }
+    if (location.pathname === '/') {
+      return fnLabel ? `SPOK — ${fnLabel}` : 'SPOK';
+    }
+    if (location.pathname === '/tasks') return 'SPOK — Mes tâches';
     return 'SPOK';
   };
 
   // Update document title
   useEffect(() => {
     const path = location.pathname;
+    const fnLabel = getCurrentFunctionLabel();
     let title = 'SPOK';
 
     if (currentSpace) {
-      if (path.endsWith('/settings')) {
-        title = `SPOK — ${currentSpace.name} — Paramètres`;
-      } else if (path.endsWith('/history')) {
-        title = `SPOK — ${currentSpace.name} — Historique`;
-      } else {
-        title = `SPOK — ${currentSpace.name}`;
-      }
+      title = fnLabel
+        ? `${currentSpace.name} — ${fnLabel}`
+        : `SPOK — ${currentSpace.name}`;
     } else if (path === '/') {
-      title = 'SPOK — Tableau de bord';
+      title = fnLabel
+        ? `SPOK - Single Point Of Knowledge - ${fnLabel}`
+        : 'SPOK - Single Point Of Knowledge';
     } else if (path === '/tasks') {
-      title = 'SPOK — Mes taches';
+      title = 'SPOK - Single Point Of Knowledge - Mes tâches';
     } else if (path === '/community/settings') {
       title = 'SPOK — Paramètres communauté';
     }
 
     document.title = title;
-  }, [currentSpace, location.pathname]);
+  }, [currentSpace, location.pathname, mode, tab]);
 
   const handleLogout = async () => {
     try {
@@ -305,14 +331,6 @@ export function Layout() {
 
       {/* Navigation - scrollable */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
-        <Link
-          to="/"
-          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-        >
-          <Home className="w-4 h-4" />
-          Tableau de bord
-        </Link>
-
         {/* Personal spaces */}
         {mySpaces.length > 0 && (
           <div className="pt-2 pb-2 border-b border-border">
@@ -431,8 +449,9 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="h-14 border-b border-border bg-card flex items-center gap-2 md:gap-3 px-3 md:px-6 flex-shrink-0">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+        <header className="border-b border-border bg-card flex items-center flex-shrink-0">
+          {/* Left: hamburger + title + badges */}
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5">
             {/* Hamburger menu (mobile) */}
             <button
               className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
@@ -441,29 +460,44 @@ export function Layout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-lg md:text-xl font-bold truncate max-w-[150px] sm:max-w-[220px] md:max-w-none">{getPageTitle()}</h2>
+            <h2 className="text-sm md:text-base font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[220px]">{getPageTitle()}</h2>
             {currentSpace && (
               <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
                 {currentSpace.community && (
-                  <span className="text-xs text-muted-foreground px-2 py-1 bg-primary/10 text-primary rounded">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                     {currentSpace.community.name}
                   </span>
                 )}
-                <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+                <span className="text-[11px] text-muted-foreground/70 px-1.5 py-0.5 bg-muted/50 rounded">
                   {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
                 </span>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5 md:gap-3 min-w-0 flex-1 justify-end">
-            <div className="flex-shrink-0">
-              <GlobalSearch />
-            </div>
-            {currentSpace && (
-              <div className="min-w-0 flex-1">
-                <ViewModeSelector />
+          {/* Right: navbar menu + search + user avatar */}
+          <div className="flex items-center gap-2 ml-auto flex-shrink-0 px-4 md:px-5">
+            <ViewModeSelector />
+            <GlobalSearch />
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent transition-colors"
+              title="Voir le profil"
+            >
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+              )}
+              <div className="hidden md:flex flex-col items-start leading-tight">
+                <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{user?.name}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+                </span>
               </div>
-            )}
+            </button>
           </div>
         </header>
 

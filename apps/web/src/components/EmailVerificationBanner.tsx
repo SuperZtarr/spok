@@ -14,8 +14,8 @@ export function EmailVerificationBanner() {
     onSuccess: () => setSent(true),
   });
 
-  // Don't show if verified, dismissed, or no user
-  if (!user || user.emailVerified || dismissed) return null;
+  // Don't show if verified, dismissed, no user, or in dev mode
+  if (!user || user.emailVerified || dismissed || import.meta.env.DEV) return null;
 
   return (
     <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between gap-3 text-sm">
