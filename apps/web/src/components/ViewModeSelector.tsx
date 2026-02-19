@@ -38,6 +38,12 @@ export function ViewModeSelector() {
   const buttonRefs = useRef<Map<ViewCategory, HTMLButtonElement>>(new Map());
 
   const isDashboard = location.pathname === '/';
+  const isInSpace = /^\/spaces\/[^/]+/.test(location.pathname);
+
+  // Only show space categories when inside a space
+  const visibleCategories = isInSpace
+    ? VIEW_CATEGORIES
+    : VIEW_CATEGORIES.filter(cat => cat.value === 'dashboard');
 
   const updatePosition = useCallback((cat: ViewCategory) => {
     const btn = buttonRefs.current.get(cat);
@@ -196,7 +202,7 @@ export function ViewModeSelector() {
     <>
       <nav ref={navRef} className="flex items-center">
         <ul className="flex items-center gap-0.5 list-none m-0 p-0">
-          {VIEW_CATEGORIES.map((cat) => {
+          {visibleCategories.map((cat) => {
             const isActive = isCategoryActive(cat.value);
             const isOpen = openCategory === cat.value;
             return (
