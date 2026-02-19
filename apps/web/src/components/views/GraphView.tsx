@@ -178,9 +178,9 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
-      const width = rect.width;
-      const height = window.innerHeight - rect.top;
-      if (width > 0 && height > 0) {
+      const width = rect.width || container.clientWidth;
+      const height = window.innerHeight - rect.top - 8; // 8px bottom margin
+      if (width > 0 && height > 100) {
         setDimensions({ width, height });
       }
     };
@@ -333,8 +333,8 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
   if (isLoading) {
     return (
-      <div className="relative flex-1 min-h-0 w-full">
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+      <div ref={containerRef} className="w-full" style={{ height: `${dimensions.height}px` }}>
+        <div className="h-full flex items-center justify-center text-muted-foreground">
           Chargement du graphe...
         </div>
       </div>
@@ -343,8 +343,8 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
   if (!data || data.nodes.length === 0) {
     return (
-      <div className="relative flex-1 min-h-0 w-full">
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+      <div ref={containerRef} className="w-full" style={{ height: `${dimensions.height}px` }}>
+        <div className="h-full flex items-center justify-center text-muted-foreground">
           Aucun element a afficher dans le graphe.
         </div>
       </div>
@@ -352,8 +352,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   }
 
   return (
-    <div className="relative flex-1 min-h-0 w-full">
-      <div ref={containerRef} className="absolute inset-0">
+    <div ref={containerRef} className="relative w-full" style={{ height: `${dimensions.height}px` }}>
       {/* Control panel */}
       <div className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
         {/* Scope selector */}
@@ -450,7 +449,6 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
         cooldownTicks={100}
         onEngineStop={() => graphRef.current?.zoomToFit(400, 50)}
       />
-      </div>
     </div>
   );
 }
