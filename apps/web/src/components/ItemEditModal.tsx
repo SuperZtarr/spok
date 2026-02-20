@@ -66,6 +66,16 @@ const PROJECT_DURATIONS = [
   { label: '2 ans', ms: 730 * DAY },
 ];
 
+const DUE_DATE_DURATIONS = [
+  { label: 'Même jour', ms: 0 },
+  { label: '+1j', ms: DAY },
+  { label: '+2j', ms: 2 * DAY },
+  { label: '+1 sem.', ms: 7 * DAY },
+  { label: '+2 sem.', ms: 14 * DAY },
+  { label: '+1 mois', ms: 30 * DAY },
+  { label: '+3 mois', ms: 90 * DAY },
+];
+
 type ParentSortMode = 'tree' | 'alpha';
 
 interface ItemEditModalProps {
@@ -976,11 +986,36 @@ export function ItemEditModal({
             <div className="space-y-2 relative">
               <label className="text-sm font-medium">Échéance</label>
               {canEdit ? (
-                <DateTimeField
-                  value={dueDate}
-                  onChange={setDueDate}
-                  showTime={false}
-                />
+                <div className="space-y-2">
+                  {startDate && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {DUE_DATE_DURATIONS.map((d) => {
+                        const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                        const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
+                        return (
+                          <button
+                            key={d.ms}
+                            type="button"
+                            onClick={() => setDueDate(toDatetimeLocal(targetDate))}
+                            className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <DateTimeField
+                    value={dueDate}
+                    onChange={setDueDate}
+                    showTime={false}
+                    minDate={startDate}
+                  />
+                </div>
               ) : (
                 <p className="text-sm">
                   {dueDate
