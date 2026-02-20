@@ -106,24 +106,42 @@ export function ImageUploadZone({
     return () => document.removeEventListener('paste', handlePaste);
   }, [disabled, isUploading, currentUrl, validateAndUpload]);
 
-  // Display uploaded image
+  const [expanded, setExpanded] = useState(false);
+
+  // Display uploaded image as thumbnail with lightbox
   if (currentUrl && !isUploading) {
     return (
-      <div className="relative group">
-        <img
-          src={currentUrl}
-          alt="Image uploadée"
-          className="w-full max-h-64 object-contain rounded-lg border border-border bg-muted"
-        />
-        {onRemove && !disabled && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-            title="Supprimer l'image"
+      <div className="flex items-center gap-3">
+        <div className="relative group">
+          <img
+            src={currentUrl}
+            alt="Image uploadée"
+            className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setExpanded(true)}
+            title="Cliquer pour agrandir"
+          />
+          {onRemove && !disabled && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+              title="Supprimer l'image"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        {expanded && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer"
+            onClick={() => setExpanded(false)}
           >
-            <X className="w-4 h-4" />
-          </button>
+            <img
+              src={currentUrl}
+              alt="Image"
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
         )}
       </div>
     );

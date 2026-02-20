@@ -788,7 +788,7 @@ export function ItemEditModal({
                   <img
                     src={url}
                     alt="Image"
-                    className="max-h-32 object-contain rounded-lg border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+                    className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => setImageExpanded(true)}
                     title="Cliquer pour agrandir"
                   />
@@ -815,7 +815,7 @@ export function ItemEditModal({
               <img
                 src={url}
                 alt="Image"
-                className="max-h-32 object-contain rounded-lg border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+                className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => setImageExpanded(true)}
                 title="Cliquer pour agrandir"
               />
