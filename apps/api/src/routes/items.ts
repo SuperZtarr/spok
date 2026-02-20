@@ -1079,11 +1079,17 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Second pass: update parent relationships
     for (const { oldItem, newItem } of createdItems) {
-      if (oldItem.parentId && oldIdToNewId.has(oldItem.parentId)) {
-        await fastify.prisma.item.update({
-          where: { id: newItem.id },
-          data: { parentId: oldIdToNewId.get(oldItem.parentId) },
-        });
+      if (oldItem.parentId) {
+        // If parent was also duplicated, use the new parent ID
+        // If same space and parent exists, keep original parentId
+        const newParentId = oldIdToNewId.get(oldItem.parentId)
+          || (targetSpaceId === request.params.spaceId ? oldItem.parentId : null);
+        if (newParentId) {
+          await fastify.prisma.item.update({
+            where: { id: newItem.id },
+            data: { parentId: newParentId },
+          });
+        }
       }
     }
 
