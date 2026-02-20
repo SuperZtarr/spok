@@ -22,7 +22,6 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
 import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, Link2, ExternalLink, X, Ban, ArrowLeft, Copy, Cog, FlaskConical, Maximize2, Trash2, CheckSquare, Pin, PinOff, type LucideIcon } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 
 export interface MindMapViewHandle {
   expandAll: () => void;
@@ -565,8 +564,6 @@ function calculateLayout(
     id: SPACE_NODE_ID,
     children: tree.length > 0 ? tree.map(buildDatum) : undefined,
   };
-
-  const root = hierarchy(rootDatum);
 
   // Recursive fan layout: each child placed at fixed distance FROM ITS PARENT
   // oriented away from the grandparent, instead of on a global radius circle

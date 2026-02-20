@@ -685,7 +685,7 @@ export function SpacePage() {
                         isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
                       }`}
                     >
-                      {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bg}`} />}
+                      {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
                       <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
                       {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
                     </button>
