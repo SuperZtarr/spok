@@ -491,7 +491,7 @@ async function main() {
     data: {
       type: ItemType.IMAGE,
       title: 'Capture écran — Dashboard V2',
-      url: 'https://picsum.photos/seed/spok-dashboard/800/600',
+      url: 'https://picsum.photos/seed/spok-dashboard/800/600.webp',
       description: '<p>Capture du nouveau Dashboard avec les cartes communautaires.</p>',
       spaceId: spaceDev.id,
       createdById: demo.id,
@@ -502,7 +502,7 @@ async function main() {
     data: {
       type: ItemType.IMAGE,
       title: 'Diagramme architecture réseau',
-      url: 'https://picsum.photos/seed/spok-archi/1024/768',
+      url: 'https://picsum.photos/seed/spok-archi/1024/768.webp',
       spaceId: spaceDev.id,
       createdById: admin.id,
     },
