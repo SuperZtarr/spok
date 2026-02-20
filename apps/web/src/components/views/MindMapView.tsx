@@ -1096,10 +1096,14 @@ function MindMapViewInner({
     const angleSpread = Math.min(Math.PI * 1.5, unpinnedCount * (Math.PI / 4));
     const startAngle = -angleSpread / 2;
 
+    // Track which nodes are modified during this reorganize
+    const modifiedIds = new Set<string>();
+
     // Recursively reposition a subtree (respects pinned nodes)
     function repositionSubtree(item: TreeItem, cx: number, cy: number, anchorPos: { x: number; y: number }) {
       // Save new absolute position
       savedPositions.current[item.id] = { x: cx, y: cy };
+      modifiedIds.add(item.id);
 
       // Recurse into visible children
       if (!collapsedIds.has(item.id) && item.children.length > 0) {
@@ -1154,9 +1158,10 @@ function MindMapViewInner({
     }
     savePositions();
 
-    // Re-apply positions to nodes without full d3 recalc
+    // Re-apply positions only to modified nodes
     setNodes(currentNodes => {
       const updated = currentNodes.map(n => {
+        if (!modifiedIds.has(n.id)) return n;
         const saved = savedPositions.current[n.id];
         if (!saved) return n;
         // If node has parentId (in a group), convert absolute to relative
