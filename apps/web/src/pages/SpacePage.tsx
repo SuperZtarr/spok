@@ -139,8 +139,11 @@ export function SpacePage() {
   };
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
-  const [filterMode, setFilterMode] = useState<'type' | 'status'>('type');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const mindmapRef = useRef<MindMapViewHandle>(null);
   const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -155,6 +158,25 @@ export function SpacePage() {
   useEffect(() => {
     return () => clearSelection();
   }, [spaceId, clearSelection]);
+
+  // Close filter dropdowns on click outside or Escape
+  useEffect(() => {
+    if (!typeDropdownOpen && !statusDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
+        setTypeDropdownOpen(false);
+      }
+      if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); }
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
+  }, [typeDropdownOpen, statusDropdownOpen]);
 
   const { data: space } = useQuery({
     queryKey: ['space', spaceId],
@@ -188,8 +210,8 @@ export function SpacePage() {
   // Determine if we should filter or highlight
   // isTreeView already covers mindmap, tree, timeline, text — no need to repeat timeline here
   const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'graph' || viewMode === 'sunburst';
-  const activeTypeFilter = filterMode === 'type' && filter !== 'ALL' ? filter : undefined;
-  const activeStatusFilter = filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined;
+  const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
+  const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
   // Pre-compute highlight color for matched items (border + bg)
   const highlightColor = useMemo(() => {
@@ -210,7 +232,7 @@ export function SpacePage() {
   }, [activeTypeFilter, activeStatusFilter, referentiels]);
 
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, filterMode, viewMode],
+    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, viewMode],
     queryFn: () =>
       itemsApi.list(spaceId!, {
         // Tree/highlight views load all items (highlight instead of filter)
@@ -624,7 +646,7 @@ export function SpacePage() {
         {/* Toolbar */}
         <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">
           <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
-          {/* Mode indicator - always visible */}
+          {/* Mode indicator */}
           {isHighlightMode ? (
             <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
               <span className="w-2 h-2 rounded-full bg-yellow-400" />
@@ -637,67 +659,101 @@ export function SpacePage() {
             </span>
           )}
 
-          {/* Toggle Type / Statut */}
-          <div className="flex items-center bg-muted rounded-md p-0.5 flex-shrink-0 mr-1">
+          {/* Type filter dropdown */}
+          <div ref={typeDropdownRef} className="relative flex-shrink-0">
             <button
-              onClick={() => { setFilterMode('type'); setStatusFilter('ALL'); }}
-              className={`px-2 py-1 text-xs rounded font-medium transition-colors ${filterMode === 'type' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
+              className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
+                activeTypeFilter
+                  ? `border-2 ${getTypeColor(activeTypeFilter, referentiels?.typeLabels).color} ${getTypeColor(activeTypeFilter, referentiels?.typeLabels).bgHover} font-semibold shadow-sm`
+                  : 'border-input bg-background shadow-sm hover:bg-accent text-muted-foreground'
+              }`}
             >
-              Type
+              {activeTypeFilter ? TYPE_LABELS[activeTypeFilter] : 'Types'}
+              <ChevronDown className={`w-3 h-3 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
-            <button
-              onClick={() => { setFilterMode('status'); setFilter('ALL'); }}
-              className={`px-2 py-1 text-xs rounded font-medium transition-colors ${filterMode === 'status' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Statut
-            </button>
+            {typeDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
+                {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'] as const).map((t) => {
+                  const isActive = filter === t;
+                  const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => { setFilter(t); setTypeDropdownOpen(false); }}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
+                        isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                      }`}
+                    >
+                      {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bg}`} />}
+                      <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
+                      {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {filterMode === 'type' ? (
-            <>
-              {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'] as const).map((t) => {
-                const isActive = filter === t;
-                const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
-                return (
+          {/* Status filter dropdown */}
+          <div ref={statusDropdownRef} className="relative flex-shrink-0">
+            {(() => {
+              const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+              const activeStatus = activeStatusFilter ? statuses.find(s => s.id === activeStatusFilter) : null;
+              const visibleStatuses = statuses.filter(s => s.visible);
+              return (
+                <>
                   <button
-                    key={t}
-                    onClick={() => setFilter(t)}
-                    className={`inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium transition-all flex-shrink-0 whitespace-nowrap border ${
-                      isActive
-                        ? t === 'ALL' ? 'bg-primary text-primary-foreground border-primary shadow-sm' : `border-2 ${typeColor?.color} ${typeColor?.bgHover} font-semibold shadow-sm`
-                        : t === 'ALL' ? 'border-input bg-background shadow-sm hover:bg-accent' : `border ${typeColor?.color} opacity-60 hover:opacity-100`
+                    onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
+                    className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
+                      activeStatus
+                        ? `border-2 ${activeStatus.borderColor} font-semibold shadow-sm`
+                        : 'border-input bg-background shadow-sm hover:bg-accent text-muted-foreground'
                     }`}
                   >
-                    {t === 'ALL' ? 'Tous' : TYPE_LABELS[t]}
+                    {activeStatus ? activeStatus.label : 'Statuts'}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
-                );
-              })}
-            </>
-          ) : (
-            <>
-              {[{ id: 'ALL', label: 'Tous', borderColor: '', color: '' }, ...(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).filter(s => s.visible)].map((s) => {
-                const isActive = statusFilter === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => setStatusFilter(s.id)}
-                    className={`inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium transition-all flex-shrink-0 whitespace-nowrap border ${
-                      isActive
-                        ? s.id === 'ALL' ? 'bg-primary text-primary-foreground border-primary shadow-sm' : `border-2 ${s.borderColor} font-semibold shadow-sm`
-                        : s.id === 'ALL' ? 'border-input bg-background shadow-sm hover:bg-accent' : `border ${s.borderColor} opacity-60 hover:opacity-100`
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
+                  {statusDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
+                      <button
+                        onClick={() => { setStatusFilter('ALL'); setStatusDropdownOpen(false); }}
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
+                          statusFilter === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                        }`}
+                      >
+                        <span className="flex-1 text-left">Tous les statuts</span>
+                      </button>
+                      {visibleStatuses.map((s) => {
+                        const isActive = statusFilter === s.id;
+                        const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => { setStatusFilter(s.id); setStatusDropdownOpen(false); }}
+                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
+                              isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                            <span className="flex-1 text-left">{s.label}</span>
+                            {isActive && <span className="text-primary text-xs">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Item count */}
           <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
             {(() => {
               const total = space?.itemCount || 0;
               const filtered = itemsData?.total ?? itemsData?.data?.length ?? total;
-              const hasFilter = (filterMode === 'type' && filter !== 'ALL') || (filterMode === 'status' && statusFilter !== 'ALL');
+              const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
               if (hasFilter && !isHighlightMode) {
                 return `${filtered}/${total} éléments`;
               }
@@ -943,8 +999,8 @@ export function SpacePage() {
               onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
-              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
-              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
             />
           ) : viewMode === 'sequence' ? (
@@ -961,8 +1017,8 @@ export function SpacePage() {
               onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
               onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
               referentiels={referentiels}
-              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
-              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               canEdit={canEdit}
             />
@@ -1003,8 +1059,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
-              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
-              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               canEdit={canEdit}
             />
@@ -1023,8 +1079,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={handleConvertToSpace}
               referentiels={referentiels}
-              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
-              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               canEdit={canEdit}
             />
@@ -1035,8 +1091,8 @@ export function SpacePage() {
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
               communitySpaces={communitySpaces || []}
-              highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
-              highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1116,8 +1172,8 @@ export function SpacePage() {
                       onToggleSelection={toggleSelection}
                       expandedItems={expandedItems}
                       canEdit={canEdit}
-                      highlightType={filterMode === 'type' && filter !== 'ALL' ? filter : undefined}
-                      highlightStatus={filterMode === 'status' && statusFilter !== 'ALL' ? statusFilter : undefined}
+                      highlightType={activeTypeFilter}
+                      highlightStatus={activeStatusFilter}
                       highlightColor={highlightColor}
                       statusColorMap={statusColorMap}
                       statusLabelMap={statusLabelMap}
@@ -1396,6 +1452,10 @@ function TreeItem({
         <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
         <span className="flex-1 truncate">{item.title}</span>
+
+        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
+        )}
 
         {item.url && (
           <a

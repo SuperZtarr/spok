@@ -253,6 +253,10 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
         <span className="text-sm font-medium whitespace-nowrap">{item.title}</span>
 
+        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
+        )}
+
         {/* Badge showing child count when collapsed */}
         {isCollapsed && childCount > 0 && (
           <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-600 text-white rounded-full">

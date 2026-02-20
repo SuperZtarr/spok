@@ -259,7 +259,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;
               const isDone = item.status === doneStatusId;
-              const hasImage = item.type === 'IMAGE' && item.url;
+              const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
 
               return (
                 <div
@@ -267,14 +267,13 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                   className="grid grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group"
                   onClick={() => onEdit(item.id)}
                 >
-                  {hasImage ? (
-                    <ImageThumbnail url={item.url!} />
-                  ) : (
-                    <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  )}
+                  <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="truncate">{item.title}</span>
+                    {hasImage && (
+                      <ImageThumbnail url={item.url!} />
+                    )}
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {item.tags.slice(0, 3).map((tag) => (

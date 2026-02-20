@@ -96,6 +96,7 @@ export function ItemEditModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
+  const [imageExpanded, setImageExpanded] = useState(false);
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
@@ -783,11 +784,27 @@ export function ItemEditModal({
                   </details>
                 </>
               ) : url ? (
-                <img
-                  src={url}
-                  alt="Image"
-                  className="w-full max-h-80 object-contain rounded-lg border border-border bg-muted"
-                />
+                <>
+                  <img
+                    src={url}
+                    alt="Image"
+                    className="max-h-32 object-contain rounded-lg border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setImageExpanded(true)}
+                    title="Cliquer pour agrandir"
+                  />
+                  {imageExpanded && (
+                    <div
+                      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer"
+                      onClick={() => setImageExpanded(false)}
+                    >
+                      <img
+                        src={url}
+                        alt="Image"
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                      />
+                    </div>
+                  )}
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">Aucune image</p>
               )}
@@ -795,7 +812,25 @@ export function ItemEditModal({
           ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Image</label>
-              <img src={url} alt="Image" className="w-full max-h-40 object-contain rounded-lg border border-border bg-muted" />
+              <img
+                src={url}
+                alt="Image"
+                className="max-h-32 object-contain rounded-lg border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setImageExpanded(true)}
+                title="Cliquer pour agrandir"
+              />
+              {imageExpanded && (
+                <div
+                  className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer"
+                  onClick={() => setImageExpanded(false)}
+                >
+                  <img
+                    src={url}
+                    alt="Image"
+                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                  />
+                </div>
+              )}
             </div>
           ) : null}
 

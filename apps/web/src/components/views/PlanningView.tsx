@@ -173,6 +173,9 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMo
       {/* Title */}
       <div className="min-w-0 flex items-center gap-2">
         <span className="truncate">{item.title}</span>
+        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
+        )}
         {item.url && (
           <a
             href={item.url}
