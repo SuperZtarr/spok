@@ -35,7 +35,7 @@ export function AdminLayout() {
       if (location.pathname === '/admin/audit-logs') return 'Audit Logs';
       return 'Administration';
     };
-    document.title = `SPOK Admin — ${getPageTitle()}`;
+    document.title = import.meta.env.DEV ? `[DEV] SPOK Admin — ${getPageTitle()}` : `SPOK Admin — ${getPageTitle()}`;
   }, [location.pathname]);
 
   return (

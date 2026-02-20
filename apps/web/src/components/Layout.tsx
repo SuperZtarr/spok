@@ -288,7 +288,7 @@ export function Layout() {
       title = 'SPOK — Paramètres communauté';
     }
 
-    document.title = title;
+    document.title = import.meta.env.DEV ? `[DEV] ${title}` : title;
   }, [currentSpace, location.pathname, mode, tab]);
 
   const handleLogout = async () => {
@@ -307,26 +307,7 @@ export function Layout() {
     <>
       {/* Header sidebar */}
       <div className="p-4 border-b border-border flex-shrink-0">
-        <Link to="/" className="block mb-3"><img src="/logo.png" alt="SPOK" className="w-full h-auto max-h-32 object-contain object-left" /></Link>
-        <button
-          onClick={() => setIsProfileOpen(true)}
-          className={`w-full flex items-center p-2 rounded-md hover:bg-accent transition-colors text-left ${sidebarWidth < 200 ? 'justify-center' : 'justify-between'}`}
-          title="Voir le profil"
-        >
-          {sidebarWidth >= 200 && (
-            <div className="min-w-0 flex-1 mr-2">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
-              </p>
-            </div>
-          )}
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name} className={`rounded-full object-cover flex-shrink-0 ${sidebarWidth < 200 ? 'w-9 h-9' : 'w-7 h-7'}`} />
-          ) : (
-            <User className={`text-muted-foreground flex-shrink-0 ${sidebarWidth < 200 ? 'w-7 h-7' : 'w-4 h-4'}`} />
-          )}
-        </button>
+        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto max-h-32 object-contain object-left" /></Link>
       </div>
 
       {/* Navigation - scrollable */}
