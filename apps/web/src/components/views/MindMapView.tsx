@@ -175,6 +175,12 @@ function countDescendants(item: TreeItem): number {
   return count;
 }
 
+// Max depth of descendant generations (0 = leaf, 1 = has children, 2 = has grandchildren, etc.)
+function maxDepth(item: TreeItem): number {
+  if (item.children.length === 0) return 0;
+  return 1 + Math.max(...item.children.map(maxDepth));
+}
+
 // Custom node component for radial layout
 interface MindMapNodeProps {
   data: {
@@ -562,15 +568,113 @@ function calculateLayout(
 
   const root = hierarchy(rootDatum);
 
-  // Compute d3 radial tree layout
-  const maxDepth = root.height || 1;
-  const maxRadius = Math.max(300, maxDepth * RADIAL_STEP);
+  // Recursive fan layout: each child placed at fixed distance FROM ITS PARENT
+  // oriented away from the grandparent, instead of on a global radius circle
+  const nodePositionMap = new Map<string, { x: number; y: number }>();
+  const centerPos = { x: 0, y: 0 };
+  nodePositionMap.set(SPACE_NODE_ID, centerPos);
 
-  const layout = d3Tree<LayoutDatum>()
-    .size([2 * Math.PI, maxRadius])
-    .separation((a, b) => (a.parent === b.parent ? 1.5 : 3) / Math.max(1, a.depth * 0.7));
+  // Count total visible descendants for spacing
+  function countVisible(datum: LayoutDatum): number {
+    if (!datum.children) return 1;
+    return datum.children.reduce((sum, c) => sum + countVisible(c), 0);
+  }
 
-  layout(root);
+  function layoutFan(
+    datum: LayoutDatum,
+    parentPos: { x: number; y: number },
+    dirAngle: number, // direction from grandparent to parent
+    arcSpan: number,  // available angular span for this subtree
+  ) {
+    const children = datum.children;
+    if (!children || children.length === 0) return;
+
+    const count = children.length;
+
+    // Precompute visible counts for proportional arc allocation
+    const childVisibleCounts = children.map(c => countVisible(c));
+    const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
+
+    // Minimum radius so siblings don't overlap on the arc
+    const MIN_SIBLING_SPACING = 130;
+    const spacingRadius = count > 1
+      ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
+      : 0;
+
+    for (let i = 0; i < count; i++) {
+      const child = children[i];
+      const descendants = childVisibleCounts[i];
+
+      // Push nodes further: max of descendant-based radius AND sibling-spacing radius
+      const radius = Math.max(
+        RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4),
+        spacingRadius
+      );
+
+      // Distribute children evenly within the arc span
+      const angle = count === 1
+        ? dirAngle
+        : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
+
+      const cx = parentPos.x + radius * Math.cos(angle);
+      const cy = parentPos.y + radius * Math.sin(angle);
+      nodePositionMap.set(child.id, { x: cx, y: cy });
+
+      // Arc adapté : minimum PI/3 (60°) + 0.5 rad (~29°) par enfant direct
+      const directChildren = child.children?.length || 0;
+      const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
+      const childArc = descendants > 1
+        ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+        : 0;
+      layoutFan(child, { x: cx, y: cy }, angle, childArc);
+    }
+  }
+
+  // Layout root children with proportional angular allocation
+  const rootChildren = rootDatum.children || [];
+  const rootCount = rootChildren.length;
+  if (rootCount > 0) {
+    const rootVisibleCounts = rootChildren.map(c => countVisible(c));
+    const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
+
+    // Minimum radius so root children don't overlap (~150px node width)
+    const MIN_NODE_SPACING = 160;
+    const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
+
+    // Arc allocation: equal base (50%) + proportional surplus (50%)
+    const equalArc = (2 * Math.PI) / rootCount;
+    const rootArcs = rootChildren.map((_, i) => {
+      const proportionalArc = (2 * Math.PI * rootVisibleCounts[i]) / Math.max(1, totalRootVisible);
+      return equalArc * 0.5 + proportionalArc * 0.5;
+    });
+
+    // Place root children around center
+    let cumulativeAngle = -Math.PI / 2; // start from top
+    for (let i = 0; i < rootCount; i++) {
+      const child = rootChildren[i];
+      const childArc = rootArcs[i];
+      const angle = cumulativeAngle + childArc / 2;
+
+      // Radius proportional to descendant count: few descendants = close, many = far
+      const descendants = rootVisibleCounts[i];
+      const rootRadius = Math.max(
+        minRadiusForSpacing,
+        RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4)
+      );
+
+      const cx = centerPos.x + rootRadius * Math.cos(angle);
+      const cy = centerPos.y + rootRadius * Math.sin(angle);
+      nodePositionMap.set(child.id, { x: cx, y: cy });
+
+      // Fan arc: use allocated arc with minimum for spreading
+      const directChildren = child.children?.length || 0;
+      const fanArc = descendants > 1
+        ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+        : 0;
+      layoutFan(child, { x: cx, y: cy }, angle, fanArc);
+      cumulativeAngle += childArc;
+    }
+  }
 
   // Space node at center
   nodes.push({
@@ -594,30 +698,32 @@ function calculateLayout(
       : { sourceHandle: 'top-source', targetHandle: 'bottom' };
   }
 
-  // Convert d3 nodes to ReactFlow nodes
-  const nodePositionMap = new Map<string, { x: number; y: number }>();
-  nodePositionMap.set(SPACE_NODE_ID, { x: -70, y: -25 });
+  // Convert positions to ReactFlow nodes
+  function getAllItems(datum: LayoutDatum): LayoutDatum[] {
+    const result: LayoutDatum[] = [];
+    if (datum.item) result.push(datum);
+    if (datum.children) datum.children.forEach(c => result.push(...getAllItems(c)));
+    return result;
+  }
 
-  root.descendants().forEach(d3Node => {
-    if (d3Node.data.id === SPACE_NODE_ID) return;
+  getAllItems(rootDatum).forEach(datum => {
+    const item = datum.item!;
+    const pos = nodePositionMap.get(datum.id);
+    if (!pos) return;
 
-    const item = d3Node.data.item!;
     const statusColor = getStatusColor(item.status, statuses);
     const hexColor = tailwindBgToHex(statusColor);
     const hasChildren = item.children.length > 0;
     const isCollapsed = collapsedIds.has(item.id);
     const childCount = countDescendants(item);
-
-    // Convert polar to cartesian (offset -π/2 to start from top)
-    const angle = (d3Node.x ?? 0) - Math.PI / 2;
-    const radius = d3Node.y ?? 0;
-    const pos = { x: radius * Math.cos(angle) - 75, y: radius * Math.sin(angle) - 20 };
-    nodePositionMap.set(item.id, pos);
+    // Check if this is a direct child of the space node
+    const isRoot = !item.parentId || !nodePositionMap.has(item.parentId);
+    const adjustedPos = { x: pos.x - 75, y: pos.y - 20 };
 
     nodes.push({
       id: item.id,
       type: 'mindmap',
-      position: pos,
+      position: adjustedPos,
       data: {
         label: item.title,
         item,
@@ -635,7 +741,7 @@ function calculateLayout(
         onDuplicateToSpace,
         onConvertToSpace,
         doneStatusId,
-        isRoot: d3Node.depth === 1,
+        isRoot,
         hasChildren,
         isCollapsed,
         childCount,
@@ -650,24 +756,34 @@ function calculateLayout(
     });
 
     // Edge from parent
-    if (d3Node.parent) {
-      const parentId = d3Node.parent.data.id;
-      const parentPos = nodePositionMap.get(parentId);
-      if (parentPos) {
-        const { sourceHandle, targetHandle } = getBestHandles(parentPos, pos);
-        edges.push({
-          id: `${parentId}-${item.id}`,
-          source: parentId,
-          target: item.id,
-          sourceHandle,
-          targetHandle,
-          type: 'default',
-          style: {
-            stroke: parentId === SPACE_NODE_ID ? 'hsl(var(--primary))' : '#94a3b8',
-            strokeWidth: 2,
-          },
-        });
-      }
+    const parentId = item.parentId || SPACE_NODE_ID;
+    const parentPos = nodePositionMap.get(parentId);
+    if (parentPos) {
+      const parentAdjusted = { x: parentPos.x - 75, y: parentPos.y - 20 };
+      const { sourceHandle, targetHandle } = getBestHandles(parentAdjusted, adjustedPos);
+      // Edge thickness based on number of descendant generations
+      // Capped to stay readable: leaf=1, parent=1.5, grandparent=2, max=2.5
+      const depth = maxDepth(item);
+      const edgeWidth = parentId === SPACE_NODE_ID
+        ? 4
+        : Math.max(1.5, Math.min(4, 1.5 + depth * 0.8));
+      const edgeOpacity = parentId === SPACE_NODE_ID
+        ? 0.9
+        : Math.max(0.5, Math.min(0.9, 0.5 + depth * 0.15));
+
+      edges.push({
+        id: `${parentId}-${item.id}`,
+        source: parentId,
+        target: item.id,
+        sourceHandle,
+        targetHandle,
+        type: 'default',
+        style: {
+          stroke: parentId === SPACE_NODE_ID ? 'hsl(var(--primary))' : '#94a3b8',
+          strokeWidth: edgeWidth,
+          opacity: edgeOpacity,
+        },
+      });
     }
   });
 
