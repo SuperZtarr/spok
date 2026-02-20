@@ -139,7 +139,7 @@ export function ImageUploadZone({
             <img
               src={currentUrl}
               alt="Image"
-              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              className="max-w-[98vw] max-h-[98vh] object-contain rounded-lg shadow-2xl"
             />
           </div>
         )}
