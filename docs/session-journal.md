@@ -101,6 +101,21 @@
 
 ---
 
+#### [2026-02-22] - Drag & drop des espaces dans la sidebar
+
+**Demande :** Permettre de déplacer un espace dans un autre sous-espace par drag & drop directement depuis la sidebar.
+**Actions réalisées :**
+- Ajout de `@dnd-kit/core` (DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor) dans Layout.tsx
+- SpaceTreeItem rendu draggable (poignée GripVertical au hover) et droppable (surbrillance cible)
+- DragOverlay avec aperçu du nom de l'espace en cours de déplacement
+- Zone "Déplacer à la racine" pour détacher un sous-espace de son parent
+- Mutation API `spacesApi.update(spaceId, { parentId })` au drop avec invalidation du cache React Query
+- Protections : distance d'activation 8px (pas d'interférence avec les clics), no-op si même parent, l'API valide les références circulaires
+**État :** EN COURS
+**Prochaine étape :** Tester en local, commiter
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)
