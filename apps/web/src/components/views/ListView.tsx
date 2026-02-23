@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Search, X, MessageSquare, ArrowUp, ArrowDown, FolderInput, Copy, FolderPlus } from 'lucide-react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, Copy, FolderPlus } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -7,7 +7,6 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
 import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
-import { stripMarkup } from '../../lib/bbcode';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -85,7 +84,6 @@ type SortField = 'title' | 'type' | 'status' | 'parent' | 'date' | 'contribution
 type SortDir = 'asc' | 'desc';
 
 export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: ListViewProps) {
-  const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -98,21 +96,11 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
     }
   }, [sortField]);
 
-  // Filter items based on search query
-  const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter((item) =>
-      item.title.toLowerCase().includes(query) ||
-      stripMarkup(item.description || '').toLowerCase().includes(query)
-    );
-  }, [items, searchQuery]);
-
-  // Sort filtered items
+  // Sort items
   const sortedItems = useMemo(() => {
-    if (!sortField) return filteredItems;
+    if (!sortField) return items;
     const mul = sortDir === 'asc' ? 1 : -1;
-    return [...filteredItems].sort((a, b) => {
+    return [...items].sort((a, b) => {
       switch (sortField) {
         case 'title':
           return mul * a.title.localeCompare(b.title, 'fr');
@@ -142,7 +130,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
           return 0;
       }
     });
-  }, [filteredItems, sortField, sortDir]);
+  }, [items, sortField, sortDir]);
 
   // Build parent name map
   const parentNames = useMemo(() => {
@@ -184,43 +172,12 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search bar */}
-      <div className="p-3 border-b border-border">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-9 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Items list */}
       {sortedItems.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          {searchQuery ? (
-            <>
-              <p>Aucun résultat</p>
-              <p className="text-sm">Aucun élément ne correspond à "{searchQuery}"</p>
-            </>
-          ) : (
-            <>
-              <p>Aucun element</p>
-              <p className="text-sm">Creez votre premier element pour commencer</p>
-            </>
-          )}
+          <p>Aucun élément</p>
+          <p className="text-sm">Créez votre premier élément pour commencer</p>
         </div>
       ) : (
         <>

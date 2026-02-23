@@ -23,6 +23,7 @@ interface TimelineViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   canEdit?: boolean;
 }
 
@@ -172,7 +173,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>, compactMode: 
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -735,14 +736,15 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
               const isCollapsed = collapsedIds.has(item.id);
               const hasDate = !!(item.startDate || item.dueDate);
               const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-              const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+              const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+              const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
               return (
                 <div
                   key={item.id}
                   className={`flex border-b hover:bg-muted/30 group ${
                     isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
-                  } ${isDimmed ? 'opacity-40' : ''}`}
+                  } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >

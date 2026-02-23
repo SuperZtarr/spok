@@ -34,6 +34,8 @@ import {
   Copy,
   FolderPlus,
   RotateCcw,
+  Search,
+  X,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -67,6 +69,7 @@ import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 
 import { TYPE_ICONS, TYPE_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
+import { stripMarkup } from '../lib/bbcode';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -154,6 +157,7 @@ export function SpacePage() {
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
   const [convertingItem, setConvertingItem] = useState<{id: string; title: string; childCount: number} | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Clear selection when leaving the page or changing space
   useEffect(() => {
@@ -267,6 +271,34 @@ export function SpacePage() {
     queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions' }),
     enabled: !!spaceId && viewMode === 'text',
   });
+
+  // Filter items by search query (only in filter mode — flat views)
+  const filterBySearch = useCallback((items: Item[] | undefined): Item[] => {
+    if (!items) return [];
+    if (!searchQuery.trim() || isHighlightMode) return items;
+    const query = searchQuery.toLowerCase();
+    return items.filter((item) =>
+      item.title.toLowerCase().includes(query) ||
+      stripMarkup(item.description || '').toLowerCase().includes(query)
+    );
+  }, [searchQuery, isHighlightMode]);
+
+  // Compute matching IDs for search highlight (used in highlight mode views)
+  const searchMatchIds = useMemo((): Set<string> | undefined => {
+    if (!searchQuery.trim()) return undefined;
+    const query = searchQuery.toLowerCase();
+    const allItems = allItemsData?.data || itemsData?.data || [];
+    const matchIds = new Set<string>();
+    for (const item of allItems) {
+      if (
+        item.title.toLowerCase().includes(query) ||
+        stripMarkup(item.description || '').toLowerCase().includes(query)
+      ) {
+        matchIds.add(item.id);
+      }
+    }
+    return matchIds.size > 0 || searchQuery.trim() ? matchIds : undefined;
+  }, [searchQuery, allItemsData?.data, itemsData?.data]);
 
   const createItemMutation = useMutation({
     mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string; startDate?: string; endDate?: string }) =>
@@ -749,12 +781,37 @@ export function SpacePage() {
             })()}
           </div>
 
+          {/* Search input */}
+          <div className="relative flex-shrink-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 w-40 pl-8 pr-7 text-xs border border-input rounded-md bg-background shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Item count */}
           <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
             {(() => {
               const total = space?.itemCount || 0;
               const filtered = itemsData?.total ?? itemsData?.data?.length ?? total;
               const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
+              const hasSearch = searchQuery.trim().length > 0;
+              if (hasSearch) {
+                const searchCount = searchMatchIds?.size ?? 0;
+                return `${searchCount}/${total} éléments`;
+              }
               if (hasFilter && !isHighlightMode) {
                 return `${filtered}/${total} éléments`;
               }
@@ -977,7 +1034,7 @@ export function SpacePage() {
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
             <ListView
-              items={itemsData?.data || []}
+              items={filterBySearch(itemsData?.data)}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -990,7 +1047,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'text' ? (
             <TextView
-              items={textViewData?.data || allItemsData?.data || []}
+              items={filterBySearch(textViewData?.data || allItemsData?.data)}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1003,10 +1060,11 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
             />
           ) : viewMode === 'sequence' ? (
             <SequenceView
-              items={allItemsData?.data || []}
+              items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
@@ -1021,11 +1079,12 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
               canEdit={canEdit}
             />
           ) : viewMode === 'kanban' ? (
             <KanbanView
-              items={itemsData?.data || []}
+              items={filterBySearch(itemsData?.data)}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1038,7 +1097,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'types' ? (
             <TypesView
-              items={itemsData?.data || []}
+              items={filterBySearch(itemsData?.data)}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateType={(id, type) => handleInlineUpdate(id, { type })}
@@ -1051,7 +1110,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'planning' ? (
             <PlanningView
-              items={allItemsData?.data || []}
+              items={filterBySearch(allItemsData?.data)}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1063,11 +1122,12 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
               canEdit={canEdit}
             />
           ) : viewMode === 'calendar' ? (
             <CalendarView
-              items={allItemsData?.data || []}
+              items={filterBySearch(allItemsData?.data)}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1079,11 +1139,12 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
               canEdit={canEdit}
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
-              items={allItemsData?.data || []}
+              items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
@@ -1099,17 +1160,19 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
               canEdit={canEdit}
             />
           ) : viewMode === 'mindmap' ? (
             <MindMapView
               ref={mindmapRef}
-              items={allItemsData?.data || []}
+              items={filterBySearch(allItemsData?.data)}
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
               communitySpaces={communitySpaces || []}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1135,6 +1198,7 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
             />
           ) : viewMode === 'sunburst' ? (
             <SunburstView
@@ -1144,6 +1208,7 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -1192,6 +1257,7 @@ export function SpacePage() {
                       highlightType={activeTypeFilter}
                       highlightStatus={activeStatusFilter}
                       highlightColor={highlightColor}
+                      searchMatchIds={searchMatchIds}
                       statusColorMap={statusColorMap}
                       statusLabelMap={statusLabelMap}
                     />
@@ -1344,6 +1410,7 @@ function TreeItem({
   highlightType,
   highlightStatus,
   highlightColor,
+  searchMatchIds,
   statusColorMap,
   statusLabelMap,
 }: {
@@ -1373,6 +1440,7 @@ function TreeItem({
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   statusColorMap: Record<string, string>;
   statusLabelMap: Record<string, string>;
 }) {
@@ -1389,9 +1457,10 @@ function TreeItem({
     setNodeRef: setDropRef,
   } = useDroppable({ id: item.id });
 
-  const hasHighlight = !!(highlightType || highlightStatus);
-  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+  const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
+  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
   const isHighlighted = hasHighlight && !isDimmed;
+  const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
   const currentDropPosition = isOver ? (globalDropPosition || 'nest') : null;
 
@@ -1420,7 +1489,7 @@ function TreeItem({
         data-item-id={item.id}
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-colors duration-150 ${
           currentDropPosition === 'nest' ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-400' : ''
-        } ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''}`}
+        } ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
@@ -1553,6 +1622,7 @@ function TreeItem({
           highlightType={highlightType}
           highlightStatus={highlightStatus}
           highlightColor={highlightColor}
+          searchMatchIds={searchMatchIds}
           statusColorMap={statusColorMap}
           statusLabelMap={statusLabelMap}
         />
@@ -1586,6 +1656,7 @@ function ItemChildren({
   highlightType,
   highlightStatus,
   highlightColor,
+  searchMatchIds,
   statusColorMap,
   statusLabelMap,
 }: {
@@ -1612,6 +1683,7 @@ function ItemChildren({
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   statusColorMap: Record<string, string>;
   statusLabelMap: Record<string, string>;
 }) {
@@ -1656,6 +1728,7 @@ function ItemChildren({
           highlightType={highlightType}
           highlightStatus={highlightStatus}
           highlightColor={highlightColor}
+          searchMatchIds={searchMatchIds}
           statusColorMap={statusColorMap}
           statusLabelMap={statusLabelMap}
         />

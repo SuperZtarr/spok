@@ -132,6 +132,7 @@ interface PlanningViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   canEdit?: boolean;
 }
 
@@ -149,11 +150,12 @@ interface PlanningItemProps {
   referentiels?: SpaceReferentiels;
   isHighlighted?: boolean;
   isDimmed?: boolean;
+  isSearchMatch?: boolean;
   highlightColor?: { border: string; bg: string };
   canEdit?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, highlightColor, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -164,7 +166,7 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMo
     <div
       className={`grid grid-cols-[auto_1fr_5rem_5rem_6rem_auto] items-center gap-3 px-4 py-2.5 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer group ${
         isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
-      } ${isDimmed ? 'opacity-40' : ''}`}
+      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
       onClick={() => onEdit(item.id)}
     >
       {/* Type icon */}
@@ -263,10 +265,11 @@ interface PeriodSectionProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -296,7 +299,8 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
             statuses={statuses}
             referentiels={referentiels}
             isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
-            isDimmed={(highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false)}
+            isDimmed={(highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false)}
+            isSearchMatch={!!(searchMatchIds && searchMatchIds.has(item.id))}
             highlightColor={highlightColor}
             canEdit={canEdit}
           />
@@ -306,7 +310,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -383,6 +387,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           highlightType={highlightType}
           highlightStatus={highlightStatus}
           highlightColor={highlightColor}
+          searchMatchIds={searchMatchIds}
           canEdit={canEdit}
         />
       ))}

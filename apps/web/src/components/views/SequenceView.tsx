@@ -48,6 +48,7 @@ interface SequenceViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   canEdit?: boolean;
 }
 
@@ -386,6 +387,7 @@ export function SequenceView({
   highlightType,
   highlightStatus,
   highlightColor,
+  searchMatchIds,
   canEdit = true,
 }: SequenceViewProps) {
   // Link mode state
@@ -498,7 +500,8 @@ export function SequenceView({
         statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
       const isDone = item.status === doneStatusId;
       const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-      const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+      const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+      const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
       const isLinkSource = linkMode && linkSource === item.id;
 
       const itemDependsOn = dependsOnMap.get(item.id) || [];
@@ -512,7 +515,7 @@ export function SequenceView({
           data-item-id={item.id}
           className={`relative border-2 rounded-lg cursor-pointer hover:shadow-md transition-all group ${borderColor} ${
             isHighlighted && highlightColor ? `${highlightColor.border} ${highlightColor.bg} ring-1 ring-offset-1 scale-[1.02]` : ''
-          } ${isDimmed ? 'opacity-40' : ''} ${
+          } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${
             hasUnsatisfiedDeps ? 'ring-1 ring-orange-300' : ''
           } ${isLinkSource ? 'ring-2 ring-purple-500 ring-offset-2 bg-purple-50' : ''} ${
             linkMode && !isLinkSource ? 'hover:ring-2 hover:ring-purple-300' : ''
@@ -827,7 +830,8 @@ export function SequenceView({
                   const sBorderColor = statusBorderColors[item.status || 'none'] || statusBorderColors['none'];
                   const isDone = item.status === doneStatusId;
                   const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-                  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+                  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+                  const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
                   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
                   const typeLabel = typeLabels[item.type]?.labelShort || item.type;
 
@@ -838,7 +842,7 @@ export function SequenceView({
                       data-item-id={item.id}
                       className={`grid grid-cols-[auto_1fr_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${
                         isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
-                      } ${isDimmed ? 'opacity-40' : ''} ${
+                      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${
                         linkMode ? 'hover:ring-2 hover:ring-purple-300' : ''
                       }`}
                       onClick={() => handleCardClick(item.id)}

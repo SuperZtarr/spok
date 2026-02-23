@@ -33,6 +33,7 @@ interface TextViewProps {
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
 }
 
 function formatDate(dateString: string | null | undefined): string | null {
@@ -80,7 +81,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor }: TextViewProps) {
+export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -169,9 +170,10 @@ export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
             const contributions = item.contributions || [];
             const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
             const hasContent = hasDescription || contributions.length > 0 || hasImage;
-            const hasHighlight = !!(highlightType || highlightStatus);
-            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus));
+            const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
+            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
             const isHighlighted = hasHighlight && !isDimmed;
+            const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
             return (
               <div
@@ -181,7 +183,7 @@ export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               >
                 {/* Item header */}
                 <div
-                  className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''}`}
+                  className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
                   <span className={`flex-shrink-0 ${typeColor.color.replace('border-', 'text-').replace('400', '500')}`}>

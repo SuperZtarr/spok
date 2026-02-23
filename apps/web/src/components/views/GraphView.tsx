@@ -50,9 +50,10 @@ interface GraphViewProps {
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
 }
 
-export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus }: GraphViewProps) {
+export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus, searchMatchIds }: GraphViewProps) {
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -227,7 +228,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     graphRef.current?.zoomToFit(400, 50);
   };
 
-  const hasHighlight = !!(highlightType || highlightStatus);
+  const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
 
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.title || '';
@@ -238,9 +239,11 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
     // Determine if this node matches the highlight filter
     const isItemNode = !isStructural;
-    const matchesHighlight = !hasHighlight || isStructural ||
+    const matchesTypeStatus = !highlightType && !highlightStatus || isStructural ||
       (highlightType && node.type === highlightType) ||
       (highlightStatus && (node.status === highlightStatus || (highlightStatus === 'undefined' && !node.status)));
+    const matchesSearch = !searchMatchIds || isStructural || searchMatchIds.has(node.id);
+    const matchesHighlight = matchesTypeStatus && matchesSearch;
     const dimmed = hasHighlight && isItemNode && !matchesHighlight;
 
     // Save context and apply dimming
@@ -249,13 +252,23 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
       ctx.globalAlpha = 0.15;
     }
 
+    // Draw search match glow (yellow ring)
+    const isSearchMatch = searchMatchIds && !isStructural && searchMatchIds.has(node.id);
+    if (isSearchMatch) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, nodeRadius + 3 / globalScale, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3 / globalScale;
+      ctx.stroke();
+    }
+
     // Draw circle
     ctx.beginPath();
     ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = (isStructural ? 2.5 : 1.5) / globalScale;
+    ctx.strokeStyle = isSearchMatch ? '#facc15' : '#fff';
+    ctx.lineWidth = (isStructural ? 2.5 : isSearchMatch ? 2.5 : 1.5) / globalScale;
     ctx.stroke();
 
     // Draw label
@@ -270,7 +283,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     }
 
     ctx.restore();
-  }, [hasHighlight, highlightType, highlightStatus]);
+  }, [hasHighlight, highlightType, highlightStatus, searchMatchIds]);
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
     const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
@@ -299,7 +312,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
       }
     }
     return LINK_COLORS[link.linkType] || '#475569';
-  }, [hasHighlight, highlightType, highlightStatus]);
+  }, [hasHighlight, highlightType, highlightStatus, searchMatchIds]);
 
   const linkWidth = useCallback((link: any) => {
     if (link.linkType === 'hierarchy') return 1.5;

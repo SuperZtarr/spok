@@ -65,9 +65,10 @@ interface SunburstViewProps {
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
 }
 
-export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus }: SunburstViewProps = {}) {
+export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus, searchMatchIds }: SunburstViewProps = {}) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -330,12 +331,14 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
               const color = getNodeColor(d);
 
               // Filter highlight: dim items that don't match the active filter
-              const hasFilterHighlight = !!(highlightType || highlightStatus);
+              const hasFilterHighlight = !!(highlightType || highlightStatus || searchMatchIds);
               const isItem = d.data.nodeType === 'item';
-              const matchesFilter = !hasFilterHighlight || !isItem ||
+              const matchesTypeStatus = !highlightType && !highlightStatus || !isItem ||
                 (highlightType && d.data.itemType === highlightType) ||
                 (highlightStatus && (d.data.status === highlightStatus || (highlightStatus === 'undefined' && !d.data.status)));
-              const filterDimmed = hasFilterHighlight && isItem && !matchesFilter;
+              const matchesSearch = !searchMatchIds || !isItem || searchMatchIds.has(d.data.id);
+              const isSearchMatch = !!(searchMatchIds && isItem && searchMatchIds.has(d.data.id));
+              const filterDimmed = hasFilterHighlight && isItem && !(matchesTypeStatus && matchesSearch);
 
               // Combine both highlight logics
               let opacity: number;
@@ -353,8 +356,8 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
                   d={path}
                   fill={color}
                   fillOpacity={opacity}
-                  stroke="var(--background)"
-                  strokeWidth={0.5}
+                  stroke={isSearchMatch ? '#facc15' : 'var(--background)'}
+                  strokeWidth={isSearchMatch ? 2.5 : 0.5}
                   onMouseEnter={() => setHoveredNode(d)}
                   onMouseLeave={() => setHoveredNode(null)}
                   onClick={() => handleClick(d)}

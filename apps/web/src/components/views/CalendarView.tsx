@@ -25,6 +25,7 @@ interface CalendarViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
   canEdit?: boolean;
 }
 
@@ -67,6 +68,7 @@ export function CalendarView({
   highlightType,
   highlightStatus,
   highlightColor,
+  searchMatchIds,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const year = currentDate.getFullYear();
@@ -212,7 +214,9 @@ export function CalendarView({
                       ? highlightStatus === 'undefined'
                         ? !!item.status
                         : item.status !== highlightStatus
-                      : false);
+                      : false) ||
+                    (searchMatchIds ? !searchMatchIds.has(item.id) : false);
+                  const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
                   return (
                     <button
@@ -222,7 +226,7 @@ export function CalendarView({
                         isHighlighted && highlightColor
                           ? `${highlightColor.bg} ${highlightColor.border} border-l-2`
                           : `${typeColor.bg} border-l-2 ${typeColor.color}`
-                      } ${isDimmed ? 'opacity-30' : ''}`}
+                      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-30' : ''}`}
                       title={`${item.title}${statusCfg ? ` — ${statusCfg.label}` : ''}`}
                     >
                       <Icon className="w-3 h-3 flex-shrink-0" />
