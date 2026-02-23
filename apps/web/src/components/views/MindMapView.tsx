@@ -846,6 +846,7 @@ function MindMapViewInner({
   communitySpaces = [],
   highlightType,
   highlightStatus,
+  searchMatchIds,
   onEdit,
   onDelete,
   onAddChild,
@@ -1913,6 +1914,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           communitySpaces={communitySpaces}
           highlightType={highlightType}
           highlightStatus={highlightStatus}
+          searchMatchIds={searchMatchIds}
           onEdit={onEdit}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
