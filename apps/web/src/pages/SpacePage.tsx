@@ -55,6 +55,7 @@ import { TimelineView } from '../components/views/TimelineView';
 import { MindMapView } from '../components/views/MindMapView';
 import type { MindMapViewHandle } from '../components/views/MindMapView';
 import { PlanningView } from '../components/views/PlanningView';
+import { CalendarView } from '../components/views/CalendarView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
@@ -205,11 +206,11 @@ export function SpacePage() {
   // Tree-based views (mindmap, tree, timeline, text) need ALL items to rebuild hierarchy
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
   // Flat views (kanban, types, planning, list) show all items without hierarchy filtering
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar';
 
   // Determine if we should filter or highlight
   // isTreeView already covers mindmap, tree, timeline, text — no need to repeat timeline here
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'graph' || viewMode === 'sunburst';
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -1050,6 +1051,22 @@ export function SpacePage() {
             />
           ) : viewMode === 'planning' ? (
             <PlanningView
+              items={allItemsData?.data || []}
+              onEdit={setEditingItemId}
+              onDelete={handleDelete}
+              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={handleConvertToSpace}
+              referentiels={referentiels}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              highlightColor={highlightColor}
+              canEdit={canEdit}
+            />
+          ) : viewMode === 'calendar' ? (
+            <CalendarView
               items={allItemsData?.data || []}
               onEdit={setEditingItemId}
               onDelete={handleDelete}

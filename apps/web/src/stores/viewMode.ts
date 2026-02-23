@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'graph' | 'text' | 'sunburst';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -19,6 +19,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'text', label: 'Texte', icon: 'FileText', category: 'basic' },
   { value: 'planning', label: 'Planning', icon: 'CalendarCheck', category: 'planning' },
   { value: 'timeline', label: 'Gantt', icon: 'GanttChart', category: 'planning' },
+  { value: 'calendar', label: 'Calendrier', icon: 'Calendar', category: 'planning' },
   { value: 'sequence', label: 'Séquence', icon: 'ArrowDownUp', category: 'planning' },
   { value: 'types', label: 'Types', icon: 'LayoutGrid', category: 'planning' },
   { value: 'mindmap', label: 'Carte mentale', icon: 'Share2', category: 'exploration' },
