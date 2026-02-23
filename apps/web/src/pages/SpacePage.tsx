@@ -646,7 +646,7 @@ export function SpacePage() {
       <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto items-center pb-1" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-1.5 flex-wrap items-center pb-1">
           {/* Mode indicator */}
           {isHighlightMode ? (
             <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
