@@ -554,18 +554,26 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const body = createRelationSchema.parse(request.body);
 
-    // Verify both items exist in the space
+    // Verify both items exist (fromItem must be in the request space, toItem can be cross-space)
     const [fromItem, toItem] = await Promise.all([
       fastify.prisma.item.findFirst({
         where: { id: request.params.id, spaceId: request.params.spaceId },
       }),
       fastify.prisma.item.findFirst({
-        where: { id: body.toItemId, spaceId: request.params.spaceId },
+        where: { id: body.toItemId },
       }),
     ]);
 
     if (!fromItem || !toItem) {
       return reply.notFound('One or both items not found');
+    }
+
+    // Cross-space relation: verify user can at least view the target item's space
+    if (toItem.spaceId !== request.params.spaceId) {
+      const targetMembership = await checkSpaceAccess(request.user.userId, toItem.spaceId);
+      if (!targetMembership) {
+        return reply.notFound('One or both items not found');
+      }
     }
 
     const relation = await fastify.prisma.itemRelation.create({

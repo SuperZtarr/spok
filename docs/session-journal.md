@@ -217,6 +217,20 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-24] - MindMap layout radial portails + distance adaptive
+
+**Demande :** Items portails affichés en ligne droite au lieu d'en éventail. Puis augmenter la distance pour les éléments avec beaucoup de descendants, et réduire la branche des feuilles sans enfants.
+**Actions réalisées :**
+- Réécriture complète `placePortalItem` : layout en éventail radial (direction __space__ → portail) au lieu d'arbre linéaire
+- Arc allocation proportionnelle (50% égal + 50% proportionnel au nombre de descendants visibles)
+- Coefficient distance augmenté progressivement : 0.4 → 0.6 → 0.8
+- Feuilles (sans enfants) rapprochées : `sqrt(max(d-1, 0))` au lieu de `sqrt(d)` — divise le rayon par 2 pour les feuilles
+- Appliqué dans les 8 occurrences (layoutFan, reorganizeRef, portal useEffect, portal resetLayout)
+**État :** TERMINÉ
+**Commit :** 5cd3ad0
+
+---
+
 #### [2026-02-24] - Refonte réorganisation MindMap + UI tweaks
 
 **Demande :** Revoir la réorganisation MindMap avec 4 règles claires + corrections UI diverses

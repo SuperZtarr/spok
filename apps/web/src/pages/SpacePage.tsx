@@ -1509,7 +1509,10 @@ export function SpacePage() {
       <ItemEditModal
         isOpen={!!editingItemId}
         onClose={() => setEditingItemId(null)}
-        spaceId={spaceId!}
+        spaceId={(() => {
+          const editItem = (allItemsData?.data || []).find((i: Item) => i.id === editingItemId);
+          return editItem?.spaceId || spaceId!;
+        })()}
         itemId={editingItemId}
         allItems={allItemsData?.data || []}
         referentiels={referentiels}

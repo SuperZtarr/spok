@@ -223,7 +223,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
   return (
     <div
-      className={`px-4 py-2 rounded-lg shadow-md min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+      className={`px-4 py-2 rounded-lg shadow-md min-w-[100px] max-w-[250px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isPortal ? 'border-2 border-dashed border-primary/40' : isRoot ? 'border-primary border-3' : 'border-2 border-gray-300'
       } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isSearchMatch ? 'ring-4 ring-yellow-400 ring-offset-2 scale-110 z-10 shadow-lg' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
       style={{ backgroundColor: hexColor, color: textColor }}
@@ -247,7 +247,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
               e.stopPropagation();
               onToggleCollapse(item.id);
             }}
-            className="p-0.5 hover:bg-black/10 rounded flex-shrink-0"
+            className="p-0.5 hover:bg-black/10 rounded flex-shrink-0 nodrag nopan"
             title={isCollapsed ? 'Déplier' : 'Replier'}
           >
             {isCollapsed ? (
@@ -260,15 +260,8 @@ function MindMapNode({ data }: MindMapNodeProps) {
 
         <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
 
-        <span className="text-sm font-medium whitespace-nowrap">{item.title}</span>
+        <span className="text-sm font-medium truncate" title={item.title}>{item.title}</span>
 
-        {/* Portal space badge */}
-        {isPortal && portalSpaceName && (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-medium whitespace-nowrap">
-            <FolderOpen className="w-3 h-3 flex-shrink-0" />
-            {portalSpaceName}
-          </span>
-        )}
 
         {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
           <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
@@ -282,7 +275,7 @@ function MindMapNode({ data }: MindMapNodeProps) {
         )}
 
         {/* Pin + Action menu */}
-        <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
+        <div className="flex items-center gap-0.5 ml-auto flex-shrink-0 nodrag nopan">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -778,7 +771,7 @@ function calculateLayout(
         isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
         isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
         isDropTarget: false,
-        canEdit: canEdit !== false && !(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
+        canEdit: canEdit !== false,
         isPinned: pinnedIdsSet?.has(item.id) || false,
         onTogglePin: onTogglePin || (() => {}),
         isPortal: !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
@@ -1501,9 +1494,9 @@ function MindMapViewInner({
             isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
             isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
             isDropTarget: false,
-            canEdit: false,
-            isPinned: false,
-            onTogglePin: () => {},
+            canEdit: canEdit !== false,
+            isPinned: pinnedIds.current.has(item.id),
+            onTogglePin: togglePin,
             isPortal: true,
             portalSpaceName: spaceName,
           },
@@ -1595,8 +1588,36 @@ function MindMapViewInner({
     });
 
     const allNodes = [...positionedNodes, ...portalNodes];
+
+    // Add cross-space relation edges: scan portal items for relations to/from visible nodes
+    const allNodeIds = new Set(allNodes.map(n => n.id));
+    const portalRelationEdges: Edge[] = [];
+    const existingRelationIds = new Set(relationEdges.map(e => e.data?.relationId));
+    const allPortalItems = Array.from(portalItemsBySpace.values()).flat();
+    [...items, ...allPortalItems].forEach(item => {
+      item.relationsFrom?.forEach(relation => {
+        if (existingRelationIds.has(relation.id)) return; // already rendered
+        if (allNodeIds.has(relation.fromItemId) && allNodeIds.has(relation.toItemId)) {
+          portalRelationEdges.push({
+            id: `relation-${relation.id}`,
+            source: relation.fromItemId,
+            target: relation.toItemId,
+            type: 'default',
+            animated: true,
+            style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
+            data: { relationId: relation.id, type: relation.type },
+            label: relation.type === 'relates' ? '' : relation.type,
+            labelStyle: { fontSize: 10, fill: '#8b5cf6' },
+            labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+          });
+          existingRelationIds.add(relation.id);
+        }
+      });
+    });
+
     const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
-    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], edgePosMap);
+    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], edgePosMap);
     setNodes(allNodes);
     setEdges(allEdges);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId]);
@@ -1611,20 +1632,23 @@ function MindMapViewInner({
     }));
   }, [dropTargetId, setNodes]);
 
-  // Handle new connection (create relation)
+  // Handle new connection (create relation) — supports cross-space via portals
   const onConnect = useCallback(
     (connection: Connection) => {
-      if (connection.source && connection.target && connection.source !== '__space__' && connection.target !== '__space__') {
+      if (connection.source && connection.target &&
+          connection.source !== '__space__' && connection.target !== '__space__' &&
+          !connection.source.startsWith('child-space-') && !connection.target.startsWith('child-space-')) {
+        // Search in current space items AND portal items
+        const allAvailableItems = [...items, ...Array.from(portalItemsBySpace.values()).flat()];
+        const sourceItem = allAvailableItems.find(i => i.id === connection.source);
+        const targetItem = allAvailableItems.find(i => i.id === connection.target);
         // Don't create relation if it's a parent-child relationship
-        const sourceItem = items.find(i => i.id === connection.source);
-        const targetItem = items.find(i => i.id === connection.target);
         if (sourceItem && targetItem && sourceItem.parentId !== connection.target && targetItem.parentId !== connection.source) {
-          // Open dialog to choose relation type
           setPendingConnection({ source: connection.source, target: connection.target });
         }
       }
     },
-    [items]
+    [items, portalItemsBySpace]
   );
 
   // Handle relation type selection
@@ -1655,7 +1679,10 @@ function MindMapViewInner({
   );
 
   const onNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+    (event: React.MouseEvent, node: Node) => {
+      // Ignore clicks on interactive elements (pin, collapse, action menu)
+      const target = event.target as HTMLElement;
+      if (target.closest('.nodrag')) return;
       // Don't try to edit the space node, portal nodes, or project group nodes
       if (node.id !== '__space__' && node.type !== 'portal') {
         onEdit(node.id);
@@ -1740,7 +1767,15 @@ function MindMapViewInner({
         }
         return null;
       }
-      const treeNode = findTreeNode(fullTree, draggedNode.id);
+      let treeNode = findTreeNode(fullTree, draggedNode.id);
+      // Fallback: search in portal trees (items from child spaces)
+      if (!treeNode) {
+        for (const [, pItems] of portalItemsBySpace.entries()) {
+          const portalTree = buildTree(pItems);
+          treeNode = findTreeNode(portalTree, draggedNode.id);
+          if (treeNode) break;
+        }
+      }
       if (!treeNode || treeNode.children.length === 0) {
         dragDescendants.current = null;
         return;
@@ -2126,9 +2161,9 @@ function MindMapViewInner({
             isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
             isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
             isDropTarget: false,
-            canEdit: false,
-            isPinned: false,
-            onTogglePin: () => {},
+            canEdit: canEdit !== false,
+            isPinned: pinnedIds.current.has(item.id),
+            onTogglePin: togglePin,
             isPortal: true,
             portalSpaceName: spaceName,
           },
@@ -2216,9 +2251,37 @@ function MindMapViewInner({
     });
 
     const allNodes = [...repositionedNodes, ...portalNodes];
+
+    // Add cross-space relation edges (same logic as useEffect)
+    const allNodeIds = new Set(allNodes.map(n => n.id));
+    const portalRelationEdges: Edge[] = [];
+    const existingRelationIds = new Set(relationEdges.map(e => e.data?.relationId));
+    const allPortalItems = Array.from(portalItemsBySpace.values()).flat();
+    [...items, ...allPortalItems].forEach(item => {
+      item.relationsFrom?.forEach(relation => {
+        if (existingRelationIds.has(relation.id)) return;
+        if (allNodeIds.has(relation.fromItemId) && allNodeIds.has(relation.toItemId)) {
+          portalRelationEdges.push({
+            id: `relation-${relation.id}`,
+            source: relation.fromItemId,
+            target: relation.toItemId,
+            type: 'default',
+            animated: true,
+            style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
+            data: { relationId: relation.id, type: relation.type },
+            label: relation.type === 'relates' ? '' : relation.type,
+            labelStyle: { fontSize: 10, fill: '#8b5cf6' },
+            labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+          });
+          existingRelationIds.add(relation.id);
+        }
+      });
+    });
+
     const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     setNodes(allNodes);
-    setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], resetEdgePosMap));
+    setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], resetEdgePosMap));
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, searchMatchIds, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, togglePin, savePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, onUpdateStatus, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, handleReorganizeChildren, doneStatusId, canEdit]);
