@@ -8,7 +8,7 @@ import { Button } from './ui/Button';
 export function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, refreshToken } = useAuthStore();
+  const { logout, refreshToken } = useAuthStore();
 
   const handleLogout = async () => {
     try {
