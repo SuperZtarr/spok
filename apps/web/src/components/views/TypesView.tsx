@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +12,7 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
@@ -19,8 +20,15 @@ import { Badge } from '../ui/Badge';
 import { TYPE_ICONS } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+}
+
 interface TypesViewProps {
   items: Item[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateType: (id: string, type: ItemType) => void;
@@ -68,11 +76,13 @@ interface TypeCardProps {
   canEdit?: boolean;
 }
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, statusLabels, statusColors, canEdit = true, portalSpaceName }: TypeCardProps & { portalSpaceName?: string }) {
   const Icon = TYPE_ICONS[item.type];
+  const isPortal = !!portalSpaceName;
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item },
+    disabled: isPortal,
   });
 
   const style = transform
@@ -90,11 +100,21 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       style={style}
       className={`bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
-      }`}
+      } ${isPortal ? 'border-dashed border-primary/30' : ''}`}
       onClick={() => onEdit(item.id)}
     >
+      {portalSpaceName && (
+        <Link
+          to={`/spaces/${item.spaceId}`}
+          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 -mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FolderKanban className="w-3 h-3" />
+          <span>{portalSpaceName}</span>
+        </Link>
+      )}
       <div className="flex items-start gap-2">
-        {canEdit && (
+        {canEdit && !isPortal && (
           <div
             {...listeners}
             {...attributes}
@@ -142,7 +162,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       </div>
 
       {/* Action menu */}
-      {canEdit && (
+      {canEdit && !isPortal && (
         <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={[
@@ -169,7 +189,11 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   );
 }
 
-function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
+interface TypeColumnProps2 extends TypeColumnProps {
+  portalItems?: (Item & { _spaceName: string })[];
+}
+
+function TypeColumn({ column, items, portalItems, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps2) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -190,7 +214,7 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace
             <h3 className="font-medium">{column.label}</h3>
           </div>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {items.length}
+            {items.length + (portalItems?.length || 0)}
           </span>
         </div>
       </div>
@@ -218,17 +242,37 @@ function TypeColumn({ column, items, onEdit, onDelete, onAddChild, onMoveToSpace
           />
         ))}
 
-        {items.length === 0 && (
+        {items.length === 0 && (!portalItems || portalItems.length === 0) && (
           <div className="text-center py-8 text-muted-foreground text-sm">
             Aucun element
           </div>
+        )}
+
+        {/* Portal items (read-only, from child spaces) */}
+        {portalItems && portalItems.length > 0 && (
+          <>
+            {items.length > 0 && <div className="border-t border-dashed border-primary/20 my-2" />}
+            {portalItems.map((item) => (
+              <TypeCard
+                key={item.id}
+                item={item}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onAddChild={onAddChild}
+                statusLabels={statusLabels}
+                statusColors={statusColors}
+                canEdit={false}
+                portalSpaceName={item._spaceName}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>
   );
 }
 
-export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: TypesViewProps) {
+export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -272,18 +316,43 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, o
     return { statusLabels: labels, statusColors: colors };
   }, [referentiels]);
 
-  // Group items by type
+  // Separate main items from portal items
+  const { mainItems, portalItemsWithSpace } = useMemo(() => {
+    if (!currentSpaceId || !portalGroups?.length) {
+      return { mainItems: items, portalItemsWithSpace: [] as (Item & { _spaceName: string })[] };
+    }
+    const main = items.filter(i => i.spaceId === currentSpaceId);
+    const spaceNames = new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+    const portal = items
+      .filter(i => i.spaceId !== currentSpaceId)
+      .map(i => ({ ...i, _spaceName: spaceNames.get(i.spaceId) || 'Espace' }));
+    return { mainItems: main, portalItemsWithSpace: portal };
+  }, [items, currentSpaceId, portalGroups]);
+
+  // Group main items by type
   const groupedItems = useMemo(() => {
     return typeColumns.reduce(
       (acc, column) => {
-        acc[column.id] = items.filter((item) => item.type === column.id);
+        acc[column.id] = mainItems.filter((item) => item.type === column.id);
         return acc;
       },
       {} as Record<string, Item[]>
     );
-  }, [typeColumns, items]);
+  }, [typeColumns, mainItems]);
 
-  const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
+  // Group portal items by type
+  const portalGroupedItems = useMemo(() => {
+    if (portalItemsWithSpace.length === 0) return {} as Record<string, (Item & { _spaceName: string })[]>;
+    return typeColumns.reduce(
+      (acc, column) => {
+        acc[column.id] = portalItemsWithSpace.filter((item) => item.type === column.id);
+        return acc;
+      },
+      {} as Record<string, (Item & { _spaceName: string })[]>
+    );
+  }, [typeColumns, portalItemsWithSpace]);
+
+  const activeItem = activeId ? mainItems.find((item) => item.id === activeId) : null;
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -302,7 +371,7 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, o
 
     const itemId = active.id as string;
     const newType = over.id as ItemType;
-    const item = items.find((i) => i.id === itemId);
+    const item = mainItems.find((i) => i.id === itemId);
 
     if (!item) return;
 
@@ -332,6 +401,7 @@ export function TypesView({ items, onEdit, onDelete, onUpdateType, onAddChild, o
               key={column.id}
               column={column}
               items={groupedItems[column.id] || []}
+              portalItems={portalGroupedItems[column.id]}
               onEdit={onEdit}
               onDelete={onDelete}
               onAddChild={onAddChild}

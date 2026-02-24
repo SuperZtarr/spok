@@ -22,6 +22,7 @@ export interface ItemFilterParams extends PaginationParams {
   status?: string;
   parentId?: string | null;
   search?: string;
+  additionalSpaceIds?: string[];
 }
 
 export interface ConflictField {

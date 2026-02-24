@@ -1,14 +1,23 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, ChevronsDownUp, ChevronsUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, type LucideIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, ChevronsDownUp, ChevronsUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban, type LucideIcon } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { TYPE_ICONS } from '../../constants/ui';
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface TimelineViewProps {
   items: Item[];
   relations?: ItemRelation[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -173,7 +182,7 @@ function flattenTree(items: TreeItem[], collapsedIds: Set<string>, compactMode: 
   return result;
 }
 
-export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -217,6 +226,12 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
     const doneStatus = visibleStatuses.find((s) => s.id === 'done');
     return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
   }, [statuses]);
+
+  // Map portal spaceId → spaceName for quick lookup
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
 
   const tree = useMemo(() => buildTree(items), [items]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
@@ -738,13 +753,15 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
               const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
               const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
               const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+              const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+              const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
 
               return (
                 <div
                   key={item.id}
                   className={`flex border-b hover:bg-muted/30 group ${
                     isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
-                  } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
+                  } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'bg-muted/10' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
@@ -778,7 +795,18 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
                     >
                       {item.title}
                     </span>
-                    {canEdit && (
+                    {isPortal && portalSpaceName && (
+                      <Link
+                        to={`/spaces/${item.spaceId}`}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                        title={`Espace : ${portalSpaceName}`}
+                      >
+                        <FolderKanban className="w-3 h-3" />
+                        <span className="truncate max-w-[60px]">{portalSpaceName}</span>
+                      </Link>
+                    )}
+                    {canEdit && !isPortal && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <ItemActionMenu
                           groups={[
@@ -822,7 +850,7 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
                       <div
                         className={`absolute top-1 h-8 rounded transition-all group/bar ${statusColor} ${
                           barStyle.hasDate
-                            ? 'shadow-md border border-black/20'
+                            ? isPortal ? 'border-2 border-dashed border-primary/30' : 'shadow-md border border-black/20'
                             : 'border-2 border-dashed border-gray-400 opacity-60'
                         } ${
                           hoveredItem === item.id || dragging?.itemId === item.id
@@ -838,12 +866,12 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
                           width: barStyle.width,
                         }}
                         title={barStyle.hasDate
-                          ? `${item.title}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${item.endDate ? formatDateShort(new Date(item.endDate)) : "aujourd'hui"}`
+                          ? `${item.title}${isPortal && portalSpaceName ? ` (${portalSpaceName})` : ''}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${item.endDate ? formatDateShort(new Date(item.endDate)) : "aujourd'hui"}`
                           : `${item.title}\n(Sans date - cliquer pour définir)`
                         }
                       >
                         {/* Left resize handle */}
-                        {canEdit && onUpdateDates && (
+                        {canEdit && !isPortal && onUpdateDates && (
                           <div
                             className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-l group/handle"
                             onMouseDown={(e) => handleDragStart(
@@ -871,7 +899,7 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
                         </div>
 
                         {/* Right resize handle */}
-                        {canEdit && onUpdateDates && (
+                        {canEdit && !isPortal && onUpdateDates && (
                           <div
                             className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-r group/handle"
                             onMouseDown={(e) => handleDragStart(
@@ -887,7 +915,7 @@ export function TimelineView({ items, relations, onEdit, onDelete, onUpdateStatu
                         )}
 
                         {/* Relation connector handle */}
-                        {canEdit && onCreateRelation && (
+                        {canEdit && !isPortal && onCreateRelation && (
                           <div
                             className="absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-70 hover:!opacity-100 transition-opacity z-10 flex items-center justify-center"
                             onMouseDown={(e) => handleRelationDragStart(e, item.id, barStyle.left + 1, barStyle.width)}

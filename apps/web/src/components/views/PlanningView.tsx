@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Trash2,
   ExternalLink,
@@ -11,6 +12,7 @@ import {
   Clock,
   HelpCircle,
   FolderInput,
+  FolderKanban,
   FolderPlus,
   Copy,
 } from 'lucide-react';
@@ -119,8 +121,16 @@ function getEffectiveDate(item: Item): Date | null {
   return dateString ? new Date(dateString) : null;
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface PlanningViewProps {
   items: Item[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -138,6 +148,7 @@ interface PlanningViewProps {
 
 interface PlanningItemProps {
   item: Item;
+  portalSpaceName?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -155,18 +166,19 @@ interface PlanningItemProps {
   canEdit?: boolean;
 }
 
-function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
   const Icon = TYPE_ICONS[item.type];
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
   const typeLabel = typeLabels[item.type]?.labelShort || item.type;
+  const isPortal = !!portalSpaceName;
 
   return (
     <div
       className={`grid grid-cols-[auto_1fr_5rem_5rem_6rem_auto] items-center gap-3 px-4 py-2.5 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer group ${
         isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
-      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
+      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'border-dashed border-primary/30' : ''}`}
       onClick={() => onEdit(item.id)}
     >
       {/* Type icon */}
@@ -175,6 +187,17 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMo
       {/* Title */}
       <div className="min-w-0 flex items-center gap-2">
         <span className="truncate">{item.title}</span>
+        {isPortal && (
+          <Link
+            to={`/spaces/${item.spaceId}`}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            title={`Espace : ${portalSpaceName}`}
+          >
+            <FolderKanban className="w-3 h-3" />
+            <span className="truncate max-w-[80px]">{portalSpaceName}</span>
+          </Link>
+        )}
         {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
           <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
         )}
@@ -223,7 +246,7 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMo
 
       {/* Action menu */}
       <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-        {canEdit && (
+        {canEdit && !isPortal && (
           <ItemActionMenu
             groups={[
               {
@@ -253,6 +276,7 @@ function PlanningItem({ item, onEdit, onDelete, onUpdateStatus, onAddChild, onMo
 interface PeriodSectionProps {
   config: PeriodConfig;
   items: Item[];
+  portalSpaceNames?: Map<string, string>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -269,7 +293,7 @@ interface PeriodSectionProps {
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -289,6 +313,7 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
           <PlanningItem
             key={item.id}
             item={item}
+            portalSpaceName={portalSpaceNames?.get(item.spaceId)}
             onEdit={onEdit}
             onDelete={onDelete}
             onUpdateStatus={onUpdateStatus}
@@ -310,12 +335,18 @@ function PeriodSection({ config, items, onEdit, onDelete, onUpdateStatus, onAddC
   );
 }
 
-export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
     return statusList.filter((s) => s.visible).sort((a, b) => a.order - b.order);
   }, [referentiels]);
+
+  // Map portal spaceId → spaceName for quick lookup
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
 
   // Filter out completed items and group by period
   const groupedItems = useMemo(() => {
@@ -375,6 +406,7 @@ export function PlanningView({ items, onEdit, onDelete, onUpdateStatus, onAddChi
           key={config.id}
           config={config}
           items={groupedItems[config.id]}
+          portalSpaceNames={portalSpaceNames}
           onEdit={onEdit}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}

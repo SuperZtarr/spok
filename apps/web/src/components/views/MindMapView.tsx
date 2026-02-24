@@ -211,17 +211,19 @@ interface MindMapNodeProps {
     canEdit: boolean;
     isPinned: boolean;
     onTogglePin: (id: string) => void;
+    isPortal: boolean;
+    portalSpaceName?: string;
   };
 }
 
 function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin } = data;
+  const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName } = data;
   const Icon = TYPE_ICONS[item.type];
 
   return (
     <div
-      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
-        isRoot ? 'border-primary border-3' : 'border-gray-300'
+      className={`px-4 py-2 rounded-lg shadow-md min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+        isPortal ? 'border-2 border-dashed border-primary/40' : isRoot ? 'border-primary border-3' : 'border-2 border-gray-300'
       } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isSearchMatch ? 'ring-4 ring-yellow-400 ring-offset-2 scale-110 z-10 shadow-lg' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
       style={{ backgroundColor: hexColor, color: textColor }}
     >
@@ -258,6 +260,14 @@ function MindMapNode({ data }: MindMapNodeProps) {
         <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
 
         <span className="text-sm font-medium whitespace-nowrap">{item.title}</span>
+
+        {/* Portal space badge */}
+        {isPortal && portalSpaceName && (
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-medium whitespace-nowrap">
+            <FolderOpen className="w-3 h-3 flex-shrink-0" />
+            {portalSpaceName}
+          </span>
+        )}
 
         {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
           <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
@@ -544,7 +554,9 @@ function calculateLayout(
   searchMatchIds?: Set<string>,
   canEdit?: boolean,
   pinnedIdsSet?: Set<string>,
-  onTogglePin?: (id: string) => void
+  onTogglePin?: (id: string) => void,
+  currentSpaceId?: string,
+  portalSpaceNames?: Map<string, string>
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -749,9 +761,11 @@ function calculateLayout(
         isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
         isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
         isDropTarget: false,
-        canEdit: canEdit !== false,
+        canEdit: canEdit !== false && !(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
         isPinned: pinnedIdsSet?.has(item.id) || false,
         onTogglePin: onTogglePin || (() => {}),
+        isPortal: !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
+        portalSpaceName: (currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId) ? portalSpaceNames?.get(item.spaceId) : undefined,
       },
     });
 
@@ -1000,7 +1014,33 @@ function MindMapViewInner({
     return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
   }, [statuses]);
 
-  const fullTree = useMemo(() => buildTree(items), [items]);
+  // Map portal spaceId → spaceName for quick lookup
+  const portalSpaceNames = useMemo(() => {
+    if (!communitySpaces?.length || !spaceId) return new Map<string, string>();
+    return new Map(communitySpaces.filter(s => s.id !== spaceId).map(s => [s.id, s.name]));
+  }, [communitySpaces, spaceId]);
+
+  // Separate current space items from portal items
+  const currentSpaceItems = useMemo(() => {
+    if (!spaceId) return items;
+    return items.filter(i => i.spaceId === spaceId);
+  }, [items, spaceId]);
+
+  // Portal items grouped by spaceId
+  const portalItemsBySpace = useMemo(() => {
+    if (!spaceId) return new Map<string, ItemWithRelations[]>();
+    const map = new Map<string, ItemWithRelations[]>();
+    for (const item of items) {
+      if (item.spaceId && item.spaceId !== spaceId) {
+        const list = map.get(item.spaceId) || [];
+        list.push(item);
+        map.set(item.spaceId, list);
+      }
+    }
+    return map;
+  }, [items, spaceId]);
+
+  const fullTree = useMemo(() => buildTree(currentSpaceItems), [currentSpaceItems]);
 
   // When a project is focused, extract its subtree
   const tree = useMemo(() => {
@@ -1057,7 +1097,7 @@ function MindMapViewInner({
   }, []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIds.current, togglePin);
+    const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIds.current, togglePin, spaceId, portalSpaceNames);
     const positionedNodes = applyPositions(nodes);
     const posMap = new Map(positionedNodes.map(n => [n.id, n.position]));
     const allEdges = recalculateEdgeHandles([...edges, ...relationEdges], posMap);
@@ -1201,7 +1241,7 @@ function MindMapViewInner({
 
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIds.current, togglePin);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIds.current, togglePin, spaceId, portalSpaceNames);
     const positionedNodes = applyPositions(newNodes);
 
     // Build a map of node positions for portal placement
@@ -1243,19 +1283,38 @@ function MindMapViewInner({
       });
     });
 
-    // Add automatic portal nodes for child spaces, attached to the central space node
+    // Build list of all spaces that need portal nodes:
+    // 1. Direct child spaces (always shown)
+    // 2. Any other space that has items in portalItemsBySpace
     const SPACE_NODE_ID = '__space__';
     const spacePos = portalPosMap.get(SPACE_NODE_ID) || { x: -70, y: -25 };
     const childSpaceRadius = 180;
-    childSpaces.forEach((childSpace, index) => {
-      const childPortalId = `child-space-${childSpace.id}`;
-      // Distribute child space portals in a fan below the center node
-      const totalChildren = childSpaces.length;
-      const angleSpread = Math.min(Math.PI * 0.8, totalChildren * (Math.PI / 4));
-      const startAngle = Math.PI / 2 - angleSpread / 2; // centered below
-      const angle = totalChildren === 1
+
+    const portalSpacesList: { id: string; space: SpaceWithRole | undefined }[] = [];
+    // Add direct child spaces
+    const addedSpaceIds = new Set<string>();
+    childSpaces.forEach(cs => {
+      portalSpacesList.push({ id: cs.id, space: cs });
+      addedSpaceIds.add(cs.id);
+    });
+    // Add any portal space not already in the list
+    portalItemsBySpace.forEach((_items, psId) => {
+      if (!addedSpaceIds.has(psId)) {
+        const foundSpace = communitySpaces.find(s => s.id === psId);
+        portalSpacesList.push({ id: psId, space: foundSpace });
+        addedSpaceIds.add(psId);
+      }
+    });
+
+    const totalPortalSpaces = portalSpacesList.length;
+    portalSpacesList.forEach((portalSpaceEntry, index) => {
+      const childPortalId = `child-space-${portalSpaceEntry.id}`;
+      // Distribute portal nodes in a fan below the center node
+      const angleSpread = Math.min(Math.PI * 0.8, totalPortalSpaces * (Math.PI / 4));
+      const startAngle = Math.PI / 2 - angleSpread / 2;
+      const angle = totalPortalSpaces === 1
         ? Math.PI / 2
-        : startAngle + (index * angleSpread) / Math.max(1, totalChildren - 1);
+        : startAngle + (index * angleSpread) / Math.max(1, totalPortalSpaces - 1);
 
       const cx = spacePos.x + childSpaceRadius * Math.cos(angle);
       const cy = spacePos.y + childSpaceRadius * Math.sin(angle);
@@ -1264,15 +1323,17 @@ function MindMapViewInner({
       const savedPos = savedPositions.current[childPortalId];
       const pos = savedPos || { x: cx, y: cy };
 
+      const spaceData = portalSpaceEntry.space || { id: portalSpaceEntry.id, name: portalSpaceNames.get(portalSpaceEntry.id) || portalSpaceEntry.id, type: 'FOLDER' as any, createdAt: '', updatedAt: '', role: 'VIEWER' as any };
+
       portalNodes.push({
         id: childPortalId,
         type: 'portal',
         position: pos,
         data: {
-          space: childSpace,
-          onRemove: () => {}, // Cannot remove auto child space portals
+          space: spaceData,
+          onRemove: () => {},
           portalId: childPortalId,
-          isChildSpace: true, // Flag to hide remove button
+          isChildSpace: true,
         },
       });
 
@@ -1287,12 +1348,137 @@ function MindMapViewInner({
       });
     });
 
+    // Add mindmap nodes for portal items using a simple tree layout below the portal node
+    const PORTAL_H_SPACING = 170; // horizontal spacing between siblings
+    const PORTAL_V_SPACING = 80;  // vertical spacing between levels
+
+    portalItemsBySpace.forEach((portalItems, portalSpaceId) => {
+      const childPortalId = `child-space-${portalSpaceId}`;
+      const portalNode = portalNodes.find(n => n.id === childPortalId);
+      if (!portalNode) return;
+      const portalPos = portalNode.position;
+
+      const subTree = buildTree(portalItems);
+      if (subTree.length === 0) return;
+
+      // Count total visible leaf nodes in a subtree (for width allocation)
+      function countLeaves(item: TreeItem): number {
+        if (collapsedIds.has(item.id) || item.children.length === 0) return 1;
+        return item.children.reduce((sum, c) => sum + countLeaves(c), 0);
+      }
+
+      // Direction from space center to portal — place tree extending outward
+      const spaceNodePos = portalPosMap.get(SPACE_NODE_ID) || { x: 0, y: 0 };
+      const dirX = portalPos.x - spaceNodePos.x;
+      const dirY = portalPos.y - spaceNodePos.y;
+      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+      // Normalized outward direction
+      const outX = dirX / dirLen;
+      const outY = dirY / dirLen;
+      // Perpendicular direction (for spreading siblings)
+      const perpX = -outY;
+      const perpY = outX;
+
+      const pSpaceName = portalSpaceNames.get(portalSpaceId);
+
+      // Recursive function: place item and its children
+      function placePortalItem(
+        item: TreeItem,
+        cx: number, cy: number,
+        parentNodeId: string,
+        spaceName: string | undefined,
+        depth: number,
+      ) {
+        const statusColor = getStatusColor(item.status, statuses);
+        const hexColor = tailwindBgToHex(statusColor);
+
+        const nodePos = { x: cx - 75, y: cy - 20 };
+        portalNodes.push({
+          id: item.id,
+          type: 'mindmap',
+          position: nodePos,
+          data: {
+            label: item.title,
+            item,
+            statusColor,
+            hexColor,
+            textColor: getContrastTextColor(hexColor),
+            onEdit,
+            onDelete,
+            onUpdateStatus,
+            onAddChild,
+            onAddPortal: handleAddPortal,
+            onToggleCollapse: toggleCollapse,
+            onReorganizeChildren: handleReorganizeChildren,
+            onMoveToSpace,
+            onDuplicateToSpace,
+            onConvertToSpace,
+            doneStatusId,
+            isRoot: depth === 0,
+            hasChildren: item.children.length > 0,
+            isCollapsed: collapsedIds.has(item.id),
+            childCount: countDescendants(item),
+            hasPortalSupport: false,
+            isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
+            isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
+            isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
+            isDropTarget: false,
+            canEdit: false,
+            isPinned: false,
+            onTogglePin: () => {},
+            isPortal: true,
+            portalSpaceName: spaceName,
+          },
+        });
+
+        // Edge from parent
+        portalEdges.push({
+          id: `portal-edge-${parentNodeId}-${item.id}`,
+          source: parentNodeId,
+          target: item.id,
+          type: 'default',
+          style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
+        });
+
+        // Place children if not collapsed
+        if (!collapsedIds.has(item.id) && item.children.length > 0) {
+          const childLeaves = item.children.map(c => countLeaves(c));
+          const totalLeaves = childLeaves.reduce((s, v) => s + v, 0);
+          const totalWidth = totalLeaves * PORTAL_H_SPACING;
+
+          let offset = -totalWidth / 2;
+          item.children.forEach((child, ci) => {
+            const leafW = childLeaves[ci] * PORTAL_H_SPACING;
+            const childCx = cx + perpX * (offset + leafW / 2) + outX * PORTAL_V_SPACING;
+            const childCy = cy + perpY * (offset + leafW / 2) + outY * PORTAL_V_SPACING;
+            offset += leafW;
+            placePortalItem(child, childCx, childCy, item.id, undefined, depth + 1);
+          });
+        }
+      }
+
+      // Place root items: spread along perpendicular direction, offset along outward direction
+      const rootLeaves = subTree.map(r => countLeaves(r));
+      const totalRootLeaves = rootLeaves.reduce((s, v) => s + v, 0);
+      const totalRootWidth = totalRootLeaves * PORTAL_H_SPACING;
+      const startDist = 160; // distance from portal node to first level
+
+      let rootOffset = -totalRootWidth / 2;
+      subTree.forEach((rootItem, i) => {
+        const leafW = rootLeaves[i] * PORTAL_H_SPACING;
+        const cx = portalPos.x + outX * startDist + perpX * (rootOffset + leafW / 2);
+        const cy = portalPos.y + outY * startDist + perpY * (rootOffset + leafW / 2);
+        rootOffset += leafW;
+        placePortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0);
+      });
+    });
+
     const allNodes = [...positionedNodes, ...portalNodes];
     const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], edgePosMap);
     setNodes(allNodes);
     setEdges(allEdges);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, hasPortalSupport, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -1391,7 +1577,38 @@ function MindMapViewInner({
   // Handle node drag start - capture descendant offsets for drag-with-children
   const onNodeDragStart = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
+      if (draggedNode.id === '__space__') return;
+
+      // Portal child-space node: drag all its portal items along
+      if (draggedNode.type === 'portal' && draggedNode.id.startsWith('child-space-')) {
+        const portalSpaceId = draggedNode.id.replace('child-space-', '');
+        const portalItems = portalItemsBySpace.get(portalSpaceId);
+        if (!portalItems || portalItems.length === 0) {
+          dragDescendants.current = null;
+          return;
+        }
+        // Collect all item IDs (flat list - all are rendered as nodes)
+        const itemIds = portalItems.map(i => i.id);
+        const currentNodes = getNodes();
+        const absPositions = getAbsolutePositions(currentNodes);
+        const draggedAbsPos = absPositions.get(draggedNode.id);
+        if (!draggedAbsPos) {
+          dragDescendants.current = null;
+          return;
+        }
+        const offsets = new Map<string, { dx: number; dy: number }>();
+        for (const id of itemIds) {
+          const pos = absPositions.get(id);
+          if (pos) {
+            offsets.set(id, { dx: pos.x - draggedAbsPos.x, dy: pos.y - draggedAbsPos.y });
+          }
+        }
+        dragDescendants.current = { ids: itemIds, offsets, startPos: { ...draggedAbsPos } };
+        return;
+      }
+
+      // Regular portal nodes (user-created) - no drag children
+      if (draggedNode.type === 'portal') return;
 
       // Find tree node and collect visible descendant IDs
       function findTreeNode(ns: TreeItem[], id: string): TreeItem | null {
@@ -1433,15 +1650,15 @@ function MindMapViewInner({
 
       dragDescendants.current = { ids: descendantIds, offsets, startPos: { ...draggedAbsPos } };
     },
-    [fullTree, collapsedIds, getNodes]
+    [fullTree, collapsedIds, getNodes, portalItemsBySpace]
   );
 
   // Handle node drag - move descendants and highlight potential drop target
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.id === '__space__' || draggedNode.type === 'portal') return;
+      if (draggedNode.id === '__space__') return;
 
-      // Move descendants with the dragged node
+      // Move descendants with the dragged node (works for both regular items and child-space portals)
       if (dragDescendants.current && dragDescendants.current.offsets.size > 0) {
         const currentNodes = getNodes();
         const absPositions = getAbsolutePositions(currentNodes);
@@ -1451,10 +1668,8 @@ function MindMapViewInner({
           setNodes(prevNodes => prevNodes.map(n => {
             const offset = offsets.get(n.id);
             if (!offset) return n;
-            // Compute new absolute position based on dragged node's current position + offset
             const newAbsX = draggedAbsPos.x + offset.dx;
             const newAbsY = draggedAbsPos.y + offset.dy;
-            // If this node has a parentId, convert absolute to relative
             if (n.parentId) {
               const parentAbs = absPositions.get(n.parentId);
               if (parentAbs) {
@@ -1465,6 +1680,9 @@ function MindMapViewInner({
           }));
         }
       }
+
+      // No drop target for portal drags
+      if (draggedNode.type === 'portal') return;
 
       const intersecting = getIntersectingNodes(draggedNode);
       const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
@@ -1477,12 +1695,26 @@ function MindMapViewInner({
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
       if (draggedNode.id === '__space__' || draggedNode.type === 'portal') {
-        // Save position for space node
-        if (draggedNode.id === '__space__') {
-          savedPositions.current[draggedNode.id] = draggedNode.position;
+        // Save position for space node or portal node
+        savedPositions.current[draggedNode.id] = draggedNode.position;
+        // Save descendant positions (portal items) - capture before nullifying
+        const portalDescIds = dragDescendants.current?.ids;
+        dragDescendants.current = null;
+        if (portalDescIds && portalDescIds.length > 0) {
+          setNodes(currentNodes => {
+            const absPositions = getAbsolutePositions(currentNodes);
+            for (const id of portalDescIds) {
+              const descAbsPos = absPositions.get(id);
+              if (descAbsPos) {
+                savedPositions.current[id] = descAbsPos;
+              }
+            }
+            savePositions();
+            return currentNodes;
+          });
+        } else {
           savePositions();
         }
-        dragDescendants.current = null;
         setDropTargetId(null);
         return;
       }
@@ -1553,7 +1785,7 @@ function MindMapViewInner({
     if (positionsStorageKey) {
       localStorage.removeItem(positionsStorageKey);
     }
-    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIds.current, togglePin);
+    const { nodes: newNodes, edges: newEdges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIds.current, togglePin, spaceId, portalSpaceNames);
 
     // Restore pinned positions and shift their descendants accordingly
     // Build a map of d3-calculated positions for all nodes
@@ -1649,13 +1881,191 @@ function MindMapViewInner({
       });
     });
 
+    // Build list of all spaces that need portal nodes (same logic as useEffect)
+    const RESET_SPACE_NODE_ID = '__space__';
+    const resetSpacePos = resetPosMap.get(RESET_SPACE_NODE_ID) || { x: -70, y: -25 };
+    const resetChildSpaceRadius = 180;
+
+    const resetPortalSpacesList: { id: string; space: SpaceWithRole | undefined }[] = [];
+    const resetAddedSpaceIds = new Set<string>();
+    childSpaces.forEach(cs => {
+      resetPortalSpacesList.push({ id: cs.id, space: cs });
+      resetAddedSpaceIds.add(cs.id);
+    });
+    portalItemsBySpace.forEach((_items, psId) => {
+      if (!resetAddedSpaceIds.has(psId)) {
+        const foundSpace = communitySpaces.find(s => s.id === psId);
+        resetPortalSpacesList.push({ id: psId, space: foundSpace });
+        resetAddedSpaceIds.add(psId);
+      }
+    });
+
+    const resetTotalPortalSpaces = resetPortalSpacesList.length;
+    resetPortalSpacesList.forEach((portalSpaceEntry, index) => {
+      const childPortalId = `child-space-${portalSpaceEntry.id}`;
+      const angleSpread = Math.min(Math.PI * 0.8, resetTotalPortalSpaces * (Math.PI / 4));
+      const startAngle = Math.PI / 2 - angleSpread / 2;
+      const angle = resetTotalPortalSpaces === 1
+        ? Math.PI / 2
+        : startAngle + (index * angleSpread) / Math.max(1, resetTotalPortalSpaces - 1);
+
+      const cx = resetSpacePos.x + resetChildSpaceRadius * Math.cos(angle);
+      const cy = resetSpacePos.y + resetChildSpaceRadius * Math.sin(angle);
+
+      const spaceData = portalSpaceEntry.space || { id: portalSpaceEntry.id, name: portalSpaceNames.get(portalSpaceEntry.id) || portalSpaceEntry.id, type: 'FOLDER' as any, createdAt: '', updatedAt: '', role: 'VIEWER' as any };
+
+      portalNodes.push({
+        id: childPortalId,
+        type: 'portal',
+        position: { x: cx, y: cy },
+        data: {
+          space: spaceData,
+          onRemove: () => {},
+          portalId: childPortalId,
+          isChildSpace: true,
+        },
+      });
+
+      portalEdges.push({
+        id: `edge-space-${childPortalId}`,
+        source: RESET_SPACE_NODE_ID,
+        target: childPortalId,
+        sourceHandle: 'bottom-source',
+        targetHandle: 'top',
+        type: 'default',
+        style: { stroke: '#6366f1', strokeWidth: 2, strokeDasharray: '5,5' },
+      });
+    });
+
+    // Add mindmap nodes for portal items using tree layout (matching useEffect)
+    const RESET_PORTAL_H_SPACING = 170;
+    const RESET_PORTAL_V_SPACING = 80;
+
+    portalItemsBySpace.forEach((portalItems, portalSpaceId) => {
+      const childPortalId = `child-space-${portalSpaceId}`;
+      const portalNode = portalNodes.find(n => n.id === childPortalId);
+      if (!portalNode) return;
+      const portalPos = portalNode.position;
+
+      const subTree = buildTree(portalItems);
+      if (subTree.length === 0) return;
+
+      // Count total visible leaf nodes in a subtree (for width allocation)
+      function resetCountLeaves(item: TreeItem): number {
+        if (collapsedIds.has(item.id) || item.children.length === 0) return 1;
+        return item.children.reduce((sum, c) => sum + resetCountLeaves(c), 0);
+      }
+
+      // Direction from space center to portal — place tree extending outward
+      const spaceNodePos = resetPosMap.get(RESET_SPACE_NODE_ID) || { x: 0, y: 0 };
+      const dirX = portalPos.x - spaceNodePos.x;
+      const dirY = portalPos.y - spaceNodePos.y;
+      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+      const outX = dirX / dirLen;
+      const outY = dirY / dirLen;
+      const perpX = -outY;
+      const perpY = outX;
+
+      const pSpaceName = portalSpaceNames.get(portalSpaceId);
+
+      // Recursive function: place item and its children
+      function placeResetPortalItem(
+        item: TreeItem,
+        cx: number, cy: number,
+        parentNodeId: string,
+        spaceName: string | undefined,
+        depth: number,
+      ) {
+        const statusColor = getStatusColor(item.status, statuses);
+        const hexColor = tailwindBgToHex(statusColor);
+
+        portalNodes.push({
+          id: item.id,
+          type: 'mindmap',
+          position: { x: cx - 75, y: cy - 20 },
+          data: {
+            label: item.title,
+            item,
+            statusColor,
+            hexColor,
+            textColor: getContrastTextColor(hexColor),
+            onEdit,
+            onDelete,
+            onUpdateStatus,
+            onAddChild,
+            onAddPortal: handleAddPortal,
+            onToggleCollapse: toggleCollapse,
+            onReorganizeChildren: handleReorganizeChildren,
+            onMoveToSpace,
+            onDuplicateToSpace,
+            onConvertToSpace,
+            doneStatusId,
+            isRoot: depth === 0,
+            hasChildren: item.children.length > 0,
+            isCollapsed: collapsedIds.has(item.id),
+            childCount: countDescendants(item),
+            hasPortalSupport: false,
+            isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
+            isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
+            isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
+            isDropTarget: false,
+            canEdit: false,
+            isPinned: false,
+            onTogglePin: () => {},
+            isPortal: true,
+            portalSpaceName: spaceName,
+          },
+        });
+
+        // Edge from parent
+        portalEdges.push({
+          id: `portal-edge-${parentNodeId}-${item.id}`,
+          source: parentNodeId,
+          target: item.id,
+          type: 'default',
+          style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
+        });
+
+        // Place children if not collapsed
+        if (!collapsedIds.has(item.id) && item.children.length > 0) {
+          const childLeaves = item.children.map(c => resetCountLeaves(c));
+          const totalLeaves = childLeaves.reduce((s, v) => s + v, 0);
+          const totalWidth = totalLeaves * RESET_PORTAL_H_SPACING;
+
+          let offset = -totalWidth / 2;
+          item.children.forEach((child, ci) => {
+            const leafW = childLeaves[ci] * RESET_PORTAL_H_SPACING;
+            const childCx = cx + perpX * (offset + leafW / 2) + outX * RESET_PORTAL_V_SPACING;
+            const childCy = cy + perpY * (offset + leafW / 2) + outY * RESET_PORTAL_V_SPACING;
+            offset += leafW;
+            placeResetPortalItem(child, childCx, childCy, item.id, undefined, depth + 1);
+          });
+        }
+      }
+
+      // Place root items: spread along perpendicular direction, offset along outward direction
+      const rootLeaves = subTree.map(r => resetCountLeaves(r));
+      const totalRootLeaves = rootLeaves.reduce((s, v) => s + v, 0);
+      const totalRootWidth = totalRootLeaves * RESET_PORTAL_H_SPACING;
+      const startDist = 160;
+
+      let rootOffset = -totalRootWidth / 2;
+      subTree.forEach((rootItem, i) => {
+        const leafW = rootLeaves[i] * RESET_PORTAL_H_SPACING;
+        const cx = portalPos.x + outX * startDist + perpX * (rootOffset + leafW / 2);
+        const cy = portalPos.y + outY * startDist + perpY * (rootOffset + leafW / 2);
+        rootOffset += leafW;
+        placeResetPortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0);
+      });
+    });
+
     const allNodes = [...repositionedNodes, ...portalNodes];
     const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     setNodes(allNodes);
     setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalEdges], resetEdgePosMap));
     // Fit view after a small delay to ensure nodes are positioned
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, searchMatchIds, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, togglePin, savePositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, onEdit, onDelete, onAddChild, handleAddPortal, toggleCollapse, hasPortalSupport, highlightType, highlightStatus, searchMatchIds, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, togglePin, savePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, onUpdateStatus, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, handleReorganizeChildren, doneStatusId, canEdit]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
@@ -1893,17 +2303,6 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   referentiels,
   canEdit,
 }, ref) {
-  if (items.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        <div className="text-center">
-          <p>Aucun élément</p>
-          <p className="text-sm">Créez des éléments pour les voir dans la carte mentale</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full w-full">
       <ReactFlowProvider>

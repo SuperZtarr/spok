@@ -12,8 +12,16 @@ import {
   DAY_NAMES_SHORT_FR,
 } from '../../lib/dateUtils';
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface CalendarViewProps {
   items: Item[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -63,6 +71,8 @@ function getItemDates(item: Item): Date[] {
 
 export function CalendarView({
   items,
+  currentSpaceId,
+  portalGroups,
   onEdit,
   referentiels,
   highlightType,
@@ -79,6 +89,12 @@ export function CalendarView({
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
+
+  // Map portal spaceId → spaceName for quick lookup
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
 
   const days = useMemo(() => getCalendarDays(year, month), [year, month]);
 
@@ -217,6 +233,8 @@ export function CalendarView({
                       : false) ||
                     (searchMatchIds ? !searchMatchIds.has(item.id) : false);
                   const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+                  const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+                  const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
 
                   return (
                     <button
@@ -226,8 +244,8 @@ export function CalendarView({
                         isHighlighted && highlightColor
                           ? `${highlightColor.bg} ${highlightColor.border} border-l-2`
                           : `${typeColor.bg} border-l-2 ${typeColor.color}`
-                      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-30' : ''}`}
-                      title={`${item.title}${statusCfg ? ` — ${statusCfg.label}` : ''}`}
+                      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-30' : ''} ${isPortal ? 'border-dashed border-primary/40' : ''}`}
+                      title={`${item.title}${portalSpaceName ? ` [${portalSpaceName}]` : ''}${statusCfg ? ` — ${statusCfg.label}` : ''}`}
                     >
                       <Icon className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{item.title}</span>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus, FolderKanban, ExternalLink } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -19,8 +20,15 @@ interface ItemWithContributions extends Item {
   contributions?: Contribution[];
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+}
+
 interface TextViewProps {
   items: ItemWithContributions[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateStatus?: (id: string, status: string) => void;
@@ -81,7 +89,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
+export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -103,8 +111,21 @@ export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
     return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
   }, [referentiels]);
 
+  // Separate items: main space vs portal spaces
+  const { mainItems, portalItemGroups } = useMemo(() => {
+    if (!currentSpaceId || !portalGroups?.length) {
+      return { mainItems: items, portalItemGroups: [] };
+    }
+    const main = items.filter(i => i.spaceId === currentSpaceId);
+    const groups = portalGroups.map(g => ({
+      ...g,
+      items: items.filter(i => i.spaceId === g.spaceId),
+    })).filter(g => g.items.length > 0);
+    return { mainItems: main, portalItemGroups: groups };
+  }, [items, currentSpaceId, portalGroups]);
+
   // Build hierarchical order then filter
-  const orderedItems = useMemo(() => buildTree(items), [items]);
+  const orderedItems = useMemo(() => buildTree(mainItems), [mainItems]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return orderedItems;
@@ -160,123 +181,232 @@ export function TextView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
         </div>
       ) : (
         <div className="flex-1 overflow-auto p-6 space-y-1">
-          {filteredItems.map((item) => {
-            const depth = (item as any)._depth || 0;
-            const Icon = TYPE_ICONS[item.type];
-            const statusLabel = statusLabels[item.status || ''] || 'Non défini';
-            const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
-            const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
-            const hasDescription = !!item.description?.trim();
-            const contributions = item.contributions || [];
-            const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
-            const hasContent = hasDescription || contributions.length > 0 || hasImage;
-            const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
-            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
-            const isHighlighted = hasHighlight && !isDimmed;
-            const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+          {filteredItems.map((item) => (
+            <TextItem
+              key={item.id}
+              item={item}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onUpdateStatus={onUpdateStatus}
+              onAddChild={onAddChild}
+              onMoveToSpace={onMoveToSpace}
+              onDuplicateToSpace={onDuplicateToSpace}
+              onConvertToSpace={onConvertToSpace}
+              canEdit={canEdit}
+              doneStatusId={doneStatusId}
+              statusLabels={statusLabels}
+              statusColors={statusColors}
+              referentiels={referentiels}
+              highlightType={highlightType}
+              highlightStatus={highlightStatus}
+              highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
+            />
+          ))}
 
+          {/* Portal sections for items from checked child spaces */}
+          {portalItemGroups.map((group) => {
+            const groupOrdered = buildTree(group.items);
+            const groupFiltered = searchQuery.trim()
+              ? groupOrdered.filter((item) =>
+                  item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  stripMarkup(item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (item.contributions || []).some((c) =>
+                    stripMarkup(c.content || '').toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                )
+              : groupOrdered;
+            if (groupFiltered.length === 0) return null;
             return (
-              <div
-                key={item.id}
-                className={`group transition-opacity ${isDimmed ? 'opacity-35' : ''}`}
-                style={{ marginLeft: `${depth * 32}px` }}
-              >
-                {/* Item header */}
-                <div
-                  className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
-                  onClick={() => onEdit(item.id)}
+              <div key={`portal-${group.spaceId}`} className="mt-6">
+                <Link
+                  to={`/spaces/${group.spaceId}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md bg-accent/50 hover:bg-accent transition-colors text-sm font-medium text-muted-foreground mb-2"
                 >
-                  <span className={`flex-shrink-0 ${typeColor.color.replace('border-', 'text-').replace('400', '500')}`}>
-                    <Icon className="w-5 h-5" />
-                  </span>
-                  <h3 className={`font-semibold text-base flex-1 ${depth === 0 ? 'text-lg' : ''}`}>
-                    {item.title}
-                  </h3>
-                  <Badge
-                    className={`text-xs ${statusColor}`}
-                    variant="secondary"
-                  >
-                    {statusLabel}
-                  </Badge>
-                  {contributions.length > 0 && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      {contributions.length}
-                    </span>
-                  )}
-                  {canEdit && (onDelete || onAddChild) && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <ItemActionMenu
-                        groups={[
-                          {
-                            actions: [
-                              ...(onUpdateStatus && item.status && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
-                              ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) }] : []),
-                              ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                            ],
-                          },
-                          {
-                            actions: [
-                              ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                              ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                            ],
-                          },
-                          {
-                            actions: [
-                              ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] : []),
-                            ],
-                          },
-                        ].filter(g => g.actions.length > 0)}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Description & Contributions */}
-                {hasContent && (
-                  <div className="pl-7 pb-3">
-                    {hasDescription && (
-                      <div
-                        className="prose prose-sm dark:prose-invert max-w-none text-foreground mt-1"
-                        dangerouslySetInnerHTML={{ __html: item.description! }}
-                      />
-                    )}
-                    {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
-                      <img src={item.url} alt="" className="max-w-sm max-h-48 object-contain rounded border border-border mt-2" />
-                    )}
-
-                    {/* Contributions */}
-                    {contributions.length > 0 && (
-                      <div className="mt-3 space-y-3">
-                        {contributions.map((contrib) => (
-                          <div
-                            key={contrib.id}
-                            className="border-l-2 border-primary/30 pl-3 py-1"
-                          >
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                              <User className="w-3 h-3" />
-                              <span className="font-medium">{contrib.author.name}</span>
-                              <span>·</span>
-                              <span>{formatDate(contrib.createdAt)}</span>
-                            </div>
-                            <div
-                              className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                              dangerouslySetInnerHTML={{ __html: contrib.content }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Separator for root items */}
-                {depth === 0 && <div className="border-b border-border/50 my-2" />}
+                  <FolderKanban className="w-4 h-4 text-primary" />
+                  <span>{group.spaceName}</span>
+                  <span className="text-xs text-muted-foreground/60">({groupFiltered.length})</span>
+                  <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                </Link>
+                {groupFiltered.map((item) => (
+                  <TextItem
+                    key={item.id}
+                    item={item}
+                    onEdit={onEdit}
+                    onDelete={undefined}
+                    onUpdateStatus={undefined}
+                    onAddChild={undefined}
+                    onMoveToSpace={undefined}
+                    onDuplicateToSpace={undefined}
+                    onConvertToSpace={undefined}
+                    canEdit={false}
+                    doneStatusId={doneStatusId}
+                    statusLabels={statusLabels}
+                    statusColors={statusColors}
+                    referentiels={referentiels}
+                    highlightType={highlightType}
+                    highlightStatus={highlightStatus}
+                    highlightColor={highlightColor}
+                    searchMatchIds={searchMatchIds}
+                  />
+                ))}
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// Extracted item rendering component to avoid duplication between main and portal sections
+function TextItem({
+  item,
+  onEdit,
+  onDelete,
+  onUpdateStatus,
+  onAddChild,
+  onMoveToSpace,
+  onDuplicateToSpace,
+  onConvertToSpace,
+  canEdit,
+  doneStatusId,
+  statusLabels,
+  statusColors,
+  referentiels,
+  highlightType,
+  highlightStatus,
+  highlightColor,
+  searchMatchIds,
+}: {
+  item: ItemWithContributions;
+  onEdit: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onUpdateStatus?: (id: string, status: string) => void;
+  onAddChild?: (parentId: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
+  canEdit?: boolean;
+  doneStatusId: string;
+  statusLabels: Record<string, string>;
+  statusColors: Record<string, string>;
+  referentiels?: SpaceReferentiels;
+  highlightType?: string;
+  highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
+}) {
+  const depth = (item as any)._depth || 0;
+  const Icon = TYPE_ICONS[item.type];
+  const statusLabel = statusLabels[item.status || ''] || 'Non défini';
+  const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
+  const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
+  const hasDescription = !!item.description?.trim();
+  const contributions = item.contributions || [];
+  const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
+  const hasContent = hasDescription || contributions.length > 0 || hasImage;
+  const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
+  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+  const isHighlighted = hasHighlight && !isDimmed;
+  const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+
+  return (
+    <div
+      className={`group transition-opacity ${isDimmed ? 'opacity-35' : ''}`}
+      style={{ marginLeft: `${depth * 32}px` }}
+    >
+      {/* Item header */}
+      <div
+        className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
+        onClick={() => onEdit(item.id)}
+      >
+        <span className={`flex-shrink-0 ${typeColor.color.replace('border-', 'text-').replace('400', '500')}`}>
+          <Icon className="w-5 h-5" />
+        </span>
+        <h3 className={`font-semibold text-base flex-1 ${depth === 0 ? 'text-lg' : ''}`}>
+          {item.title}
+        </h3>
+        <Badge
+          className={`text-xs ${statusColor}`}
+          variant="secondary"
+        >
+          {statusLabel}
+        </Badge>
+        {contributions.length > 0 && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MessageSquare className="w-3.5 h-3.5" />
+            {contributions.length}
+          </span>
+        )}
+        {canEdit && (onDelete || onAddChild) && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <ItemActionMenu
+              groups={[
+                {
+                  actions: [
+                    ...(onUpdateStatus && item.status && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
+                    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) }] : []),
+                    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                  ],
+                },
+                {
+                  actions: [
+                    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                    ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
+                  ],
+                },
+                {
+                  actions: [
+                    ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] : []),
+                  ],
+                },
+              ].filter(g => g.actions.length > 0)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Description & Contributions */}
+      {hasContent && (
+        <div className="pl-7 pb-3">
+          {hasDescription && (
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-foreground mt-1"
+              dangerouslySetInnerHTML={{ __html: item.description! }}
+            />
+          )}
+          {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+            <img src={item.url} alt="" className="max-w-sm max-h-48 object-contain rounded border border-border mt-2" />
+          )}
+
+          {/* Contributions */}
+          {contributions.length > 0 && (
+            <div className="mt-3 space-y-3">
+              {contributions.map((contrib) => (
+                <div
+                  key={contrib.id}
+                  className="border-l-2 border-primary/30 pl-3 py-1"
+                >
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <User className="w-3 h-3" />
+                    <span className="font-medium">{contrib.author.name}</span>
+                    <span>·</span>
+                    <span>{formatDate(contrib.createdAt)}</span>
+                  </div>
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                    dangerouslySetInnerHTML={{ __html: contrib.content }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Separator for root items */}
+      {depth === 0 && <div className="border-b border-border/50 my-2" />}
     </div>
   );
 }

@@ -617,6 +617,7 @@ export const itemsApi = {
     if (params?.status) searchParams.set('status', params.status);
     if (params?.parentId !== undefined) searchParams.set('parentId', params.parentId || '');
     if (params?.search) searchParams.set('search', params.search);
+    if (params?.additionalSpaceIds?.length) searchParams.set('additionalSpaceIds', params.additionalSpaceIds.join(','));
     if (params?.include) searchParams.set('include', params.include);
 
     const query = searchParams.toString();

@@ -7,6 +7,7 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
+import { useSpaceStore } from '../stores/space';
 import { spacesApi, authApi } from '../lib/api';
 import { Button } from './ui/Button';
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
@@ -57,6 +58,9 @@ function SpaceTreeItem({
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedIds.has(node.id);
   const isDragged = draggedId === node.id;
+
+  const { includeChildrenSpaceIds, toggleIncludeChildren } = useSpaceStore();
+  const isIncludeChildren = includeChildrenSpaceIds.has(node.id);
 
   const { attributes, listeners, setNodeRef: setDragRef } = useDraggable({
     id: `drag-${node.id}`,
@@ -119,6 +123,16 @@ function SpaceTreeItem({
           )}
           <span className="truncate">{node.name}</span>
         </Link>
+        <input
+          type="checkbox"
+          checked={isIncludeChildren}
+          onChange={(e) => { e.stopPropagation(); toggleIncludeChildren(node.id); }}
+          onClick={(e) => e.stopPropagation()}
+          className={`w-3.5 h-3.5 rounded flex-shrink-0 cursor-pointer accent-primary transition-opacity ${
+            isIncludeChildren ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
+          }`}
+          title="Inclure les éléments des sous-espaces"
+        />
       </div>
       {hasChildren && isExpanded && (
         node.children.map((child) => (

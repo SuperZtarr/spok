@@ -45,6 +45,7 @@ const querySchema = z.object({
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
   include: z.string().optional(),
+  additionalSpaceIds: z.string().optional(), // comma-separated space IDs
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(5000).default(20),
 });
@@ -121,11 +122,20 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const query = querySchema.parse(request.query);
-      const { page, pageSize, type, status, parentId, search, include } = query;
+      const { page, pageSize, type, status, parentId, search, include, additionalSpaceIds } = query;
 
       const includeContributions = include?.split(',').includes('contributions');
 
-      const where: any = { spaceId: request.params.spaceId };
+      // Build spaceId filter (optionally include additional specific spaces)
+      let spaceIdFilter: any = request.params.spaceId;
+      if (additionalSpaceIds) {
+        const extraIds = additionalSpaceIds.split(',').filter(Boolean);
+        if (extraIds.length > 0) {
+          spaceIdFilter = { in: [request.params.spaceId, ...extraIds] };
+        }
+      }
+
+      const where: any = { spaceId: spaceIdFilter };
 
       if (type) where.type = type;
       if (status === 'none') {

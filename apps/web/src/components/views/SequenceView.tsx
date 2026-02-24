@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, FolderInput, FolderPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, FolderInput, FolderKanban, FolderPlus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
@@ -32,9 +33,17 @@ function formatDate(dateString: string | null | undefined): string | null {
   });
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface SequenceViewProps {
   items: Item[];
   relations?: ItemRelation[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -374,6 +383,8 @@ function SVGConnectors({ lines, onClickRelation }: { lines: ConnectorLine[]; onC
 export function SequenceView({
   items,
   relations,
+  currentSpaceId,
+  portalGroups,
   onEdit,
   onDelete,
   onUpdateStatus,
@@ -419,6 +430,12 @@ export function SequenceView({
       doneStatusId: doneId,
     };
   }, [referentiels]);
+
+  // Map portal spaceId → spaceName for quick lookup
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
 
   // Compute hierarchy chains
   const { chains, standalone } = useMemo(() => {
@@ -503,6 +520,8 @@ export function SequenceView({
       const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
       const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
       const isLinkSource = linkMode && linkSource === item.id;
+      const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+      const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
 
       const itemDependsOn = dependsOnMap.get(item.id) || [];
       const itemBlocks = blocksMap.get(item.id) || [];
@@ -519,7 +538,7 @@ export function SequenceView({
             hasUnsatisfiedDeps ? 'ring-1 ring-orange-300' : ''
           } ${isLinkSource ? 'ring-2 ring-purple-500 ring-offset-2 bg-purple-50' : ''} ${
             linkMode && !isLinkSource ? 'hover:ring-2 hover:ring-purple-300' : ''
-          } ${compact ? 'p-3 w-52' : 'p-4 w-full max-w-md'}`}
+          } ${compact ? 'p-3 w-52' : 'p-4 w-full max-w-md'} ${isPortal ? 'border-dashed border-primary/30' : ''}`}
           onClick={() => handleCardClick(item.id)}
         >
           <div className="flex items-start gap-2">
@@ -532,6 +551,17 @@ export function SequenceView({
                 >
                   {item.title}
                 </h3>
+                {isPortal && portalSpaceName && (
+                  <Link
+                    to={`/spaces/${item.spaceId}`}
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                    title={`Espace : ${portalSpaceName}`}
+                  >
+                    <FolderKanban className="w-3 h-3" />
+                    {!compact && <span className="truncate max-w-[60px]">{portalSpaceName}</span>}
+                  </Link>
+                )}
                 {item.url && (
                   <a
                     href={item.url}
@@ -588,7 +618,7 @@ export function SequenceView({
             </div>
 
             {/* Action menu on hover */}
-            {canEdit && (
+            {canEdit && !isPortal && (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                 <ItemActionMenu
                   groups={[
@@ -635,6 +665,8 @@ export function SequenceView({
       linkMode,
       linkSource,
       canEdit,
+      currentSpaceId,
+      portalSpaceNames,
     ]
   );
 
@@ -834,6 +866,8 @@ export function SequenceView({
                   const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
                   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
                   const typeLabel = typeLabels[item.type]?.labelShort || item.type;
+                  const isPortalItem = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+                  const portalName = isPortalItem ? portalSpaceNames.get(item.spaceId) : undefined;
 
                   return (
                     <div
@@ -844,12 +878,25 @@ export function SequenceView({
                         isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
                       } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${
                         linkMode ? 'hover:ring-2 hover:ring-purple-300' : ''
-                      }`}
+                      } ${isPortalItem ? 'bg-muted/10' : ''}`}
                       onClick={() => handleCardClick(item.id)}
                     >
                       <Icon className={`w-4 h-4 flex-shrink-0 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
 
-                      <span className="truncate">{item.title}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="truncate">{item.title}</span>
+                        {isPortalItem && portalName && (
+                          <Link
+                            to={`/spaces/${item.spaceId}`}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                            title={`Espace : ${portalName}`}
+                          >
+                            <FolderKanban className="w-3 h-3" />
+                            <span className="truncate max-w-[60px]">{portalName}</span>
+                          </Link>
+                        )}
+                      </div>
 
                       <span className="flex justify-center">
                         <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
@@ -884,7 +931,7 @@ export function SequenceView({
                       </span>
 
                       <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {canEdit && (
+                        {canEdit && !isPortalItem && (
                           <ItemActionMenu
                             groups={[
                               {

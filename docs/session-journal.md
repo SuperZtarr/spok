@@ -111,8 +111,45 @@
 - Zone "Déplacer à la racine" pour détacher un sous-espace de son parent
 - Mutation API `spacesApi.update(spaceId, { parentId })` au drop avec invalidation du cache React Query
 - Protections : distance d'activation 8px (pas d'interférence avec les clics), no-op si même parent, l'API valide les références circulaires
-**État :** EN COURS
-**Prochaine étape :** Tester en local, commiter
+**État :** TERMINÉ
+**Commit :** f26c95e
+
+---
+
+#### [2026-02-23] - Vue Calendrier mensuelle
+
+**Demande :** Ajouter une vue calendrier mensuelle affichant les items avec dates (dueDate, startDate, endDate) sur une grille de 6 semaines.
+**Actions réalisées :**
+- Création `CalendarView.tsx` : grille mensuelle lundi→dimanche, navigation mois, bouton "Aujourd'hui", items positionnés par date, items multi-jours (startDate→endDate) étendus, max 3 items visibles par cellule avec compteur "+N", highlight type/status
+- Modification `viewMode.ts` : ajout `'calendar'` au type ViewMode + entrée "Calendrier" (icône Calendar, catégorie planning)
+- Modification `SpacePage.tsx` : import + rendu conditionnel, classé flatView + highlightMode
+- Modification `ViewModeSelector.tsx` : import icône Calendar + ajout dans le dictionnaire ICONS
+**État :** TERMINÉ
+**Commit :** c459701
+
+---
+
+#### [2026-02-23] - Menu vues groupées par catégorie + fix MindMap
+
+**Demande :** Afficher les labels de catégorie (Basique, Planification, Exploration) au-dessus des boutons de vue dans le menu principal quand il y a assez de place, avec des blocs visuellement séparés.
+**Actions réalisées :**
+- ViewModeSelector.tsx : `renderSpaceViewsInline` regroupe les vues par catégorie avec label uppercase au-dessus, séparateurs verticaux, fond `bg-accent/50` sur la catégorie active, boutons en `rounded-md` avec fond `bg-primary/10` pour la vue active
+- MindMapView.tsx : fix crash — `searchMatchIds` n'était pas destructuré dans `MindMapViewInner` ni passé en prop depuis le wrapper forwardRef
+**État :** TERMINÉ
+**Commit :** ed0b4a7
+
+---
+
+#### [2026-02-23] - Barre de recherche globale dans la toolbar
+
+**Demande :** Déplacer la barre de recherche de ListView vers la toolbar commune de SpacePage, pour qu'elle soit disponible sur toutes les vues. En mode highlight, les items correspondants doivent être mis en évidence avec un anneau jaune.
+**Actions réalisées :**
+- SpacePage.tsx : ajout du champ de recherche dans la toolbar (entre filtres et compteur), state searchQuery, filterBySearch (filtre en mode flat, no-op en highlight), searchMatchIds (Set<string> des IDs matchant)
+- ListView.tsx : suppression de la barre de recherche interne et du filtrage local
+- 8 vues highlight (TextView, SequenceView, TimelineView, PlanningView, CalendarView, MindMapView, GraphView, SunburstView) : prop searchMatchIds, isDimmed étendu, isSearchMatch avec highlight jaune (ring-2 ring-yellow-400 bg-yellow-50, ou glow canvas #facc15 pour GraphView/SunburstView)
+- TreeItem + ItemChildren : propagation searchMatchIds dans l'arborescence
+**État :** TERMINÉ
+**Commit :** c0feb6c
 
 ---
 

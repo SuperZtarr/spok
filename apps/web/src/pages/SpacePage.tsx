@@ -31,6 +31,7 @@ import {
   ChevronsUpDown,
   ChevronsDownUp,
   FolderInput,
+  FolderKanban,
   Copy,
   FolderPlus,
   RotateCcw,
@@ -48,6 +49,7 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore } from '../stores/viewMode';
+import { useSpaceStore } from '../stores/space';
 import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
 import { SequenceView } from '../components/views/SequenceView';
@@ -158,6 +160,7 @@ export function SpacePage() {
   const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
   const [convertingItem, setConvertingItem] = useState<{id: string; title: string; childCount: number} | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const { includeChildrenSpaceIds } = useSpaceStore();
 
   // Clear selection when leaving the page or changing space
   useEffect(() => {
@@ -207,6 +210,25 @@ export function SpacePage() {
   // Load spaces from the same community (for portal feature in mindmap)
   const { data: communitySpaces } = useSpaces(space?.communityId || undefined);
 
+  // Compute the list of checked descendant space IDs to include in queries
+  const checkedDescendantIds = useMemo((): string[] => {
+    if (!spaceId || includeChildrenSpaceIds.size === 0 || !communitySpaces) return [];
+    // Find all descendants of current space
+    const descendants = new Set<string>();
+    const queue = [spaceId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const s of communitySpaces) {
+        if (s.parentId === current && !descendants.has(s.id)) {
+          descendants.add(s.id);
+          queue.push(s.id);
+        }
+      }
+    }
+    // Return only the checked ones
+    return [...includeChildrenSpaceIds].filter(id => descendants.has(id));
+  }, [spaceId, includeChildrenSpaceIds, communitySpaces]);
+
   // Tree-based views (mindmap, tree, timeline, text) need ALL items to rebuild hierarchy
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
   // Flat views (kanban, types, planning, list) show all items without hierarchy filtering
@@ -237,7 +259,7 @@ export function SpacePage() {
   }, [activeTypeFilter, activeStatusFilter, referentiels]);
 
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, viewMode],
+    queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, viewMode, checkedDescendantIds],
     queryFn: () =>
       itemsApi.list(spaceId!, {
         // Tree/highlight views load all items (highlight instead of filter)
@@ -247,28 +269,47 @@ export function SpacePage() {
         // Flat views also need all items
         // Only filter by parentId for non-tree, non-flat views when no filter active
         parentId: !activeTypeFilter && !activeStatusFilter && !isFlatView && !isTreeView ? null : undefined,
+        additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined,
         pageSize: 5000,
       }),
     enabled: !!spaceId,
   });
 
-  // Root items for tree view (only items without parent)
+  // Root items for tree view (only items from current space without parent)
   const rootItems = useMemo(() => {
     if (!itemsData?.data) return [];
-    return itemsData.data.filter((item: Item) => !item.parentId);
-  }, [itemsData?.data]);
+    return itemsData.data.filter((item: Item) => !item.parentId && item.spaceId === spaceId);
+  }, [itemsData?.data, spaceId]);
+
+  // Portal groups: root items from additional spaces, grouped by space
+  const portalGroups = useMemo(() => {
+    if (checkedDescendantIds.length === 0 || !itemsData?.data) return [];
+    const groupedBySpace = new Map<string, Item[]>();
+    for (const item of itemsData.data) {
+      if (item.spaceId !== spaceId && !item.parentId) {
+        const existing = groupedBySpace.get(item.spaceId) || [];
+        existing.push(item);
+        groupedBySpace.set(item.spaceId, existing);
+      }
+    }
+    return [...groupedBySpace.entries()].map(([sid, items]) => ({
+      spaceId: sid,
+      spaceName: communitySpaces?.find(s => s.id === sid)?.name || 'Espace',
+      items,
+    }));
+  }, [itemsData?.data, spaceId, checkedDescendantIds, communitySpaces]);
 
   // Load all items for parent selector (without filter)
   const { data: allItemsData } = useQuery({
-    queryKey: ['items', spaceId, 'all'],
-    queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000 }),
+    queryKey: ['items', spaceId, 'all', checkedDescendantIds],
+    queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined }),
     enabled: !!spaceId,
   });
 
   // Load all items with contributions for text view
   const { data: textViewData } = useQuery({
-    queryKey: ['items', spaceId, 'all-with-contributions'],
-    queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions' }),
+    queryKey: ['items', spaceId, 'all-with-contributions', checkedDescendantIds],
+    queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions', additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined }),
     enabled: !!spaceId && viewMode === 'text',
   });
 
@@ -648,7 +689,8 @@ export function SpacePage() {
 
   // Expand all items that have children (at any level)
   const expandAll = () => {
-    const allItems = allItemsData?.data || [];
+    // Use allItemsData (complete list), fall back to itemsData if not yet loaded
+    const allItems = allItemsData?.data || itemsData?.data || [];
     // Find all items that are parents (have at least one child)
     const parentIds = new Set<string>();
     allItems.forEach((item: Item) => {
@@ -1035,6 +1077,8 @@ export function SpacePage() {
           ) : viewMode === 'list' ? (
             <ListView
               items={filterBySearch(itemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1048,6 +1092,8 @@ export function SpacePage() {
           ) : viewMode === 'text' ? (
             <TextView
               items={filterBySearch(textViewData?.data || allItemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1066,6 +1112,8 @@ export function SpacePage() {
             <SequenceView
               items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1085,6 +1133,8 @@ export function SpacePage() {
           ) : viewMode === 'kanban' ? (
             <KanbanView
               items={filterBySearch(itemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1098,6 +1148,8 @@ export function SpacePage() {
           ) : viewMode === 'types' ? (
             <TypesView
               items={filterBySearch(itemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateType={(id, type) => handleInlineUpdate(id, { type })}
@@ -1111,6 +1163,8 @@ export function SpacePage() {
           ) : viewMode === 'planning' ? (
             <PlanningView
               items={filterBySearch(allItemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1128,6 +1182,8 @@ export function SpacePage() {
           ) : viewMode === 'calendar' ? (
             <CalendarView
               items={filterBySearch(allItemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1146,6 +1202,8 @@ export function SpacePage() {
             <TimelineView
               items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
@@ -1261,6 +1319,54 @@ export function SpacePage() {
                       statusColorMap={statusColorMap}
                       statusLabelMap={statusLabelMap}
                     />
+                  ))}
+                  {/* Portal sections for items from checked child spaces */}
+                  {portalGroups.map((group) => (
+                    <div key={`portal-${group.spaceId}`} className="mt-2">
+                      <Link
+                        to={`/spaces/${group.spaceId}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-accent/50 hover:bg-accent transition-colors text-sm font-medium text-muted-foreground"
+                      >
+                        <FolderKanban className="w-4 h-4 text-primary" />
+                        <span>{group.spaceName}</span>
+                        <span className="text-xs text-muted-foreground/60">({group.items.length})</span>
+                        <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                      </Link>
+                      {group.items.map((item: Item & { childCount?: number }, index: number) => (
+                        <TreeItem
+                          key={item.id}
+                          item={item}
+                          depth={1}
+                          orderNumber={`${index + 1}`}
+                          isExpanded={expandedItems.has(item.id)}
+                          onToggleExpand={toggleExpanded}
+                          onEdit={setEditingItemId}
+                          onDelete={handleDelete}
+                          onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+                          onAddChild={handleAddChild}
+                          onMoveToSpace={(id) => setMoveItemId(id)}
+                          onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+                          onConvertToSpace={handleConvertToSpace}
+                          spaceId={group.spaceId}
+                          isOver={overId === item.id}
+                          onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
+                          globalOverId={overId}
+                          globalDropMode={dropMode}
+                          globalDropPosition={dropPosition}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedIds.has(item.id)}
+                          onToggleSelection={toggleSelection}
+                          expandedItems={expandedItems}
+                          canEdit={false}
+                          highlightType={activeTypeFilter}
+                          highlightStatus={activeStatusFilter}
+                          highlightColor={highlightColor}
+                          searchMatchIds={searchMatchIds}
+                          statusColorMap={statusColorMap}
+                          statusLabelMap={statusLabelMap}
+                        />
+                      ))}
+                    </div>
                   ))}
                   {/* Root drop zone - at the bottom to avoid interfering with first item */}
                   {activeId && (

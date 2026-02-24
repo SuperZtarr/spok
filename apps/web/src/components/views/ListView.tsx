@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, Copy, FolderPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, FolderKanban, Copy, FolderPlus } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -13,8 +14,16 @@ interface ItemWithContributions extends Item {
   contributionCount?: number;
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface ListViewProps {
   items: ItemWithContributions[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -83,9 +92,16 @@ function ImageThumbnail({ url }: { url: string }) {
 type SortField = 'title' | 'type' | 'status' | 'parent' | 'date' | 'contributions';
 type SortDir = 'asc' | 'desc';
 
-export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: ListViewProps) {
+export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: ListViewProps) {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  // Portal support
+  const hasPortals = !!(portalGroups && portalGroups.length > 0);
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
 
   const toggleSort = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -182,12 +198,15 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
       ) : (
         <>
           {/* Header — fixed outside scroll */}
-          <div className="grid grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0">
+          <div className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto]'} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre
               {sortField === 'title' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
+            {hasPortals && (
+              <span className="text-left truncate">Espace</span>
+            )}
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left truncate" onClick={() => toggleSort('parent')}>
               Parent
               {sortField === 'parent' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
@@ -217,11 +236,13 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
               const typeLabel = typeLabelsShort[item.type] || item.type;
               const isDone = item.status === doneStatusId;
               const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
+              const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+              const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
 
               return (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto] items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group"
+                  className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto]'} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
                   <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -242,6 +263,22 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                       </div>
                     )}
                   </div>
+
+                  {hasPortals && (
+                    <span className="truncate text-xs">
+                      {isPortal && portalSpaceName ? (
+                        <Link
+                          to={`/spaces/${item.spaceId}`}
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          title={`Espace : ${portalSpaceName}`}
+                        >
+                          <FolderKanban className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{portalSpaceName}</span>
+                        </Link>
+                      ) : null}
+                    </span>
+                  )}
 
                   <span className="truncate text-xs text-muted-foreground" title={item.parentId ? parentNames[item.parentId] || '' : ''}>
                     {item.parentId ? parentNames[item.parentId] || '' : ''}
@@ -292,7 +329,7 @@ export function ListView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, 
                   </span>
 
                   <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {canEdit && (
+                    {canEdit && !isPortal && (
                       <ItemActionMenu
                         groups={[
                           {

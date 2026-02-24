@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +12,7 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -31,8 +32,15 @@ function formatDate(dateString: string | null | undefined): string | null {
   });
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+}
+
 interface KanbanViewProps {
   items: Item[];
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -47,6 +55,7 @@ interface KanbanViewProps {
 interface KanbanColumnProps {
   column: StatusConfig;
   items: Item[];
+  portalItems?: (Item & { _spaceName: string })[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -77,11 +86,13 @@ interface KanbanCardProps {
   referentiels?: SpaceReferentiels;
 }
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, portalSpaceName }: KanbanCardProps & { portalSpaceName?: string }) {
   const Icon = TYPE_ICONS[item.type];
+  const isPortal = !!portalSpaceName;
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item, columnId },
+    disabled: isPortal,
   });
 
   const style = transform
@@ -96,11 +107,21 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       style={style}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
-      }`}
+      } ${isPortal ? 'border-dashed border-primary/30' : ''}`}
       onClick={() => onEdit(item.id)}
     >
+      {portalSpaceName && (
+        <Link
+          to={`/spaces/${item.spaceId}`}
+          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 -mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FolderKanban className="w-3 h-3" />
+          <span>{portalSpaceName}</span>
+        </Link>
+      )}
       <div className="flex items-start gap-2">
-        {canEdit && (
+        {canEdit && !isPortal && (
           <div
             {...listeners}
             {...attributes}
@@ -153,7 +174,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       </div>
 
       {/* Action menu */}
-      {canEdit && (
+      {canEdit && !isPortal && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={[
@@ -181,7 +202,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, nextStatus, canEdit, referentiels }: KanbanColumnProps) {
+function KanbanColumn({ column, items, portalItems, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, nextStatus, canEdit, referentiels }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -202,7 +223,7 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
         <div className="flex items-center justify-between">
           <h3 className="font-medium">{column.label}</h3>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {items.length}
+            {items.length + (portalItems?.length || 0)}
           </span>
         </div>
       </div>
@@ -232,17 +253,38 @@ function KanbanColumn({ column, items, onEdit, onDelete, onUpdateStatus, onAddCh
           />
         ))}
 
-        {items.length === 0 && (
+        {items.length === 0 && (!portalItems || portalItems.length === 0) && (
           <div className="text-center py-8 text-muted-foreground text-sm">
             Aucun element
           </div>
+        )}
+
+        {/* Portal items (read-only, from child spaces) */}
+        {portalItems && portalItems.length > 0 && (
+          <>
+            {items.length > 0 && <div className="border-t border-dashed border-primary/20 my-2" />}
+            {portalItems.map((item) => (
+              <KanbanCard
+                key={item.id}
+                item={item}
+                columnId={column.id}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onUpdateStatus={onUpdateStatus}
+                onAddChild={onAddChild}
+                canEdit={false}
+                referentiels={referentiels}
+                portalSpaceName={item._spaceName}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>
   );
 }
 
-export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: KanbanViewProps) {
+export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -253,6 +295,19 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
       },
     })
   );
+
+  // Separate main items from portal items
+  const { mainItems, portalItemsWithSpace } = useMemo(() => {
+    if (!currentSpaceId || !portalGroups?.length) {
+      return { mainItems: items, portalItemsWithSpace: [] as (Item & { _spaceName: string })[] };
+    }
+    const main = items.filter(i => i.spaceId === currentSpaceId);
+    const spaceNames = new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+    const portal = items
+      .filter(i => i.spaceId !== currentSpaceId)
+      .map(i => ({ ...i, _spaceName: spaceNames.get(i.spaceId) || 'Espace' }));
+    return { mainItems: main, portalItemsWithSpace: portal };
+  }, [items, currentSpaceId, portalGroups]);
 
   // Use referentiels or defaults
   const statuses = useMemo(() => {
@@ -272,22 +327,38 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
     return map;
   }, [statuses]);
 
-  // Group items by status
+  // Group main items by status
   const groupedItems = useMemo(() => {
     return statuses.reduce(
       (acc, status) => {
         if (status.id === 'undefined') {
-          acc[status.id] = items.filter((item) => !item.status);
+          acc[status.id] = mainItems.filter((item) => !item.status);
         } else {
-          acc[status.id] = items.filter((item) => item.status === status.id);
+          acc[status.id] = mainItems.filter((item) => item.status === status.id);
         }
         return acc;
       },
       {} as Record<string, Item[]>
     );
-  }, [statuses, items]);
+  }, [statuses, mainItems]);
 
-  const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
+  // Group portal items by status
+  const portalGroupedItems = useMemo(() => {
+    if (portalItemsWithSpace.length === 0) return {} as Record<string, (Item & { _spaceName: string })[]>;
+    return statuses.reduce(
+      (acc, status) => {
+        if (status.id === 'undefined') {
+          acc[status.id] = portalItemsWithSpace.filter((item) => !item.status);
+        } else {
+          acc[status.id] = portalItemsWithSpace.filter((item) => item.status === status.id);
+        }
+        return acc;
+      },
+      {} as Record<string, (Item & { _spaceName: string })[]>
+    );
+  }, [statuses, portalItemsWithSpace]);
+
+  const activeItem = activeId ? mainItems.find((item) => item.id === activeId) : null;
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -341,6 +412,7 @@ export function KanbanView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
               key={status.id}
               column={status}
               items={groupedItems[status.id] || []}
+              portalItems={portalGroupedItems[status.id]}
               onEdit={onEdit}
               onDelete={onDelete}
               onUpdateStatus={onUpdateStatus}
