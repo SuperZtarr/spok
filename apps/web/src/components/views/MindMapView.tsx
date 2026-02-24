@@ -207,6 +207,7 @@ interface MindMapNodeProps {
     hasPortalSupport: boolean;
     isHighlighted: boolean;
     isDimmed: boolean;
+    isSearchMatch: boolean;
     isDropTarget: boolean;
     canEdit: boolean;
     isPinned: boolean;

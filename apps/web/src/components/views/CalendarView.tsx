@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { Badge } from '../ui/Badge';
 import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
 import {
   getCalendarDays,
@@ -243,7 +242,7 @@ export function CalendarView({
                       className={`w-full text-left px-1.5 py-0.5 rounded text-xs truncate flex items-center gap-1 hover:ring-1 hover:ring-ring transition-all ${
                         isHighlighted && highlightColor
                           ? `${highlightColor.bg} ${highlightColor.border} border-l-2`
-                          : `${typeColor.bg} border-l-2 ${typeColor.color}`
+                          : `${typeColor.bgHover} border-l-2 ${typeColor.color}`
                       } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-30' : ''} ${isPortal ? 'border-dashed border-primary/40' : ''}`}
                       title={`${item.title}${portalSpaceName ? ` [${portalSpaceName}]` : ''}${statusCfg ? ` — ${statusCfg.label}` : ''}`}
                     >
