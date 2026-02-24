@@ -40,6 +40,16 @@ function buildSpaceTree(spaces: SpaceWithRole[]): SpaceTreeNode[] {
   return roots;
 }
 
+/** Collect all descendant IDs of a tree node recursively */
+function collectDescendantIds(node: SpaceTreeNode): string[] {
+  const ids: string[] = [];
+  for (const child of node.children) {
+    ids.push(child.id);
+    ids.push(...collectDescendantIds(child));
+  }
+  return ids;
+}
+
 function SpaceTreeItem({
   node,
   level,
@@ -126,7 +136,7 @@ function SpaceTreeItem({
         <input
           type="checkbox"
           checked={isIncludeChildren}
-          onChange={(e) => { e.stopPropagation(); toggleIncludeChildren(node.id); }}
+          onChange={(e) => { e.stopPropagation(); toggleIncludeChildren(node.id, collectDescendantIds(node)); }}
           onClick={(e) => e.stopPropagation()}
           className={`w-3.5 h-3.5 rounded flex-shrink-0 cursor-pointer accent-primary transition-opacity ${
             isIncludeChildren ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
