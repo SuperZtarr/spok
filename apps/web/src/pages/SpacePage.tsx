@@ -37,6 +37,7 @@ import {
   RotateCcw,
   Search,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -44,6 +45,7 @@ import { DEFAULT_REFERENTIELS, buildStatusColorMap, buildStatusLabelMap } from '
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
@@ -159,6 +161,15 @@ export function SpacePage() {
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
   const [convertingItem, setConvertingItem] = useState<{id: string; title: string; childCount: number} | null>(null);
+  const [pendingCrossSpaceMove, setPendingCrossSpaceMove] = useState<{
+    itemId: string;
+    itemTitle: string;
+    sourceSpaceId: string;
+    targetSpaceId: string;
+    targetSpaceName: string;
+    childCount: number;
+    updates?: { status?: string; type?: ItemType };
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const { includeChildrenSpaceIds } = useSpaceStore();
 
@@ -357,10 +368,13 @@ export function SpacePage() {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren?: boolean }) =>
-      itemsApi.delete(spaceId!, id, { deleteChildren }),
-    onSuccess: () => {
+    mutationFn: ({ id, itemSpaceId, deleteChildren }: { id: string; itemSpaceId: string; deleteChildren?: boolean }) =>
+      itemsApi.delete(itemSpaceId, id, { deleteChildren }),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      if (variables.itemSpaceId !== spaceId) {
+        queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
+      }
     },
   });
 
@@ -383,10 +397,13 @@ export function SpacePage() {
 
   const confirmDelete = useCallback((options: { deleteChildren: boolean }) => {
     if (deletingItem) {
-      deleteItemMutation.mutate({ id: deletingItem.id, deleteChildren: options.deleteChildren });
+      const allItems = allItemsData?.data || itemsData?.data || [];
+      const item = allItems.find((i: Item) => i.id === deletingItem.id);
+      const itemSpaceId = item?.spaceId || spaceId!;
+      deleteItemMutation.mutate({ id: deletingItem.id, itemSpaceId, deleteChildren: options.deleteChildren });
       setDeletingItem(null);
     }
-  }, [deletingItem, deleteItemMutation]);
+  }, [deletingItem, deleteItemMutation, allItemsData?.data, itemsData?.data, spaceId]);
 
   const handleConvertToSpace = useCallback((id: string) => {
     const allItems = allItemsData?.data || itemsData?.data || [];
@@ -403,10 +420,14 @@ export function SpacePage() {
   }, [allItemsData?.data, itemsData?.data]);
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
-      itemsApi.update(spaceId!, id, data),
-    onSuccess: () => {
+    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
+      itemsApi.update(itemSpaceId, id, data),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      // Also invalidate the item's own space if different from page space
+      if (variables.itemSpaceId !== spaceId) {
+        queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
+      }
     },
     onError: (error) => {
       // On conflict for inline updates, simply reload data
@@ -424,36 +445,83 @@ export function SpacePage() {
   };
 
   const handleInlineUpdate = (id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null }) => {
-    updateItemMutation.mutate({ id, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
+    // Resolve the item's actual spaceId (portal items belong to different spaces)
+    const allItems = allItemsData?.data || itemsData?.data || [];
+    const item = allItems.find((i: Item) => i.id === id);
+    const itemSpaceId = item?.spaceId || spaceId!;
+    updateItemMutation.mutate({ id, itemSpaceId, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
   };
 
   const moveItemMutation = useMutation({
-    mutationFn: ({ id, parentId, position }: { id: string; parentId?: string | null; position: number }) =>
-      itemsApi.move(spaceId!, id, { parentId, position }),
-    onSuccess: () => {
+    mutationFn: ({ id, itemSpaceId, parentId, position }: { id: string; itemSpaceId: string; parentId?: string | null; position: number }) =>
+      itemsApi.move(itemSpaceId, id, { parentId, position }),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      if (variables.itemSpaceId !== spaceId) {
+        queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
+      }
     },
   });
 
+  // Move item to a different space (cross-space drag & drop)
+  const executeCrossSpaceMove = async (itemId: string, sourceSpaceId: string, targetSpaceId: string, includeChildren: boolean, updates?: { status?: string; type?: ItemType }) => {
+    try {
+      await itemsApi.bulkMove(sourceSpaceId, { itemIds: [itemId], targetSpaceId, includeChildren });
+      if (updates) {
+        await itemsApi.update(targetSpaceId, itemId, updates);
+      }
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    } catch (e) {
+      console.error('Failed to move item to space:', e);
+    }
+  };
+
+  const handleMoveItemToSpace = (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => {
+    const allItems = allItemsData?.data || itemsData?.data || [];
+    const item = allItems.find((i: Item) => i.id === itemId);
+    const countDescendants = (parentId: string): number => {
+      const children = allItems.filter((i: Item) => i.parentId === parentId);
+      return children.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
+    };
+    const childCount = countDescendants(itemId);
+
+    if (childCount > 0) {
+      // Has children — ask for confirmation
+      const targetSpaceName = communitySpaces?.find(s => s.id === targetSpaceId)?.name || 'l\'espace cible';
+      setPendingCrossSpaceMove({
+        itemId,
+        itemTitle: item?.title || 'cet élément',
+        sourceSpaceId,
+        targetSpaceId,
+        targetSpaceName,
+        childCount,
+        updates,
+      });
+    } else {
+      // No children — move directly
+      executeCrossSpaceMove(itemId, sourceSpaceId, targetSpaceId, true, updates);
+    }
+  };
+
   const createRelationMutation = useMutation({
-    mutationFn: ({ fromItemId, toItemId, type }: { fromItemId: string; toItemId: string; type: string }) =>
-      itemsApi.createRelation(spaceId!, fromItemId, { toItemId, type }),
+    mutationFn: ({ fromItemId, itemSpaceId, toItemId, type }: { fromItemId: string; itemSpaceId: string; toItemId: string; type: string }) =>
+      itemsApi.createRelation(itemSpaceId, fromItemId, { toItemId, type }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
   });
 
   const deleteRelationMutation = useMutation({
-    mutationFn: ({ itemId, relationId }: { itemId: string; relationId: string }) =>
-      itemsApi.deleteRelation(spaceId!, itemId, relationId),
+    mutationFn: ({ itemId, itemSpaceId, relationId }: { itemId: string; itemSpaceId: string; relationId: string }) =>
+      itemsApi.deleteRelation(itemSpaceId, itemId, relationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
   });
 
   const convertToSpaceMutation = useMutation({
-    mutationFn: ({ itemId, spaceName }: { itemId: string; spaceName: string }) =>
-      itemsApi.convertToSpace(spaceId!, itemId, {
+    mutationFn: ({ itemId, itemSpaceId, spaceName }: { itemId: string; itemSpaceId: string; spaceName: string }) =>
+      itemsApi.convertToSpace(itemSpaceId, itemId, {
         spaceName,
         communityId: space?.communityId || undefined,
       }),
@@ -548,10 +616,13 @@ export function SpacePage() {
 
     if (!activeItem) return;
 
+    const activeItemSpaceId = activeItem.spaceId || spaceId!;
+
     // Handle drop on root zone
     if (over.id === 'root') {
       moveItemMutation.mutate({
         id: active.id as string,
+        itemSpaceId: activeItemSpaceId,
         parentId: null,
         position: 0,
       });
@@ -571,6 +642,7 @@ export function SpacePage() {
       // Make the active item a child of the over item
       moveItemMutation.mutate({
         id: active.id as string,
+        itemSpaceId: activeItemSpaceId,
         parentId: over.id as string,
         position: 0,
       });
@@ -581,6 +653,7 @@ export function SpacePage() {
       const targetPosition = currentDropPosition === 'after' ? overIndex + 1 : overIndex;
       moveItemMutation.mutate({
         id: active.id as string,
+        itemSpaceId: activeItemSpaceId,
         parentId: overItem.parentId ?? null,
         position: targetPosition >= 0 ? targetPosition : 0,
       });
@@ -1121,8 +1194,16 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={handleConvertToSpace}
-              onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
-              onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
+              onCreateRelation={(fromItemId, toItemId, type) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === fromItemId);
+                    createRelationMutation.mutate({ fromItemId, itemSpaceId: item?.spaceId || spaceId!, toItemId, type });
+                  }}
+              onDeleteRelation={(itemId, relationId) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === itemId);
+                    deleteRelationMutation.mutate({ itemId, itemSpaceId: item?.spaceId || spaceId!, relationId });
+                  }}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1142,6 +1223,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={handleConvertToSpace}
+              onMoveItemToSpace={handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1157,6 +1239,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={handleConvertToSpace}
+              onMoveItemToSpace={handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1208,8 +1291,16 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => handleInlineUpdate(id, { startDate, endDate })}
-              onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
-              onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
+              onCreateRelation={(fromItemId, toItemId, type) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === fromItemId);
+                    createRelationMutation.mutate({ fromItemId, itemSpaceId: item?.spaceId || spaceId!, toItemId, type });
+                  }}
+              onDeleteRelation={(itemId, relationId) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === itemId);
+                    deleteRelationMutation.mutate({ itemId, itemSpaceId: item?.spaceId || spaceId!, relationId });
+                  }}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
@@ -1235,12 +1326,24 @@ export function SpacePage() {
               onDelete={handleDelete}
               onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
-              onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
+              onMove={(id, parentId, position) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === id);
+                    moveItemMutation.mutate({ id, itemSpaceId: item?.spaceId || spaceId!, parentId, position });
+                  }}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={handleConvertToSpace}
-              onCreateRelation={(fromItemId, toItemId, type) => createRelationMutation.mutate({ fromItemId, toItemId, type })}
-              onDeleteRelation={(itemId, relationId) => deleteRelationMutation.mutate({ itemId, relationId })}
+              onCreateRelation={(fromItemId, toItemId, type) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === fromItemId);
+                    createRelationMutation.mutate({ fromItemId, itemSpaceId: item?.spaceId || spaceId!, toItemId, type });
+                  }}
+              onDeleteRelation={(itemId, relationId) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === itemId);
+                    deleteRelationMutation.mutate({ itemId, itemSpaceId: item?.spaceId || spaceId!, relationId });
+                  }}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1305,7 +1408,11 @@ export function SpacePage() {
                       onConvertToSpace={handleConvertToSpace}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
-                      onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
+                      onMove={(id, parentId, position) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === id);
+                    moveItemMutation.mutate({ id, itemSpaceId: item?.spaceId || spaceId!, parentId, position });
+                  }}
                       globalOverId={overId}
                       globalDropMode={dropMode}
                       globalDropPosition={dropPosition}
@@ -1351,7 +1458,11 @@ export function SpacePage() {
                           onConvertToSpace={handleConvertToSpace}
                           spaceId={group.spaceId}
                           isOver={overId === item.id}
-                          onMove={(id, parentId, position) => moveItemMutation.mutate({ id, parentId, position })}
+                          onMove={(id, parentId, position) => {
+                    const allItems = allItemsData?.data || itemsData?.data || [];
+                    const item = allItems.find((i: Item) => i.id === id);
+                    moveItemMutation.mutate({ id, itemSpaceId: item?.spaceId || spaceId!, parentId, position });
+                  }}
                           globalOverId={overId}
                           globalDropMode={dropMode}
                           globalDropPosition={dropPosition}
@@ -1450,7 +1561,9 @@ export function SpacePage() {
         onClose={() => setConvertingItem(null)}
         onConfirm={(spaceName) => {
           if (convertingItem) {
-            convertToSpaceMutation.mutate({ itemId: convertingItem.id, spaceName });
+            const allItems = allItemsData?.data || itemsData?.data || [];
+            const item = allItems.find((i: Item) => i.id === convertingItem.id);
+            convertToSpaceMutation.mutate({ itemId: convertingItem.id, itemSpaceId: item?.spaceId || spaceId!, spaceName });
           }
         }}
         itemTitle={convertingItem?.title || ''}
@@ -1468,6 +1581,58 @@ export function SpacePage() {
         childCount={deletingItem?.childCount || 0}
         contributionCount={deletingItem?.contributionCount || 0}
       />
+
+      {/* Cross-space move confirmation modal */}
+      <Modal
+        isOpen={!!pendingCrossSpaceMove}
+        onClose={() => setPendingCrossSpaceMove(null)}
+        title="Déplacer vers un autre espace"
+        size="small"
+      >
+        {pendingCrossSpaceMove && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+              <FolderInput className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="font-semibold truncate">{pendingCrossSpaceMove.itemTitle}</span>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>
+                Cet élément a <strong>{pendingCrossSpaceMove.childCount}</strong> descendant{pendingCrossSpaceMove.childCount > 1 ? 's' : ''}.
+                Voulez-vous aussi les déplacer vers <strong>{pendingCrossSpaceMove.targetSpaceName}</strong> ?
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  const m = pendingCrossSpaceMove;
+                  setPendingCrossSpaceMove(null);
+                  executeCrossSpaceMove(m.itemId, m.sourceSpaceId, m.targetSpaceId, true, m.updates);
+                }}
+              >
+                Déplacer avec les {pendingCrossSpaceMove.childCount} descendant{pendingCrossSpaceMove.childCount > 1 ? 's' : ''}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const m = pendingCrossSpaceMove;
+                  setPendingCrossSpaceMove(null);
+                  executeCrossSpaceMove(m.itemId, m.sourceSpaceId, m.targetSpaceId, false, m.updates);
+                }}
+              >
+                Déplacer seul
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setPendingCrossSpaceMove(null)}>
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

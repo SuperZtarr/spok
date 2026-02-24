@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DndContext,
@@ -11,10 +11,11 @@ import {
   useSensors,
   useDroppable,
   useDraggable,
+  closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
@@ -48,6 +49,7 @@ interface KanbanViewProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -55,7 +57,7 @@ interface KanbanViewProps {
 interface KanbanColumnProps {
   column: StatusConfig;
   items: Item[];
-  portalItems?: (Item & { _spaceName: string })[];
+  droppableId: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -65,6 +67,7 @@ interface KanbanColumnProps {
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
   nextStatus?: string;
+  nextStatusLabel?: string;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
 }
@@ -86,13 +89,14 @@ interface KanbanCardProps {
   referentiels?: SpaceReferentiels;
 }
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, portalSpaceName }: KanbanCardProps & { portalSpaceName?: string }) {
+const MIN_BOARD_HEIGHT = 200;
+const DEFAULT_BOARD_HEIGHT = 400;
+
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
   const Icon = TYPE_ICONS[item.type];
-  const isPortal = !!portalSpaceName;
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item, columnId },
-    disabled: isPortal,
   });
 
   const style = transform
@@ -107,21 +111,11 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       style={style}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
-      } ${isPortal ? 'border-dashed border-primary/30' : ''}`}
+      }`}
       onClick={() => onEdit(item.id)}
     >
-      {portalSpaceName && (
-        <Link
-          to={`/spaces/${item.spaceId}`}
-          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 -mt-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <FolderKanban className="w-3 h-3" />
-          <span>{portalSpaceName}</span>
-        </Link>
-      )}
       <div className="flex items-start gap-2">
-        {canEdit && !isPortal && (
+        {canEdit && (
           <div
             {...listeners}
             {...attributes}
@@ -174,13 +168,13 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       </div>
 
       {/* Action menu */}
-      {canEdit && !isPortal && (
+      {canEdit && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={[
               {
                 actions: [
-                  ...(nextStatus ? [{ id: 'next-status', label: nextStatusLabel || 'Suivant', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, nextStatus) }] : []),
+                  ...(nextStatus !== undefined ? [{ id: 'next-status', label: nextStatusLabel || 'Suivant', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, nextStatus!) }] : []),
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                 ],
@@ -202,9 +196,9 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, portalItems, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, nextStatus, canEdit, referentiels }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, nextStatus, nextStatusLabel, canEdit, referentiels }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
-    id: column.id,
+    id: droppableId,
   });
 
   // Extract border color from borderColor (e.g., "border-gray-300 bg-gray-50" -> "border-gray-300")
@@ -223,7 +217,7 @@ function KanbanColumn({ column, items, portalItems, onEdit, onDelete, onUpdateSt
         <div className="flex items-center justify-between">
           <h3 className="font-medium">{column.label}</h3>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {items.length + (portalItems?.length || 0)}
+            {items.length}
           </span>
         </div>
       </div>
@@ -231,7 +225,7 @@ function KanbanColumn({ column, items, portalItems, onEdit, onDelete, onUpdateSt
       {/* Column items - droppable area */}
       <div
         ref={setNodeRef}
-        className={`p-2 space-y-2 flex-1 overflow-y-auto min-h-[100px] ${
+        className={`p-2 space-y-2 flex-1 overflow-y-auto min-h-[60px] ${
           isOver ? 'ring-2 ring-primary ring-inset' : ''
         }`}
       >
@@ -239,7 +233,7 @@ function KanbanColumn({ column, items, portalItems, onEdit, onDelete, onUpdateSt
           <KanbanCard
             key={item.id}
             item={item}
-            columnId={column.id}
+            columnId={droppableId}
             onEdit={onEdit}
             onDelete={onDelete}
             onUpdateStatus={onUpdateStatus}
@@ -248,43 +242,61 @@ function KanbanColumn({ column, items, portalItems, onEdit, onDelete, onUpdateSt
             onDuplicateToSpace={onDuplicateToSpace}
             onConvertToSpace={onConvertToSpace}
             nextStatus={nextStatus}
+            nextStatusLabel={nextStatusLabel}
             canEdit={canEdit}
             referentiels={referentiels}
           />
         ))}
 
-        {items.length === 0 && (!portalItems || portalItems.length === 0) && (
-          <div className="text-center py-8 text-muted-foreground text-sm">
+        {items.length === 0 && (
+          <div className="text-center py-4 text-muted-foreground text-sm">
             Aucun element
           </div>
-        )}
-
-        {/* Portal items (read-only, from child spaces) */}
-        {portalItems && portalItems.length > 0 && (
-          <>
-            {items.length > 0 && <div className="border-t border-dashed border-primary/20 my-2" />}
-            {portalItems.map((item) => (
-              <KanbanCard
-                key={item.id}
-                item={item}
-                columnId={column.id}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onUpdateStatus={onUpdateStatus}
-                onAddChild={onAddChild}
-                canEdit={false}
-                referentiels={referentiels}
-                portalSpaceName={item._spaceName}
-              />
-            ))}
-          </>
         )}
       </div>
     </div>
   );
 }
 
-export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: KanbanViewProps) {
+// Resize handle between boards
+function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
+  const handleRef = useRef<HTMLDivElement>(null);
+  const startYRef = useRef(0);
+  const draggingRef = useRef(false);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startYRef.current = e.clientY;
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    const delta = e.clientY - startYRef.current;
+    startYRef.current = e.clientY;
+    onResize(delta);
+  }, [onResize]);
+
+  const onPointerUp = useCallback(() => {
+    draggingRef.current = false;
+  }, []);
+
+  return (
+    <div
+      ref={handleRef}
+      className="flex items-center justify-center h-3 cursor-row-resize group hover:bg-muted/50 transition-colors -my-0.5 z-10"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    >
+      <GripHorizontal className="w-5 h-3 text-muted-foreground/40 group-hover:text-muted-foreground" />
+    </div>
+  );
+}
+
+export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onMoveItemToSpace, referentiels, canEdit = true }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -295,19 +307,6 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
       },
     })
   );
-
-  // Separate main items from portal items
-  const { mainItems, portalItemsWithSpace } = useMemo(() => {
-    if (!currentSpaceId || !portalGroups?.length) {
-      return { mainItems: items, portalItemsWithSpace: [] as (Item & { _spaceName: string })[] };
-    }
-    const main = items.filter(i => i.spaceId === currentSpaceId);
-    const spaceNames = new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
-    const portal = items
-      .filter(i => i.spaceId !== currentSpaceId)
-      .map(i => ({ ...i, _spaceName: spaceNames.get(i.spaceId) || 'Espace' }));
-    return { mainItems: main, portalItemsWithSpace: portal };
-  }, [items, currentSpaceId, portalGroups]);
 
   // Use referentiels or defaults
   const statuses = useMemo(() => {
@@ -327,38 +326,50 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     return map;
   }, [statuses]);
 
-  // Group main items by status
-  const groupedItems = useMemo(() => {
-    return statuses.reduce(
-      (acc, status) => {
+  // Build space sections: main space + portal spaces
+  const spaceSections = useMemo(() => {
+    if (!currentSpaceId || !portalGroups?.length) {
+      return [{ spaceId: currentSpaceId || 'default', spaceName: null, isPortal: false, items }];
+    }
+    const mainItems = items.filter(i => i.spaceId === currentSpaceId);
+    const sections = [{ spaceId: currentSpaceId, spaceName: null as string | null, isPortal: false, items: mainItems }];
+    for (const pg of portalGroups) {
+      const spaceItems = items.filter(i => i.spaceId === pg.spaceId);
+      if (spaceItems.length > 0 || true) { // Always show portal board even if empty
+        sections.push({ spaceId: pg.spaceId, spaceName: pg.spaceName, isPortal: true, items: spaceItems });
+      }
+    }
+    return sections;
+  }, [items, currentSpaceId, portalGroups]);
+
+  // Resizable heights per space
+  const [boardHeights, setBoardHeights] = useState<Record<string, number>>({});
+  const getHeight = (spaceId: string) => boardHeights[spaceId] || DEFAULT_BOARD_HEIGHT;
+
+  const handleResize = useCallback((spaceId: string, delta: number) => {
+    setBoardHeights(prev => ({
+      ...prev,
+      [spaceId]: Math.max(MIN_BOARD_HEIGHT, (prev[spaceId] || DEFAULT_BOARD_HEIGHT) + delta),
+    }));
+  }, []);
+
+  // Group items by status per space
+  const groupedBySpace = useMemo(() => {
+    const result: Record<string, Record<string, Item[]>> = {};
+    for (const section of spaceSections) {
+      result[section.spaceId] = statuses.reduce((acc, status) => {
         if (status.id === 'undefined') {
-          acc[status.id] = mainItems.filter((item) => !item.status);
+          acc[status.id] = section.items.filter((item) => !item.status);
         } else {
-          acc[status.id] = mainItems.filter((item) => item.status === status.id);
+          acc[status.id] = section.items.filter((item) => item.status === status.id);
         }
         return acc;
-      },
-      {} as Record<string, Item[]>
-    );
-  }, [statuses, mainItems]);
+      }, {} as Record<string, Item[]>);
+    }
+    return result;
+  }, [spaceSections, statuses]);
 
-  // Group portal items by status
-  const portalGroupedItems = useMemo(() => {
-    if (portalItemsWithSpace.length === 0) return {} as Record<string, (Item & { _spaceName: string })[]>;
-    return statuses.reduce(
-      (acc, status) => {
-        if (status.id === 'undefined') {
-          acc[status.id] = portalItemsWithSpace.filter((item) => !item.status);
-        } else {
-          acc[status.id] = portalItemsWithSpace.filter((item) => item.status === status.id);
-        }
-        return acc;
-      },
-      {} as Record<string, (Item & { _spaceName: string })[]>
-    );
-  }, [statuses, portalItemsWithSpace]);
-
-  const activeItem = activeId ? mainItems.find((item) => item.id === activeId) : null;
+  const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -376,19 +387,28 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     if (!over) return;
 
     const itemId = active.id as string;
-    const newStatus = over.id as string;
+    const droppableId = String(over.id);
     const item = items.find((i) => i.id === itemId);
 
     if (!item) return;
 
-    // Get current status
-    const currentStatus = item.status || 'undefined';
+    // Parse droppable ID: "spaceId::statusId"
+    const separatorIdx = droppableId.indexOf('::');
+    const targetSpaceId = separatorIdx >= 0 ? droppableId.slice(0, separatorIdx) : currentSpaceId;
+    const targetStatusId = separatorIdx >= 0 ? droppableId.slice(separatorIdx + 2) : droppableId;
 
-    // Only update if status changed
+    const newStatus = targetStatusId === 'undefined' ? '' : targetStatusId;
+    const currentStatus = item.status || '';
+
+    // Cross-space move
+    if (targetSpaceId && item.spaceId !== targetSpaceId && onMoveItemToSpace) {
+      onMoveItemToSpace(itemId, item.spaceId, targetSpaceId, { status: newStatus });
+      return;
+    }
+
+    // Same space: status change only
     if (currentStatus !== newStatus) {
-      // Convert 'undefined' column to empty status
-      const statusToSet = newStatus === 'undefined' ? '' : newStatus;
-      onUpdateStatus(itemId, statusToSet);
+      onUpdateStatus(itemId, newStatus);
     }
   };
 
@@ -400,33 +420,72 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="p-4 overflow-x-auto h-full">
-        <div className="flex gap-3 h-full min-h-0">
-          {statuses.map((status) => (
-            <KanbanColumn
-              key={status.id}
-              column={status}
-              items={groupedItems[status.id] || []}
-              portalItems={portalGroupedItems[status.id]}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onUpdateStatus={onUpdateStatus}
-              onAddChild={onAddChild}
-              onMoveToSpace={onMoveToSpace}
-              onDuplicateToSpace={onDuplicateToSpace}
-              onConvertToSpace={onConvertToSpace}
-              isOver={overId === status.id}
-              nextStatus={nextStatusMap[status.id]?.id}
-              canEdit={canEdit}
-              referentiels={referentiels}
-            />
-          ))}
-        </div>
+      <div className="p-4 overflow-y-auto h-full space-y-2">
+        {spaceSections.map((section, idx) => {
+          const grouped = groupedBySpace[section.spaceId] || {};
+          return (
+            <div key={section.spaceId}>
+              {/* Resize handle between boards */}
+              {idx > 0 && (
+                <ResizeHandle onResize={(delta) => handleResize(spaceSections[idx - 1].spaceId, delta)} />
+              )}
+
+              {/* Portal header */}
+              {section.isPortal && (
+                <div className="flex items-center gap-2 mb-2 mt-1">
+                  <FolderKanban className="w-4 h-4 text-primary/70" />
+                  <Link
+                    to={`/spaces/${section.spaceId}`}
+                    className="text-sm font-medium text-primary/70 hover:text-primary hover:underline"
+                  >
+                    {section.spaceName}
+                  </Link>
+                  <span className="text-xs text-muted-foreground">
+                    ({section.items.length} item{section.items.length !== 1 ? 's' : ''})
+                  </span>
+                </div>
+              )}
+
+              {/* Board */}
+              <div
+                className={`overflow-x-auto ${section.isPortal ? 'border border-dashed border-primary/20 rounded-lg p-2' : ''}`}
+                style={{ height: spaceSections.length > 1 ? getHeight(section.spaceId) : undefined }}
+              >
+                <div className="flex gap-3 h-full min-h-0">
+                  {statuses.map((status) => {
+                    const droppableId = `${section.spaceId}::${status.id}`;
+                    return (
+                      <KanbanColumn
+                        key={droppableId}
+                        column={status}
+                        items={grouped[status.id] || []}
+                        droppableId={droppableId}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onUpdateStatus={onUpdateStatus}
+                        onAddChild={onAddChild}
+                        onMoveToSpace={onMoveToSpace}
+                        onDuplicateToSpace={onDuplicateToSpace}
+                        onConvertToSpace={onConvertToSpace}
+                        isOver={overId === droppableId}
+                        nextStatus={nextStatusMap[status.id]?.id}
+                        nextStatusLabel={nextStatusMap[status.id]?.label}
+                        canEdit={canEdit}
+                        referentiels={referentiels}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Drag overlay */}

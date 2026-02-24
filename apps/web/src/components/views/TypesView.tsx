@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DndContext,
@@ -11,8 +11,9 @@ import {
   useSensors,
   useDroppable,
   useDraggable,
+  closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
@@ -36,6 +37,7 @@ interface TypesViewProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -50,6 +52,7 @@ interface TypeColumnConfig {
 interface TypeColumnProps {
   column: TypeColumnConfig;
   items: Item[];
+  droppableId: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onAddChild: (parentId: string) => void;
@@ -76,13 +79,14 @@ interface TypeCardProps {
   canEdit?: boolean;
 }
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, statusLabels, statusColors, canEdit = true, portalSpaceName }: TypeCardProps & { portalSpaceName?: string }) {
+const MIN_BOARD_HEIGHT = 200;
+const DEFAULT_BOARD_HEIGHT = 400;
+
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
   const Icon = TYPE_ICONS[item.type];
-  const isPortal = !!portalSpaceName;
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item },
-    disabled: isPortal,
   });
 
   const style = transform
@@ -100,21 +104,11 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       style={style}
       className={`bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
-      } ${isPortal ? 'border-dashed border-primary/30' : ''}`}
+      }`}
       onClick={() => onEdit(item.id)}
     >
-      {portalSpaceName && (
-        <Link
-          to={`/spaces/${item.spaceId}`}
-          className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary mb-1.5 -mt-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <FolderKanban className="w-3 h-3" />
-          <span>{portalSpaceName}</span>
-        </Link>
-      )}
       <div className="flex items-start gap-2">
-        {canEdit && !isPortal && (
+        {canEdit && (
           <div
             {...listeners}
             {...attributes}
@@ -162,7 +156,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       </div>
 
       {/* Action menu */}
-      {canEdit && !isPortal && (
+      {canEdit && (
         <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={[
@@ -189,13 +183,9 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   );
 }
 
-interface TypeColumnProps2 extends TypeColumnProps {
-  portalItems?: (Item & { _spaceName: string })[];
-}
-
-function TypeColumn({ column, items, portalItems, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps2) {
+function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
-    id: column.id,
+    id: droppableId,
   });
 
   const Icon = TYPE_ICONS[column.id];
@@ -214,7 +204,7 @@ function TypeColumn({ column, items, portalItems, onEdit, onDelete, onAddChild, 
             <h3 className="font-medium">{column.label}</h3>
           </div>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {items.length + (portalItems?.length || 0)}
+            {items.length}
           </span>
         </div>
       </div>
@@ -222,7 +212,7 @@ function TypeColumn({ column, items, portalItems, onEdit, onDelete, onAddChild, 
       {/* Column items - droppable area */}
       <div
         ref={setNodeRef}
-        className={`p-2 space-y-2 flex-1 overflow-y-auto min-h-[100px] ${
+        className={`p-2 space-y-2 flex-1 overflow-y-auto min-h-[60px] ${
           isOver ? 'ring-2 ring-primary ring-inset' : ''
         }`}
       >
@@ -242,37 +232,55 @@ function TypeColumn({ column, items, portalItems, onEdit, onDelete, onAddChild, 
           />
         ))}
 
-        {items.length === 0 && (!portalItems || portalItems.length === 0) && (
-          <div className="text-center py-8 text-muted-foreground text-sm">
+        {items.length === 0 && (
+          <div className="text-center py-4 text-muted-foreground text-sm">
             Aucun element
           </div>
-        )}
-
-        {/* Portal items (read-only, from child spaces) */}
-        {portalItems && portalItems.length > 0 && (
-          <>
-            {items.length > 0 && <div className="border-t border-dashed border-primary/20 my-2" />}
-            {portalItems.map((item) => (
-              <TypeCard
-                key={item.id}
-                item={item}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onAddChild={onAddChild}
-                statusLabels={statusLabels}
-                statusColors={statusColors}
-                canEdit={false}
-                portalSpaceName={item._spaceName}
-              />
-            ))}
-          </>
         )}
       </div>
     </div>
   );
 }
 
-export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: TypesViewProps) {
+// Resize handle between boards
+function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
+  const handleRef = useRef<HTMLDivElement>(null);
+  const startYRef = useRef(0);
+  const draggingRef = useRef(false);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startYRef.current = e.clientY;
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    const delta = e.clientY - startYRef.current;
+    startYRef.current = e.clientY;
+    onResize(delta);
+  }, [onResize]);
+
+  const onPointerUp = useCallback(() => {
+    draggingRef.current = false;
+  }, []);
+
+  return (
+    <div
+      ref={handleRef}
+      className="flex items-center justify-center h-3 cursor-row-resize group hover:bg-muted/50 transition-colors -my-0.5 z-10"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    >
+      <GripHorizontal className="w-5 h-3 text-muted-foreground/40 group-hover:text-muted-foreground" />
+    </div>
+  );
+}
+
+export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onMoveItemToSpace, referentiels, canEdit = true }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -316,43 +324,44 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
     return { statusLabels: labels, statusColors: colors };
   }, [referentiels]);
 
-  // Separate main items from portal items
-  const { mainItems, portalItemsWithSpace } = useMemo(() => {
+  // Build space sections: main space + portal spaces
+  const spaceSections = useMemo(() => {
     if (!currentSpaceId || !portalGroups?.length) {
-      return { mainItems: items, portalItemsWithSpace: [] as (Item & { _spaceName: string })[] };
+      return [{ spaceId: currentSpaceId || 'default', spaceName: null, isPortal: false, items }];
     }
-    const main = items.filter(i => i.spaceId === currentSpaceId);
-    const spaceNames = new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
-    const portal = items
-      .filter(i => i.spaceId !== currentSpaceId)
-      .map(i => ({ ...i, _spaceName: spaceNames.get(i.spaceId) || 'Espace' }));
-    return { mainItems: main, portalItemsWithSpace: portal };
+    const mainItems = items.filter(i => i.spaceId === currentSpaceId);
+    const sections = [{ spaceId: currentSpaceId, spaceName: null as string | null, isPortal: false, items: mainItems }];
+    for (const pg of portalGroups) {
+      const spaceItems = items.filter(i => i.spaceId === pg.spaceId);
+      sections.push({ spaceId: pg.spaceId, spaceName: pg.spaceName, isPortal: true, items: spaceItems });
+    }
+    return sections;
   }, [items, currentSpaceId, portalGroups]);
 
-  // Group main items by type
-  const groupedItems = useMemo(() => {
-    return typeColumns.reduce(
-      (acc, column) => {
-        acc[column.id] = mainItems.filter((item) => item.type === column.id);
-        return acc;
-      },
-      {} as Record<string, Item[]>
-    );
-  }, [typeColumns, mainItems]);
+  // Resizable heights per space
+  const [boardHeights, setBoardHeights] = useState<Record<string, number>>({});
+  const getHeight = (spaceId: string) => boardHeights[spaceId] || DEFAULT_BOARD_HEIGHT;
 
-  // Group portal items by type
-  const portalGroupedItems = useMemo(() => {
-    if (portalItemsWithSpace.length === 0) return {} as Record<string, (Item & { _spaceName: string })[]>;
-    return typeColumns.reduce(
-      (acc, column) => {
-        acc[column.id] = portalItemsWithSpace.filter((item) => item.type === column.id);
-        return acc;
-      },
-      {} as Record<string, (Item & { _spaceName: string })[]>
-    );
-  }, [typeColumns, portalItemsWithSpace]);
+  const handleResize = useCallback((spaceId: string, delta: number) => {
+    setBoardHeights(prev => ({
+      ...prev,
+      [spaceId]: Math.max(MIN_BOARD_HEIGHT, (prev[spaceId] || DEFAULT_BOARD_HEIGHT) + delta),
+    }));
+  }, []);
 
-  const activeItem = activeId ? mainItems.find((item) => item.id === activeId) : null;
+  // Group items by type per space
+  const groupedBySpace = useMemo(() => {
+    const result: Record<string, Record<string, Item[]>> = {};
+    for (const section of spaceSections) {
+      result[section.spaceId] = typeColumns.reduce((acc, column) => {
+        acc[column.id] = section.items.filter((item) => item.type === column.id);
+        return acc;
+      }, {} as Record<string, Item[]>);
+    }
+    return result;
+  }, [spaceSections, typeColumns]);
+
+  const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -370,12 +379,25 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
     if (!over) return;
 
     const itemId = active.id as string;
-    const newType = over.id as ItemType;
-    const item = mainItems.find((i) => i.id === itemId);
+    const droppableId = String(over.id);
+    const item = items.find((i) => i.id === itemId);
 
     if (!item) return;
 
-    // Only update if type changed
+    // Parse droppable ID: "spaceId::typeId"
+    const separatorIdx = droppableId.indexOf('::');
+    const targetSpaceId = separatorIdx >= 0 ? droppableId.slice(0, separatorIdx) : currentSpaceId;
+    const targetTypeId = separatorIdx >= 0 ? droppableId.slice(separatorIdx + 2) : droppableId;
+
+    const newType = targetTypeId as ItemType;
+
+    // Cross-space move
+    if (targetSpaceId && item.spaceId !== targetSpaceId && onMoveItemToSpace) {
+      onMoveItemToSpace(itemId, item.spaceId, targetSpaceId, { type: newType });
+      return;
+    }
+
+    // Same space: type change only
     if (item.type !== newType) {
       onUpdateType(itemId, newType);
     }
@@ -389,32 +411,70 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="p-4 overflow-x-auto h-full">
-        <div className="flex gap-3 h-full min-h-0">
-          {typeColumns.map((column) => (
-            <TypeColumn
-              key={column.id}
-              column={column}
-              items={groupedItems[column.id] || []}
-              portalItems={portalGroupedItems[column.id]}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onAddChild={onAddChild}
-              onMoveToSpace={onMoveToSpace}
-              onDuplicateToSpace={onDuplicateToSpace}
-              onConvertToSpace={onConvertToSpace}
-              isOver={overId === column.id}
-              statusLabels={statusLabels}
-              statusColors={statusColors}
-              canEdit={canEdit}
-            />
-          ))}
-        </div>
+      <div className="p-4 overflow-y-auto h-full space-y-2">
+        {spaceSections.map((section, idx) => {
+          const grouped = groupedBySpace[section.spaceId] || {};
+          return (
+            <div key={section.spaceId}>
+              {/* Resize handle between boards */}
+              {idx > 0 && (
+                <ResizeHandle onResize={(delta) => handleResize(spaceSections[idx - 1].spaceId, delta)} />
+              )}
+
+              {/* Portal header */}
+              {section.isPortal && (
+                <div className="flex items-center gap-2 mb-2 mt-1">
+                  <FolderKanban className="w-4 h-4 text-primary/70" />
+                  <Link
+                    to={`/spaces/${section.spaceId}`}
+                    className="text-sm font-medium text-primary/70 hover:text-primary hover:underline"
+                  >
+                    {section.spaceName}
+                  </Link>
+                  <span className="text-xs text-muted-foreground">
+                    ({section.items.length} item{section.items.length !== 1 ? 's' : ''})
+                  </span>
+                </div>
+              )}
+
+              {/* Board */}
+              <div
+                className={`overflow-x-auto ${section.isPortal ? 'border border-dashed border-primary/20 rounded-lg p-2' : ''}`}
+                style={{ height: spaceSections.length > 1 ? getHeight(section.spaceId) : undefined }}
+              >
+                <div className="flex gap-3 h-full min-h-0">
+                  {typeColumns.map((column) => {
+                    const droppableId = `${section.spaceId}::${column.id}`;
+                    return (
+                      <TypeColumn
+                        key={droppableId}
+                        column={column}
+                        items={grouped[column.id] || []}
+                        droppableId={droppableId}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onAddChild={onAddChild}
+                        onMoveToSpace={onMoveToSpace}
+                        onDuplicateToSpace={onDuplicateToSpace}
+                        onConvertToSpace={onConvertToSpace}
+                        isOver={overId === droppableId}
+                        statusLabels={statusLabels}
+                        statusColors={statusColors}
+                        canEdit={canEdit}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Drag overlay */}
