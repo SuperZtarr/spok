@@ -217,6 +217,26 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-24] - Refonte réorganisation MindMap + UI tweaks
+
+**Demande :** Revoir la réorganisation MindMap avec 4 règles claires + corrections UI diverses
+**Règles établies :**
+1. "Réorganiser les enfants" = éventail direction parent_direct → élément (pas __space__)
+2. Éléments fixés : même règle, direction toujours locale
+3. Portails : distance proportionnelle au nombre d'items, enfants en éventail __space__ → portail
+4. Drag : les enfants suivent (comportement conservé)
+**Actions réalisées :**
+- Fix baseAngle dans reorganizeRef : utilise le parent direct au lieu de __space__
+- Rayon adaptatif (sqrt descendants) cohérent avec layoutFan
+- Distance portail = 300 + sqrt(n)*100 au lieu de 180 fixe (useEffect + resetLayout)
+- Réorganisation items portail : recherche dans fullTree puis portalTrees, gestion child-space nodes
+- Bouton ↺ sur nœuds portail pour réorganiser leurs enfants
+- UI: modal fullscreen mobile, admin sidebar réordonnée, header élargi, logo crop CSS, ITEM_TYPES fix
+**État :** TERMINÉ
+**Commit :** fa469df
+
+---
+
 #### [2026-02-24] - Portails d'espaces enfants cross-space dans toutes les vues
 
 **Demande :** Pouvoir cocher des espaces enfants dans la sidebar pour afficher leurs items en lecture seule dans l'espace parent, avec distinction visuelle.

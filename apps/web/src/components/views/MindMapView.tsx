@@ -635,7 +635,7 @@ function calculateLayout(
 
       // Push nodes further: max of descendant-based radius AND sibling-spacing radius
       const radius = Math.max(
-        RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4),
+        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
         spacingRadius
       );
 
@@ -687,7 +687,7 @@ function calculateLayout(
       const descendants = rootVisibleCounts[i];
       const rootRadius = Math.max(
         minRadiusForSpacing,
-        RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4)
+        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
       );
 
       const cx = centerPos.x + rootRadius * Math.cos(angle);
@@ -1240,7 +1240,7 @@ function MindMapViewInner({
               ? (MIN_SIBLING_SPACING * (unpinnedKids.length - 1)) / Math.max(subSpread, 0.2)
               : 0;
             const subRadius = Math.max(
-              RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4),
+              RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
               spacingRadius
             );
             const a = unpinnedKids.length === 1 ? dirAngle : dirAngle + subStart + (unpinnedIdx * subSpread) / Math.max(1, unpinnedKids.length - 1);
@@ -1270,7 +1270,7 @@ function MindMapViewInner({
           ? (MIN_SIBLING_SPACING * (unpinnedCount - 1)) / Math.max(angleSpread, 0.2)
           : 0;
         const radius = Math.max(
-          RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4),
+          RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
           spacingRadius
         );
         const angle = unpinnedCount === 1
@@ -1435,10 +1435,7 @@ function MindMapViewInner({
       });
     });
 
-    // Add mindmap nodes for portal items using a simple tree layout below the portal node
-    const PORTAL_H_SPACING = 170; // horizontal spacing between siblings
-    const PORTAL_V_SPACING = 80;  // vertical spacing between levels
-
+    // Add mindmap nodes for portal items using radial fan layout (same as layoutFan)
     portalItemsBySpace.forEach((portalItems, portalSpaceId) => {
       const childPortalId = `child-space-${portalSpaceId}`;
       const portalNode = portalNodes.find(n => n.id === childPortalId);
@@ -1448,33 +1445,27 @@ function MindMapViewInner({
       const subTree = buildTree(portalItems);
       if (subTree.length === 0) return;
 
-      // Count total visible leaf nodes in a subtree (for width allocation)
-      function countLeaves(item: TreeItem): number {
+      // Count visible descendants (consistent with layoutFan)
+      function countVisible(item: TreeItem): number {
         if (collapsedIds.has(item.id) || item.children.length === 0) return 1;
-        return item.children.reduce((sum, c) => sum + countLeaves(c), 0);
+        return item.children.reduce((sum, c) => sum + countVisible(c), 0);
       }
 
-      // Direction from space center to portal — place tree extending outward
+      // Direction from __space__ to portal node (Rule 3)
       const spaceNodePos = portalPosMap.get(SPACE_NODE_ID) || { x: 0, y: 0 };
-      const dirX = portalPos.x - spaceNodePos.x;
-      const dirY = portalPos.y - spaceNodePos.y;
-      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
-      // Normalized outward direction
-      const outX = dirX / dirLen;
-      const outY = dirY / dirLen;
-      // Perpendicular direction (for spreading siblings)
-      const perpX = -outY;
-      const perpY = outX;
+      const baseAngle = Math.atan2(portalPos.y - spaceNodePos.y, portalPos.x - spaceNodePos.x);
 
       const pSpaceName = portalSpaceNames.get(portalSpaceId);
 
-      // Recursive function: place item and its children
+      // Recursive function: place item and its children in radial fan
       function placePortalItem(
         item: TreeItem,
         cx: number, cy: number,
         parentNodeId: string,
         spaceName: string | undefined,
         depth: number,
+        dirAngle: number,
+        arcSpan: number,
       ) {
         const statusColor = getStatusColor(item.status, statuses);
         const hexColor = tailwindBgToHex(statusColor);
@@ -1527,36 +1518,79 @@ function MindMapViewInner({
           style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
         });
 
-        // Place children if not collapsed
+        // Place children in radial fan if not collapsed
         if (!collapsedIds.has(item.id) && item.children.length > 0) {
-          const childLeaves = item.children.map(c => countLeaves(c));
-          const totalLeaves = childLeaves.reduce((s, v) => s + v, 0);
-          const totalWidth = totalLeaves * PORTAL_H_SPACING;
+          const children = item.children;
+          const childVisibleCounts = children.map(c => countVisible(c));
+          const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
+          const count = children.length;
 
-          let offset = -totalWidth / 2;
-          item.children.forEach((child, ci) => {
-            const leafW = childLeaves[ci] * PORTAL_H_SPACING;
-            const childCx = cx + perpX * (offset + leafW / 2) + outX * PORTAL_V_SPACING;
-            const childCy = cy + perpY * (offset + leafW / 2) + outY * PORTAL_V_SPACING;
-            offset += leafW;
-            placePortalItem(child, childCx, childCy, item.id, undefined, depth + 1);
-          });
+          const MIN_SIBLING_SPACING = 130;
+          const spacingRadius = count > 1
+            ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
+            : 0;
+
+          for (let i = 0; i < count; i++) {
+            const child = children[i];
+            const descendants = childVisibleCounts[i];
+            const radius = Math.max(
+              RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
+              spacingRadius
+            );
+            const angle = count === 1
+              ? dirAngle
+              : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
+
+            const childCx = cx + radius * Math.cos(angle);
+            const childCy = cy + radius * Math.sin(angle);
+
+            const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
+            const directChildren = child.children?.length || 0;
+            const childArc = descendants > 1
+              ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+              : 0;
+
+            placePortalItem(child, childCx, childCy, item.id, undefined, depth + 1, angle, childArc);
+          }
         }
       }
 
-      // Place root items: spread along perpendicular direction, offset along outward direction
-      const rootLeaves = subTree.map(r => countLeaves(r));
-      const totalRootLeaves = rootLeaves.reduce((s, v) => s + v, 0);
-      const totalRootWidth = totalRootLeaves * PORTAL_H_SPACING;
-      const startDist = 160; // distance from portal node to first level
+      // Place root portal items in a radial fan around the portal node
+      const rootCount = subTree.length;
+      const rootVisibleCounts = subTree.map(r => countVisible(r));
+      const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
 
-      let rootOffset = -totalRootWidth / 2;
+      // Arc allocation: equal base (50%) + proportional surplus (50%)
+      const totalArcSpan = Math.min(Math.PI * 1.5, rootCount * (Math.PI / 4));
+      const equalArc = totalArcSpan / Math.max(1, rootCount);
+      const rootArcs = subTree.map((_, i) => {
+        const proportionalArc = totalArcSpan * (rootVisibleCounts[i] / Math.max(1, totalRootVisible));
+        return equalArc * 0.5 + proportionalArc * 0.5;
+      });
+
+      const MIN_NODE_SPACING = 160;
+      const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
+
+      let cumulativeAngle = baseAngle - totalArcSpan / 2;
       subTree.forEach((rootItem, i) => {
-        const leafW = rootLeaves[i] * PORTAL_H_SPACING;
-        const cx = portalPos.x + outX * startDist + perpX * (rootOffset + leafW / 2);
-        const cy = portalPos.y + outY * startDist + perpY * (rootOffset + leafW / 2);
-        rootOffset += leafW;
-        placePortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0);
+        const childArc = rootArcs[i];
+        const angle = cumulativeAngle + childArc / 2;
+        const descendants = rootVisibleCounts[i];
+        const rootRadius = Math.max(
+          minRadiusForSpacing,
+          RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
+        );
+
+        const cx = portalPos.x + rootRadius * Math.cos(angle);
+        const cy = portalPos.y + rootRadius * Math.sin(angle);
+
+        const directChildren = rootItem.children?.length || 0;
+        const fanArc = descendants > 1
+          ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+          : 0;
+
+        placePortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0, angle, fanArc);
+        cumulativeAngle += childArc;
       });
     });
 
@@ -2030,10 +2064,7 @@ function MindMapViewInner({
       });
     });
 
-    // Add mindmap nodes for portal items using tree layout (matching useEffect)
-    const RESET_PORTAL_H_SPACING = 170;
-    const RESET_PORTAL_V_SPACING = 80;
-
+    // Add mindmap nodes for portal items using radial fan layout (matching useEffect)
     portalItemsBySpace.forEach((portalItems, portalSpaceId) => {
       const childPortalId = `child-space-${portalSpaceId}`;
       const portalNode = portalNodes.find(n => n.id === childPortalId);
@@ -2043,31 +2074,24 @@ function MindMapViewInner({
       const subTree = buildTree(portalItems);
       if (subTree.length === 0) return;
 
-      // Count total visible leaf nodes in a subtree (for width allocation)
-      function resetCountLeaves(item: TreeItem): number {
+      function resetCountVisible(item: TreeItem): number {
         if (collapsedIds.has(item.id) || item.children.length === 0) return 1;
-        return item.children.reduce((sum, c) => sum + resetCountLeaves(c), 0);
+        return item.children.reduce((sum, c) => sum + resetCountVisible(c), 0);
       }
 
-      // Direction from space center to portal — place tree extending outward
       const spaceNodePos = resetPosMap.get(RESET_SPACE_NODE_ID) || { x: 0, y: 0 };
-      const dirX = portalPos.x - spaceNodePos.x;
-      const dirY = portalPos.y - spaceNodePos.y;
-      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
-      const outX = dirX / dirLen;
-      const outY = dirY / dirLen;
-      const perpX = -outY;
-      const perpY = outX;
+      const resetBaseAngle = Math.atan2(portalPos.y - spaceNodePos.y, portalPos.x - spaceNodePos.x);
 
       const pSpaceName = portalSpaceNames.get(portalSpaceId);
 
-      // Recursive function: place item and its children
       function placeResetPortalItem(
         item: TreeItem,
         cx: number, cy: number,
         parentNodeId: string,
         spaceName: string | undefined,
         depth: number,
+        dirAngle: number,
+        arcSpan: number,
       ) {
         const statusColor = getStatusColor(item.status, statuses);
         const hexColor = tailwindBgToHex(statusColor);
@@ -2110,7 +2134,6 @@ function MindMapViewInner({
           },
         });
 
-        // Edge from parent
         portalEdges.push({
           id: `portal-edge-${parentNodeId}-${item.id}`,
           source: parentNodeId,
@@ -2119,36 +2142,76 @@ function MindMapViewInner({
           style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
         });
 
-        // Place children if not collapsed
         if (!collapsedIds.has(item.id) && item.children.length > 0) {
-          const childLeaves = item.children.map(c => resetCountLeaves(c));
-          const totalLeaves = childLeaves.reduce((s, v) => s + v, 0);
-          const totalWidth = totalLeaves * RESET_PORTAL_H_SPACING;
+          const children = item.children;
+          const childVisibleCounts = children.map(c => resetCountVisible(c));
+          const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
+          const count = children.length;
 
-          let offset = -totalWidth / 2;
-          item.children.forEach((child, ci) => {
-            const leafW = childLeaves[ci] * RESET_PORTAL_H_SPACING;
-            const childCx = cx + perpX * (offset + leafW / 2) + outX * RESET_PORTAL_V_SPACING;
-            const childCy = cy + perpY * (offset + leafW / 2) + outY * RESET_PORTAL_V_SPACING;
-            offset += leafW;
-            placeResetPortalItem(child, childCx, childCy, item.id, undefined, depth + 1);
-          });
+          const MIN_SIBLING_SPACING = 130;
+          const spacingRadius = count > 1
+            ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
+            : 0;
+
+          for (let i = 0; i < count; i++) {
+            const child = children[i];
+            const descendants = childVisibleCounts[i];
+            const radius = Math.max(
+              RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
+              spacingRadius
+            );
+            const angle = count === 1
+              ? dirAngle
+              : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
+
+            const childCx = cx + radius * Math.cos(angle);
+            const childCy = cy + radius * Math.sin(angle);
+
+            const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
+            const directChildren = child.children?.length || 0;
+            const childArc = descendants > 1
+              ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+              : 0;
+
+            placeResetPortalItem(child, childCx, childCy, item.id, undefined, depth + 1, angle, childArc);
+          }
         }
       }
 
-      // Place root items: spread along perpendicular direction, offset along outward direction
-      const rootLeaves = subTree.map(r => resetCountLeaves(r));
-      const totalRootLeaves = rootLeaves.reduce((s, v) => s + v, 0);
-      const totalRootWidth = totalRootLeaves * RESET_PORTAL_H_SPACING;
-      const startDist = 160;
+      const rootCount = subTree.length;
+      const rootVisibleCounts = subTree.map(r => resetCountVisible(r));
+      const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
 
-      let rootOffset = -totalRootWidth / 2;
+      const totalArcSpan = Math.min(Math.PI * 1.5, rootCount * (Math.PI / 4));
+      const equalArc = totalArcSpan / Math.max(1, rootCount);
+      const rootArcs = subTree.map((_, i) => {
+        const proportionalArc = totalArcSpan * (rootVisibleCounts[i] / Math.max(1, totalRootVisible));
+        return equalArc * 0.5 + proportionalArc * 0.5;
+      });
+
+      const MIN_NODE_SPACING = 160;
+      const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
+
+      let cumulativeAngle = resetBaseAngle - totalArcSpan / 2;
       subTree.forEach((rootItem, i) => {
-        const leafW = rootLeaves[i] * RESET_PORTAL_H_SPACING;
-        const cx = portalPos.x + outX * startDist + perpX * (rootOffset + leafW / 2);
-        const cy = portalPos.y + outY * startDist + perpY * (rootOffset + leafW / 2);
-        rootOffset += leafW;
-        placeResetPortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0);
+        const childArc = rootArcs[i];
+        const angle = cumulativeAngle + childArc / 2;
+        const descendants = rootVisibleCounts[i];
+        const rootRadius = Math.max(
+          minRadiusForSpacing,
+          RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
+        );
+
+        const cx = portalPos.x + rootRadius * Math.cos(angle);
+        const cy = portalPos.y + rootRadius * Math.sin(angle);
+
+        const directChildren = rootItem.children?.length || 0;
+        const fanArc = descendants > 1
+          ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+          : 0;
+
+        placeResetPortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0, angle, fanArc);
+        cumulativeAngle += childArc;
       });
     });
 
