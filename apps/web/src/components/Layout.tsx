@@ -419,9 +419,9 @@ export function Layout() {
   // Sidebar content (shared between mobile and desktop)
   const sidebarContent = (
     <>
-      {/* Header sidebar */}
-      <div className="p-4 border-b border-border flex-shrink-0">
-        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto max-h-32 object-contain object-left" /></Link>
+      {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
+      <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
+        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
       </div>
 
       {/* Navigation - scrollable */}
@@ -560,7 +560,7 @@ export function Layout() {
         {/* Top header */}
         <header className="border-b border-border bg-card flex items-center flex-shrink-0">
           {/* Left: hamburger + title + badges */}
-          <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 py-2">
             {/* Hamburger menu (mobile) */}
             <button
               className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
@@ -569,20 +569,22 @@ export function Layout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-sm md:text-base font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[220px]">{getPageTitle()}</h2>
-            {currentSpace && (
-              <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-                {currentSpace.community && (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    {currentSpace.community.name}
+            <div className="min-w-0">
+              <h2 className="text-sm md:text-base font-semibold text-foreground truncate">{getPageTitle()}</h2>
+              {currentSpace && (
+                <div className="flex items-center gap-2">
+                  {currentSpace.community && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      {currentSpace.community.name}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground/70 px-1.5 py-0.5 bg-muted/50 rounded">
+                    {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
                   </span>
-                )}
-                <span className="text-[11px] text-muted-foreground/70 px-1.5 py-0.5 bg-muted/50 rounded">
-                  {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
-                </span>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
           {/* Right: navbar menu + search + user avatar */}
           <div className="flex items-center gap-2 ml-auto flex-shrink-0 px-4 md:px-5">

@@ -42,15 +42,8 @@ export function AdminLayout() {
     <div className="h-screen flex overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col">
-        <div className="p-4 border-b border-border">
-          <img src="/logo.png" alt="SPOK" className="w-full h-auto mb-3" />
-          <div className="flex items-center justify-between p-2 rounded-md bg-accent/50">
-            <div>
-              <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">Administrateur</p>
-            </div>
-            <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">Admin</span>
-          </div>
+        <div className="px-1 border-b border-border overflow-hidden">
+          <img src="/logo.png" alt="SPOK" className="w-full h-auto -my-[18%]" />
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -68,15 +61,15 @@ export function AdminLayout() {
             </span>
 
             <Link
-              to="/admin/users"
+              to="/admin/communities"
               className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                isActive('/admin/users')
+                isActive('/admin/communities')
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-accent'
               }`}
             >
-              <Users className="w-4 h-4" />
-              Utilisateurs
+              <Building2 className="w-4 h-4" />
+              Communautes
             </Link>
 
             <Link
@@ -92,39 +85,15 @@ export function AdminLayout() {
             </Link>
 
             <Link
-              to="/admin/communities"
+              to="/admin/users"
               className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                isActive('/admin/communities')
+                isActive('/admin/users')
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-accent'
               }`}
             >
-              <Building2 className="w-4 h-4" />
-              Communautes
-            </Link>
-
-            <Link
-              to="/admin/anomalies"
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                isActive('/admin/anomalies')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent'
-              }`}
-            >
-              <AlertTriangle className="w-4 h-4" />
-              Diagnostics
-            </Link>
-
-            <Link
-              to="/admin/referentiels"
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                isActive('/admin/referentiels')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              Referentiels
+              <Users className="w-4 h-4" />
+              Utilisateurs
             </Link>
 
             <Link
@@ -149,6 +118,30 @@ export function AdminLayout() {
             >
               <History className="w-4 h-4" />
               Audit Logs
+            </Link>
+
+            <Link
+              to="/admin/anomalies"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                isActive('/admin/anomalies')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Diagnostics
+            </Link>
+
+            <Link
+              to="/admin/referentiels"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                isActive('/admin/referentiels')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Referentiels
             </Link>
           </div>
         </nav>

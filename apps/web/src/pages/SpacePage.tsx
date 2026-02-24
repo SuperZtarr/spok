@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
+import { ITEM_TYPES } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useSpaces } from '../hooks/useSpaces';
@@ -1033,7 +1034,7 @@ export function SpacePage() {
           <div className="bg-card border rounded-lg p-4 mb-6">
             <form onSubmit={handleCreateItem} className="space-y-4">
               <div className="flex gap-2 flex-wrap">
-                {(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE'] as const).map((t) => {
+                {ITEM_TYPES.map((t) => {
                   const Icon = TYPE_ICONS[t];
                   const isActive = newItemType === t;
                   const typeColor = getTypeColor(t, referentiels?.typeLabels);

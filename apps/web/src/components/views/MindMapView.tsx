@@ -374,11 +374,13 @@ interface PortalNodeProps {
     onRemove: (portalId: string) => void;
     portalId: string;
     isChildSpace?: boolean;
+    onReorganizeChildren?: (id: string) => void;
+    hasItems?: boolean;
   };
 }
 
 function PortalNode({ data }: PortalNodeProps) {
-  const { space, onRemove, portalId, isChildSpace } = data;
+  const { space, onRemove, portalId, isChildSpace, onReorganizeChildren, hasItems } = data;
 
   const handleClick = () => {
     // Navigate to the space (same tab for child spaces, new tab for portals)
@@ -423,19 +425,33 @@ function PortalNode({ data }: PortalNodeProps) {
         </div>
       </div>
 
-      {/* Remove button (hidden for auto child space portals) */}
-      {!isChildSpace && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(portalId);
-          }}
-          className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-          title="Supprimer le portail"
-        >
-          <X className="w-3 h-3 text-red-500" />
-        </button>
-      )}
+      {/* Action buttons on hover */}
+      <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {hasItems && onReorganizeChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorganizeChildren(portalId);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-indigo-50"
+            title="Réorganiser les enfants"
+          >
+            <RotateCcw className="w-3 h-3 text-indigo-500" />
+          </button>
+        )}
+        {!isChildSpace && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(portalId);
+            }}
+            className="p-1 bg-white rounded-full shadow-md hover:bg-red-50"
+            title="Supprimer le portail"
+          >
+            <X className="w-3 h-3 text-red-500" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1121,23 +1137,73 @@ function MindMapViewInner({
       return null;
     }
 
-    const treeNode = findTreeNode(fullTree, parentId);
-    if (!treeNode || treeNode.children.length === 0) return;
-
-    const visibleChildren = collapsedIds.has(parentId) ? [] : treeNode.children;
-    if (visibleChildren.length === 0) return;
-
-    // Get the parent's current absolute position
+    // Get positions first (needed for all cases)
     const currentNodes = getNodes();
     const absPositions = getAbsolutePositions(currentNodes);
-    const parentPosRaw = absPositions.get(parentId);
-    if (!parentPosRaw) return;
-    const parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
+
+    let visibleChildren: TreeItem[] = [];
+    let parentPos: { x: number; y: number };
+    let baseAngle: number;
+
+    // Case 1: Portal node (child-space-{spaceId}) → reorganize root items of that portal space
+    if (parentId.startsWith('child-space-')) {
+      const portalSpaceId = parentId.replace('child-space-', '');
+      const portalItems = portalItemsBySpace.get(portalSpaceId);
+      if (!portalItems || portalItems.length === 0) return;
+      const portalTree = buildTree(portalItems);
+      if (portalTree.length === 0) return;
+      visibleChildren = portalTree; // root items of the portal tree
+      const parentPosRaw = absPositions.get(parentId);
+      if (!parentPosRaw) return;
+      parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
+      // Direction: __space__ → portal node (Rule 3)
+      const spacePos = absPositions.get('__space__') || { x: 0, y: 0 };
+      baseAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
+    } else {
+      // Case 2: Try fullTree first (current space items)
+      let treeNode = findTreeNode(fullTree, parentId);
+
+      // Case 3: Search in portal trees if not found
+      if (!treeNode) {
+        for (const [, pItems] of portalItemsBySpace.entries()) {
+          const portalTree = buildTree(pItems);
+          treeNode = findTreeNode(portalTree, parentId);
+          if (treeNode) break;
+        }
+      }
+
+      if (!treeNode || treeNode.children.length === 0) return;
+
+      visibleChildren = collapsedIds.has(parentId) ? [] : treeNode.children;
+      if (visibleChildren.length === 0) return;
+
+      const parentPosRaw = absPositions.get(parentId);
+      if (!parentPosRaw) return;
+      parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
+
+      // Compute direction from direct parent to this node for outward fan (Rule 1)
+      const parentItem = items.find(i => i.id === parentId);
+      const grandParentId = parentItem?.parentId || '__space__';
+      // For portal items whose parent is a portal node (child-space-{spaceId}), use the portal node
+      const portalNodeId = parentItem?.spaceId && parentItem.spaceId !== spaceId
+        ? `child-space-${parentItem.spaceId}`
+        : null;
+      const anchorId = grandParentId !== '__space__' ? grandParentId
+        : portalNodeId && absPositions.has(portalNodeId) ? portalNodeId
+        : '__space__';
+      const grandParentPos = absPositions.get(anchorId) || { x: 0, y: 0 };
+      baseAngle = Math.atan2(parentPos.y - grandParentPos.y, parentPos.x - grandParentPos.x);
+    }
+
+    // Count visible descendants for adaptive radius (consistent with layoutFan)
+    function countVisible(node: TreeItem): number {
+      if (collapsedIds.has(node.id) || node.children.length === 0) return 1;
+      return node.children.reduce((sum, c) => sum + countVisible(c), 0);
+    }
 
     // Separate pinned and unpinned children
     const unpinnedChildren = visibleChildren.filter(c => !pinnedIds.current.has(c.id));
     const unpinnedCount = unpinnedChildren.length;
-    const radius = RADIAL_STEP;
     const angleSpread = Math.min(Math.PI * 1.5, unpinnedCount * (Math.PI / 4));
     const startAngle = -angleSpread / 2;
 
@@ -1154,7 +1220,6 @@ function MindMapViewInner({
       if (!collapsedIds.has(item.id) && item.children.length > 0) {
         const kids = item.children;
         const unpinnedKids = kids.filter(k => !pinnedIds.current.has(k.id));
-        const subRadius = RADIAL_STEP * 0.8;
         const subSpread = Math.min(Math.PI, unpinnedKids.length * (Math.PI / 5));
         const subStart = -subSpread / 2;
         // Direction from grandparent to this node
@@ -1168,6 +1233,16 @@ function MindMapViewInner({
               repositionSubtree(kids[i], pinnedPos.x, pinnedPos.y, { x: cx, y: cy });
             }
           } else {
+            // Adaptive radius based on descendant count (like layoutFan)
+            const descendants = countVisible(kids[i]);
+            const MIN_SIBLING_SPACING = 130;
+            const spacingRadius = unpinnedKids.length > 1
+              ? (MIN_SIBLING_SPACING * (unpinnedKids.length - 1)) / Math.max(subSpread, 0.2)
+              : 0;
+            const subRadius = Math.max(
+              RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4),
+              spacingRadius
+            );
             const a = unpinnedKids.length === 1 ? dirAngle : dirAngle + subStart + (unpinnedIdx * subSpread) / Math.max(1, unpinnedKids.length - 1);
             const nx = cx + subRadius * Math.cos(a);
             const ny = cy + subRadius * Math.sin(a);
@@ -1177,10 +1252,6 @@ function MindMapViewInner({
         }
       }
     }
-
-    // Compute direction from center to parent for outward fan
-    const spacePos = absPositions.get('__space__') || { x: 0, y: 0 };
-    const baseAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
 
     // Reposition unpinned children in fan; pinned children keep position but reorganize their own children
     let unpinnedIdx = 0;
@@ -1192,6 +1263,16 @@ function MindMapViewInner({
           repositionSubtree(visibleChildren[i], pinnedPos.x, pinnedPos.y, parentPos);
         }
       } else {
+        // Adaptive radius based on descendant count (like layoutFan)
+        const descendants = countVisible(visibleChildren[i]);
+        const MIN_SIBLING_SPACING = 130;
+        const spacingRadius = unpinnedCount > 1
+          ? (MIN_SIBLING_SPACING * (unpinnedCount - 1)) / Math.max(angleSpread, 0.2)
+          : 0;
+        const radius = Math.max(
+          RADIAL_STEP * (0.8 + Math.sqrt(descendants) * 0.4),
+          spacingRadius
+        );
         const angle = unpinnedCount === 1
           ? baseAngle
           : baseAngle + startAngle + (unpinnedIdx * angleSpread) / Math.max(1, unpinnedCount - 1);
@@ -1289,7 +1370,7 @@ function MindMapViewInner({
     // 2. Any other space that has items in portalItemsBySpace
     const SPACE_NODE_ID = '__space__';
     const spacePos = portalPosMap.get(SPACE_NODE_ID) || { x: -70, y: -25 };
-    const childSpaceRadius = 180;
+    const BASE_PORTAL_DIST = 300;
 
     const portalSpacesList: { id: string; space: SpaceWithRole | undefined }[] = [];
     // Add direct child spaces
@@ -1310,6 +1391,9 @@ function MindMapViewInner({
     const totalPortalSpaces = portalSpacesList.length;
     portalSpacesList.forEach((portalSpaceEntry, index) => {
       const childPortalId = `child-space-${portalSpaceEntry.id}`;
+      // Distance proportionnelle au nombre d'items (Rule 3)
+      const portalItemCount = portalItemsBySpace.get(portalSpaceEntry.id)?.length || 0;
+      const childSpaceRadius = BASE_PORTAL_DIST + Math.sqrt(portalItemCount) * 100;
       // Distribute portal nodes in a fan below the center node
       const angleSpread = Math.min(Math.PI * 0.8, totalPortalSpaces * (Math.PI / 4));
       const startAngle = Math.PI / 2 - angleSpread / 2;
@@ -1335,6 +1419,8 @@ function MindMapViewInner({
           onRemove: () => {},
           portalId: childPortalId,
           isChildSpace: true,
+          onReorganizeChildren: handleReorganizeChildren,
+          hasItems: portalItemCount > 0,
         },
       });
 
@@ -1885,7 +1971,7 @@ function MindMapViewInner({
     // Build list of all spaces that need portal nodes (same logic as useEffect)
     const RESET_SPACE_NODE_ID = '__space__';
     const resetSpacePos = resetPosMap.get(RESET_SPACE_NODE_ID) || { x: -70, y: -25 };
-    const resetChildSpaceRadius = 180;
+    const RESET_BASE_PORTAL_DIST = 300;
 
     const resetPortalSpacesList: { id: string; space: SpaceWithRole | undefined }[] = [];
     const resetAddedSpaceIds = new Set<string>();
@@ -1904,6 +1990,9 @@ function MindMapViewInner({
     const resetTotalPortalSpaces = resetPortalSpacesList.length;
     resetPortalSpacesList.forEach((portalSpaceEntry, index) => {
       const childPortalId = `child-space-${portalSpaceEntry.id}`;
+      // Distance proportionnelle au nombre d'items (Rule 3)
+      const portalItemCount = portalItemsBySpace.get(portalSpaceEntry.id)?.length || 0;
+      const resetChildSpaceRadius = RESET_BASE_PORTAL_DIST + Math.sqrt(portalItemCount) * 100;
       const angleSpread = Math.min(Math.PI * 0.8, resetTotalPortalSpaces * (Math.PI / 4));
       const startAngle = Math.PI / 2 - angleSpread / 2;
       const angle = resetTotalPortalSpaces === 1
@@ -1915,6 +2004,7 @@ function MindMapViewInner({
 
       const spaceData = portalSpaceEntry.space || { id: portalSpaceEntry.id, name: portalSpaceNames.get(portalSpaceEntry.id) || portalSpaceEntry.id, type: 'FOLDER' as any, createdAt: '', updatedAt: '', role: 'VIEWER' as any };
 
+      const resetPortalItemCount = portalItemsBySpace.get(portalSpaceEntry.id)?.length || 0;
       portalNodes.push({
         id: childPortalId,
         type: 'portal',
@@ -1924,6 +2014,8 @@ function MindMapViewInner({
           onRemove: () => {},
           portalId: childPortalId,
           isChildSpace: true,
+          onReorganizeChildren: handleReorganizeChildren,
+          hasItems: resetPortalItemCount > 0,
         },
       });
 

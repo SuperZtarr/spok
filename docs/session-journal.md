@@ -192,6 +192,31 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-24] - Segmentation Kanban/Types par espace + drag cross-space
+
+**Demande :** Afficher un board Kanban/Types complet par espace (principal + portails), empilés verticalement, avec drag & drop intra et cross-espace + modale de confirmation si l'item a des descendants.
+**Actions réalisées :**
+- KanbanView.tsx : un DndContext unique, droppable IDs composites `spaceId::statusId`, boards par espace avec header portail, hauteur redimensionnable
+- TypesView.tsx : même refactoring symétrique avec `spaceId::typeId`
+- SpacePage.tsx : `handleMoveItemToSpace` avec vérification descendants → modale confirmation (déplacer seul / avec descendants / annuler)
+- Fix 404 : toutes les mutations (update, delete, move, relations, convert) utilisent maintenant le `spaceId` réel de l'item au lieu du spaceId de la page
+- Suppression console.log de debug
+**État :** TERMINÉ
+**Commit :** e19130b
+
+---
+
+#### [2026-02-24] - Support portail GraphView + SunburstView
+
+**Demande :** Ajouter le support des portails d'espaces enfants dans GraphView et SunburstView (les 2 vues manquantes).
+**Actions réalisées :**
+- Backend : paramètre `additionalSpaceIds` dans les endpoints graph space et sunburst
+- Frontend : hooks `useGraphData` et `useSunburstData` passent `additionalSpaceIds`, GraphView et SunburstView les transmettent
+**État :** TERMINÉ
+**Commit :** 07b10f0
+
+---
+
 #### [2026-02-24] - Portails d'espaces enfants cross-space dans toutes les vues
 
 **Demande :** Pouvoir cocher des espaces enfants dans la sidebar pour afficher leurs items en lecture seule dans l'espace parent, avec distinction visuelle.

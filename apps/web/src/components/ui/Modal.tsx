@@ -33,10 +33,10 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-0 sm:p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/50 transition-opacity hidden sm:block"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -44,11 +44,15 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
       {/* Modal content */}
       <div
         className={cn(
+          // Mobile: always fullscreen
+          'relative z-50 flex flex-col bg-background p-4 sm:p-6',
+          'w-full h-full sm:h-auto sm:rounded-lg sm:border sm:shadow-lg',
+          // Desktop: size-specific constraints
           size === 'large'
-            ? 'relative z-50 w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] flex flex-col rounded-lg bg-background border shadow-lg p-6'
+            ? 'sm:w-[80vw] sm:max-w-[80vw] sm:h-[80vh] sm:max-h-[80vh]'
             : size === 'small'
-            ? 'relative z-50 w-full max-w-md max-h-[90vh] flex flex-col rounded-lg bg-background border shadow-lg p-6'
-            : 'relative z-50 w-full max-w-4xl max-h-[90vh] flex flex-col rounded-lg bg-background border shadow-lg p-6',
+            ? 'sm:max-w-md sm:max-h-[90vh]'
+            : 'sm:max-w-4xl sm:max-h-[90vh]',
           className
         )}
         role="dialog"
