@@ -66,9 +66,10 @@ interface SunburstViewProps {
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
+  additionalSpaceIds?: string[];
 }
 
-export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus, searchMatchIds }: SunburstViewProps = {}) {
+export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, highlightStatus, searchMatchIds, additionalSpaceIds }: SunburstViewProps = {}) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -160,6 +161,20 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
     });
   };
 
+  // Set of portal space IDs for visual distinction
+  const portalSpaceIdSet = useMemo(() => new Set(additionalSpaceIds || []), [additionalSpaceIds]);
+
+  // Check if a sunburst node is inside a portal space subtree
+  const isPortalNode = useCallback((d: HierarchyRectangularNode<SunburstNode>): boolean => {
+    if (portalSpaceIdSet.size === 0) return false;
+    let current: HierarchyRectangularNode<SunburstNode> | null = d;
+    while (current) {
+      if (current.data.nodeType === 'space' && portalSpaceIdSet.has(current.data.id)) return true;
+      current = current.parent;
+    }
+    return false;
+  }, [portalSpaceIdSet]);
+
   const communityIdsFilter = useMemo(() => {
     if (!selectedCommunityIds || !userCommunities) return undefined;
     if (selectedCommunityIds.size === userCommunities.length) return undefined;
@@ -168,7 +183,8 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
 
   const { data: sunburstData, isLoading } = useSunburstData(
     spaceId ? undefined : communityIdsFilter,
-    spaceId
+    spaceId,
+    spaceId ? additionalSpaceIds : undefined
   );
 
   // Build partition layout
@@ -329,6 +345,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
 
               const isHoverHighlighted = !hoveredNode || isAncestorOf(d, hoveredNode) || isAncestorOf(hoveredNode, d) || d === hoveredNode;
               const color = getNodeColor(d);
+              const isPortal = isPortalNode(d);
 
               // Filter highlight: dim items that don't match the active filter
               const hasFilterHighlight = !!(highlightType || highlightStatus || searchMatchIds);
@@ -347,7 +364,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
               } else if (hoveredNode) {
                 opacity = isHoverHighlighted ? 0.9 : 0.15;
               } else {
-                opacity = 0.85;
+                opacity = isPortal ? 0.65 : 0.85;
               }
 
               return (
@@ -356,8 +373,9 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
                   d={path}
                   fill={color}
                   fillOpacity={opacity}
-                  stroke={isSearchMatch ? '#facc15' : 'var(--background)'}
-                  strokeWidth={isSearchMatch ? 2.5 : 0.5}
+                  stroke={isSearchMatch ? '#facc15' : isPortal ? '#94a3b8' : 'var(--background)'}
+                  strokeWidth={isSearchMatch ? 2.5 : isPortal ? 1.5 : 0.5}
+                  strokeDasharray={isPortal && !isSearchMatch ? '4 2' : undefined}
                   onMouseEnter={() => setHoveredNode(d)}
                   onMouseLeave={() => setHoveredNode(null)}
                   onClick={() => handleClick(d)}

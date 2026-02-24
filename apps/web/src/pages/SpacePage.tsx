@@ -1257,6 +1257,7 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
+              additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
             />
           ) : viewMode === 'sunburst' ? (
             <SunburstView
@@ -1267,6 +1268,7 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
+              additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">

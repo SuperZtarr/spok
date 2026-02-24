@@ -223,11 +223,14 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   // Space-level graph
-  fastify.get<{ Params: { spaceId: string }; Querystring: { linkTypes?: string } }>(
+  fastify.get<{ Params: { spaceId: string }; Querystring: { linkTypes?: string; additionalSpaceIds?: string } }>(
     '/spaces/:spaceId/graph',
     async (request, reply) => {
       const { spaceId } = request.params;
       const linkTypes = parseLinkTypes(request.query.linkTypes);
+      const additionalSpaceIds = request.query.additionalSpaceIds
+        ? request.query.additionalSpaceIds.split(',').map(id => id.trim()).filter(Boolean)
+        : [];
 
       // Check membership
       const membership = await fastify.prisma.spaceMembership.findUnique({
@@ -268,8 +271,11 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         select: { name: true },
       });
 
+      // Build the list of space IDs to query
+      const allSpaceIds = [spaceId, ...additionalSpaceIds];
+
       const items = await fastify.prisma.item.findMany({
-        where: { spaceId },
+        where: { spaceId: { in: allSpaceIds } },
         select: {
           id: true,
           title: true,
@@ -284,7 +290,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
 
       const graph = await buildGraph(fastify.prisma, items, linkTypes);
 
-      // Add a central space node and link root items to it
+      // Add a central space node for the main space
       const spaceNodeId = `space-${spaceId}`;
       graph.nodes.unshift({
         id: spaceNodeId,
@@ -297,14 +303,46 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         tagIds: [],
       });
 
+      // Add space nodes for additional (portal) spaces
+      if (additionalSpaceIds.length > 0) {
+        const portalSpaces = await fastify.prisma.space.findMany({
+          where: { id: { in: additionalSpaceIds } },
+          select: { id: true, name: true },
+        });
+        for (const ps of portalSpaces) {
+          const portalNodeId = `space-${ps.id}`;
+          graph.nodes.push({
+            id: portalNodeId,
+            title: ps.name,
+            type: 'SPACE',
+            status: null,
+            spaceId: ps.id,
+            spaceName: ps.name,
+            parentId: null,
+            tagIds: [],
+          });
+          // Link portal space node to main space node
+          if (linkTypes.has('hierarchy')) {
+            graph.links.push({
+              id: `h-portal-${ps.id}`,
+              source: spaceNodeId,
+              target: portalNodeId,
+              linkType: 'hierarchy',
+            });
+          }
+        }
+      }
+
       if (linkTypes.has('hierarchy')) {
         const nodeIds = new Set(items.map(i => i.id));
         let linkCounter = graph.links.length;
         for (const item of items) {
           if (!item.parentId || !nodeIds.has(item.parentId)) {
+            // Link root items to their respective space node
+            const targetSpaceNode = `space-${item.spaceId}`;
             graph.links.push({
               id: `h-${linkCounter++}`,
-              source: spaceNodeId,
+              source: targetSpaceNode,
               target: item.id,
               linkType: 'hierarchy',
             });
@@ -480,10 +518,13 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Sunburst hierarchy: Global → Communities → Spaces → Items → Children
-  fastify.get<{ Querystring: { communityIds?: string; spaceId?: string } }>(
+  fastify.get<{ Querystring: { communityIds?: string; spaceId?: string; additionalSpaceIds?: string } }>(
     '/graph/sunburst',
     async (request, reply) => {
       const filterSpaceId = request.query.spaceId || null;
+      const additionalSpaceIds = request.query.additionalSpaceIds
+        ? request.query.additionalSpaceIds.split(',').map(id => id.trim()).filter(Boolean)
+        : [];
       const filterCommunityIds = request.query.communityIds
         ? request.query.communityIds.split(',').map(id => id.trim()).filter(Boolean)
         : null;
@@ -514,8 +555,10 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           select: { id: true, name: true },
         });
 
+        // Fetch items from main space + additional portal spaces
+        const allSpaceIds = [filterSpaceId, ...additionalSpaceIds];
         const items = await fastify.prisma.item.findMany({
-          where: { spaceId: filterSpaceId },
+          where: { spaceId: { in: allSpaceIds } },
           select: {
             id: true, title: true, type: true, status: true, spaceId: true, parentId: true,
             _count: { select: { contributions: true } },
@@ -542,13 +585,37 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        const itemTree = buildSpaceItemTree(items, null);
+        // Build main space item tree
+        const mainItems = items.filter(i => i.spaceId === filterSpaceId);
+        const itemTree = buildSpaceItemTree(mainItems, null);
+
+        // Build portal space children
+        const portalChildren: SunburstNode[] = [];
+        if (additionalSpaceIds.length > 0) {
+          const portalSpaces = await fastify.prisma.space.findMany({
+            where: { id: { in: additionalSpaceIds } },
+            select: { id: true, name: true },
+          });
+          for (const ps of portalSpaces) {
+            const portalItems = items.filter(i => i.spaceId === ps.id);
+            const portalTree = buildSpaceItemTree(portalItems, null);
+            portalChildren.push({
+              name: ps.name,
+              id: ps.id,
+              nodeType: 'space',
+              children: portalTree.length > 0 ? portalTree : undefined,
+              value: portalTree.length === 0 ? 1 : undefined,
+            });
+          }
+        }
+
+        const allChildren = [...itemTree, ...portalChildren];
         const root: SunburstNode = {
           name: spaceInfo?.name || 'Espace',
           id: filterSpaceId,
           nodeType: 'space',
-          children: itemTree.length > 0 ? itemTree : undefined,
-          value: itemTree.length === 0 ? 1 : undefined,
+          children: allChildren.length > 0 ? allChildren : undefined,
+          value: allChildren.length === 0 ? 1 : undefined,
         };
         return root;
       }

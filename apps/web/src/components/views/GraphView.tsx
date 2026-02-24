@@ -51,9 +51,10 @@ interface GraphViewProps {
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
+  additionalSpaceIds?: string[];
 }
 
-export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus, searchMatchIds }: GraphViewProps) {
+export function GraphView({ level, entityId, spaceId, spaceName, communityId, communityName, onNodeClick, highlightType, highlightStatus, searchMatchIds, additionalSpaceIds }: GraphViewProps) {
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -170,7 +171,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   };
 
   const linkTypesArray = useMemo(() => [...activeLinkTypes], [activeLinkTypes]);
-  const { data, isLoading } = useGraphData(scope, activeEntityId, linkTypesArray, communityIdsFilter);
+  const { data, isLoading } = useGraphData(scope, activeEntityId, linkTypesArray, communityIdsFilter, scope === 'space' ? additionalSpaceIds : undefined);
 
   // Compute available size from container position in viewport
   useEffect(() => {
@@ -230,9 +231,14 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
 
   const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
 
+  // Set of additional (portal) space IDs for visual distinction
+  const portalSpaceIdSet = useMemo(() => new Set(additionalSpaceIds || []), [additionalSpaceIds]);
+
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.title || '';
     const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
+    const isPortal = !isStructural && !!spaceId && node.spaceId !== spaceId && portalSpaceIdSet.has(node.spaceId);
+    const isPortalSpace = isStructural && node.type === 'SPACE' && portalSpaceIdSet.has(node.spaceId);
     const nodeRadius = isStructural ? (node.type === 'COMMUNITY' ? 10 : 8) : 5;
     const fontSize = Math.max((isStructural ? 14 : 12) / globalScale, 2);
     const color = NODE_COLORS[node.type] || '#94a3b8';
@@ -250,6 +256,8 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     ctx.save();
     if (dimmed) {
       ctx.globalAlpha = 0.15;
+    } else if (isPortal) {
+      ctx.globalAlpha = 0.7;
     }
 
     // Draw search match glow (yellow ring)
@@ -267,9 +275,19 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = isSearchMatch ? '#facc15' : '#fff';
-    ctx.lineWidth = (isStructural ? 2.5 : isSearchMatch ? 2.5 : 1.5) / globalScale;
-    ctx.stroke();
+
+    // Portal nodes: dashed border
+    if (isPortal || isPortalSpace) {
+      ctx.setLineDash([3 / globalScale, 2 / globalScale]);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.strokeStyle = isSearchMatch ? '#facc15' : '#fff';
+      ctx.lineWidth = (isStructural ? 2.5 : isSearchMatch ? 2.5 : 1.5) / globalScale;
+      ctx.stroke();
+    }
 
     // Draw label
     if (globalScale > 0.5 || isStructural) {
@@ -283,7 +301,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     }
 
     ctx.restore();
-  }, [hasHighlight, highlightType, highlightStatus, searchMatchIds]);
+  }, [hasHighlight, highlightType, highlightStatus, searchMatchIds, spaceId, portalSpaceIdSet]);
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
     const isStructural = node.type === 'SPACE' || node.type === 'COMMUNITY';
@@ -326,6 +344,8 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   }, []);
 
   const nodeLabel = useCallback((node: any) => {
+    const isPortalNode = !!spaceId && node.spaceId !== spaceId && portalSpaceIdSet.has(node.spaceId);
+    const portalBadge = isPortalNode ? '<span style="color:#94a3b8;font-style:italic;"> (portail)</span>' : '';
     if (node.type === 'COMMUNITY') {
       return `<div style="background:#1e293b;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;">
         <strong>${node.title}</strong><br/>
@@ -335,14 +355,14 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     if (node.type === 'SPACE') {
       return `<div style="background:#1e293b;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;">
         <strong>${node.title}</strong><br/>
-        <span style="color:#f59e0b">Espace</span>
+        <span style="color:#f59e0b">Espace</span>${portalBadge}
       </div>`;
     }
     return `<div style="background:#1e293b;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;max-width:250px;">
       <strong>${node.title}</strong><br/>
-      <span style="color:#94a3b8">${node.type} — ${node.spaceName}</span>
+      <span style="color:#94a3b8">${node.type} — ${node.spaceName}</span>${portalBadge}
     </div>`;
-  }, []);
+  }, [spaceId, portalSpaceIdSet]);
 
   if (isLoading) {
     return (

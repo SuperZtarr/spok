@@ -1326,8 +1326,13 @@ export const auditLogsApi = {
 
 // Graph
 export const graphApi = {
-  space: (spaceId: string, linkTypes: string[]) =>
-    fetchApi<{ nodes: any[]; links: any[] }>(`/spaces/${spaceId}/graph?linkTypes=${linkTypes.join(',')}`),
+  space: (spaceId: string, linkTypes: string[], additionalSpaceIds?: string[]) => {
+    const params = new URLSearchParams({ linkTypes: linkTypes.join(',') });
+    if (additionalSpaceIds && additionalSpaceIds.length > 0) {
+      params.set('additionalSpaceIds', additionalSpaceIds.join(','));
+    }
+    return fetchApi<{ nodes: any[]; links: any[] }>(`/spaces/${spaceId}/graph?${params.toString()}`);
+  },
 
   community: (communityId: string, linkTypes: string[]) =>
     fetchApi<{ nodes: any[]; links: any[] }>(`/communities/${communityId}/graph?linkTypes=${linkTypes.join(',')}`),
@@ -1340,13 +1345,16 @@ export const graphApi = {
     return fetchApi<{ nodes: any[]; links: any[] }>(`/graph/global?${params.toString()}`);
   },
 
-  sunburst: (communityIds?: string[], spaceId?: string) => {
+  sunburst: (communityIds?: string[], spaceId?: string, additionalSpaceIds?: string[]) => {
     const params = new URLSearchParams();
     if (communityIds && communityIds.length > 0) {
       params.set('communityIds', communityIds.join(','));
     }
     if (spaceId) {
       params.set('spaceId', spaceId);
+    }
+    if (additionalSpaceIds && additionalSpaceIds.length > 0) {
+      params.set('additionalSpaceIds', additionalSpaceIds.join(','));
     }
     const query = params.toString();
     return fetchApi<SunburstNode>(`/graph/sunburst${query ? `?${query}` : ''}`);
