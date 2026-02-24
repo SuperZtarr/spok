@@ -264,6 +264,19 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-25] - Vitest infrastructure + 294 tests API
+
+**Demande :** Phase 3-4 de l'audit : installer Vitest, écrire des tests pour toutes les routes API.
+**Actions réalisées :**
+- Vitest installé avec workspace configs (API=node, web=jsdom), `vitest.config.ts` root
+- Mock Prisma complet dans `apps/api/src/test/helpers.ts` (20+ modèles, builders)
+- 17 fichiers de test créés : auth (29), items (35), spaces (47), communities (38), tags (13), referentiels (10), auditLogs (11), graph (17), search (8), user-tasks (14), admin users (24), admin spaces (15), admin communities (14), admin auditLogs (12), admin referentiels (3), smoke API (2), smoke web (2)
+- Bug identifié : routes admin/users.ts lignes 357/415 — chemins sans `/` initial (`':id/spaces'`) causent `/admin/users:id/spaces` au lieu de `/admin/users/:id/spaces`
+**État :** TERMINÉ
+**Commit :** ee2359f
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)
