@@ -69,7 +69,16 @@
       "Bash(pnpm vite build:*)",
       "Bash(psql:*)",
       "Bash(pnpm --filter @spok/database push:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm dev:stop:*)",
+      "Bash(docker volume:*)",
+      "Bash(pnpm add:*)",
+      "Bash(python3:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWx1cDl1ZzQwMDAwbjg2eGpmOTZlajNmIiwiZW1haWwiOiJhZG1pbkBzcG9rLmFwcCIsImlhdCI6MTc3MTU4MjEyNCwiZXhwIjoxNzcxNTgzMDI0fQ.947GTsOGkGWwUWoWtka1_n6cdyi-q6og6crcREP7z7A\")",
+      "Bash(SID=\"cmluq9mwu0003s9m9jv90v0lg\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWx1cDl1ZzQwMDAwbjg2eGpmOTZlajNmIiwiZW1haWwiOiJhZG1pbkBzcG9rLmFwcCIsImlhdCI6MTc3MTU5NzQxNywiZXhwIjoxNzcxNTk4MzE3fQ.ozqPyB5E_5YytZeuv7Z3pp-cJ8teROdZ9oviC1JLckI\")",
+      "Bash(pnpm dev:start:*)"
     ]
   }
 }

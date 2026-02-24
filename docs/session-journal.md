@@ -2,6 +2,45 @@
 
 ---
 
+## Accords permanents
+
+> Cette section persiste entre les sessions. Claude DOIT la lire au démarrage et appliquer ces règles sans qu'on ait à les rappeler.
+
+### 1. Checklist post-commit (5 étapes obligatoires)
+Après chaque commit :
+1. Mettre à jour `docs/TODO.md` local (marquer terminé + date + hash)
+2. Synchroniser vers `C:\_dev\spok\docs\TODO.md` (source de vérité)
+3. Mettre à jour `docs/session-journal.md` (entrée avec état TERMINÉ + commit)
+4. Créer/mettre à jour un item dans l'espace **Documentation Projet** (ID: `cmluq9mwu0003s9m9jv90v0lg`) via l'API locale
+5. Proposer la prochaine tâche de la TODO et attendre validation
+
+### 2. Documentation Projet dans SPOK
+- Espace ID : `cmluq9mwu0003s9m9jv90v0lg`
+- API locale : `http://localhost:3001`
+- Auth : `POST /auth/login` avec `admin@spok.app` / `admin1234`
+- Après chaque **feat** ou **refactor** : créer un item DOCUMENT décrivant ce qui a été implémenté (titre, description, composants modifiés, décisions d'architecture)
+- Après chaque **fix** important : mettre à jour l'item parent ou créer une NOTE
+
+### 3. Workflow Git
+- Ne JAMAIS merger dans master ni pusher sans accord explicite de l'utilisateur
+- Commiter sur la branche worktree (`claude/*`)
+- Tester en local avant merge
+- Merger et pusher uniquement quand l'utilisateur dit "merge et push"
+
+### 4. Communication
+- Être direct et factuel
+- Procéder étape par étape
+- Ne pas proposer d'implémentation non demandée
+- En cas d'oubli détecté, corriger immédiatement sans excuses excessives
+
+### 5. Anti-tunnel : rendre la main fréquemment
+- **Ne jamais faire un tour long** : découper chaque développement en petites étapes et rendre la main entre chaque, pour laisser l'utilisateur intervenir/corriger/réorienter
+- **1 étape = 1 tour** : une étape logique (ex: modifier 1 fichier, ou présenter un plan) puis STOP — attendre la réponse de l'utilisateur avant de continuer
+- **Avant de coder** : présenter le plan et attendre validation
+- **Si erreur** : s'arrêter, expliquer, attendre les instructions
+
+---
+
 ## Historique des sessions precedentes (resume)
 
 ### Fonctionnalites implementees
@@ -150,6 +189,19 @@
 - TreeItem + ItemChildren : propagation searchMatchIds dans l'arborescence
 **État :** TERMINÉ
 **Commit :** c0feb6c
+
+---
+
+#### [2026-02-24] - Portails d'espaces enfants cross-space dans toutes les vues
+
+**Demande :** Pouvoir cocher des espaces enfants dans la sidebar pour afficher leurs items en lecture seule dans l'espace parent, avec distinction visuelle.
+**Actions réalisées :**
+- Store Zustand : `includeChildrenSpaceIds` (Set) avec checkboxes dans la sidebar (Layout.tsx)
+- API : paramètre `additionalSpaceIds` dans items.ts pour récupérer les items de plusieurs espaces
+- SpacePage.tsx : `portalItemsBySpace` (Map groupant items par espace source), passé en prop à toutes les vues
+- 9 vues implémentées : Liste (colonne espace), Kanban (badge espace, sections portail), Texte (sections portail), Types (badge espace), Timeline (badge + barres dashed), Planning (badge espace), Calendrier (bordure dashed + tooltip), Séquence (badge + dashed border), MindMap (nœuds portail avec layout arbre directionnel, drag group, resetLayout aligné)
+**État :** TERMINÉ
+**Commit :** 2c6bea2
 
 ---
 

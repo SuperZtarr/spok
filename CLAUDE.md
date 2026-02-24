@@ -116,6 +116,12 @@ Deploye sur Railway :
 
 ## Instructions pour Claude
 
+### Démarrage de session (OBLIGATOIRE — AVANT TOUTE ACTION)
+1. Lire `~/.claude/CLAUDE.md` (instructions globales, accords permanents)
+2. Lire `docs/session-journal.md` (accords permanents + historique)
+3. Lire `docs/TODO.md` (tâches en cours)
+4. Faire le point avec l'utilisateur avant de commencer quoi que ce soit
+
 ### Workflow Git (OBLIGATOIRE)
 - **JAMAIS** merger dans master ni pusher sans accord explicite de l'utilisateur
 - Commiter uniquement sur la branche worktree (`claude/*`)
