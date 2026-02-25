@@ -84,7 +84,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
 
         <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
 
-        <span className="text-sm font-medium truncate" title={item.title}>{item.title}</span>
+        <span className="text-sm font-medium line-clamp-2 break-words" title={item.title}>{item.title}</span>
 
 
         {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
