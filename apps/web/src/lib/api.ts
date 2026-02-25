@@ -1318,6 +1318,22 @@ export const referentielsApi = {
     ),
 };
 
+// Canvas Layout
+export type CanvasLayoutResponse = {
+  positions: Record<string, { x: number; y: number }>;
+};
+
+export const canvasLayoutApi = {
+  get: (spaceId: string) =>
+    fetchApi<CanvasLayoutResponse>(`/spaces/${spaceId}/canvas-layout`),
+
+  update: (spaceId: string, positions: Record<string, { x: number; y: number }>) =>
+    fetchApi<CanvasLayoutResponse>(`/spaces/${spaceId}/canvas-layout`, {
+      method: 'PUT',
+      body: JSON.stringify({ positions }),
+    }),
+};
+
 // Audit Logs
 export const auditLogsApi = {
   list: (spaceId: string, params?: AuditLogFilters) => {

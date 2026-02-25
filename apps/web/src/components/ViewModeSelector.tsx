@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid,
-  GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, Check,
+  GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Check,
   ChevronDown, FolderKanban, CheckSquare, ExternalLink, LayoutDashboard,
   Eye,
 } from 'lucide-react';
@@ -25,6 +25,7 @@ const ICONS: Record<string, typeof List> = {
   Network,
   CircleDot,
   Waypoints,
+  PenTool,
   FolderKanban,
   CheckSquare,
 };

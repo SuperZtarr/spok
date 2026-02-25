@@ -22,7 +22,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
-import type { Item, ItemType } from '@spok/shared';
+import type { Item, ItemType, ItemWithRelations } from '@spok/shared';
 import { ITEM_TYPES } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
@@ -51,6 +51,7 @@ import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
 import { SunburstView } from '../components/views/SunburstView';
 import { RelationsMapView } from '../components/views/RelationsMapView';
+import { SchemaView } from '../components/views/SchemaView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 
@@ -181,7 +182,7 @@ export function SpacePage() {
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar';
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations';
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -510,8 +511,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -633,7 +634,7 @@ export function SpacePage() {
         )}
 
         {/* Items / Views */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
@@ -843,6 +844,17 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
+            />
+          ) : viewMode === 'schema' ? (
+            <SchemaView
+              items={(allItemsData?.data || []) as ItemWithRelations[]}
+              spaceId={spaceId!}
+              onEdit={(itemId) => setEditingItemId(itemId)}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
+              portalItems={portalGroups.flatMap(g => g.items) as ItemWithRelations[]}
+              canEdit={canEdit}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
