@@ -302,14 +302,11 @@ export function calculateLayout(
           source: relation.fromItemId,
           target: relation.toItemId,
           ...handles,
-          type: 'default',
+          type: 'relation',
           animated: true,
           style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
-          data: { relationId: relation.id, type: relation.type },
-          label: relation.type === 'relates' ? '' : relation.type,
-          labelStyle: { fontSize: 10, fill: '#8b5cf6' },
-          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+          data: { relationId: relation.id, type: relation.type, label: relation.label || '', fromItemId: relation.fromItemId },
         });
       }
     });
@@ -602,14 +599,11 @@ export function buildPortalNodesAndEdges(
           id: `relation-${relation.id}`,
           source: relation.fromItemId,
           target: relation.toItemId,
-          type: 'default',
+          type: 'relation',
           animated: true,
           style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
-          data: { relationId: relation.id, type: relation.type },
-          label: relation.type === 'relates' ? '' : relation.type,
-          labelStyle: { fontSize: 10, fill: '#8b5cf6' },
-          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+          data: { relationId: relation.id, type: relation.type, label: relation.label || '', fromItemId: relation.fromItemId },
         });
         existingRelationIds.add(relation.id);
       }

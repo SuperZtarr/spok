@@ -113,6 +113,14 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     },
   });
 
+  const updateRelationMutation = useMutation({
+    mutationFn: ({ itemId, itemSpaceId, relationId, data }: { itemId: string; itemSpaceId: string; relationId: string; data: { type?: string; label?: string | null } }) =>
+      itemsApi.updateRelation(itemSpaceId, itemId, relationId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
   const convertToSpaceMutation = useMutation({
     mutationFn: ({ itemId, itemSpaceId, spaceName }: { itemId: string; itemSpaceId: string; spaceName: string }) =>
       itemsApi.convertToSpace(itemSpaceId, itemId, {
@@ -222,6 +230,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     deleteRelationMutation.mutate({ itemId, itemSpaceId, relationId });
   }, [resolveItemSpaceId, deleteRelationMutation]);
 
+  const handleUpdateRelation = useCallback((itemId: string, relationId: string, data: { type?: string; label?: string | null }) => {
+    const itemSpaceId = resolveItemSpaceId(itemId);
+    updateRelationMutation.mutate({ itemId, itemSpaceId, relationId, data });
+  }, [resolveItemSpaceId, updateRelationMutation]);
+
   return {
     // Delete flow
     handleDelete,
@@ -247,5 +260,6 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     // Relations
     handleCreateRelation,
     handleDeleteRelation,
+    handleUpdateRelation,
   };
 }

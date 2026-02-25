@@ -805,6 +805,7 @@ export function SpacePage() {
               onConvertToSpace={actions.handleConvertToSpace}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
+              onUpdateRelation={actions.handleUpdateRelation}
               referentiels={referentiels}
               canEdit={canEdit}
             />
