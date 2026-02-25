@@ -230,12 +230,44 @@ export function SchemaView({
       canvasLayoutApi.update(spaceId, positions),
   });
 
+  // Editing relation state
+  const [editingEdge, setEditingEdge] = useState<{
+    relationId: string; fromItemId: string; type: string; label: string;
+    sourceName: string; targetName: string;
+  } | null>(null);
+  const [editEdgeType, setEditEdgeType] = useState('');
+  const [editEdgeLabel, setEditEdgeLabel] = useState('');
+
   // Create relation mutation
   const createRelationMutation = useMutation({
     mutationFn: ({ fromItemId, toItemId, type }: { fromItemId: string; toItemId: string; type: string }) => {
       const fromItem = [...items, ...portalItems].find(i => i.id === fromItemId);
       if (!fromItem) throw new Error('Item source not found');
       return itemsApi.createRelation(fromItem.spaceId, fromItemId, { toItemId, type });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+
+  // Update relation mutation
+  const updateRelationMutation = useMutation({
+    mutationFn: ({ fromItemId, relationId, data }: { fromItemId: string; relationId: string; data: { type?: string; label?: string | null } }) => {
+      const fromItem = allItems.find(i => i.id === fromItemId);
+      if (!fromItem) throw new Error('Item source not found');
+      return itemsApi.updateRelation(fromItem.spaceId, fromItemId, relationId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+
+  // Delete relation mutation
+  const deleteRelationMutation = useMutation({
+    mutationFn: ({ fromItemId, relationId }: { fromItemId: string; relationId: string }) => {
+      const fromItem = allItems.find(i => i.id === fromItemId);
+      if (!fromItem) throw new Error('Item source not found');
+      return itemsApi.deleteRelation(fromItem.spaceId, fromItemId, relationId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
@@ -316,7 +348,7 @@ export function SchemaView({
             source: rel.fromItemId,
             target: rel.toItemId,
             type: 'relation',
-            data: { relationType: rel.type, label: rel.label },
+            data: { relationType: rel.type, label: rel.label, relationId: rel.id },
             markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
           });
         }
@@ -366,6 +398,25 @@ export function SchemaView({
     setPendingConnection(null);
   }, [pendingConnection, createRelationMutation]);
 
+  // Click on edge → open edit relation modal
+  const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    if (!canEdit || !edge.data?.relationId) return;
+    const sourceItem = allItems.find(i => i.id === edge.source);
+    const targetItem = allItems.find(i => i.id === edge.target);
+    const relType = (edge.data.relationType as string) || 'relates';
+    const relLabel = (edge.data.label as string) || '';
+    setEditingEdge({
+      relationId: edge.data.relationId as string,
+      fromItemId: edge.source,
+      type: relType,
+      label: relLabel,
+      sourceName: sourceItem?.title || 'Inconnu',
+      targetName: targetItem?.title || 'Inconnu',
+    });
+    setEditEdgeType(relType);
+    setEditEdgeLabel(relLabel);
+  }, [canEdit, allItems]);
+
   // Double-click on canvas → create item
   const handlePaneDoubleClick = useCallback((event: React.MouseEvent) => {
     if (!canEdit || !onCreateItem) return;
@@ -384,6 +435,7 @@ export function SchemaView({
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
+        onEdgeClick={handleEdgeClick}
         onDoubleClick={handlePaneDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -407,13 +459,91 @@ export function SchemaView({
         />
       </ReactFlow>
 
-      {/* Relation type picker */}
+      {/* Relation type picker (new connection) */}
       {pendingConnection && (
         <RelationTypePicker
           position={pickerPos}
           onSelect={handleRelationTypeSelect}
           onCancel={() => setPendingConnection(null)}
         />
+      )}
+
+      {/* Edit relation modal */}
+      {editingEdge && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Modifier la relation</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium">{editingEdge.sourceName}</span>
+              {' → '}
+              <span className="font-medium">{editingEdge.targetName}</span>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(RELATION_TYPE_MAP).map(([typeId, config]) => (
+                    <button
+                      key={typeId}
+                      onClick={() => setEditEdgeType(typeId)}
+                      className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
+                        editEdgeType === typeId ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
+                      }`}
+                    >
+                      <config.Icon className="w-4 h-4" style={{ color: config.color }} />
+                      <span className="text-sm font-medium">{config.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Commentaire</label>
+                <input
+                  type="text"
+                  value={editEdgeLabel}
+                  onChange={(e) => setEditEdgeLabel(e.target.value)}
+                  placeholder="Commentaire (optionnel)"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-purple-400 bg-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => {
+                  updateRelationMutation.mutate({
+                    fromItemId: editingEdge.fromItemId,
+                    relationId: editingEdge.relationId,
+                    data: { type: editEdgeType, label: editEdgeLabel.trim() || null },
+                  });
+                  setEditingEdge(null);
+                }}
+                className="flex-1 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+              >
+                Enregistrer
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Supprimer cette relation ?')) {
+                    deleteRelationMutation.mutate({
+                      fromItemId: editingEdge.fromItemId,
+                      relationId: editingEdge.relationId,
+                    });
+                    setEditingEdge(null);
+                  }
+                }}
+                className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
+              >
+                Supprimer
+              </button>
+              <button
+                onClick={() => setEditingEdge(null)}
+                className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
