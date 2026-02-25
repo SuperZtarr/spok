@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -10,6 +10,7 @@ import { Select } from '../components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import type { SpaceWithRole } from '@spok/shared';
+import { SPACE_TEMPLATES } from '@spok/shared';
 import { GraphView } from '../components/views/GraphView';
 import { SunburstView } from '../components/views/SunburstView';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -317,6 +318,7 @@ export function DashboardPage() {
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
   const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>(currentCommunity?.id || '');
   const [newSpaceParentId, setNewSpaceParentId] = useState<string>('');
+  const [newSpaceTemplateId, setNewSpaceTemplateId] = useState<string>('blank');
 
   // Pre-select current community when the form opens
   useEffect(() => {
@@ -456,6 +458,7 @@ export function DashboardPage() {
         type: newSpaceType,
         communityId: newSpaceType === 'GROUP' && newSpaceCommunityId ? newSpaceCommunityId : undefined,
         parentId: newSpaceType === 'GROUP' && newSpaceParentId ? newSpaceParentId : undefined,
+        templateId: newSpaceTemplateId !== 'blank' ? newSpaceTemplateId : undefined,
       });
     }
   };
@@ -465,6 +468,7 @@ export function DashboardPage() {
     setNewSpaceName('');
     setNewSpaceCommunityId('');
     setNewSpaceParentId('');
+    setNewSpaceTemplateId('blank');
   };
 
   // When space type changes, reset community/parent if personal
@@ -548,6 +552,32 @@ export function DashboardPage() {
                     placeholder="Mon nouveau projet"
                     required
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Template</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {SPACE_TEMPLATES.map((tpl) => {
+                      const IconMap: Record<string, typeof FileText> = { FileText, FolderKanban, LayoutGrid, Users };
+                      const TplIcon = IconMap[tpl.icon] || FileText;
+                      return (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => setNewSpaceTemplateId(tpl.id)}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all text-center ${
+                            newSpaceTemplateId === tpl.id
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : 'border-border hover:border-primary/40 hover:bg-accent/50'
+                          }`}
+                        >
+                          <TplIcon className={`w-5 h-5 ${newSpaceTemplateId === tpl.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <span className={`text-sm font-medium ${newSpaceTemplateId === tpl.id ? 'text-primary' : ''}`}>{tpl.name}</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight">{tpl.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

@@ -35,6 +35,7 @@ export interface CreateSpaceInput {
   type: SpaceType;
   communityId?: string;
   parentId?: string;
+  templateId?: string;
 }
 
 export interface UpdateSpaceInput {

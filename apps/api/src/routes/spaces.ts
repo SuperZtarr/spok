@@ -1,6 +1,8 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Role, SpaceDeletePreview } from '@spok/shared';
+import { SPACE_TEMPLATES } from '@spok/shared';
+import type { SpaceTemplateItem } from '@spok/shared';
 import { itemsRoutes } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
@@ -16,6 +18,7 @@ const createSpaceSchema = z.object({
   type: z.enum(['PERSONAL', 'GROUP']),
   communityId: z.string().optional(),
   parentId: z.string().optional(),
+  templateId: z.string().optional(),
 });
 
 const updateSpaceSchema = z.object({
@@ -230,6 +233,49 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     });
+
+    // Apply template if specified
+    const template = body.templateId ? SPACE_TEMPLATES.find(t => t.id === body.templateId) : null;
+    if (template && template.id !== 'blank') {
+      // Apply custom statuses via referentiels module
+      if (template.statuses) {
+        const referentielsConfig = {
+          statuses: template.statuses,
+          typeLabels: (await import('@spok/shared')).DEFAULT_TYPE_LABELS,
+        };
+        await fastify.prisma.spaceModule.create({
+          data: {
+            spaceId: space.id,
+            moduleKey: 'referentiels',
+            config: JSON.parse(JSON.stringify(referentielsConfig)),
+            enabled: true,
+          },
+        });
+      }
+
+      // Create template items
+      if (template.items && template.items.length > 0) {
+        const createItems = async (items: SpaceTemplateItem[], parentId: string | null) => {
+          for (let i = 0; i < items.length; i++) {
+            const tplItem = items[i];
+            const item = await fastify.prisma.item.create({
+              data: {
+                title: tplItem.title,
+                type: tplItem.type,
+                spaceId: space.id,
+                createdById: request.user.userId,
+                parentId,
+                position: i,
+              },
+            });
+            if (tplItem.children && tplItem.children.length > 0) {
+              await createItems(tplItem.children, item.id);
+            }
+          }
+        };
+        await createItems(template.items, null);
+      }
+    }
 
     return reply.status(201).send({ ...space, role: 'OWNER' as Role });
   });
