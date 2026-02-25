@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { itemsApi, isConflictError } from '../lib/api';
+import { itemsApi, spacesApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -55,6 +55,7 @@ export function ItemEditModal({
   const [imageExpanded, setImageExpanded] = useState(false);
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
+  const [assignedToId, setAssignedToId] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -96,6 +97,12 @@ export function ItemEditModal({
     enabled: !!itemId && isOpen,
   });
 
+  const { data: spaceMembers } = useQuery({
+    queryKey: ['space-members', spaceId],
+    queryFn: () => spacesApi.getMembers(spaceId),
+    enabled: isOpen,
+  });
+
   // Reset form when item changes
   useEffect(() => {
     if (item) {
@@ -104,6 +111,7 @@ export function ItemEditModal({
       setUrl(item.url || '');
       setParentId(item.parentId || '');
       setStatus(item.status || '');
+      setAssignedToId(item.assignedToId || '');
       setType(item.type);
       // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
       if (item.dueDate) {
@@ -134,7 +142,7 @@ export function ItemEditModal({
   }, [item]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -313,7 +321,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -343,6 +351,11 @@ export function ItemEditModal({
 
     if (status !== (item.status || '')) {
       updates.status = status || undefined;
+    }
+
+    const newAssignedToId = assignedToId || null;
+    if (newAssignedToId !== (item.assignedToId || null)) {
+      updates.assignedToId = newAssignedToId;
     }
 
     // Handle dueDate changes
@@ -667,6 +680,32 @@ export function ItemEditModal({
               </div>
             </div>
           </div>
+
+          {/* Assigné à */}
+          {spaceMembers && spaceMembers.length > 1 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium" title="Membre assigné à cet élément">Assigné à</label>
+              {canEdit ? (
+                <Select
+                  value={assignedToId}
+                  onChange={(e) => setAssignedToId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Non assigné' },
+                    ...spaceMembers.map((m) => ({
+                      value: m.userId,
+                      label: m.name || m.email,
+                    })),
+                  ]}
+                />
+              ) : (
+                <p className="text-sm">
+                  {assignedToId
+                    ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu')
+                    : <span className="text-muted-foreground">Non assigné</span>}
+                </p>
+              )}
+            </div>
+          )}
 
           {type === 'IMAGE' ? (
             <div className="space-y-2">

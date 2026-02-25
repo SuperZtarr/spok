@@ -16,6 +16,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       dueDateFrom?: string;
       dueDateTo?: string;
       noDueDate?: string;
+      assignedToMe?: string;
       sortBy?: string;
       sortDir?: string;
       page?: string;
@@ -31,6 +32,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       dueDateFrom,
       dueDateTo,
       noDueDate,
+      assignedToMe,
       sortBy = 'createdAt',
       sortDir = 'desc',
       page: pageStr = '1',
@@ -164,6 +166,11 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       where.dueDate = dueDateFilter;
     }
 
+    // Assigned to me filter
+    if (assignedToMe === 'true') {
+      where.assignedToId = request.user.userId;
+    }
+
     // Text search
     if (search) {
       // If we already have an OR (from status filter), we need AND to combine
@@ -217,10 +224,12 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
           updatedAt: true,
           spaceId: true,
           createdById: true,
+          assignedToId: true,
           parentId: true,
           description: true,
           space: { select: { id: true, name: true } },
           createdBy: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true } },
           parent: { select: { id: true, title: true } },
           tags: { select: { tag: { select: { id: true, name: true, color: true } } } },
         },
@@ -236,6 +245,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
         ...t,
         spaceName: t.space.name,
         createdByName: t.createdBy.name,
+        assignedToName: t.assignedTo?.name || null,
         tags: t.tags.map((it) => it.tag),
       })),
       total,

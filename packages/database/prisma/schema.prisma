@@ -22,7 +22,8 @@ model User {
 
   memberships            SpaceMembership[]
   communityMemberships   CommunityMembership[]
-  createdItems           Item[]
+  createdItems           Item[]  @relation("ItemCreatedBy")
+  assignedItems          Item[]  @relation("ItemAssignedTo")
   contributions          Contribution[]
   auditLogs              AuditLog[]
   passwordResetTokens        PasswordResetToken[]
@@ -149,8 +150,10 @@ model Item {
 
   spaceId     String
   space       Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  createdById String
-  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById  String
+  createdBy    User   @relation("ItemCreatedBy", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?  @relation("ItemAssignedTo", fields: [assignedToId], references: [id])
 
   // Relations hiérarchiques
   parentId String?
@@ -166,6 +169,7 @@ model Item {
 
   @@index([spaceId])
   @@index([createdById])
+  @@index([assignedToId])
   @@index([parentId])
   @@map("items")
 }

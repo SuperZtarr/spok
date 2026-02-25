@@ -357,6 +357,20 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-25] - Transfert de propriété (espace + communauté)
+
+**Demande :** Implémenter le transfert de propriété pour espaces et communautés (manque fonctionnel #2)
+**Décision :** Ancien owner → MEMBER (choix utilisateur, pas ADMIN)
+**Actions réalisées :**
+- Route API `POST /:id/transfer-ownership` sur communities.ts et spaces.ts (transaction atomique)
+- Méthodes client `transferOwnership()` sur spacesApi et communitiesApi
+- Bouton couronne (Crown) + modale de confirmation dans CommunityMembersManager et SpaceMembersManager
+- Visible uniquement par l'OWNER, sur les membres autres que soi-même
+**État :** TERMINÉ
+**Commit :** 1013fb5
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)

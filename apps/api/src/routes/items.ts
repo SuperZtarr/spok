@@ -20,6 +20,7 @@ const createItemSchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   parentId: z.string().optional(),
+  assignedToId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
 });
 
@@ -35,6 +36,7 @@ const updateItemSchema = z.object({
   startDate: z.string().datetime().nullable().optional(),
   endDate: z.string().datetime().nullable().optional(),
   parentId: z.string().nullable().optional(),
+  assignedToId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
   updatedAt: z.string().datetime().optional(),
 });
@@ -128,6 +130,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const prismaInclude: any = {
         tags: { include: { tag: true } },
         children: { select: { id: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
         _count: { select: { children: true, contributions: true } },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true } } },
@@ -248,6 +251,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         },
         parent: true,
         createdBy: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true } } },
         },
@@ -325,6 +329,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             startDate: 'Date de début',
             endDate: 'Date de fin',
             parentId: 'Parent',
+            assignedToId: 'Assigné à',
           };
 
           const conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }> = [];

@@ -340,6 +340,7 @@ export interface GlobalTaskFilters {
   dueDateFrom?: string;
   dueDateTo?: string;
   noDueDate?: boolean;
+  assignedToMe?: boolean;
   sortBy?: 'dueDate' | 'status' | 'spaceName' | 'createdAt' | 'priority' | 'title';
   sortDir?: 'asc' | 'desc';
   page?: number;
@@ -359,12 +360,15 @@ export interface GlobalTask {
   updatedAt: string;
   spaceId: string;
   createdById: string;
+  assignedToId: string | null;
   parentId: string | null;
   description: string | null;
   spaceName: string;
   createdByName: string;
+  assignedToName: string | null;
   space: { id: string; name: string };
   createdBy: { id: string; name: string };
+  assignedTo: { id: string; name: string } | null;
   parent: { id: string; title: string } | null;
   tags: { id: string; name: string; color: string | null }[];
 }
@@ -380,6 +384,7 @@ export const userTasksApi = {
     if (params?.dueDateFrom) sp.set('dueDateFrom', params.dueDateFrom);
     if (params?.dueDateTo) sp.set('dueDateTo', params.dueDateTo);
     if (params?.noDueDate) sp.set('noDueDate', 'true');
+    if (params?.assignedToMe) sp.set('assignedToMe', 'true');
     if (params?.sortBy) sp.set('sortBy', params.sortBy);
     if (params?.sortDir) sp.set('sortDir', params.sortDir);
     if (params?.page) sp.set('page', params.page.toString());

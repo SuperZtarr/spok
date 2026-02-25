@@ -19,6 +19,7 @@ export interface Item {
   updatedAt: string;
   spaceId: string;
   createdById: string;
+  assignedToId?: string | null;
   parentId?: string | null;
   tags?: Tag[];
 }
@@ -40,6 +41,11 @@ export interface ItemWithRelations extends Item {
     name: string;
     email: string;
   };
+  assignedTo?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   _count?: {
     contributions?: number;
   };
@@ -57,6 +63,7 @@ export interface CreateItemInput {
   startDate?: string;
   endDate?: string;
   parentId?: string;
+  assignedToId?: string | null;
   tagIds?: string[];
 }
 
@@ -72,6 +79,7 @@ export interface UpdateItemInput {
   startDate?: string | null;
   endDate?: string | null;
   parentId?: string | null;
+  assignedToId?: string | null;
   tagIds?: string[];
   updatedAt?: string;
 }

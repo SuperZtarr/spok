@@ -99,6 +99,7 @@ export function GlobalTasksPage() {
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
   const [selectedDueDates, setSelectedDueDates] = useState<string[]>([]);
+  const [assignedToMe, setAssignedToMe] = useState(false);
   const [sortBy, setSortBy] = useState<SortField>('dueDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
@@ -200,6 +201,7 @@ export function GlobalTasksPage() {
       priorityParam,
       spaceParam,
       selectedDueDates,
+      assignedToMe,
       sortBy,
       sortDir,
       page,
@@ -212,6 +214,7 @@ export function GlobalTasksPage() {
         priority: priorityParam,
         spaceId: spaceParam,
         ...dueDateParams,
+        assignedToMe: assignedToMe || undefined,
         sortBy,
         sortDir,
         page,
@@ -278,6 +281,7 @@ export function GlobalTasksPage() {
     selectedPriorities.length > 0 ||
     selectedSpaces.length > 0 ||
     selectedDueDates.length > 0 ||
+    assignedToMe ||
     debouncedSearch.length > 0;
 
   const clearAllFilters = () => {
@@ -286,6 +290,7 @@ export function GlobalTasksPage() {
     setSelectedPriorities([]);
     setSelectedSpaces([]);
     setSelectedDueDates([]);
+    setAssignedToMe(false);
     setSearch('');
     setDebouncedSearch('');
     setPage(1);
@@ -298,7 +303,7 @@ export function GlobalTasksPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const activeFilterCount =
-    (isTypeFiltered ? selectedTypes.length : 0) + selectedStatuses.length + selectedPriorities.length + selectedDueDates.length + selectedSpaces.length;
+    (isTypeFiltered ? selectedTypes.length : 0) + selectedStatuses.length + selectedPriorities.length + selectedDueDates.length + selectedSpaces.length + (assignedToMe ? 1 : 0);
 
   const SortHeader = ({
     label,
@@ -401,6 +406,16 @@ export function GlobalTasksPage() {
           {renderFilterRow('Statut', statusOptions, selectedStatuses, (id) => setSelectedStatuses((prev) => toggleValue(prev, id)))}
           {renderFilterRow('Priorite', priorityOptions, selectedPriorities, (id) => setSelectedPriorities((prev) => toggleValue(prev, id)))}
           {renderFilterRow('Echeance', DUE_DATE_OPTIONS, selectedDueDates, (id) => setSelectedDueDates((prev) => toggleValue(prev, id)))}
+          <div className="flex items-start gap-2">
+            <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0 pt-1 hidden sm:block">Assigné</span>
+            <span className="text-xs font-medium text-muted-foreground flex-shrink-0 pt-1 sm:hidden">Assigné</span>
+            <FilterChip
+              label="Assigné à moi"
+              active={assignedToMe}
+              color="bg-violet-100 text-violet-800 border-violet-300"
+              onClick={() => { setAssignedToMe((v) => !v); setPage(1); }}
+            />
+          </div>
           {spaces && spaces.length > 0 &&
             renderFilterRow('Espaces', spaces.map((s) => ({ id: s.id, label: s.name })), selectedSpaces, (id) => setSelectedSpaces((prev) => toggleValue(prev, id)), true)}
         </div>
