@@ -114,19 +114,15 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   });
 
   const updateRelationMutation = useMutation({
-    mutationFn: ({ itemId, itemSpaceId, relationId, data }: { itemId: string; itemSpaceId: string; relationId: string; data: { type?: string; label?: string | null } }) => {
-      console.log('[updateRelation]', { itemId, itemSpaceId, relationId, data });
-      return itemsApi.updateRelation(itemSpaceId, itemId, relationId, data);
-    },
+    mutationFn: ({ itemId, itemSpaceId, relationId, data }: { itemId: string; itemSpaceId: string; relationId: string; data: { type?: string; label?: string | null } }) =>
+      itemsApi.updateRelation(itemSpaceId, itemId, relationId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       if (variables.itemSpaceId !== spaceId) {
         queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
       }
     },
-    onError: (error) => {
-      console.error('[updateRelation] error:', error);
-    },
+    onError: (error) => console.error('[updateRelation] error:', error),
   });
 
   const convertToSpaceMutation = useMutation({
