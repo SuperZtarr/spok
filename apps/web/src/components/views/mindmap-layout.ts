@@ -370,7 +370,7 @@ export function buildPortalNodesAndEdges(
       sourceHandle: 'right-source',
       targetHandle: 'left',
       type: 'default',
-      style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
+      style: { stroke: '#818cf8', strokeWidth: 1.5 },
     });
   });
 
@@ -433,7 +433,7 @@ export function buildPortalNodesAndEdges(
       sourceHandle: 'bottom-source',
       targetHandle: 'top',
       type: 'default',
-      style: { stroke: '#6366f1', strokeWidth: 2, strokeDasharray: '5,5' },
+      style: { stroke: '#6366f1', strokeWidth: 1.5 },
     });
   });
 
@@ -507,7 +507,7 @@ export function buildPortalNodesAndEdges(
         source: parentNodeId,
         target: item.id,
         type: 'default',
-        style: { stroke: '#818cf8', strokeWidth: 2, strokeDasharray: '5,5' },
+        style: { stroke: '#818cf8', strokeWidth: 1.5 },
       });
 
       // Place children in radial fan if not collapsed
