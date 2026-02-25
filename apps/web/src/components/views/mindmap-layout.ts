@@ -302,11 +302,14 @@ export function calculateLayout(
           source: relation.fromItemId,
           target: relation.toItemId,
           ...handles,
-          type: 'relation',
+          type: 'default',
           animated: true,
           style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
           data: { relationId: relation.id, type: relation.type, label: relation.label || '', fromItemId: relation.fromItemId },
+          label: relation.label ? `${relation.type} 💬` : relation.type,
+          labelStyle: { fontSize: 10, fill: '#8b5cf6' },
+          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
         });
       }
     });
@@ -599,11 +602,14 @@ export function buildPortalNodesAndEdges(
           id: `relation-${relation.id}`,
           source: relation.fromItemId,
           target: relation.toItemId,
-          type: 'relation',
+          type: 'default',
           animated: true,
           style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
           data: { relationId: relation.id, type: relation.type, label: relation.label || '', fromItemId: relation.fromItemId },
+          label: relation.label ? `${relation.type} 💬` : relation.type,
+          labelStyle: { fontSize: 10, fill: '#8b5cf6' },
+          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
         });
         existingRelationIds.add(relation.id);
       }

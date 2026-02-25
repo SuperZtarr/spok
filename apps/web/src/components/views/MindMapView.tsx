@@ -30,7 +30,7 @@ import {
   findTreeNode,
   RADIAL_STEP,
 } from './mindmap-utils';
-import { nodeTypes, edgeTypes } from './mindmap-nodes';
+import { nodeTypes } from './mindmap-nodes';
 import { calculateLayout, buildPortalNodesAndEdges, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
 
 export interface MindMapViewHandle {
@@ -828,7 +828,6 @@ function MindMapViewInner({
         onNodeDragStop={onNodeDragStop}
         onConnect={canEdit !== false ? onConnect : undefined}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.1}

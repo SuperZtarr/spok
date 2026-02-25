@@ -1,8 +1,7 @@
-import { Handle, Position, BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, ExternalLink, X, Copy, Trash2, CheckSquare, Pin, PinOff, Link2, Ban, ArrowLeft, type LucideIcon, FlaskConical, Cog } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, ExternalLink, X, Copy, Trash2, CheckSquare, Pin, PinOff } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { TreeItem } from './mindmap-utils';
 
@@ -276,62 +275,4 @@ export const nodeTypes = {
   mindmap: MindMapNode,
   space: SpaceNode,
   portal: PortalNode,
-};
-
-// Relation type → icon mapping
-const RELATION_ICON_MAP: Record<string, { Icon: LucideIcon; color: string }> = {
-  relates: { Icon: Link2, color: '#8b5cf6' },
-  blocks: { Icon: Ban, color: '#ef4444' },
-  depends: { Icon: ArrowLeft, color: '#f97316' },
-  duplicates: { Icon: Copy, color: '#6b7280' },
-  implements: { Icon: Cog, color: '#3b82f6' },
-  tests: { Icon: FlaskConical, color: '#22c55e' },
-};
-
-// Custom edge with icon + tooltip for relation label
-function RelationEdge({
-  id, sourceX, sourceY, targetX, targetY,
-  sourcePosition, targetPosition, data, markerEnd, style,
-}: EdgeProps) {
-  const [hovered, setHovered] = useState(false);
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
-  });
-
-  const relType = (data?.type as string) || 'relates';
-  const relLabel = (data?.label as string) || '';
-  const iconInfo = RELATION_ICON_MAP[relType] || RELATION_ICON_MAP.relates;
-  const IconComponent = iconInfo.Icon;
-
-  return (
-    <>
-      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
-      <foreignObject
-        x={labelX - 10}
-        y={labelY - 10}
-        width={20}
-        height={20}
-        className="overflow-visible pointer-events-auto"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-white shadow-sm border cursor-pointer"
-          style={{ borderColor: iconInfo.color }}
-        >
-          <IconComponent className="w-3 h-3" style={{ color: iconInfo.color }} />
-        </div>
-        {hovered && relLabel && (
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap shadow-lg z-50">
-            {relLabel}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
-          </div>
-        )}
-      </foreignObject>
-    </>
-  );
-}
-
-export const edgeTypes = {
-  relation: RelationEdge,
 };
