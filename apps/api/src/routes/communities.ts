@@ -707,6 +707,51 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Transfer community ownership
+  fastify.post<{ Params: { id: string }; Body: { targetMemberId: string } }>(
+    '/:id/transfer-ownership',
+    async (request, reply) => {
+      const ownership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!ownership || ownership.role !== 'OWNER') {
+        return reply.forbidden('Only the owner can transfer ownership');
+      }
+
+      const targetMember = await fastify.prisma.communityMembership.findUnique({
+        where: { id: request.body.targetMemberId },
+      });
+
+      if (!targetMember || targetMember.communityId !== request.params.id) {
+        return reply.notFound('Target member not found');
+      }
+
+      if (targetMember.userId === request.user.userId) {
+        return reply.badRequest('Cannot transfer ownership to yourself');
+      }
+
+      // Transaction: demote current owner to MEMBER, promote target to OWNER
+      await fastify.prisma.$transaction([
+        fastify.prisma.communityMembership.update({
+          where: { id: ownership.id },
+          data: { role: 'MEMBER' },
+        }),
+        fastify.prisma.communityMembership.update({
+          where: { id: targetMember.id },
+          data: { role: 'OWNER' },
+        }),
+      ]);
+
+      return { success: true };
+    }
+  );
+
   // Upload community avatar
   fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({

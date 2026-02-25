@@ -498,6 +498,12 @@ export const spacesApi = {
 
   deleteCover: (id: string) =>
     fetchApi<{ success: boolean }>(`/spaces/${id}/cover`, { method: 'DELETE' }),
+
+  transferOwnership: (id: string, targetMemberId: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/transfer-ownership`, {
+      method: 'POST',
+      body: JSON.stringify({ targetMemberId }),
+    }),
 };
 
 // Communities
@@ -547,6 +553,12 @@ export const communitiesApi = {
     fetchApi<CommunityMember>(`/communities/${id}/members/${memberId}`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    }),
+
+  transferOwnership: (id: string, targetMemberId: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/transfer-ownership`, {
+      method: 'POST',
+      body: JSON.stringify({ targetMemberId }),
     }),
 
   listPublic: () =>

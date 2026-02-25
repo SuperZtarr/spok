@@ -1063,6 +1063,51 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Transfer space ownership
+  fastify.post<{ Params: { id: string }; Body: { targetMemberId: string } }>(
+    '/:id/transfer-ownership',
+    async (request, reply) => {
+      const ownership = await fastify.prisma.spaceMembership.findUnique({
+        where: {
+          userId_spaceId: {
+            userId: request.user.userId,
+            spaceId: request.params.id,
+          },
+        },
+      });
+
+      if (!ownership || ownership.role !== 'OWNER') {
+        return reply.forbidden('Only the owner can transfer ownership');
+      }
+
+      const targetMember = await fastify.prisma.spaceMembership.findUnique({
+        where: { id: request.body.targetMemberId },
+      });
+
+      if (!targetMember || targetMember.spaceId !== request.params.id) {
+        return reply.notFound('Target member not found');
+      }
+
+      if (targetMember.userId === request.user.userId) {
+        return reply.badRequest('Cannot transfer ownership to yourself');
+      }
+
+      // Transaction: demote current owner to MEMBER, promote target to OWNER
+      await fastify.prisma.$transaction([
+        fastify.prisma.spaceMembership.update({
+          where: { id: ownership.id },
+          data: { role: 'MEMBER' },
+        }),
+        fastify.prisma.spaceMembership.update({
+          where: { id: targetMember.id },
+          data: { role: 'OWNER' },
+        }),
+      ]);
+
+      return { success: true };
+    }
+  );
+
   // Upload space avatar
   fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({

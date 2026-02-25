@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Loader2, Trash2, ChevronDown } from 'lucide-react';
+import { Users, UserPlus, Loader2, Trash2, ChevronDown, Crown } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -33,6 +33,7 @@ export function CommunityMembersManager({
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<CommunityRole>('MEMBER');
   const [removingMember, setRemovingMember] = useState<CommunityMember | null>(null);
+  const [transferTarget, setTransferTarget] = useState<CommunityMember | null>(null);
 
   const { data: members, isLoading } = useQuery({
     queryKey: ['community-members', communityId],
@@ -61,6 +62,16 @@ export function CommunityMembersManager({
       communitiesApi.updateMemberRole(communityId, memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
+    },
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: (targetMemberId: string) =>
+      communitiesApi.transferOwnership(communityId, targetMemberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      setTransferTarget(null);
     },
   });
 
@@ -188,6 +199,16 @@ export function CommunityMembersManager({
                   </span>
                 )}
 
+                {isOwner && !isSelf && !memberIsOwner && (
+                  <button
+                    onClick={() => setTransferTarget(member)}
+                    className="p-1 text-muted-foreground hover:text-amber-500 transition-colors"
+                    title="Transférer la propriété"
+                  >
+                    <Crown className="w-4 h-4" />
+                  </button>
+                )}
+
                 {canRemoveMember && (
                   <button
                     onClick={() => setRemovingMember(member)}
@@ -215,6 +236,20 @@ export function CommunityMembersManager({
         message={`Voulez-vous retirer ${removingMember?.name || removingMember?.email} de cette communauté ?`}
         confirmLabel="Retirer"
         isPending={removeMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={!!transferTarget}
+        onClose={() => setTransferTarget(null)}
+        onConfirm={() => {
+          if (transferTarget) {
+            transferMutation.mutate(transferTarget.id);
+          }
+        }}
+        title="Transférer la propriété"
+        message={`Voulez-vous transférer la propriété de cette communauté à ${transferTarget?.name || transferTarget?.email} ? Vous deviendrez simple membre.`}
+        confirmLabel="Transférer"
+        isPending={transferMutation.isPending}
       />
     </div>
   );

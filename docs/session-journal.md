@@ -277,6 +277,86 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-25] - Refactoring items.ts (Phase 5)
+
+**Demande :** Phase 5 de l'audit : refactoring des fichiers > 1000 lignes. Premier fichier : items.ts (1716 lignes).
+**Actions réalisées :**
+- Extraction de 6 sous-modules Fastify depuis items.ts :
+  - `item-relations.ts` (~110 lignes) : create/delete relation
+  - `item-move.ts` (~270 lignes) : move + bulk-move
+  - `item-bulk.ts` (~210 lignes) : bulk-duplicate
+  - `item-uploads.ts` (~150 lignes) : image + document upload
+  - `item-contributions.ts` (~200 lignes) : CRUD contributions
+  - `item-convert.ts` (~185 lignes) : convert-to-space
+- `checkSpaceAccess` transformé de closure interne en fonction exportée (prend `prisma` en paramètre)
+- items.ts réduit à ~380 lignes (schemas CRUD + list/create/get/update/delete + registration des sous-plugins)
+- 372 tests passent sans modification
+**État :** TERMINÉ
+**Commit :** 6e5e414
+
+---
+
+#### [2026-02-25] - Refactoring SpacePage.tsx (Phase 5)
+
+**Demande :** Phase 5, troisième fichier : SpacePage.tsx (2016 lignes).
+**Actions réalisées :**
+- Extraction de 3 fichiers depuis SpacePage.tsx :
+  - `space-tree-view.tsx` (~310 lignes) : composants TreeItem, ItemChildren, RootDropZone (vue arborescence avec drag & drop)
+  - `useSpaceActions.ts` (~220 lignes) : hook custom avec 6 mutations (delete, update, move, relations, convert), action handlers, état des modales (deletingItem, convertingItem, pendingCrossSpaceMove)
+  - `SpaceToolbar.tsx` (~270 lignes) : composant toolbar avec filtres type/statut, recherche, compteur, boutons expand/collapse/réorganiser
+- SpacePage.tsx réduit à ~760 lignes (état, queries, DnD, formulaire création, view switch, modales)
+- 372 tests passent sans modification
+**État :** TERMINÉ
+**Commit :** a3168fd
+
+---
+
+#### [2026-02-25] - Refactoring MindMapView.tsx (Phase 5)
+
+**Demande :** Phase 5, deuxième fichier : MindMapView.tsx (2553 lignes).
+**Actions réalisées :**
+- Extraction de 3 fichiers depuis MindMapView.tsx :
+  - `mindmap-utils.ts` (~248 lignes) : types (TreeItem, PortalState, LayoutDatum), constantes (RADIAL_STEP, RELATION_TYPES), fonctions utilitaires (buildTree, getStatusColor, tailwindBgToHex, etc.)
+  - `mindmap-nodes.tsx` (~278 lignes) : composants React MindMapNode, SpaceNode, PortalNode + registre nodeTypes
+  - `mindmap-layout.ts` (~480 lignes) : calculateLayout (layout radial), buildPortalNodesAndEdges (logique portails dédupliquée), interfaces MindMapCallbacks/MindMapLayoutOptions
+- MindMapView.tsx réduit à ~780 lignes (état, handlers, JSX)
+- Déduplication : `buildPortalNodesAndEdges` remplace ~250 lignes dupliquées entre useEffect et resetLayout
+- Fix tsconfig.json : ajout `types` explicites pour éviter stub @types/testing-library__jest-dom
+- 372 tests passent sans modification
+**État :** TERMINÉ
+**Commit :** 267f387
+
+---
+
+#### [2026-02-25] - Tests web Phase 4 (community, dashboardTab, theme, useSort, api)
+
+**Demande :** Compléter la Phase 4 des tests web — stores, hooks et utilitaires restants.
+**Actions réalisées :**
+- `community.test.ts` (5 tests) : get/set/persist currentCommunity
+- `dashboardTab.test.ts` (10 tests) : get/set/persist tab + constantes DASHBOARD_TABS/NAV_ITEMS
+- `theme.test.ts` (5 tests) : initTheme light/dark/system, setTheme + DOM classList
+- `useSort.test.ts` (12 tests) : toggle key/order, sortData strings/numbers/nulls/unknown
+- `api.test.ts` (9 tests) : ApiError constructor, isConflictError type guard
+- `setup.ts` : ajout mock global `window.matchMedia` pour jsdom
+- Total : 413 tests (372 existants + 41 nouveaux)
+**État :** TERMINÉ
+**Commit :** 9007e21
+
+---
+
+#### [2026-02-25] - Refactoring ItemEditModal, TimelineView, SequenceView (Phase 5 finale)
+
+**Demande :** Compléter la Phase 5 du refactoring — les 3 derniers fichiers > 1000 lignes.
+**Actions réalisées :**
+- ItemEditModal.tsx (1339 → 1247) : extraction `item-edit-constants.ts` (56 lignes, durées), `item-edit-helpers.ts` (38 lignes, fileNameToTitle, urlToTitle, getDescendantIds)
+- TimelineView.tsx (1131 → 988) : extraction `timeline-constants.ts` (33 lignes, zoom config, RELATION_TYPES), `timeline-utils.ts` (50 lignes, date utils, getStatusColor), `timeline-tree.ts` (64 lignes, buildTree, flattenTree)
+- SequenceView.tsx (1040 → 698) : extraction `sequence-chains.ts` (216 lignes, computeHierarchyChains), `SequenceSVG.tsx` (97 lignes, SVGConnectors), `sequence-utils.ts` (32 lignes, RELATION_TYPES, formatDate)
+- Typecheck OK, 372 tests passent sans modification
+**État :** TERMINÉ
+**Commit :** addd2af
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)

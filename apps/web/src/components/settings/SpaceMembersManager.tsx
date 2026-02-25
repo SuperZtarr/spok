@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Loader2, Trash2, ChevronDown } from 'lucide-react';
+import { Users, UserPlus, Loader2, Trash2, ChevronDown, Crown } from 'lucide-react';
 import { spacesApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -37,6 +37,7 @@ export function SpaceMembersManager({
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [removingMember, setRemovingMember] = useState<SpaceMember | null>(null);
+  const [transferTarget, setTransferTarget] = useState<SpaceMember | null>(null);
 
   const { data: members, isLoading } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -65,6 +66,16 @@ export function SpaceMembersManager({
       spacesApi.updateMemberRole(spaceId, memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space-members', spaceId] });
+    },
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: (targetMemberId: string) =>
+      spacesApi.transferOwnership(spaceId, targetMemberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space-members', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      setTransferTarget(null);
     },
   });
 
@@ -196,6 +207,16 @@ export function SpaceMembersManager({
                   </span>
                 )}
 
+                {isOwner && !isSelf && !memberIsOwner && (
+                  <button
+                    onClick={() => setTransferTarget(member)}
+                    className="p-1 text-muted-foreground hover:text-amber-500 transition-colors"
+                    title="Transférer la propriété"
+                  >
+                    <Crown className="w-4 h-4" />
+                  </button>
+                )}
+
                 {canRemoveMember && (
                   <button
                     onClick={() => setRemovingMember(member)}
@@ -223,6 +244,20 @@ export function SpaceMembersManager({
         message={`Voulez-vous retirer ${removingMember?.name || removingMember?.email} de cet espace ?`}
         confirmLabel="Retirer"
         isPending={removeMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={!!transferTarget}
+        onClose={() => setTransferTarget(null)}
+        onConfirm={() => {
+          if (transferTarget) {
+            transferMutation.mutate(transferTarget.id);
+          }
+        }}
+        title="Transférer la propriété"
+        message={`Voulez-vous transférer la propriété de cet espace à ${transferTarget?.name || transferTarget?.email} ? Vous deviendrez simple membre.`}
+        confirmLabel="Transférer"
+        isPending={transferMutation.isPending}
       />
     </div>
   );
