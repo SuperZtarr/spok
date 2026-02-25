@@ -1,11 +1,14 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Link2, Ban, ArrowLeft, Copy, Cog, FlaskConical, ChevronsDownUp, ChevronsUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Copy, ChevronsDownUp, ChevronsUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { TYPE_ICONS } from '../../constants/ui';
+import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
+import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor } from './timeline-utils';
+import { buildTree, flattenTree } from './timeline-tree';
 
 interface PortalGroup {
   spaceId: string;
@@ -34,152 +37,6 @@ interface TimelineViewProps {
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
-}
-
-// Zoom level configuration
-type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year';
-
-interface ZoomConfig {
-  label: string;
-  days: number;
-  dayWidth: number;
-  navStep: number; // days to navigate
-  showDayNumbers: boolean;
-  showWeekdays: boolean;
-}
-
-const ZOOM_CONFIGS: Record<ZoomLevel, ZoomConfig> = {
-  day: { label: 'Jour', days: 7, dayWidth: 80, navStep: 1, showDayNumbers: true, showWeekdays: true },
-  week: { label: 'Semaine', days: 42, dayWidth: 40, navStep: 7, showDayNumbers: true, showWeekdays: true },
-  month: { label: 'Mois', days: 90, dayWidth: 20, navStep: 30, showDayNumbers: true, showWeekdays: false },
-  quarter: { label: 'Trimestre', days: 180, dayWidth: 8, navStep: 30, showDayNumbers: false, showWeekdays: false },
-  year: { label: 'Année', days: 365, dayWidth: 4, navStep: 90, showDayNumbers: false, showWeekdays: false },
-};
-
-const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];
-
-// Utility functions
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function differenceInDays(date1: Date, date2: Date): number {
-  const d1 = startOfDay(date1);
-  const d2 = startOfDay(date2);
-  return Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function formatDateShort(date: Date): string {
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
-function formatDateFull(date: Date): string {
-  return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function getWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-}
-
-function getMonthName(date: Date): string {
-  return date.toLocaleDateString('fr-FR', { month: 'short' });
-}
-
-// Relation types (same as MindMapView)
-const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
-  { id: 'relates', label: 'Est lié à', Icon: Link2, description: 'Lien simple entre deux éléments', color: 'text-purple-500' },
-  { id: 'blocks', label: 'Bloque', Icon: Ban, description: 'A doit être terminé avant B', color: 'text-red-500' },
-  { id: 'depends', label: 'Dépend de', Icon: ArrowLeft, description: 'A nécessite B pour avancer', color: 'text-orange-500' },
-  { id: 'duplicates', label: 'Duplique', Icon: Copy, description: 'A est un doublon de B', color: 'text-gray-500' },
-  { id: 'implements', label: 'Implémente', Icon: Cog, description: 'A réalise/concrétise B', color: 'text-blue-500' },
-  { id: 'tests', label: 'Teste', Icon: FlaskConical, description: 'A valide le bon fonctionnement de B', color: 'text-green-500' },
-];
-
-// Get status color from referentiels
-function getStatusColor(status: string | null | undefined, statuses: StatusConfig[]): string {
-  if (!status) {
-    const undefinedStatus = statuses.find(s => s.id === 'undefined');
-    return undefinedStatus?.color || 'bg-slate-100 text-slate-600';
-  }
-  const statusConfig = statuses.find(s => s.id === status);
-  if (!statusConfig) return 'bg-gray-100 text-gray-800';
-  return statusConfig.color;
-}
-
-// Build tree structure from flat items
-interface TreeItem extends Item {
-  children: TreeItem[];
-  depth: number;
-}
-
-function buildTree(items: Item[]): TreeItem[] {
-  const itemMap = new Map<string, TreeItem>();
-  const rootItems: TreeItem[] = [];
-
-  items.forEach(item => {
-    itemMap.set(item.id, { ...item, children: [], depth: 0 });
-  });
-
-  items.forEach(item => {
-    const treeItem = itemMap.get(item.id)!;
-    if (item.parentId && itemMap.has(item.parentId)) {
-      const parent = itemMap.get(item.parentId)!;
-      parent.children.push(treeItem);
-    } else {
-      rootItems.push(treeItem);
-    }
-  });
-
-  function setDepths(items: TreeItem[], depth: number) {
-    items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    items.forEach(item => {
-      item.depth = depth;
-      setDepths(item.children, depth + 1);
-    });
-  }
-  setDepths(rootItems, 0);
-
-  return rootItems;
-}
-
-function itemHasDate(item: Item): boolean {
-  return !!(item.startDate || item.endDate || item.dueDate);
-}
-
-function subtreeHasDate(item: TreeItem): boolean {
-  if (itemHasDate(item)) return true;
-  return item.children.some(child => subtreeHasDate(child));
-}
-
-function flattenTree(items: TreeItem[], collapsedIds: Set<string>, compactMode: boolean = false): TreeItem[] {
-  const result: TreeItem[] = [];
-
-  function traverse(items: TreeItem[]) {
-    items.forEach(item => {
-      // In compact mode, skip items that have no dates in their entire subtree
-      if (compactMode && !subtreeHasDate(item)) return;
-
-      result.push(item);
-      if (item.children.length > 0 && !collapsedIds.has(item.id)) {
-        traverse(item.children);
-      }
-    });
-  }
-
-  traverse(items);
-  return result;
 }
 
 export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {

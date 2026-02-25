@@ -19,62 +19,8 @@ import { FileUploadZone } from './ui/FileUploadZone';
 import { DateTimeField } from './ui/DateTimeField';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import { formatDate, formatDateTime } from '../lib/utils';
-
-const MEETING_DURATIONS = [
-  { label: '15 min', ms: 15 * 60 * 1000 },
-  { label: '30 min', ms: 30 * 60 * 1000 },
-  { label: '45 min', ms: 45 * 60 * 1000 },
-  { label: '1h', ms: 60 * 60 * 1000 },
-  { label: '1h30', ms: 90 * 60 * 1000 },
-  { label: '2h', ms: 2 * 60 * 60 * 1000 },
-  { label: '3h', ms: 3 * 60 * 60 * 1000 },
-  { label: '4h', ms: 4 * 60 * 60 * 1000 },
-];
-
-const DAY = 24 * 60 * 60 * 1000;
-const PERIOD_DURATIONS = [
-  { label: '1 jour', ms: DAY },
-  { label: '2 jours', ms: 2 * DAY },
-  { label: '3 jours', ms: 3 * DAY },
-  { label: '5 jours', ms: 5 * DAY },
-  { label: '1 sem.', ms: 7 * DAY },
-  { label: '2 sem.', ms: 14 * DAY },
-  { label: '1 mois', ms: 30 * DAY },
-  { label: '3 mois', ms: 90 * DAY },
-];
-
-const TASK_DURATIONS = [
-  { label: '15 min', ms: 15 * 60 * 1000 },
-  { label: '30 min', ms: 30 * 60 * 1000 },
-  { label: '45 min', ms: 45 * 60 * 1000 },
-  { label: '1h', ms: 60 * 60 * 1000 },
-  { label: '1h30', ms: 90 * 60 * 1000 },
-  { label: '2h', ms: 2 * 60 * 60 * 1000 },
-  { label: '3h', ms: 3 * 60 * 60 * 1000 },
-  { label: '4h', ms: 4 * 60 * 60 * 1000 },
-  { label: '1 jour', ms: DAY },
-  { label: '2 jours', ms: 2 * DAY },
-  { label: '1 sem.', ms: 7 * DAY },
-  { label: '2 sem.', ms: 14 * DAY },
-];
-
-const PROJECT_DURATIONS = [
-  { label: '1 mois', ms: 30 * DAY },
-  { label: '3 mois', ms: 90 * DAY },
-  { label: '6 mois', ms: 180 * DAY },
-  { label: '1 an', ms: 365 * DAY },
-  { label: '2 ans', ms: 730 * DAY },
-];
-
-const DUE_DATE_DURATIONS = [
-  { label: 'Même jour', ms: 0 },
-  { label: '+1j', ms: DAY },
-  { label: '+2j', ms: 2 * DAY },
-  { label: '+1 sem.', ms: 7 * DAY },
-  { label: '+2 sem.', ms: 14 * DAY },
-  { label: '+1 mois', ms: 30 * DAY },
-  { label: '+3 mois', ms: 90 * DAY },
-];
+import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
+import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -269,29 +215,6 @@ export function ItemEditModal({
     },
   });
 
-  // --- Auto-fill title from file/URL ---
-  /** Extract a clean name from a filename (remove extension) */
-  const fileNameToTitle = useCallback((filename: string): string => {
-    const name = filename.replace(/\.[^.]+$/, ''); // remove extension
-    return name.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
-  }, []);
-
-  /** Extract a readable title from a URL (domain or last path segment) */
-  const urlToTitle = useCallback((rawUrl: string): string => {
-    try {
-      const u = new URL(rawUrl);
-      const path = u.pathname.replace(/\/$/, '');
-      if (path && path !== '/') {
-        const last = path.split('/').pop() || '';
-        const decoded = decodeURIComponent(last).replace(/\.[^.]+$/, '');
-        if (decoded) return decoded.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
-      }
-      return u.hostname.replace(/^www\./, '');
-    } catch {
-      return '';
-    }
-  }, []);
-
   const autoFillTitle = useCallback((name: string) => {
     if (!title || title.trim() === '') {
       setTitle(name);
@@ -457,24 +380,9 @@ export function ItemEditModal({
     }
   };
 
-  // Get all descendants of an item to prevent circular references
-  const getDescendantIds = (id: string): Set<string> => {
-    const descendants = new Set<string>();
-    const findDescendants = (currentId: string) => {
-      allItems.forEach((item) => {
-        if (item.parentId === currentId && !descendants.has(item.id)) {
-          descendants.add(item.id);
-          findDescendants(item.id);
-        }
-      });
-    };
-    findDescendants(id);
-    return descendants;
-  };
-
   // Build parent options excluding current item and its descendants
   const parentOptions = useMemo(() => {
-    const descendants = itemId ? getDescendantIds(itemId) : new Set<string>();
+    const descendants = itemId ? getDescendantIds(itemId, allItems) : new Set<string>();
 
     const validItems = allItems.filter((i) => {
       if (!itemId) return true;
