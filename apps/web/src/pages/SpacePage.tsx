@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -11,44 +11,25 @@ import {
   DragOverlay,
   DragStartEvent,
   DragOverEvent,
-  useDroppable,
-  useDraggable,
 } from '@dnd-kit/core';
 import {
-  Plus,
   FileText,
-  CheckSquare,
-  ChevronRight,
-  ChevronDown,
-  Trash2,
-  GripVertical,
-  ListChecks,
-  ExternalLink,
   ArrowDownAZ,
   GitBranch,
-  Settings,
-  History,
-  ChevronsUpDown,
-  ChevronsDownUp,
-  FolderInput,
   FolderKanban,
-  Copy,
-  FolderPlus,
-  RotateCcw,
-  Search,
-  X,
+  ExternalLink,
+  FolderInput,
   AlertTriangle,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
 import { ITEM_TYPES } from '@spok/shared';
-import { DEFAULT_REFERENTIELS, buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
+import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore } from '../stores/viewMode';
@@ -71,18 +52,22 @@ import { TextView } from '../components/views/TextView';
 import { SunburstView } from '../components/views/SunburstView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
-import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 
 import { TYPE_ICONS, TYPE_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
 
+// Extracted components and hooks
+import { TreeItem, RootDropZone } from './space-tree-view';
+import { useSpaceActions } from './useSpaceActions';
+import { SpaceToolbar } from './SpaceToolbar';
+
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { mode: viewMode } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
 
+  // --- New item form state ---
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemType, setNewItemType] = useState<ItemType>('NOTE');
@@ -92,7 +77,6 @@ export function SpacePage() {
   const [newItemStartDate, setNewItemStartDate] = useState('');
   const [newItemEndDate, setNewItemEndDate] = useState('');
 
-  // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
   const formatDateForInput = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -102,34 +86,23 @@ export function SpacePage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Helper to get default dates for PROJECT type (today 00:00 -> tomorrow 00:00)
   const getDefaultProjectDates = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return {
-      startDate: formatDateForInput(today),
-      endDate: formatDateForInput(tomorrow),
-    };
+    return { startDate: formatDateForInput(today), endDate: formatDateForInput(tomorrow) };
   };
 
-  // Helper to get default dates for MEETING type (next hour -> +1h)
   const getDefaultMeetingDates = () => {
     const now = new Date();
-    // Round to next hour with 0 minutes
     const startDate = new Date(now);
     startDate.setHours(now.getHours() + 1, 0, 0, 0);
-    // End date is 1 hour after start
     const endDate = new Date(startDate);
     endDate.setHours(startDate.getHours() + 1);
-    return {
-      startDate: formatDateForInput(startDate),
-      endDate: formatDateForInput(endDate),
-    };
+    return { startDate: formatDateForInput(startDate), endDate: formatDateForInput(endDate) };
   };
 
-  // Handle item type change with default dates for PROJECT, PERIOD and MEETING
   const handleItemTypeChange = (type: ItemType) => {
     setNewItemType(type);
     if (type === 'PROJECT' || type === 'PERIOD') {
@@ -141,18 +114,15 @@ export function SpacePage() {
       setNewItemStartDate(startDate);
       setNewItemEndDate(endDate);
     } else {
-      // Clear dates for other types
       setNewItemStartDate('');
       setNewItemEndDate('');
     }
   };
+
+  // --- UI state ---
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-  const typeDropdownRef = useRef<HTMLDivElement>(null);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const mindmapRef = useRef<MindMapViewHandle>(null);
   const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -160,17 +130,6 @@ export function SpacePage() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
-  const [deletingItem, setDeletingItem] = useState<{id: string; title: string; type: string; childCount: number; contributionCount: number} | null>(null);
-  const [convertingItem, setConvertingItem] = useState<{id: string; title: string; childCount: number} | null>(null);
-  const [pendingCrossSpaceMove, setPendingCrossSpaceMove] = useState<{
-    itemId: string;
-    itemTitle: string;
-    sourceSpaceId: string;
-    targetSpaceId: string;
-    targetSpaceName: string;
-    childCount: number;
-    updates?: { status?: string; type?: ItemType };
-  } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const { includeChildrenSpaceIds } = useSpaceStore();
 
@@ -179,25 +138,7 @@ export function SpacePage() {
     return () => clearSelection();
   }, [spaceId, clearSelection]);
 
-  // Close filter dropdowns on click outside or Escape
-  useEffect(() => {
-    if (!typeDropdownOpen && !statusDropdownOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
-        setTypeDropdownOpen(false);
-      }
-      if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
-        setStatusDropdownOpen(false);
-      }
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); }
-    };
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [typeDropdownOpen, statusDropdownOpen]);
-
+  // --- Queries ---
   const { data: space } = useQuery({
     queryKey: ['space', spaceId],
     queryFn: () => spacesApi.get(spaceId!),
@@ -206,7 +147,6 @@ export function SpacePage() {
 
   const canEdit = space?.role !== 'VIEWER';
 
-  // Load referentiels for this space
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
 
@@ -219,13 +159,10 @@ export function SpacePage() {
     [referentiels],
   );
 
-  // Load spaces from the same community (for portal feature in mindmap)
   const { data: communitySpaces } = useSpaces(space?.communityId || undefined);
 
-  // Compute the list of checked descendant space IDs to include in queries
   const checkedDescendantIds = useMemo((): string[] => {
     if (!spaceId || includeChildrenSpaceIds.size === 0 || !communitySpaces) return [];
-    // Find all descendants of current space
     const descendants = new Set<string>();
     const queue = [spaceId];
     while (queue.length > 0) {
@@ -237,32 +174,25 @@ export function SpacePage() {
         }
       }
     }
-    // Return only the checked ones
     return [...includeChildrenSpaceIds].filter(id => descendants.has(id));
   }, [spaceId, includeChildrenSpaceIds, communitySpaces]);
 
-  // Tree-based views (mindmap, tree, timeline, text) need ALL items to rebuild hierarchy
+  // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  // Flat views (kanban, types, planning, list) show all items without hierarchy filtering
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar';
-
-  // Determine if we should filter or highlight
-  // isTreeView already covers mindmap, tree, timeline, text — no need to repeat timeline here
   const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
-  // Pre-compute highlight color for matched items (border + bg)
   const highlightColor = useMemo(() => {
     if (activeTypeFilter) {
       const tc = getTypeColor(activeTypeFilter, referentiels?.typeLabels);
       return { border: tc.color, bg: tc.bgHover };
     }
     if (activeStatusFilter) {
-      const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-      const s = statuses.find(st => st.id === activeStatusFilter);
+      const statuses = referentiels?.statuses || [];
+      const s = statuses.find((st: any) => st.id === activeStatusFilter);
       if (s) {
-        // borderColor is like "border-orange-300 bg-orange-50", extract both parts
         const parts = s.borderColor.split(' ');
         return { border: parts[0] || '', bg: parts[1] || '' };
       }
@@ -274,12 +204,8 @@ export function SpacePage() {
     queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, viewMode, checkedDescendantIds],
     queryFn: () =>
       itemsApi.list(spaceId!, {
-        // Tree/highlight views load all items (highlight instead of filter)
         type: activeTypeFilter && !isHighlightMode ? activeTypeFilter : undefined,
         status: activeStatusFilter && !isHighlightMode ? (activeStatusFilter === 'undefined' ? 'none' : activeStatusFilter) : undefined,
-        // Tree views need all items (no parentId filter) to build the full hierarchy
-        // Flat views also need all items
-        // Only filter by parentId for non-tree, non-flat views when no filter active
         parentId: !activeTypeFilter && !activeStatusFilter && !isFlatView && !isTreeView ? null : undefined,
         additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined,
         pageSize: 5000,
@@ -287,13 +213,11 @@ export function SpacePage() {
     enabled: !!spaceId,
   });
 
-  // Root items for tree view (only items from current space without parent)
   const rootItems = useMemo(() => {
     if (!itemsData?.data) return [];
     return itemsData.data.filter((item: Item) => !item.parentId && item.spaceId === spaceId);
   }, [itemsData?.data, spaceId]);
 
-  // Portal groups: root items from additional spaces, grouped by space
   const portalGroups = useMemo(() => {
     if (checkedDescendantIds.length === 0 || !itemsData?.data) return [];
     const groupedBySpace = new Map<string, Item[]>();
@@ -311,21 +235,22 @@ export function SpacePage() {
     }));
   }, [itemsData?.data, spaceId, checkedDescendantIds, communitySpaces]);
 
-  // Load all items for parent selector (without filter)
   const { data: allItemsData } = useQuery({
     queryKey: ['items', spaceId, 'all', checkedDescendantIds],
     queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined }),
     enabled: !!spaceId,
   });
 
-  // Load all items with contributions for text view
   const { data: textViewData } = useQuery({
     queryKey: ['items', spaceId, 'all-with-contributions', checkedDescendantIds],
     queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions', additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined }),
     enabled: !!spaceId && viewMode === 'text',
   });
 
-  // Filter items by search query (only in filter mode — flat views)
+  // All items for lookups (allItemsData preferred, fallback to itemsData)
+  const allItems = useMemo(() => allItemsData?.data || itemsData?.data || [], [allItemsData?.data, itemsData?.data]);
+
+  // --- Search ---
   const filterBySearch = useCallback((items: Item[] | undefined): Item[] => {
     if (!items) return [];
     if (!searchQuery.trim() || isHighlightMode) return items;
@@ -336,11 +261,9 @@ export function SpacePage() {
     );
   }, [searchQuery, isHighlightMode]);
 
-  // Compute matching IDs for search highlight (used in highlight mode views)
   const searchMatchIds = useMemo((): Set<string> | undefined => {
     if (!searchQuery.trim()) return undefined;
     const query = searchQuery.toLowerCase();
-    const allItems = allItemsData?.data || itemsData?.data || [];
     const matchIds = new Set<string>();
     for (const item of allItems) {
       if (
@@ -351,8 +274,17 @@ export function SpacePage() {
       }
     }
     return matchIds.size > 0 || searchQuery.trim() ? matchIds : undefined;
-  }, [searchQuery, allItemsData?.data, itemsData?.data]);
+  }, [searchQuery, allItems]);
 
+  // --- Actions hook ---
+  const actions = useSpaceActions({
+    spaceId,
+    allItems,
+    communityId: space?.communityId,
+    communitySpaces: communitySpaces || undefined,
+  });
+
+  // Create item mutation (kept here because onSuccess clears form state)
   const createItemMutation = useMutation({
     mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string; startDate?: string; endDate?: string }) =>
       itemsApi.create(spaceId!, data),
@@ -368,180 +300,13 @@ export function SpacePage() {
     },
   });
 
-  const deleteItemMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, deleteChildren }: { id: string; itemSpaceId: string; deleteChildren?: boolean }) =>
-      itemsApi.delete(itemSpaceId, id, { deleteChildren }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      if (variables.itemSpaceId !== spaceId) {
-        queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
-      }
-    },
-  });
-
-  const handleDelete = useCallback((id: string) => {
-    const allItems = allItemsData?.data || itemsData?.data || [];
-    const item = allItems.find((i: Item) => i.id === id) as (Item & { childCount?: number; contributionCount?: number }) | undefined;
-    // Count all descendants recursively, not just direct children
-    const countDescendants = (parentId: string): number => {
-      const children = allItems.filter((i: Item) => i.parentId === parentId);
-      return children.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
-    };
-    setDeletingItem({
-      id,
-      title: item?.title || 'cet élément',
-      type: item?.type || 'NOTE',
-      childCount: countDescendants(id),
-      contributionCount: item?.contributionCount || 0,
-    });
-  }, [allItemsData?.data, itemsData?.data]);
-
-  const confirmDelete = useCallback((options: { deleteChildren: boolean }) => {
-    if (deletingItem) {
-      const allItems = allItemsData?.data || itemsData?.data || [];
-      const item = allItems.find((i: Item) => i.id === deletingItem.id);
-      const itemSpaceId = item?.spaceId || spaceId!;
-      deleteItemMutation.mutate({ id: deletingItem.id, itemSpaceId, deleteChildren: options.deleteChildren });
-      setDeletingItem(null);
-    }
-  }, [deletingItem, deleteItemMutation, allItemsData?.data, itemsData?.data, spaceId]);
-
-  const handleConvertToSpace = useCallback((id: string) => {
-    const allItems = allItemsData?.data || itemsData?.data || [];
-    const item = allItems.find((i: Item) => i.id === id);
-    const countDescendants = (parentId: string): number => {
-      const children = allItems.filter((i: Item) => i.parentId === parentId);
-      return children.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
-    };
-    setConvertingItem({
-      id,
-      title: item?.title || 'cet élément',
-      childCount: countDescendants(id),
-    });
-  }, [allItemsData?.data, itemsData?.data]);
-
-  const updateItemMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
-      itemsApi.update(itemSpaceId, id, data),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      // Also invalidate the item's own space if different from page space
-      if (variables.itemSpaceId !== spaceId) {
-        queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
-      }
-    },
-    onError: (error) => {
-      // On conflict for inline updates, simply reload data
-      if (error instanceof Error && 'statusCode' in error && (error as any).statusCode === 409) {
-        queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      }
-    },
-  });
-
-  // Helper: find item updatedAt for optimistic locking on inline updates
-  const getItemUpdatedAt = (id: string): string | undefined => {
-    const allItems = allItemsData?.data || itemsData?.data || [];
-    const found = allItems.find((i: Item) => i.id === id);
-    return found?.updatedAt;
-  };
-
-  const handleInlineUpdate = (id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null }) => {
-    // Resolve the item's actual spaceId (portal items belong to different spaces)
-    const allItems = allItemsData?.data || itemsData?.data || [];
-    const item = allItems.find((i: Item) => i.id === id);
-    const itemSpaceId = item?.spaceId || spaceId!;
-    updateItemMutation.mutate({ id, itemSpaceId, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
-  };
-
-  const moveItemMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, parentId, position }: { id: string; itemSpaceId: string; parentId?: string | null; position: number }) =>
-      itemsApi.move(itemSpaceId, id, { parentId, position }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      if (variables.itemSpaceId !== spaceId) {
-        queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
-      }
-    },
-  });
-
-  // Move item to a different space (cross-space drag & drop)
-  const executeCrossSpaceMove = async (itemId: string, sourceSpaceId: string, targetSpaceId: string, includeChildren: boolean, updates?: { status?: string; type?: ItemType }) => {
-    try {
-      await itemsApi.bulkMove(sourceSpaceId, { itemIds: [itemId], targetSpaceId, includeChildren });
-      if (updates) {
-        await itemsApi.update(targetSpaceId, itemId, updates);
-      }
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-    } catch (e) {
-      console.error('Failed to move item to space:', e);
-    }
-  };
-
-  const handleMoveItemToSpace = (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => {
-    const allItems = allItemsData?.data || itemsData?.data || [];
-    const item = allItems.find((i: Item) => i.id === itemId);
-    const countDescendants = (parentId: string): number => {
-      const children = allItems.filter((i: Item) => i.parentId === parentId);
-      return children.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
-    };
-    const childCount = countDescendants(itemId);
-
-    if (childCount > 0) {
-      // Has children — ask for confirmation
-      const targetSpaceName = communitySpaces?.find(s => s.id === targetSpaceId)?.name || 'l\'espace cible';
-      setPendingCrossSpaceMove({
-        itemId,
-        itemTitle: item?.title || 'cet élément',
-        sourceSpaceId,
-        targetSpaceId,
-        targetSpaceName,
-        childCount,
-        updates,
-      });
-    } else {
-      // No children — move directly
-      executeCrossSpaceMove(itemId, sourceSpaceId, targetSpaceId, true, updates);
-    }
-  };
-
-  const createRelationMutation = useMutation({
-    mutationFn: ({ fromItemId, itemSpaceId, toItemId, type }: { fromItemId: string; itemSpaceId: string; toItemId: string; type: string }) =>
-      itemsApi.createRelation(itemSpaceId, fromItemId, { toItemId, type }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-    },
-  });
-
-  const deleteRelationMutation = useMutation({
-    mutationFn: ({ itemId, itemSpaceId, relationId }: { itemId: string; itemSpaceId: string; relationId: string }) =>
-      itemsApi.deleteRelation(itemSpaceId, itemId, relationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-    },
-  });
-
-  const convertToSpaceMutation = useMutation({
-    mutationFn: ({ itemId, itemSpaceId, spaceName }: { itemId: string; itemSpaceId: string; spaceName: string }) =>
-      itemsApi.convertToSpace(itemSpaceId, itemId, {
-        spaceName,
-        communityId: space?.communityId || undefined,
-      }),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
-      queryClient.invalidateQueries({ queryKey: ['spaces'] });
-      setConvertingItem(null);
-      navigate(`/spaces/${result.space.id}`);
-    },
-  });
-
+  // --- DnD state & handlers ---
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
   const pointerYRef = useRef(0);
 
-  // Track pointer position for accurate drop zone detection
   useEffect(() => {
     if (!activeId) return;
     const handler = (e: PointerEvent) => { pointerYRef.current = e.clientY; };
@@ -550,11 +315,7 @@ export function SpacePage() {
   }, [activeId]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -571,8 +332,6 @@ export function SpacePage() {
       return;
     }
 
-    // Find the actual DOM element for accurate position detection
-    // dnd-kit's event.over.rect can be stale when sortable transforms are applied
     const overElement = document.querySelector(`[data-item-id="${currentOverId}"]`) as HTMLElement | null;
     const liveRect = overElement?.getBoundingClientRect();
     const pointerY = pointerYRef.current;
@@ -583,7 +342,6 @@ export function SpacePage() {
       return;
     }
 
-    // Top third = insert before, middle third = nest, bottom third = insert after
     const relativeY = pointerY - liveRect.top;
     const ratio = relativeY / liveRect.height;
 
@@ -610,54 +368,29 @@ export function SpacePage() {
 
     if (!over || active.id === over.id) return;
 
-    // Use allItemsData to find any item (including children)
-    const allItems = allItemsData?.data || [];
     const rootItemsList = itemsData?.data || [];
     const activeItem = allItems.find((item: Item) => item.id === active.id);
-
     if (!activeItem) return;
 
-    const activeItemSpaceId = activeItem.spaceId || spaceId!;
-
-    // Handle drop on root zone
     if (over.id === 'root') {
-      moveItemMutation.mutate({
-        id: active.id as string,
-        itemSpaceId: activeItemSpaceId,
-        parentId: null,
-        position: 0,
-      });
+      actions.handleMove(active.id as string, null, 0);
       return;
     }
 
     const overItem = allItems.find((item: Item) => item.id === over.id);
     if (!overItem) return;
 
-    // Find position among siblings
     const siblings = overItem.parentId
       ? allItems.filter((item: Item) => item.parentId === overItem.parentId)
       : rootItemsList;
     const overIndex = siblings.findIndex((item: Item) => item.id === over.id);
 
     if (currentDropMode === 'nest') {
-      // Make the active item a child of the over item
-      moveItemMutation.mutate({
-        id: active.id as string,
-        itemSpaceId: activeItemSpaceId,
-        parentId: over.id as string,
-        position: 0,
-      });
-      // Auto-expand the parent to show the new child
+      actions.handleMove(active.id as string, over.id as string, 0);
       setExpandedItems((prev) => new Set([...prev, over.id as string]));
     } else {
-      // Reorder at the same level (move to same parent as overItem)
       const targetPosition = currentDropPosition === 'after' ? overIndex + 1 : overIndex;
-      moveItemMutation.mutate({
-        id: active.id as string,
-        itemSpaceId: activeItemSpaceId,
-        parentId: overItem.parentId ?? null,
-        position: targetPosition >= 0 ? targetPosition : 0,
-      });
+      actions.handleMove(active.id as string, overItem.parentId ?? null, targetPosition >= 0 ? targetPosition : 0);
     }
   };
 
@@ -668,8 +401,9 @@ export function SpacePage() {
     setDropPosition('nest');
   };
 
-  const activeItem = activeId ? allItemsData?.data?.find((item: Item) => item.id === activeId) : null;
+  const activeItem = activeId ? allItems.find((item: Item) => item.id === activeId) : null;
 
+  // --- Form handlers ---
   const handleCreateItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (newItemTitle.trim()) {
@@ -686,7 +420,6 @@ export function SpacePage() {
     }
   };
 
-  // Parent sort mode state (persisted in localStorage)
   type ParentSortMode = 'tree' | 'alpha';
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE);
@@ -699,56 +432,36 @@ export function SpacePage() {
     localStorage.setItem(STORAGE_KEYS.PARENT_SORT_MODE, newMode);
   };
 
-  // Build parent options for the creation form (with tree or alpha sort)
   const parentOptions = useMemo(() => {
-    const allItems = allItemsData?.data || [];
-
     if (parentSortMode === 'alpha') {
-      // Alphabetical sort
       const sorted = [...allItems].sort((a: Item, b: Item) =>
         a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' })
       );
       return [
         { value: '', label: 'Aucun parent (racine)' },
-        ...sorted.map((item: Item) => ({
-          value: item.id,
-          label: item.title,
-        })),
+        ...sorted.map((item: Item) => ({ value: item.id, label: item.title })),
       ];
     } else {
-      // Tree sort with indentation
       const buildTree = (parentId: string | null, depth: number): { value: string; label: string }[] => {
         const children = allItems
           .filter((item: Item) => (item.parentId || null) === parentId)
           .sort((a: Item, b: Item) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
-
         const result: { value: string; label: string }[] = [];
         for (const child of children) {
           const indent = depth > 0 ? '—'.repeat(depth) + ' ' : '';
-          result.push({
-            value: child.id,
-            label: `${indent}${child.title}`,
-          });
+          result.push({ value: child.id, label: `${indent}${child.title}` });
           result.push(...buildTree(child.id, depth + 1));
         }
         return result;
       };
-
-      return [
-        { value: '', label: 'Aucun parent (racine)' },
-        ...buildTree(null, 0),
-      ];
+      return [{ value: '', label: 'Aucun parent (racine)' }, ...buildTree(null, 0)];
     }
-  }, [allItemsData?.data, parentSortMode]);
+  }, [allItems, parentSortMode]);
 
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
     });
   };
@@ -757,277 +470,71 @@ export function SpacePage() {
     setNewItemParentId(parentId);
     handleItemTypeChange('NOTE');
     setShowNewItem(true);
-    // Auto-expand the parent to show the new child after creation
     setExpandedItems((prev) => new Set([...prev, parentId]));
   };
 
-  // Expand all items that have children (at any level)
   const expandAll = () => {
-    // Use allItemsData (complete list), fall back to itemsData if not yet loaded
-    const allItems = allItemsData?.data || itemsData?.data || [];
-    // Find all items that are parents (have at least one child)
     const parentIds = new Set<string>();
-    allItems.forEach((item: Item) => {
-      if (item.parentId) {
-        parentIds.add(item.parentId);
-      }
-    });
-    // Also add items with childCount > 0 (from the API response)
-    allItems.forEach((item: Item & { childCount?: number }) => {
-      if ((item.childCount || 0) > 0) {
-        parentIds.add(item.id);
-      }
-    });
+    allItems.forEach((item: Item) => { if (item.parentId) parentIds.add(item.parentId); });
+    allItems.forEach((item: Item & { childCount?: number }) => { if ((item.childCount || 0) > 0) parentIds.add(item.id); });
     setExpandedItems(parentIds);
   };
 
-  // Collapse all items
-  const collapseAll = () => {
-    setExpandedItems(new Set());
-  };
-
-  // Check if any item is expanded
+  const collapseAll = () => { setExpandedItems(new Set()); };
   const hasExpandedItems = expandedItems.size > 0;
 
+  // --- Toolbar callbacks ---
+  const handleToggleExpand = useCallback(() => {
+    if (viewMode === 'mindmap') {
+      if (mindmapExpanded) {
+        mindmapRef.current?.collapseAll();
+        setMindmapExpanded(false);
+      } else {
+        mindmapRef.current?.expandAll();
+        setMindmapExpanded(true);
+      }
+    } else {
+      hasExpandedItems ? collapseAll() : expandAll();
+    }
+  }, [viewMode, mindmapExpanded, hasExpandedItems]);
+
+  const handleResetLayout = useCallback(() => {
+    mindmapRef.current?.resetLayout();
+  }, []);
+
+  const handleNewItem = useCallback(() => {
+    handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
+    setShowNewItem(true);
+  }, [filter]);
+
+  // --- Render ---
   return (
     <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full overflow-hidden' : ''}`}>
       <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' h-full' : ''}`}>
         {/* Toolbar */}
-        <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">
-          <div className="flex gap-1.5 flex-wrap items-center pb-1">
-          {/* Mode indicator */}
-          {isHighlightMode ? (
-            <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
-              <span className="w-2 h-2 rounded-full bg-yellow-400" />
-              <span className="hidden sm:inline">Lumière</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-blue-300 bg-blue-50 text-blue-700 shadow-sm flex-shrink-0">
-              <span className="w-2 h-2 rounded-full bg-blue-400" />
-              <span className="hidden sm:inline">Filtre</span>
-            </span>
-          )}
-
-          {/* Type filter dropdown */}
-          <div ref={typeDropdownRef} className="relative flex-shrink-0">
-            <button
-              onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
-              className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
-                activeTypeFilter
-                  ? `border-2 ${getTypeColor(activeTypeFilter, referentiels?.typeLabels).color} ${getTypeColor(activeTypeFilter, referentiels?.typeLabels).bgHover} font-semibold shadow-sm`
-                  : 'border-input bg-background shadow-sm hover:bg-accent text-muted-foreground'
-              }`}
-            >
-              {activeTypeFilter ? TYPE_LABELS[activeTypeFilter] : 'Types'}
-              <ChevronDown className={`w-3 h-3 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {typeDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
-                {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'] as const).map((t) => {
-                  const isActive = filter === t;
-                  const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => { setFilter(t); setTypeDropdownOpen(false); }}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                        isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                      }`}
-                    >
-                      {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
-                      <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
-                      {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Status filter dropdown */}
-          <div ref={statusDropdownRef} className="relative flex-shrink-0">
-            {(() => {
-              const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-              const activeStatus = activeStatusFilter ? statuses.find(s => s.id === activeStatusFilter) : null;
-              const visibleStatuses = statuses.filter(s => s.visible);
-              return (
-                <>
-                  <button
-                    onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
-                    className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
-                      activeStatus
-                        ? `border-2 ${activeStatus.borderColor} font-semibold shadow-sm`
-                        : 'border-input bg-background shadow-sm hover:bg-accent text-muted-foreground'
-                    }`}
-                  >
-                    {activeStatus ? activeStatus.label : 'Statuts'}
-                    <ChevronDown className={`w-3 h-3 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {statusDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
-                      <button
-                        onClick={() => { setStatusFilter('ALL'); setStatusDropdownOpen(false); }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                          statusFilter === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                        }`}
-                      >
-                        <span className="flex-1 text-left">Tous les statuts</span>
-                      </button>
-                      {visibleStatuses.map((s) => {
-                        const isActive = statusFilter === s.id;
-                        const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => { setStatusFilter(s.id); setStatusDropdownOpen(false); }}
-                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                              isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                            }`}
-                          >
-                            <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                            <span className="flex-1 text-left">{s.label}</span>
-                            {isActive && <span className="text-primary text-xs">✓</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-
-          {/* Search input */}
-          <div className="relative flex-shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-40 pl-8 pr-7 text-xs border border-input rounded-md bg-background shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Item count */}
-          <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
-            {(() => {
-              const total = space?.itemCount || 0;
-              const filtered = itemsData?.total ?? itemsData?.data?.length ?? total;
-              const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
-              const hasSearch = searchQuery.trim().length > 0;
-              if (hasSearch) {
-                const searchCount = searchMatchIds?.size ?? 0;
-                return `${searchCount}/${total} éléments`;
-              }
-              if (hasFilter && !isHighlightMode) {
-                return `${filtered}/${total} éléments`;
-              }
-              return `${total} éléments`;
-            })()}
-          </span>
-
-          {(viewMode === 'tree' || viewMode === 'mindmap') && (() => {
-            const isMindmap = viewMode === 'mindmap';
-            const isExpanded = isMindmap ? mindmapExpanded : hasExpandedItems;
-            const handleClick = () => {
-              if (isMindmap) {
-                if (isExpanded) {
-                  mindmapRef.current?.collapseAll();
-                  setMindmapExpanded(false);
-                } else {
-                  mindmapRef.current?.expandAll();
-                  setMindmapExpanded(true);
-                }
-              } else {
-                isExpanded ? collapseAll() : expandAll();
-              }
-            };
-            return (
-              <>
-                <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClick}
-                  title={isExpanded ? 'Tout réduire' : 'Tout étendre'}
-                  className="flex-shrink-0"
-                >
-                  {isExpanded ? (
-                    <>
-                      <ChevronsDownUp className="w-4 h-4 mr-1" />
-                      Réduire
-                    </>
-                  ) : (
-                    <>
-                      <ChevronsUpDown className="w-4 h-4 mr-1" />
-                      Étendre
-                    </>
-                  )}
-                </Button>
-              </>
-            );
-          })()}
-
-          {viewMode === 'mindmap' && (
-            <>
-              <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => mindmapRef.current?.resetLayout()}
-                title="Réorganiser les éléments"
-                className="flex-shrink-0"
-              >
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Réorganiser
-              </Button>
-            </>
-          )}
-
-          <div className="ml-auto flex gap-1 flex-shrink-0">
-            <Link to={`/spaces/${spaceId}/history`}>
-              <Button variant="ghost" size="sm" title="Historique des modifications">
-                <History className="w-4 h-4" />
-              </Button>
-            </Link>
-            {(space?.role === 'OWNER' || space?.role === 'ADMIN') && (
-              <Link to={`/spaces/${spaceId}/settings`}>
-                <Button variant="ghost" size="sm" title="Paramètres de l'espace">
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </Link>
-            )}
-            {canEdit && (
-              <Button
-                variant={isSelectionMode ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setSelectionMode(!isSelectionMode)}
-                title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
-              >
-                <ListChecks className="w-4 h-4" />
-              </Button>
-            )}
-            {canEdit && (
-              <Button size="sm" onClick={() => {
-                handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
-                setShowNewItem(true);
-              }}>
-                <Plus className="w-4 h-4 mr-1" />
-                Nouveau
-              </Button>
-            )}
-          </div>
-          </div>
-        </div>
+        <SpaceToolbar
+          filter={filter}
+          onFilterChange={setFilter}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          isHighlightMode={isHighlightMode}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          totalItemCount={space?.itemCount || 0}
+          filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+          searchMatchCount={searchMatchIds?.size}
+          referentiels={referentiels}
+          viewMode={viewMode}
+          isExpanded={viewMode === 'mindmap' ? mindmapExpanded : hasExpandedItems}
+          onToggleExpand={handleToggleExpand}
+          onResetLayout={handleResetLayout}
+          canEdit={canEdit}
+          isSelectionMode={isSelectionMode}
+          onToggleSelectionMode={() => setSelectionMode(!isSelectionMode)}
+          onNewItem={handleNewItem}
+          spaceId={spaceId}
+          spaceRole={space?.role}
+        />
 
         {/* New item form */}
         {showNewItem && (
@@ -1074,19 +581,11 @@ export function SpacePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Date de début</label>
-                    <Input
-                      type="datetime-local"
-                      value={newItemStartDate}
-                      onChange={(e) => setNewItemStartDate(e.target.value)}
-                    />
+                    <Input type="datetime-local" value={newItemStartDate} onChange={(e) => setNewItemStartDate(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Date de fin</label>
-                    <Input
-                      type="datetime-local"
-                      value={newItemEndDate}
-                      onChange={(e) => setNewItemEndDate(e.target.value)}
-                    />
+                    <Input type="datetime-local" value={newItemEndDate} onChange={(e) => setNewItemEndDate(e.target.value)} />
                   </div>
                 </div>
               )}
@@ -1101,15 +600,9 @@ export function SpacePage() {
                     title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
                   >
                     {parentSortMode === 'tree' ? (
-                      <>
-                        <GitBranch className="w-3 h-3" />
-                        <span>Arborescence</span>
-                      </>
+                      <><GitBranch className="w-3 h-3" /><span>Arborescence</span></>
                     ) : (
-                      <>
-                        <ArrowDownAZ className="w-3 h-3" />
-                        <span>A-Z</span>
-                      </>
+                      <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>
                     )}
                   </button>
                 </div>
@@ -1121,22 +614,16 @@ export function SpacePage() {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" disabled={createItemMutation.isPending}>
-                  Créer
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowNewItem(false);
-                    setNewItemTitle('');
-                    setNewItemUrl('');
-                    setNewItemParentId('');
-                    setNewItemDueDate('');
-                    setNewItemStartDate('');
-                    setNewItemEndDate('');
-                  }}
-                >
+                <Button type="submit" disabled={createItemMutation.isPending}>Créer</Button>
+                <Button type="button" variant="outline" onClick={() => {
+                  setShowNewItem(false);
+                  setNewItemTitle('');
+                  setNewItemUrl('');
+                  setNewItemParentId('');
+                  setNewItemDueDate('');
+                  setNewItemStartDate('');
+                  setNewItemEndDate('');
+                }}>
                   Annuler
                 </Button>
               </div>
@@ -1144,7 +631,7 @@ export function SpacePage() {
           </div>
         )}
 
-        {/* Items list */}
+        {/* Items / Views */}
         <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
@@ -1154,12 +641,12 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1169,12 +656,12 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
               highlightType={activeTypeFilter}
@@ -1189,22 +676,14 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
-              onCreateRelation={(fromItemId, toItemId, type) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === fromItemId);
-                    createRelationMutation.mutate({ fromItemId, itemSpaceId: item?.spaceId || spaceId!, toItemId, type });
-                  }}
-              onDeleteRelation={(itemId, relationId) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === itemId);
-                    deleteRelationMutation.mutate({ itemId, itemSpaceId: item?.spaceId || spaceId!, relationId });
-                  }}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onCreateRelation={actions.handleCreateRelation}
+              onDeleteRelation={actions.handleDeleteRelation}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1218,13 +697,13 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
-              onMoveItemToSpace={handleMoveItemToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1234,13 +713,13 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateType={(id, type) => handleInlineUpdate(id, { type })}
+              onDelete={actions.handleDelete}
+              onUpdateType={(id, type) => actions.handleInlineUpdate(id, { type })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
-              onMoveItemToSpace={handleMoveItemToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1250,12 +729,12 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1269,12 +748,12 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1289,23 +768,15 @@ export function SpacePage() {
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
-              onUpdateDates={(id, startDate, endDate) => handleInlineUpdate(id, { startDate, endDate })}
-              onCreateRelation={(fromItemId, toItemId, type) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === fromItemId);
-                    createRelationMutation.mutate({ fromItemId, itemSpaceId: item?.spaceId || spaceId!, toItemId, type });
-                  }}
-              onDeleteRelation={(itemId, relationId) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === itemId);
-                    deleteRelationMutation.mutate({ itemId, itemSpaceId: item?.spaceId || spaceId!, relationId });
-                  }}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onUpdateDates={(id, startDate, endDate) => actions.handleInlineUpdate(id, { startDate, endDate })}
+              onCreateRelation={actions.handleCreateRelation}
+              onDeleteRelation={actions.handleDeleteRelation}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
+              onConvertToSpace={actions.handleConvertToSpace}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1324,27 +795,15 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
               onEdit={setEditingItemId}
-              onDelete={handleDelete}
-              onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
-              onMove={(id, parentId, position) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === id);
-                    moveItemMutation.mutate({ id, itemSpaceId: item?.spaceId || spaceId!, parentId, position });
-                  }}
+              onMove={actions.handleMove}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={handleConvertToSpace}
-              onCreateRelation={(fromItemId, toItemId, type) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === fromItemId);
-                    createRelationMutation.mutate({ fromItemId, itemSpaceId: item?.spaceId || spaceId!, toItemId, type });
-                  }}
-              onDeleteRelation={(itemId, relationId) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === itemId);
-                    deleteRelationMutation.mutate({ itemId, itemSpaceId: item?.spaceId || spaceId!, relationId });
-                  }}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onCreateRelation={actions.handleCreateRelation}
+              onDeleteRelation={actions.handleDeleteRelation}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1401,19 +860,15 @@ export function SpacePage() {
                       isExpanded={expandedItems.has(item.id)}
                       onToggleExpand={toggleExpanded}
                       onEdit={setEditingItemId}
-                      onDelete={handleDelete}
-                      onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+                      onDelete={actions.handleDelete}
+                      onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
                       onAddChild={handleAddChild}
                       onMoveToSpace={(id) => setMoveItemId(id)}
                       onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-                      onConvertToSpace={handleConvertToSpace}
+                      onConvertToSpace={actions.handleConvertToSpace}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
-                      onMove={(id, parentId, position) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === id);
-                    moveItemMutation.mutate({ id, itemSpaceId: item?.spaceId || spaceId!, parentId, position });
-                  }}
+                      onMove={actions.handleMove}
                       globalOverId={overId}
                       globalDropMode={dropMode}
                       globalDropPosition={dropPosition}
@@ -1451,19 +906,15 @@ export function SpacePage() {
                           isExpanded={expandedItems.has(item.id)}
                           onToggleExpand={toggleExpanded}
                           onEdit={setEditingItemId}
-                          onDelete={handleDelete}
-                          onUpdateStatus={(id, status) => handleInlineUpdate(id, { status })}
+                          onDelete={actions.handleDelete}
+                          onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
                           onAddChild={handleAddChild}
                           onMoveToSpace={(id) => setMoveItemId(id)}
                           onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-                          onConvertToSpace={handleConvertToSpace}
+                          onConvertToSpace={actions.handleConvertToSpace}
                           spaceId={group.spaceId}
                           isOver={overId === item.id}
-                          onMove={(id, parentId, position) => {
-                    const allItems = allItemsData?.data || itemsData?.data || [];
-                    const item = allItems.find((i: Item) => i.id === id);
-                    moveItemMutation.mutate({ id, itemSpaceId: item?.spaceId || spaceId!, parentId, position });
-                  }}
+                          onMove={actions.handleMove}
                           globalOverId={overId}
                           globalDropMode={dropMode}
                           globalDropPosition={dropPosition}
@@ -1482,7 +933,6 @@ export function SpacePage() {
                       ))}
                     </div>
                   ))}
-                  {/* Root drop zone - at the bottom to avoid interfering with first item */}
                   {activeId && (
                     <RootDropZone isOver={overId === 'root'} />
                   )}
@@ -1510,11 +960,11 @@ export function SpacePage() {
         isOpen={!!editingItemId}
         onClose={() => setEditingItemId(null)}
         spaceId={(() => {
-          const editItem = (allItemsData?.data || []).find((i: Item) => i.id === editingItemId);
+          const editItem = allItems.find((i: Item) => i.id === editingItemId);
           return editItem?.spaceId || spaceId!;
         })()}
         itemId={editingItemId}
-        allItems={allItemsData?.data || []}
+        allItems={allItems}
         referentiels={referentiels}
         canEdit={canEdit}
         spaceName={space?.name}
@@ -1530,81 +980,57 @@ export function SpacePage() {
       )}
 
       {/* Move to space modal (selection mode) */}
-      <MoveToSpaceModal
-        isOpen={showMoveModal}
-        onClose={() => setShowMoveModal(false)}
-        currentSpaceId={spaceId!}
-      />
+      <MoveToSpaceModal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} currentSpaceId={spaceId!} />
 
-      {/* Move to space modal (single item from MindMap) */}
-      <MoveToSpaceModal
-        isOpen={!!moveItemId}
-        onClose={() => setMoveItemId(null)}
-        currentSpaceId={spaceId!}
-        itemIds={moveItemId ? [moveItemId] : undefined}
-      />
+      {/* Move to space modal (single item) */}
+      <MoveToSpaceModal isOpen={!!moveItemId} onClose={() => setMoveItemId(null)} currentSpaceId={spaceId!} itemIds={moveItemId ? [moveItemId] : undefined} />
 
       {/* Duplicate to space modal (selection mode) */}
-      <DuplicateToSpaceModal
-        isOpen={showDuplicateModal}
-        onClose={() => setShowDuplicateModal(false)}
-        currentSpaceId={spaceId!}
-      />
+      <DuplicateToSpaceModal isOpen={showDuplicateModal} onClose={() => setShowDuplicateModal(false)} currentSpaceId={spaceId!} />
 
-      {/* Duplicate to space modal (single item from MindMap) */}
-      <DuplicateToSpaceModal
-        isOpen={!!duplicateItemId}
-        onClose={() => setDuplicateItemId(null)}
-        currentSpaceId={spaceId!}
-        itemIds={duplicateItemId ? [duplicateItemId] : undefined}
-      />
+      {/* Duplicate to space modal (single item) */}
+      <DuplicateToSpaceModal isOpen={!!duplicateItemId} onClose={() => setDuplicateItemId(null)} currentSpaceId={spaceId!} itemIds={duplicateItemId ? [duplicateItemId] : undefined} />
 
       {/* Convert to space modal */}
       <ConvertToSpaceModal
-        isOpen={!!convertingItem}
-        onClose={() => setConvertingItem(null)}
-        onConfirm={(spaceName) => {
-          if (convertingItem) {
-            const allItems = allItemsData?.data || itemsData?.data || [];
-            const item = allItems.find((i: Item) => i.id === convertingItem.id);
-            convertToSpaceMutation.mutate({ itemId: convertingItem.id, itemSpaceId: item?.spaceId || spaceId!, spaceName });
-          }
-        }}
-        itemTitle={convertingItem?.title || ''}
-        childCount={convertingItem?.childCount || 0}
-        isPending={convertToSpaceMutation.isPending}
+        isOpen={!!actions.convertingItem}
+        onClose={() => actions.setConvertingItem(null)}
+        onConfirm={actions.confirmConvertToSpace}
+        itemTitle={actions.convertingItem?.title || ''}
+        childCount={actions.convertingItem?.childCount || 0}
+        isPending={actions.convertToSpacePending}
       />
 
       {/* Delete confirmation modal */}
       <DeleteConfirmModal
-        isOpen={!!deletingItem}
-        onClose={() => setDeletingItem(null)}
-        onConfirm={confirmDelete}
-        itemTitle={deletingItem?.title || ''}
-        itemType={deletingItem?.type || 'NOTE'}
-        childCount={deletingItem?.childCount || 0}
-        contributionCount={deletingItem?.contributionCount || 0}
+        isOpen={!!actions.deletingItem}
+        onClose={() => actions.setDeletingItem(null)}
+        onConfirm={actions.confirmDelete}
+        itemTitle={actions.deletingItem?.title || ''}
+        itemType={actions.deletingItem?.type || 'NOTE'}
+        childCount={actions.deletingItem?.childCount || 0}
+        contributionCount={actions.deletingItem?.contributionCount || 0}
       />
 
       {/* Cross-space move confirmation modal */}
       <Modal
-        isOpen={!!pendingCrossSpaceMove}
-        onClose={() => setPendingCrossSpaceMove(null)}
+        isOpen={!!actions.pendingCrossSpaceMove}
+        onClose={() => actions.setPendingCrossSpaceMove(null)}
         title="Déplacer vers un autre espace"
         size="small"
       >
-        {pendingCrossSpaceMove && (
+        {actions.pendingCrossSpaceMove && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
               <FolderInput className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-semibold truncate">{pendingCrossSpaceMove.itemTitle}</span>
+              <span className="font-semibold truncate">{actions.pendingCrossSpaceMove.itemTitle}</span>
             </div>
 
             <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>
-                Cet élément a <strong>{pendingCrossSpaceMove.childCount}</strong> descendant{pendingCrossSpaceMove.childCount > 1 ? 's' : ''}.
-                Voulez-vous aussi les déplacer vers <strong>{pendingCrossSpaceMove.targetSpaceName}</strong> ?
+                Cet élément a <strong>{actions.pendingCrossSpaceMove.childCount}</strong> descendant{actions.pendingCrossSpaceMove.childCount > 1 ? 's' : ''}.
+                Voulez-vous aussi les déplacer vers <strong>{actions.pendingCrossSpaceMove.targetSpaceName}</strong> ?
               </span>
             </div>
 
@@ -1612,25 +1038,25 @@ export function SpacePage() {
               <Button
                 className="w-full"
                 onClick={() => {
-                  const m = pendingCrossSpaceMove;
-                  setPendingCrossSpaceMove(null);
-                  executeCrossSpaceMove(m.itemId, m.sourceSpaceId, m.targetSpaceId, true, m.updates);
+                  const m = actions.pendingCrossSpaceMove!;
+                  actions.setPendingCrossSpaceMove(null);
+                  actions.executeCrossSpaceMove(m.itemId, m.sourceSpaceId, m.targetSpaceId, true, m.updates);
                 }}
               >
-                Déplacer avec les {pendingCrossSpaceMove.childCount} descendant{pendingCrossSpaceMove.childCount > 1 ? 's' : ''}
+                Déplacer avec les {actions.pendingCrossSpaceMove.childCount} descendant{actions.pendingCrossSpaceMove.childCount > 1 ? 's' : ''}
               </Button>
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  const m = pendingCrossSpaceMove;
-                  setPendingCrossSpaceMove(null);
-                  executeCrossSpaceMove(m.itemId, m.sourceSpaceId, m.targetSpaceId, false, m.updates);
+                  const m = actions.pendingCrossSpaceMove!;
+                  actions.setPendingCrossSpaceMove(null);
+                  actions.executeCrossSpaceMove(m.itemId, m.sourceSpaceId, m.targetSpaceId, false, m.updates);
                 }}
               >
                 Déplacer seul
               </Button>
-              <Button variant="ghost" className="w-full" onClick={() => setPendingCrossSpaceMove(null)}>
+              <Button variant="ghost" className="w-full" onClick={() => actions.setPendingCrossSpaceMove(null)}>
                 Annuler
               </Button>
             </div>
@@ -1638,378 +1064,5 @@ export function SpacePage() {
         )}
       </Modal>
     </div>
-  );
-}
-
-// Root drop zone to move items to root level
-function RootDropZone({ isOver }: { isOver: boolean }) {
-  const { setNodeRef } = useDroppable({ id: 'root' });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`mx-3 mt-2 py-2 px-3 rounded-md border-2 border-dashed transition-colors ${
-        isOver
-          ? 'border-green-500 bg-green-50 text-green-700'
-          : 'border-gray-300 text-gray-400'
-      }`}
-    >
-      <span className="text-sm">↓ Déposer ici pour mettre à la racine</span>
-    </div>
-  );
-}
-
-// Tree item component - uses useDraggable + useDroppable (no transform/reorder animations)
-function TreeItem({
-  item,
-  depth,
-  orderNumber,
-  isExpanded,
-  onToggleExpand,
-  onEdit,
-  onDelete,
-  onUpdateStatus,
-  onAddChild,
-  onMoveToSpace,
-  onDuplicateToSpace,
-  onConvertToSpace,
-  spaceId,
-  isOver,
-  onMove,
-  globalOverId,
-  globalDropMode,
-  globalDropPosition,
-  isSelectionMode,
-  isSelected,
-  onToggleSelection,
-  expandedItems,
-  canEdit,
-  highlightType,
-  highlightStatus,
-  highlightColor,
-  searchMatchIds,
-  statusColorMap,
-  statusLabelMap,
-}: {
-  item: Item & { childCount?: number; tags?: any[] };
-  depth: number;
-  orderNumber: string;
-  isExpanded: boolean;
-  onToggleExpand: (id: string) => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  onUpdateStatus: (id: string, status: string) => void;
-  onAddChild: (parentId: string) => void;
-  onMoveToSpace?: (id: string) => void;
-  onDuplicateToSpace?: (id: string) => void;
-  onConvertToSpace?: (id: string) => void;
-  spaceId: string;
-  isOver: boolean;
-  onMove: (id: string, parentId: string | null, position: number) => void;
-  globalOverId: string | null;
-  globalDropMode: 'reorder' | 'nest';
-  globalDropPosition?: 'before' | 'after' | 'nest';
-  isSelectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelection?: (id: string) => void;
-  expandedItems: Set<string>;
-  canEdit?: boolean;
-  highlightType?: string;
-  highlightStatus?: string;
-  highlightColor?: { border: string; bg: string };
-  searchMatchIds?: Set<string>;
-  statusColorMap: Record<string, string>;
-  statusLabelMap: Record<string, string>;
-}) {
-  // Draggable (for the grip handle)
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({ id: item.id });
-
-  // Droppable (for receiving drops)
-  const {
-    setNodeRef: setDropRef,
-  } = useDroppable({ id: item.id });
-
-  const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
-  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
-  const isHighlighted = hasHighlight && !isDimmed;
-  const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
-
-  const currentDropPosition = isOver ? (globalDropPosition || 'nest') : null;
-
-  const Icon = TYPE_ICONS[item.type];
-  const hasChildren = (item.childCount || 0) > 0;
-
-  const handleClick = () => {
-    if (isSelectionMode && onToggleSelection) {
-      onToggleSelection(item.id);
-    } else {
-      onEdit(item.id);
-    }
-  };
-
-  return (
-    <div style={{ opacity: isDragging ? 0.4 : isDimmed ? 0.35 : 1 }}>
-      {/* Line before this item (insert before) */}
-      {currentDropPosition === 'before' && (
-        <div className="relative mx-3 h-0.5" style={{ marginLeft: `${12 + depth * 24}px` }}>
-          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
-        </div>
-      )}
-      <div
-        ref={setDropRef}
-        data-item-id={item.id}
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-colors duration-150 ${
-          currentDropPosition === 'nest' ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-400' : ''
-        } ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
-        style={{ paddingLeft: `${12 + depth * 24}px` }}
-        onClick={handleClick}
-      >
-        {isSelectionMode ? (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelection?.(item.id)}
-            onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded"
-          />
-        ) : canEdit !== false ? (
-          <button
-            ref={setDragRef}
-            {...attributes}
-            {...listeners}
-            className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
-            onClick={(e) => e.stopPropagation()}
-            title="Glisser pour réorganiser"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        ) : null}
-
-        {hasChildren ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand(item.id);
-            }}
-            className="p-0.5 hover:bg-muted rounded"
-            title={isExpanded ? 'Réduire' : 'Développer'}
-          >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-        ) : (
-          <div className="w-5" />
-        )}
-
-        <span className="text-xs text-muted-foreground font-mono min-w-[1.5rem]">{orderNumber}</span>
-
-        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-        <span className="flex-1 truncate">{item.title}</span>
-
-        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
-          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
-        )}
-
-        {item.url && (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            title="Ouvrir le lien"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        )}
-
-        <Badge
-          className={`text-xs ${statusColorMap[item.status || 'none'] || statusColorMap['undefined'] || 'bg-gray-100 text-gray-500'}`}
-          variant="secondary"
-        >
-          {statusLabelMap[item.status || ''] || statusLabelMap['undefined'] || 'Non défini'}
-        </Badge>
-
-        {canEdit !== false && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-            <ItemActionMenu
-              groups={[
-                {
-                  actions: [
-                    ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
-                    { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                  ],
-                },
-                {
-                  actions: [
-                    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                    ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                  ],
-                },
-                {
-                  actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-                },
-              ].filter(g => g.actions.length > 0)}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Line after this item (insert after) */}
-      {currentDropPosition === 'after' && (
-        <div className="relative mx-3 h-0.5" style={{ marginLeft: `${12 + depth * 24}px` }}>
-          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
-        </div>
-      )}
-
-      {isExpanded && hasChildren && (
-        <ItemChildren
-          spaceId={spaceId}
-          parentId={item.id}
-          depth={depth + 1}
-          parentOrderNumber={orderNumber}
-          onEditItem={onEdit}
-          onDelete={onDelete}
-          onUpdateStatus={onUpdateStatus}
-          onAddChild={onAddChild}
-          onMoveToSpace={onMoveToSpace}
-          onDuplicateToSpace={onDuplicateToSpace}
-          onConvertToSpace={onConvertToSpace}
-          onMove={onMove}
-          globalOverId={globalOverId}
-          globalDropMode={globalDropMode}
-          globalDropPosition={globalDropPosition}
-          isSelectionMode={isSelectionMode}
-          onToggleSelection={onToggleSelection}
-          expandedItems={expandedItems}
-          onToggleExpand={onToggleExpand}
-          canEdit={canEdit}
-          highlightType={highlightType}
-          highlightStatus={highlightStatus}
-          highlightColor={highlightColor}
-          searchMatchIds={searchMatchIds}
-          statusColorMap={statusColorMap}
-          statusLabelMap={statusLabelMap}
-        />
-      )}
-    </div>
-  );
-}
-
-// Sub-component to load children lazily
-function ItemChildren({
-  spaceId,
-  parentId,
-  depth,
-  parentOrderNumber,
-  onEditItem,
-  onDelete,
-  onUpdateStatus,
-  onAddChild,
-  onMoveToSpace,
-  onDuplicateToSpace,
-  onConvertToSpace,
-  onMove,
-  globalOverId,
-  globalDropMode,
-  globalDropPosition,
-  isSelectionMode,
-  onToggleSelection,
-  expandedItems,
-  onToggleExpand,
-  canEdit,
-  highlightType,
-  highlightStatus,
-  highlightColor,
-  searchMatchIds,
-  statusColorMap,
-  statusLabelMap,
-}: {
-  spaceId: string;
-  parentId: string;
-  depth: number;
-  parentOrderNumber: string;
-  onEditItem: (id: string) => void;
-  onDelete: (id: string) => void;
-  onUpdateStatus: (id: string, status: string) => void;
-  onAddChild: (parentId: string) => void;
-  onMoveToSpace?: (id: string) => void;
-  onDuplicateToSpace?: (id: string) => void;
-  onConvertToSpace?: (id: string) => void;
-  onMove: (id: string, parentId: string | null, position: number) => void;
-  globalOverId: string | null;
-  globalDropMode: 'reorder' | 'nest';
-  globalDropPosition?: 'before' | 'after' | 'nest';
-  isSelectionMode?: boolean;
-  onToggleSelection?: (id: string) => void;
-  expandedItems: Set<string>;
-  onToggleExpand: (id: string) => void;
-  canEdit?: boolean;
-  highlightType?: string;
-  highlightStatus?: string;
-  highlightColor?: { border: string; bg: string };
-  searchMatchIds?: Set<string>;
-  statusColorMap: Record<string, string>;
-  statusLabelMap: Record<string, string>;
-}) {
-  const { data } = useQuery({
-    queryKey: ['items', spaceId, 'children', parentId],
-    queryFn: () => itemsApi.list(spaceId, { parentId, pageSize: 5000 }),
-  });
-
-  // Get selection store for checking selection state (must be before any early return)
-  const { selectedIds: globalSelectedIds } = useSelectionStore();
-
-  if (!data?.data.length) return null;
-
-  return (
-    <>
-      {data.data.map((item: Item & { childCount?: number }, index: number) => (
-        <TreeItem
-          key={item.id}
-          item={item}
-          depth={depth}
-          orderNumber={`${parentOrderNumber}.${index + 1}`}
-          isExpanded={expandedItems.has(item.id)}
-          onToggleExpand={onToggleExpand}
-          onEdit={onEditItem}
-          onDelete={onDelete}
-          onUpdateStatus={onUpdateStatus}
-          onAddChild={onAddChild}
-          onMoveToSpace={onMoveToSpace}
-          onDuplicateToSpace={onDuplicateToSpace}
-          onConvertToSpace={onConvertToSpace}
-          spaceId={spaceId}
-          isOver={globalOverId === item.id}
-          onMove={onMove}
-          globalOverId={globalOverId}
-          globalDropMode={globalDropMode}
-          globalDropPosition={globalDropPosition}
-          isSelectionMode={isSelectionMode}
-          isSelected={globalSelectedIds.has(item.id)}
-          onToggleSelection={onToggleSelection}
-          expandedItems={expandedItems}
-          canEdit={canEdit}
-          highlightType={highlightType}
-          highlightStatus={highlightStatus}
-          highlightColor={highlightColor}
-          searchMatchIds={searchMatchIds}
-          statusColorMap={statusColorMap}
-          statusLabelMap={statusLabelMap}
-        />
-      ))}
-    </>
   );
 }
