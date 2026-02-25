@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -25,6 +25,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'mindmap', label: 'Carte mentale', icon: 'Share2', category: 'exploration' },
   { value: 'graph', label: 'Graphe', icon: 'Network', category: 'exploration' },
   { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', category: 'exploration' },
+  { value: 'relations', label: 'Relations', icon: 'Waypoints', category: 'exploration' },
 ];
 
 interface ViewModeState {

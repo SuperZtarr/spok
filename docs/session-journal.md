@@ -357,6 +357,31 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-25] - Assignation d'items
+
+**Demande :** Ajouter l'assignation d'items à des membres + vue "Assigné à moi" (manque fonctionnel #3)
+**Actions réalisées :**
+- Schema Prisma : `assignedToId` + relation `assignedTo` sur Item, index
+- API items.ts : `assignedToId` dans create/update zod, `assignedTo` dans includes listing + get, conflict detection
+- API user-tasks.ts : filtre `assignedToMe`, `assignedToId`/`assignedTo` dans select et réponse
+- Types shared : `assignedToId` sur Item, `assignedTo` sur ItemWithRelations, dans Create/UpdateItemInput
+- UI ItemEditModal : sélecteur dropdown des membres de l'espace (visible si > 1 membre)
+- UI GlobalTasksPage : chip filtre "Assigné à moi" (violet)
+**État :** TERMINÉ
+**Commit :** fbb4887
+
+---
+
+#### [2026-02-25] - Statut "Bloqué" → "À valider"
+
+**Demande :** Remplacer le statut "bloqué" par "à valider" dans les référentiels par défaut
+**Actions réalisées :**
+- `defaultReferentiels.ts` : id `blocked`→`to_validate`, label `Bloqué`→`À valider`, couleur noir→violet
+**État :** TERMINÉ
+**Commit :** e5c6766
+
+---
+
 #### [2026-02-25] - Transfert de propriété (espace + communauté)
 
 **Demande :** Implémenter le transfert de propriété pour espaces et communautés (manque fonctionnel #2)
