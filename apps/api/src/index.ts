@@ -23,6 +23,7 @@ import { searchRoutes } from './routes/search.js';
 import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
 import { graphRoutes } from './routes/graph.js';
+import { notificationsRoutes } from './routes/notifications.js';
 
 const envToLogger = {
   development: {
@@ -214,6 +215,7 @@ async function buildApp() {
   await app.register(userRoutes, { prefix: '/user' });
   await app.register(userTasksRoutes, { prefix: '/user' });
   await app.register(graphRoutes);
+  await app.register(notificationsRoutes, { prefix: '/notifications' });
 
   // Health check
   app.get('/health', async () => {

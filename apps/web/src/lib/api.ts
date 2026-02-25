@@ -40,6 +40,7 @@ import type {
   CreateContributionInput,
   UpdateContributionInput,
   SunburstNode,
+  Notification,
 } from '@spok/shared';
 
 // API URL is injected at build time via VITE_API_URL environment variable
@@ -1382,6 +1383,23 @@ export const graphApi = {
     const query = params.toString();
     return fetchApi<SunburstNode>(`/graph/sunburst${query ? `?${query}` : ''}`);
   },
+};
+
+export const notificationsApi = {
+  list: (limit = 20, offset = 0) =>
+    fetchApi<Notification[]>(`/notifications?limit=${limit}&offset=${offset}`),
+
+  unreadCount: () =>
+    fetchApi<{ count: number }>('/notifications/unread-count'),
+
+  markRead: (id: string) =>
+    fetchApi<Notification>(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllRead: () =>
+    fetchApi<{ updated: number }>('/notifications/read-all', { method: 'PATCH' }),
+
+  delete: (id: string) =>
+    fetchApi<{ success: boolean }>(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {

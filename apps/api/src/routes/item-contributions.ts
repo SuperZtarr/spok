@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog } from '../utils/audit.js';
+import { createNotification } from '../utils/notifications.js';
 import { checkSpaceAccess } from './items.js';
 
 const createContributionSchema = z.object({
@@ -97,6 +98,21 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
         after: { content: contribution.content, itemId: contribution.itemId },
       },
     });
+
+    // Notify item creator and assignee (except the contribution author)
+    const authorName = contribution.author.name;
+    const notifyIds = new Set<string>();
+    if (item.createdById !== request.user.userId) notifyIds.add(item.createdById);
+    if (item.assignedToId && item.assignedToId !== request.user.userId) notifyIds.add(item.assignedToId);
+    for (const targetUserId of notifyIds) {
+      await createNotification(fastify.prisma, {
+        userId: targetUserId,
+        type: 'CONTRIBUTION',
+        title: `${authorName} a commenté « ${item.title} »`,
+        link: `/spaces/${request.params.spaceId}`,
+        metadata: { actorId: request.user.userId, actorName: authorName, itemId: item.id, itemTitle: item.title },
+      });
+    }
 
     return reply.status(201).send(contribution);
   });

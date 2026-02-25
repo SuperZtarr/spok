@@ -7,6 +7,7 @@ import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
+import { createNotification } from '../utils/notifications.js';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -943,6 +944,16 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             },
           },
         },
+      });
+
+      // Notify invited user
+      const inviterName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+      await createNotification(fastify.prisma, {
+        userId: invitedUser.id,
+        type: 'INVITATION',
+        title: `${inviterName} vous a ajouté à l'espace « ${membership.space.name} »`,
+        link: `/spaces/${request.params.id}`,
+        metadata: { actorId: request.user.userId, actorName: inviterName, spaceName: membership.space.name },
       });
 
       return reply.status(201).send({

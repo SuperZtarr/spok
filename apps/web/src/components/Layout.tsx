@@ -15,6 +15,7 @@ import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
 import { CommunitySelector } from './CommunitySelector';
 import { GlobalSearch } from './GlobalSearch';
+import { NotificationBell } from './NotificationBell';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
@@ -590,6 +591,7 @@ export function Layout() {
           <div className="flex items-center gap-2 ml-auto flex-shrink-0 px-4 md:px-5">
             <ViewModeSelector />
             <GlobalSearch />
+            <NotificationBell />
             <button
               onClick={() => setIsProfileOpen(true)}
               className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent transition-colors"

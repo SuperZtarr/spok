@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
+import { createNotification } from '../utils/notifications.js';
 import { itemRelationsRoutes } from './item-relations.js';
 import { itemMoveRoutes } from './item-move.js';
 import { itemBulkRoutes } from './item-bulk.js';
@@ -417,6 +418,18 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           after: serializeItemForAudit(item),
         },
       });
+
+      // Notify on assignment change
+      if (updateData.assignedToId && updateData.assignedToId !== existingItem.assignedToId && updateData.assignedToId !== request.user.userId) {
+        const assignerName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+        await createNotification(fastify.prisma, {
+          userId: updateData.assignedToId,
+          type: 'ASSIGNMENT',
+          title: `${assignerName} vous a assigné « ${item.title} »`,
+          link: `/spaces/${request.params.spaceId}`,
+          metadata: { actorId: request.user.userId, actorName: assignerName, itemId: item.id, itemTitle: item.title },
+        });
+      }
 
       return {
         ...item,

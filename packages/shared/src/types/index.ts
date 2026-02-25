@@ -7,3 +7,4 @@ export * from './audit.js';
 export * from './community.js';
 export * from './contribution.js';
 export * from './graph.js';
+export * from './notification.js';

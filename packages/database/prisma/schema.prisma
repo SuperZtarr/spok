@@ -26,6 +26,7 @@ model User {
   assignedItems          Item[]  @relation("ItemAssignedTo")
   contributions          Contribution[]
   auditLogs              AuditLog[]
+  notifications              Notification[]
   passwordResetTokens        PasswordResetToken[]
   emailVerificationTokens    EmailVerificationToken[]
 
@@ -278,6 +279,32 @@ model AuditLog {
   @@index([spaceId, createdAt])
   @@index([batchId])
   @@map("audit_logs")
+}
+
+// Notifications
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String?
+  link      String?          // URL relative pour navigation (ex: /spaces/xxx)
+  read      Boolean          @default(false)
+  metadata  Json?            // données supplémentaires (actorName, spaceName, etc.)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INVITATION
+  ASSIGNMENT
+  CONTRIBUTION
+  MENTION
 }
 
 // Refresh tokens for JWT
