@@ -850,6 +850,13 @@ export function SpacePage() {
               items={(allItemsData?.data || []) as ItemWithRelations[]}
               spaceId={spaceId!}
               onEdit={(itemId) => setEditingItemId(itemId)}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={actions.handleConvertToSpace}
+              doneStatusId={referentiels?.statuses?.find(s => s.id === 'done')?.id || 'done'}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}

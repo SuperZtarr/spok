@@ -10,7 +10,6 @@ import {
   useEdgesState,
   type Node,
   type Edge,
-  type Connection,
   type OnConnect,
   type NodeChange,
   type NodeTypes,
@@ -25,7 +24,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ItemWithRelations } from '@spok/shared';
 import { canvasLayoutApi, itemsApi } from '../../lib/api';
 import { TYPE_ICONS } from '../../constants/ui';
-import { Ban, ArrowLeft, Link2, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { Plus, Trash2, CheckSquare, FolderInput, FolderPlus, Ban, ArrowLeft, Link2, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
 
 const TYPE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -54,6 +54,13 @@ const RELATION_TYPE_MAP: Record<string, { label: string; Icon: LucideIcon; color
 interface SchemaNodeData {
   item: ItemWithRelations;
   onEdit: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onUpdateStatus?: (id: string, status: string) => void;
+  onAddChild?: (id: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
+  doneStatusId?: string;
   isHighlighted: boolean;
   isDimmed: boolean;
   isSearchMatch: boolean;
@@ -63,9 +70,30 @@ interface SchemaNodeData {
 }
 
 function SchemaNode({ data }: { data: SchemaNodeData }) {
-  const { item, isHighlighted, isDimmed, isSearchMatch, isPortal } = data;
+  const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit } = data;
   const Icon = TYPE_ICONS[item.type];
   const dotColor = TYPE_COLORS[item.type] || '#6b7280';
+
+  const menuGroups = useMemo(() => {
+    const groups = [];
+    if (canEdit) {
+      const createActions = [];
+      if (onAddChild) createActions.push({ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) });
+      if (onDuplicateToSpace) createActions.push({ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) });
+      if (createActions.length > 0) groups.push({ label: 'Créer', actions: createActions });
+
+      const organizeActions = [];
+      if (onUpdateStatus && doneStatusId && item.status !== doneStatusId) {
+        organizeActions.push({ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) });
+      }
+      if (onMoveToSpace) organizeActions.push({ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) });
+      if (onConvertToSpace) organizeActions.push({ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) });
+      if (organizeActions.length > 0) groups.push({ label: 'Organiser', actions: organizeActions });
+
+      if (onDelete) groups.push({ actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] });
+    }
+    return groups;
+  }, [canEdit, item, onAddChild, onDuplicateToSpace, onUpdateStatus, onMoveToSpace, onConvertToSpace, onDelete, doneStatusId]);
 
   return (
     <div
@@ -97,6 +125,17 @@ function SchemaNode({ data }: { data: SchemaNodeData }) {
         />
         <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
         <span className="text-sm font-medium line-clamp-2 break-words text-foreground">{item.title}</span>
+
+        {/* Action menu */}
+        {menuGroups.length > 0 && (
+          <div className="ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity nodrag nopan">
+            <ItemActionMenu
+              groups={menuGroups}
+              triggerClassName="p-0.5 rounded hover:bg-black/10 transition-colors"
+              side="right"
+            />
+          </div>
+        )}
       </div>
       {item.status && (
         <div className="mt-1 text-[10px] text-muted-foreground truncate">{item.status}</div>
@@ -136,60 +175,19 @@ function RelationEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, 
 const nodeTypes: NodeTypes = { schema: SchemaNode };
 const edgeTypes: EdgeTypes = { relation: RelationEdge };
 
-// --- Relation type picker modal ---
-function RelationTypePicker({
-  onSelect,
-  onCancel,
-  position,
-}: {
-  onSelect: (type: string) => void;
-  onCancel: () => void;
-  position: { x: number; y: number };
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as HTMLElement)) onCancel();
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancel();
-    }
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [onCancel]);
-
-  return (
-    <div
-      ref={ref}
-      className="fixed z-50 bg-card border rounded-lg shadow-lg p-2 w-48"
-      style={{ top: position.y, left: position.x }}
-    >
-      <div className="text-xs font-medium text-muted-foreground mb-1 px-2">Type de relation</div>
-      {Object.entries(RELATION_TYPE_MAP).map(([type, config]) => (
-        <button
-          key={type}
-          onClick={() => onSelect(type)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded transition-colors"
-        >
-          <config.Icon className="w-4 h-4" style={{ color: config.color }} />
-          <span>{config.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // --- Main component ---
 interface SchemaViewProps {
   items: ItemWithRelations[];
   spaceId: string;
   onEdit: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onUpdateStatus?: (id: string, status: string) => void;
+  onAddChild?: (id: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
   onCreateItem?: (position: { x: number; y: number }) => void;
+  doneStatusId?: string;
   highlightType?: string;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
@@ -201,7 +199,14 @@ export function SchemaView({
   items,
   spaceId,
   onEdit,
+  onDelete,
+  onUpdateStatus,
+  onAddChild,
+  onMoveToSpace,
+  onDuplicateToSpace,
+  onConvertToSpace,
   onCreateItem,
+  doneStatusId,
   highlightType,
   highlightStatus,
   searchMatchIds,
@@ -211,8 +216,11 @@ export function SchemaView({
   const queryClient = useQueryClient();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([] as Node[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([] as Edge[]);
-  const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
-  const [pickerPos, setPickerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [pendingConnection, setPendingConnection] = useState<{
+    source: string; target: string; sourceName: string; targetName: string;
+  } | null>(null);
+  const [newRelType, setNewRelType] = useState('relates');
+  const [newRelLabel, setNewRelLabel] = useState('');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const positionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const initializedRef = useRef(false);
@@ -240,10 +248,10 @@ export function SchemaView({
 
   // Create relation mutation
   const createRelationMutation = useMutation({
-    mutationFn: ({ fromItemId, toItemId, type }: { fromItemId: string; toItemId: string; type: string }) => {
+    mutationFn: ({ fromItemId, toItemId, type, label }: { fromItemId: string; toItemId: string; type: string; label?: string }) => {
       const fromItem = [...items, ...portalItems].find(i => i.id === fromItemId);
       if (!fromItem) throw new Error('Item source not found');
-      return itemsApi.createRelation(fromItem.spaceId, fromItemId, { toItemId, type });
+      return itemsApi.createRelation(fromItem.spaceId, fromItemId, { toItemId, type, label });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
@@ -325,6 +333,13 @@ export function SchemaView({
         data: {
           item,
           onEdit,
+          onDelete,
+          onUpdateStatus,
+          onAddChild,
+          onMoveToSpace,
+          onDuplicateToSpace,
+          onConvertToSpace,
+          doneStatusId,
           isHighlighted,
           isDimmed: isDimmed && !isSearchMatch,
           isSearchMatch,
@@ -379,24 +394,32 @@ export function SchemaView({
     }
   }, [onNodesChange, savePositions, setNodes]);
 
-  // Handle new connection → show type picker
+  // Handle new connection → show creation modal
   const handleConnect: OnConnect = useCallback((connection) => {
     if (!canEdit) return;
     if (!connection.source || !connection.target || connection.source === connection.target) return;
-    setPendingConnection(connection);
-    // Position picker near center of viewport
-    setPickerPos({ x: window.innerWidth / 2 - 96, y: window.innerHeight / 2 - 100 });
-  }, [canEdit]);
+    const sourceItem = allItems.find(i => i.id === connection.source);
+    const targetItem = allItems.find(i => i.id === connection.target);
+    setPendingConnection({
+      source: connection.source!,
+      target: connection.target!,
+      sourceName: sourceItem?.title || 'Inconnu',
+      targetName: targetItem?.title || 'Inconnu',
+    });
+    setNewRelType('relates');
+    setNewRelLabel('');
+  }, [canEdit, allItems]);
 
-  const handleRelationTypeSelect = useCallback((type: string) => {
-    if (!pendingConnection?.source || !pendingConnection?.target) return;
+  const handleCreateRelation = useCallback(() => {
+    if (!pendingConnection) return;
     createRelationMutation.mutate({
       fromItemId: pendingConnection.source,
       toItemId: pendingConnection.target,
-      type,
+      type: newRelType,
+      label: newRelLabel.trim() || undefined,
     });
     setPendingConnection(null);
-  }, [pendingConnection, createRelationMutation]);
+  }, [pendingConnection, newRelType, newRelLabel, createRelationMutation]);
 
   // Click on edge → open edit relation modal
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
@@ -459,13 +482,61 @@ export function SchemaView({
         />
       </ReactFlow>
 
-      {/* Relation type picker (new connection) */}
+      {/* Create relation modal */}
       {pendingConnection && (
-        <RelationTypePicker
-          position={pickerPos}
-          onSelect={handleRelationTypeSelect}
-          onCancel={() => setPendingConnection(null)}
-        />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Créer une relation</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium">{pendingConnection.sourceName}</span>
+              {' → '}
+              <span className="font-medium">{pendingConnection.targetName}</span>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(RELATION_TYPE_MAP).map(([typeId, config]) => (
+                    <button
+                      key={typeId}
+                      onClick={() => setNewRelType(typeId)}
+                      className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
+                        newRelType === typeId ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
+                      }`}
+                    >
+                      <config.Icon className="w-4 h-4" style={{ color: config.color }} />
+                      <span className="text-sm font-medium">{config.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Commentaire</label>
+                <input
+                  type="text"
+                  value={newRelLabel}
+                  onChange={(e) => setNewRelLabel(e.target.value)}
+                  placeholder="Commentaire (optionnel)"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-purple-400 bg-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleCreateRelation}
+                className="flex-1 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+              >
+                Créer
+              </button>
+              <button
+                onClick={() => setPendingConnection(null)}
+                className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Edit relation modal */}
