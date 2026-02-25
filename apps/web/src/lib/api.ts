@@ -667,6 +667,12 @@ export const itemsApi = {
       body: JSON.stringify(data),
     }),
 
+  updateRelation: (spaceId: string, itemId: string, relationId: string, data: { type?: string; label?: string | null }) =>
+    fetchApi<{ id: string; type: string; label: string | null }>(`/spaces/${spaceId}/items/${itemId}/relations/${relationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
   deleteRelation: (spaceId: string, itemId: string, relationId: string) =>
     fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${itemId}/relations/${relationId}`, {
       method: 'DELETE',

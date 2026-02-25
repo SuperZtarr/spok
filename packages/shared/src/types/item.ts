@@ -89,11 +89,13 @@ export interface ItemRelation {
   fromItemId: string;
   toItemId: string;
   type: string;
+  label?: string | null;
 }
 
 export interface CreateRelationInput {
   toItemId: string;
   type: string;
+  label?: string;
 }
 
 export interface Tag {

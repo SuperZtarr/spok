@@ -80,8 +80,12 @@ export function ItemEditModal({
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
-  const [newRelationType, setNewRelationType] = useState<'depends' | 'blocks'>('depends');
+  const [newRelationType, setNewRelationType] = useState<'depends' | 'blocks' | 'relates'>('depends');
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
+  const [newRelationLabel, setNewRelationLabel] = useState('');
+  const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
+  const [editRelationType, setEditRelationType] = useState('');
+  const [editRelationLabel, setEditRelationLabel] = useState('');
 
   const { user } = useAuthStore();
 
@@ -206,12 +210,13 @@ export function ItemEditModal({
 
   // Relations mutations
   const createRelationMutation = useMutation({
-    mutationFn: (data: { toItemId: string; type: string }) =>
+    mutationFn: (data: { toItemId: string; type: string; label?: string }) =>
       itemsApi.createRelation(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
       setShowAddRelation(false);
       setNewRelationTargetId('');
+      setNewRelationLabel('');
     },
   });
 
@@ -220,6 +225,17 @@ export function ItemEditModal({
       itemsApi.deleteRelation(spaceId, itemId!, relationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+    },
+  });
+
+  const updateRelationMutation = useMutation({
+    mutationFn: ({ relationId, data }: { relationId: string; data: { type?: string; label?: string | null } }) =>
+      itemsApi.updateRelation(spaceId, itemId!, relationId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      setEditingRelationId(null);
+      setEditRelationType('');
+      setEditRelationLabel('');
     },
   });
 
@@ -279,7 +295,9 @@ export function ItemEditModal({
       createRelationMutation.mutate({
         toItemId: newRelationTargetId,
         type: newRelationType,
+        label: newRelationLabel.trim() || undefined,
       });
+      setNewRelationLabel('');
     }
   };
 
@@ -1026,10 +1044,11 @@ export function ItemEditModal({
                     <label className="text-xs text-muted-foreground">Type</label>
                     <Select
                       value={newRelationType}
-                      onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks')}
+                      onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks' | 'relates')}
                       options={[
                         { value: 'depends', label: 'Dépend de...' },
                         { value: 'blocks', label: 'Bloque...' },
+                        { value: 'relates', label: 'Lié à...' },
                       ]}
                     />
                   </div>
@@ -1047,6 +1066,12 @@ export function ItemEditModal({
                     />
                   </div>
                 </div>
+                <Input
+                  value={newRelationLabel}
+                  onChange={(e) => setNewRelationLabel(e.target.value)}
+                  placeholder="Commentaire (optionnel)"
+                  className="text-sm"
+                />
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -1063,6 +1088,7 @@ export function ItemEditModal({
                     onClick={() => {
                       setShowAddRelation(false);
                       setNewRelationTargetId('');
+                      setNewRelationLabel('');
                     }}
                   >
                     Annuler
@@ -1077,28 +1103,97 @@ export function ItemEditModal({
               <div className="space-y-2">
                 {/* Relations FROM this item (this item depends on / blocks others) */}
                 {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => (
-                  <div
-                    key={relation.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        relation.type === 'depends' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {relation.type === 'depends' ? 'Dépend de' : 'Bloque'}
-                      </span>
-                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                      <span>{relation.toItem?.title || 'Élément inconnu'}</span>
-                    </div>
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRelation(relation.id)}
-                        className="p-1 hover:bg-background rounded transition-colors text-destructive"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                  <div key={relation.id} className="p-2 bg-muted/50 rounded-md text-sm space-y-1">
+                    {editingRelationId === relation.id ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={editRelationType}
+                            onChange={(e) => setEditRelationType(e.target.value)}
+                            className="text-xs h-7"
+                            options={[
+                              { value: 'depends', label: 'Dépend de' },
+                              { value: 'blocks', label: 'Bloque' },
+                              { value: 'relates', label: 'Lié à' },
+                            ]}
+                          />
+                          <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
+                        </div>
+                        <Input
+                          value={editRelationLabel}
+                          onChange={(e) => setEditRelationLabel(e.target.value)}
+                          placeholder="Commentaire (optionnel)"
+                          className="text-xs h-7"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => updateRelationMutation.mutate({
+                              relationId: relation.id,
+                              data: {
+                                type: editRelationType,
+                                label: editRelationLabel.trim() || null,
+                              },
+                            })}
+                            disabled={updateRelationMutation.isPending}
+                          >
+                            {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingRelationId(null)}
+                          >
+                            Annuler
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              relation.type === 'depends' ? 'bg-orange-100 text-orange-700' :
+                              relation.type === 'blocks' ? 'bg-red-100 text-red-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {relation.type === 'depends' ? 'Dépend de' : relation.type === 'blocks' ? 'Bloque' : 'Lié à'}
+                            </span>
+                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                            <span>{relation.toItem?.title || 'Élément inconnu'}</span>
+                          </div>
+                          {canEdit && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingRelationId(relation.id);
+                                  setEditRelationType(relation.type);
+                                  setEditRelationLabel(relation.label || '');
+                                }}
+                                className="p-1 hover:bg-background rounded transition-colors text-muted-foreground"
+                                title="Modifier"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRelation(relation.id)}
+                                className="p-1 hover:bg-background rounded transition-colors text-destructive"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {relation.label && (
+                          <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
@@ -1107,17 +1202,22 @@ export function ItemEditModal({
                 {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => (
                   <div
                     key={relation.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
+                    className="p-2 bg-muted/50 rounded-md text-sm space-y-1"
                   >
                     <div className="flex items-center gap-2">
                       <span>{relation.fromItem?.title || 'Élément inconnu'}</span>
                       <ArrowRight className="w-3 h-3 text-muted-foreground" />
                       <span className={`text-xs px-2 py-0.5 rounded ${
-                        relation.type === 'depends' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                        relation.type === 'depends' ? 'bg-blue-100 text-blue-700' :
+                        relation.type === 'blocks' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-blue-100 text-blue-700'
                       }`}>
-                        {relation.type === 'depends' ? 'dépend de ceci' : 'est bloqué par ceci'}
+                        {relation.type === 'depends' ? 'dépend de ceci' : relation.type === 'blocks' ? 'est bloqué par ceci' : 'lié à ceci'}
                       </span>
                     </div>
+                    {relation.label && (
+                      <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>
+                    )}
                   </div>
                 ))}
               </div>

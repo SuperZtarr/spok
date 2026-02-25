@@ -19,6 +19,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   MOVE: 'Déplacement',
   BULK_MOVE: 'Déplacement en masse',
   ADD_RELATION: 'Ajout relation',
+  UPDATE_RELATION: 'Modification relation',
   DELETE_RELATION: 'Suppression relation',
 };
 

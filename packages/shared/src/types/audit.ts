@@ -5,6 +5,7 @@ export type AuditAction =
   | 'MOVE'
   | 'BULK_MOVE'
   | 'ADD_RELATION'
+  | 'UPDATE_RELATION'
   | 'DELETE_RELATION';
 
 export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community';

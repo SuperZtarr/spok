@@ -30,6 +30,7 @@ const ACTION_CONFIG: Record<
   MOVE: { label: 'Déplacement', icon: Move, color: 'bg-purple-100 text-purple-800' },
   BULK_MOVE: { label: 'Déplacement en masse', icon: ArrowRightLeft, color: 'bg-purple-100 text-purple-800' },
   ADD_RELATION: { label: 'Ajout relation', icon: Link2, color: 'bg-teal-100 text-teal-800' },
+  UPDATE_RELATION: { label: 'Modification relation', icon: Pencil, color: 'bg-teal-100 text-teal-800' },
   DELETE_RELATION: { label: 'Suppression relation', icon: Unlink, color: 'bg-orange-100 text-orange-800' },
 };
 

@@ -193,6 +193,7 @@ model ItemRelation {
   fromItemId String
   toItemId   String
   type       String // "blocks", "relates", "depends", etc.
+  label      String? // commentaire/note sur la relation
 
   fromItem Item @relation("RelationFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
   toItem   Item @relation("RelationTo", fields: [toItemId], references: [id], onDelete: Cascade)
