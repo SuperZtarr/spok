@@ -135,6 +135,15 @@ export function createMockPrisma() {
       delete: vi.fn(),
       deleteMany: vi.fn(),
     },
+    notification: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+      count: vi.fn(),
+    },
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn().mockImplementation((arg: unknown) => {
