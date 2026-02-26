@@ -144,6 +144,17 @@ function SchemaNode({ data }: { data: SchemaNodeData }) {
   );
 }
 
+// --- Custom Hierarchy Edge (parent → child, light gray) ---
+function HierarchyEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition }: any) {
+  const [edgePath] = getSmoothStepPath({
+    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 16,
+  });
+
+  return (
+    <BaseEdge id={id} path={edgePath} style={{ stroke: '#d1d5db', strokeWidth: 1.5 }} />
+  );
+}
+
 // --- Custom Relation Edge ---
 function RelationEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: any) {
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -173,7 +184,77 @@ function RelationEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, 
 }
 
 const nodeTypes: NodeTypes = { schema: SchemaNode };
-const edgeTypes: EdgeTypes = { relation: RelationEdge };
+const edgeTypes: EdgeTypes = { hierarchy: HierarchyEdge, relation: RelationEdge };
+
+// --- Hierarchy layout algorithm ---
+function computeHierarchyLayout(items: ItemWithRelations[]): Record<string, { x: number; y: number }> {
+  const itemMap = new Map(items.map(i => [i.id, i]));
+  const childrenMap = new Map<string, string[]>();
+  const roots: string[] = [];
+
+  for (const item of items) {
+    if (item.parentId && itemMap.has(item.parentId)) {
+      const siblings = childrenMap.get(item.parentId) || [];
+      siblings.push(item.id);
+      childrenMap.set(item.parentId, siblings);
+    } else {
+      roots.push(item.id);
+    }
+  }
+
+  const NODE_W = 240;
+  const NODE_H = 70;
+  const H_GAP = 40;
+  const V_GAP = 80;
+  const TREE_GAP = 120;
+
+  // Compute subtree width
+  const widths = new Map<string, number>();
+  function getWidth(id: string): number {
+    if (widths.has(id)) return widths.get(id)!;
+    const children = childrenMap.get(id) || [];
+    if (children.length === 0) { widths.set(id, NODE_W); return NODE_W; }
+    const total = children.reduce((s, c) => s + getWidth(c), 0) + (children.length - 1) * H_GAP;
+    const w = Math.max(NODE_W, total);
+    widths.set(id, w);
+    return w;
+  }
+
+  // Compute subtree depth
+  const depths = new Map<string, number>();
+  function getDepth(id: string): number {
+    if (depths.has(id)) return depths.get(id)!;
+    const children = childrenMap.get(id) || [];
+    if (children.length === 0) { depths.set(id, 1); return 1; }
+    const d = 1 + Math.max(...children.map(getDepth));
+    depths.set(id, d);
+    return d;
+  }
+
+  const positions: Record<string, { x: number; y: number }> = {};
+  function layout(id: string, x: number, y: number) {
+    positions[id] = { x, y };
+    const children = childrenMap.get(id) || [];
+    if (children.length === 0) return;
+    const totalW = children.reduce((s, c) => s + getWidth(c), 0) + (children.length - 1) * H_GAP;
+    let cx = x + NODE_W / 2 - totalW / 2;
+    for (const cid of children) {
+      const cw = getWidth(cid);
+      layout(cid, cx + cw / 2 - NODE_W / 2, y + NODE_H + V_GAP);
+      cx += cw + H_GAP;
+    }
+  }
+
+  // Stack root trees vertically
+  let offsetY = 0;
+  for (const rootId of roots) {
+    layout(rootId, 0, offsetY);
+    const treeHeight = getDepth(rootId) * (NODE_H + V_GAP) - V_GAP;
+    offsetY += treeHeight + TREE_GAP;
+  }
+
+  return positions;
+}
 
 // --- Main component ---
 interface SchemaViewProps {
@@ -193,6 +274,7 @@ interface SchemaViewProps {
   searchMatchIds?: Set<string>;
   portalItems?: ItemWithRelations[];
   canEdit: boolean;
+  onReorganizeRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export function SchemaView({
@@ -212,6 +294,7 @@ export function SchemaView({
   searchMatchIds,
   portalItems = [],
   canEdit,
+  onReorganizeRef,
 }: SchemaViewProps) {
   const queryClient = useQueryClient();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([] as Node[]);
@@ -302,19 +385,13 @@ export function SchemaView({
     const savedPositions = layoutData?.positions ?? {};
     const currentPositions = positionsRef.current;
 
-    // Grid layout for items without saved positions
-    let gridIndex = 0;
-    const GRID_COLS = 5;
-    const GRID_X_STEP = 260;
-    const GRID_Y_STEP = 120;
+    // Use hierarchy layout as fallback for items without saved positions
+    const hasSavedPositions = Object.keys(savedPositions).length > 0 || Object.keys(currentPositions).length > 0;
+    const hierarchyPositions = hasSavedPositions ? {} : computeHierarchyLayout(allItems);
 
     const newNodes: Node[] = allItems.map((item) => {
-      // Priority: current drag positions > saved positions > grid
-      const pos = currentPositions[item.id] || savedPositions[item.id] || {
-        x: (gridIndex % GRID_COLS) * GRID_X_STEP,
-        y: Math.floor(gridIndex / GRID_COLS) * GRID_Y_STEP,
-      };
-      if (!currentPositions[item.id] && !savedPositions[item.id]) gridIndex++;
+      // Priority: current drag positions > saved positions > hierarchy layout
+      const pos = currentPositions[item.id] || savedPositions[item.id] || hierarchyPositions[item.id] || { x: 0, y: 0 };
 
       const isHighlighted = !!(
         (highlightType && item.type === highlightType) ||
@@ -349,9 +426,25 @@ export function SchemaView({
       };
     });
 
-    // Build edges from relations
+    // Build edges from hierarchy (parent → child)
     const itemIdSet = new Set(allItems.map(i => i.id));
     const newEdges: Edge[] = [];
+
+    for (const item of allItems) {
+      if (item.parentId && itemIdSet.has(item.parentId)) {
+        newEdges.push({
+          id: `hier-${item.parentId}-${item.id}`,
+          source: item.parentId,
+          sourceHandle: 'bottom-source',
+          target: item.id,
+          targetHandle: 'top',
+          type: 'hierarchy',
+          markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: '#d1d5db' },
+        });
+      }
+    }
+
+    // Build edges from relations
     const edgeSet = new Set<string>();
 
     for (const item of allItems) {
@@ -440,6 +533,25 @@ export function SchemaView({
     setEditEdgeLabel(relLabel);
   }, [canEdit, allItems]);
 
+  // Reorganize: apply hierarchy layout to all items
+  const handleReorganize = useCallback(() => {
+    const newPositions = computeHierarchyLayout(allItems);
+    positionsRef.current = newPositions;
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => ({
+        ...node,
+        position: newPositions[node.id] || node.position,
+      }))
+    );
+    savePositions(newPositions);
+  }, [allItems, setNodes, savePositions]);
+
+  // Expose reorganize to parent via ref
+  useEffect(() => {
+    if (onReorganizeRef) onReorganizeRef.current = handleReorganize;
+    return () => { if (onReorganizeRef) onReorganizeRef.current = null; };
+  }, [onReorganizeRef, handleReorganize]);
+
   // Double-click on canvas → create item
   const handlePaneDoubleClick = useCallback((event: React.MouseEvent) => {
     if (!canEdit || !onCreateItem) return;
@@ -468,6 +580,10 @@ export function SchemaView({
         maxZoom={2}
         snapToGrid
         snapGrid={[20, 20]}
+        selectionOnDrag
+        panOnDrag={[1, 2]}
+        selectionKeyCode={null}
+        multiSelectionKeyCode="Shift"
         connectionLineStyle={{ stroke: '#a855f7', strokeWidth: 2 }}
         defaultEdgeOptions={{ type: 'relation' }}
         proOptions={{ hideAttribution: true }}
@@ -481,6 +597,7 @@ export function SchemaView({
           className="!bg-card !border-border"
         />
       </ReactFlow>
+
 
       {/* Create relation modal */}
       {pendingConnection && (

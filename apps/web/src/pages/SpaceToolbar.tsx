@@ -101,7 +101,7 @@ export function SpaceToolbar({
   }, [typeDropdownOpen, statusDropdownOpen]);
 
   const showExpandCollapse = viewMode === 'tree' || viewMode === 'mindmap';
-  const showResetLayout = viewMode === 'mindmap';
+  const showResetLayout = viewMode === 'mindmap' || viewMode === 'schema';
 
   return (
     <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">

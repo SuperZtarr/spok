@@ -126,6 +126,7 @@ export function SpacePage() {
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const mindmapRef = useRef<MindMapViewHandle>(null);
+  const schemaReorganizeRef = useRef<(() => void) | null>(null);
   const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -501,8 +502,12 @@ export function SpacePage() {
   }, [viewMode, mindmapExpanded, hasExpandedItems]);
 
   const handleResetLayout = useCallback(() => {
-    mindmapRef.current?.resetLayout();
-  }, []);
+    if (viewMode === 'schema') {
+      schemaReorganizeRef.current?.();
+    } else {
+      mindmapRef.current?.resetLayout();
+    }
+  }, [viewMode]);
 
   const handleNewItem = useCallback(() => {
     handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
@@ -862,6 +867,7 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               portalItems={portalGroups.flatMap(g => g.items) as ItemWithRelations[]}
               canEdit={canEdit}
+              onReorganizeRef={schemaReorganizeRef}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
