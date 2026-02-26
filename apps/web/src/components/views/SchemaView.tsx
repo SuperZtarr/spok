@@ -17,7 +17,9 @@ import {
   BackgroundVariant,
   MarkerType,
   BaseEdge,
-  getSmoothStepPath,
+  getBezierPath,
+  useReactFlow,
+  ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -144,21 +146,79 @@ function SchemaNode({ data }: { data: SchemaNodeData }) {
   );
 }
 
-// --- Custom Hierarchy Edge (parent → child, light gray) ---
-function HierarchyEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition }: any) {
-  const [edgePath] = getSmoothStepPath({
-    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 16,
-  });
+// --- Custom Group Node (parent with children inside) ---
+interface SchemaGroupData extends SchemaNodeData {
+  groupWidth: number;
+  groupHeight: number;
+}
+
+function SchemaGroupNode({ data }: { data: SchemaGroupData }) {
+  const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit, groupWidth, groupHeight } = data;
+  const Icon = TYPE_ICONS[item.type];
+  const dotColor = TYPE_COLORS[item.type] || '#6b7280';
+
+  const menuGroups = useMemo(() => {
+    const groups = [];
+    if (canEdit) {
+      const createActions = [];
+      if (onAddChild) createActions.push({ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) });
+      if (onDuplicateToSpace) createActions.push({ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) });
+      if (createActions.length > 0) groups.push({ label: 'Créer', actions: createActions });
+
+      const organizeActions = [];
+      if (onUpdateStatus && doneStatusId && item.status !== doneStatusId) {
+        organizeActions.push({ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) });
+      }
+      if (onMoveToSpace) organizeActions.push({ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) });
+      if (onConvertToSpace) organizeActions.push({ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) });
+      if (organizeActions.length > 0) groups.push({ label: 'Organiser', actions: organizeActions });
+
+      if (onDelete) groups.push({ actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] });
+    }
+    return groups;
+  }, [canEdit, item, onAddChild, onDuplicateToSpace, onUpdateStatus, onMoveToSpace, onConvertToSpace, onDelete, doneStatusId]);
 
   return (
-    <BaseEdge id={id} path={edgePath} style={{ stroke: '#d1d5db', strokeWidth: 1.5 }} />
+    <div
+      style={{ width: groupWidth, height: groupHeight }}
+      className={`rounded-lg border-2 bg-muted/30 transition-all
+        ${isPortal ? 'border-dashed border-primary/40' : 'border-border'}
+        ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 z-10' : ''}
+        ${isSearchMatch ? 'ring-4 ring-yellow-400 ring-offset-2 z-10' : ''}
+        ${isDimmed ? 'opacity-30' : ''}
+      `}
+    >
+      <Handle type="target" position={Position.Top} className="!bg-blue-400 !w-2.5 !h-2.5 !border-2 !border-blue-600" id="top" />
+      <Handle type="target" position={Position.Bottom} className="!bg-blue-400 !w-2.5 !h-2.5 !border-2 !border-blue-600" id="bottom" />
+      <Handle type="target" position={Position.Left} className="!bg-blue-400 !w-2.5 !h-2.5 !border-2 !border-blue-600" id="left" />
+      <Handle type="target" position={Position.Right} className="!bg-blue-400 !w-2.5 !h-2.5 !border-2 !border-blue-600" id="right" />
+      <Handle type="source" position={Position.Top} className="!bg-green-400 !w-2.5 !h-2.5 !border-2 !border-green-600" id="top-source" />
+      <Handle type="source" position={Position.Bottom} className="!bg-green-400 !w-2.5 !h-2.5 !border-2 !border-green-600" id="bottom-source" />
+      <Handle type="source" position={Position.Left} className="!bg-green-400 !w-2.5 !h-2.5 !border-2 !border-green-600" id="left-source" />
+      <Handle type="source" position={Position.Right} className="!bg-green-400 !w-2.5 !h-2.5 !border-2 !border-green-600" id="right-source" />
+
+      <div
+        className="flex items-center gap-2 px-3 py-2 rounded-t-md bg-card/80 border-b border-border cursor-pointer group"
+        onDoubleClick={(e) => { e.stopPropagation(); data.onEdit(item.id); }}
+      >
+        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+        <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+        <span className="text-sm font-semibold line-clamp-1 break-words text-foreground">{item.title}</span>
+        {item.status && <span className="text-[10px] text-muted-foreground ml-1">({item.status})</span>}
+        {menuGroups.length > 0 && (
+          <div className="ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity nodrag nopan">
+            <ItemActionMenu groups={menuGroups} triggerClassName="p-0.5 rounded hover:bg-black/10 transition-colors" side="right" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 // --- Custom Relation Edge ---
 function RelationEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: any) {
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 16,
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
   });
 
   const relType = data?.relationType || 'relates';
@@ -183,11 +243,23 @@ function RelationEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, 
   );
 }
 
-const nodeTypes: NodeTypes = { schema: SchemaNode };
-const edgeTypes: EdgeTypes = { hierarchy: HierarchyEdge, relation: RelationEdge };
+const nodeTypes: NodeTypes = { schema: SchemaNode, schemaGroup: SchemaGroupNode };
+const edgeTypes: EdgeTypes = { relation: RelationEdge };
 
-// --- Hierarchy layout algorithm ---
-function computeHierarchyLayout(items: ItemWithRelations[]): Record<string, { x: number; y: number }> {
+// --- Group layout constants ---
+const LEAF_W = 220;
+const LEAF_H = 60;
+const GROUP_HEADER_H = 40;
+const GROUP_PAD = 20;
+const CHILD_GAP = 35;
+const ROOT_GAP = 80;
+
+// --- Compute nested group sizes ---
+interface NodeSize { w: number; h: number }
+
+function computeGroupSizes(
+  items: ItemWithRelations[],
+): { childrenMap: Map<string, string[]>; roots: string[]; sizes: Map<string, NodeSize> } {
   const itemMap = new Map(items.map(i => [i.id, i]));
   const childrenMap = new Map<string, string[]>();
   const roots: string[] = [];
@@ -202,58 +274,82 @@ function computeHierarchyLayout(items: ItemWithRelations[]): Record<string, { x:
     }
   }
 
-  const NODE_W = 240;
-  const NODE_H = 70;
-  const H_GAP = 40;
-  const V_GAP = 80;
-  const TREE_GAP = 120;
+  const sizes = new Map<string, NodeSize>();
+  const visiting = new Set<string>();
 
-  // Compute subtree width
-  const widths = new Map<string, number>();
-  function getWidth(id: string): number {
-    if (widths.has(id)) return widths.get(id)!;
+  function computeSize(id: string): NodeSize {
+    if (sizes.has(id)) return sizes.get(id)!;
+    // Cycle detection
+    if (visiting.has(id)) {
+      const s = { w: LEAF_W, h: LEAF_H };
+      sizes.set(id, s);
+      return s;
+    }
+    visiting.add(id);
     const children = childrenMap.get(id) || [];
-    if (children.length === 0) { widths.set(id, NODE_W); return NODE_W; }
-    const total = children.reduce((s, c) => s + getWidth(c), 0) + (children.length - 1) * H_GAP;
-    const w = Math.max(NODE_W, total);
-    widths.set(id, w);
-    return w;
+    if (children.length === 0) {
+      const s = { w: LEAF_W, h: LEAF_H };
+      sizes.set(id, s);
+      visiting.delete(id);
+      return s;
+    }
+    // Compute children sizes first
+    let maxChildW = 0;
+    let totalChildH = 0;
+    for (const cid of children) {
+      const cs = computeSize(cid);
+      maxChildW = Math.max(maxChildW, cs.w);
+      totalChildH += cs.h;
+    }
+    totalChildH += (children.length - 1) * CHILD_GAP;
+    const w = Math.max(LEAF_W, maxChildW + GROUP_PAD * 2);
+    const h = GROUP_HEADER_H + totalChildH + GROUP_PAD * 2;
+    const s = { w, h };
+    sizes.set(id, s);
+    visiting.delete(id);
+    return s;
   }
 
-  // Compute subtree depth
-  const depths = new Map<string, number>();
-  function getDepth(id: string): number {
-    if (depths.has(id)) return depths.get(id)!;
-    const children = childrenMap.get(id) || [];
-    if (children.length === 0) { depths.set(id, 1); return 1; }
-    const d = 1 + Math.max(...children.map(getDepth));
-    depths.set(id, d);
-    return d;
-  }
+  for (const id of [...itemMap.keys()]) computeSize(id);
+
+  return { childrenMap, roots, sizes };
+}
+
+// --- Compute positions (relative for children, absolute for roots) ---
+function computeHierarchyLayout(items: ItemWithRelations[]): {
+  positions: Record<string, { x: number; y: number }>;
+  parentMap: Record<string, string>;
+  sizes: Map<string, NodeSize>;
+  childrenMap: Map<string, string[]>;
+} {
+  const { childrenMap, roots, sizes } = computeGroupSizes(items);
 
   const positions: Record<string, { x: number; y: number }> = {};
-  function layout(id: string, x: number, y: number) {
-    positions[id] = { x, y };
-    const children = childrenMap.get(id) || [];
-    if (children.length === 0) return;
-    const totalW = children.reduce((s, c) => s + getWidth(c), 0) + (children.length - 1) * H_GAP;
-    let cx = x + NODE_W / 2 - totalW / 2;
+  const parentMap: Record<string, string> = {};
+
+  // Position children inside parent (relative coords)
+  function layoutChildren(parentId: string) {
+    const children = childrenMap.get(parentId) || [];
+    let y = GROUP_HEADER_H + GROUP_PAD;
     for (const cid of children) {
-      const cw = getWidth(cid);
-      layout(cid, cx + cw / 2 - NODE_W / 2, y + NODE_H + V_GAP);
-      cx += cw + H_GAP;
+      positions[cid] = { x: GROUP_PAD, y };
+      parentMap[cid] = parentId;
+      const cs = sizes.get(cid)!;
+      y += cs.h + CHILD_GAP;
+      layoutChildren(cid);
     }
   }
 
-  // Stack root trees vertically
+  // Stack roots vertically
   let offsetY = 0;
   for (const rootId of roots) {
-    layout(rootId, 0, offsetY);
-    const treeHeight = getDepth(rootId) * (NODE_H + V_GAP) - V_GAP;
-    offsetY += treeHeight + TREE_GAP;
+    positions[rootId] = { x: 0, y: offsetY };
+    const rs = sizes.get(rootId)!;
+    offsetY += rs.h + ROOT_GAP;
+    layoutChildren(rootId);
   }
 
-  return positions;
+  return { positions, parentMap, sizes, childrenMap };
 }
 
 // --- Main component ---
@@ -277,7 +373,7 @@ interface SchemaViewProps {
   onReorganizeRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export function SchemaView({
+function SchemaViewInner({
   items,
   spaceId,
   onEdit,
@@ -297,6 +393,7 @@ export function SchemaView({
   onReorganizeRef,
 }: SchemaViewProps) {
   const queryClient = useQueryClient();
+  const reactFlowInstance = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([] as Node[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([] as Edge[]);
   const [pendingConnection, setPendingConnection] = useState<{
@@ -365,6 +462,20 @@ export function SchemaView({
     },
   });
 
+  // Reparent mutation (drop node onto another)
+  const reparentMutation = useMutation({
+    mutationFn: ({ itemId, parentId }: { itemId: string; parentId: string | null }) => {
+      const item = allItems.find(i => i.id === itemId);
+      if (!item) throw new Error('Item not found');
+      return itemsApi.update(item.spaceId, itemId, { parentId });
+    },
+    onSuccess: () => {
+      positionsRef.current = {};
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['canvas-layout'] });
+    },
+  });
+
   // Debounced save
   const savePositions = useCallback((positions: Record<string, { x: number; y: number }>) => {
     if (!canEdit) return;
@@ -385,13 +496,34 @@ export function SchemaView({
     const savedPositions = layoutData?.positions ?? {};
     const currentPositions = positionsRef.current;
 
-    // Use hierarchy layout as fallback for items without saved positions
+    // Compute hierarchy layout (always needed for sizes/parentMap)
+    const hierarchy = computeHierarchyLayout(allItems);
     const hasSavedPositions = Object.keys(savedPositions).length > 0 || Object.keys(currentPositions).length > 0;
-    const hierarchyPositions = hasSavedPositions ? {} : computeHierarchyLayout(allItems);
 
-    const newNodes: Node[] = allItems.map((item) => {
-      // Priority: current drag positions > saved positions > hierarchy layout
-      const pos = currentPositions[item.id] || savedPositions[item.id] || hierarchyPositions[item.id] || { x: 0, y: 0 };
+    const itemMap = new Map(allItems.map(i => [i.id, i]));
+
+    // Build nodes — parents first, then children (ReactFlow needs parent before child)
+    const newNodes: Node[] = [];
+    const visited = new Set<string>();
+
+    function addNode(id: string) {
+      if (visited.has(id)) return;
+      // If this node has a ReactFlow parent, ensure parent is added first
+      const rfParent = hierarchy.parentMap[id];
+      if (rfParent && !visited.has(rfParent)) addNode(rfParent);
+
+      visited.add(id);
+      const item = itemMap.get(id);
+      if (!item) return;
+
+      const children = hierarchy.childrenMap.get(id) || [];
+      const isGroup = children.length > 0;
+      const size = hierarchy.sizes.get(id)!;
+
+      // Position: saved > hierarchy default
+      const pos = hasSavedPositions
+        ? (currentPositions[id] || savedPositions[id] || hierarchy.positions[id] || { x: 0, y: 0 })
+        : (hierarchy.positions[id] || { x: 0, y: 0 });
 
       const isHighlighted = !!(
         (highlightType && item.type === highlightType) ||
@@ -403,48 +535,41 @@ export function SchemaView({
       );
       const isSearchMatch = searchMatchIds ? searchMatchIds.has(item.id) : false;
 
-      return {
-        id: item.id,
-        type: 'schema',
-        position: pos,
-        data: {
-          item,
-          onEdit,
-          onDelete,
-          onUpdateStatus,
-          onAddChild,
-          onMoveToSpace,
-          onDuplicateToSpace,
-          onConvertToSpace,
-          doneStatusId,
-          isHighlighted,
-          isDimmed: isDimmed && !isSearchMatch,
-          isSearchMatch,
-          isPortal: portalIds.has(item.id),
-          canEdit,
-        } satisfies SchemaNodeData,
+      const nodeData = {
+        item,
+        onEdit,
+        onDelete,
+        onUpdateStatus,
+        onAddChild,
+        onMoveToSpace,
+        onDuplicateToSpace,
+        onConvertToSpace,
+        doneStatusId,
+        isHighlighted,
+        isDimmed: isDimmed && !isSearchMatch,
+        isSearchMatch,
+        isPortal: portalIds.has(item.id),
+        canEdit,
+        ...(isGroup ? { groupWidth: size.w, groupHeight: size.h } : {}),
       };
-    });
 
-    // Build edges from hierarchy (parent → child)
-    const itemIdSet = new Set(allItems.map(i => i.id));
-    const newEdges: Edge[] = [];
+      const node: Node = {
+        id,
+        type: isGroup ? 'schemaGroup' : 'schema',
+        position: pos,
+        data: nodeData,
+        ...(rfParent ? { parentId: rfParent } : {}),
+        ...(isGroup ? { style: { width: size.w, height: size.h } } : {}),
+      };
 
-    for (const item of allItems) {
-      if (item.parentId && itemIdSet.has(item.parentId)) {
-        newEdges.push({
-          id: `hier-${item.parentId}-${item.id}`,
-          source: item.parentId,
-          sourceHandle: 'bottom-source',
-          target: item.id,
-          targetHandle: 'top',
-          type: 'hierarchy',
-          markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: '#d1d5db' },
-        });
-      }
+      newNodes.push(node);
     }
 
-    // Build edges from relations
+    for (const item of allItems) addNode(item.id);
+
+    // Build edges from relations only (hierarchy is visual nesting now)
+    const itemIdSet = new Set(allItems.map(i => i.id));
+    const newEdges: Edge[] = [];
     const edgeSet = new Set<string>();
 
     for (const item of allItems) {
@@ -486,6 +611,36 @@ export function SchemaView({
       });
     }
   }, [onNodesChange, savePositions, setNodes]);
+
+  // Handle drop onto another node → reparent, or outside parent → detach
+  const handleNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
+    if (!canEdit) return;
+    if (portalIds.has(draggedNode.id)) return;
+
+    const draggedItem = allItems.find(i => i.id === draggedNode.id);
+    if (!draggedItem) return;
+
+    const intersecting = reactFlowInstance.getIntersectingNodes(draggedNode);
+    const targets = intersecting
+      .filter(n => n.id !== draggedNode.id)
+      .sort((a, b) => {
+        const areaA = (a.measured?.width ?? 0) * (a.measured?.height ?? 0);
+        const areaB = (b.measured?.width ?? 0) * (b.measured?.height ?? 0);
+        return areaA - areaB;
+      });
+
+    const target = targets[0];
+
+    if (target) {
+      // Dropped onto a node → reparent (if not already child of it)
+      if (draggedItem.parentId !== target.id) {
+        reparentMutation.mutate({ itemId: draggedNode.id, parentId: target.id });
+      }
+    } else if (draggedItem.parentId) {
+      // Dropped on empty space and had a parent → detach
+      reparentMutation.mutate({ itemId: draggedNode.id, parentId: null });
+    }
+  }, [canEdit, reactFlowInstance, allItems, portalIds, reparentMutation]);
 
   // Handle new connection → show creation modal
   const handleConnect: OnConnect = useCallback((connection) => {
@@ -533,17 +688,24 @@ export function SchemaView({
     setEditEdgeLabel(relLabel);
   }, [canEdit, allItems]);
 
-  // Reorganize: apply hierarchy layout to all items
+  // Reorganize: reset to hierarchy layout
   const handleReorganize = useCallback(() => {
-    const newPositions = computeHierarchyLayout(allItems);
-    positionsRef.current = newPositions;
+    const hierarchy = computeHierarchyLayout(allItems);
+    positionsRef.current = {};
+    // Re-trigger the useEffect by clearing saved positions cache
+    initializedRef.current = true;
     setNodes((currentNodes) =>
       currentNodes.map((node) => ({
         ...node,
-        position: newPositions[node.id] || node.position,
+        position: hierarchy.positions[node.id] || node.position,
       }))
     );
-    savePositions(newPositions);
+    // Save only root positions (children are relative to parent)
+    const rootPositions: Record<string, { x: number; y: number }> = {};
+    for (const [id, pos] of Object.entries(hierarchy.positions)) {
+      if (!hierarchy.parentMap[id]) rootPositions[id] = pos;
+    }
+    savePositions(rootPositions);
   }, [allItems, setNodes, savePositions]);
 
   // Expose reorganize to parent via ref
@@ -568,6 +730,7 @@ export function SchemaView({
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
+        onNodeDragStop={handleNodeDragStop}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onEdgeClick={handleEdgeClick}
@@ -734,5 +897,13 @@ export function SchemaView({
         </div>
       )}
     </div>
+  );
+}
+
+export function SchemaView(props: SchemaViewProps) {
+  return (
+    <ReactFlowProvider>
+      <SchemaViewInner {...props} />
+    </ReactFlowProvider>
   );
 }
