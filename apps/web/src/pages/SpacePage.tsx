@@ -527,7 +527,7 @@ export function SpacePage() {
           isHighlightMode={isHighlightMode}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
-          totalItemCount={space?.itemCount || 0}
+          totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
           filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
           searchMatchCount={searchMatchIds?.size}
           referentiels={referentiels}
