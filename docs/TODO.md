@@ -60,6 +60,14 @@
 - [ ] Préparation : liste d'items à l'avance ou sélection live par l'animateur ?
 - [ ] MVP : animateur sélectionne → participants voient en temps réel, puis itérer
 
+### Serveur MCP (Model Context Protocol)
+- [ ] Réfléchir à l'intérêt : exposer les données SPOK (items, espaces, relations) comme contexte pour les LLM
+- [ ] Cas d'usage : navigation/recherche dans SPOK via Claude, création d'items par prompt, résumé de contenu, analyse de graphe
+- [ ] Architecture : serveur MCP séparé ou intégré à l'API Fastify existante ?
+- [ ] Quelles ressources exposer (items, espaces, communautés, relations, contributions) ?
+- [ ] Quels outils MCP proposer (search, create, update, summarize, navigate) ?
+- [ ] Auth : comment authentifier les requêtes MCP (token utilisateur, clé API dédiée) ?
+
 ### Améliorations
 - Rôle par défaut configurable pour les nouveaux membres de communauté sur les espaces
 - Archivage d'items (flag archivedAt) plutôt que suppression définitive
