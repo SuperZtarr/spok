@@ -9,7 +9,7 @@ import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, authApi } from '../lib/api';
-import { Button } from './ui/Button';
+
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
@@ -190,6 +190,8 @@ export function Layout() {
   const { initTheme } = useThemeStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Expand/collapse state for space tree (persisted in localStorage)
   const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => {
@@ -288,8 +290,9 @@ export function Layout() {
     localStorage.setItem('spok-sidebar-width', String(sidebarWidth));
   }, [sidebarWidth]);
 
-  // Sync user from server on mount
+  // Sync user from server on mount (only if authenticated)
   useEffect(() => {
+    if (!user) return;
     authApi.me().then((serverUser) => {
       if (serverUser) {
         updateUser(serverUser);
@@ -303,7 +306,20 @@ export function Layout() {
   // Close sidebar on navigation (mobile)
   useEffect(() => {
     setSidebarOpen(false);
+    setUserMenuOpen(false);
   }, [location.pathname]);
+
+  // Close user menu on click outside
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [userMenuOpen]);
 
   // Filter spaces by current community
   const { data: spaces } = useQuery({
@@ -311,11 +327,11 @@ export function Layout() {
     queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
   });
 
-  // Also fetch personal spaces (always visible)
+  // Also fetch personal spaces (always visible, only for authenticated users)
   const { data: personalSpaces } = useQuery({
     queryKey: ['spaces', 'personal'],
     queryFn: () => spacesApi.list('none'),
-    enabled: !!currentCommunity, // Only fetch when community is selected
+    enabled: !!currentCommunity && !!user, // Only fetch when community is selected AND authenticated
   });
 
   // Separate personal and community/group spaces, then build trees
@@ -427,8 +443,8 @@ export function Layout() {
 
       {/* Navigation - scrollable */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
-        {/* Personal spaces */}
-        {mySpaces.length > 0 && (
+        {/* Personal spaces (authenticated only) */}
+        {user && mySpaces.length > 0 && (
           <div className="pt-2 pb-2 border-b border-border">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
@@ -465,9 +481,11 @@ export function Layout() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               {currentCommunity ? currentCommunity.name : 'Espaces de groupe'}
             </span>
-            <Link to="/?new=space" title="Créer un nouvel espace">
-              <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-            </Link>
+            {user && (
+              <Link to="/?new=space" title="Créer un nouvel espace">
+                <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+              </Link>
+            )}
           </div>
           <DndContext sensors={dndSensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             {communitySpaceTree.length > 0 ? (
@@ -502,20 +520,8 @@ export function Layout() {
 
       {/* Footer sidebar */}
       <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
-        {user?.globalRole === 'ADMIN' && (
-          <Link to="/admin">
-            <Button variant="ghost" className="w-full justify-start">
-              <Shield className="w-4 h-4 mr-2" />
-              Administration
-            </Button>
-          </Link>
-        )}
         <DevModeToggle />
         <DevDbStatus />
-        <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Déconnexion
-        </Button>
       </div>
     </>
   );
@@ -591,32 +597,80 @@ export function Layout() {
           <div className="flex items-center gap-2 ml-auto flex-shrink-0 px-4 md:px-5">
             <ViewModeSelector />
             <GlobalSearch />
-            <NotificationBell />
-            <button
-              onClick={() => setIsProfileOpen(true)}
-              className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent transition-colors"
-              title="Voir le profil"
-            >
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                  <User className="w-3.5 h-3.5 text-muted-foreground" />
+            {user ? (
+              <>
+                <NotificationBell />
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent transition-colors"
+                    title="Menu utilisateur"
+                  >
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="hidden md:flex flex-col items-start leading-tight">
+                      <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{user.name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {user.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+                      </span>
+                    </div>
+                  </button>
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                      <div className="px-3 py-2 border-b border-border">
+                        <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={() => { setUserMenuOpen(false); setIsProfileOpen(true); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                        Profil
+                      </button>
+                      {user.globalRole === 'ADMIN' && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Administration
+                        </Link>
+                      )}
+                      <div className="border-t border-border my-1" />
+                      <button
+                        onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Déconnexion
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="hidden md:flex flex-col items-start leading-tight">
-                <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{user?.name}</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {user?.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
-                </span>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/login" className="text-sm text-foreground hover:text-primary transition-colors px-3 py-1.5">
+                  Connexion
+                </Link>
+                <Link to="/register" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">
+                  Inscription
+                </Link>
               </div>
-            </button>
+            )}
           </div>
         </header>
 
         {/* Page content */}
         <main className="flex-1 flex flex-col min-h-0 overflow-auto">
-          <EmailVerificationBanner />
+          {user && <EmailVerificationBanner />}
           <Outlet />
         </main>
       </div>

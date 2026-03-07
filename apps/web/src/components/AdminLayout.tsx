@@ -1,26 +1,9 @@
 import { useEffect } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History } from 'lucide-react';
-import { useAuthStore } from '../stores/auth';
-import { authApi } from '../lib/api';
-import { Button } from './ui/Button';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History } from 'lucide-react';
 
 export function AdminLayout() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { logout, refreshToken } = useAuthStore();
-
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await authApi.logout(refreshToken);
-      }
-    } finally {
-      logout();
-      navigate('/login');
-    }
-  };
-
   const isActive = (path: string) => location.pathname === path;
 
   // Update document title
@@ -146,12 +129,6 @@ export function AdminLayout() {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Deconnexion
-          </Button>
-        </div>
       </aside>
 
       {/* Main content */}
