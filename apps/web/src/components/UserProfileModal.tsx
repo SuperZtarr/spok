@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Pencil, Check, X, Lock, CheckCircle } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser } from '@spok/shared';
@@ -29,11 +29,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const { updateUser, updateTokens } = useAuthStore();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState('');
+  const [nameValue, setNameValue] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [emailValue, setEmailValue] = useState('');
+  const [emailValue, setEmailValue] = useState(user?.email || '');
   const [savingEmail, setSavingEmail] = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -41,6 +39,13 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setNameValue(user.name);
+      setEmailValue(user.email);
+    }
+  }, [user?.name, user?.email]);
 
   const { data: communities } = useQuery({
     queryKey: ['communities'],
@@ -70,7 +75,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const handleSaveName = async () => {
     const trimmed = nameValue.trim();
     if (!trimmed || trimmed === user.name) {
-      setEditingName(false);
+      setNameValue(user.name);
       return;
     }
     setError(null);
@@ -78,7 +83,6 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     try {
       const result = await userApi.updateProfile({ name: trimmed });
       updateUser({ name: result.name });
-      setEditingName(false);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la modification du nom');
     } finally {
@@ -89,7 +93,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const handleSaveEmail = async () => {
     const trimmed = emailValue.trim();
     if (!trimmed || trimmed === user.email) {
-      setEditingEmail(false);
+      setEmailValue(user.email);
       return;
     }
     setError(null);
@@ -103,7 +107,6 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       if (result.tokens) {
         updateTokens(result.tokens.accessToken, result.tokens.refreshToken);
       }
-      setEditingEmail(false);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la modification de l\'email');
     } finally {
@@ -183,39 +186,21 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             />
           </div>
           <div className="flex-1 min-w-0">
-            {editingName ? (
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={nameValue}
-                  onChange={(e) => setNameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveName();
-                    if (e.key === 'Escape') setEditingName(false);
-                  }}
-                  autoFocus
-                  disabled={savingName}
-                  className="flex-1 min-w-0 px-2 py-1 text-lg font-medium border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button onClick={handleSaveName} disabled={savingName} className="p-1 text-primary hover:bg-accent rounded" title="Valider">
-                  {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                </button>
-                <button onClick={() => setEditingName(false)} disabled={savingName} className="p-1 text-muted-foreground hover:bg-accent rounded" title="Annuler">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 group/name">
-                <p className="font-medium text-lg truncate">{user.name}</p>
-                <button
-                  onClick={() => { setNameValue(user.name); setEditingName(true); }}
-                  className="p-1 text-muted-foreground opacity-0 group-hover/name:opacity-100 hover:bg-accent rounded transition-opacity"
-                  title="Modifier le nom"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') { setNameValue(user.name); (e.target as HTMLInputElement).blur(); }
+                }}
+                onBlur={handleSaveName}
+                disabled={savingName}
+                className="flex-1 min-w-0 px-2 py-1 text-lg font-medium border border-transparent rounded-md bg-transparent hover:border-border focus:border-border focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+              />
+              {savingName && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+            </div>
             <p className="text-sm text-muted-foreground">{ROLE_LABELS[user.globalRole] || user.globalRole}</p>
             {user.avatarUrl && (
               <button
@@ -237,49 +222,30 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm">
             <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            {editingEmail ? (
-              <div className="flex items-center gap-1 flex-1 min-w-0">
-                <input
-                  type="email"
-                  value={emailValue}
-                  onChange={(e) => setEmailValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveEmail();
-                    if (e.key === 'Escape') setEditingEmail(false);
-                  }}
-                  autoFocus
-                  disabled={savingEmail}
-                  className="flex-1 min-w-0 px-2 py-0.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button onClick={handleSaveEmail} disabled={savingEmail} className="p-1 text-primary hover:bg-accent rounded" title="Valider">
-                  {savingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                </button>
-                <button onClick={() => setEditingEmail(false)} disabled={savingEmail} className="p-1 text-muted-foreground hover:bg-accent rounded" title="Annuler">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 group/email flex-1 min-w-0">
-                <span className="text-muted-foreground flex-shrink-0">Email :</span>
-                <span className="font-medium truncate">{user.email}</span>
-                {user.emailVerified ? (
-                  <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-0.5 flex-shrink-0" title="Email vérifié">
-                    <CheckCircle className="w-3 h-3" />
-                  </span>
-                ) : (
-                  <span className="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0" title="Email non vérifié">
-                    Non vérifié
-                  </span>
-                )}
-                <button
-                  onClick={() => { setEmailValue(user.email); setEditingEmail(true); }}
-                  className="p-1 text-muted-foreground opacity-0 group-hover/email:opacity-100 hover:bg-accent rounded transition-opacity flex-shrink-0"
-                  title="Modifier l'email"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <input
+                type="email"
+                value={emailValue}
+                onChange={(e) => setEmailValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEmail();
+                  if (e.key === 'Escape') { setEmailValue(user.email); (e.target as HTMLInputElement).blur(); }
+                }}
+                onBlur={handleSaveEmail}
+                disabled={savingEmail}
+                className="flex-1 min-w-0 px-2 py-0.5 text-sm border border-transparent rounded-md bg-transparent hover:border-border focus:border-border focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+              />
+              {savingEmail && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary flex-shrink-0" />}
+              {user.emailVerified ? (
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-0.5 flex-shrink-0" title="Email vérifié">
+                  <CheckCircle className="w-3 h-3" />
+                </span>
+              ) : (
+                <span className="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0" title="Email non vérifié">
+                  Non vérifié
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-3 text-sm">
@@ -326,17 +292,12 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-1 group/pwd flex-1">
-                <span className="text-muted-foreground">Mot de passe :</span>
-                <span className="font-medium">********</span>
-                <button
-                  onClick={() => setEditingPassword(true)}
-                  className="p-1 text-muted-foreground opacity-0 group-hover/pwd:opacity-100 hover:bg-accent rounded transition-opacity"
-                  title="Modifier le mot de passe"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
-              </div>
+              <button
+                onClick={() => setEditingPassword(true)}
+                className="text-sm text-primary hover:underline"
+              >
+                Changer le mot de passe
+              </button>
             )}
           </div>
 

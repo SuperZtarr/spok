@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Trash2, Save, Building2 } from 'lucide-react';
+import { UserPlus, Trash2, Save } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -30,7 +30,6 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
   const [editType, setEditType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
   const [editCommunityId, setEditCommunityId] = useState<string>('');
   const [editParentId, setEditParentId] = useState<string>('');
-  const [isEditing, setIsEditing] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberSearch, setNewMemberSearch] = useState('');
 
@@ -39,6 +38,15 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     queryFn: () => adminApi.spaces.get(spaceId),
     enabled: !!spaceId,
   });
+
+  useEffect(() => {
+    if (space) {
+      setEditName(space.name);
+      setEditType(space.type);
+      setEditCommunityId(space.communityId || '');
+      setEditParentId(space.parentId || '');
+    }
+  }, [space]);
 
   const { data: communitiesData } = useQuery({
     queryKey: ['admin', 'communities'],
@@ -93,7 +101,6 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
-      setIsEditing(false);
     },
   });
 
@@ -126,16 +133,6 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     },
   });
 
-  const handleStartEdit = () => {
-    if (space) {
-      setEditName(space.name);
-      setEditType(space.type);
-      setEditCommunityId(space.communityId || '');
-      setEditParentId(space.parentId || '');
-      setIsEditing(true);
-    }
-  };
-
   const handleSaveEdit = () => {
     const data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null; parentId?: string | null } = {};
     if (editName !== space?.name) data.name = editName;
@@ -146,8 +143,6 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     if (newParentId !== (space?.parentId || null)) data.parentId = newParentId;
     if (Object.keys(data).length > 0) {
       updateMutation.mutate(data);
-    } else {
-      setIsEditing(false);
     }
   };
 
@@ -174,113 +169,59 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
           <div className="space-y-4">
             <h3 className="font-medium">Informations</h3>
 
-            {isEditing ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Nom</label>
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Type</label>
-                  <Select
-                    value={editType}
-                    onChange={(e) => {
-                      const newType = e.target.value as 'PERSONAL' | 'GROUP';
-                      setEditType(newType);
-                      if (newType === 'PERSONAL') setEditCommunityId('');
-                    }}
-                    options={typeOptions}
-                  />
-                </div>
-                {editType === 'GROUP' && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Communauté</label>
-                    <Select
-                      value={editCommunityId}
-                      onChange={(e) => setEditCommunityId(e.target.value)}
-                      options={communityOptions}
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Espace parent</label>
-                  <Select
-                    value={editParentId}
-                    onChange={(e) => setEditParentId(e.target.value)}
-                    options={parentSpaceOptions}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    Enregistrer
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditing(false)}
-                  >
-                    Annuler
-                  </Button>
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nom</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Nom:</span>{' '}
-                  <span className="font-medium">{space.name}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Type:</span>{' '}
-                  <span className="font-medium">
-                    {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
-                  </span>
-                </div>
-                {space.type === 'GROUP' && (
-                  <div>
-                    <span className="text-muted-foreground">Communauté:</span>{' '}
-                    <span className="font-medium">
-                      {space.community ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Building2 className="w-3 h-3" />
-                          {space.community.name}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/50">Aucune</span>
-                      )}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <span className="text-muted-foreground">Parent:</span>{' '}
-                  <span className="font-medium">
-                    {space.parent ? space.parent.name : <span className="text-muted-foreground/50">Aucun (racine)</span>}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Elements:</span>{' '}
-                  <span className="font-medium">{space.itemCount}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Cree le:</span>{' '}
-                  <span className="font-medium">
-                    {new Date(space.createdAt).toLocaleDateString('fr-FR')}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <Button size="sm" variant="outline" onClick={handleStartEdit}>
-                    Modifier
-                  </Button>
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Type</label>
+                <Select
+                  value={editType}
+                  onChange={(e) => {
+                    const newType = e.target.value as 'PERSONAL' | 'GROUP';
+                    setEditType(newType);
+                    if (newType === 'PERSONAL') setEditCommunityId('');
+                  }}
+                  options={typeOptions}
+                />
               </div>
-            )}
+              {editType === 'GROUP' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Communauté</label>
+                  <Select
+                    value={editCommunityId}
+                    onChange={(e) => setEditCommunityId(e.target.value)}
+                    options={communityOptions}
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium mb-1">Espace parent</label>
+                <Select
+                  value={editParentId}
+                  onChange={(e) => setEditParentId(e.target.value)}
+                  options={parentSpaceOptions}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div>Éléments : <span className="font-medium text-foreground">{space.itemCount}</span></div>
+                <div>Créé le : <span className="font-medium text-foreground">{new Date(space.createdAt).toLocaleDateString('fr-FR')}</span></div>
+              </div>
+              <div>
+                <Button
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={updateMutation.isPending}
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  Enregistrer
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Members */}

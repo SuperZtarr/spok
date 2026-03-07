@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, FolderKanban, Plus, Trash2, Loader2, Save, Camera, ImageIcon } from 'lucide-react';
@@ -19,7 +19,6 @@ export function CommunitySettingsPage() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editIsPublic, setEditIsPublic] = useState(false);
-  const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
 
@@ -35,6 +34,14 @@ export function CommunitySettingsPage() {
     queryKey: ['spaces'],
     queryFn: () => spacesApi.list(),
   });
+
+  useEffect(() => {
+    if (community) {
+      setEditName(community.name);
+      setEditDescription(community.description || '');
+      setEditIsPublic(community.isPublic);
+    }
+  }, [community]);
 
   // Spaces in this community
   const communitySpaces = allSpaces?.filter(s => s.communityId === communityId) || [];
@@ -56,7 +63,6 @@ export function CommunitySettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      setIsEditingInfo(false);
     },
   });
 
@@ -115,15 +121,6 @@ export function CommunitySettingsPage() {
     },
   });
 
-  const handleStartEdit = () => {
-    if (community) {
-      setEditName(community.name);
-      setEditDescription(community.description || '');
-      setEditIsPublic(community.isPublic);
-      setIsEditingInfo(true);
-    }
-  };
-
   const handleSaveInfo = () => {
     const updates: { name?: string; description?: string; isPublic?: boolean } = {};
     if (editName !== community?.name) updates.name = editName;
@@ -131,8 +128,6 @@ export function CommunitySettingsPage() {
     if (editIsPublic !== community?.isPublic && community?.role === 'OWNER') updates.isPublic = editIsPublic;
     if (Object.keys(updates).length > 0) {
       updateCommunityMutation.mutate(updates);
-    } else {
-      setIsEditingInfo(false);
     }
   };
 
@@ -191,7 +186,7 @@ export function CommunitySettingsPage() {
         <div className="bg-card border rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Informations</h2>
 
-          {isEditingInfo ? (
+          {canEdit ? (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Nom</label>
@@ -222,7 +217,14 @@ export function CommunitySettingsPage() {
                   </label>
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div>Rôle : <span className="font-medium text-foreground">
+                  {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+                </span></div>
+                <div>Membres : <span className="font-medium text-foreground">{community.memberCount || 0}</span></div>
+                <div>Espaces : <span className="font-medium text-foreground">{communitySpaces.length}</span></div>
+              </div>
+              <div>
                 <Button
                   size="sm"
                   onClick={handleSaveInfo}
@@ -231,54 +233,22 @@ export function CommunitySettingsPage() {
                   <Save className="w-4 h-4 mr-1" />
                   Enregistrer
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditingInfo(false)}
-                >
-                  Annuler
-                </Button>
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Nom:</span>{' '}
-                  <span className="font-medium">{community.name}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Rôle:</span>{' '}
-                  <span className="font-medium">
-                    {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
-                  </span>
-                </div>
-                {community.description && (
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Description:</span>{' '}
-                    <span>{community.description}</span>
-                  </div>
-                )}
-                <div>
-                  <span className="text-muted-foreground">Membres:</span>{' '}
-                  <span className="font-medium">{community.memberCount || 0}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Espaces:</span>{' '}
-                  <span className="font-medium">{communitySpaces.length}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Visibilité:</span>{' '}
-                  <span className={`font-medium ${community.isPublic ? 'text-green-600' : ''}`}>
-                    {community.isPublic ? 'Publique' : 'Privée'}
-                  </span>
-                </div>
-              </div>
-              {canEdit && (
-                <Button size="sm" variant="outline" onClick={handleStartEdit} title="Modifier les informations de la communauté">
-                  Modifier
-                </Button>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div><span className="text-muted-foreground">Nom:</span> <span className="font-medium">{community.name}</span></div>
+              <div><span className="text-muted-foreground">Rôle:</span> <span className="font-medium">
+                {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+              </span></div>
+              {community.description && (
+                <div className="col-span-2"><span className="text-muted-foreground">Description:</span> <span>{community.description}</span></div>
               )}
+              <div><span className="text-muted-foreground">Membres:</span> <span className="font-medium">{community.memberCount || 0}</span></div>
+              <div><span className="text-muted-foreground">Espaces:</span> <span className="font-medium">{communitySpaces.length}</span></div>
+              <div><span className="text-muted-foreground">Visibilité:</span> <span className={`font-medium ${community.isPublic ? 'text-green-600' : ''}`}>
+                {community.isPublic ? 'Publique' : 'Privée'}
+              </span></div>
             </div>
           )}
         </div>
