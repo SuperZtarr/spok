@@ -73,7 +73,7 @@ export interface UpdateItemInput {
   description?: string | null;
   content?: Record<string, unknown>;
   url?: string | null;
-  status?: string;
+  status?: string | null;
   priority?: number;
   dueDate?: string | null;
   startDate?: string | null;
