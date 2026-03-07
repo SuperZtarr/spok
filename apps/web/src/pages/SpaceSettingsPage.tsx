@@ -14,7 +14,7 @@ import { Select } from '../components/ui/Select';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
-import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
+import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
 
 export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -84,6 +84,7 @@ export function SpaceSettingsPage() {
   const [editName, setEditName] = useState('');
   const [editCommunityId, setEditCommunityId] = useState<string>('');
   const [editParentId, setEditParentId] = useState<string>('');
+  const [editDefaultRole, setEditDefaultRole] = useState<string>('');
 
   // Initialize local state when data loads
   useEffect(() => {
@@ -99,6 +100,7 @@ export function SpaceSettingsPage() {
       setEditName(space.name);
       setEditCommunityId(space.communityId || '');
       setEditParentId(space.parentId || '');
+      setEditDefaultRole(space.defaultRole || '');
     }
   }, [space, editName]);
 
@@ -139,12 +141,14 @@ export function SpaceSettingsPage() {
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
 
-    const updates: { name?: string; communityId?: string | null; parentId?: string | null } = {};
+    const updates: { name?: string; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null } = {};
     if (editName !== space.name) updates.name = editName;
     const newCommunityId = editCommunityId || null;
     if (newCommunityId !== space.communityId) updates.communityId = newCommunityId;
     const newParentId = editParentId || null;
     if (newParentId !== (space.parentId || null)) updates.parentId = newParentId;
+    const newDefaultRole = (editDefaultRole || null) as Role | null;
+    if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -154,7 +158,8 @@ export function SpaceSettingsPage() {
   const hasSpaceInfoChanges = space && (
     editName !== space.name ||
     (editCommunityId || null) !== space.communityId ||
-    (editParentId || null) !== (space.parentId || null)
+    (editParentId || null) !== (space.parentId || null) ||
+    (editDefaultRole || null) !== (space.defaultRole || null)
   );
 
   const communityOptions = [
@@ -326,6 +331,22 @@ export function SpaceSettingsPage() {
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Imbriquer cet espace sous un autre espace de groupe
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Rôle par défaut des nouveaux membres</label>
+                <Select
+                  value={editDefaultRole}
+                  onChange={(e) => setEditDefaultRole(e.target.value)}
+                  options={[
+                    { value: '', label: 'Pas d\'accès automatique' },
+                    { value: 'VIEWER', label: 'Lecteur' },
+                    { value: 'MEMBER', label: 'Membre' },
+                    { value: 'ADMIN', label: 'Administrateur' },
+                  ]}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Quand un utilisateur rejoint la communauté, il sera automatiquement ajouté à cet espace avec ce rôle
                 </p>
               </div>
               {hasSpaceInfoChanges && (

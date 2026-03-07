@@ -26,6 +26,7 @@ const updateSpaceSchema = z.object({
   name: z.string().min(1).optional(),
   communityId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
+  defaultRole: z.enum(['ADMIN', 'MEMBER', 'VIEWER']).nullable().optional(),
 });
 
 const inviteSchema = z.object({
@@ -511,6 +512,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.name !== undefined) updateData.name = body.name;
       if (body.parentId !== undefined) updateData.parentId = body.parentId;
       if (communityIdOverride !== undefined) updateData.communityId = communityIdOverride;
+      if (body.defaultRole !== undefined) updateData.defaultRole = body.defaultRole;
 
       const updatedSpace = await fastify.prisma.space.update({
         where: { id: request.params.id },

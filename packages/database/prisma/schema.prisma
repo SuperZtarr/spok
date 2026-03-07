@@ -51,6 +51,8 @@ model Space {
   parent    Space?  @relation("SpaceHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Space[] @relation("SpaceHierarchy")
 
+  defaultRole Role? // Auto-join role for new community members (null = no auto-join)
+
   memberships SpaceMembership[]
   items       Item[]
   modules     SpaceModule[]

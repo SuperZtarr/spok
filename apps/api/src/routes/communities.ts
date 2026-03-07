@@ -1,8 +1,41 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import type { PrismaClient } from '@prisma/client';
 import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from '../utils/audit.js';
+
+/** Auto-join user to community spaces that have a defaultRole configured */
+async function autoJoinCommunitySpaces(prisma: PrismaClient, userId: string, communityId: string) {
+  const spacesWithDefault = await prisma.space.findMany({
+    where: { communityId, defaultRole: { not: null } },
+    select: { id: true, defaultRole: true },
+  });
+
+  if (spacesWithDefault.length === 0) return;
+
+  // Filter out spaces where user is already a member
+  const existingMemberships = await prisma.spaceMembership.findMany({
+    where: {
+      userId,
+      spaceId: { in: spacesWithDefault.map(s => s.id) },
+    },
+    select: { spaceId: true },
+  });
+
+  const existingSpaceIds = new Set(existingMemberships.map(m => m.spaceId));
+  const toCreate = spacesWithDefault.filter(s => !existingSpaceIds.has(s.id));
+
+  if (toCreate.length > 0) {
+    await prisma.spaceMembership.createMany({
+      data: toCreate.map(s => ({
+        userId,
+        spaceId: s.id,
+        role: s.defaultRole!,
+      })),
+    });
+  }
+}
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -441,6 +474,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Auto-join spaces with defaultRole
+    await autoJoinCommunitySpaces(fastify.prisma as unknown as PrismaClient, request.user.userId, request.params.id);
+
     return { success: true };
   });
 
@@ -588,6 +624,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       });
+
+      // Auto-join spaces with defaultRole
+      await autoJoinCommunitySpaces(fastify.prisma as unknown as PrismaClient, invitedUser.id, request.params.id);
 
       return reply.status(201).send({
         id: newMembership.id,

@@ -10,6 +10,7 @@ export interface Space {
   parentId?: string | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
+  defaultRole?: Role | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +42,7 @@ export interface CreateSpaceInput {
 export interface UpdateSpaceInput {
   name?: string;
   parentId?: string | null;
+  defaultRole?: Role | null;
 }
 
 export interface InviteMemberInput {
