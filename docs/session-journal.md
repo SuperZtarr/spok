@@ -357,6 +357,21 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-25] - Vue Relations (cartographie non hiérarchique)
+
+**Demande :** Ajouter une vue qui visualise les relations entre items indépendamment de la hiérarchie parent/enfant (amélioration #7)
+**Actions réalisées :**
+- Nouveau composant `RelationsMapView.tsx` : force-graph 2D basé sur react-force-graph-2d
+- Affiche uniquement les relations libres (blocks, depends, relates) entre items
+- Toggles par type de relation, option afficher items sans relations
+- Couleurs par type d'item, flèches directionnelles, highlight (type/statut/recherche)
+- Ajouté `'relations'` dans viewMode store (icône Waypoints, catégorie exploration)
+- Câblé dans SpacePage.tsx et ViewModeSelector.tsx
+**État :** TERMINÉ
+**Commit :** ebdbd13
+
+---
+
 #### [2026-02-25] - Assignation d'items
 
 **Demande :** Ajouter l'assignation d'items à des membres + vue "Assigné à moi" (manque fonctionnel #3)
@@ -396,6 +411,35 @@ Après chaque commit :
 
 ---
 
+#### [2026-02-25] - MindMap : édition relations + icônes type + tooltip commentaire
+
+**Demande :** Clic sur une relation dans la MindMap ne doit plus supprimer mais éditer. Icône du type de lien sur l'edge, tooltip du commentaire au survol.
+**Actions réalisées :**
+- Custom edge `RelationEdge` dans mindmap-nodes.tsx : icône du type (Ban, ArrowLeft, Link2, Copy, Cog, FlaskConical) dans un cercle sur le lien, tooltip commentaire au hover
+- Modale d'édition relation dans MindMapView : même style que la modale de création (grille type + champ commentaire + Enregistrer/Supprimer/Annuler)
+- `onUpdateRelation` ajouté dans MindMapViewProps, useSpaceActions (mutation + handler), SpacePage
+- Edges relation passés en `type: 'relation'` dans mindmap-layout.ts (custom edge au lieu de default)
+- `edgeTypes` enregistré dans ReactFlow
+**État :** TERMINÉ
+**Commit :** 98209e8
+
+---
+
+#### [2026-02-25] - Enrichir les relations entre items
+
+**Demande :** Ajouter un commentaire sur les relations, pouvoir éditer (modifier type + commentaire) et supprimer une relation (amélioration #8)
+**Actions réalisées :**
+- Schema Prisma : `label String?` sur ItemRelation
+- API : `label` dans createRelationSchema, route PATCH `/:id/relations/:relationId`, audit UPDATE_RELATION
+- Types shared : `label` dans CreateRelationInput + ItemRelation, `UPDATE_RELATION` dans AuditAction
+- Client API : `updateRelation()` + label dans createRelation
+- UI ItemEditModal : type "Lié à" ajouté, champ commentaire à la création, label affiché en italique sous chaque relation, bouton crayon → formulaire inline (type + label + sauvegarder/annuler)
+- Audit UI : UPDATE_RELATION dans AuditLogDetail et AuditLogItem
+**État :** TERMINÉ
+**Commit :** c4849fb
+
+---
+
 #### [2025-02-15] - Fix build Railway après unification ItemActionMenu
 
 **Demande :** Correction automatique suite à l'échec du build Railway (commit 282d58f)
@@ -404,5 +448,66 @@ Après chaque commit :
 - Supprimé l'import inutilisé `X` dans `SpaceSettingsPage.tsx`
 - Commit `1e97a24`, merge fast-forward dans master, push origin
 **État :** TERMINÉ
+
+---
+
+#### [2026-02-26] - Vue Schéma (canvas libre)
+
+**Demande :** Ajouter une vue permettant de faire des schémas visuels avec les éléments — canvas libre, connexions = relations en base, positions persistées.
+**Décision :** ReactFlow en mode libre, positions sauvegardées via SpaceModule (canvas-layout), type picker pour les nouvelles connexions.
+**Actions réalisées :**
+- Route API `canvas-layout.ts` : GET/PUT positions via SpaceModule (`moduleKey: 'canvas-layout'`)
+- Enregistrement dans `spaces.ts` à `/:spaceId/canvas-layout`
+- Client `canvasLayoutApi` dans `api.ts` (get, update)
+- Composant `SchemaView.tsx` : ReactFlow canvas libre, nœuds custom (titre, type, statut), edges custom (icône type relation), handles source/target sur 4 côtés, grille pointillée snap 20px, MiniMap, debounced save positions (1s)
+- Connexion entre handles → picker type de relation → crée ItemRelation
+- Double-clic nœud → ouvre ItemEditModal
+- Support portails (bordure dashed), highlight type/statut, searchMatchIds (jaune)
+- Ajout `'schema'` dans viewMode (icône PenTool, catégorie exploration)
+- Intégration SpacePage + ViewModeSelector
+**État :** TERMINÉ
+**Commit :** b04ab2b
+
+---
+
+#### [2026-02-26] - SchemaView : hiérarchie, layout arbre, réorganiser, multi-sélection
+
+**Demande :** Afficher la hiérarchie parent→enfant dans la vue Schéma, layout initial en arbre, bouton réorganiser dans la toolbar, sélection multiple.
+**Actions réalisées :**
+- Edges hiérarchie gris clair (HierarchyEdge) : parent bottom → enfant top
+- Algorithme `computeHierarchyLayout` : arbre avec blocs racine empilés verticalement
+- Layout hiérarchique utilisé à l'initialisation (quand pas de positions sauvegardées)
+- Bouton "Réorganiser" dans SpaceToolbar (comme MindMap) via ref callback
+- Multi-sélection : drag sur fond = rectangle de sélection, Shift+clic, déplacement groupé
+**État :** TERMINÉ
+**Commit :** 446c905
+
+---
+
+#### [2026-02-26] - Fix portails SchemaView + compteur items
+
+**Demande :** Les portails (espaces enfants cochés) ne s'affichent pas en vue Schéma, et le compteur d'éléments ne les inclut pas.
+**Actions réalisées :**
+- Ajout de `'schema'` dans `isFlatView` (SpacePage) pour que tous les items soient récupérés (pas seulement les racines)
+- Compteur d'items utilise `allItemsData?.data?.length` au lieu de `space.itemCount` pour inclure les portails
+**État :** TERMINÉ
+**Commits :** bbd627c, d983134
+
+---
+
+#### [2026-02-26] - SchemaView : groupes imbriqués + drag reparent
+
+**Demande :** Remplacer les liens de hiérarchie par des nœuds conteneurs (enfants visuellement à l'intérieur du parent). Permettre de drag & drop un nœud sur un autre pour le reparenter, et hors d'un parent pour le détacher.
+**Actions réalisées :**
+- Suppression des HierarchyEdges, remplacement par nesting visuel ReactFlow (`parentId` sur les nœuds enfants)
+- Nouveau composant `SchemaGroupNode` : conteneur avec header (titre, icône, statut, menu actions) + zone enfants
+- Algorithme récursif `computeGroupSizes` : calcul bottom-up des dimensions (largeur/hauteur) des groupes imbriqués
+- Protection anti-cycle dans `computeSize` (set `visiting`)
+- Drag & drop reparent : drop un nœud sur un autre → API `update(parentId)`, drop hors d'un parent → détache (`parentId: null`)
+- `ReactFlowProvider` wrapper pour accès `useReactFlow().getIntersectingNodes()`
+- Edges de relation en courbes de Bézier (`getBezierPath`)
+- Multi-sélection conservée (drag rectangle + Shift+clic)
+**État :** TERMINÉ
+**Commit :** f21d5f9
 
 ---
