@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, GripVertical } from 'lucide-react';
+import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, GripVertical, Settings } from 'lucide-react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { useAuthStore } from '../stores/auth';
@@ -481,11 +481,18 @@ export function Layout() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               {currentCommunity ? currentCommunity.name : 'Espaces de groupe'}
             </span>
-            {user && (
-              <Link to="/?new=space" title="Créer un nouvel espace">
-                <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-              </Link>
-            )}
+            <div className="flex items-center gap-1">
+              {currentCommunity && currentCommunity.role && ['OWNER', 'ADMIN'].includes(currentCommunity.role) && (
+                <Link to={`/communities/${currentCommunity.id}/settings`} title="Paramètres de la communauté">
+                  <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                </Link>
+              )}
+              {user && (
+                <Link to="/?new=space" title="Créer un nouvel espace">
+                  <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                </Link>
+              )}
+            </div>
           </div>
           <DndContext sensors={dndSensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             {communitySpaceTree.length > 0 ? (
