@@ -12,29 +12,36 @@ const updateTagSchema = z.object({
 });
 
 export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Helper to check space access (direct membership OR community membership)
-  async function checkSpaceAccess(userId: string, spaceId: string) {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: { userId_spaceId: { userId, spaceId } },
-    });
-    if (membership) return membership;
+  // Helper to check space access (direct membership, community membership, or public community)
+  async function checkSpaceAccess(userId: string | undefined, spaceId: string) {
+    if (userId) {
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId, spaceId } },
+      });
+      if (membership) return membership;
+    }
 
     const space = await fastify.prisma.space.findUnique({
       where: { id: spaceId },
-      select: { communityId: true },
+      select: { communityId: true, community: { select: { isPublic: true } } },
     });
     if (space?.communityId) {
-      const cm = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId, communityId: space.communityId } },
-      });
-      if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      if (userId) {
+        const cm = await fastify.prisma.communityMembership.findUnique({
+          where: { userId_communityId: { userId, communityId: space.communityId } },
+        });
+        if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      }
+      if (space.community?.isPublic) {
+        return { userId: userId || '', spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      }
     }
     return null;
   }
 
   // List tags
   fastify.get<{ Params: { spaceId: string } }>('/', async (request, reply) => {
-    const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(request.user?.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -56,6 +63,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
   // Create tag
   fastify.post<{ Params: { spaceId: string }; Body: z.infer<typeof createTagSchema> }>(
     '/',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
       if (!membership) {
@@ -97,6 +105,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
   // Update tag
   fastify.patch<{ Params: { spaceId: string; id: string }; Body: z.infer<typeof updateTagSchema> }>(
     '/:id',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
       if (!membership) {
@@ -146,7 +155,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Delete tag
-  fastify.delete<{ Params: { spaceId: string; id: string } }>('/:id', async (request, reply) => {
+  fastify.delete<{ Params: { spaceId: string; id: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');

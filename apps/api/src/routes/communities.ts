@@ -24,11 +24,8 @@ const inviteSchema = z.object({
 });
 
 export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
-  // All routes require authentication
-  fastify.addHook('preHandler', fastify.authenticate);
-
   // Create a new community
-  fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = createCommunitySchema.parse(request.body);
 
     const community = await fastify.prisma.community.create({
@@ -59,7 +56,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // List user's communities
-  fastify.get('/', async (request) => {
+  fastify.get('/', { preHandler: [fastify.authenticate] }, async (request) => {
     const memberships = await fastify.prisma.communityMembership.findMany({
       where: { userId: request.user.userId },
       include: {
@@ -81,18 +78,21 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // List public communities the user has NOT joined
-  fastify.get('/public', async (request) => {
-    const myMemberships = await fastify.prisma.communityMembership.findMany({
-      where: { userId: request.user.userId },
-      select: { communityId: true },
-    });
-    const myIds = myMemberships.map((m) => m.communityId);
+  // List public communities (authenticated: exclude joined; anonymous: all public)
+  fastify.get('/public', { preHandler: [fastify.optionalAuthenticate] }, async (request) => {
+    let myIds: string[] = [];
+    if (request.user?.userId) {
+      const myMemberships = await fastify.prisma.communityMembership.findMany({
+        where: { userId: request.user.userId },
+        select: { communityId: true },
+      });
+      myIds = myMemberships.map((m) => m.communityId);
+    }
 
     const communities = await fastify.prisma.community.findMany({
       where: {
         isPublic: true,
-        id: { notIn: myIds },
+        ...(myIds.length > 0 ? { id: { notIn: myIds } } : {}),
       },
       include: {
         _count: {
@@ -109,36 +109,39 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // Get community by ID
-  fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
+  // Get community by ID (authenticated: full access if member; anonymous: public only)
+  fastify.get<{ Params: { id: string } }>('/:id', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
+    // If authenticated, check membership
+    if (request.user?.userId) {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
         },
-      },
-      include: {
-        community: {
-          include: {
-            _count: {
-              select: { memberships: true, spaces: true },
+        include: {
+          community: {
+            include: {
+              _count: {
+                select: { memberships: true, spaces: true },
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    if (membership) {
-      return {
-        ...membership.community,
-        role: membership.role,
-        memberCount: membership.community._count.memberships,
-        spaceCount: membership.community._count.spaces,
-      };
+      if (membership) {
+        return {
+          ...membership.community,
+          role: membership.role,
+          memberCount: membership.community._count.memberships,
+          spaceCount: membership.community._count.spaces,
+        };
+      }
     }
 
-    // Non-member: allow access if community is public
+    // Non-member or anonymous: allow access if community is public
     const community = await fastify.prisma.community.findUnique({
       where: { id: request.params.id },
       include: {
@@ -163,6 +166,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Update community
   fastify.patch<{ Params: { id: string }; Body: z.infer<typeof updateCommunitySchema> }>(
     '/:id',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -198,7 +202,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Delete preview — list spaces and items that will be affected
-  fastify.get<{ Params: { id: string } }>('/:id/delete-preview', async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/:id/delete-preview', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -247,7 +251,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Delete community
-  fastify.delete<{ Params: { id: string }; Querystring: { deleteChildren?: string } }>('/:id', async (request, reply) => {
+  fastify.delete<{ Params: { id: string }; Querystring: { deleteChildren?: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const community = await fastify.prisma.community.findUnique({
       where: { id: request.params.id },
     });
@@ -402,7 +406,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Join a public community
-  fastify.post<{ Params: { id: string } }>('/:id/join', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/join', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const community = await fastify.prisma.community.findUnique({
       where: { id: request.params.id },
     });
@@ -441,7 +445,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Leave a community (cascade: also removes space memberships)
-  fastify.post<{ Params: { id: string } }>('/:id/leave', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/leave', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -486,7 +490,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Get community members
-  fastify.get<{ Params: { id: string } }>('/:id/members', async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/:id/members', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -526,6 +530,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Invite member to community
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof inviteSchema> }>(
     '/:id/invite',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -598,6 +603,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Remove member from community
   fastify.delete<{ Params: { id: string; memberId: string } }>(
     '/:id/members/:memberId',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -645,6 +651,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Update member role
   fastify.patch<{ Params: { id: string; memberId: string }; Body: { role: CommunityRole } }>(
     '/:id/members/:memberId',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -710,6 +717,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Transfer community ownership
   fastify.post<{ Params: { id: string }; Body: { targetMemberId: string } }>(
     '/:id/transfer-ownership',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const ownership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -753,7 +761,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Upload community avatar
-  fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -801,7 +809,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Delete community avatar
-  fastify.delete<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+  fastify.delete<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -829,7 +837,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Upload community cover
-  fastify.post<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -877,7 +885,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Delete community cover
-  fastify.delete<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+  fastify.delete<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {

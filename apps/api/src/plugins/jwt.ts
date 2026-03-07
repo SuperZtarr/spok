@@ -6,6 +6,7 @@ import type { JWTPayload } from '@spok/shared';
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    optionalAuthenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -29,6 +30,14 @@ const jwtPluginAsync: FastifyPluginAsync = async (fastify) => {
       await request.jwtVerify();
     } catch (err) {
       reply.unauthorized('Invalid or expired token');
+    }
+  });
+
+  fastify.decorate('optionalAuthenticate', async (request: FastifyRequest, _reply: FastifyReply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      // No token or invalid token — continue as anonymous (request.user stays undefined)
     }
   });
 };

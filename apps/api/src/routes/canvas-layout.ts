@@ -24,23 +24,28 @@ function parseCanvasLayout(config: unknown): CanvasLayout | null {
 }
 
 export const canvasLayoutRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.addHook('preHandler', fastify.authenticate);
-
-  async function checkSpaceAccess(userId: string, spaceId: string) {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: { userId_spaceId: { userId, spaceId } },
-    });
-    if (membership) return membership;
+  async function checkSpaceAccess(userId: string | undefined, spaceId: string) {
+    if (userId) {
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId, spaceId } },
+      });
+      if (membership) return membership;
+    }
 
     const space = await fastify.prisma.space.findUnique({
       where: { id: spaceId },
-      select: { communityId: true },
+      select: { communityId: true, community: { select: { isPublic: true } } },
     });
     if (space?.communityId) {
-      const cm = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId, communityId: space.communityId } },
-      });
-      if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      if (userId) {
+        const cm = await fastify.prisma.communityMembership.findUnique({
+          where: { userId_communityId: { userId, communityId: space.communityId } },
+        });
+        if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      }
+      if (space.community?.isPublic) {
+        return { userId: userId || '', spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      }
     }
     return null;
   }
@@ -49,7 +54,7 @@ export const canvasLayoutRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/', async (request, reply) => {
     const { spaceId } = request.params as { spaceId: string };
 
-    const membership = await checkSpaceAccess(request.user.userId, spaceId);
+    const membership = await checkSpaceAccess(request.user?.userId, spaceId);
     if (!membership) {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }
@@ -63,7 +68,7 @@ export const canvasLayoutRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // PUT /spaces/:spaceId/canvas-layout
-  fastify.put('/', async (request, reply) => {
+  fastify.put('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { spaceId } = request.params as { spaceId: string };
 
     const membership = await checkSpaceAccess(request.user.userId, spaceId);

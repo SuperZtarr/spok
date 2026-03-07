@@ -15,6 +15,9 @@ const querySchema = z.object({
 });
 
 export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
+  // Audit logs always require authentication
+  fastify.addHook('preHandler', fastify.authenticate);
+
   // Helper to check space access (direct membership OR community membership)
   async function checkSpaceAccess(userId: string, spaceId: string) {
     const membership = await fastify.prisma.spaceMembership.findUnique({

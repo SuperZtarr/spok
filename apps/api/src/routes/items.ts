@@ -53,30 +53,38 @@ const querySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(5000).default(20),
 });
 
-// Exported helper: check space access (direct membership OR community membership)
-export async function checkSpaceAccess(prisma: any, userId: string, spaceId: string) {
-  // 1. Direct space membership
-  const membership = await prisma.spaceMembership.findUnique({
-    where: {
-      userId_spaceId: { userId, spaceId },
-    },
-  });
-  if (membership) return membership;
-
-  // 2. Community membership → VIEWER access
-  const space = await prisma.space.findUnique({
-    where: { id: spaceId },
-    select: { communityId: true },
-  });
-  if (space?.communityId) {
-    const communityMembership = await prisma.communityMembership.findUnique({
+// Exported helper: check space access (direct membership, community membership, or public community)
+export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string) {
+  // 1. If authenticated, check direct space membership
+  if (userId) {
+    const membership = await prisma.spaceMembership.findUnique({
       where: {
-        userId_communityId: { userId, communityId: space.communityId },
+        userId_spaceId: { userId, spaceId },
       },
     });
-    if (communityMembership) {
-      // Return a virtual VIEWER membership
-      return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+    if (membership) return membership;
+  }
+
+  // 2. Community membership or public community → VIEWER access
+  const space = await prisma.space.findUnique({
+    where: { id: spaceId },
+    select: { communityId: true, community: { select: { isPublic: true } } },
+  });
+  if (space?.communityId) {
+    if (userId) {
+      const communityMembership = await prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: { userId, communityId: space.communityId },
+        },
+      });
+      if (communityMembership) {
+        return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      }
+    }
+
+    // Public community: allow anonymous and non-member authenticated users
+    if (space.community?.isPublic) {
+      return { userId: userId || '', spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
     }
   }
 
@@ -84,19 +92,22 @@ export async function checkSpaceAccess(prisma: any, userId: string, spaceId: str
 }
 
 export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Register sub-plugins (same prefix scope — routes are relative)
-  await fastify.register(itemRelationsRoutes);
-  await fastify.register(itemMoveRoutes);
-  await fastify.register(itemBulkRoutes);
-  await fastify.register(itemUploadRoutes);
-  await fastify.register(itemContributionRoutes);
-  await fastify.register(itemConvertRoutes);
+  // Register write sub-plugins — require authentication
+  await fastify.register(async function (authInstance) {
+    authInstance.addHook('preHandler', authInstance.authenticate);
+    await authInstance.register(itemRelationsRoutes);
+    await authInstance.register(itemMoveRoutes);
+    await authInstance.register(itemBulkRoutes);
+    await authInstance.register(itemUploadRoutes);
+    await authInstance.register(itemContributionRoutes);
+    await authInstance.register(itemConvertRoutes);
+  });
 
   // List items
   fastify.get<{ Params: { spaceId: string }; Querystring: z.infer<typeof querySchema> }>(
     '/',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -180,6 +191,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   // Create item
   fastify.post<{ Params: { spaceId: string }; Body: z.infer<typeof createItemSchema> }>(
     '/',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
       if (!membership) {
@@ -233,7 +245,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get item by ID
   fastify.get<{ Params: { spaceId: string; id: string } }>('/:id', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -288,6 +300,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   // Update item
   fastify.patch<{ Params: { spaceId: string; id: string }; Body: z.infer<typeof updateItemSchema> }>(
     '/:id',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
       if (!membership) {
@@ -439,7 +452,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Delete item
-  fastify.delete<{ Params: { spaceId: string; id: string }; Querystring: { deleteChildren?: string } }>('/:id', async (request, reply) => {
+  fastify.delete<{ Params: { spaceId: string; id: string }; Querystring: { deleteChildren?: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');

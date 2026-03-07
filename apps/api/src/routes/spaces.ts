@@ -34,19 +34,49 @@ const inviteSchema = z.object({
 });
 
 export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
-  // All routes require authentication
-  fastify.addHook('preHandler', fastify.authenticate);
+  // Register nested routes — optional auth (each file adds authenticate on write routes)
+  await fastify.register(async function (optInstance) {
+    optInstance.addHook('preHandler', optInstance.optionalAuthenticate);
+    await optInstance.register(itemsRoutes, { prefix: '/:spaceId/items' });
+    await optInstance.register(tagsRoutes, { prefix: '/:spaceId/tags' });
+    await optInstance.register(referentielsRoutes, { prefix: '/:spaceId/referentiels' });
+    await optInstance.register(canvasLayoutRoutes, { prefix: '/:spaceId/canvas-layout' });
+    await optInstance.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
+  });
 
-  // Register nested routes
-  await fastify.register(itemsRoutes, { prefix: '/:spaceId/items' });
-  await fastify.register(tagsRoutes, { prefix: '/:spaceId/tags' });
-  await fastify.register(referentielsRoutes, { prefix: '/:spaceId/referentiels' });
-  await fastify.register(canvasLayoutRoutes, { prefix: '/:spaceId/canvas-layout' });
-  await fastify.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
-
-  // List user's spaces (including visible community spaces)
-  fastify.get<{ Querystring: { communityId?: string; parentId?: string } }>('/', async (request) => {
+  // List spaces (authenticated: all accessible; anonymous: public community spaces only)
+  fastify.get<{ Querystring: { communityId?: string; parentId?: string } }>('/', { preHandler: [fastify.optionalAuthenticate] }, async (request) => {
     const { communityId } = request.query;
+    const userId = request.user?.userId;
+
+    // Anonymous visitor: only public community spaces
+    if (!userId) {
+      if (!communityId || communityId === 'none') return [];
+
+      const community = await fastify.prisma.community.findUnique({
+        where: { id: communityId },
+        select: { isPublic: true },
+      });
+      if (!community?.isPublic) return [];
+
+      const spaces = await fastify.prisma.space.findMany({
+        where: { communityId, type: 'GROUP' },
+        include: {
+          _count: { select: { memberships: true, items: true } },
+          community: { select: { id: true, name: true, avatarUrl: true } },
+          parent: { select: { id: true, name: true } },
+        },
+        orderBy: { name: 'asc' },
+      });
+
+      return spaces.map((s) => ({
+        ...s,
+        role: 'VIEWER' as Role,
+        memberCount: s._count.memberships,
+        itemCount: s._count.items,
+        isMember: false,
+      }));
+    }
 
     // Build filter based on communityId parameter
     let spaceFilter: { communityId?: string | null } = {};
@@ -158,7 +188,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Create space
-  fastify.post<{ Body: z.infer<typeof createSpaceSchema> }>('/', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof createSpaceSchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = createSpaceSchema.parse(request.body);
 
     // PERSONAL spaces cannot be nested or have communities
@@ -282,63 +312,80 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send({ ...space, role: 'OWNER' as Role });
   });
 
-  // Get space by ID (direct membership OR community membership)
-  fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
-    // 1. Try direct membership
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
+  // Get space by ID (direct membership, community membership, or public community)
+  fastify.get<{ Params: { id: string } }>('/:id', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
+    const userId = request.user?.userId;
+
+    // 1. If authenticated, try direct membership
+    if (userId) {
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: {
+          userId_spaceId: {
+            userId,
+            spaceId: request.params.id,
+          },
         },
-      },
-      include: {
-        space: {
-          include: {
-            _count: {
-              select: { memberships: true, items: true },
-            },
-            community: {
-              select: { id: true, name: true },
-            },
-            parent: {
-              select: { id: true, name: true },
+        include: {
+          space: {
+            include: {
+              _count: {
+                select: { memberships: true, items: true },
+              },
+              community: {
+                select: { id: true, name: true },
+              },
+              parent: {
+                select: { id: true, name: true },
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    if (membership) {
-      return {
-        ...membership.space,
-        role: membership.role,
-        memberCount: membership.space._count.memberships,
-        itemCount: membership.space._count.items,
-      };
+      if (membership) {
+        return {
+          ...membership.space,
+          role: membership.role,
+          memberCount: membership.space._count.memberships,
+          itemCount: membership.space._count.items,
+        };
+      }
     }
 
-    // 2. Try community membership → VIEWER access
+    // 2. Try community membership or public community → VIEWER access
     const space = await fastify.prisma.space.findUnique({
       where: { id: request.params.id },
       include: {
         _count: { select: { memberships: true, items: true } },
-        community: { select: { id: true, name: true } },
+        community: { select: { id: true, name: true, isPublic: true } },
         parent: { select: { id: true, name: true } },
       },
     });
 
     if (space?.communityId) {
-      const communityMembership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: space.communityId,
+      // Authenticated user: check community membership
+      if (userId) {
+        const communityMembership = await fastify.prisma.communityMembership.findUnique({
+          where: {
+            userId_communityId: {
+              userId,
+              communityId: space.communityId,
+            },
           },
-        },
-      });
+        });
 
-      if (communityMembership) {
+        if (communityMembership) {
+          return {
+            ...space,
+            role: 'VIEWER' as Role,
+            memberCount: space._count.memberships,
+            itemCount: space._count.items,
+          };
+        }
+      }
+
+      // Public community: allow anonymous and non-member authenticated users
+      if (space.community?.isPublic) {
         return {
           ...space,
           role: 'VIEWER' as Role,
@@ -354,6 +401,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Update space
   fastify.patch<{ Params: { id: string }; Body: z.infer<typeof updateSpaceSchema> }>(
     '/:id',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       // Check if user is global admin
       const currentUser = await fastify.prisma.user.findUnique({
@@ -488,7 +536,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Delete preview — list children that will be affected
-  fastify.get<{ Params: { id: string } }>('/:id/delete-preview', async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/:id/delete-preview', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const space = await fastify.prisma.space.findUnique({
       where: { id: request.params.id },
     });
@@ -586,7 +634,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Delete space
-  fastify.delete<{ Params: { id: string }; Querystring: { deleteChildren?: string } }>('/:id', async (request, reply) => {
+  fastify.delete<{ Params: { id: string }; Querystring: { deleteChildren?: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const space = await fastify.prisma.space.findUnique({
       where: { id: request.params.id },
     });
@@ -792,7 +840,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Join a community space
-  fastify.post<{ Params: { id: string } }>('/:id/join', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/join', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     // Check the space exists and belongs to a community
     const space = await fastify.prisma.space.findUnique({
       where: { id: request.params.id },
@@ -846,7 +894,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Leave a space
-  fastify.post<{ Params: { id: string } }>('/:id/leave', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/leave', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
@@ -872,7 +920,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Get space members
-  fastify.get<{ Params: { id: string } }>('/:id/members', async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/:id/members', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     // Check direct membership
     let hasAccess = !!(await fastify.prisma.spaceMembership.findUnique({
       where: {
@@ -931,6 +979,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Invite member to space
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof inviteSchema> }>(
     '/:id/invite',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.spaceMembership.findUnique({
         where: {
@@ -1018,6 +1067,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Remove member from space
   fastify.delete<{ Params: { id: string; memberId: string } }>(
     '/:id/members/:memberId',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.spaceMembership.findUnique({
         where: {
@@ -1063,6 +1113,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Update member role in space
   fastify.patch<{ Params: { id: string; memberId: string }; Body: { role: string } }>(
     '/:id/members/:memberId',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const membership = await fastify.prisma.spaceMembership.findUnique({
         where: {
@@ -1125,6 +1176,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Transfer space ownership
   fastify.post<{ Params: { id: string }; Body: { targetMemberId: string } }>(
     '/:id/transfer-ownership',
+    { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const ownership = await fastify.prisma.spaceMembership.findUnique({
         where: {
@@ -1168,7 +1220,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Upload space avatar
-  fastify.post<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
@@ -1217,7 +1269,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Delete space avatar
-  fastify.delete<{ Params: { id: string } }>('/:id/avatar', async (request, reply) => {
+  fastify.delete<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
@@ -1245,7 +1297,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Upload space cover
-  fastify.post<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
@@ -1293,7 +1345,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Delete space cover
-  fastify.delete<{ Params: { id: string } }>('/:id/cover', async (request, reply) => {
+  fastify.delete<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await fastify.prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: {
