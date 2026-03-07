@@ -107,7 +107,7 @@ export function calculateLayout(
     children: tree.length > 0 ? tree.map(buildDatum) : undefined,
   };
 
-  // Recursive fan layout — simple proportional allocation
+  // Recursive fan layout
   const nodePositionMap = new Map<string, { x: number; y: number }>();
   const centerPos = { x: 0, y: 0 };
   nodePositionMap.set(SPACE_NODE_ID, centerPos);
@@ -130,45 +130,75 @@ export function calculateLayout(
     const childVisibleCounts = children.map(c => countVisible(c));
     const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
 
+    const MIN_SIBLING_SPACING = 130;
+    const spacingRadius = count > 1
+      ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
+      : 0;
+
     for (let i = 0; i < count; i++) {
       const child = children[i];
+      const descendants = childVisibleCounts[i];
+
+      const radius = Math.max(
+        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
+        spacingRadius
+      );
 
       const angle = count === 1
         ? dirAngle
         : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
 
-      const cx = parentPos.x + RADIAL_STEP * Math.cos(angle);
-      const cy = parentPos.y + RADIAL_STEP * Math.sin(angle);
+      const cx = parentPos.x + radius * Math.cos(angle);
+      const cy = parentPos.y + radius * Math.sin(angle);
       nodePositionMap.set(child.id, { x: cx, y: cy });
 
-      const childArc = totalVisible > 1
-        ? arcSpan * (childVisibleCounts[i] / totalVisible)
+      const directChildren = child.children?.length || 0;
+      const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
+      const childArc = descendants > 1
+        ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
         : 0;
       layoutFan(child, { x: cx, y: cy }, angle, childArc);
     }
   }
 
-  // Layout root children — equal angular spacing around full circle
+  // Layout root children with proportional angular allocation
   const rootChildren = rootDatum.children || [];
   const rootCount = rootChildren.length;
   if (rootCount > 0) {
     const rootVisibleCounts = rootChildren.map(c => countVisible(c));
     const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
 
-    const equalArc = (2 * Math.PI) / rootCount;
+    const MIN_NODE_SPACING = 160;
+    const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
 
+    const equalArc = (2 * Math.PI) / rootCount;
+    const rootArcs = rootChildren.map((_, i) => {
+      const proportionalArc = (2 * Math.PI * rootVisibleCounts[i]) / Math.max(1, totalRootVisible);
+      return equalArc * 0.5 + proportionalArc * 0.5;
+    });
+
+    let cumulativeAngle = -Math.PI / 2;
     for (let i = 0; i < rootCount; i++) {
       const child = rootChildren[i];
-      const angle = -Math.PI / 2 + i * equalArc;
+      const childArc = rootArcs[i];
+      const angle = cumulativeAngle + childArc / 2;
 
-      const cx = centerPos.x + RADIAL_STEP * Math.cos(angle);
-      const cy = centerPos.y + RADIAL_STEP * Math.sin(angle);
+      const descendants = rootVisibleCounts[i];
+      const rootRadius = Math.max(
+        minRadiusForSpacing,
+        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
+      );
+
+      const cx = centerPos.x + rootRadius * Math.cos(angle);
+      const cy = centerPos.y + rootRadius * Math.sin(angle);
       nodePositionMap.set(child.id, { x: cx, y: cy });
 
-      const childArc = totalRootVisible > 1
-        ? (2 * Math.PI) * (rootVisibleCounts[i] / totalRootVisible)
-        : Math.PI;
-      layoutFan(child, { x: cx, y: cy }, angle, childArc);
+      const directChildren = child.children?.length || 0;
+      const fanArc = descendants > 1
+        ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+        : 0;
+      layoutFan(child, { x: cx, y: cy }, angle, fanArc);
+      cumulativeAngle += childArc;
     }
   }
 
@@ -505,17 +535,29 @@ export function buildPortalNodesAndEdges(
         const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
         const count = children.length;
 
+        const MIN_SIBLING_SPACING = 130;
+        const spacingRadius = count > 1
+          ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
+          : 0;
+
         for (let i = 0; i < count; i++) {
           const child = children[i];
+          const descendants = childVisibleCounts[i];
+          const radius = Math.max(
+            RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
+            spacingRadius
+          );
           const angle = count === 1
             ? dirAngle
             : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
 
-          const childCx = cx + RADIAL_STEP * Math.cos(angle);
-          const childCy = cy + RADIAL_STEP * Math.sin(angle);
+          const childCx = cx + radius * Math.cos(angle);
+          const childCy = cy + radius * Math.sin(angle);
 
-          const childArc = totalVisible > 1
-            ? arcSpan * (childVisibleCounts[i] / totalVisible)
+          const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
+          const directChildren = child.children?.length || 0;
+          const childArc = descendants > 1
+            ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
             : 0;
 
           placePortalItem(child, childCx, childCy, item.id, undefined, depth + 1, angle, childArc);
@@ -528,19 +570,36 @@ export function buildPortalNodesAndEdges(
     const rootVisibleCounts = subTree.map(r => countVisibleUtil(r, collapsedIds));
     const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
 
-    const equalArc = (2 * Math.PI) / Math.max(1, rootCount);
+    const totalArcSpan = Math.min(Math.PI * 1.5, rootCount * (Math.PI / 4));
+    const equalArc = totalArcSpan / Math.max(1, rootCount);
+    const rootArcs = subTree.map((_, i) => {
+      const proportionalArc = totalArcSpan * (rootVisibleCounts[i] / Math.max(1, totalRootVisible));
+      return equalArc * 0.5 + proportionalArc * 0.5;
+    });
 
+    const MIN_NODE_SPACING = 160;
+    const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
+
+    let cumulativeAngle = baseAngle - totalArcSpan / 2;
     subTree.forEach((rootItem, i) => {
-      const angle = baseAngle - Math.PI + i * equalArc;
+      const childArc = rootArcs[i];
+      const angle = cumulativeAngle + childArc / 2;
+      const descendants = rootVisibleCounts[i];
+      const rootRadius = Math.max(
+        minRadiusForSpacing,
+        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
+      );
 
-      const cx = portalPos.x + RADIAL_STEP * Math.cos(angle);
-      const cy = portalPos.y + RADIAL_STEP * Math.sin(angle);
+      const cx = portalPos.x + rootRadius * Math.cos(angle);
+      const cy = portalPos.y + rootRadius * Math.sin(angle);
 
-      const childArc = totalRootVisible > 1
-        ? (2 * Math.PI) * (rootVisibleCounts[i] / totalRootVisible)
-        : Math.PI;
+      const directChildren = rootItem.children?.length || 0;
+      const fanArc = descendants > 1
+        ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
+        : 0;
 
-      placePortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0, angle, childArc);
+      placePortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0, angle, fanArc);
+      cumulativeAngle += childArc;
     });
   });
 
