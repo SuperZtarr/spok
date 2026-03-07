@@ -285,11 +285,13 @@ export function SpaceToolbar({
         )}
 
         <div className="ml-auto flex gap-1 flex-shrink-0">
-          <Link to={`/spaces/${spaceId}/history`}>
-            <Button variant="ghost" size="sm" title="Historique des modifications">
-              <History className="w-4 h-4" />
-            </Button>
-          </Link>
+          {canEdit && (
+            <Link to={`/spaces/${spaceId}/history`}>
+              <Button variant="ghost" size="sm" title="Historique des modifications">
+                <History className="w-4 h-4" />
+              </Button>
+            </Link>
+          )}
           {(spaceRole === 'OWNER' || spaceRole === 'ADMIN') && (
             <Link to={`/spaces/${spaceId}/settings`}>
               <Button variant="ghost" size="sm" title="Paramètres de l'espace">

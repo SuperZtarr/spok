@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -25,16 +25,6 @@ import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-}
-
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -47,16 +37,23 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function HomeRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
 
   if (!isAuthenticated) {
-    return <LandingPage />;
+    // Root → landing page
+    if (location.pathname === '/') return <LandingPage />;
+
+    // Protected paths → redirect to login
+    if (location.pathname === '/tasks' ||
+        location.pathname.includes('/settings') ||
+        location.pathname.includes('/history')) {
+      return <Navigate to="/login" replace />;
+    }
+
+    // Public paths (communities, spaces) → Layout in anonymous mode
   }
 
-  return (
-    <ProtectedRoute>
-      <Layout />
-    </ProtectedRoute>
-  );
+  return <Layout />;
 }
 
 export default function App() {
