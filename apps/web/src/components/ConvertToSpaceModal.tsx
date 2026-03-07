@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FolderPlus, Loader2, ArrowRight } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
@@ -21,6 +21,10 @@ export function ConvertToSpaceModal({
   isPending = false,
 }: ConvertToSpaceModalProps) {
   const [spaceName, setSpaceName] = useState(itemTitle);
+
+  useEffect(() => {
+    setSpaceName(itemTitle);
+  }, [itemTitle]);
 
   const handleConfirm = () => {
     if (spaceName.trim()) {
