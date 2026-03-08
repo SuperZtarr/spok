@@ -29,15 +29,30 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  // Calculate dropdown position from trigger
+  // Calculate dropdown position from trigger, flipping up if near bottom
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const dropdownWidth = 200;
-    setPosition({
-      top: rect.bottom + 4,
-      left: side === 'right' ? rect.left : rect.right - dropdownWidth,
-    });
+    const estimatedHeight = 250; // conservative estimate for menu height
+    const margin = 8;
+
+    let top = rect.bottom + 4;
+    // Flip upward if dropdown would overflow viewport bottom
+    if (top + estimatedHeight > window.innerHeight - margin) {
+      top = rect.top - estimatedHeight - 4;
+      // If flipping up would go above viewport, clamp to top
+      if (top < margin) top = margin;
+    }
+
+    let left = side === 'right' ? rect.left : rect.right - dropdownWidth;
+    // Clamp horizontal
+    if (left + dropdownWidth > window.innerWidth - margin) {
+      left = window.innerWidth - dropdownWidth - margin;
+    }
+    if (left < margin) left = margin;
+
+    setPosition({ top, left });
   }, [side]);
 
   const openMenu = useCallback(() => {

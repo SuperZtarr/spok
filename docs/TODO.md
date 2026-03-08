@@ -13,6 +13,9 @@
 - [x] Templates d'espace (structure pré-configurée : statuts, types, items) — déjà implémenté
 - [x] Tags partagés au niveau communauté — b5d10de
 
+### Infra & emails
+- [ ] Configurer un domaine custom Resend (ex: `noreply@spok.app`) avec SPF/DKIM/DMARC pour éviter les spams
+
 ### Membres & permissions
 - [ ] Modèle Invitation dédié (pending/accepted/declined) au lieu de créer directement un membership — **basse priorité**
 
@@ -21,9 +24,9 @@
 ### Nouvelles visualisations
 - [ ] Matrice effort/impact — items sur 2 axes (priorité vs complexité), drag pour repositionner
 - [x] Treemap — rectangles imbriqués proportionnels au nombre d'enfants ou contributions — 09a1a35
-- [ ] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions)
+- [ ] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions) — **basse priorité**
 - [x] Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total) — aa1aa4c
-- [ ] Diagramme de flux cumulatif (CFD) — empilage des statuts dans le temps
+- [x] Diagramme de flux cumulatif (CFD) — empilage des statuts dans le temps — 6091981
 - [ ] Chord diagram — relations circulaires entre espaces ou types d'items
 - [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins
 - [x] Organigramme — arborescence verticale des membres par communauté/espace/rôle — d570ef8
@@ -50,6 +53,8 @@
 ## Historique
 
 ### 2026-03-08
+- DeadlinesView : onglet dashboard "Échéances", items groupés par urgence — d093921
+- CfdView : diagramme de flux cumulatif, empilage statuts dans le temps — 6091981
 - OrgChartView : organigramme vertical des membres par rôle — d570ef8
 - BurndownView : courbe burnup/burndown, 2 modes, tooltip, stats, ligne idéale — aa1aa4c
 - Restauration audit logs UPDATE/MOVE : dialog champ par champ avec sélection — a950424
