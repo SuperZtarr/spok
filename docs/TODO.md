@@ -27,8 +27,8 @@
 - [ ] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions) — **basse priorité**
 - [x] Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total) — aa1aa4c
 - [x] Diagramme de flux cumulatif (CFD) — empilage des statuts dans le temps — 6091981
-- [ ] Chord diagram — relations circulaires entre espaces ou types d'items
-- [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins
+- [x] Chord diagram — relations circulaires entre espaces ou types d'items — 68bf9a8
+- [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins — **basse priorité**
 - [x] Organigramme — arborescence verticale des membres par communauté/espace/rôle — d570ef8
 - [ ] Vue matricielle — tableau croisé (assigné × statut, type × espace)
 
@@ -53,6 +53,7 @@
 ## Historique
 
 ### 2026-03-08
+- ChordView : diagramme chord, relations entre types ou espaces — 68bf9a8
 - DeadlinesView : onglet dashboard "Échéances", items groupés par urgence — d093921
 - CfdView : diagramme de flux cumulatif, empilage statuts dans le temps — 6091981
 - OrgChartView : organigramme vertical des membres par rôle — d570ef8

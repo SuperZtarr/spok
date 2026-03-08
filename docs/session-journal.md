@@ -632,6 +632,38 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-08] - ChordView (diagramme chord)
+
+**Demande :** Chord diagram — relations circulaires entre espaces ou types d'items
+**Actions réalisées :**
+- ChordView.tsx : d3-chord SVG, 2 modes (par type / par espace), option inclure hiérarchie, rubans colorés proportionnels, tooltip, légende, hover highlight
+- Wiring : viewMode.ts (type + VIEW_MODES, icône Disc, catégorie exploration), ViewModeSelector, SpacePage
+- Dépendances : d3-chord, d3-shape ajoutés
+**État :** TERMINÉ — 68bf9a8
+
+---
+
+#### [2026-03-08] - DeadlinesView (onglet Échéances dashboard)
+
+**Demande :** Nouvel onglet dans le dashboard affichant les items avec échéance
+**Actions réalisées :**
+- dashboardTab.ts : ajout tab `deadlines` (icône CalendarCheck, label "Échéances")
+- DeadlinesView.tsx : liste items avec dueDate groupés par urgence (En retard, Aujourd'hui, Cette semaine, Ce mois, Plus tard), badges statut/priorité/espace, clic → ItemEditModal
+- DashboardPage.tsx : wiring du nouveau tab
+**État :** TERMINÉ — d093921
+
+---
+
+#### [2026-03-08] - CfdView (flux cumulatif)
+
+**Demande :** Diagramme de flux cumulatif — empilage des statuts dans le temps
+**Actions réalisées :**
+- CfdView.tsx : chart SVG stacked area, snapshots journaliers/hebdo/mensuels adaptatifs, tooltip au survol avec crosshair, légende, stats total, couleurs par statut
+- Wiring : viewMode.ts (type + VIEW_MODES, icône Layers, catégorie planning), ViewModeSelector, SpacePage (import, isFlatView, overflow, render)
+**État :** TERMINÉ — 6091981
+
+---
+
 #### [2026-03-08] - Commits session
 
 **Commits créés :**
