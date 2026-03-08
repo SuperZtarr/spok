@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'orgchart' | 'cfd';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'orgchart' | 'cfd' | 'chord';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -30,6 +30,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'bubble', label: 'Bulles', icon: 'Circle', category: 'exploration' },
   { value: 'radialTree', label: 'Arbre radial', icon: 'Orbit', category: 'exploration' },
   { value: 'treemap', label: 'Treemap', icon: 'SquareStack', category: 'exploration' },
+  { value: 'chord', label: 'Chord', icon: 'Disc', category: 'exploration' },
   { value: 'burndown', label: 'Burndown', icon: 'TrendingDown', category: 'planning' },
   { value: 'cfd', label: 'Flux cumulatif', icon: 'Layers', category: 'planning' },
   { value: 'orgchart', label: 'Organigramme', icon: 'Users', category: 'basic' },

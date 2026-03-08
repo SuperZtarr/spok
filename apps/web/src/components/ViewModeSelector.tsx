@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   List, GitBranch, ArrowDownUp, Columns3, Share2, LayoutGrid,
-  GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Users, Check,
+  GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Users, Check,
   ChevronDown, FolderKanban, CheckSquare, ExternalLink, LayoutDashboard,
   Eye,
 } from 'lucide-react';
@@ -31,6 +31,7 @@ const ICONS: Record<string, typeof List> = {
   SquareStack,
   TrendingDown,
   Layers,
+  Disc,
   Users,
   FolderKanban,
   CheckSquare,
