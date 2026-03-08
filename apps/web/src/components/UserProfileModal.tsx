@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
-import type { AuthUser } from '@spok/shared';
+import type { AuthUser, NotificationType, NotificationChannel } from '@spok/shared';
 import { useThemeStore } from '../stores/theme';
 
 interface UserProfileModalProps {
@@ -335,6 +335,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
           </div>
         </div>
 
+        {/* Préférences de notifications */}
+        <NotificationPreferencesSection />
+
         {/* Communautés */}
         <div className="pt-4 border-t border-border">
           <div className="flex items-center gap-2 mb-3">
@@ -361,5 +364,67 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
         </div>
       </div>
     </Modal>
+  );
+}
+
+const NOTIF_TYPE_LABELS: Record<NotificationType, string> = {
+  INVITATION: 'Invitations',
+  ASSIGNMENT: 'Assignations',
+  CONTRIBUTION: 'Contributions',
+  MENTION: 'Mentions',
+};
+
+const CHANNEL_OPTIONS: { value: NotificationChannel; label: string }[] = [
+  { value: 'all', label: 'App + Email' },
+  { value: 'in_app', label: 'App seule' },
+  { value: 'none', label: 'Désactivé' },
+];
+
+function NotificationPreferencesSection() {
+  const queryClient = useQueryClient();
+
+  const { data: prefs } = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: userApi.getNotificationPreferences,
+  });
+
+  const mutation = useMutation({
+    mutationFn: userApi.updateNotificationPreferences,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+    },
+  });
+
+  if (!prefs) return null;
+
+  return (
+    <div className="pt-4 border-t border-border">
+      <div className="flex items-center gap-2 mb-3">
+        <Bell className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm font-medium">Notifications</span>
+      </div>
+      <div className="space-y-2">
+        {(Object.keys(NOTIF_TYPE_LABELS) as NotificationType[]).map((type) => (
+          <div key={type} className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{NOTIF_TYPE_LABELS[type]}</span>
+            <div className="flex gap-1">
+              {CHANNEL_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => mutation.mutate({ [type]: opt.value })}
+                  className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                    (prefs as any)[type] === opt.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-accent'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -10,6 +10,15 @@ const updatePreferencesSchema = z.object({
   themePreference: z.enum(['light', 'dark', 'system']).optional(),
 });
 
+const notificationChannelSchema = z.enum(['all', 'in_app', 'none']);
+
+const updateNotificationPreferencesSchema = z.object({
+  INVITATION: notificationChannelSchema.optional(),
+  ASSIGNMENT: notificationChannelSchema.optional(),
+  CONTRIBUTION: notificationChannelSchema.optional(),
+  MENTION: notificationChannelSchema.optional(),
+});
+
 const updateProfileSchema = z.object({
   name: z.string().min(1, 'Le nom ne peut pas être vide').max(100).optional(),
   email: z.string().email('Email invalide').optional(),
@@ -110,6 +119,38 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { success: true };
+  });
+
+  // GET /user/notification-preferences
+  fastify.get('/notification-preferences', { preHandler: [fastify.authenticate] }, async (request) => {
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: request.user.userId },
+      select: { notificationPreferences: true },
+    });
+
+    const defaults = { INVITATION: 'all', ASSIGNMENT: 'all', CONTRIBUTION: 'in_app', MENTION: 'all' };
+    return { ...(defaults as any), ...(user?.notificationPreferences as any || {}) };
+  });
+
+  // PATCH /user/notification-preferences
+  fastify.patch('/notification-preferences', { preHandler: [fastify.authenticate] }, async (request) => {
+    const updates = updateNotificationPreferencesSchema.parse(request.body);
+
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: request.user.userId },
+      select: { notificationPreferences: true },
+    });
+
+    const current = (user?.notificationPreferences as any) || {};
+    const merged = { ...current, ...updates };
+
+    await fastify.prisma.user.update({
+      where: { id: request.user.userId },
+      data: { notificationPreferences: merged },
+    });
+
+    const defaults = { INVITATION: 'all', ASSIGNMENT: 'all', CONTRIBUTION: 'in_app', MENTION: 'all' };
+    return { ...defaults, ...merged };
   });
 
   // POST /user/avatar — upload avatar (stored as data URI in DB)

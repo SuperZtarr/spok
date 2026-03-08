@@ -1,5 +1,17 @@
 export type NotificationType = 'INVITATION' | 'ASSIGNMENT' | 'CONTRIBUTION' | 'MENTION';
 
+// 'all' = in-app + email, 'in_app' = in-app only, 'none' = disabled
+export type NotificationChannel = 'all' | 'in_app' | 'none';
+
+export type NotificationPreferences = Record<NotificationType, NotificationChannel>;
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  INVITATION: 'all',
+  ASSIGNMENT: 'all',
+  CONTRIBUTION: 'in_app',
+  MENTION: 'all',
+};
+
 export interface Notification {
   id: string;
   userId: string;

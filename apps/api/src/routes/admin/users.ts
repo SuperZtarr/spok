@@ -82,6 +82,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
         globalRole: true,
         createdAt: true,
         updatedAt: true,
+        notificationPreferences: true,
         _count: {
           select: { memberships: true, communityMemberships: true },
         },
@@ -280,6 +281,30 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true };
   });
+
+  // PATCH /admin/users/:id/notification-preferences - Update user notification preferences
+  fastify.patch<{ Params: UserParams; Body: Record<string, string> }>(
+    '/:id/notification-preferences',
+    async (request, reply) => {
+      const { id } = request.params;
+
+      const user = await fastify.prisma.user.findUnique({ where: { id }, select: { notificationPreferences: true } });
+      if (!user) {
+        return reply.notFound('User not found');
+      }
+
+      const current = (user.notificationPreferences as any) || {};
+      const merged = { ...current, ...request.body };
+
+      await fastify.prisma.user.update({
+        where: { id },
+        data: { notificationPreferences: merged },
+      });
+
+      const defaults = { INVITATION: 'all', ASSIGNMENT: 'all', CONTRIBUTION: 'in_app', MENTION: 'all' };
+      return { ...defaults, ...merged };
+    }
+  );
 
   // POST /admin/users/:id/communities - Add user to a community
   fastify.post<{ Params: UserParams; Body: { communityId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' } }>(
