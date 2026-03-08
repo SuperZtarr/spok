@@ -19,6 +19,7 @@ import { DashboardMindMapView } from '../components/views/DashboardMindMapView';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '../components/ui/ItemActionMenu';
 import { useDashboardTabStore } from '../stores/dashboardTab';
+import { DeadlinesView } from '../components/views/DeadlinesView';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -499,8 +500,12 @@ export function DashboardPage() {
   }, [allSpaces]);
 
   return (
-    <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' ? ' h-full overflow-hidden' : ''}`}>
-      {tab === 'graph' ? (
+    <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' || tab === 'deadlines' ? ' h-full overflow-hidden' : ''}`}>
+      {tab === 'deadlines' ? (
+        <div className="flex-1 min-h-0 flex flex-col">
+          <DeadlinesView />
+        </div>
+      ) : tab === 'graph' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <GraphView
             level="global"
