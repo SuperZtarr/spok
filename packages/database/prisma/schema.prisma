@@ -313,6 +313,7 @@ enum NotificationType {
   ASSIGNMENT
   CONTRIBUTION
   MENTION
+  EMAIL_VERIFICATION
 }
 
 // Refresh tokens for JWT

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import { Resend } from 'resend';
 import type { AuthResponse, AuthTokens, AuthUser } from '@spok/shared';
+import { createNotification } from '../utils/notifications.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -86,6 +87,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     sendVerificationEmail(fastify, user.id, user.email, user.name).catch((error) => {
       fastify.log.error(error, 'Failed to send verification email');
     });
+
+    // Create in-app notification for email verification
+    createNotification(fastify.prisma, {
+      userId: user.id,
+      type: 'EMAIL_VERIFICATION',
+      title: 'Vérifiez votre adresse email',
+      message: 'Un email de vérification a été envoyé. Pensez à vérifier vos courriers indésirables.',
+    }).catch(() => {});
 
     const response: AuthResponse = {
       user: authUser,

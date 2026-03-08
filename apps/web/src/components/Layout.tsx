@@ -16,7 +16,6 @@ import { UserProfileModal } from './UserProfileModal';
 import { CommunitySelector } from './CommunitySelector';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
-import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import type { SpaceWithRole } from '@spok/shared';
@@ -677,7 +676,6 @@ export function Layout() {
 
         {/* Page content */}
         <main className="flex-1 flex flex-col min-h-0 overflow-auto">
-          {user && <EmailVerificationBanner />}
           <Outlet />
         </main>
       </div>

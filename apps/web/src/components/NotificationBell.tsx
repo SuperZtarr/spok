@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign } from 'lucide-react';
-import { notificationsApi } from '../lib/api';
+import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2 } from 'lucide-react';
+import { notificationsApi, authApi } from '../lib/api';
 import type { Notification, NotificationType } from '@spok/shared';
 
 const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }> = {
@@ -10,6 +10,7 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }
   ASSIGNMENT: { icon: ClipboardList, color: 'text-orange-500' },
   CONTRIBUTION: { icon: MessageSquare, color: 'text-green-500' },
   MENTION: { icon: AtSign, color: 'text-purple-500' },
+  EMAIL_VERIFICATION: { icon: Mail, color: 'text-amber-500' },
 };
 
 function timeAgo(dateStr: string): string {
@@ -63,6 +64,10 @@ export function NotificationBell() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
+  });
+
+  const resendVerificationMutation = useMutation({
+    mutationFn: () => authApi.resendVerification(),
   });
 
   const unreadCount = unreadData?.count ?? 0;
@@ -148,6 +153,19 @@ export function NotificationBell() {
                       </p>
                       {notif.message && (
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.message}</p>
+                      )}
+                      {notif.type === 'EMAIL_VERIFICATION' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            resendVerificationMutation.mutate();
+                          }}
+                          disabled={resendVerificationMutation.isPending || resendVerificationMutation.isSuccess}
+                          className="text-xs text-amber-600 hover:text-amber-800 underline hover:no-underline mt-0.5 flex items-center gap-1"
+                        >
+                          {resendVerificationMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                          {resendVerificationMutation.isSuccess ? 'Email renvoyé !' : 'Renvoyer l\'email'}
+                        </button>
                       )}
                       <p className="text-[10px] text-muted-foreground/70 mt-0.5">{timeAgo(notif.createdAt)}</p>
                     </div>
