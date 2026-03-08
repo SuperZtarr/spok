@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -29,6 +29,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'schema', label: 'Schéma', icon: 'PenTool', category: 'exploration' },
   { value: 'bubble', label: 'Bulles', icon: 'Circle', category: 'exploration' },
   { value: 'radialTree', label: 'Arbre radial', icon: 'Orbit', category: 'exploration' },
+  { value: 'treemap', label: 'Treemap', icon: 'SquareStack', category: 'exploration' },
 ];
 
 interface ViewModeState {
