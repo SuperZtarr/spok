@@ -56,6 +56,7 @@ import { BubbleView } from '../components/views/BubbleView';
 import { RadialTreeView } from '../components/views/RadialTreeView';
 import { TreemapView } from '../components/views/TreemapView';
 import { BurndownView } from '../components/views/BurndownView';
+import { OrgChartView } from '../components/views/OrgChartView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 
@@ -520,8 +521,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -643,8 +644,13 @@ export function SpacePage() {
         )}
 
         {/* Items / Views */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' ? ' overflow-hidden flex flex-col' : ''}`}>
-          {itemsLoading ? (
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' ? ' overflow-hidden flex flex-col' : ''}`}>
+          {viewMode === 'orgchart' ? (
+            <OrgChartView
+              spaceId={spaceId!}
+              spaceName={space?.name || 'Espace'}
+            />
+          ) : itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
             <ListView
