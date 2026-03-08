@@ -159,6 +159,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /admin/audit-logs/:id/restore - Restore from a single audit log
   fastify.post<{
     Params: { id: string };
+    Body: { fieldsToRestore?: string[] };
   }>('/:id/restore', async (request, reply) => {
     const log = await fastify.prisma.auditLog.findUnique({
       where: { id: request.params.id },
@@ -170,8 +171,96 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const changes = log.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null;
 
+    // Handle UPDATE/MOVE: restore selected fields to their before-state
+    if ((log.action === 'UPDATE' || log.action === 'MOVE') && changes?.before) {
+      const body = request.body as { fieldsToRestore?: string[] } | null;
+      const fieldsToRestore = body?.fieldsToRestore;
+
+      // Determine which fields to restore
+      const before = changes.before;
+      const restoreData: Record<string, unknown> = {};
+
+      // Allowed fields for each entity type
+      const ITEM_FIELDS = ['type', 'title', 'description', 'content', 'url', 'status', 'priority', 'position', 'dueDate', 'startDate', 'endDate', 'parentId', 'spaceId', 'assignedToId'];
+      const SPACE_FIELDS = ['name', 'type', 'parentId', 'communityId', 'avatarUrl', 'coverUrl', 'defaultRole'];
+      const COMMUNITY_FIELDS = ['name', 'description', 'isPublic', 'avatarUrl', 'coverUrl'];
+
+      let allowedFields: string[];
+      switch (log.entity) {
+        case 'Item': allowedFields = ITEM_FIELDS; break;
+        case 'Space': allowedFields = SPACE_FIELDS; break;
+        case 'Community': allowedFields = COMMUNITY_FIELDS; break;
+        default:
+          return reply.badRequest(`Restore not supported for entity type: ${log.entity}`);
+      }
+
+      for (const field of (fieldsToRestore || Object.keys(before))) {
+        if (allowedFields.includes(field) && field in before) {
+          let value = before[field];
+          // Convert date strings back to Date objects for Prisma
+          if (['dueDate', 'startDate', 'endDate'].includes(field) && typeof value === 'string') {
+            value = new Date(value);
+          }
+          restoreData[field] = value ?? null;
+        }
+      }
+
+      if (Object.keys(restoreData).length === 0) {
+        return reply.badRequest('No valid fields to restore');
+      }
+
+      let restored: unknown;
+      switch (log.entity) {
+        case 'Item': {
+          const existing = await fastify.prisma.item.findUnique({ where: { id: log.entityId } });
+          if (!existing) return reply.notFound('Item no longer exists');
+          restored = await fastify.prisma.item.update({
+            where: { id: log.entityId },
+            data: restoreData as any,
+          });
+          break;
+        }
+        case 'Space': {
+          const existing = await fastify.prisma.space.findUnique({ where: { id: log.entityId } });
+          if (!existing) return reply.notFound('Space no longer exists');
+          restored = await fastify.prisma.space.update({
+            where: { id: log.entityId },
+            data: restoreData as any,
+          });
+          break;
+        }
+        case 'Community': {
+          const existing = await fastify.prisma.community.findUnique({ where: { id: log.entityId } });
+          if (!existing) return reply.notFound('Community no longer exists');
+          restored = await fastify.prisma.community.update({
+            where: { id: log.entityId },
+            data: restoreData as any,
+          });
+          break;
+        }
+      }
+
+      await fastify.prisma.auditLog.create({
+        data: {
+          action: 'UPDATE',
+          entity: log.entity,
+          entityId: log.entityId,
+          spaceId: log.spaceId,
+          userId: request.user.userId,
+          changes: {
+            before: changes.after || {},
+            after: restoreData,
+            restoredFromAuditLogId: log.id,
+            restoredFields: Object.keys(restoreData),
+          } as any,
+        },
+      });
+
+      return { success: true, restored, entity: log.entity, restoredFields: Object.keys(restoreData) };
+    }
+
     if (log.action !== 'DELETE' || !changes?.before) {
-      return reply.badRequest('Only DELETE logs with before-state can be restored');
+      return reply.badRequest('Only DELETE or UPDATE/MOVE logs with before-state can be restored');
     }
 
     const before = changes.before;

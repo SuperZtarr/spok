@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { AuditRestoreDialog } from '../../components/AuditRestoreDialog';
 
 const ENTITY_OPTIONS = [
   { value: '', label: 'Toutes' },
@@ -45,6 +46,7 @@ export function AuditLogsPage() {
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [purgeDays] = useState(90);
+  const [restoreUpdateLog, setRestoreUpdateLog] = useState<typeof logs[0] | null>(null);
 
   const pageSize = 50;
 
@@ -68,6 +70,15 @@ export function AuditLogsPage() {
     mutationFn: (id: string) => adminApi.auditLogs.restore(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] });
+    },
+  });
+
+  const restoreUpdateMutation = useMutation({
+    mutationFn: ({ id, fieldsToRestore }: { id: string; fieldsToRestore: string[] }) =>
+      adminApi.auditLogs.restore(id, fieldsToRestore),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] });
+      setRestoreUpdateLog(null);
     },
   });
 
@@ -285,6 +296,16 @@ export function AuditLogsPage() {
                             Restaurer
                           </Button>
                         )}
+                        {(log.action === 'UPDATE' || log.action === 'MOVE') && (log.changes as any)?.before && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRestoreUpdateLog(log)}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                            Restaurer
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -354,6 +375,15 @@ export function AuditLogsPage() {
                                         <RotateCcw className="w-3 h-3" />
                                       </Button>
                                     )}
+                                    {(log.action === 'UPDATE' || log.action === 'MOVE') && (log.changes as any)?.before && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setRestoreUpdateLog(log)}
+                                      >
+                                        <RotateCcw className="w-3 h-3" />
+                                      </Button>
+                                    )}
                                   </td>
                                 </tr>
                               ))}
@@ -395,6 +425,21 @@ export function AuditLogsPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Restore UPDATE dialog */}
+      {restoreUpdateLog && (
+        <AuditRestoreDialog
+          isOpen={!!restoreUpdateLog}
+          onClose={() => setRestoreUpdateLog(null)}
+          changes={restoreUpdateLog.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null}
+          entity={restoreUpdateLog.entity}
+          action={restoreUpdateLog.action}
+          date={restoreUpdateLog.createdAt}
+          userName={restoreUpdateLog.user?.name || restoreUpdateLog.userId}
+          onRestore={(fieldsToRestore) => restoreUpdateMutation.mutate({ id: restoreUpdateLog.id, fieldsToRestore })}
+          isPending={restoreUpdateMutation.isPending}
+        />
       )}
 
       {/* Purge modal */}

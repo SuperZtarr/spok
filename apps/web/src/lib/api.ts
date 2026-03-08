@@ -1304,9 +1304,10 @@ export const adminApi = {
         estimatedSizeMB: number;
       }>('/admin/audit-logs/stats'),
 
-    restore: (id: string) =>
-      fetchApi<{ success: boolean; restored: unknown; entity: string }>(`/admin/audit-logs/${id}/restore`, {
+    restore: (id: string, fieldsToRestore?: string[]) =>
+      fetchApi<{ success: boolean; restored: unknown; entity: string; restoredFields?: string[] }>(`/admin/audit-logs/${id}/restore`, {
         method: 'POST',
+        body: JSON.stringify(fieldsToRestore ? { fieldsToRestore } : {}),
       }),
 
     batchRestore: (batchId: string) =>
