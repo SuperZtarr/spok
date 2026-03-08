@@ -26,7 +26,7 @@
 - [ ] Diagramme de flux cumulatif (CFD) — empilage des statuts dans le temps
 - [ ] Chord diagram — relations circulaires entre espaces ou types d'items
 - [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins
-- [ ] Organigramme — arborescence verticale des membres par communauté/espace/rôle
+- [x] Organigramme — arborescence verticale des membres par communauté/espace/rôle — d570ef8
 - [ ] Vue matricielle — tableau croisé (assigné × statut, type × espace)
 
 ### Séances de présentation live
@@ -50,6 +50,7 @@
 ## Historique
 
 ### 2026-03-08
+- OrgChartView : organigramme vertical des membres par rôle — d570ef8
 - BurndownView : courbe burnup/burndown, 2 modes, tooltip, stats, ligne idéale — aa1aa4c
 - Restauration audit logs UPDATE/MOVE : dialog champ par champ avec sélection — a950424
 - @mentions et #références d'items dans TipTap — 000593b

@@ -600,6 +600,16 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-08] - OrgChartView
+
+**Demande :** Organigramme — arborescence verticale des membres par espace/rôle
+**Actions réalisées :**
+- OrgChartView.tsx : arbre SVG vertical, racine = espace → groupes par rôle (OWNER/ADMIN/MEMBER/VIEWER) → membres individuels, couleurs par rôle, tooltip, légende, connecteurs Bézier, layout récursif
+- Wiring : viewMode.ts (type + VIEW_MODES, icône Users, catégorie basic), ViewModeSelector, SpacePage (rendu avant loading items, charge ses propres données via spacesApi.getMembers)
+**État :** TERMINÉ — d570ef8
+
+---
+
 #### [2026-03-08] - BurndownView
 
 **Demande :** Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total)
@@ -629,6 +639,7 @@ Après chaque commit :
 - 3457763 feat: email notifications with user preferences
 - b5d10de feat: community-level shared tags
 - 09a1a35 feat: TreemapView — nested rectangles proportional to children/contributions
+- d570ef8 feat: OrgChartView — vertical tree of space members grouped by role
 - aa1aa4c feat: BurndownView — burnup/burndown chart for task progress over time
 - a950424 feat: audit log restore for UPDATE/MOVE with field-by-field selection dialog
 **État :** TERMINÉ
