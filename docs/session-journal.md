@@ -600,6 +600,28 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-08] - BurndownView
+
+**Demande :** Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total)
+**Actions réalisées :**
+- BurndownView.tsx : chart SVG avec 2 modes (Burnup = 2 courbes total/done, Burndown = reste à faire + ligne idéale en pointillés), tooltip au survol, stats en barre de contrôle, axes/grille, ResizeObserver, adaptatif pas journalier/hebdo/mensuel
+- Wiring : viewMode.ts (type + VIEW_MODES, icône TrendingDown, catégorie planning), ViewModeSelector, SpacePage (import, isFlatView, overflow, render)
+**État :** TERMINÉ — aa1aa4c
+
+---
+
+#### [2026-03-08] - Restauration audit logs UPDATE/MOVE
+
+**Demande :** Ajouter dans l'admin des audit logs une restauration sur les UPDATE/MOVE, avec dialogue de confirmation champ par champ (comme la résolution de conflit concurrent)
+**Actions réalisées :**
+- Backend admin/auditLogs.ts : route POST /:id/restore étendue pour UPDATE/MOVE, body `fieldsToRestore[]` optionnel, restauration sélective des champs, audit log de traçabilité
+- AuditRestoreDialog.tsx : dialog avec comparaison champ par champ (valeur actuelle en rouge / valeur à restaurer en vert), checkboxes de sélection, boutons tout sélectionner/désélectionner
+- api.ts : `adminApi.auditLogs.restore()` accepte `fieldsToRestore?: string[]`
+- AuditLogsPage.tsx : bouton Restaurer sur les lignes UPDATE/MOVE (single + batch), wiring du dialog
+**État :** TERMINÉ — a950424
+
+---
+
 #### [2026-03-08] - Commits session
 
 **Commits créés :**
@@ -607,7 +629,8 @@ Après chaque commit :
 - 3457763 feat: email notifications with user preferences
 - b5d10de feat: community-level shared tags
 - 09a1a35 feat: TreemapView — nested rectangles proportional to children/contributions
-- 85ec840 docs: update TODO and session journal
+- aa1aa4c feat: BurndownView — burnup/burndown chart for task progress over time
+- a950424 feat: audit log restore for UPDATE/MOVE with field-by-field selection dialog
 **État :** TERMINÉ
 
 ---

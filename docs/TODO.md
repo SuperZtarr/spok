@@ -22,7 +22,7 @@
 - [ ] Matrice effort/impact — items sur 2 axes (priorité vs complexité), drag pour repositionner
 - [x] Treemap — rectangles imbriqués proportionnels au nombre d'enfants ou contributions — 09a1a35
 - [ ] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions)
-- [ ] Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total)
+- [x] Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total) — aa1aa4c
 - [ ] Diagramme de flux cumulatif (CFD) — empilage des statuts dans le temps
 - [ ] Chord diagram — relations circulaires entre espaces ou types d'items
 - [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins
@@ -50,6 +50,8 @@
 ## Historique
 
 ### 2026-03-08
+- BurndownView : courbe burnup/burndown, 2 modes, tooltip, stats, ligne idéale — aa1aa4c
+- Restauration audit logs UPDATE/MOVE : dialog champ par champ avec sélection — a950424
 - @mentions et #références d'items dans TipTap — 000593b
 - Notifications par email avec préférences utilisateur — 3457763
 - Tags partagés au niveau communauté — b5d10de
