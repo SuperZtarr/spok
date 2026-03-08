@@ -55,6 +55,7 @@ import { SchemaView } from '../components/views/SchemaView';
 import { BubbleView } from '../components/views/BubbleView';
 import { RadialTreeView } from '../components/views/RadialTreeView';
 import { TreemapView } from '../components/views/TreemapView';
+import { BurndownView } from '../components/views/BurndownView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 
@@ -185,7 +186,7 @@ export function SpacePage() {
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown';
   const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
@@ -519,8 +520,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -642,7 +643,7 @@ export function SpacePage() {
         )}
 
         {/* Items / Views */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
           ) : viewMode === 'list' ? (
@@ -891,6 +892,14 @@ export function SpacePage() {
             />
           ) : viewMode === 'treemap' ? (
             <TreemapView
+              items={(allItemsData?.data || []) as Item[]}
+              onItemClick={(itemId) => setEditingItemId(itemId)}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
+            />
+          ) : viewMode === 'burndown' ? (
+            <BurndownView
               items={(allItemsData?.data || []) as Item[]}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
