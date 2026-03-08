@@ -152,6 +152,21 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       avatarUrl: user.avatarUrl ?? undefined,
     };
 
+    // Create email verification notification if not verified and none exists
+    if (!user.emailVerified) {
+      const existingNotif = await fastify.prisma.notification.findFirst({
+        where: { userId: user.id, type: 'EMAIL_VERIFICATION' },
+      });
+      if (!existingNotif) {
+        createNotification(fastify.prisma, {
+          userId: user.id,
+          type: 'EMAIL_VERIFICATION',
+          title: 'Vérifiez votre adresse email',
+          message: 'Un email de vérification a été envoyé. Pensez à vérifier vos courriers indésirables.',
+        }).catch(() => {});
+      }
+    }
+
     const response: AuthResponse = {
       user: authUser,
       tokens,
