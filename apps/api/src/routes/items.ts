@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { createNotification } from '../utils/notifications.js';
+import { notifyMentionedUsers } from '../utils/mentions.js';
 import { itemRelationsRoutes } from './item-relations.js';
 import { itemMoveRoutes } from './item-move.js';
 import { itemBulkRoutes } from './item-bulk.js';
@@ -236,6 +237,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
+      // Notify @mentioned users in description
+      if (itemData.description) {
+        const authorName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+        await notifyMentionedUsers(fastify.prisma, itemData.description, request.user.userId, authorName, item.id, item.title, request.params.spaceId);
+      }
+
       return reply.status(201).send({
         ...item,
         tags: item.tags.map((t) => t.tag),
@@ -431,6 +438,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           after: serializeItemForAudit(item),
         },
       });
+
+      // Notify @mentioned users in updated description
+      if (updateData.description && updateData.description !== existingItem.description) {
+        const authorName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+        await notifyMentionedUsers(fastify.prisma, updateData.description, request.user.userId, authorName, item.id, item.title, request.params.spaceId);
+      }
 
       // Notify on assignment change
       if (updateData.assignedToId && updateData.assignedToId !== existingItem.assignedToId && updateData.assignedToId !== request.user.userId) {

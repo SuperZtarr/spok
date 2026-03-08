@@ -603,6 +603,8 @@ export function ItemEditModal({
               content={description}
               onChange={setDescription}
               editable={canEdit}
+              spaceId={spaceId}
+              mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
             />
           </div>
 
@@ -1249,6 +1251,8 @@ export function ItemEditModal({
                           key={`edit-${contribution.id}`}
                           content={editingContributionContent}
                           onChange={setEditingContributionContent}
+                          spaceId={spaceId}
+                          mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                         />
                         <div className="flex gap-2">
                           <Button
@@ -1330,6 +1334,8 @@ export function ItemEditModal({
                   content={newContribution}
                   onChange={setNewContribution}
                   placeholder="Ajouter une contribution..."
+                  spaceId={spaceId}
+                  mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
                 <Button
                   type="button"

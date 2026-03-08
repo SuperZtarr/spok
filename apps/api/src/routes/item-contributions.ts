@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog } from '../utils/audit.js';
 import { createNotification } from '../utils/notifications.js';
+import { notifyMentionedUsers } from '../utils/mentions.js';
 import { checkSpaceAccess } from './items.js';
 
 const createContributionSchema = z.object({
@@ -113,6 +114,9 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
         metadata: { actorId: request.user.userId, actorName: authorName, itemId: item.id, itemTitle: item.title },
       });
     }
+
+    // Notify @mentioned users
+    await notifyMentionedUsers(fastify.prisma, body.content, request.user.userId, authorName, item.id, item.title, request.params.spaceId);
 
     return reply.status(201).send(contribution);
   });

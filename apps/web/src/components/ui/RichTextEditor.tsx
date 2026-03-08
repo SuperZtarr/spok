@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import Mention from '@tiptap/extension-mention';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
 import {
   Bold,
   Italic,
@@ -17,6 +19,8 @@ import {
   Redo,
   GripHorizontal,
 } from 'lucide-react';
+import { MentionList, type MentionItem, type MentionListRef } from './MentionList';
+import { spacesApi } from '../../lib/api';
 
 interface RichTextEditorProps {
   content: string;
@@ -26,9 +30,63 @@ interface RichTextEditorProps {
   resizable?: boolean;
   minHeight?: number;
   defaultMaxHeight?: number;
+  spaceId?: string;
+  mentionableItems?: Array<{ id: string; title: string; type: string; spaceName?: string }>;
 }
 
-export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300 }: RichTextEditorProps) {
+function createSuggestionConfig(
+  fetchItems: (query: string) => Promise<MentionItem[]>,
+) {
+  return {
+    items: async ({ query }: { query: string }) => {
+      return fetchItems(query);
+    },
+    render: () => {
+      let component: ReactRenderer<MentionListRef> | null = null;
+      let popup: TippyInstance[] | null = null;
+
+      return {
+        onStart: (props: any) => {
+          component = new ReactRenderer(MentionList, {
+            props,
+            editor: props.editor,
+          });
+
+          if (!props.clientRect) return;
+
+          popup = tippy('body', {
+            getReferenceClientRect: props.clientRect,
+            appendTo: () => document.body,
+            content: component.element,
+            showOnCreate: true,
+            interactive: true,
+            trigger: 'manual',
+            placement: 'bottom-start',
+          });
+        },
+        onUpdate: (props: any) => {
+          component?.updateProps(props);
+          if (popup?.[0] && props.clientRect) {
+            popup[0].setProps({ getReferenceClientRect: props.clientRect });
+          }
+        },
+        onKeyDown: (props: any) => {
+          if (props.event.key === 'Escape') {
+            popup?.[0]?.hide();
+            return true;
+          }
+          return component?.ref?.onKeyDown(props) ?? false;
+        },
+        onExit: () => {
+          popup?.[0]?.destroy();
+          component?.destroy();
+        },
+      };
+    },
+  };
+}
+
+export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems }: RichTextEditorProps) {
   const isUpdatingFromProp = useRef(false);
   const [editorHeight, setEditorHeight] = useState<number | null>(null);
   const isDragging = useRef(false);
@@ -63,20 +121,73 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
     document.addEventListener('mouseup', handleMouseUp);
   }, [minHeight, defaultMaxHeight]);
 
+  // Build TipTap extensions
+  const extensions: any[] = [
+    StarterKit.configure({
+      heading: { levels: [2, 3] },
+    }),
+    Underline,
+    Link.configure({
+      openOnClick: false,
+      HTMLAttributes: { class: 'text-primary underline hover:no-underline' },
+    }),
+    Placeholder.configure({
+      placeholder: placeholder || 'Ajoutez une description...',
+    }),
+  ];
+
+  // @mention extension (users)
+  if (spaceId) {
+    extensions.push(
+      Mention.configure({
+        HTMLAttributes: {
+          class: 'mention-user',
+          'data-mention-type': 'user',
+        },
+        suggestion: createSuggestionConfig(async (query: string) => {
+          if (!spaceId) return [];
+          try {
+            const members = await spacesApi.getMembers(spaceId);
+            return members
+              .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
+              .slice(0, 8)
+              .map((m) => ({ id: m.userId, label: m.name, type: 'user' as const }));
+          } catch {
+            return [];
+          }
+        }),
+      })
+    );
+  }
+
+  // #reference extension (items)
+  if (mentionableItems) {
+    const ItemMention = Mention.extend({ name: 'itemMention' }).configure({
+      HTMLAttributes: {
+        class: 'mention-item',
+        'data-mention-type': 'item',
+      },
+      suggestion: {
+        char: '#',
+        ...createSuggestionConfig(async (query: string) => {
+          if (!mentionableItems) return [];
+          return mentionableItems
+            .filter((item) => item.title.toLowerCase().includes(query.toLowerCase()))
+            .slice(0, 8)
+            .map((item) => ({
+              id: item.id,
+              label: item.title,
+              type: 'item' as const,
+              extra: item.spaceName || item.type,
+            }));
+        }),
+      },
+    });
+    extensions.push(ItemMention);
+  }
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3] },
-      }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { class: 'text-primary underline hover:no-underline' },
-      }),
-      Placeholder.configure({
-        placeholder: placeholder || 'Ajoutez une description...',
-      }),
-    ],
+    extensions,
     content,
     editable,
     onUpdate: ({ editor }) => {
@@ -231,7 +342,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
       >
         <EditorContent
           editor={editor}
-          className="prose prose-sm dark:prose-invert max-w-none p-3 min-h-full focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[96px]"
+          className="prose prose-sm dark:prose-invert max-w-none p-3 min-h-full focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[96px] [&_.mention-user]:bg-blue-100 [&_.mention-user]:dark:bg-blue-900/30 [&_.mention-user]:text-blue-700 [&_.mention-user]:dark:text-blue-300 [&_.mention-user]:px-1 [&_.mention-user]:py-0.5 [&_.mention-user]:rounded [&_.mention-user]:font-medium [&_.mention-user]:text-sm [&_.mention-item]:bg-purple-100 [&_.mention-item]:dark:bg-purple-900/30 [&_.mention-item]:text-purple-700 [&_.mention-item]:dark:text-purple-300 [&_.mention-item]:px-1 [&_.mention-item]:py-0.5 [&_.mention-item]:rounded [&_.mention-item]:font-medium [&_.mention-item]:text-sm"
         />
       </div>
 
