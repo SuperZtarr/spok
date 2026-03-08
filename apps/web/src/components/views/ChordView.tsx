@@ -205,12 +205,17 @@ export function ChordView({ items }: ChordViewProps) {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const width = rect.width || container.clientWidth;
+      const height = window.innerHeight - rect.top - 8;
       if (width > 0 && height > 0) setDimensions({ width, height });
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
   }, []);
 
   const chordData = useMemo(
