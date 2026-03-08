@@ -511,3 +511,103 @@ Après chaque commit :
 **Commit :** f21d5f9
 
 ---
+
+#### [2026-03-08] - RadialTreeView
+
+**Demande :** Créer une nouvelle vue "Arbre radial" utilisant d3-hierarchy tree layout en mode radial
+**Actions réalisées :**
+- Nouveau composant `RadialTreeView.tsx` : arbre radial SVG avec zoom/pan, tooltip, légende, nœuds colorés par type
+- Ajout du mode `radialTree` dans `viewMode.ts` (label "Arbre radial", icône Orbit, catégorie exploration)
+- Ajout icône `Orbit` dans `ViewModeSelector.tsx`
+- Wiring dans `SpacePage.tsx` (import, isFlatView, isHighlightMode, overflow classes, rendu conditionnel)
+**État :** TERMINÉ
+**Commit :** 927c8cb
+
+---
+
+#### [2026-03-08] - Rôle par défaut pour nouveaux membres
+
+**Demande :** Rôle par défaut configurable pour les nouveaux membres de communauté sur les espaces
+**Actions réalisées :**
+- Ajout `defaultRole Role?` sur le modèle Space (schema Prisma)
+- Type Space et UpdateSpaceInput mis à jour dans @spok/shared
+- Fonction `autoJoinCommunitySpaces` dans communities.ts : auto-join sur join/invite
+- Sélecteur dans SpaceSettingsPage (4 options : aucun, lecteur, membre, admin)
+**État :** TERMINÉ
+**Commit :** bfa9de6
+
+---
+
+#### [2026-03-08] - @mentions et #références dans TipTap
+
+**Demande :** Ajouter @mentions (utilisateurs) et #références (items) dans l'éditeur TipTap
+**Actions réalisées :**
+- Extension TipTap Mention (@) : autocomplete membres de l'espace, badges bleus
+- Extension TipTap itemMention (#) : autocomplete items cross-espaces, badges violets
+- Composant MentionList.tsx : popup suggestion avec navigation clavier
+- Backend mentions.ts : extractMentionedUserIds + notifyMentionedUsers
+- Déclenchement MENTION dans items.ts (create/update) et item-contributions.ts (create)
+- RichTextEditor : props spaceId + mentionableItems, styling mention-user/mention-item
+- ItemEditModal : passage des props aux 3 instances de RichTextEditor
+**État :** EN COURS (pas encore commité)
+
+---
+
+#### [2026-03-08] - Notifications email + préférences
+
+**Demande :** Notifications par email via Resend avec préférences utilisateur par type, configurables dans le profil et par l'admin
+**Actions réalisées :**
+- Schema Prisma : `notificationPreferences Json?` sur User
+- Types shared : NotificationChannel, NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES
+- notifications.ts refactoré : vérifie préférences user (all/in_app/none), envoie email via Resend si 'all'
+- API user.ts : GET/PATCH /user/notification-preferences
+- API admin/users.ts : PATCH /:id/notification-preferences + notificationPreferences dans le détail
+- Frontend UserProfileModal : section Notifications avec boutons par type (App+Email / App seule / Désactivé)
+- Frontend api.ts : getNotificationPreferences, updateNotificationPreferences
+**État :** EN COURS (pas encore commité)
+
+---
+
+#### [2026-03-08] - Tags partagés au niveau communauté
+
+**Demande :** Tags communautaires disponibles dans tous les espaces de la communauté
+**Actions réalisées :**
+- Schema Prisma : communityId optionnel sur Tag, relation Community.tags, index + unique constraint
+- API tags.ts : listing inclut les tags de la communauté associée, badge isCommunityTag
+- API communities.ts : CRUD tags communautaires (GET/POST/PATCH/DELETE /:id/tags)
+- Frontend api.ts : communitiesApi.getTags/createTag/updateTag/deleteTag
+- Frontend TagSelector : badge "communauté" sur les tags partagés
+- Frontend CommunitySettingsPage : section CommunityTagsSection (CRUD inline)
+**État :** TERMINÉ — b5d10de
+
+---
+
+#### [2026-03-08] - Templates d'espace (vérification)
+
+**Demande :** Templates d'espace (structure pré-configurée : statuts, types, items)
+**Constat :** Déjà implémenté ! Backend (spaces.ts) applique les templates, frontend (DashboardPage) affiche le sélecteur avec 4 templates (Vide, Projet, Kanban, Réunions), types définis dans @spok/shared (spaceTemplates.ts)
+**État :** TERMINÉ (déjà existant)
+
+---
+
+#### [2026-03-08] - TreemapView
+
+**Demande :** Visualisation Treemap — rectangles imbriqués proportionnels
+**Actions réalisées :**
+- TreemapView.tsx : SVG treemap d3-hierarchy, 3 modes de taille (enfants/contributions/égal), zoom sur clic parent, tooltip, légende, highlight/search
+- Wiring : viewMode.ts (type + VIEW_MODES), ViewModeSelector (icône SquareStack), SpacePage (import, isFlatView, isHighlightMode, overflow, render)
+**État :** TERMINÉ — 09a1a35
+
+---
+
+#### [2026-03-08] - Commits session
+
+**Commits créés :**
+- 000593b feat: @mentions and #item references in TipTap editor
+- 3457763 feat: email notifications with user preferences
+- b5d10de feat: community-level shared tags
+- 09a1a35 feat: TreemapView — nested rectangles proportional to children/contributions
+- 85ec840 docs: update TODO and session journal
+**État :** TERMINÉ
+
+---

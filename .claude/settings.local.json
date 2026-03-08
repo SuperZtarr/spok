@@ -78,7 +78,17 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWx1cDl1ZzQwMDAwbjg2eGpmOTZlajNmIiwiZW1haWwiOiJhZG1pbkBzcG9rLmFwcCIsImlhdCI6MTc3MTU4MjEyNCwiZXhwIjoxNzcxNTgzMDI0fQ.947GTsOGkGWwUWoWtka1_n6cdyi-q6og6crcREP7z7A\")",
       "Bash(SID=\"cmluq9mwu0003s9m9jv90v0lg\")",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWx1cDl1ZzQwMDAwbjg2eGpmOTZlajNmIiwiZW1haWwiOiJhZG1pbkBzcG9rLmFwcCIsImlhdCI6MTc3MTU5NzQxNywiZXhwIjoxNzcxNTk4MzE3fQ.ozqPyB5E_5YytZeuv7Z3pp-cJ8teROdZ9oviC1JLckI\")",
-      "Bash(pnpm dev:start:*)"
+      "Bash(pnpm dev:start:*)",
+      "Bash(node -e:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(git status:*)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec:*)",
+      "Bash(docker restart:*)",
+      "Bash(cd:*)",
+      "Bash(cd C:/_dev/spok && git fetch origin master 2>&1)",
+      "Bash(pnpm dev:logs:api:*)",
+      "Bash(nslookup:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
