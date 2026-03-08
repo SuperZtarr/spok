@@ -189,6 +189,9 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
                 />
               )}
               <span className="truncate">{tag.name}</span>
+              {(tag as any).isCommunityTag && (
+                <span className="text-[10px] text-blue-500 bg-blue-500/10 px-1 rounded">communauté</span>
+              )}
               <span className="text-xs text-muted-foreground ml-auto">
                 {(tag as Tag & { itemCount?: number }).itemCount ?? 0}
               </span>

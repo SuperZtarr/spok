@@ -950,4 +950,113 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true };
   });
+
+  // ==================== Community Tags ====================
+
+  // GET /communities/:id/tags — list community-level tags
+  fastify.get<{ Params: { id: string } }>('/:id/tags', async (request, reply) => {
+    const community = await fastify.prisma.community.findUnique({ where: { id: request.params.id } });
+    if (!community) return reply.notFound('Community not found');
+
+    // Check membership (or public)
+    if (!community.isPublic) {
+      if (!request.user?.userId) return reply.unauthorized('Authentication required');
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
+      });
+      if (!membership) return reply.forbidden('Not a member of this community');
+    }
+
+    const tags = await fastify.prisma.tag.findMany({
+      where: { communityId: request.params.id },
+      include: { _count: { select: { items: true } } },
+      orderBy: { name: 'asc' },
+    });
+
+    return tags.map((tag) => ({ ...tag, itemCount: tag._count.items }));
+  });
+
+  // POST /communities/:id/tags — create community tag (OWNER/ADMIN only)
+  fastify.post<{ Params: { id: string }; Body: { name: string; color?: string } }>(
+    '/:id/tags',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
+      });
+      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+        return reply.forbidden('Only owners and admins can manage community tags');
+      }
+
+      const { name, color } = request.body;
+      if (!name || name.trim().length === 0) return reply.badRequest('Tag name is required');
+
+      const existing = await fastify.prisma.tag.findUnique({
+        where: { communityId_name: { communityId: request.params.id, name: name.trim() } },
+      });
+      if (existing) return reply.conflict('Tag with this name already exists');
+
+      const tag = await fastify.prisma.tag.create({
+        data: { name: name.trim(), color, communityId: request.params.id },
+      });
+
+      return reply.status(201).send(tag);
+    }
+  );
+
+  // PATCH /communities/:id/tags/:tagId — update community tag
+  fastify.patch<{ Params: { id: string; tagId: string }; Body: { name?: string; color?: string | null } }>(
+    '/:id/tags/:tagId',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
+      });
+      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+        return reply.forbidden('Only owners and admins can manage community tags');
+      }
+
+      const tag = await fastify.prisma.tag.findFirst({
+        where: { id: request.params.tagId, communityId: request.params.id },
+      });
+      if (!tag) return reply.notFound('Tag not found');
+
+      const { name, color } = request.body;
+      if (name && name !== tag.name) {
+        const existing = await fastify.prisma.tag.findUnique({
+          where: { communityId_name: { communityId: request.params.id, name } },
+        });
+        if (existing) return reply.conflict('Tag with this name already exists');
+      }
+
+      const updated = await fastify.prisma.tag.update({
+        where: { id: request.params.tagId },
+        data: { ...(name && { name }), ...(color !== undefined && { color }) },
+      });
+
+      return updated;
+    }
+  );
+
+  // DELETE /communities/:id/tags/:tagId — delete community tag
+  fastify.delete<{ Params: { id: string; tagId: string } }>(
+    '/:id/tags/:tagId',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
+      });
+      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+        return reply.forbidden('Only owners and admins can manage community tags');
+      }
+
+      const tag = await fastify.prisma.tag.findFirst({
+        where: { id: request.params.tagId, communityId: request.params.id },
+      });
+      if (!tag) return reply.notFound('Tag not found');
+
+      await fastify.prisma.tag.delete({ where: { id: request.params.tagId } });
+      return { success: true };
+    }
+  );
 };

@@ -41,6 +41,7 @@ import type {
   UpdateContributionInput,
   SunburstNode,
   Notification,
+  NotificationPreferences,
 } from '@spok/shared';
 
 // API URL is injected at build time via VITE_API_URL environment variable
@@ -329,6 +330,15 @@ export const userApi = {
 
   deleteAvatar: () =>
     fetchApi<{ success: boolean }>('/user/avatar', { method: 'DELETE' }),
+
+  getNotificationPreferences: () =>
+    fetchApi<NotificationPreferences>('/user/notification-preferences'),
+
+  updateNotificationPreferences: (data: Partial<NotificationPreferences>) =>
+    fetchApi<NotificationPreferences>('/user/notification-preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 };
 
 // User Tasks (global across spaces)
@@ -623,6 +633,27 @@ export const communitiesApi = {
 
   deleteCover: (id: string) =>
     fetchApi<{ success: boolean }>(`/communities/${id}/cover`, { method: 'DELETE' }),
+
+  // Community tags
+  getTags: (id: string) =>
+    fetchApi<Array<Tag & { itemCount: number }>>(`/communities/${id}/tags`),
+
+  createTag: (id: string, data: { name: string; color?: string }) =>
+    fetchApi<Tag>(`/communities/${id}/tags`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateTag: (id: string, tagId: string, data: { name?: string; color?: string | null }) =>
+    fetchApi<Tag>(`/communities/${id}/tags/${tagId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteTag: (id: string, tagId: string) =>
+    fetchApi<{ success: boolean }>(`/communities/${id}/tags/${tagId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Items

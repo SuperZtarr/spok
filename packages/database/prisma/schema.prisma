@@ -16,7 +16,8 @@ model User {
   name         String
   avatarUrl    String?
   globalRole        GlobalRole @default(USER)
-  themePreference   String     @default("system")
+  themePreference           String     @default("system")
+  notificationPreferences   Json?      // { INVITATION: "all", ASSIGNMENT: "all", CONTRIBUTION: "in_app", MENTION: "all" }
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -87,6 +88,7 @@ model Community {
 
   memberships CommunityMembership[]
   spaces      Space[]
+  tags        Tag[]
 
   @@map("communities")
 }
@@ -207,15 +209,19 @@ model ItemRelation {
 
 // Tags
 model Tag {
-  id      String  @id @default(cuid())
-  name    String
-  color   String?
-  spaceId String
+  id          String  @id @default(cuid())
+  name        String
+  color       String?
+  spaceId     String?
+  communityId String?
 
-  space Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  items ItemTag[]
+  space     Space?     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  community Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  items     ItemTag[]
 
   @@unique([spaceId, name])
+  @@unique([communityId, name])
+  @@index([communityId])
   @@map("tags")
 }
 

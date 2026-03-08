@@ -46,8 +46,19 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
+    // Get the space's communityId to include community-level tags
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: request.params.spaceId },
+      select: { communityId: true },
+    });
+
     const tags = await fastify.prisma.tag.findMany({
-      where: { spaceId: request.params.spaceId },
+      where: {
+        OR: [
+          { spaceId: request.params.spaceId },
+          ...(space?.communityId ? [{ communityId: space.communityId }] : []),
+        ],
+      },
       include: {
         _count: { select: { items: true } },
       },
@@ -57,6 +68,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
     return tags.map((tag) => ({
       ...tag,
       itemCount: tag._count.items,
+      isCommunityTag: !!tag.communityId,
     }));
   });
 

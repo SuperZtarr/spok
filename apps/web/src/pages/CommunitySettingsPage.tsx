@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, Plus, Trash2, Loader2, Save, Camera, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X } from 'lucide-react';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -432,6 +432,11 @@ export function CommunitySettingsPage() {
           )}
         </div>
 
+        {/* Community Tags */}
+        {['OWNER', 'ADMIN'].includes(community.role || '') && (
+          <CommunityTagsSection communityId={communityId!} />
+        )}
+
         {/* Members section */}
         {user && (
           <div className="bg-card border rounded-lg p-6">
@@ -442,6 +447,145 @@ export function CommunitySettingsPage() {
             />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CommunityTagsSection({ communityId }: { communityId: string }) {
+  const queryClient = useQueryClient();
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#6366f1');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+
+  const { data: tags = [] } = useQuery({
+    queryKey: ['community-tags', communityId],
+    queryFn: () => communitiesApi.getTags(communityId),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; color?: string }) => communitiesApi.createTag(communityId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-tags', communityId] });
+      setNewTagName('');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ tagId, data }: { tagId: string; data: { name?: string; color?: string | null } }) =>
+      communitiesApi.updateTag(communityId, tagId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-tags', communityId] });
+      setEditingId(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (tagId: string) => communitiesApi.deleteTag(communityId, tagId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-tags', communityId] });
+    },
+  });
+
+  return (
+    <div className="bg-card border rounded-lg p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <TagIcon className="w-5 h-5 text-muted-foreground" />
+        <h2 className="text-lg font-semibold">Tags communautaires</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Ces tags sont disponibles dans tous les espaces de la communauté.
+      </p>
+
+      {/* Existing tags */}
+      <div className="space-y-2 mb-4">
+        {tags.map((tag) => (
+          <div key={tag.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+            {editingId === tag.id ? (
+              <>
+                <input
+                  type="color"
+                  value={editColor}
+                  onChange={(e) => setEditColor(e.target.value)}
+                  className="w-6 h-6 rounded cursor-pointer border-0"
+                />
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') updateMutation.mutate({ tagId: tag.id, data: { name: editName, color: editColor } });
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                  className="flex-1 px-2 py-0.5 text-sm border border-border rounded bg-background"
+                  autoFocus
+                />
+                <button
+                  onClick={() => updateMutation.mutate({ tagId: tag.id, data: { name: editName, color: editColor } })}
+                  className="p-1 text-primary hover:bg-accent rounded"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => setEditingId(null)} className="p-1 text-muted-foreground hover:bg-accent rounded">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                {tag.color && (
+                  <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                )}
+                <span className="flex-1 text-sm">{tag.name}</span>
+                <span className="text-xs text-muted-foreground">{tag.itemCount} items</span>
+                <button
+                  onClick={() => { setEditingId(tag.id); setEditName(tag.name); setEditColor(tag.color || '#6366f1'); }}
+                  className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => { if (confirm(`Supprimer le tag « ${tag.name} » ?`)) deleteMutation.mutate(tag.id); }}
+                  className="p-1 text-muted-foreground hover:text-destructive hover:bg-accent rounded"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+        {tags.length === 0 && (
+          <p className="text-sm text-muted-foreground italic">Aucun tag communautaire</p>
+        )}
+      </div>
+
+      {/* Create new tag */}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={newTagColor}
+          onChange={(e) => setNewTagColor(e.target.value)}
+          className="w-8 h-8 rounded cursor-pointer border-0"
+        />
+        <input
+          type="text"
+          value={newTagName}
+          onChange={(e) => setNewTagName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newTagName.trim()) createMutation.mutate({ name: newTagName.trim(), color: newTagColor });
+          }}
+          placeholder="Nouveau tag..."
+          className="flex-1 px-3 py-1.5 text-sm border border-border rounded-md bg-background"
+        />
+        <Button
+          size="sm"
+          onClick={() => { if (newTagName.trim()) createMutation.mutate({ name: newTagName.trim(), color: newTagColor }); }}
+          disabled={!newTagName.trim() || createMutation.isPending}
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Ajouter
+        </Button>
       </div>
     </div>
   );
