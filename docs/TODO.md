@@ -17,7 +17,7 @@
 - [ ] Configurer un domaine custom Resend (ex: `noreply@spok.app`) avec SPF/DKIM/DMARC pour éviter les spams
 
 ### Membres & permissions
-- [ ] Modèle Invitation dédié (pending/accepted/declined) au lieu de créer directement un membership — **basse priorité**
+- [x] Modèle Invitation dédié (pending/accepted/declined) au lieu de créer directement un membership — b3bf186
 
 ## Idées (à explorer)
 
@@ -59,6 +59,7 @@
 - Bouton suppression dans modale item — e27a2d5
 - MatrixView effort/impact avec drag & persistence — 640a267
 - CrossTableView tableau croisé configurable — 5e73a0f
+- Modèle Invitation dédié (pending/accepted/declined) — b3bf186
 
 ### 2026-03-08
 - ChordView : diagramme chord, relations entre types ou espaces — 68bf9a8

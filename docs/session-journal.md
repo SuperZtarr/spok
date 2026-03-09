@@ -676,7 +676,7 @@ Après chaque commit :
 - MatrixView : scatter 2 axes effort/impact, 4 quadrants, drag repositionnement, persistence SpaceModule — 640a267
 - CrossTableView : tableau croisé dynamique, 4 dimensions (statut/type/assigné/espace), totaux, cellules expandables — 5e73a0f
 **État :** TERMINÉ
-**Commits :** 1e9ac95, 945a871, f0900d1, e27a2d5, 640a267, 5e73a0f
+**Commits :** 1e9ac95, 945a871, f0900d1, e27a2d5, 640a267, 5e73a0f, b3bf186
 
 ---
 
