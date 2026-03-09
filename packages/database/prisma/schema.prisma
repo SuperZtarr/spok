@@ -30,6 +30,7 @@ model User {
   notifications              Notification[]
   passwordResetTokens        PasswordResetToken[]
   emailVerificationTokens    EmailVerificationToken[]
+  sentInvitations            Invitation[] @relation("InvitationInvitedBy")
 
   @@map("users")
 }
@@ -59,6 +60,7 @@ model Space {
   modules     SpaceModule[]
   tags        Tag[]
   auditLogs   AuditLog[]
+  invitations Invitation[]
 
   @@index([communityId])
   @@index([parentId])
@@ -89,6 +91,7 @@ model Community {
   memberships CommunityMembership[]
   spaces      Space[]
   tags        Tag[]
+  invitations Invitation[]
 
   @@map("communities")
 }
@@ -134,6 +137,42 @@ enum Role {
   ADMIN
   MEMBER
   VIEWER
+}
+
+// Invitation à rejoindre une communauté ou un espace
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String
+  token       String           @unique @default(uuid())
+  status      InvitationStatus @default(PENDING)
+  role        String           // Role or CommunityRole as string
+  message     String?          // Optional message from inviter
+
+  communityId String?
+  spaceId     String?
+
+  invitedById String
+  invitedBy   User       @relation("InvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  space       Space?     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  expiresAt   DateTime
+  respondedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([email])
+  @@index([communityId])
+  @@index([spaceId])
+  @@index([token])
+  @@map("invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
 }
 
 // Élément générique (note, projet, tâche)

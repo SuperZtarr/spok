@@ -42,6 +42,7 @@ import type {
   SunburstNode,
   Notification,
   NotificationPreferences,
+  Invitation,
 } from '@spok/shared';
 
 // API URL is injected at build time via VITE_API_URL environment variable
@@ -454,11 +455,14 @@ export const spacesApi = {
 
   getMembers: (id: string) => fetchApi<SpaceMember[]>(`/spaces/${id}/members`),
 
-  invite: (id: string, data: { email: string; role: string }) =>
-    fetchApi<SpaceMember>(`/spaces/${id}/invite`, {
+  invite: (id: string, data: { email: string; role: string; message?: string }) =>
+    fetchApi<Invitation>(`/spaces/${id}/invite`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getInvitations: (id: string) =>
+    fetchApi<Invitation[]>(`/spaces/${id}/invitations`),
 
   removeMember: (id: string, memberId: string) =>
     fetchApi<{ success: boolean }>(`/spaces/${id}/members/${memberId}`, {
@@ -554,11 +558,14 @@ export const communitiesApi = {
 
   getMembers: (id: string) => fetchApi<CommunityMember[]>(`/communities/${id}/members`),
 
-  invite: (id: string, data: InviteCommunityMemberInput) =>
-    fetchApi<CommunityMember>(`/communities/${id}/invite`, {
+  invite: (id: string, data: InviteCommunityMemberInput & { message?: string }) =>
+    fetchApi<Invitation>(`/communities/${id}/invite`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getInvitations: (id: string) =>
+    fetchApi<Invitation[]>(`/communities/${id}/invitations`),
 
   removeMember: (id: string, memberId: string) =>
     fetchApi<{ success: boolean }>(`/communities/${id}/members/${memberId}`, {
@@ -1470,6 +1477,26 @@ export const notificationsApi = {
 
   delete: (id: string) =>
     fetchApi<{ success: boolean }>(`/notifications/${id}`, { method: 'DELETE' }),
+};
+
+export const invitationsApi = {
+  my: () =>
+    fetchApi<Invitation[]>('/invitations/my'),
+
+  accept: (token: string) =>
+    fetchApi<{ success: boolean; status: string }>(`/invitations/${token}/accept`, {
+      method: 'POST',
+    }),
+
+  decline: (token: string) =>
+    fetchApi<{ success: boolean; status: string }>(`/invitations/${token}/decline`, {
+      method: 'POST',
+    }),
+
+  cancel: (id: string) =>
+    fetchApi<{ success: boolean }>(`/invitations/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {

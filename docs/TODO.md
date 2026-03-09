@@ -22,7 +22,7 @@
 ## Idées (à explorer)
 
 ### Nouvelles visualisations
-- [ ] Matrice effort/impact — items sur 2 axes (priorité vs complexité), drag pour repositionner
+- [x] Matrice effort/impact — items sur 2 axes (priorité vs complexité), drag pour repositionner — 640a267
 - [x] Treemap — rectangles imbriqués proportionnels au nombre d'enfants ou contributions — 09a1a35
 - [ ] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions) — **basse priorité**
 - [x] Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total) — aa1aa4c
@@ -30,7 +30,7 @@
 - [x] Chord diagram — relations circulaires entre espaces ou types d'items — 68bf9a8
 - [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins — **basse priorité**
 - [x] Organigramme — arborescence verticale des membres par communauté/espace/rôle — d570ef8
-- [ ] Vue matricielle — tableau croisé (assigné × statut, type × espace)
+- [x] Vue matricielle — tableau croisé (assigné × statut, type × espace) — 5e73a0f
 
 ### Séances de présentation live
 - [ ] Définir le transport temps réel (WebSocket Fastify natif / Socket.io / SSE)
@@ -51,6 +51,14 @@
 - [ ] Auth : comment authentifier les requêtes MCP (token utilisateur, clé API dédiée) ?
 
 ## Historique
+
+### 2026-03-09
+- MindMap 3 lignes de titre — 1e9ac95
+- Gantt réorganisation chronologique persistée — 945a871
+- Sélecteurs d'espaces groupés par communauté partout — f0900d1
+- Bouton suppression dans modale item — e27a2d5
+- MatrixView effort/impact avec drag & persistence — 640a267
+- CrossTableView tableau croisé configurable — 5e73a0f
 
 ### 2026-03-08
 - ChordView : diagramme chord, relations entre types ou espaces — 68bf9a8

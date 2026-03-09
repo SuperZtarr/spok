@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Loader2, Trash2, ChevronDown, Crown } from 'lucide-react';
-import { spacesApi } from '../../lib/api';
+import { Users, UserPlus, Loader2, Trash2, ChevronDown, Crown, Clock, X, Mail } from 'lucide-react';
+import { spacesApi, invitationsApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { ConfirmModal } from '../ConfirmModal';
-import type { SpaceMember } from '@spok/shared';
+import type { SpaceMember, Invitation } from '@spok/shared';
 
 interface SpaceMembersManagerProps {
   spaceId: string;
@@ -44,12 +44,27 @@ export function SpaceMembersManager({
     queryFn: () => spacesApi.getMembers(spaceId),
   });
 
+  const { data: invitations } = useQuery({
+    queryKey: ['space-invitations', spaceId],
+    queryFn: () => spacesApi.getInvitations(spaceId),
+    enabled: currentUserRole === 'OWNER' || currentUserRole === 'ADMIN',
+  });
+
+  const pendingInvitations = invitations?.filter((i: Invitation) => i.status === 'PENDING') || [];
+
   const inviteMutation = useMutation({
     mutationFn: (data: { email: string; role: string }) => spacesApi.invite(spaceId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['space-members', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['space-invitations', spaceId] });
       setInviteEmail('');
       setInviteRole('MEMBER');
+    },
+  });
+
+  const cancelInvitationMutation = useMutation({
+    mutationFn: (id: string) => invitationsApi.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space-invitations', spaceId] });
     },
   });
 
@@ -145,6 +160,37 @@ export function SpaceMembersManager({
         <p className="text-sm text-destructive mb-3">
           {(inviteMutation.error as any)?.message || 'Erreur lors de l\'invitation.'}
         </p>
+      )}
+
+      {/* Pending invitations */}
+      {canInvite && pendingInvitations.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" />
+            Invitations en attente ({pendingInvitations.length})
+          </h3>
+          <div className="divide-y divide-border border rounded-md">
+            {pendingInvitations.map((inv: Invitation) => (
+              <div key={inv.id} className="flex items-center gap-3 px-3 py-2">
+                <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm truncate">{inv.email}</span>
+                </div>
+                <span className="text-xs text-muted-foreground px-2 py-0.5 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded">
+                  {ROLE_LABELS[inv.role] || inv.role}
+                </span>
+                <button
+                  onClick={() => cancelInvitationMutation.mutate(inv.id)}
+                  disabled={cancelInvitationMutation.isPending}
+                  className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                  title="Annuler l'invitation"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Members list */}

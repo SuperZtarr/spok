@@ -664,6 +664,22 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-09] - Session features batch
+
+**Demande :** Série de fonctionnalités et améliorations
+**Actions réalisées :**
+- MindMap : hauteur nœuds augmentée à 3 lignes (line-clamp-3) — 1e9ac95
+- Gantt : bouton réorganisation chronologique persistée via API reorder, respect hiérarchie — 945a871
+- Sélecteurs d'espaces groupés par communauté : utilitaire spaceGrouping.ts, Select optgroups, appliqué dans SpaceSettingsPage, MoveToSpaceModal, DuplicateToSpaceModal, UserDetailModal, CommunityDetailModal — f0900d1
+- CommunitySelector : dropdown prend toute la hauteur disponible (calc 100vh - 120px) — f0900d1
+- Bouton suppression (Trash2) dans ItemEditModal avec confirmation — e27a2d5
+- MatrixView : scatter 2 axes effort/impact, 4 quadrants, drag repositionnement, persistence SpaceModule — 640a267
+- CrossTableView : tableau croisé dynamique, 4 dimensions (statut/type/assigné/espace), totaux, cellules expandables — 5e73a0f
+**État :** TERMINÉ
+**Commits :** 1e9ac95, 945a871, f0900d1, e27a2d5, 640a267, 5e73a0f
+
+---
+
 #### [2026-03-08] - Commits session
 
 **Commits créés :**

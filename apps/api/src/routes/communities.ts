@@ -4,38 +4,10 @@ import type { PrismaClient } from '@prisma/client';
 import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from '../utils/audit.js';
+import { createNotification } from '../utils/notifications.js';
+import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
 
-/** Auto-join user to community spaces that have a defaultRole configured */
-async function autoJoinCommunitySpaces(prisma: PrismaClient, userId: string, communityId: string) {
-  const spacesWithDefault = await prisma.space.findMany({
-    where: { communityId, defaultRole: { not: null } },
-    select: { id: true, defaultRole: true },
-  });
-
-  if (spacesWithDefault.length === 0) return;
-
-  // Filter out spaces where user is already a member
-  const existingMemberships = await prisma.spaceMembership.findMany({
-    where: {
-      userId,
-      spaceId: { in: spacesWithDefault.map(s => s.id) },
-    },
-    select: { spaceId: true },
-  });
-
-  const existingSpaceIds = new Set(existingMemberships.map(m => m.spaceId));
-  const toCreate = spacesWithDefault.filter(s => !existingSpaceIds.has(s.id));
-
-  if (toCreate.length > 0) {
-    await prisma.spaceMembership.createMany({
-      data: toCreate.map(s => ({
-        userId,
-        spaceId: s.id,
-        role: s.defaultRole!,
-      })),
-    });
-  }
-}
+// autoJoinCommunitySpaces is imported from invitations.ts
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -54,6 +26,7 @@ const updateCommunitySchema = z.object({
 const inviteSchema = z.object({
   email: z.string().email(),
   role: z.enum(['ADMIN', 'MEMBER']),
+  message: z.string().optional(),
 });
 
 export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
@@ -563,79 +536,97 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // Invite member to community
+  // Invite member to community (creates an Invitation, not a direct membership)
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof inviteSchema> }>(
     '/:id/invite',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
+      const mem = await fastify.prisma.communityMembership.findUnique({
         where: {
           userId_communityId: {
             userId: request.user.userId,
             communityId: request.params.id,
           },
         },
+        include: { community: { select: { name: true } } },
       });
 
-      if (!membership) {
+      if (!mem) {
         return reply.notFound('Community not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!['OWNER', 'ADMIN'].includes(mem.role)) {
         return reply.forbidden('Insufficient permissions');
       }
 
       const body = inviteSchema.parse(request.body);
 
+      // Check if user is already a member
       const invitedUser = await fastify.prisma.user.findUnique({
         where: { email: body.email },
       });
-
-      if (!invitedUser) {
-        return reply.notFound('User not found');
+      if (invitedUser) {
+        const existingMembership = await fastify.prisma.communityMembership.findUnique({
+          where: { userId_communityId: { userId: invitedUser.id, communityId: request.params.id } },
+        });
+        if (existingMembership) {
+          return reply.conflict('User is already a member');
+        }
       }
 
-      const existingMembership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: invitedUser.id,
-            communityId: request.params.id,
-          },
-        },
+      // Check for existing pending invitation
+      const existingInvitation = await fastify.prisma.invitation.findFirst({
+        where: { email: body.email, communityId: request.params.id, status: 'PENDING' },
+      });
+      if (existingInvitation) {
+        return reply.conflict('An invitation is already pending for this email');
+      }
+
+      const invitation = await createInvitationHelper(fastify.prisma as unknown as PrismaClient, {
+        email: body.email,
+        role: body.role,
+        message: body.message,
+        communityId: request.params.id,
+        invitedById: request.user.userId,
       });
 
-      if (existingMembership) {
-        return reply.conflict('User is already a member');
-      }
-
-      const newMembership = await fastify.prisma.communityMembership.create({
-        data: {
+      // Notify invited user if they have an account
+      if (invitedUser) {
+        const inviterName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+        await createNotification(fastify.prisma, {
           userId: invitedUser.id,
-          communityId: request.params.id,
-          role: body.role,
-        },
+          type: 'INVITATION',
+          title: `${inviterName} vous invite à rejoindre la communauté « ${mem.community.name} »`,
+          link: `/invitations`,
+          metadata: { actorId: request.user.userId, actorName: inviterName, communityName: mem.community.name, invitationId: invitation.id },
+        });
+      }
+
+      return reply.status(201).send(invitation);
+    }
+  );
+
+  // List pending invitations for a community
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/invitations',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const mem = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
+      });
+      if (!mem || !['OWNER', 'ADMIN'].includes(mem.role)) {
+        return reply.forbidden('Insufficient permissions');
+      }
+
+      const invitations = await fastify.prisma.invitation.findMany({
+        where: { communityId: request.params.id },
         include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
+          invitedBy: { select: { id: true, name: true, email: true } },
         },
+        orderBy: { createdAt: 'desc' },
       });
 
-      // Auto-join spaces with defaultRole
-      await autoJoinCommunitySpaces(fastify.prisma as unknown as PrismaClient, invitedUser.id, request.params.id);
-
-      return reply.status(201).send({
-        id: newMembership.id,
-        userId: newMembership.userId,
-        email: newMembership.user.email,
-        name: newMembership.user.name,
-        role: newMembership.role,
-        joinedAt: newMembership.joinedAt,
-      });
+      return invitations;
     }
   );
 

@@ -12,6 +12,7 @@ import { auditLogsRoutes } from './auditLogs.js';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
 import { createNotification } from '../utils/notifications.js';
+import { createInvitation as createInvitationHelper } from './invitations.js';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -33,6 +34,7 @@ const updateSpaceSchema = z.object({
 const inviteSchema = z.object({
   email: z.string().email(),
   role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']),
+  message: z.string().optional(),
 });
 
 export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
@@ -980,7 +982,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // Invite member to space
+  // Invite member to space (creates an Invitation, not a direct membership)
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof inviteSchema> }>(
     '/:id/invite',
     { preHandler: [fastify.authenticate] },
@@ -1009,62 +1011,72 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = inviteSchema.parse(request.body);
 
+      // Check if user is already a member
       const invitedUser = await fastify.prisma.user.findUnique({
         where: { email: body.email },
       });
-
-      if (!invitedUser) {
-        return reply.notFound('User not found');
+      if (invitedUser) {
+        const existingMembership = await fastify.prisma.spaceMembership.findUnique({
+          where: { userId_spaceId: { userId: invitedUser.id, spaceId: request.params.id } },
+        });
+        if (existingMembership) {
+          return reply.conflict('User is already a member');
+        }
       }
 
-      const existingMembership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: invitedUser.id,
-            spaceId: request.params.id,
-          },
-        },
+      // Check for existing pending invitation
+      const existingInvitation = await fastify.prisma.invitation.findFirst({
+        where: { email: body.email, spaceId: request.params.id, status: 'PENDING' },
+      });
+      if (existingInvitation) {
+        return reply.conflict('An invitation is already pending for this email');
+      }
+
+      const invitation = await createInvitationHelper(fastify.prisma, {
+        email: body.email,
+        role: body.role,
+        message: body.message,
+        spaceId: request.params.id,
+        invitedById: request.user.userId,
       });
 
-      if (existingMembership) {
-        return reply.conflict('User is already a member');
-      }
-
-      const newMembership = await fastify.prisma.spaceMembership.create({
-        data: {
+      // Notify invited user if they have an account
+      if (invitedUser) {
+        const inviterName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+        await createNotification(fastify.prisma, {
           userId: invitedUser.id,
-          spaceId: request.params.id,
-          role: body.role,
-        },
+          type: 'INVITATION',
+          title: `${inviterName} vous invite à rejoindre l'espace « ${membership.space.name} »`,
+          link: `/invitations`,
+          metadata: { actorId: request.user.userId, actorName: inviterName, spaceName: membership.space.name, invitationId: invitation.id },
+        });
+      }
+
+      return reply.status(201).send(invitation);
+    }
+  );
+
+  // List pending invitations for a space
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/invitations',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId: request.user.userId, spaceId: request.params.id } },
+      });
+      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+        return reply.forbidden('Insufficient permissions');
+      }
+
+      const invitations = await fastify.prisma.invitation.findMany({
+        where: { spaceId: request.params.id },
         include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
+          invitedBy: { select: { id: true, name: true, email: true } },
         },
+        orderBy: { createdAt: 'desc' },
       });
 
-      // Notify invited user
-      const inviterName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
-      await createNotification(fastify.prisma, {
-        userId: invitedUser.id,
-        type: 'INVITATION',
-        title: `${inviterName} vous a ajouté à l'espace « ${membership.space.name} »`,
-        link: `/spaces/${request.params.id}`,
-        metadata: { actorId: request.user.userId, actorName: inviterName, spaceName: membership.space.name },
-      });
-
-      return reply.status(201).send({
-        id: newMembership.id,
-        userId: newMembership.userId,
-        email: newMembership.user.email,
-        name: newMembership.user.name,
-        role: newMembership.role,
-        joinedAt: newMembership.joinedAt,
-      });
+      return invitations;
     }
   );
 

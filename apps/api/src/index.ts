@@ -11,6 +11,7 @@ import { adminAuthPlugin } from './plugins/adminAuth.js';
 import { authRoutes } from './routes/auth.js';
 import { spacesRoutes } from './routes/spaces.js';
 import { communitiesRoutes } from './routes/communities.js';
+import { invitationsRoutes } from './routes/invitations.js';
 import { adminUsersRoutes } from './routes/admin/users.js';
 import { adminSpacesRoutes } from './routes/admin/spaces.js';
 import { adminCommunitiesRoutes } from './routes/admin/communities.js';
@@ -203,6 +204,7 @@ async function buildApp() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(spacesRoutes, { prefix: '/spaces' });
   await app.register(communitiesRoutes, { prefix: '/communities' });
+  await app.register(invitationsRoutes, { prefix: '/invitations' });
   await app.register(adminUsersRoutes, { prefix: '/admin/users' });
   await app.register(adminSpacesRoutes, { prefix: '/admin/spaces' });
   await app.register(adminCommunitiesRoutes, { prefix: '/admin/communities' });
