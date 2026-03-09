@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Building2, FolderKanban, Plus, Trash2, Save } from 'lucide-react';
 import { adminApi } from '../../lib/api';
+import { groupSpacesByCommunity } from '../../lib/spaceGrouping';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -211,10 +212,13 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     ...availableCommunities.map((c) => ({ value: c.id, label: c.name })),
   ];
 
-  const spaceOptions = [
-    { value: '', label: 'Selectionner un espace' },
-    ...availableSpaces.map((s) => ({ value: s.id, label: s.name })),
-  ];
+  const spaceBaseOptions = [{ value: '', label: 'Selectionner un espace' }];
+  const spaceGroups = useMemo(() => {
+    return groupSpacesByCommunity(availableSpaces).map(g => ({
+      label: g.label,
+      options: g.spaces.map(s => ({ value: s.id, label: s.name })),
+    }));
+  }, [availableSpaces]);
 
   // Creation form
   if (isCreating) {
@@ -460,7 +464,8 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                   <Select
                     value={selectedSpaceId}
                     onChange={(e) => setSelectedSpaceId(e.target.value)}
-                    options={spaceOptions}
+                    options={spaceBaseOptions}
+                    groups={spaceGroups}
                     className="flex-1"
                   />
                   <Select

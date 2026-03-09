@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, FolderInput, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
+import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
 import { useSelectionStore } from '../stores/selection';
 
@@ -56,6 +57,8 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
     );
   }, [availableSpaces, searchQuery]);
 
+  const spaceGroups = useMemo(() => groupSpacesByCommunity(filteredSpaces), [filteredSpaces]);
+
   if (!isOpen) return null;
 
   return (
@@ -108,31 +111,40 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
-              {filteredSpaces.map((space) => (
-                <label
-                  key={space.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedSpaceId === space.id
-                      ? 'border-primary bg-primary/5'
-                      : 'hover:bg-accent'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="targetSpace"
-                    value={space.id}
-                    checked={selectedSpaceId === space.id}
-                    onChange={(e) => setSelectedSpaceId(e.target.value)}
-                    className="w-4 h-4"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">{space.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'} • {space.role}
-                    </div>
+            <div className="max-h-60 overflow-y-auto mb-4">
+              {spaceGroups.map((group) => (
+                <div key={group.communityId || '_personal'}>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">
+                    {group.label}
                   </div>
-                </label>
+                  <div className="space-y-1.5">
+                    {group.spaces.map((space) => (
+                      <label
+                        key={space.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedSpaceId === space.id
+                            ? 'border-primary bg-primary/5'
+                            : 'hover:bg-accent'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="targetSpace"
+                          value={space.id}
+                          checked={selectedSpaceId === space.id}
+                          onChange={(e) => setSelectedSpaceId(e.target.value)}
+                          className="w-4 h-4"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium">{space.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'} • {space.role}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
             )}

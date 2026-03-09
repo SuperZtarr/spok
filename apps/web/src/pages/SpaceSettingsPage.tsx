@@ -7,6 +7,7 @@ import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
+import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -167,9 +168,9 @@ export function SpaceSettingsPage() {
     ...(communities?.map((c) => ({ value: c.id, label: c.name })) || []),
   ];
 
-  // Build parent space options, excluding self and descendants
-  const parentSpaceOptions = useMemo(() => {
-    if (!allSpaces || !spaceId) return [{ value: '', label: 'Aucun (espace racine)' }];
+  // Build parent space options grouped by community, excluding self and descendants
+  const { parentSpaceBaseOptions, parentSpaceGroups } = useMemo(() => {
+    if (!allSpaces || !spaceId) return { parentSpaceBaseOptions: [{ value: '', label: 'Aucun (espace racine)' }], parentSpaceGroups: [] };
 
     // Collect all descendant IDs to exclude
     const excludeIds = new Set<string>([spaceId]);
@@ -184,10 +185,15 @@ export function SpaceSettingsPage() {
     findDescendants(spaceId);
 
     const eligible = allSpaces.filter(s => s.type === 'GROUP' && !excludeIds.has(s.id));
-    return [
-      { value: '', label: 'Aucun (espace racine)' },
-      ...eligible.map(s => ({ value: s.id, label: s.name })),
-    ];
+    const groups = groupSpacesByCommunity(eligible).map(g => ({
+      label: g.label,
+      options: g.spaces.map(s => ({ value: s.id, label: s.name })),
+    }));
+
+    return {
+      parentSpaceBaseOptions: [{ value: '', label: 'Aucun (espace racine)' }],
+      parentSpaceGroups: groups,
+    };
   }, [allSpaces, spaceId]);
 
   // Check permissions
@@ -327,7 +333,8 @@ export function SpaceSettingsPage() {
                 <Select
                   value={editParentId}
                   onChange={(e) => setEditParentId(e.target.value)}
-                  options={parentSpaceOptions}
+                  options={parentSpaceBaseOptions}
+                  groups={parentSpaceGroups}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Imbriquer cet espace sous un autre espace de groupe

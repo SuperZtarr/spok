@@ -130,7 +130,7 @@ export function CommunitySelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg py-1 max-h-80 overflow-y-auto">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg py-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
           <button
             onClick={() => handleSelect(null)}
             className={`flex items-center gap-2 w-full px-3 py-2 hover:bg-accent transition-colors text-sm text-left ${
