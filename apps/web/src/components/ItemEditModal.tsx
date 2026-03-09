@@ -34,6 +34,7 @@ interface ItemEditModalProps {
   canEdit?: boolean;
   spaceName?: string;
   onNavigate?: (itemId: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function ItemEditModal({
@@ -46,6 +47,7 @@ export function ItemEditModal({
   canEdit = true,
   spaceName,
   onNavigate,
+  onDelete,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
 
@@ -1360,6 +1362,21 @@ export function ItemEditModal({
             <Button type="button" variant="outline" onClick={onClose}>
               {canEdit ? 'Annuler' : 'Fermer'}
             </Button>
+            {canEdit && onDelete && itemId && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="ml-auto"
+                onClick={() => {
+                  if (confirm('Supprimer cet élément ?')) {
+                    onDelete(itemId);
+                    onClose();
+                  }
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </form>
       ) : (

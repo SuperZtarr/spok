@@ -1067,6 +1067,7 @@ export function SpacePage() {
         canEdit={canEdit}
         spaceName={space?.name}
         onNavigate={setEditingItemId}
+        onDelete={actions.handleDelete}
       />
 
       {/* Selection action bar */}
