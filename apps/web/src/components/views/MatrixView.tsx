@@ -72,11 +72,33 @@ export function MatrixView({ items, spaceId, onEdit, referentiels, highlightType
   const areaW = containerSize.width - PADDING * 2;
   const areaH = containerSize.height - PADDING * 2;
 
+  // Compute default positions using a grid layout when no saved positions exist
+  const defaultPositions = useMemo(() => {
+    const map: Record<string, { x: number; y: number }> = {};
+    const unpositioned = items.filter(i => !positions[i.id]);
+    if (unpositioned.length === 0) return map;
+
+    const cols = Math.ceil(Math.sqrt(unpositioned.length));
+    const rows = Math.ceil(unpositioned.length / cols);
+    const padX = 8; // margin from edges in %
+    const padY = 8;
+    const rangeX = 100 - padX * 2;
+    const rangeY = 100 - padY * 2;
+
+    unpositioned.forEach((item, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      map[item.id] = {
+        x: padX + (cols > 1 ? (col / (cols - 1)) * rangeX : rangeX / 2),
+        y: padY + (rows > 1 ? (row / (rows - 1)) * rangeY : rangeY / 2),
+      };
+    });
+    return map;
+  }, [items, positions]);
+
   const getItemPos = (item: Item) => {
     if (positions[item.id]) return positions[item.id];
-    // Default: scatter around center with some deterministic offset
-    const hash = item.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return { x: 40 + (hash % 20), y: 40 + ((hash * 7) % 20) };
+    return defaultPositions[item.id] || { x: 50, y: 50 };
   };
 
   const toPixel = (pos: { x: number; y: number }) => ({
