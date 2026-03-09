@@ -59,6 +59,8 @@ import { BurndownView } from '../components/views/BurndownView';
 import { OrgChartView } from '../components/views/OrgChartView';
 import { CfdView } from '../components/views/CfdView';
 import { ChordView } from '../components/views/ChordView';
+import { MatrixView } from '../components/views/MatrixView';
+import { CrossTableView } from '../components/views/CrossTableView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 
@@ -189,8 +191,8 @@ export function SpacePage() {
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord';
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable';
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'matrix' || viewMode === 'crossTable';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -523,8 +525,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -646,7 +648,7 @@ export function SpacePage() {
         )}
 
         {/* Items / Views */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' ? ' overflow-hidden flex flex-col' : ''}`}>
           {viewMode === 'orgchart' ? (
             <OrgChartView
               spaceId={spaceId!}
@@ -927,6 +929,27 @@ export function SpacePage() {
             <ChordView
               items={(allItemsData?.data || []) as Item[]}
               onItemClick={(itemId) => setEditingItemId(itemId)}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
+            />
+          ) : viewMode === 'matrix' ? (
+            <MatrixView
+              items={filterBySearch(allItemsData?.data)}
+              spaceId={spaceId!}
+              onEdit={setEditingItemId}
+              referentiels={referentiels}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
+              canEdit={canEdit}
+            />
+          ) : viewMode === 'crossTable' ? (
+            <CrossTableView
+              items={filterBySearch(allItemsData?.data)}
+              currentSpaceId={spaceId}
+              onEdit={setEditingItemId}
+              referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}

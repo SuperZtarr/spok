@@ -1372,6 +1372,22 @@ export const canvasLayoutApi = {
     }),
 };
 
+// Matrix Layout
+export type MatrixLayoutResponse = {
+  positions: Record<string, { x: number; y: number }>;
+};
+
+export const matrixLayoutApi = {
+  get: (spaceId: string) =>
+    fetchApi<MatrixLayoutResponse>(`/spaces/${spaceId}/matrix-layout`),
+
+  update: (spaceId: string, positions: Record<string, { x: number; y: number }>) =>
+    fetchApi<MatrixLayoutResponse>(`/spaces/${spaceId}/matrix-layout`, {
+      method: 'PUT',
+      body: JSON.stringify({ positions }),
+    }),
+};
+
 // Audit Logs
 export const auditLogsApi = {
   list: (spaceId: string, params?: AuditLogFilters) => {

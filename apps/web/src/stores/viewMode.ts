@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'orgchart' | 'cfd' | 'chord';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'orgchart' | 'cfd' | 'chord' | 'matrix' | 'crossTable';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -34,6 +34,8 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'burndown', label: 'Burndown', icon: 'TrendingDown', category: 'planning' },
   { value: 'cfd', label: 'Flux cumulatif', icon: 'Layers', category: 'planning' },
   { value: 'orgchart', label: 'Organigramme', icon: 'Users', category: 'basic' },
+  { value: 'matrix', label: 'Matrice', icon: 'Crosshair', category: 'planning' },
+  { value: 'crossTable', label: 'Tableau croisé', icon: 'Table2', category: 'planning' },
 ];
 
 interface ViewModeState {
