@@ -114,6 +114,43 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
     return { success: true };
   });
 
+  // Reorder siblings by new position order
+  const reorderSchema = z.object({
+    // Array of { parentId, itemIds[] } — each group reorders siblings under that parent
+    groups: z.array(z.object({
+      parentId: z.string().nullable(),
+      itemIds: z.array(z.string()).min(1),
+    })).min(1),
+  });
+
+  fastify.post<{
+    Params: { spaceId: string };
+    Body: z.infer<typeof reorderSchema>;
+  }>('/reorder', async (request, reply) => {
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    if (!membership) {
+      return reply.notFound('Space not found');
+    }
+    if (membership.role === 'VIEWER') {
+      return reply.forbidden('Viewers cannot reorder items');
+    }
+
+    const { groups } = reorderSchema.parse(request.body);
+
+    const updates = groups.flatMap(group =>
+      group.itemIds.map((id, index) =>
+        fastify.prisma.item.updateMany({
+          where: { id, spaceId: request.params.spaceId, parentId: group.parentId },
+          data: { position: index },
+        })
+      )
+    );
+
+    await fastify.prisma.$transaction(updates);
+
+    return { success: true };
+  });
+
   // Bulk move items to another space
   fastify.post<{
     Params: { spaceId: string };

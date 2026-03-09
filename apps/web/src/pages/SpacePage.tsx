@@ -785,6 +785,7 @@ export function SpacePage() {
               items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               currentSpaceId={spaceId}
+              spaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}

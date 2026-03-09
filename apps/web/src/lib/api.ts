@@ -728,6 +728,12 @@ export const itemsApi = {
       }
     ),
 
+  reorder: (spaceId: string, groups: { parentId: string | null; itemIds: string[] }[]) =>
+    fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ groups }),
+    }),
+
   bulkDuplicate: (
     spaceId: string,
     data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean }

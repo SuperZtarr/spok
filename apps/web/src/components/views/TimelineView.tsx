@@ -1,14 +1,16 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Copy, ChevronsDownUp, ChevronsUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Copy, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import { itemsApi } from '../../lib/api';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { TYPE_ICONS } from '../../constants/ui';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor } from './timeline-utils';
-import { buildTree, flattenTree } from './timeline-tree';
+import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 
 interface PortalGroup {
   spaceId: string;
@@ -31,6 +33,7 @@ interface TimelineViewProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  spaceId?: string;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   highlightStatus?: string;
@@ -39,7 +42,8 @@ interface TimelineViewProps {
   canEdit?: boolean;
 }
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
@@ -51,6 +55,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [compactMode, setCompactMode] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{
@@ -191,6 +196,38 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       return next;
     });
   };
+
+  const handleChronoReorder = useCallback(async () => {
+    if (!spaceId || reordering) return;
+    // Build groups of siblings sorted by date
+    function collectGroups(treeItems: TreeItem[], parentId: string | null): { parentId: string | null; itemIds: string[] }[] {
+      const sorted = [...treeItems].sort((a, b) => {
+        const dateA = a.startDate || a.dueDate;
+        const dateB = b.startDate || b.dueDate;
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return new Date(dateA).getTime() - new Date(dateB).getTime();
+      });
+      const groups: { parentId: string | null; itemIds: string[] }[] = [
+        { parentId, itemIds: sorted.map(i => i.id) },
+      ];
+      for (const item of sorted) {
+        if (item.children.length > 0) {
+          groups.push(...collectGroups(item.children, item.id));
+        }
+      }
+      return groups;
+    }
+    const groups = collectGroups(tree, null);
+    setReordering(true);
+    try {
+      await itemsApi.reorder(spaceId, groups);
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    } finally {
+      setReordering(false);
+    }
+  }, [spaceId, tree, reordering, queryClient]);
 
   // Handle drag start for resizing
   const handleDragStart = useCallback((
@@ -465,6 +502,19 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           <span className="text-sm text-muted-foreground">
             {items.length} ({itemsWithDatesCount} planifiés)
           </span>
+
+          {/* Chronological reorder */}
+          {canEdit && spaceId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleChronoReorder}
+              disabled={reordering}
+              title="Réordonner chronologiquement (persisté)"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+            </Button>
+          )}
 
           {/* Compact mode toggle */}
           <Button
