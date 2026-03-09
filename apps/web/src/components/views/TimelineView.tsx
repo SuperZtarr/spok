@@ -323,13 +323,13 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     const idx = flatItems.findIndex(i => i.id === itemId);
     if (idx === -1) return;
 
-    const endX = barLeft + barWidth;
+    const centerX = barLeft + barWidth / 2;
     const centerY = idx * 40 + 20; // ROW_HEIGHT / 2
     setRelationDrag({
       fromItemId: itemId,
-      fromX: endX,
+      fromX: centerX,
       fromY: centerY,
-      currentX: endX,
+      currentX: centerX,
       currentY: centerY,
     });
   }, [flatItems]);
@@ -462,11 +462,32 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       const toBar = getBarStyle(toItem);
       if (!fromBar || !toBar) continue;
 
-      // Arrow from end of source bar to start of target bar
-      const fromX = fromBar.left + fromBar.width;
+      // Arrow: connect the closest edges of the two bars
+      // Determine best connection points based on relative positions
+      const fromCenterX = fromBar.left + fromBar.width / 2;
+      const toCenterX = toBar.left + toBar.width / 2;
       const fromY = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const toX = toBar.left;
       const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+
+      let fromX: number;
+      let toX: number;
+
+      // If bars don't overlap horizontally, connect nearest edges
+      const fromRight = fromBar.left + fromBar.width;
+      const toRight = toBar.left + toBar.width;
+      if (fromRight < toBar.left) {
+        // Source is fully left of target
+        fromX = fromRight;
+        toX = toBar.left;
+      } else if (toRight < fromBar.left) {
+        // Target is fully left of source
+        fromX = fromBar.left;
+        toX = toRight;
+      } else {
+        // Bars overlap horizontally — use centers
+        fromX = fromCenterX;
+        toX = toCenterX;
+      }
 
       arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId });
     }
@@ -666,7 +687,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
               return (
                 <div
                   key={item.id}
-                  className={`flex border-b hover:bg-muted/30 group ${
+                  className={`flex border-b hover:bg-muted/30 group h-10 overflow-hidden ${
                     isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
                   } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'bg-muted/10' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
@@ -821,10 +842,10 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           </div>
                         )}
 
-                        {/* Relation connector handle */}
+                        {/* Relation connector handle (center of bar) */}
                         {canEdit && !isPortal && onCreateRelation && (
                           <div
-                            className="absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-70 hover:!opacity-100 transition-opacity z-10 flex items-center justify-center"
+                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-70 hover:!opacity-100 transition-opacity z-10 flex items-center justify-center"
                             onMouseDown={(e) => handleRelationDragStart(e, item.id, barStyle.left + 1, barStyle.width)}
                             title="Glisser vers un élément pour créer une liaison"
                           >
@@ -913,15 +934,25 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                   const relType = RELATION_TYPES.find(t => t.id === arrow.type);
                   const relLabel = relType?.label || arrow.type;
 
-                  // Curved path: from end of source bar to start of target bar
                   const dx = arrow.toX - arrow.fromX;
-                  const midX = arrow.fromX + dx / 2;
-                  // If going backwards (target starts before source ends), route around
-                  const curveOffset = dx < 20 ? 30 : 0;
+                  const dy = arrow.toY - arrow.fromY;
+                  const absDy = Math.abs(dy);
 
-                  const path = curveOffset > 0
-                    ? `M ${arrow.fromX} ${arrow.fromY} C ${arrow.fromX + curveOffset} ${arrow.fromY}, ${arrow.toX - curveOffset} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`
-                    : `M ${arrow.fromX} ${arrow.fromY} C ${midX} ${arrow.fromY}, ${midX} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
+                  let path: string;
+                  if (Math.abs(dx) < 10 && absDy > 0) {
+                    // Nearly vertical — slight S-curve
+                    const offset = 30;
+                    path = `M ${arrow.fromX} ${arrow.fromY} C ${arrow.fromX + offset} ${arrow.fromY}, ${arrow.toX - offset} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
+                  } else if (dx < 0) {
+                    // Target is to the left — route below/above to avoid crossing bars
+                    const detour = Math.max(40, absDy * 0.5);
+                    const midY = (arrow.fromY + arrow.toY) / 2 + (dy > 0 ? -detour : detour);
+                    path = `M ${arrow.fromX} ${arrow.fromY} Q ${arrow.fromX} ${midY}, ${(arrow.fromX + arrow.toX) / 2} ${midY} Q ${arrow.toX} ${midY}, ${arrow.toX} ${arrow.toY}`;
+                  } else {
+                    // Normal left-to-right — smooth cubic Bézier
+                    const cpOffset = Math.max(dx * 0.4, 20);
+                    path = `M ${arrow.fromX} ${arrow.fromY} C ${arrow.fromX + cpOffset} ${arrow.fromY}, ${arrow.toX - cpOffset} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
+                  }
 
                   return (
                     <g key={idx}>
