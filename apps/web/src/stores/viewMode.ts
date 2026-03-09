@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'orgchart' | 'cfd' | 'chord' | 'matrix' | 'crossTable';
+export type ViewMode = 'list' | 'tree' | 'sequence' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'orgchart' | 'cfd' | 'chord' | 'matrix' | 'crossTable' | 'heatmap';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -36,6 +36,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'orgchart', label: 'Organigramme', icon: 'Users', category: 'basic' },
   { value: 'matrix', label: 'Matrice', icon: 'Crosshair', category: 'planning' },
   { value: 'crossTable', label: 'Tableau croisé', icon: 'Table2', category: 'planning' },
+  { value: 'heatmap', label: 'Heatmap', icon: 'Grid3x3', category: 'exploration' },
 ];
 
 interface ViewModeState {
