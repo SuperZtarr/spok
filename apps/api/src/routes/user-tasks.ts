@@ -40,7 +40,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     } = request.query;
 
     const page = Math.max(1, parseInt(pageStr, 10));
-    const pageSize = Math.min(100, Math.max(1, parseInt(pageSizeStr, 10)));
+    const pageSize = Math.min(500, Math.max(1, parseInt(pageSizeStr, 10)));
     const skip = (page - 1) * pageSize;
 
     // 1. Resolve accessible spaceIds based on user role

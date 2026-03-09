@@ -103,14 +103,15 @@ export function DeadlinesView() {
 
   const [editingTask, setEditingTask] = useState<{ itemId: string; spaceId: string } | null>(null);
 
-  // Fetch all items with a due date, sorted by dueDate asc
+  // Fetch all items with a due date, sorted by dueDate asc (all types)
   const { data: tasksData, isLoading } = useQuery({
     queryKey: ['deadlines-view'],
     queryFn: () =>
       userTasksApi.list({
+        type: 'NOTE,TASK,PROJECT,MEETING,PERIOD,LINK,DOCUMENT,IMAGE,BUG',
         sortBy: 'dueDate',
         sortDir: 'asc',
-        pageSize: 200,
+        pageSize: 500,
       }),
   });
 
@@ -121,13 +122,14 @@ export function DeadlinesView() {
     enabled: !!editingTask,
   });
 
-  // Filter to only items with dueDate and not done/cancelled
+  // Filter to only items with dueDate
+  const [showDone, setShowDone] = useState(false);
   const tasksWithDeadline = useMemo(() => {
     if (!tasksData?.data) return [];
     return tasksData.data.filter(
-      (t) => t.dueDate && t.status !== 'done' && t.status !== 'cancelled'
+      (t) => t.dueDate && (showDone || (t.status !== 'done' && t.status !== 'cancelled'))
     );
-  }, [tasksData]);
+  }, [tasksData, showDone]);
 
   const groups = useMemo(() => groupByDeadline(tasksWithDeadline), [tasksWithDeadline]);
 
@@ -172,6 +174,15 @@ export function DeadlinesView() {
             {todayCount} aujourd'hui
           </span>
         )}
+        <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showDone}
+            onChange={(e) => setShowDone(e.target.checked)}
+            className="rounded"
+          />
+          Terminés
+        </label>
       </div>
 
       {/* Groups */}
