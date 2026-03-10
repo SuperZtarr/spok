@@ -53,7 +53,6 @@ import { TreemapView } from '../components/views/TreemapView';
 import { BurndownView } from '../components/views/BurndownView';
 import { CfdView } from '../components/views/CfdView';
 import { ChordView } from '../components/views/ChordView';
-import { MatrixView } from '../components/views/MatrixView';
 import { CrossTableView } from '../components/views/CrossTableView';
 import { HeatmapView } from '../components/views/HeatmapView';
 import { EgoNetworkView } from '../components/views/EgoNetworkView';
@@ -137,8 +136,8 @@ export function SpacePage() {
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
-  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
+  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -419,8 +418,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -450,7 +449,7 @@ export function SpacePage() {
         />
 
         {/* Items / Views */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -710,17 +709,6 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
-            />
-          ) : viewMode === 'matrix' ? (
-            <MatrixView
-              items={filterBySearch(allItemsData?.data)}
-              spaceId={spaceId!}
-              onEdit={setEditingItemId}
-              referentiels={referentiels}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-              canEdit={canEdit}
             />
           ) : viewMode === 'crossTable' ? (
             <CrossTableView

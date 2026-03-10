@@ -183,16 +183,6 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Un rétrécissement indique un goulot d\'étranglement',
     ],
   },
-  matrix: {
-    title: 'Matrice',
-    description: 'Matrice effort/impact pour prioriser les éléments selon deux axes.',
-    tips: [
-      'Glissez les éléments pour les positionner sur la matrice',
-      'Les positions sont sauvegardées automatiquement',
-      'Double-cliquez sur un élément pour l\'éditer',
-      'Les 4 quadrants : Quick wins, Stratégique, Remplissage, À éviter',
-    ],
-  },
   crossTable: {
     title: 'Tableau croisé',
     description: 'Tableau croisé dynamique montrant les éléments selon deux dimensions au choix.',
