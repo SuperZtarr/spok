@@ -16,6 +16,8 @@ import type { ItemType } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
+import { ViewHelpButton } from '../components/ViewHelpButton';
+import type { ViewMode } from '../stores/viewMode';
 
 export interface SpaceToolbarProps {
   // Filters
@@ -34,7 +36,7 @@ export interface SpaceToolbarProps {
   // Referentiels
   referentiels?: any;
   // View mode
-  viewMode: string;
+  viewMode: ViewMode;
   // Expand/Collapse
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -242,6 +244,8 @@ export function SpaceToolbar({
             return `${totalItemCount} éléments`;
           })()}
         </span>
+
+        <ViewHelpButton viewMode={viewMode} />
 
         {showExpandCollapse && (
           <>

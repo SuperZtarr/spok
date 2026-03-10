@@ -1,0 +1,243 @@
+import type { ViewMode } from '../stores/viewMode';
+
+export interface ViewDescription {
+  title: string;
+  description: string;
+  tips: string[];
+}
+
+export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
+  list: {
+    title: 'Liste',
+    description: 'Affichage tabulaire de tous les éléments avec tri et filtrage rapide.',
+    tips: [
+      'Cliquez sur un en-tête de colonne pour trier',
+      'Cliquez sur un élément pour l\'éditer',
+      'Glissez-déposez pour réorganiser les éléments',
+    ],
+  },
+  tree: {
+    title: 'Arborescence',
+    description: 'Vue hiérarchique montrant les relations parent-enfant entre les éléments.',
+    tips: [
+      'Cliquez sur les flèches pour déplier/replier les branches',
+      'Glissez-déposez un élément sur un autre pour le déplacer dans la hiérarchie',
+      'Cliquez sur un élément pour l\'éditer',
+    ],
+  },
+  kanban: {
+    title: 'Kanban',
+    description: 'Tableau de colonnes organisées par statut pour gérer le flux de travail.',
+    tips: [
+      'Glissez-déposez les cartes entre colonnes pour changer leur statut',
+      'Les colonnes correspondent aux statuts définis dans les référentiels',
+      'Cliquez sur une carte pour l\'éditer',
+    ],
+  },
+  text: {
+    title: 'Texte',
+    description: 'Vue document affichant le contenu textuel des éléments de manière continue.',
+    tips: [
+      'Naviguez dans le contenu comme un document',
+      'Cliquez sur un élément pour l\'éditer',
+    ],
+  },
+  planning: {
+    title: 'Planning',
+    description: 'Vue calendaire par semaines montrant les éléments planifiés avec leurs échéances.',
+    tips: [
+      'Les éléments sont positionnés selon leurs dates de début et de fin',
+      'Cliquez sur un élément pour l\'éditer',
+      'Utilisez les flèches pour naviguer entre les semaines',
+    ],
+  },
+  timeline: {
+    title: 'Gantt',
+    description: 'Diagramme de Gantt montrant les éléments sur une ligne de temps avec leurs dépendances.',
+    tips: [
+      'Redimensionnez les barres pour ajuster les dates',
+      'Glissez les barres horizontalement pour déplacer les dates',
+      'Cliquez sur le point central d\'une barre pour créer une relation de dépendance',
+      'Les flèches montrent les dépendances entre éléments',
+    ],
+  },
+  calendar: {
+    title: 'Calendrier',
+    description: 'Vue mensuelle affichant les éléments sur un calendrier classique.',
+    tips: [
+      'Les éléments apparaissent à leur date d\'échéance',
+      'Naviguez entre les mois avec les flèches',
+      'Cliquez sur un élément pour l\'éditer',
+    ],
+  },
+  sequence: {
+    title: 'Séquence',
+    description: 'Vue séquentielle montrant les éléments dans un ordre personnalisable.',
+    tips: [
+      'Glissez-déposez pour réorganiser la séquence',
+      'Cliquez sur un élément pour l\'éditer',
+    ],
+  },
+  types: {
+    title: 'Types',
+    description: 'Éléments regroupés par type (note, tâche, projet, etc.) dans des sections distinctes.',
+    tips: [
+      'Chaque section correspond à un type d\'élément',
+      'Cliquez sur un élément pour l\'éditer',
+      'Utilisez le filtre de type dans la toolbar pour isoler un type',
+    ],
+  },
+  mindmap: {
+    title: 'Carte mentale',
+    description: 'Représentation en arbre radial partant du centre, idéale pour le brainstorming.',
+    tips: [
+      'Zoomez avec la molette de la souris',
+      'Glissez le fond pour déplacer la vue',
+      'Cliquez sur un nœud pour l\'éditer',
+      'La hiérarchie parent-enfant détermine la structure',
+    ],
+  },
+  graph: {
+    title: 'Graphe',
+    description: 'Réseau interactif montrant les éléments et toutes leurs relations (hiérarchie + liens).',
+    tips: [
+      'Zoomez avec la molette de la souris',
+      'Glissez le fond pour déplacer la vue',
+      'Glissez un nœud pour le repositionner',
+      'Cliquez sur un nœud pour l\'éditer',
+      'Les couleurs représentent les types d\'éléments',
+    ],
+  },
+  sunburst: {
+    title: 'Sunburst',
+    description: 'Diagramme en cercles concentriques montrant la hiérarchie et les proportions.',
+    tips: [
+      'Chaque anneau représente un niveau de profondeur',
+      'La taille des segments reflète le nombre d\'enfants',
+      'Cliquez sur un segment pour l\'éditer',
+      'Survolez pour voir les détails',
+    ],
+  },
+  relations: {
+    title: 'Relations',
+    description: 'Vue focalisée sur les liens entre éléments, montrant le réseau de relations.',
+    tips: [
+      'Les lignes représentent les relations entre éléments',
+      'Zoomez et déplacez la vue pour explorer',
+      'Cliquez sur un nœud pour l\'éditer',
+    ],
+  },
+  schema: {
+    title: 'Schéma',
+    description: 'Vue libre type tableau blanc pour organiser spatialement les éléments.',
+    tips: [
+      'Glissez les éléments pour les positionner librement',
+      'Les positions sont sauvegardées automatiquement',
+      'Double-cliquez sur un élément pour l\'éditer',
+      'Zoomez avec la molette pour ajuster la vue',
+    ],
+  },
+  bubble: {
+    title: 'Bulles',
+    description: 'Visualisation en bulles dont la taille reflète le nombre d\'enfants ou de relations.',
+    tips: [
+      'La taille des bulles est proportionnelle au contenu',
+      'Les couleurs représentent les types',
+      'Cliquez sur une bulle pour l\'éditer',
+    ],
+  },
+  radialTree: {
+    title: 'Arbre radial',
+    description: 'Arbre hiérarchique disposé en cercle, compact et lisible pour les grandes structures.',
+    tips: [
+      'La racine est au centre, les feuilles sur les bords',
+      'Zoomez pour explorer les branches',
+      'Cliquez sur un nœud pour l\'éditer',
+    ],
+  },
+  treemap: {
+    title: 'Treemap',
+    description: 'Diagramme en rectangles imbriqués montrant la hiérarchie et les proportions relatives.',
+    tips: [
+      'La surface de chaque rectangle reflète le poids relatif',
+      'Les couleurs distinguent les types ou niveaux',
+      'Cliquez sur un rectangle pour l\'éditer',
+    ],
+  },
+  chord: {
+    title: 'Chord',
+    description: 'Diagramme circulaire montrant les relations croisées entre types ou espaces.',
+    tips: [
+      'Les arcs représentent les groupes (types ou espaces)',
+      'Les rubans montrent les relations entre groupes',
+      'Survolez un arc ou un ruban pour voir les détails',
+    ],
+  },
+  burndown: {
+    title: 'Burndown',
+    description: 'Graphique montrant la progression des tâches terminées dans le temps.',
+    tips: [
+      'La ligne descend au fur et à mesure que les tâches sont terminées',
+      'Comparez avec la ligne idéale pour évaluer le rythme',
+      'Sélectionnez la période à afficher',
+    ],
+  },
+  cfd: {
+    title: 'Flux cumulatif',
+    description: 'Diagramme de flux cumulatif (CFD) montrant l\'évolution des statuts dans le temps.',
+    tips: [
+      'Chaque bande colorée représente un statut',
+      'L\'épaisseur d\'une bande montre le nombre d\'éléments dans ce statut',
+      'Un rétrécissement indique un goulot d\'étranglement',
+    ],
+  },
+  orgchart: {
+    title: 'Organigramme',
+    description: 'Organigramme hiérarchique classique, de haut en bas.',
+    tips: [
+      'La structure reflète la hiérarchie parent-enfant',
+      'Cliquez sur un élément pour l\'éditer',
+      'Idéal pour visualiser l\'organisation d\'une équipe ou d\'un projet',
+    ],
+  },
+  matrix: {
+    title: 'Matrice',
+    description: 'Matrice effort/impact pour prioriser les éléments selon deux axes.',
+    tips: [
+      'Glissez les éléments pour les positionner sur la matrice',
+      'Les positions sont sauvegardées automatiquement',
+      'Double-cliquez sur un élément pour l\'éditer',
+      'Les 4 quadrants : Quick wins, Stratégique, Remplissage, À éviter',
+    ],
+  },
+  crossTable: {
+    title: 'Tableau croisé',
+    description: 'Tableau croisé dynamique montrant les éléments selon deux dimensions au choix.',
+    tips: [
+      'Sélectionnez les axes (lignes et colonnes) dans les menus',
+      'Les cellules montrent le nombre d\'éléments correspondants',
+      'Cliquez sur une cellule pour voir les éléments',
+    ],
+  },
+  ego: {
+    title: 'Réseau égocentrique',
+    description: 'Graphe centré sur un item montrant ses voisins directs et indirects par anneaux concentriques.',
+    tips: [
+      'Sélectionnez l\'item central dans le menu déroulant ou cliquez sur un nœud',
+      'Ajustez la profondeur (1 à 3 niveaux) avec le slider',
+      'Cliquez sur un nœud pour recentrer le réseau sur cet item',
+      'Double-cliquez pour éditer l\'item',
+      'Les relations et la hiérarchie parent-enfant sont toutes deux affichées',
+    ],
+  },
+  heatmap: {
+    title: 'Heatmap',
+    description: 'Carte de chaleur type GitHub montrant l\'activité quotidienne sur 6 mois ou 1 an.',
+    tips: [
+      'Chaque case représente un jour, la couleur indique l\'intensité',
+      'Basculez entre créations et modifications',
+      'Survolez une case pour voir les détails du jour',
+      'Cliquez sur une case avec un seul élément pour l\'éditer',
+    ],
+  },
+};
