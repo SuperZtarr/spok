@@ -78,12 +78,13 @@ export function computeHierarchyChains(
     if (rel.type === 'depends') {
       from = rel.toItemId;
       to = rel.fromItemId;
-    } else if (rel.type === 'blocks') {
+    } else {
+      // blocks, relates, duplicates, implements, tests — all go from → to
       from = rel.fromItemId;
       to = rel.toItemId;
-    } else return;
+    }
 
-    allRelEdges.push({ from, to, type: rel.type as 'depends' | 'blocks' });
+    allRelEdges.push({ from, to, type: rel.type as ConnectorEdge['type'] });
 
     const key = `${from}→${to}`;
     if (!dagEdgeSet.has(key)) {
