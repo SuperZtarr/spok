@@ -62,6 +62,7 @@ import { ChordView } from '../components/views/ChordView';
 import { MatrixView } from '../components/views/MatrixView';
 import { CrossTableView } from '../components/views/CrossTableView';
 import { HeatmapView } from '../components/views/HeatmapView';
+import { EgoNetworkView } from '../components/views/EgoNetworkView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 
@@ -192,8 +193,8 @@ export function SpacePage() {
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap';
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
+  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -526,8 +527,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -649,7 +650,7 @@ export function SpacePage() {
         )}
 
         {/* Items / Views */}
-        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
           {viewMode === 'orgchart' ? (
             <OrgChartView
               spaceId={spaceId!}
@@ -958,6 +959,16 @@ export function SpacePage() {
           ) : viewMode === 'heatmap' ? (
             <HeatmapView
               items={filterBySearch(allItemsData?.data)}
+              onEdit={setEditingItemId}
+              referentiels={referentiels}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
+            />
+          ) : viewMode === 'ego' ? (
+            <EgoNetworkView
+              items={filterBySearch(allItemsData?.data)}
+              relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               onEdit={setEditingItemId}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
