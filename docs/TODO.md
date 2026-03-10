@@ -24,11 +24,11 @@
 ### Nouvelles visualisations
 - [x] Matrice effort/impact — items sur 2 axes (priorité vs complexité), drag pour repositionner — 640a267
 - [x] Treemap — rectangles imbriqués proportionnels au nombre d'enfants ou contributions — 09a1a35
-- [ ] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions) — **basse priorité**
+- [x] Heatmap temporelle — grille mois/semaines colorée par activité (créations, contributions) — ed8be2d
 - [x] Burndown/Burnup — courbe d'avancement des tâches dans le temps (done vs total) — aa1aa4c
 - [x] Diagramme de flux cumulatif (CFD) — empilage des statuts dans le temps — 6091981
 - [x] Chord diagram — relations circulaires entre espaces ou types d'items — 68bf9a8
-- [ ] Réseau égocentrique — centré sur un item, N niveaux de voisins — **basse priorité**
+- [x] Réseau égocentrique — centré sur un item, N niveaux de voisins — 0d74d3a
 - [x] Organigramme — arborescence verticale des membres par communauté/espace/rôle — d570ef8
 - [x] Vue matricielle — tableau croisé (assigné × statut, type × espace) — 5e73a0f
 
@@ -51,6 +51,17 @@
 - [ ] Auth : comment authentifier les requêtes MCP (token utilisateur, clé API dédiée) ?
 
 ## Historique
+
+### 2026-03-10
+- ViewHelpButton : bouton ? aide contextuelle pour chaque vue — 1983fc0
+- EgoNetworkView : réseau égocentrique centré sur un item, profondeur 1-3 — 0d74d3a
+- HeatmapView : carte de chaleur style GitHub, créations/modifications — ed8be2d
+- PWA installabilité : manifest, service worker, icônes — d72914c
+- DeadlinesView : affiche tous les types d'items, pas seulement TASK — f5ff338
+- Types → catégorie basique, Kanban → planification — 243dc7f
+- MatrixView : distribution en grille au lieu de cluster superposé — 544ec89
+- HeatmapView : carte de chaleur style GitHub, créations/modifications — ed8be2d
+- Gantt : flèches de relations connectées au centre des barres — 0e0840f
 
 ### 2026-03-09
 - MindMap 3 lignes de titre — 1e9ac95
