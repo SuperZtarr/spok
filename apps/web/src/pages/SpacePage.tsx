@@ -521,6 +521,10 @@ export function SpacePage() {
     }
   }, [viewMode]);
 
+  const handleFitAll = useCallback(() => {
+    mindmapRef.current?.fitAll();
+  }, []);
+
   const handleNewItem = useCallback(() => {
     handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
     setShowNewItem(true);
@@ -547,6 +551,7 @@ export function SpacePage() {
           isExpanded={viewMode === 'mindmap' ? mindmapExpanded : hasExpandedItems}
           onToggleExpand={handleToggleExpand}
           onResetLayout={handleResetLayout}
+          onFitAll={viewMode === 'mindmap' ? handleFitAll : undefined}
           canEdit={canEdit}
           isSelectionMode={isSelectionMode}
           onToggleSelectionMode={() => setSelectionMode(!isSelectionMode)}

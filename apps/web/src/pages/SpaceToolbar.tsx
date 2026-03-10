@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   ChevronsDownUp,
   RotateCcw,
+  Maximize2,
   Settings,
   History,
   ListChecks,
@@ -42,6 +43,8 @@ export interface SpaceToolbarProps {
   onToggleExpand: () => void;
   // MindMap reset
   onResetLayout: () => void;
+  // Fit all
+  onFitAll?: () => void;
   // Actions
   canEdit: boolean;
   isSelectionMode: boolean;
@@ -68,6 +71,7 @@ export function SpaceToolbar({
   isExpanded,
   onToggleExpand,
   onResetLayout,
+  onFitAll,
   canEdit,
   isSelectionMode,
   onToggleSelectionMode,
@@ -285,6 +289,18 @@ export function SpaceToolbar({
               <RotateCcw className="w-4 h-4 mr-1" />
               Réorganiser
             </Button>
+            {onFitAll && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onFitAll}
+                title="Tout voir"
+                className="flex-shrink-0"
+              >
+                <Maximize2 className="w-4 h-4 mr-1" />
+                Tout voir
+              </Button>
+            )}
           </>
         )}
 

@@ -38,6 +38,7 @@ export interface MindMapViewHandle {
   collapseAll: () => void;
   resetLayout: () => void;
   hasCollapsedNodes: boolean;
+  fitAll: () => void;
 }
 
 interface MindMapViewProps {
@@ -551,7 +552,7 @@ function MindMapViewInner({
         const treeNode = findTreeNode(fullTree, node.id);
         if (treeNode && treeNode.children.length > 0) {
           setFocusedProjectId(node.id);
-          setTimeout(() => fitView({ padding: 0.3 }), 100);
+          setTimeout(() => fitView({ padding: 0.1 }), 100);
         }
       }
     },
@@ -560,7 +561,7 @@ function MindMapViewInner({
 
   const exitProjectFocus = useCallback(() => {
     setFocusedProjectId(null);
-    setTimeout(() => fitView({ padding: 0.3 }), 100);
+    setTimeout(() => fitView({ padding: 0.1 }), 100);
   }, [fitView]);
 
   // Handle node drag start
@@ -781,7 +782,7 @@ function MindMapViewInner({
     const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     setNodes(allNodes);
     setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], resetEdgePosMap));
-    setTimeout(() => fitView({ padding: 0.3 }), 50);
+    setTimeout(() => fitView({ padding: 0.1 }), 50);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, savePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, fullTree]);
 
   // Get all node IDs that have children
@@ -798,20 +799,24 @@ function MindMapViewInner({
 
   const expandAll = useCallback(() => {
     setCollapsedIds(new Set());
-    setTimeout(() => fitView({ padding: 0.3 }), 100);
+    setTimeout(() => fitView({ padding: 0.1 }), 100);
   }, [fitView]);
 
   const collapseAll = useCallback(() => {
     const parentIds = getParentIds(tree);
     setCollapsedIds(parentIds);
-    setTimeout(() => fitView({ padding: 0.3 }), 100);
+    setTimeout(() => fitView({ padding: 0.1 }), 100);
   }, [tree, getParentIds, fitView]);
 
   const hasCollapsedNodes = collapsedIds.size > 0;
 
+  const fitAll = useCallback(() => {
+    fitView({ padding: 0.1 });
+  }, [fitView]);
+
   useImperativeHandle(innerRef, () => ({
-    expandAll, collapseAll, resetLayout, hasCollapsedNodes,
-  }), [expandAll, collapseAll, resetLayout, hasCollapsedNodes]);
+    expandAll, collapseAll, resetLayout, hasCollapsedNodes, fitAll,
+  }), [expandAll, collapseAll, resetLayout, hasCollapsedNodes, fitAll]);
 
   return (
     <>
@@ -829,8 +834,8 @@ function MindMapViewInner({
         onConnect={canEdit !== false ? onConnect : undefined}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.1}
+        fitViewOptions={{ padding: 0.1 }}
+        minZoom={0.01}
         maxZoom={2}
         connectOnClick={false}
         defaultEdgeOptions={{
