@@ -324,13 +324,16 @@ export function Layout() {
   const { data: spaces } = useQuery({
     queryKey: ['spaces', currentCommunity?.id],
     queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
+    enabled: !!user,
+    placeholderData: (prev: any) => prev,
   });
 
   // Also fetch personal spaces (always visible, only for authenticated users)
   const { data: personalSpaces } = useQuery({
     queryKey: ['spaces', 'personal'],
     queryFn: () => spacesApi.list('none'),
-    enabled: !!currentCommunity && !!user, // Only fetch when community is selected AND authenticated
+    enabled: !!user,
+    placeholderData: (prev: any) => prev,
   });
 
   // Separate personal and community/group spaces, then build trees
