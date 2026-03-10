@@ -88,7 +88,10 @@
       "Bash(cd C:/_dev/spok && git fetch origin master 2>&1)",
       "Bash(pnpm dev:logs:api:*)",
       "Bash(nslookup:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npx sharp-cli:*)",
+      "WebSearch",
+      "Bash(cd C:/_dev/spok && rm apps/web/src/components/views/SequenceView.tsx apps/web/src/components/views/sequence-utils.ts apps/web/src/components/views/sequence-chains.ts apps/web/src/components/views/SequenceSVG.tsx)"
     ]
   }
 }

@@ -13,6 +13,9 @@
 - [x] Templates d'espace (structure pré-configurée : statuts, types, items) — déjà implémenté
 - [x] Tags partagés au niveau communauté — b5d10de
 
+### Vues
+- [ ] Vue Texte : investiguer pourquoi les données des sous-espaces sélectionnés ne s'affichent pas (la query passe bien `additionalSpaceIds`, vérifier côté composant TextView)
+
 ### Infra & emails
 - [ ] Configurer un domaine custom Resend (ex: `noreply@spok.app`) avec SPF/DKIM/DMARC pour éviter les spams
 

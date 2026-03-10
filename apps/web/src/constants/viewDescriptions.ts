@@ -70,14 +70,6 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Cliquez sur un élément pour l\'éditer',
     ],
   },
-  sequence: {
-    title: 'Séquence',
-    description: 'Vue séquentielle montrant les éléments dans un ordre personnalisable.',
-    tips: [
-      'Glissez-déposez pour réorganiser la séquence',
-      'Cliquez sur un élément pour l\'éditer',
-    ],
-  },
   types: {
     title: 'Types',
     description: 'Éléments regroupés par type (note, tâche, projet, etc.) dans des sections distinctes.',

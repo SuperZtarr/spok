@@ -156,7 +156,7 @@ export function SpaceExportButton({ items, spaceName }: SpaceExportButtonProps) 
         Exporter
       </Button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-popover border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
+        <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
           <button
             className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
             onClick={() => { exportCSV(items, spaceName); setOpen(false); }}

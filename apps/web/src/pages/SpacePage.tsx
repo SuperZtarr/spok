@@ -32,7 +32,6 @@ import { useViewModeStore } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
 import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
-import { SequenceView } from '../components/views/SequenceView';
 import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
 import { TimelineView } from '../components/views/TimelineView';
@@ -139,7 +138,7 @@ export function SpacePage() {
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
-  const isHighlightMode = isTreeView || viewMode === 'sequence' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
+  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -490,28 +489,6 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
-            />
-          ) : viewMode === 'sequence' ? (
-            <SequenceView
-              items={filterBySearch(allItemsData?.data)}
-              relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
-              currentSpaceId={spaceId}
-              portalGroups={portalGroups}
-              onEdit={setEditingItemId}
-              onDelete={actions.handleDelete}
-              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
-              onAddChild={handleAddChild}
-              onMoveToSpace={(id) => setMoveItemId(id)}
-              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={actions.handleConvertToSpace}
-              onCreateRelation={actions.handleCreateRelation}
-              onDeleteRelation={actions.handleDeleteRelation}
-              referentiels={referentiels}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              highlightColor={highlightColor}
-              searchMatchIds={searchMatchIds}
-              canEdit={canEdit}
             />
           ) : viewMode === 'kanban' ? (
             <KanbanView

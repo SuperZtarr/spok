@@ -48,7 +48,7 @@ describe('useViewModeStore', () => {
   })
 
   it('should accept all valid view modes', () => {
-    const modes: ViewMode[] = ['list', 'tree', 'sequence', 'mindmap', 'kanban', 'types', 'timeline', 'planning', 'calendar', 'graph', 'text', 'sunburst']
+    const modes: ViewMode[] = ['list', 'tree', 'mindmap', 'kanban', 'types', 'timeline', 'planning', 'calendar', 'graph', 'text', 'sunburst']
     for (const mode of modes) {
       useViewModeStore.getState().setMode(mode)
       expect(useViewModeStore.getState().mode).toBe(mode)
