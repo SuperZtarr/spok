@@ -20,6 +20,7 @@ import {
   ExternalLink,
   FolderInput,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType, ItemWithRelations } from '@spok/shared';
@@ -657,7 +658,10 @@ export function SpacePage() {
               spaceName={space?.name || 'Espace'}
             />
           ) : itemsLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+            <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Chargement des éléments…
+            </div>
           ) : viewMode === 'list' ? (
             <ListView
               items={filterBySearch(itemsData?.data)}
