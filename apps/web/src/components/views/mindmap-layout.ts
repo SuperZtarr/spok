@@ -83,7 +83,7 @@ export function calculateLayout(
   totalItemCount: number,
   callbacks: MindMapCallbacks,
   options: MindMapLayoutOptions,
-): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[] } {
+): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number } {
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onTogglePin } = callbacks;
   const { hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
 
@@ -164,6 +164,7 @@ export function calculateLayout(
   // Layout root children with proportional angular allocation
   const rootChildren = rootDatum.children || [];
   const rootCount = rootChildren.length;
+  let rootArcEnd = -Math.PI / 2; // default: no branches
   if (rootCount > 0) {
     const rootVisibleCounts = rootChildren.map(c => countVisible(c));
     const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
@@ -200,6 +201,7 @@ export function calculateLayout(
       layoutFan(child, { x: cx, y: cy }, angle, fanArc);
       cumulativeAngle += childArc;
     }
+    rootArcEnd = cumulativeAngle;
   }
 
   // Space node at center
@@ -330,7 +332,7 @@ export function calculateLayout(
     });
   });
 
-  return { nodes, edges, relationEdges };
+  return { nodes, edges, relationEdges, rootArcEnd };
 }
 
 // ===================================================================
@@ -351,13 +353,14 @@ export interface PortalBuildContext {
   options: MindMapLayoutOptions;
   removePortal: (id: string) => void;
   savedPositions: Record<string, { x: number; y: number }>;
+  rootArcEnd?: number;
 }
 
 export function buildPortalNodesAndEdges(
   ctx: PortalBuildContext,
   relationEdges: Edge[],
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
-  const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions } = ctx;
+  const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions, rootArcEnd } = ctx;
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onTogglePin } = callbacks;
   const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet } = options;
 
@@ -410,17 +413,24 @@ export function buildPortalNodesAndEdges(
     }
   });
 
-  // 3. Position child-space portal nodes
+  // 3. Position child-space portal nodes — place in the angular gap after main branches
   const totalPortalSpaces = portalSpacesList.length;
+  const rootStart = -Math.PI / 2;
+  const arcEnd = rootArcEnd ?? rootStart; // fallback if not provided
+  // Gap = remaining angle in the circle after main branches
+  const gapAngle = (rootStart + 2 * Math.PI) - arcEnd;
+  // Portal arc: use up to 80% of the gap, leave some padding
+  const portalArcSpread = Math.min(gapAngle * 0.8, totalPortalSpaces * (Math.PI / 4));
+  const portalPadding = (gapAngle - portalArcSpread) / 2;
+  const portalArcStart = arcEnd + portalPadding;
+
   portalSpacesList.forEach((portalSpaceEntry, index) => {
     const childPortalId = `child-space-${portalSpaceEntry.id}`;
     const portalItemCount = portalItemsBySpace.get(portalSpaceEntry.id)?.length || 0;
     const childSpaceRadius = BASE_PORTAL_DIST + Math.sqrt(portalItemCount) * 100;
-    const angleSpread = Math.min(Math.PI * 0.8, totalPortalSpaces * (Math.PI / 4));
-    const startAngle = Math.PI / 2 - angleSpread / 2;
     const angle = totalPortalSpaces === 1
-      ? Math.PI / 2
-      : startAngle + (index * angleSpread) / Math.max(1, totalPortalSpaces - 1);
+      ? portalArcStart + portalArcSpread / 2
+      : portalArcStart + (index * portalArcSpread) / Math.max(1, totalPortalSpaces - 1);
 
     const cx = spacePos.x + childSpaceRadius * Math.cos(angle);
     const cy = spacePos.y + childSpaceRadius * Math.sin(angle);

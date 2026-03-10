@@ -14,8 +14,6 @@ import {
 } from '@dnd-kit/core';
 import {
   FileText,
-  ArrowDownAZ,
-  GitBranch,
   FolderKanban,
   ExternalLink,
   FolderInput,
@@ -24,14 +22,11 @@ import {
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType, ItemWithRelations } from '@spok/shared';
-import { ITEM_TYPES } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
@@ -67,7 +62,7 @@ import { EgoNetworkView } from '../components/views/EgoNetworkView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 
-import { TYPE_ICONS, TYPE_LABELS, STORAGE_KEYS, getTypeColor } from '../constants/ui';
+import { TYPE_ICONS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
 
 // Extracted components and hooks
@@ -81,57 +76,7 @@ export function SpacePage() {
   const { mode: viewMode } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
 
-  // --- New item form state ---
-  const [showNewItem, setShowNewItem] = useState(false);
-  const [newItemTitle, setNewItemTitle] = useState('');
-  const [newItemType, setNewItemType] = useState<ItemType>('NOTE');
-  const [newItemUrl, setNewItemUrl] = useState('');
-  const [newItemParentId, setNewItemParentId] = useState<string>('');
-  const [newItemDueDate, setNewItemDueDate] = useState('');
-  const [newItemStartDate, setNewItemStartDate] = useState('');
-  const [newItemEndDate, setNewItemEndDate] = useState('');
 
-  const formatDateForInput = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  const getDefaultProjectDates = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return { startDate: formatDateForInput(today), endDate: formatDateForInput(tomorrow) };
-  };
-
-  const getDefaultMeetingDates = () => {
-    const now = new Date();
-    const startDate = new Date(now);
-    startDate.setHours(now.getHours() + 1, 0, 0, 0);
-    const endDate = new Date(startDate);
-    endDate.setHours(startDate.getHours() + 1);
-    return { startDate: formatDateForInput(startDate), endDate: formatDateForInput(endDate) };
-  };
-
-  const handleItemTypeChange = (type: ItemType) => {
-    setNewItemType(type);
-    if (type === 'PROJECT' || type === 'PERIOD') {
-      const { startDate, endDate } = getDefaultProjectDates();
-      setNewItemStartDate(startDate);
-      setNewItemEndDate(endDate);
-    } else if (type === 'MEETING') {
-      const { startDate, endDate } = getDefaultMeetingDates();
-      setNewItemStartDate(startDate);
-      setNewItemEndDate(endDate);
-    } else {
-      setNewItemStartDate('');
-      setNewItemEndDate('');
-    }
-  };
 
   // --- UI state ---
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -299,19 +244,12 @@ export function SpacePage() {
     communitySpaces: communitySpaces || undefined,
   });
 
-  // Create item mutation (kept here because onSuccess clears form state)
+  // Create item mutation
   const createItemMutation = useMutation({
     mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string; startDate?: string; endDate?: string }) =>
       itemsApi.create(spaceId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      setNewItemTitle('');
-      setNewItemUrl('');
-      setNewItemParentId('');
-      setNewItemDueDate('');
-      setNewItemStartDate('');
-      setNewItemEndDate('');
-      setShowNewItem(false);
     },
   });
 
@@ -418,61 +356,6 @@ export function SpacePage() {
 
   const activeItem = activeId ? allItems.find((item: Item) => item.id === activeId) : null;
 
-  // --- Form handlers ---
-  const handleCreateItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newItemTitle.trim()) {
-      createItemMutation.mutate({
-        type: newItemType,
-        title: newItemTitle,
-        url: newItemUrl || undefined,
-        parentId: newItemParentId || undefined,
-        status: 'todo',
-        dueDate: newItemDueDate ? new Date(newItemDueDate).toISOString() : undefined,
-        startDate: newItemStartDate ? new Date(newItemStartDate).toISOString() : undefined,
-        endDate: newItemEndDate ? new Date(newItemEndDate).toISOString() : undefined,
-      });
-    }
-  };
-
-  type ParentSortMode = 'tree' | 'alpha';
-  const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE);
-    return (saved as ParentSortMode) || 'tree';
-  });
-
-  const toggleParentSortMode = () => {
-    const newMode = parentSortMode === 'tree' ? 'alpha' : 'tree';
-    setParentSortMode(newMode);
-    localStorage.setItem(STORAGE_KEYS.PARENT_SORT_MODE, newMode);
-  };
-
-  const parentOptions = useMemo(() => {
-    if (parentSortMode === 'alpha') {
-      const sorted = [...allItems].sort((a: Item, b: Item) =>
-        a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' })
-      );
-      return [
-        { value: '', label: 'Aucun parent (racine)' },
-        ...sorted.map((item: Item) => ({ value: item.id, label: item.title })),
-      ];
-    } else {
-      const buildTree = (parentId: string | null, depth: number): { value: string; label: string }[] => {
-        const children = allItems
-          .filter((item: Item) => (item.parentId || null) === parentId)
-          .sort((a: Item, b: Item) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
-        const result: { value: string; label: string }[] = [];
-        for (const child of children) {
-          const indent = depth > 0 ? '—'.repeat(depth) + ' ' : '';
-          result.push({ value: child.id, label: `${indent}${child.title}` });
-          result.push(...buildTree(child.id, depth + 1));
-        }
-        return result;
-      };
-      return [{ value: '', label: 'Aucun parent (racine)' }, ...buildTree(null, 0)];
-    }
-  }, [allItems, parentSortMode]);
-
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) => {
       const next = new Set(prev);
@@ -482,10 +365,13 @@ export function SpacePage() {
   };
 
   const handleAddChild = (parentId: string) => {
-    setNewItemParentId(parentId);
-    handleItemTypeChange('NOTE');
-    setShowNewItem(true);
-    setExpandedItems((prev) => new Set([...prev, parentId]));
+    createItemMutation.mutate(
+      { type: 'NOTE', title: 'Nouvel élément', status: 'todo', parentId },
+      { onSuccess: (created: any) => {
+        setEditingItemId(created.id);
+        setExpandedItems((prev) => new Set([...prev, parentId]));
+      }},
+    );
   };
 
   const expandAll = () => {
@@ -526,9 +412,12 @@ export function SpacePage() {
   }, []);
 
   const handleNewItem = useCallback(() => {
-    handleItemTypeChange(filter === 'ALL' ? 'NOTE' : filter);
-    setShowNewItem(true);
-  }, [filter]);
+    const type = filter === 'ALL' ? 'NOTE' : filter;
+    createItemMutation.mutate(
+      { type, title: 'Nouvel élément', status: 'todo' },
+      { onSuccess: (created: any) => { setEditingItemId(created.id); } },
+    );
+  }, [filter, createItemMutation]);
 
   // --- Render ---
   return (
@@ -559,101 +448,6 @@ export function SpacePage() {
           spaceId={spaceId}
           spaceRole={space?.role}
         />
-
-        {/* New item form */}
-        {showNewItem && (
-          <div className="bg-card border rounded-lg p-4 mb-6">
-            <form onSubmit={handleCreateItem} className="space-y-4">
-              <div className="flex gap-2 flex-wrap">
-                {ITEM_TYPES.map((t) => {
-                  const Icon = TYPE_ICONS[t];
-                  const isActive = newItemType === t;
-                  const typeColor = getTypeColor(t, referentiels?.typeLabels);
-                  return (
-                    <Button
-                      key={t}
-                      type="button"
-                      variant={isActive ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleItemTypeChange(t)}
-                      className={isActive ? `border-2 ${typeColor.color}` : ''}
-                    >
-                      <Icon className="w-4 h-4 mr-1" />
-                      {TYPE_LABELS[t]}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              <Input
-                value={newItemTitle}
-                onChange={(e) => setNewItemTitle(e.target.value)}
-                placeholder={`Titre de la ${TYPE_LABELS[newItemType].toLowerCase()}`}
-                autoFocus
-              />
-
-              {(newItemType === 'LINK' || newItemType === 'DOCUMENT' || newItemType === 'IMAGE') && (
-                <Input
-                  type="url"
-                  value={newItemUrl}
-                  onChange={(e) => setNewItemUrl(e.target.value)}
-                  placeholder="URL (https://...)"
-                />
-              )}
-
-              {(newItemType === 'MEETING' || newItemType === 'PERIOD' || newItemType === 'PROJECT' || newItemType === 'TASK') && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date de début</label>
-                    <Input type="datetime-local" value={newItemStartDate} onChange={(e) => setNewItemStartDate(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date de fin</label>
-                    <Input type="datetime-local" value={newItemEndDate} onChange={(e) => setNewItemEndDate(e.target.value)} />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Parent (optionnel)</label>
-                  <button
-                    type="button"
-                    onClick={toggleParentSortMode}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
-                  >
-                    {parentSortMode === 'tree' ? (
-                      <><GitBranch className="w-3 h-3" /><span>Arborescence</span></>
-                    ) : (
-                      <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>
-                    )}
-                  </button>
-                </div>
-                <Select
-                  value={newItemParentId}
-                  onChange={(e) => setNewItemParentId(e.target.value)}
-                  options={parentOptions}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" disabled={createItemMutation.isPending}>Créer</Button>
-                <Button type="button" variant="outline" onClick={() => {
-                  setShowNewItem(false);
-                  setNewItemTitle('');
-                  setNewItemUrl('');
-                  setNewItemParentId('');
-                  setNewItemDueDate('');
-                  setNewItemStartDate('');
-                  setNewItemEndDate('');
-                }}>
-                  Annuler
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {/* Items / Views */}
         <div className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'orgchart' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'matrix' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
