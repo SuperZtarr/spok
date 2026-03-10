@@ -191,15 +191,6 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Un rétrécissement indique un goulot d\'étranglement',
     ],
   },
-  orgchart: {
-    title: 'Organigramme',
-    description: 'Organigramme hiérarchique classique, de haut en bas.',
-    tips: [
-      'La structure reflète la hiérarchie parent-enfant',
-      'Cliquez sur un élément pour l\'éditer',
-      'Idéal pour visualiser l\'organisation d\'une équipe ou d\'un projet',
-    ],
-  },
   matrix: {
     title: 'Matrice',
     description: 'Matrice effort/impact pour prioriser les éléments selon deux axes.',

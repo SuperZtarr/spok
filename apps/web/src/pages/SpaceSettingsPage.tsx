@@ -15,6 +15,7 @@ import { Select } from '../components/ui/Select';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
+import { OrgChartView } from '../components/views/OrgChartView';
 import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
 
 export function SpaceSettingsPage() {
@@ -454,13 +455,19 @@ export function SpaceSettingsPage() {
 
         {/* Members */}
         {space?.type === 'GROUP' && user && (
-          <div className="bg-card border rounded-lg p-6">
+          <div className="bg-card border rounded-lg p-6 space-y-6">
             <SpaceMembersManager
               spaceId={spaceId!}
               currentUserRole={space.role || 'VIEWER'}
               currentUserId={user.id}
               spaceType={space.type}
             />
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-medium mb-3">Organigramme</h3>
+              <div className="h-[400px] border rounded-lg overflow-hidden">
+                <OrgChartView spaceId={spaceId!} spaceName={space.name} />
+              </div>
+            </div>
           </div>
         )}
 
