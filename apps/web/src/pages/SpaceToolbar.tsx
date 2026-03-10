@@ -18,7 +18,9 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import { ViewHelpButton } from '../components/ViewHelpButton';
+import { SpaceExportButton } from '../components/SpaceExportButton';
 import type { ViewMode } from '../stores/viewMode';
+import type { Item } from '@spok/shared';
 
 export interface SpaceToolbarProps {
   // Filters
@@ -53,6 +55,9 @@ export interface SpaceToolbarProps {
   // Space
   spaceId?: string;
   spaceRole?: string;
+  // Export
+  items?: Item[];
+  spaceName?: string;
 }
 
 export function SpaceToolbar({
@@ -78,6 +83,8 @@ export function SpaceToolbar({
   onNewItem,
   spaceId,
   spaceRole,
+  items: exportItems,
+  spaceName,
 }: SpaceToolbarProps) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -305,6 +312,9 @@ export function SpaceToolbar({
         )}
 
         <div className="ml-auto flex gap-1 flex-shrink-0">
+          {exportItems && spaceName && (
+            <SpaceExportButton items={exportItems} spaceName={spaceName} />
+          )}
           {canEdit && (
             <Link to={`/spaces/${spaceId}/history`}>
               <Button variant="ghost" size="sm" title="Historique des modifications">

@@ -446,6 +446,8 @@ export function SpacePage() {
           onNewItem={handleNewItem}
           spaceId={spaceId}
           spaceRole={space?.role}
+          items={allItems}
+          spaceName={space?.name}
         />
 
         {/* Items / Views */}
