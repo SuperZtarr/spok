@@ -44,6 +44,7 @@ import type {
   NotificationPreferences,
   Invitation,
 } from '@spok/shared';
+import { useAuthStore } from '../stores/auth';
 
 // API URL is injected at build time via VITE_API_URL environment variable
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -109,7 +110,7 @@ async function tryRefreshToken(): Promise<boolean> {
     const newAccessToken = data.tokens.accessToken;
     const newRefreshToken = data.tokens.refreshToken;
 
-    // Update localStorage
+    // Update localStorage + Zustand store in memory
     localStorage.setItem('accessToken', newAccessToken);
     const newState = {
       ...state,
@@ -117,6 +118,7 @@ async function tryRefreshToken(): Promise<boolean> {
       refreshToken: newRefreshToken,
     };
     localStorage.setItem('auth-storage', JSON.stringify({ state: newState }));
+    useAuthStore.getState().updateTokens(newAccessToken, newRefreshToken);
 
     return true;
   } catch {

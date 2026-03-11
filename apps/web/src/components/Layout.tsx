@@ -326,6 +326,7 @@ export function Layout() {
     queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
     enabled: !!user,
     placeholderData: (prev: any) => prev,
+    refetchOnWindowFocus: 'always',
   });
 
   // Also fetch personal spaces (always visible, only for authenticated users)
@@ -334,6 +335,7 @@ export function Layout() {
     queryFn: () => spacesApi.list('none'),
     enabled: !!user,
     placeholderData: (prev: any) => prev,
+    refetchOnWindowFocus: 'always',
   });
 
   // Separate personal and community/group spaces, then build trees
