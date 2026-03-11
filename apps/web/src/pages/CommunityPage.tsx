@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye, ChevronRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -15,11 +15,83 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   VIEWER: { label: 'Lecteur', icon: Eye, color: 'text-muted-foreground' },
 };
 
+function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMove: (spaceId: string, newParentId: string | null) => void }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/spok-space-id', node.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('application/spok-space-id')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = () => setIsDragOver(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const draggedId = e.dataTransfer.getData('application/spok-space-id');
+    if (draggedId && draggedId !== node.id) {
+      onMove(draggedId, node.id);
+    }
+  };
+
+  return (
+    <>
+      <Link
+        to={`/spaces/${node.id}`}
+        draggable
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${isDragOver ? 'border-primary bg-primary/5 ring-2 ring-primary' : 'border-border hover:bg-accent/50'}`}
+        style={{ marginLeft: `${level * 24}px` }}
+      >
+        {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
+        {node.avatarUrl ? (
+          <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
+        ) : (
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FolderOpen className="w-4 h-4 text-primary" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{node.name}</p>
+          <p className="text-xs text-muted-foreground">{node.itemCount || 0} élément{(node.itemCount || 0) > 1 ? 's' : ''}</p>
+        </div>
+      </Link>
+      {node.children?.map((child: any) => (
+        <SpaceTreeNode key={child.id} node={child} level={level + 1} onMove={onMove} />
+      ))}
+    </>
+  );
+}
+
 export function CommunityPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore(s => s.user);
   const [showEmailModal, setShowEmailModal] = useState(false);
+
+  const moveSpaceMutation = useMutation({
+    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string | null }) =>
+      spacesApi.update(spaceId, { parentId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces', communityId] });
+    },
+  });
+
+  const handleMoveSpace = (spaceId: string, newParentId: string | null) => {
+    moveSpaceMutation.mutate({ spaceId, parentId: newParentId });
+  };
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
@@ -52,6 +124,23 @@ export function CommunityPage() {
     name: m.name,
     email: m.email,
   }));
+
+  // Build space tree from flat list
+  const spaceTree = useMemo(() => {
+    if (!spaces) return [];
+    type SpaceNode = (typeof spaces)[number] & { children: SpaceNode[] };
+    const map = new Map<string, SpaceNode>();
+    const roots: SpaceNode[] = [];
+    spaces.forEach(s => map.set(s.id, { ...s, children: [] }));
+    spaces.forEach(s => {
+      if (s.parentId && map.has(s.parentId)) {
+        map.get(s.parentId)!.children.push(map.get(s.id)!);
+      } else {
+        roots.push(map.get(s.id)!);
+      }
+    });
+    return roots;
+  }, [spaces]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -108,26 +197,10 @@ export function CommunityPage() {
             <FolderOpen className="w-4 h-4" />
             Espaces ({spaces?.length || 0})
           </h2>
-          {spaces && spaces.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {spaces.map(space => (
-                <Link
-                  key={space.id}
-                  to={`/spaces/${space.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-                >
-                  {space.avatarUrl ? (
-                    <img src={space.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FolderOpen className="w-4 h-4 text-primary" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{space.name}</p>
-                    <p className="text-xs text-muted-foreground">{space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}</p>
-                  </div>
-                </Link>
+          {spaceTree.length > 0 ? (
+            <div className="space-y-1">
+              {spaceTree.map(node => (
+                <SpaceTreeNode key={node.id} node={node} level={0} onMove={handleMoveSpace} />
               ))}
             </div>
           ) : (
