@@ -55,6 +55,9 @@
 
 ## Historique
 
+### 2026-03-11
+- Fix sidebar : espaces disparaissent au retour sur la fenêtre — ac04cf7
+
 ### 2026-03-10
 - ViewHelpButton : bouton ? aide contextuelle pour chaque vue — 1983fc0
 - EgoNetworkView : réseau égocentrique centré sur un item, profondeur 1-3 — 0d74d3a

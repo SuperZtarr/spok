@@ -693,3 +693,14 @@ Après chaque commit :
 **État :** TERMINÉ
 
 ---
+
+#### [2026-03-11] - Fix sidebar refresh au retour sur la fenêtre
+
+**Demande :** La sidebar perd les espaces personnels et communautaires quand on revient sur la page/fenêtre
+**Actions réalisées :**
+- Layout.tsx : `refetchOnWindowFocus: 'always'` sur les 2 queries d'espaces
+- api.ts : sync Zustand store après token refresh (pas juste localStorage)
+**État :** TERMINÉ
+**Commit :** ac04cf7
+
+---

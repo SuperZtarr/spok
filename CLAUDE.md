@@ -8,22 +8,17 @@ SPOK is a modular multi-user application for structuring, linking, evaluating, a
 
 ## Commands
 
-### Development (Docker - mode principal)
+### Development
 ```bash
-pnpm dev:start            # Tout-en-un : lance PostgreSQL + API + Web en Docker
-pnpm dev:stop             # Arret propre des 3 conteneurs
-pnpm dev:logs             # Logs des 3 services en temps reel
-pnpm dev:logs:api         # Logs API uniquement
-pnpm dev:logs:web         # Logs Web uniquement
-pnpm dev:logs:db          # Logs PostgreSQL uniquement
-```
-
-### Development (local sans Docker - fallback)
-```bash
+pnpm dev:start            # Tout-en-un : PostgreSQL Docker + API + Web en local
+pnpm dev:stop             # Arret des processus node (PostgreSQL reste actif)
 pnpm dev                  # Build packages puis lance API + Web en local
 pnpm dev:api              # API seule (port 3001)
 pnpm dev:web              # Web seul (port 3000)
 pnpm build:packages       # Build @spok/shared + @spok/database
+pnpm db:up                # Demarrer PostgreSQL Docker seul
+pnpm db:down              # Arreter PostgreSQL Docker
+pnpm dev:logs:db          # Logs PostgreSQL
 ```
 
 ### Database (PostgreSQL via Prisma)
@@ -52,15 +47,13 @@ packages/
   database/     # @spok/database - Prisma ORM + schema
   shared/       # @spok/shared - Shared types and constants
 docker/
-  Dockerfile.api.dev      # Image dev API (node:20-slim, tsx watch)
-  Dockerfile.web.dev      # Image dev Web (node:20-alpine, vite)
-  docker-compose.dev.yml  # 3 services : postgres, api, web
+  docker-compose.dev.yml  # PostgreSQL dev (port 25432)
   Dockerfile.api          # Image prod API
   Dockerfile.web          # Image prod Web (nginx)
   docker-compose.yml      # Compose prod
 scripts/
-  dev-start.ps1           # Script demarrage Docker dev
-  dev-stop.ps1            # Script arret Docker dev
+  dev-start.ps1           # PostgreSQL Docker + pnpm dev
+  dev-stop.ps1            # Arret processus node
 ```
 
 ### API Structure (apps/api/)
@@ -96,15 +89,11 @@ Internal packages use `workspace:*` protocol. When importing:
 - `@spok/database` exports Prisma client
 - `@spok/shared` exports shared types/constants
 
-## Docker Dev - Details techniques
+## Dev local
 
-Les conteneurs utilisent `node-linker=hoisted` dans `.npmrc` (genere au build) pour eviter les symlinks pnpm incompatibles avec Docker. Les packages workspace `@spok/*` sont lies via symlinks manuels dans le Dockerfile.
-
-Les volumes montent le code source (read-only) pour le hot reload :
-- API : `apps/api/src`, `packages/shared/src`, `packages/database/prisma`
-- Web : `apps/web/src`, `apps/web/index.html`, `apps/web/public`, `packages/shared/src`
-
-PostgreSQL est expose sur le port 25432 (host) pour eviter les conflits avec une instance locale.
+- **PostgreSQL** en Docker (conteneur `spok-postgres-dev`, port 25432, partage entre projets)
+- **API + Web** en local via `pnpm dev` (hot reload natif, pas de Docker)
+- `pnpm dev:start` fait les deux : demarre postgres Docker puis lance `pnpm dev`
 
 ## Production
 
@@ -135,10 +124,9 @@ Deploye sur Railway :
 
 ### Demarrage / Arret
 ```bash
-pnpm dev:start   # Lance les 3 conteneurs Docker (postgres, api, web)
-pnpm dev:stop    # Arrete les conteneurs + fallback kill processus node
+pnpm dev:start   # PostgreSQL Docker + API + Web en local
+pnpm dev:stop    # Arrete les processus node (PostgreSQL reste actif)
 ```
-Les scripts PowerShell sont dans `scripts/dev-start.ps1` et `scripts/dev-stop.ps1`.
 
 ### Redemarrage des services
 Apres chaque developpement necessitant un redemarrage : `pnpm dev:stop` puis `pnpm dev:start`.
@@ -149,5 +137,5 @@ Apres chaque developpement necessitant un redemarrage : `pnpm dev:stop` puis `pn
 - Modifications de `vite.config.ts` ou fichiers de configuration
 - Modifications des fichiers `.env`
 
-**Pas de redemarrage necessaire** (rechargement automatique via volumes Docker) :
+**Pas de redemarrage necessaire** (hot reload natif) :
 - Modifications de code TypeScript/React (tsx watch + Vite HMR)
