@@ -442,7 +442,7 @@ export function Layout() {
     <>
       {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
       <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
+        <Link to="/" className="block" title={`Dernière MEP : ${new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
       </div>
 
       {/* Navigation - scrollable */}
