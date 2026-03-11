@@ -3,12 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   List, GitBranch, Columns3, Share2, LayoutGrid,
   GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Table2, Grid3x3, Focus, Check,
-  ChevronDown, FolderKanban, CheckSquare, ExternalLink, LayoutDashboard,
-  Eye,
+  ChevronDown, FolderKanban, CheckSquare, LayoutDashboard,
+  Eye, Users,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewCategory } from '../stores/viewMode';
-import { useDashboardTabStore, DASHBOARD_TABS, DASHBOARD_NAV_ITEMS } from '../stores/dashboardTab';
+import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import { cn } from '../lib/utils';
 
 const ICONS: Record<string, typeof List> = {
@@ -36,6 +36,7 @@ const ICONS: Record<string, typeof List> = {
   Table2,
   Grid3x3,
   Focus,
+  Users,
 };
 
 export function ViewModeSelector() {
@@ -150,33 +151,20 @@ export function ViewModeSelector() {
             const Icon = ICONS[dashTab.icon];
             const isActive = isDashboard && tab === dashTab.value;
             return (
-              <button
-                key={dashTab.value}
-                onClick={() => { setTab(dashTab.value); closeAll(); if (!isDashboard) navigate('/'); }}
-                className={cn(
-                  'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
-                  isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                )}
-              >
-                <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
-                <span className="flex-1 text-left">{dashTab.label}</span>
-                {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-              </button>
-            );
-          })}
-          {DASHBOARD_NAV_ITEMS.length > 0 && <div className="h-px bg-border mx-1 my-1" />}
-          {DASHBOARD_NAV_ITEMS.map(navItem => {
-            const Icon = ICONS[navItem.icon];
-            return (
-              <button
-                key={navItem.route}
-                onClick={() => { navigate(navItem.route); closeAll(); }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors text-foreground/80 hover:bg-accent hover:text-foreground"
-              >
-                <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                <span className="flex-1 text-left">{navItem.label}</span>
-                <ExternalLink className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
-              </button>
+              <div key={dashTab.value}>
+                {dashTab.separator && <div className="h-px bg-border mx-1 my-1" />}
+                <button
+                  onClick={() => { setTab(dashTab.value); closeAll(); if (!isDashboard) navigate('/'); }}
+                  className={cn(
+                    'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+                    isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                  <span className="flex-1 text-left">{dashTab.label}</span>
+                  {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                </button>
+              </div>
             );
           })}
         </>
@@ -232,36 +220,20 @@ export function ViewModeSelector() {
         const Icon = ICONS[dashTab.icon];
         const isActive = isDashboard && tab === dashTab.value;
         return (
-          <button
-            key={dashTab.value}
-            onClick={() => { setTab(dashTab.value); if (!isDashboard) navigate('/'); }}
-            title={dashTab.label}
-            className={cn(
-              'flex items-center gap-1.5 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
-              isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
-            )}
-          >
-            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
-            {showLabels && <span>{dashTab.label}</span>}
-          </button>
-        );
-      })}
-      {DASHBOARD_NAV_ITEMS.map(navItem => {
-        const Icon = ICONS[navItem.icon];
-        const isActive = location.pathname === navItem.route;
-        return (
-          <button
-            key={navItem.route}
-            onClick={() => navigate(navItem.route)}
-            title={navItem.label}
-            className={cn(
-              'flex items-center gap-1.5 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
-              isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
-            )}
-          >
-            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
-            {showLabels && <span>{navItem.label}</span>}
-          </button>
+          <div key={dashTab.value} className="flex items-center">
+            {dashTab.separator && <div className="w-px h-5 bg-border mx-1" />}
+            <button
+              onClick={() => { setTab(dashTab.value); if (!isDashboard) navigate('/'); }}
+              title={dashTab.label}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
+                isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
+              )}
+            >
+              <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
+              {showLabels && <span>{dashTab.label}</span>}
+            </button>
+          </div>
         );
       })}
     </div>
@@ -274,33 +246,20 @@ export function ViewModeSelector() {
         const Icon = ICONS[dashTab.icon];
         const isActive = isDashboard && tab === dashTab.value;
         return (
-          <button
-            key={dashTab.value}
-            onClick={() => { setTab(dashTab.value); closeAll(); navigate('/'); }}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors',
-              isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-            )}
-          >
-            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
-            <span className="flex-1 text-left">{dashTab.label}</span>
-            {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-          </button>
-        );
-      })}
-      {DASHBOARD_NAV_ITEMS.length > 0 && <div className="h-px bg-border mx-1 my-1" />}
-      {DASHBOARD_NAV_ITEMS.map(navItem => {
-        const Icon = ICONS[navItem.icon];
-        return (
-          <button
-            key={navItem.route}
-            onClick={() => { navigate(navItem.route); closeAll(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors text-foreground/80 hover:bg-accent hover:text-foreground"
-          >
-            <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-            <span className="flex-1 text-left">{navItem.label}</span>
-            <ExternalLink className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
-          </button>
+          <div key={dashTab.value}>
+            {dashTab.separator && <div className="h-px bg-border mx-1 my-1" />}
+            <button
+              onClick={() => { setTab(dashTab.value); closeAll(); navigate('/'); }}
+              className={cn(
+                'w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors',
+                isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+              <span className="flex-1 text-left">{dashTab.label}</span>
+              {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+            </button>
+          </div>
         );
       })}
     </>

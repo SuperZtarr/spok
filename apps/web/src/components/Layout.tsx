@@ -482,9 +482,15 @@ export function Layout() {
         {/* Community / Group spaces */}
         <div className="pt-2">
           <div className="flex items-center justify-between px-3 mb-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {currentCommunity ? currentCommunity.name : 'Espaces de groupe'}
-            </span>
+            {currentCommunity ? (
+              <Link to={`/communities/${currentCommunity.id}`} className="text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                {currentCommunity.name}
+              </Link>
+            ) : (
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Espaces de groupe
+              </span>
+            )}
             <div className="flex items-center gap-1">
               {currentCommunity && currentCommunity.role && ['OWNER', 'ADMIN'].includes(currentCommunity.role) && (
                 <Link to={`/communities/${currentCommunity.id}/settings`} title="Paramètres de la communauté">

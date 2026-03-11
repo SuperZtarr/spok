@@ -1,27 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type DashboardTab = 'spaces' | 'deadlines' | 'graph' | 'sunburst' | 'mindmap';
+export type DashboardTab = 'communities' | 'spaces' | 'sunburst' | 'mindmap' | 'graph' | 'tasks' | 'deadlines' | 'planning';
 
 export const DASHBOARD_TABS: {
   value: DashboardTab;
   label: string;
   icon: string;
+  separator?: boolean;
 }[] = [
+  { value: 'communities', label: 'Communautés', icon: 'Users' },
   { value: 'spaces', label: 'Espaces', icon: 'FolderKanban' },
-  { value: 'deadlines', label: 'Échéances', icon: 'CalendarCheck' },
-  { value: 'graph', label: 'Graphe global', icon: 'Network' },
   { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot' },
   { value: 'mindmap', label: 'Carte mentale', icon: 'GitBranch' },
-];
-
-// Navigation items (not real tabs — they navigate to a different route)
-export const DASHBOARD_NAV_ITEMS: {
-  label: string;
-  icon: string;
-  route: string;
-}[] = [
-  { label: 'Mes tâches', icon: 'CheckSquare', route: '/tasks' },
+  { value: 'graph', label: 'Graphe global', icon: 'Network' },
+  { value: 'tasks', label: 'Mes tâches', icon: 'CheckSquare', separator: true },
+  { value: 'deadlines', label: 'Mes échéances', icon: 'CalendarCheck' },
+  { value: 'planning', label: 'Mon planning', icon: 'Calendar' },
 ];
 
 interface DashboardTabState {
