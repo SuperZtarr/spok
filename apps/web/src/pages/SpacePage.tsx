@@ -363,7 +363,7 @@ export function SpacePage() {
 
   const handleAddChild = (parentId: string) => {
     createItemMutation.mutate(
-      { type: 'NOTE', title: 'Nouvel élément', status: 'todo', parentId },
+      { type: 'NOTE', title: '', status: 'todo', parentId },
       { onSuccess: (created: any) => {
         setEditingItemId(created.id);
         setExpandedItems((prev) => new Set([...prev, parentId]));
@@ -411,7 +411,7 @@ export function SpacePage() {
   const handleNewItem = useCallback(() => {
     const type = filter === 'ALL' ? 'NOTE' : filter;
     createItemMutation.mutate(
-      { type, title: 'Nouvel élément', status: 'todo' },
+      { type, title: '', status: 'todo' },
       { onSuccess: (created: any) => { setEditingItemId(created.id); } },
     );
   }, [filter, createItemMutation]);

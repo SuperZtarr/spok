@@ -552,7 +552,7 @@ export function ItemEditModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Titre de l'élément"
-                  required
+                  autoFocus={!title}
                 />
               ) : (
                 <p className="text-lg font-medium">{title}</p>

@@ -12,7 +12,7 @@ import { itemConvertRoutes } from './item-convert.js';
 
 const createItemSchema = z.object({
   type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG']),
-  title: z.string().min(1),
+  title: z.string().default(''),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
   url: z.string().url().optional(),
