@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, Mail } from 'lucide-react';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
@@ -16,6 +16,7 @@ import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
 import { OrgChartView } from '../components/views/OrgChartView';
+import { SendEmailModal } from '../components/SendEmailModal';
 import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
 
 export function SpaceSettingsPage() {
@@ -32,6 +33,13 @@ export function SpaceSettingsPage() {
   const deleteSpaceMutation = useDeleteSpace();
   const queryClient = useQueryClient();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+
+  const { data: spaceMembers } = useQuery({
+    queryKey: ['space-members', spaceId],
+    queryFn: () => spacesApi.getMembers(spaceId!),
+    enabled: !!spaceId && space?.type === 'GROUP',
+  });
 
   // Image mutations
   const uploadAvatarMutation = useMutation({
@@ -456,6 +464,14 @@ export function SpaceSettingsPage() {
         {/* Members */}
         {space?.type === 'GROUP' && user && (
           <div className="bg-card border rounded-lg p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div />
+              {['OWNER', 'ADMIN'].includes(space.role || '') && spaceMembers && spaceMembers.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)}>
+                  <Mail className="w-4 h-4 mr-1.5" />Envoyer un email
+                </Button>
+              )}
+            </div>
             <SpaceMembersManager
               spaceId={spaceId!}
               currentUserRole={space.role || 'VIEWER'}
@@ -532,6 +548,16 @@ export function SpaceSettingsPage() {
           />
         )}
       </div>
+
+      {/* Email modal */}
+      {space && spaceMembers && (
+        <SendEmailModal
+          isOpen={showEmailModal}
+          onClose={() => setShowEmailModal(false)}
+          members={spaceMembers.map(m => ({ userId: m.userId, name: m.name, email: m.email }))}
+          target={{ type: 'space', id: space.id, name: space.name }}
+        />
+      )}
     </div>
   );
 }

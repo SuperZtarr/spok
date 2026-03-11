@@ -1050,4 +1050,77 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       return { success: true };
     }
   );
+
+  // ==================== Send Email to Members ====================
+
+  const sendEmailSchema = z.object({
+    subject: z.string().min(1),
+    html: z.string().min(1),
+    recipientIds: z.array(z.string()).min(1),
+  });
+
+  // POST /communities/:id/send-email — send email to community members
+  fastify.post<{ Params: { id: string }; Body: z.infer<typeof sendEmailSchema> }>(
+    '/:id/send-email',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!process.env.RESEND_API_KEY) {
+        return reply.serviceUnavailable('Email service is not configured');
+      }
+
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+        return reply.forbidden('Insufficient permissions');
+      }
+
+      const body = sendEmailSchema.parse(request.body);
+
+      // Fetch recipients that are members of this community
+      const members = await fastify.prisma.communityMembership.findMany({
+        where: {
+          communityId: request.params.id,
+          userId: { in: body.recipientIds },
+        },
+        include: {
+          user: { select: { email: true } },
+        },
+      });
+
+      const emails = members.map((m) => m.user.email);
+
+      if (emails.length === 0) {
+        return reply.badRequest('No valid recipients found among community members');
+      }
+
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      let sent = 0;
+      let failed = 0;
+
+      for (const email of emails) {
+        try {
+          await resend.emails.send({
+            from: 'SPOK <notifications@spok.app>',
+            to: email,
+            subject: body.subject,
+            html: body.html,
+          });
+          sent++;
+        } catch {
+          failed++;
+        }
+      }
+
+      return { sent, failed };
+    }
+  );
 };

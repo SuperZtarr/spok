@@ -526,6 +526,12 @@ export const spacesApi = {
       method: 'POST',
       body: JSON.stringify({ targetMemberId }),
     }),
+
+  sendEmail: (id: string, data: { subject: string; html: string; recipientIds: string[] }) =>
+    fetchApi<{ sent: number; failed: number }>(`/spaces/${id}/send-email`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Communities
@@ -662,6 +668,12 @@ export const communitiesApi = {
   deleteTag: (id: string, tagId: string) =>
     fetchApi<{ success: boolean }>(`/communities/${id}/tags/${tagId}`, {
       method: 'DELETE',
+    }),
+
+  sendEmail: (id: string, data: { subject: string; html: string; recipientIds: string[] }) =>
+    fetchApi<{ sent: number; failed: number }>(`/communities/${id}/send-email`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 };
 
