@@ -2,11 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from './ui/Button';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import type { Item, ItemRelation } from '@spok/shared';
-
 interface SpaceExportButtonProps {
   items: Item[];
   spaceName: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 function stripHtml(html: string): string {
@@ -134,8 +137,77 @@ function exportExcel(items: Item[], spaceName: string) {
   downloadFile(buf, `${sanitizeFilename(spaceName)}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
-export function SpaceExportButton({ items, spaceName }: SpaceExportButtonProps) {
+function exportPDF(items: Item[], spaceName: string) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  // Title
+  doc.setFontSize(16);
+  doc.text(spaceName, 14, 15);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} — ${items.length} élément${items.length > 1 ? 's' : ''}`, 14, 21);
+  doc.setTextColor(0);
+
+  // Items table
+  const rows = buildItemRows(items);
+  const columns = ['Titre', 'Type', 'Statut', 'Priorité', 'Assigné à', 'Tags', 'Date échéance', 'Date début', 'Date fin'];
+
+  autoTable(doc, {
+    startY: 26,
+    head: [columns],
+    body: rows.map(row => columns.map(col => (row as any)[col] || '')),
+    styles: { fontSize: 7, cellPadding: 1.5 },
+    headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 247, 250] },
+    columnStyles: {
+      0: { cellWidth: 60 }, // Titre
+    },
+    didParseCell: (data) => {
+      // Truncate long titles
+      if (data.column.index === 0 && data.cell.text.join('').length > 80) {
+        data.cell.text = [data.cell.text.join('').slice(0, 77) + '...'];
+      }
+    },
+  });
+
+  // Relations table on next page if any
+  const relationRows = buildRelationRows(items);
+  if (relationRows.length > 0) {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text('Relations', 14, 15);
+
+    autoTable(doc, {
+      startY: 22,
+      head: [['De', 'Vers', 'Type', 'Commentaire']],
+      body: relationRows.map(r => [r['De'], r['Vers'], r['Type'], r['Commentaire']]),
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+    });
+  }
+
+  doc.save(`${sanitizeFilename(spaceName)}.pdf`);
+}
+
+async function exportViewPNG(container: HTMLDivElement, spaceName: string) {
+  const canvas = await html2canvas(container, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+  });
+
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${sanitizeFilename(spaceName)}_vue.png`;
+  a.click();
+}
+
+export function SpaceExportButton({ items, spaceName, viewContainerRef }: SpaceExportButtonProps) {
   const [open, setOpen] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -175,6 +247,31 @@ export function SpaceExportButton({ items, spaceName }: SpaceExportButtonProps) 
           >
             Excel (.xlsx)
           </button>
+          <div className="h-px bg-border mx-2 my-1" />
+          <button
+            className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
+            onClick={() => { exportPDF(items, spaceName); setOpen(false); }}
+          >
+            PDF — données (.pdf)
+          </button>
+          {viewContainerRef && (
+            <button
+              className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors disabled:opacity-50"
+              disabled={capturing}
+              onClick={async () => {
+                if (!viewContainerRef.current) return;
+                setCapturing(true);
+                setOpen(false);
+                try {
+                  await exportViewPNG(viewContainerRef.current, spaceName);
+                } finally {
+                  setCapturing(false);
+                }
+              }}
+            >
+              {capturing ? 'Capture en cours…' : 'PNG — vue actuelle (.png)'}
+            </button>
+          )}
         </div>
       )}
     </div>

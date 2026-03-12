@@ -58,6 +58,7 @@ export interface SpaceToolbarProps {
   // Export
   items?: Item[];
   spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function SpaceToolbar({
@@ -85,6 +86,7 @@ export function SpaceToolbar({
   spaceRole,
   items: exportItems,
   spaceName,
+  viewContainerRef,
 }: SpaceToolbarProps) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -313,7 +315,7 @@ export function SpaceToolbar({
 
         <div className="ml-auto flex gap-1 flex-shrink-0">
           {exportItems && spaceName && (
-            <SpaceExportButton items={exportItems} spaceName={spaceName} />
+            <SpaceExportButton items={exportItems} spaceName={spaceName} viewContainerRef={viewContainerRef} />
           )}
           {canEdit && (
             <Link to={`/spaces/${spaceId}/history`}>
