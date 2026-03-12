@@ -86,7 +86,6 @@ function isJsonResponse(response: Response): boolean {
   return contentType !== null && contentType.includes('application/json');
 }
 
-let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefreshToken(): Promise<boolean> {
@@ -170,14 +169,14 @@ async function fetchApi<T>(
   if (!response.ok) {
     // Handle 401 Unauthorized - try to refresh token
     if (response.status === 401 && !isRetry && !endpoint.startsWith('/auth/')) {
-      if (!isRefreshing) {
-        isRefreshing = true;
-        refreshPromise = tryRefreshToken();
+      // Coalesce concurrent refresh attempts into a single promise
+      if (!refreshPromise) {
+        refreshPromise = tryRefreshToken().finally(() => {
+          refreshPromise = null;
+        });
       }
 
       const refreshed = await refreshPromise;
-      isRefreshing = false;
-      refreshPromise = null;
 
       if (refreshed) {
         // Retry the original request with new token

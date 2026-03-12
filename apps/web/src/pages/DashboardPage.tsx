@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid, Calendar } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -22,6 +22,7 @@ import { useDashboardTabStore } from '../stores/dashboardTab';
 import { DeadlinesView } from '../components/views/DeadlinesView';
 import { GlobalTasksPage } from './GlobalTasksPage';
 import { CommunityListView } from '../components/views/CommunityListView';
+import { MyOrganizationView } from '../components/views/MyOrganizationView';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -510,12 +511,8 @@ export function DashboardPage() {
           <GlobalTasksPage />
         </div>
       ) : tab === 'planning' ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <div className="text-center">
-            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">Mon planning</p>
-            <p className="text-sm">Bientôt disponible</p>
-          </div>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <MyOrganizationView />
         </div>
       ) : tab === 'deadlines' ? (
         <div className="flex-1 min-h-0 flex flex-col">

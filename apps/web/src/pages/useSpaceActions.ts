@@ -182,7 +182,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     return found?.updatedAt;
   }, [allItems]);
 
-  const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null }) => {
+  const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
     updateItemMutation.mutate({ id, itemSpaceId, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
   }, [resolveItemSpaceId, updateItemMutation, getItemUpdatedAt]);

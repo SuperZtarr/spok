@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -32,6 +32,8 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'chord', label: 'Chord', icon: 'Disc', category: 'exploration' },
   { value: 'burndown', label: 'Burndown', icon: 'TrendingDown', category: 'planning' },
   { value: 'cfd', label: 'Flux cumulatif', icon: 'Layers', category: 'planning' },
+  { value: 'members', label: 'Membres', icon: 'Users', category: 'basic' },
+  { value: 'priority', label: 'Priorités', icon: 'Flame', category: 'basic' },
   { value: 'crossTable', label: 'Tableau croisé', icon: 'Table2', category: 'basic' },
   { value: 'heatmap', label: 'Heatmap', icon: 'Grid3x3', category: 'exploration' },
   { value: 'ego', label: 'Réseau ego', icon: 'Focus', category: 'exploration' },

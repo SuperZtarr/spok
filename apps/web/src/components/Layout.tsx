@@ -327,6 +327,9 @@ export function Layout() {
     enabled: !!user,
     placeholderData: (prev: any) => prev,
     refetchOnWindowFocus: 'always',
+    staleTime: 30_000,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Also fetch personal spaces (always visible, only for authenticated users)
@@ -336,6 +339,9 @@ export function Layout() {
     enabled: !!user,
     placeholderData: (prev: any) => prev,
     refetchOnWindowFocus: 'always',
+    staleTime: 30_000,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Separate personal and community/group spaces, then build trees

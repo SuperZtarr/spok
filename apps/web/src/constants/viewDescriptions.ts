@@ -213,4 +213,21 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Cliquez sur une case avec un seul élément pour l\'éditer',
     ],
   },
+  priority: {
+    title: 'Priorités',
+    description: 'Kanban par niveau de priorité. Glissez-déposez les items pour changer leur priorité.',
+    tips: [
+      'Colonnes P1 (Urgente) à P4 (Basse) + Sans priorité',
+      'Glissez un item vers une colonne pour changer sa priorité',
+    ],
+  },
+  members: {
+    title: 'Membres',
+    description: 'Kanban par membre de l\'espace. Glissez-déposez les items pour les assigner.',
+    tips: [
+      'Chaque colonne représente un membre de l\'espace',
+      'Glissez un item vers une colonne pour l\'assigner à ce membre',
+      'La colonne "Non assigné" regroupe les items sans responsable',
+    ],
+  },
 };

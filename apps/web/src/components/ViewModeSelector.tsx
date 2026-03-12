@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   List, GitBranch, Columns3, Share2, LayoutGrid,
   GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Table2, Grid3x3, Focus, Check,
-  ChevronDown, FolderKanban, CheckSquare, LayoutDashboard,
+  ChevronDown, FolderKanban, CheckSquare, LayoutDashboard, ClipboardList, Flame,
   Eye, Users,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -37,6 +37,8 @@ const ICONS: Record<string, typeof List> = {
   Grid3x3,
   Focus,
   Users,
+  LayoutDashboard,
+  Flame,
 };
 
 export function ViewModeSelector() {
@@ -45,15 +47,17 @@ export function ViewModeSelector() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  type MenuCategory = ViewCategory | 'myActivities';
+
   // Dropdown states
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openCategory, setOpenCategory] = useState<ViewCategory | null>(null);
+  const [openCategory, setOpenCategory] = useState<MenuCategory | null>(null);
 
   // Refs
   const navRef = useRef<HTMLElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileButtonRef = useRef<HTMLButtonElement>(null);
-  const categoryButtonRefs = useRef<Map<ViewCategory, HTMLButtonElement>>(new Map());
+  const categoryButtonRefs = useRef<Map<MenuCategory, HTMLButtonElement>>(new Map());
 
   // Positions
   const [mobilePos, setMobilePos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -61,6 +65,10 @@ export function ViewModeSelector() {
 
   const isDashboard = location.pathname === '/';
   const isInSpace = /^\/spaces\/[^/]+/.test(location.pathname);
+
+  // Dashboard tab groups
+  const globalTabs = DASHBOARD_TABS.filter(t => t.group === 'global');
+  const myActivitiesTabs = DASHBOARD_TABS.filter(t => t.group === 'myActivities');
 
   // Categories visible in space (for md dropdown level)
   const spaceCategories = VIEW_CATEGORIES.filter(cat => cat.value !== 'dashboard');
@@ -80,7 +88,7 @@ export function ViewModeSelector() {
     setMobilePos(computeDropdownPos(mobileButtonRef.current, 220));
   }, [computeDropdownPos]);
 
-  const updateCategoryDropdownPos = useCallback((cat: ViewCategory) => {
+  const updateCategoryDropdownPos = useCallback((cat: MenuCategory) => {
     setCategoryDropdownPos(computeDropdownPos(categoryButtonRefs.current.get(cat) || null, 200));
   }, [computeDropdownPos]);
 
@@ -91,7 +99,7 @@ export function ViewModeSelector() {
   }, []);
 
   // --- Category dropdown handlers ---
-  const handleCategoryClick = useCallback((cat: ViewCategory) => {
+  const handleCategoryClick = useCallback((cat: MenuCategory) => {
     if (openCategory === cat) {
       setOpenCategory(null);
     } else {
@@ -100,7 +108,7 @@ export function ViewModeSelector() {
     }
   }, [openCategory, updateCategoryDropdownPos]);
 
-  const handleCategoryMouseEnter = useCallback((cat: ViewCategory) => {
+  const handleCategoryMouseEnter = useCallback((cat: MenuCategory) => {
     if (openCategory && openCategory !== cat) {
       updateCategoryDropdownPos(cat);
       setOpenCategory(cat);
@@ -145,42 +153,74 @@ export function ViewModeSelector() {
   // --- Mobile menu content (unified dropdown) ---
   const renderMobileMenuContent = () => {
     if (!isInSpace) {
+      // Dashboard: show grouped tabs
       return (
         <>
-          {DASHBOARD_TABS.map(dashTab => {
+          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Vues globales</div>
+          {globalTabs.map(dashTab => {
             const Icon = ICONS[dashTab.icon];
             const isActive = isDashboard && tab === dashTab.value;
             return (
-              <div key={dashTab.value}>
-                {dashTab.separator && <div className="h-px bg-border mx-1 my-1" />}
-                <button
-                  onClick={() => { setTab(dashTab.value); closeAll(); if (!isDashboard) navigate('/'); }}
-                  className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
-                    isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                  )}
-                >
-                  <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
-                  <span className="flex-1 text-left">{dashTab.label}</span>
-                  {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-                </button>
-              </div>
+              <button
+                key={dashTab.value}
+                onClick={() => { setTab(dashTab.value); closeAll(); if (!isDashboard) navigate('/'); }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+                  isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="flex-1 text-left">{dashTab.label}</span>
+                {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+              </button>
+            );
+          })}
+          <div className="h-px bg-border mx-1 my-1" />
+          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Mes activités</div>
+          {myActivitiesTabs.map(dashTab => {
+            const Icon = ICONS[dashTab.icon];
+            const isActive = isDashboard && tab === dashTab.value;
+            return (
+              <button
+                key={dashTab.value}
+                onClick={() => { setTab(dashTab.value); closeAll(); if (!isDashboard) navigate('/'); }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+                  isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="flex-1 text-left">{dashTab.label}</span>
+                {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+              </button>
             );
           })}
         </>
       );
     }
 
-    // Space: dashboard link + all view modes grouped by category
+    // Space: vues globales + mes activités + all view modes grouped by category
     return (
       <>
-        <button
-          onClick={() => { navigate('/'); closeAll(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors text-foreground/80 hover:bg-accent hover:text-foreground"
-        >
-          <LayoutDashboard className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-          <span className="flex-1 text-left">Tableau de bord</span>
-        </button>
+        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Vues globales</div>
+        {globalTabs.map(dashTab => {
+          const Icon = ICONS[dashTab.icon];
+          const isActive = isDashboard && tab === dashTab.value;
+          return (
+            <button
+              key={dashTab.value}
+              onClick={() => { setTab(dashTab.value); closeAll(); navigate('/'); }}
+              className={cn(
+                'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+                isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+              <span className="flex-1 text-left">{dashTab.label}</span>
+              {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+            </button>
+          );
+        })}
         <div className="h-px bg-border mx-1 my-1" />
         {VIEW_CATEGORIES.filter(c => c.value !== 'dashboard').map((cat, catIdx) => {
           const catModes = VIEW_MODES.filter(v => v.category === cat.value);
@@ -209,49 +249,17 @@ export function ViewModeSelector() {
             </div>
           );
         })}
-      </>
-    );
-  };
-
-  // --- Dashboard inline items: icon + optional text ---
-  const renderDashboardInline = (showLabels: boolean) => (
-    <div className="flex items-center gap-0.5">
-      {DASHBOARD_TABS.map(dashTab => {
-        const Icon = ICONS[dashTab.icon];
-        const isActive = isDashboard && tab === dashTab.value;
-        return (
-          <div key={dashTab.value} className="flex items-center">
-            {dashTab.separator && <div className="w-px h-5 bg-border mx-1" />}
+        <div className="h-px bg-border mx-1 my-1" />
+        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Mes activités</div>
+        {myActivitiesTabs.map(dashTab => {
+          const Icon = ICONS[dashTab.icon];
+          const isActive = isDashboard && tab === dashTab.value;
+          return (
             <button
-              onClick={() => { setTab(dashTab.value); if (!isDashboard) navigate('/'); }}
-              title={dashTab.label}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
-                isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
-              )}
-            >
-              <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
-              {showLabels && <span>{dashTab.label}</span>}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // --- Dashboard dropdown content (used in space views) ---
-  const renderDashboardDropdownContent = () => (
-    <>
-      {DASHBOARD_TABS.map(dashTab => {
-        const Icon = ICONS[dashTab.icon];
-        const isActive = isDashboard && tab === dashTab.value;
-        return (
-          <div key={dashTab.value}>
-            {dashTab.separator && <div className="h-px bg-border mx-1 my-1" />}
-            <button
+              key={dashTab.value}
               onClick={() => { setTab(dashTab.value); closeAll(); navigate('/'); }}
               className={cn(
-                'w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors',
+                'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
                 isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
               )}
             >
@@ -259,7 +267,98 @@ export function ViewModeSelector() {
               <span className="flex-1 text-left">{dashTab.label}</span>
               {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
             </button>
-          </div>
+          );
+        })}
+      </>
+    );
+  };
+
+  // --- Dashboard inline items: icon + optional text ---
+  const renderDashboardInline = (showLabels: boolean) => (
+    <div className="flex items-center gap-0.5">
+      {globalTabs.map(dashTab => {
+        const Icon = ICONS[dashTab.icon];
+        const isActive = isDashboard && tab === dashTab.value;
+        return (
+          <button
+            key={dashTab.value}
+            onClick={() => { setTab(dashTab.value); if (!isDashboard) navigate('/'); }}
+            title={dashTab.label}
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
+              isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
+            )}
+          >
+            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
+            {showLabels && <span>{dashTab.label}</span>}
+          </button>
+        );
+      })}
+      <div className="w-px h-5 bg-border mx-1" />
+      {myActivitiesTabs.map(dashTab => {
+        const Icon = ICONS[dashTab.icon];
+        const isActive = isDashboard && tab === dashTab.value;
+        return (
+          <button
+            key={dashTab.value}
+            onClick={() => { setTab(dashTab.value); if (!isDashboard) navigate('/'); }}
+            title={dashTab.label}
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
+              isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
+            )}
+          >
+            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
+            {showLabels && <span>{dashTab.label}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // --- Dashboard dropdown content (global views only) ---
+  const renderDashboardDropdownContent = () => (
+    <>
+      {globalTabs.map(dashTab => {
+        const Icon = ICONS[dashTab.icon];
+        const isActive = isDashboard && tab === dashTab.value;
+        return (
+          <button
+            key={dashTab.value}
+            onClick={() => { setTab(dashTab.value); closeAll(); navigate('/'); }}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors',
+              isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+            )}
+          >
+            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+            <span className="flex-1 text-left">{dashTab.label}</span>
+            {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+          </button>
+        );
+      })}
+    </>
+  );
+
+  // --- My Activities dropdown content ---
+  const renderMyActivitiesDropdownContent = () => (
+    <>
+      {myActivitiesTabs.map(dashTab => {
+        const Icon = ICONS[dashTab.icon];
+        const isActive = isDashboard && tab === dashTab.value;
+        return (
+          <button
+            key={dashTab.value}
+            onClick={() => { setTab(dashTab.value); closeAll(); navigate('/'); }}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors',
+              isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+            )}
+          >
+            <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+            <span className="flex-1 text-left">{dashTab.label}</span>
+            {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+          </button>
         );
       })}
     </>
@@ -271,6 +370,10 @@ export function ViewModeSelector() {
 
     if (openCategory === 'dashboard') {
       return renderDashboardDropdownContent();
+    }
+
+    if (openCategory === 'myActivities') {
+      return renderMyActivitiesDropdownContent();
     }
 
     const activeCategoryModes = VIEW_MODES.filter(v => v.category === openCategory);
@@ -301,7 +404,7 @@ export function ViewModeSelector() {
   // --- Space categories with dropdowns (md level) ---
   const renderSpaceCategories = () => (
     <ul className="flex items-center gap-0.5 list-none m-0 p-0">
-      {/* Dashboard category */}
+      {/* Vues globales (ex-Accueil) */}
       <li className="relative">
         <button
           ref={(el) => { if (el) categoryButtonRefs.current.set('dashboard', el); }}
@@ -315,7 +418,7 @@ export function ViewModeSelector() {
           )}
         >
           <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-          <span>Accueil</span>
+          <span>Vues globales</span>
           <ChevronDown className={cn('w-3 h-3 transition-transform duration-150', openCategory === 'dashboard' && 'rotate-180')} />
         </button>
       </li>
@@ -348,6 +451,28 @@ export function ViewModeSelector() {
           </li>
         );
       })}
+
+      {/* Separator */}
+      <li><div className="w-px h-5 bg-border mx-0.5" /></li>
+
+      {/* Mes activités */}
+      <li className="relative">
+        <button
+          ref={(el) => { if (el) categoryButtonRefs.current.set('myActivities', el); }}
+          onClick={() => handleCategoryClick('myActivities')}
+          onMouseEnter={() => handleCategoryMouseEnter('myActivities')}
+          className={cn(
+            'flex items-center gap-1 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
+            openCategory === 'myActivities'
+              ? 'text-foreground border-primary'
+              : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
+          )}
+        >
+          <ClipboardList className="w-4 h-4 flex-shrink-0" />
+          <span>Mes activités</span>
+          <ChevronDown className={cn('w-3 h-3 transition-transform duration-150', openCategory === 'myActivities' && 'rotate-180')} />
+        </button>
+      </li>
     </ul>
   );
 

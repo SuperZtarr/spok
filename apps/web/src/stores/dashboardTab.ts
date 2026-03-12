@@ -3,20 +3,22 @@ import { persist } from 'zustand/middleware';
 
 export type DashboardTab = 'communities' | 'spaces' | 'sunburst' | 'mindmap' | 'graph' | 'tasks' | 'deadlines' | 'planning';
 
+export type DashboardGroup = 'global' | 'myActivities';
+
 export const DASHBOARD_TABS: {
   value: DashboardTab;
   label: string;
   icon: string;
-  separator?: boolean;
+  group: DashboardGroup;
 }[] = [
-  { value: 'communities', label: 'Communautés', icon: 'Users' },
-  { value: 'spaces', label: 'Espaces', icon: 'FolderKanban' },
-  { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot' },
-  { value: 'mindmap', label: 'Carte mentale', icon: 'GitBranch' },
-  { value: 'graph', label: 'Graphe global', icon: 'Network' },
-  { value: 'tasks', label: 'Mes tâches', icon: 'CheckSquare', separator: true },
-  { value: 'deadlines', label: 'Mes échéances', icon: 'CalendarCheck' },
-  { value: 'planning', label: 'Mon planning', icon: 'Calendar' },
+  { value: 'communities', label: 'Communautés', icon: 'Users', group: 'global' },
+  { value: 'spaces', label: 'Espaces', icon: 'FolderKanban', group: 'global' },
+  { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', group: 'global' },
+  { value: 'mindmap', label: 'Carte mentale', icon: 'GitBranch', group: 'global' },
+  { value: 'graph', label: 'Graphe global', icon: 'Network', group: 'global' },
+  { value: 'tasks', label: 'Mes tâches', icon: 'CheckSquare', group: 'myActivities' },
+  { value: 'deadlines', label: 'Mes échéances', icon: 'CalendarCheck', group: 'myActivities' },
+  { value: 'planning', label: 'Mon organisation', icon: 'LayoutDashboard', group: 'myActivities' },
 ];
 
 interface DashboardTabState {
