@@ -694,6 +694,21 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-12] - Export PDF données + capture PNG vue actuelle
+
+**Demande :** Enrichir les exports avec du PDF pour les vues adaptées, puis capture PNG pour les vues visuelles
+**Décision :** PDF tabulaire pour les données (jspdf + autotable), PNG pour la capture visuelle des vues (html2canvas au lieu de PDF car plus pertinent pour une image)
+**Actions réalisées :**
+- Installation jspdf, jspdf-autotable, html2canvas
+- SpaceExportButton.tsx : fonctions exportPDF (tableau items + relations A4 paysage) et exportViewPNG (capture html2canvas)
+- SpaceToolbar.tsx : propagation viewContainerRef
+- SpacePage.tsx : ref viewContainerRef sur le conteneur des vues
+- Dropdown export enrichi avec séparateur données/visuel (CSV, JSON, Excel | PDF données, PNG vue)
+**État :** TERMINÉ
+**Commit :** b4db74f
+
+---
+
 #### [2026-03-11] - Fix sidebar refresh au retour sur la fenêtre
 
 **Demande :** La sidebar perd les espaces personnels et communautaires quand on revient sur la page/fenêtre

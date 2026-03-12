@@ -17,7 +17,7 @@ import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, Folder
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { TYPE_ICONS, getTypeTextColor } from '../../constants/ui';
+import { TYPE_ICONS, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 
@@ -130,6 +130,14 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
+            {(() => {
+              const pConfig = getPriorityConfig(item.priority);
+              return pConfig ? (
+                <span className={`text-[10px] font-bold ${pConfig.textColor} flex-shrink-0`} title={pConfig.label}>
+                  {pConfig.shortLabel}
+                </span>
+              ) : null;
+            })()}
             {item.url && (
               <a
                 href={item.url}

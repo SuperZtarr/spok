@@ -11,7 +11,7 @@ import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon } from 'lucide-react';
 import { TagSelector } from './ui/TagSelector';
 import { TagBadge } from './ui/TagBadge';
-import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS } from '../constants/ui';
+import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
@@ -62,6 +62,7 @@ export function ItemEditModal({
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [priority, setPriority] = useState<number | null>(null);
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
@@ -117,6 +118,7 @@ export function ItemEditModal({
       setUrl(item.url || '');
       setParentId(item.parentId || '');
       setStatus(item.status || '');
+      setPriority(item.priority ?? null);
       setAssignedToId(item.assignedToId || '');
       setType(item.type);
       // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
@@ -341,7 +343,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -371,6 +373,10 @@ export function ItemEditModal({
 
     if (status !== (item.status || '')) {
       updates.status = status || null;
+    }
+
+    if (priority !== (item.priority ?? null)) {
+      updates.priority = priority;
     }
 
     const newAssignedToId = assignedToId || null;
@@ -700,6 +706,53 @@ export function ItemEditModal({
                   })()
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Priorité */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium" title="Niveau de priorité de l'élément">Priorité</label>
+            <div className="flex flex-wrap gap-2">
+              {canEdit ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPriority(null)}
+                    className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                      priority === null
+                        ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm'
+                        : 'border-gray-200 opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    Aucune
+                  </button>
+                  {PRIORITIES.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPriority(p.value)}
+                      className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${p.color} ${
+                        priority === p.value
+                          ? `${p.bgColor} font-semibold shadow-sm`
+                          : 'opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                (() => {
+                  const config = PRIORITIES.find(p => p.value === priority);
+                  return config ? (
+                    <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>
+                      {config.label}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Non définie</span>
+                  );
+                })()
+              )}
             </div>
           </div>
 

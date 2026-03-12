@@ -116,6 +116,20 @@ export function getTypeTextColor(type: string, typeLabels?: Record<string, TypeL
 }
 
 // =============================================================================
+// PRIORITY - Niveaux de priorité des items
+// =============================================================================
+export const PRIORITIES: { value: number; label: string; shortLabel: string; color: string; bgColor: string; textColor: string; icon: string }[] = [
+  { value: 4, label: 'Urgente', shortLabel: 'P1', color: 'border-red-500', bgColor: 'bg-red-50', textColor: 'text-red-600', icon: '🔴' },
+  { value: 3, label: 'Haute', shortLabel: 'P2', color: 'border-orange-400', bgColor: 'bg-orange-50', textColor: 'text-orange-600', icon: '🟠' },
+  { value: 2, label: 'Normale', shortLabel: 'P3', color: 'border-blue-400', bgColor: 'bg-blue-50', textColor: 'text-blue-600', icon: '🔵' },
+  { value: 1, label: 'Basse', shortLabel: 'P4', color: 'border-gray-300', bgColor: 'bg-gray-50', textColor: 'text-gray-500', icon: '⚪' },
+];
+
+export function getPriorityConfig(priority: number | null | undefined) {
+  return PRIORITIES.find(p => p.value === priority) || null;
+}
+
+// =============================================================================
 // LOCAL STORAGE KEYS - Clés pour le stockage local
 // =============================================================================
 export const STORAGE_KEYS = {

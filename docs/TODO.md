@@ -13,6 +13,10 @@
 - [x] Templates d'espace (structure pré-configurée : statuts, types, items) — déjà implémenté
 - [x] Tags partagés au niveau communauté — b5d10de
 
+### Exports
+- [x] Export PDF données (tableau items + relations, jspdf + autotable) — b4db74f
+- [x] Export PNG capture vue actuelle (html2canvas) — b4db74f
+
 ### Vues
 - [ ] Vue Texte : investiguer pourquoi les données des sous-espaces sélectionnés ne s'affichent pas (la query passe bien `additionalSpaceIds`, vérifier côté composant TextView)
 
@@ -54,6 +58,9 @@
 - [ ] Auth : comment authentifier les requêtes MCP (token utilisateur, clé API dédiée) ?
 
 ## Historique
+
+### 2026-03-12
+- Export PDF données + capture PNG vue actuelle — b4db74f
 
 ### 2026-03-11
 - Fix sidebar : espaces disparaissent au retour sur la fenêtre — ac04cf7

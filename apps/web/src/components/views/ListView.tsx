@@ -7,7 +7,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 
 import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
-import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
+import { TYPE_ICONS, getTypeColor, getPriorityConfig } from '../../constants/ui';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -89,7 +89,7 @@ function ImageThumbnail({ url }: { url: string }) {
   );
 }
 
-type SortField = 'title' | 'type' | 'status' | 'parent' | 'date' | 'contributions';
+type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 'contributions';
 type SortDir = 'asc' | 'desc';
 
 export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, canEdit = true }: ListViewProps) {
@@ -126,6 +126,11 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           const sa = a.status || '';
           const sb = b.status || '';
           return mul * sa.localeCompare(sb);
+        }
+        case 'priority': {
+          const pa = a.priority ?? 0;
+          const pb = b.priority ?? 0;
+          return mul * (pa - pb);
         }
         case 'parent': {
           const pa = (a.parentId && parentNames[a.parentId]) || '';
@@ -198,7 +203,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
       ) : (
         <>
           {/* Header — fixed outside scroll */}
-          <div className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto]'} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
+          <div className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre
@@ -218,6 +223,10 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
             <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('status')}>
               Statut
               {sortField === 'status' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+            </button>
+            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('priority')}>
+              Prio
+              {sortField === 'priority' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
             <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('date')}>
               Info
@@ -242,7 +251,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               return (
                 <div
                   key={item.id}
-                  className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_5rem_auto]'} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
+                  className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
                   <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -297,6 +306,19 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     >
                       {statusLabel}
                     </Badge>
+                  </span>
+
+                  <span className="flex justify-center">
+                    {(() => {
+                      const pConfig = getPriorityConfig(item.priority);
+                      return pConfig ? (
+                        <span className={`text-xs font-medium ${pConfig.textColor}`} title={pConfig.label}>
+                          {pConfig.shortLabel}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/40">—</span>
+                      );
+                    })()}
                   </span>
 
                   <span className="flex items-center justify-center gap-1.5">
