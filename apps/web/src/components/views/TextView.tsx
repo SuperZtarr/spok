@@ -164,7 +164,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
       </div>
 
       {/* Content */}
-      {filteredItems.length === 0 ? (
+      {filteredItems.length === 0 && portalItemGroups.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
           {searchQuery ? (
