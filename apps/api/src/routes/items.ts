@@ -42,6 +42,7 @@ const updateItemSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
   updatedAt: z.string().datetime().optional(),
+  propagateToChildren: z.boolean().optional(),
 });
 
 const querySchema = z.object({
@@ -332,7 +333,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = updateItemSchema.parse(request.body);
-      const { tagIds, updatedAt: clientUpdatedAt, ...updateData } = body;
+      const { tagIds, updatedAt: clientUpdatedAt, propagateToChildren, ...updateData } = body;
 
       // Optimistic locking: if client sends updatedAt, compare with server
       if (clientUpdatedAt) {
@@ -440,6 +441,28 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           after: serializeItemForAudit(item),
         },
       });
+
+      // Propagate status to all descendants recursively
+      if (propagateToChildren && updateData.status !== undefined) {
+        const collectDescendantIds = async (parentId: string): Promise<string[]> => {
+          const children = await fastify.prisma.item.findMany({
+            where: { parentId, spaceId: request.params.spaceId },
+            select: { id: true },
+          });
+          const ids = children.map(c => c.id);
+          for (const child of children) {
+            ids.push(...await collectDescendantIds(child.id));
+          }
+          return ids;
+        };
+        const descendantIds = await collectDescendantIds(request.params.id);
+        if (descendantIds.length > 0) {
+          await fastify.prisma.item.updateMany({
+            where: { id: { in: descendantIds } },
+            data: { status: updateData.status },
+          });
+        }
+      }
 
       // Notify @mentioned users in updated description
       if (updateData.description && updateData.description !== existingItem.description) {

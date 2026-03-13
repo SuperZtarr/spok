@@ -19,6 +19,13 @@ export interface ConvertingItem {
   childCount: number;
 }
 
+export interface PendingStatusPropagation {
+  itemId: string;
+  itemTitle: string;
+  status: string;
+  childCount: number;
+}
+
 export interface PendingCrossSpaceMove {
   itemId: string;
   itemTitle: string;
@@ -51,6 +58,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const [convertingItem, setConvertingItem] = useState<ConvertingItem | null>(null);
   const [pendingCrossSpaceMove, setPendingCrossSpaceMove] = useState<PendingCrossSpaceMove | null>(null);
   const [mergingItemId, setMergingItemId] = useState<string | null>(null);
+  const [pendingStatusPropagation, setPendingStatusPropagation] = useState<PendingStatusPropagation | null>(null);
 
   // Resolve an item's actual spaceId (portal items belong to different spaces)
   const resolveItemSpaceId = useCallback((itemId: string): string => {
@@ -74,7 +82,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string } }) =>
+    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string; propagateToChildren?: boolean } }) =>
       itemsApi.update(itemSpaceId, id, data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -138,6 +146,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       setConvertingItem(null);
       navigate(`/spaces/${result.space.id}/content`);
     },
@@ -188,7 +197,21 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
     updateItemMutation.mutate({ id, itemSpaceId, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
-  }, [resolveItemSpaceId, updateItemMutation, getItemUpdatedAt]);
+
+    // If status changed on an item with children, propose propagation
+    if (data.status !== undefined) {
+      const childCount = countDescendants(allItems, id);
+      if (childCount > 0) {
+        const item = allItems.find(i => i.id === id);
+        setPendingStatusPropagation({
+          itemId: id,
+          itemTitle: item?.title || 'cet élément',
+          status: data.status,
+          childCount,
+        });
+      }
+    }
+  }, [resolveItemSpaceId, updateItemMutation, getItemUpdatedAt, allItems]);
 
   const handleMove = useCallback((id: string, parentId: string | null, position: number) => {
     const itemSpaceId = resolveItemSpaceId(id);
@@ -242,6 +265,20 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     updateRelationMutation.mutate({ itemId, itemSpaceId, relationId, data });
   }, [resolveItemSpaceId, updateRelationMutation]);
 
+  // --- Status propagation ---
+
+  const confirmStatusPropagation = useCallback(() => {
+    if (pendingStatusPropagation) {
+      const itemSpaceId = resolveItemSpaceId(pendingStatusPropagation.itemId);
+      updateItemMutation.mutate({
+        id: pendingStatusPropagation.itemId,
+        itemSpaceId,
+        data: { status: pendingStatusPropagation.status, propagateToChildren: true },
+      });
+      setPendingStatusPropagation(null);
+    }
+  }, [pendingStatusPropagation, resolveItemSpaceId, updateItemMutation]);
+
   // --- Merge ---
 
   const handleMerge = useCallback((id: string) => {
@@ -287,6 +324,10 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     handleCreateRelation,
     handleDeleteRelation,
     handleUpdateRelation,
+    // Status propagation
+    pendingStatusPropagation,
+    setPendingStatusPropagation,
+    confirmStatusPropagation,
     // Merge
     handleMerge,
     mergingItemId,

@@ -82,6 +82,7 @@ export interface UpdateItemInput {
   assignedToId?: string | null;
   tagIds?: string[];
   updatedAt?: string;
+  propagateToChildren?: boolean;
 }
 
 export interface ItemRelation {

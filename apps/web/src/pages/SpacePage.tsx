@@ -59,6 +59,7 @@ import { EgoNetworkView } from '../components/views/EgoNetworkView';
 import { MembersKanbanView } from '../components/views/MembersKanbanView';
 import { PriorityView } from '../components/views/PriorityView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 import { MergeItemModal } from '../components/MergeItemModal';
 
@@ -1057,6 +1058,16 @@ export function SpacePage() {
           </div>
         )}
       </Modal>
+
+      {/* Status propagation confirmation */}
+      <ConfirmModal
+        isOpen={!!actions.pendingStatusPropagation}
+        onClose={() => actions.setPendingStatusPropagation(null)}
+        onConfirm={() => actions.confirmStatusPropagation()}
+        title="Propager le statut aux enfants"
+        message={`Voulez-vous aussi appliquer ce statut aux ${actions.pendingStatusPropagation?.childCount || 0} descendant${(actions.pendingStatusPropagation?.childCount || 0) > 1 ? 's' : ''} de « ${actions.pendingStatusPropagation?.itemTitle || ''} » ?`}
+        confirmLabel="Propager"
+      />
     </div>
   );
 }
