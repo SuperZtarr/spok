@@ -104,10 +104,11 @@ export function DrawioEditor({ xml, onChange, onImageExport, onSaveAndClose, pre
       {previewUrl ? (
         <div
           className="border rounded-md p-4 bg-white dark:bg-gray-900 overflow-auto cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+          style={{ maxHeight: '300px' }}
           onClick={() => editable && setIsEditing(true)}
           title={editable ? 'Cliquer pour modifier' : undefined}
         >
-          <img src={previewUrl} alt="Diagramme" className="max-w-full h-auto" />
+          <img src={previewUrl} alt="Diagramme" className="max-w-full h-auto max-h-[260px] object-contain mx-auto" />
         </div>
       ) : xml ? (
         <div
