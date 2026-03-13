@@ -1,58 +1,23 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { PenTool, Maximize2, Minimize2 } from 'lucide-react';
+import { Workflow, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from './Button';
 
 interface DrawioEditorProps {
   xml: string;
   onChange: (xml: string) => void;
+  onImageExport?: (blob: Blob) => void;
+  previewUrl?: string;
   editable?: boolean;
 }
 
-const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=dark&noSaveBtn=1&noExitBtn=1';
+const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&noSaveBtn=1&noExitBtn=1';
 
-export function DrawioEditor({ xml, onChange, editable = true }: DrawioEditorProps) {
+export function DrawioEditor({ xml, onChange, onImageExport, previewUrl, editable = true }: DrawioEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [svgPreview, setSvgPreview] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Generate SVG preview from XML
-  useEffect(() => {
-    if (!xml) {
-      setSvgPreview('');
-      return;
-    }
-    // Use a hidden iframe to export SVG
-    const previewFrame = document.createElement('iframe');
-    previewFrame.style.display = 'none';
-    previewFrame.src = 'https://embed.diagrams.net/?embed=1&proto=json&spin=0&ui=min';
-
-    const handlePreviewMessage = (evt: MessageEvent) => {
-      if (evt.source !== previewFrame.contentWindow) return;
-      try {
-        const msg = JSON.parse(evt.data);
-        if (msg.event === 'init') {
-          previewFrame.contentWindow?.postMessage(
-            JSON.stringify({ action: 'export', format: 'svg', xml }),
-            '*'
-          );
-        } else if (msg.event === 'export') {
-          setSvgPreview(msg.data);
-          window.removeEventListener('message', handlePreviewMessage);
-          previewFrame.remove();
-        }
-      } catch { /* ignore */ }
-    };
-
-    window.addEventListener('message', handlePreviewMessage);
-    document.body.appendChild(previewFrame);
-
-    return () => {
-      window.removeEventListener('message', handlePreviewMessage);
-      previewFrame.remove();
-    };
-  }, [xml]);
+  const pendingExportRef = useRef(false);
 
   // Handle messages from draw.io iframe
   const handleMessage = useCallback((evt: MessageEvent) => {
@@ -75,14 +40,45 @@ export function DrawioEditor({ xml, onChange, editable = true }: DrawioEditorPro
         onChange(msg.xml);
       } else if (msg.event === 'save') {
         onChange(msg.xml);
+        // Request PNG export after save
+        if (onImageExport) {
+          pendingExportRef.current = true;
+          iframeRef.current.contentWindow?.postMessage(
+            JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
+            '*'
+          );
+        }
+      } else if (msg.event === 'export' && pendingExportRef.current) {
+        pendingExportRef.current = false;
+        // msg.data is a base64 data URL
+        if (onImageExport && msg.data) {
+          fetch(msg.data)
+            .then(r => r.blob())
+            .then(blob => onImageExport(blob))
+            .catch(() => {});
+        }
       } else if (msg.event === 'exit') {
-        setIsEditing(false);
-        setIsFullscreen(false);
+        // Request PNG export before closing
+        if (onImageExport && xml) {
+          pendingExportRef.current = true;
+          iframeRef.current.contentWindow?.postMessage(
+            JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
+            '*'
+          );
+          // Wait briefly for export, then close
+          setTimeout(() => {
+            setIsEditing(false);
+            setIsFullscreen(false);
+          }, 500);
+        } else {
+          setIsEditing(false);
+          setIsFullscreen(false);
+        }
       }
     } catch {
       /* ignore non-JSON messages */
     }
-  }, [xml, onChange]);
+  }, [xml, onChange, onImageExport]);
 
   useEffect(() => {
     if (isEditing) {
@@ -102,6 +98,25 @@ export function DrawioEditor({ xml, onChange, editable = true }: DrawioEditorPro
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [isFullscreen]);
+
+  // When closing editor, export PNG
+  const handleClose = useCallback(() => {
+    if (onImageExport && xml && iframeRef.current?.contentWindow) {
+      pendingExportRef.current = true;
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
+        '*'
+      );
+      // Give time for the export message to come back
+      setTimeout(() => {
+        setIsEditing(false);
+        setIsFullscreen(false);
+      }, 500);
+    } else {
+      setIsEditing(false);
+      setIsFullscreen(false);
+    }
+  }, [onImageExport, xml]);
 
   if (isEditing) {
     return (
@@ -124,7 +139,7 @@ export function DrawioEditor({ xml, onChange, editable = true }: DrawioEditorPro
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => { setIsEditing(false); setIsFullscreen(false); }}
+            onClick={handleClose}
           >
             Fermer
           </Button>
@@ -139,25 +154,29 @@ export function DrawioEditor({ xml, onChange, editable = true }: DrawioEditorPro
     );
   }
 
-  // Preview mode
+  // Preview mode — show PNG from url, or placeholder
   return (
     <div className="space-y-2">
-      {xml && svgPreview ? (
+      {previewUrl ? (
         <div
           className="border rounded-md p-4 bg-white dark:bg-gray-900 overflow-auto cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-          style={{ maxHeight: '400px' }}
           onClick={() => editable && setIsEditing(true)}
           title={editable ? 'Cliquer pour modifier' : undefined}
-          dangerouslySetInnerHTML={{ __html: svgPreview }}
-        />
+        >
+          <img src={previewUrl} alt="Diagramme" className="max-w-full h-auto" />
+        </div>
       ) : xml ? (
-        <div className="border rounded-md p-8 text-center text-muted-foreground">
-          <PenTool className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p>Diagramme enregistré (aperçu en cours de chargement...)</p>
+        <div
+          className="border rounded-md p-8 text-center text-muted-foreground cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+          onClick={() => editable && setIsEditing(true)}
+          title={editable ? 'Cliquer pour modifier' : undefined}
+        >
+          <Workflow className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p>Diagramme enregistré (cliquer pour voir)</p>
         </div>
       ) : (
         <div className="border rounded-md p-8 text-center text-muted-foreground border-dashed">
-          <PenTool className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <Workflow className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Aucun diagramme</p>
         </div>
       )}
@@ -168,7 +187,7 @@ export function DrawioEditor({ xml, onChange, editable = true }: DrawioEditorPro
           size="sm"
           onClick={() => setIsEditing(true)}
         >
-          <PenTool className="w-4 h-4 mr-1" />
+          <Workflow className="w-4 h-4 mr-1" />
           {xml ? 'Modifier le diagramme' : 'Créer un diagramme'}
         </Button>
       )}

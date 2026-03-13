@@ -553,7 +553,7 @@ export function ItemEditModal({
           )}
         </div>
       }
-      size="large"
+      size="fullscreen"
     >
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
@@ -621,6 +621,12 @@ export function ItemEditModal({
               <DrawioEditor
                 xml={diagramXml}
                 onChange={setDiagramXml}
+                onImageExport={(blob) => {
+                  if (!itemId) return;
+                  const file = new File([blob], 'diagram.png', { type: 'image/png' });
+                  uploadImageMutation.mutate(file);
+                }}
+                previewUrl={url || undefined}
                 editable={canEdit}
               />
             </div>

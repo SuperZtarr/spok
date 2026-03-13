@@ -9,7 +9,7 @@ import {
   File,
   Image,
   Bug,
-  PenTool,
+  Workflow,
 } from 'lucide-react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
 import { DEFAULT_TYPE_LABELS } from '@spok/shared';
@@ -32,7 +32,7 @@ export const TYPE_ICONS: Record<string, typeof FileText> = {
   DOCUMENT: File,
   IMAGE: Image,
   BUG: Bug,
-  DIAGRAM: PenTool,
+  DIAGRAM: Workflow,
   // Legacy fallback
   APPOINTMENT: Calendar,
 };
