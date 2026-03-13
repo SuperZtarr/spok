@@ -68,12 +68,14 @@ import { stripMarkup } from '../lib/bbcode';
 import { TreeItem, RootDropZone } from './space-tree-view';
 import { useSpaceActions } from './useSpaceActions';
 import { SpaceToolbar } from './SpaceToolbar';
+import { useAuthStore } from '../stores/auth';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const queryClient = useQueryClient();
   const { mode: viewMode } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
+  const { user } = useAuthStore();
 
 
 
@@ -374,6 +376,12 @@ export function SpacePage() {
     );
   };
 
+  const handleSelfAssign = useCallback((id: string) => {
+    const item = allItems.find((i: Item) => i.id === id);
+    const newAssignee = item?.assignedToId === user?.id ? null : user?.id || null;
+    actions.handleInlineUpdate(id, { assignedToId: newAssignee });
+  }, [allItems, user, actions]);
+
   const expandAll = () => {
     const parentIds = new Set<string>();
     allItems.forEach((item: Item) => { if (item.parentId) parentIds.add(item.parentId); });
@@ -471,6 +479,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -486,6 +495,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               referentiels={referentiels}
               canEdit={canEdit}
               highlightType={activeTypeFilter}
@@ -505,6 +515,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -521,6 +532,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -537,6 +549,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -580,6 +593,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -605,6 +619,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
               onUpdateRelation={actions.handleUpdateRelation}
@@ -657,6 +672,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               doneStatusId={referentiels?.statuses?.find(s => s.id === 'done')?.id || 'done'}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -756,6 +772,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -769,6 +786,7 @@ export function SpacePage() {
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -805,6 +823,7 @@ export function SpacePage() {
                       onMoveToSpace={(id) => setMoveItemId(id)}
                       onDuplicateToSpace={(id) => setDuplicateItemId(id)}
                       onConvertToSpace={actions.handleConvertToSpace}
+                      onSelfAssign={handleSelfAssign}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       onMove={actions.handleMove}
@@ -851,6 +870,7 @@ export function SpacePage() {
                           onMoveToSpace={(id) => setMoveItemId(id)}
                           onDuplicateToSpace={(id) => setDuplicateItemId(id)}
                           onConvertToSpace={actions.handleConvertToSpace}
+                          onSelfAssign={handleSelfAssign}
                           spaceId={group.spaceId}
                           isOver={overId === item.id}
                           onMove={actions.handleMove}

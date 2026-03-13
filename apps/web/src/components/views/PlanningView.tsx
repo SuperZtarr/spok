@@ -15,6 +15,7 @@ import {
   FolderKanban,
   FolderPlus,
   Copy,
+  UserPlus,
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
@@ -137,6 +138,7 @@ interface PlanningViewProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -155,6 +157,7 @@ interface PlanningItemProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   typeLabels?: Record<string, { labelShort: string }>;
@@ -166,7 +169,7 @@ interface PlanningItemProps {
   canEdit?: boolean;
 }
 
-function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
   const Icon = getTypeIcon(item.type);
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -253,6 +256,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
                 actions: [
                   ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
                   ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                 ],
               },
@@ -283,6 +287,7 @@ interface PeriodSectionProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   referentiels?: SpaceReferentiels;
@@ -293,7 +298,7 @@ interface PeriodSectionProps {
   canEdit?: boolean;
 }
 
-function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -321,6 +326,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
             onMoveToSpace={onMoveToSpace}
             onDuplicateToSpace={onDuplicateToSpace}
             onConvertToSpace={onConvertToSpace}
+            onSelfAssign={onSelfAssign}
             statuses={statuses}
             referentiels={referentiels}
             isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
@@ -335,7 +341,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
   );
 }
 
-export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -414,6 +420,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace}
+          onSelfAssign={onSelfAssign}
           statuses={statuses}
           referentiels={referentiels}
           highlightType={highlightType}

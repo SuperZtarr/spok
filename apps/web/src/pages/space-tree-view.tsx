@@ -11,6 +11,7 @@ import {
   FolderInput,
   Copy,
   FolderPlus,
+  UserPlus,
 } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { itemsApi } from '../lib/api';
@@ -51,6 +52,7 @@ export interface TreeItemProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
@@ -84,6 +86,7 @@ export function TreeItem({
   onMoveToSpace,
   onDuplicateToSpace,
   onConvertToSpace,
+  onSelfAssign,
   spaceId,
   isOver,
   onMove,
@@ -229,6 +232,7 @@ export function TreeItem({
                   actions: [
                     ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
                     { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                    ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
                     ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                   ],
                 },
@@ -268,6 +272,7 @@ export function TreeItem({
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace}
+          onSelfAssign={onSelfAssign}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
@@ -302,6 +307,7 @@ export function ItemChildren({
   onMoveToSpace,
   onDuplicateToSpace,
   onConvertToSpace,
+  onSelfAssign,
   onMove,
   globalOverId,
   globalDropMode,
@@ -329,6 +335,7 @@ export function ItemChildren({
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -372,6 +379,7 @@ export function ItemChildren({
           onMoveToSpace={onMoveToSpace}
           onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace}
+          onSelfAssign={onSelfAssign}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           onMove={onMove}

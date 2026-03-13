@@ -22,7 +22,7 @@ import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constant
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { Trash2, Plus, Copy, FolderInput, FolderPlus } from 'lucide-react';
+import { Trash2, Plus, Copy, FolderInput, FolderPlus, UserPlus } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,6 +51,7 @@ interface MembersKanbanViewProps {
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -71,6 +72,7 @@ function MemberKanbanCard({
   onMoveToSpace,
   onDuplicateToSpace,
   onConvertToSpace,
+  onSelfAssign,
   isDragging,
   canEdit = true,
   referentiels,
@@ -82,6 +84,7 @@ function MemberKanbanCard({
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
@@ -150,6 +153,7 @@ function MemberKanbanCard({
               {
                 actions: [
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
+                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
                   ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                 ],
               },
@@ -184,6 +188,7 @@ function MemberColumnComponent({
   onMoveToSpace,
   onDuplicateToSpace,
   onConvertToSpace,
+  onSelfAssign,
   canEdit,
   referentiels,
   draggedItemId,
@@ -197,6 +202,7 @@ function MemberColumnComponent({
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
   draggedItemId: string | null;
@@ -242,6 +248,7 @@ function MemberColumnComponent({
             onMoveToSpace={onMoveToSpace}
             onDuplicateToSpace={onDuplicateToSpace}
             onConvertToSpace={onConvertToSpace}
+            onSelfAssign={onSelfAssign}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
             referentiels={referentiels}
@@ -308,6 +315,7 @@ export function MembersKanbanView({
   onAddChild,
   onMoveToSpace,
   onDuplicateToSpace,
+  onSelfAssign,
   onConvertToSpace,
   referentiels,
   canEdit = true,
@@ -493,6 +501,7 @@ export function MembersKanbanView({
                       onMoveToSpace={onMoveToSpace}
                       onDuplicateToSpace={onDuplicateToSpace}
                       onConvertToSpace={onConvertToSpace}
+                      onSelfAssign={onSelfAssign}
                       canEdit={canEdit}
                       referentiels={referentiels}
                       draggedItemId={draggedItemId}
