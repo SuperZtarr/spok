@@ -119,7 +119,7 @@ export function SpaceToolbar({
   const showResetLayout = viewMode === 'mindmap' || viewMode === 'schema';
 
   return (
-    <div className="flex flex-col gap-2 mb-3 z-10 bg-background pb-2 flex-shrink-0">
+    <div className="flex flex-col gap-2 mb-3 z-20 bg-background pb-2 flex-shrink-0 relative">
       <div className="flex gap-1.5 flex-wrap items-center pb-1">
         {/* Mode indicator */}
         {isHighlightMode ? (
