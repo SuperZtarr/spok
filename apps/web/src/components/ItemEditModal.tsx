@@ -635,9 +635,8 @@ export function ItemEditModal({
                   // 2. Upload PNG to R2
                   const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
                   await uploadImageMutation.mutateAsync(file);
-                  // 3. Refresh item data so modal has fresh updatedAt
+                  // 3. Refresh list only (NOT individual item — that would reset the form and close the modal)
                   queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-                  queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
                 }}
                 previewUrl={url || undefined}
                 editable={canEdit}
