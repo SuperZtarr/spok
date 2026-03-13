@@ -99,6 +99,8 @@ export function CommunitySettingsPage() {
   const [editIsPublic, setEditIsPublic] = useState(false);
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
+  const [showCreateSpace, setShowCreateSpace] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState('');
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members'>('general');
 
   // Fetch community details
@@ -184,6 +186,17 @@ export function CommunitySettingsPage() {
     },
   });
 
+
+  // Create new space in this community
+  const createSpaceMutation = useMutation({
+    mutationFn: (name: string) => spacesApi.create({ name, type: 'GROUP', communityId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
+      setShowCreateSpace(false);
+      setNewSpaceName('');
+    },
+  });
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -469,17 +482,63 @@ export function CommunitySettingsPage() {
                 <FolderKanban className="w-5 h-5" />
                 Espaces ({communitySpaces.length})
               </h2>
-              {canEdit && availableSpaces.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddSpace(!showAddSpace)}
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Ajouter un espace
-                </Button>
+              {canEdit && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => { setShowCreateSpace(!showCreateSpace); setShowAddSpace(false); }}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Créer un espace
+                  </Button>
+                  {availableSpaces.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setShowAddSpace(!showAddSpace); setShowCreateSpace(false); }}
+                    >
+                      Rattacher un espace existant
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
+
+            {/* Create space form */}
+            {showCreateSpace && (
+              <div className="p-4 bg-muted rounded-lg mb-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Créer un nouvel espace dans cette communauté :
+                </p>
+                <Input
+                  value={newSpaceName}
+                  onChange={(e) => setNewSpaceName(e.target.value)}
+                  placeholder="Nom de l'espace"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newSpaceName.trim()) {
+                      createSpaceMutation.mutate(newSpaceName.trim());
+                    }
+                  }}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => createSpaceMutation.mutate(newSpaceName.trim())}
+                    disabled={!newSpaceName.trim() || createSpaceMutation.isPending}
+                  >
+                    {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { setShowCreateSpace(false); setNewSpaceName(''); }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Add space form */}
             {showAddSpace && (
