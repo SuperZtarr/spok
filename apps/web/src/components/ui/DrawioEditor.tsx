@@ -1,24 +1,24 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Workflow } from 'lucide-react';
+import { Workflow, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 
 interface DrawioEditorProps {
   xml: string;
   onChange: (xml: string) => void;
-  onImageExport?: (blob: Blob) => void;
-  onSaveAndClose?: () => void;
+  onSaveAndClose?: (xml: string, pngBlob: Blob) => Promise<void>;
   previewUrl?: string;
   editable?: boolean;
 }
 
 const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&saveAndExit=1&noExitBtn=1';
 
-export function DrawioEditor({ xml, onChange, onImageExport, onSaveAndClose, previewUrl, editable = true }: DrawioEditorProps) {
+export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editable = true }: DrawioEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const pendingExportRef = useRef(false);
-  const closeAfterExportRef = useRef(false);
+  const pendingExitRef = useRef(false);
+  const savedXmlRef = useRef('');
 
   // Handle messages from draw.io iframe
   const handleMessage = useCallback((evt: MessageEvent) => {
@@ -40,33 +40,37 @@ export function DrawioEditor({ xml, onChange, onImageExport, onSaveAndClose, pre
         onChange(msg.xml);
       } else if (msg.event === 'save') {
         onChange(msg.xml);
-        // Request PNG export after save
-        if (onImageExport) {
-          pendingExportRef.current = true;
-          closeAfterExportRef.current = !!msg.exit;
+        if (msg.exit && onSaveAndClose) {
+          // "Save & Exit": request PNG export, then save everything
+          pendingExitRef.current = true;
+          savedXmlRef.current = msg.xml;
+          setIsSaving(true);
           iframeRef.current.contentWindow?.postMessage(
             JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
             '*'
           );
         } else if (msg.exit) {
-          // No image export needed, just close and save
           setIsEditing(false);
-          onSaveAndClose?.();
         }
-      } else if (msg.event === 'export' && pendingExportRef.current) {
-        pendingExportRef.current = false;
-        if (onImageExport && msg.data) {
+        // Simple "Save" (no exit): just onChange, nothing else
+      } else if (msg.event === 'export' && pendingExitRef.current) {
+        pendingExitRef.current = false;
+        const xmlToSave = savedXmlRef.current;
+        if (onSaveAndClose && msg.data) {
           fetch(msg.data)
             .then(r => r.blob())
-            .then(blob => {
-              onImageExport(blob);
-              if (closeAfterExportRef.current) {
-                closeAfterExportRef.current = false;
-                setIsEditing(false);
-                onSaveAndClose?.();
-              }
+            .then(blob => onSaveAndClose(xmlToSave, blob))
+            .then(() => {
+              setIsSaving(false);
+              setIsEditing(false);
             })
-            .catch(() => {});
+            .catch(() => {
+              setIsSaving(false);
+              setIsEditing(false);
+            });
+        } else {
+          setIsSaving(false);
+          setIsEditing(false);
         }
       } else if (msg.event === 'exit') {
         setIsEditing(false);
@@ -74,7 +78,7 @@ export function DrawioEditor({ xml, onChange, onImageExport, onSaveAndClose, pre
     } catch {
       /* ignore non-JSON messages */
     }
-  }, [xml, onChange, onImageExport, onSaveAndClose]);
+  }, [xml, onChange, onSaveAndClose]);
 
   useEffect(() => {
     if (isEditing) {
@@ -94,6 +98,14 @@ export function DrawioEditor({ xml, onChange, onImageExport, onSaveAndClose, pre
           src={DRAWIO_URL}
           className="w-full h-full border-0"
         />
+        {isSaving && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50">
+            <div className="flex items-center gap-3 rounded-lg bg-background px-6 py-4 shadow-lg">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm font-medium">Sauvegarde en cours…</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

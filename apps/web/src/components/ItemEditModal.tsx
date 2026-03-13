@@ -625,12 +625,20 @@ export function ItemEditModal({
               <DrawioEditor
                 xml={diagramXml}
                 onChange={setDiagramXml}
-                onImageExport={(blob) => {
+                onSaveAndClose={async (savedXml, pngBlob) => {
                   if (!itemId) return;
-                  const file = new File([blob], 'diagram.png', { type: 'image/png' });
-                  uploadImageMutation.mutate(file);
+                  // 1. Save XML to database (skip optimistic locking — auto-save from draw.io)
+                  await itemsApi.update(spaceId, itemId, {
+                    content: { xml: savedXml },
+                  });
+                  setDiagramXml(savedXml);
+                  // 2. Upload PNG to R2
+                  const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
+                  await uploadImageMutation.mutateAsync(file);
+                  // 3. Refresh item data so modal has fresh updatedAt
+                  queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+                  queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
                 }}
-                onSaveAndClose={doSubmit}
                 previewUrl={url || undefined}
                 editable={canEdit}
               />
