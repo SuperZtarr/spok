@@ -65,10 +65,10 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   PERIOD: 'Période',
   LINK: 'Lien',
   CONFIG: 'Config',
-  DOCUMENT: 'Doc',
+  DOCUMENT: 'Document',
   IMAGE: 'Image',
   BUG: 'Bug',
-  DIAGRAM: 'Diag',
+  DIAGRAM: 'Diagramme',
   // Legacy fallback
   APPOINTMENT: 'RDV',
 };

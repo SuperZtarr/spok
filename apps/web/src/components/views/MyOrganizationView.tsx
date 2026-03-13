@@ -492,12 +492,12 @@ export function MyOrganizationView() {
 
       {/* Échéances */}
       <div className="bg-card border rounded-lg p-4">
-        <DeadlinesView />
+        <DeadlinesView embedded />
       </div>
 
       {/* Toutes les tâches */}
       <div className="bg-card border rounded-lg p-4">
-        <GlobalTasksPage />
+        <GlobalTasksPage externalFilters={filters} />
       </div>
 
       {/* Edit modal */}

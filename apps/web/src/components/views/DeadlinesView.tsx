@@ -99,7 +99,7 @@ function groupByDeadline(tasks: GlobalTask[]): DeadlineGroup[] {
   return groups;
 }
 
-export function DeadlinesView() {
+export function DeadlinesView({ embedded }: { embedded?: boolean } = {}) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -167,7 +167,7 @@ export function DeadlinesView() {
             Terminés
           </label>
         </div>
-        <GlobalTaskFilterBar filters={filters} />
+        {!embedded && <GlobalTaskFilterBar filters={filters} />}
       </div>
 
       {/* Content */}

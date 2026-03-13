@@ -224,6 +224,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
               onChange={(e) => setEditName(e.target.value)}
               placeholder="Nom de la communaute"
               required
+              autoFocus
             />
           </div>
 

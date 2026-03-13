@@ -229,6 +229,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               onChange={(e) => setEditName(e.target.value)}
               placeholder="Nom complet"
               required
+              autoFocus
             />
           </div>
 

@@ -17,17 +17,17 @@ import { Button } from '../components/ui/Button';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { TYPE_LABELS } from '../constants/ui';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
-import { useGlobalTaskFilters } from '../hooks/useGlobalTaskFilters';
+import { useGlobalTaskFilters, type GlobalTaskFilterState } from '../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../components/GlobalTaskFilterBar';
 
 const STATUS_COLOR_MAP = buildStatusColorMap();
 const STATUS_LABEL_MAP = buildStatusLabelMap();
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: 'Critique', color: 'bg-red-100 text-red-800' },
-  2: { label: 'Haute', color: 'bg-orange-100 text-orange-800' },
-  3: { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800' },
-  4: { label: 'Basse', color: 'bg-blue-100 text-blue-800' },
+  4: { label: 'Urgente', color: 'bg-red-100 text-red-800' },
+  3: { label: 'Haute', color: 'bg-orange-100 text-orange-800' },
+  2: { label: 'Normale', color: 'bg-blue-100 text-blue-800' },
+  1: { label: 'Basse', color: 'bg-gray-100 text-gray-600' },
 };
 
 function formatDate(dateStr: string | null): string {
@@ -54,15 +54,18 @@ const typeOptions = [
   { id: 'PERIOD', label: TYPE_LABELS['PERIOD'] || 'Période', color: 'bg-teal-100 text-teal-800 border-teal-300' },
   { id: 'LINK', label: TYPE_LABELS['LINK'] || 'Lien', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
   { id: 'IMAGE', label: TYPE_LABELS['IMAGE'] || 'Image', color: 'bg-pink-100 text-pink-800 border-pink-300' },
+  { id: 'DIAGRAM', label: TYPE_LABELS['DIAGRAM'] || 'Diagramme', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
 ];
 
 type SortField = GlobalTaskFilters['sortBy'];
 
-export function GlobalTasksPage() {
+export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalTaskFilterState }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const filters = useGlobalTaskFilters();
+  const internalFilters = useGlobalTaskFilters();
+  const filters = externalFilters || internalFilters;
+  const embedded = !!externalFilters;
 
   // Modal state
   const [editingTask, setEditingTask] = useState<{
@@ -113,19 +116,21 @@ export function GlobalTasksPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 mb-3">
-          <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-          <h1 className="text-lg sm:text-xl font-bold">Mes taches</h1>
-          {total > 0 && (
-            <span className="text-xs sm:text-sm text-muted-foreground">
-              ({total})
-            </span>
-          )}
-        </div>
+      {!embedded && (
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3">
+            <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+            <h1 className="text-lg sm:text-xl font-bold">Mes taches</h1>
+            {total > 0 && (
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                ({total})
+              </span>
+            )}
+          </div>
 
-        <GlobalTaskFilterBar filters={filters} />
-      </div>
+          <GlobalTaskFilterBar filters={filters} />
+        </div>
+      )}
 
       {/* Table header — hidden on mobile */}
       <div className="hidden md:grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">

@@ -560,6 +560,7 @@ export function DashboardPage() {
                     onChange={(e) => setNewSpaceName(e.target.value)}
                     placeholder="Mon nouveau projet"
                     required
+                    autoFocus
                   />
                 </div>
 

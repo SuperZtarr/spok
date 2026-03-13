@@ -230,22 +230,10 @@ export function Layout() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [userMenuOpen]);
 
-  // Filter spaces by current community
-  const { data: spaces } = useQuery({
-    queryKey: ['spaces', currentCommunity?.id],
-    queryFn: () => spacesApi.list(currentCommunity?.id || 'none'),
-    enabled: !!user,
-    placeholderData: (prev: any) => prev,
-    refetchOnWindowFocus: 'always',
-    staleTime: 30_000,
-    retry: 2,
-    retryDelay: 1000,
-  });
-
-  // Also fetch personal spaces (always visible, only for authenticated users)
-  const { data: personalSpaces } = useQuery({
-    queryKey: ['spaces', 'personal'],
-    queryFn: () => spacesApi.list('none'),
+  // Fetch ALL spaces once (stable key, no flash on community change)
+  const { data: allSpaces, isFetching: spacesFetching } = useQuery({
+    queryKey: ['spaces', 'sidebar'],
+    queryFn: () => spacesApi.list(),
     enabled: !!user,
     placeholderData: (prev: any) => prev,
     refetchOnWindowFocus: 'always',
@@ -256,18 +244,16 @@ export function Layout() {
 
   // Separate personal and community/group spaces, then build trees
   const { mySpaces, communitySpaceTree } = useMemo(() => {
+    const all = allSpaces || [];
     const sortByName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 
-    let personalList: SpaceWithRole[];
-    let groupList: SpaceWithRole[];
+    const personalList = all.filter(s => s.type === 'PERSONAL').sort(sortByName);
 
+    let groupList: SpaceWithRole[];
     if (currentCommunity) {
-      personalList = (personalSpaces?.filter(s => s.type === 'PERSONAL') || []).sort(sortByName);
-      groupList = (spaces || []).slice().sort(sortByName);
+      groupList = all.filter(s => s.type !== 'PERSONAL' && s.communityId === currentCommunity.id).sort(sortByName);
     } else {
-      const all = spaces || [];
-      personalList = all.filter(s => s.type === 'PERSONAL').sort(sortByName);
       groupList = all.filter(s => s.type !== 'PERSONAL').sort(sortByName);
     }
 
@@ -275,7 +261,7 @@ export function Layout() {
       mySpaces: personalList,
       communitySpaceTree: buildSpaceTree(groupList),
     };
-  }, [currentCommunity, spaces, personalSpaces]);
+  }, [currentCommunity, allSpaces]);
 
   // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
@@ -431,9 +417,9 @@ export function Layout() {
                   onToggle={toggleSpaceExpand}
                 />
               ))
-            ) : (
+            ) : !spacesFetching ? (
               <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
-            )}
+            ) : null}
         </div>
       </nav>
 

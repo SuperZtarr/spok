@@ -171,6 +171,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
                 <Input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
+                  autoFocus
                 />
               </div>
               <div>

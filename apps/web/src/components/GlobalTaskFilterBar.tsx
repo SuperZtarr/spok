@@ -84,6 +84,7 @@ const typeOptions = [
   { id: 'PERIOD', label: TYPE_LABELS['PERIOD'] || 'Période', color: 'bg-teal-100 text-teal-800 border-teal-300' },
   { id: 'LINK', label: TYPE_LABELS['LINK'] || 'Lien', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
   { id: 'IMAGE', label: TYPE_LABELS['IMAGE'] || 'Image', color: 'bg-pink-100 text-pink-800 border-pink-300' },
+  { id: 'DIAGRAM', label: TYPE_LABELS['DIAGRAM'] || 'Diagramme', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
 ];
 
 const statusOptions = DEFAULT_STATUSES
@@ -96,10 +97,10 @@ const statusOptions = DEFAULT_STATUSES
   }));
 
 const priorityOptions = [
-  { id: '1', label: 'Critique', color: 'bg-red-100 text-red-800 border-red-300' },
-  { id: '2', label: 'Haute', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { id: '3', label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  { id: '4', label: 'Basse', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { id: '4', label: 'Urgente', color: 'bg-red-100 text-red-800 border-red-300' },
+  { id: '3', label: 'Haute', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  { id: '2', label: 'Normale', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { id: '1', label: 'Basse', color: 'bg-gray-100 text-gray-600 border-gray-300' },
 ];
 
 interface GlobalTaskFilterBarProps {
