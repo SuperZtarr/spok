@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight } from 'lucide-react';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -9,6 +9,84 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 import { useAuthStore } from '../stores/auth';
+
+function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: string | null) => void }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('application/spok-space-id')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setIsDragOver(true);
+        }
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const draggedId = e.dataTransfer.getData('application/spok-space-id');
+        if (draggedId) onMove(draggedId, null);
+      }}
+      className={`flex items-center justify-center p-2 rounded-lg border border-dashed transition-colors text-xs text-muted-foreground ${
+        isDragOver ? 'border-primary bg-primary/5 text-primary' : 'border-transparent'
+      }`}
+    >
+      {isDragOver ? 'Déposer ici pour mettre à la racine' : ''}
+    </div>
+  );
+}
+
+function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMove: (spaceId: string, newParentId: string | null) => void }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  return (
+    <>
+      <Link
+        to={`/spaces/${node.id}`}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('application/spok-space-id', node.id);
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes('application/spok-space-id')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setIsDragOver(true);
+          }
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const draggedId = e.dataTransfer.getData('application/spok-space-id');
+          if (draggedId && draggedId !== node.id) onMove(draggedId, node.id);
+        }}
+        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${isDragOver ? 'border-primary bg-primary/5 ring-2 ring-primary' : 'border-border hover:bg-accent/50'}`}
+        style={{ marginLeft: `${level * 24}px` }}
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />
+        {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
+        {node.avatarUrl ? (
+          <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
+        ) : (
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FolderOpen className="w-4 h-4 text-primary" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{node.name}</p>
+          <p className="text-xs text-muted-foreground">{node.itemCount || 0} élément{(node.itemCount || 0) > 1 ? 's' : ''}</p>
+        </div>
+      </Link>
+      {node.children?.map((child: any) => (
+        <SpaceTreeNode key={child.id} node={child} level={level + 1} onMove={onMove} />
+      ))}
+    </>
+  );
+}
 
 export function CommunitySettingsPage() {
   const { communityId } = useParams<{ communityId: string }>();
@@ -21,6 +99,7 @@ export function CommunitySettingsPage() {
   const [editIsPublic, setEditIsPublic] = useState(false);
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members'>('general');
 
   // Fetch community details
   const { data: community, isLoading: communityLoading } = useQuery({
@@ -45,6 +124,34 @@ export function CommunitySettingsPage() {
 
   // Spaces in this community
   const communitySpaces = allSpaces?.filter(s => s.communityId === communityId) || [];
+
+  // Build space tree
+  const spaceTree = useMemo(() => {
+    type SpaceNode = (typeof communitySpaces)[number] & { children: SpaceNode[] };
+    const map = new Map<string, SpaceNode>();
+    const roots: SpaceNode[] = [];
+    communitySpaces.forEach(s => map.set(s.id, { ...s, children: [] }));
+    communitySpaces.forEach(s => {
+      if (s.parentId && map.has(s.parentId)) {
+        map.get(s.parentId)!.children.push(map.get(s.id)!);
+      } else {
+        roots.push(map.get(s.id)!);
+      }
+    });
+    return roots;
+  }, [communitySpaces]);
+
+  const moveSpaceMutation = useMutation({
+    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string | null }) =>
+      spacesApi.update(spaceId, { parentId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const handleMoveSpace = (spaceId: string, newParentId: string | null) => {
+    moveSpaceMutation.mutate({ spaceId, parentId: newParentId });
+  };
 
   // Spaces that can be added (GROUP spaces not in any community, owned/admin by user)
   const availableSpaces = allSpaces?.filter(
@@ -77,14 +184,6 @@ export function CommunitySettingsPage() {
     },
   });
 
-  // Remove space from community
-  const removeSpaceMutation = useMutation({
-    mutationFn: (spaceId: string) => spacesApi.update(spaceId, { communityId: null }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spaces'] });
-      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
-    },
-  });
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,11 +236,6 @@ export function CommunitySettingsPage() {
     }
   };
 
-  const handleRemoveSpace = (spaceId: string, spaceName: string) => {
-    if (confirm(`Retirer l'espace "${spaceName}" de cette communauté ?`)) {
-      removeSpaceMutation.mutate(spaceId);
-    }
-  };
 
   if (communityLoading) {
     return (
@@ -153,7 +247,7 @@ export function CommunitySettingsPage() {
 
   if (!community) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Communauté non trouvée ou accès refusé.</p>
           <Button variant="link" onClick={() => navigate('/')}>
@@ -165,7 +259,7 @@ export function CommunitySettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto overflow-auto flex-1 min-h-0">
+    <div className="p-6 overflow-auto flex-1 min-h-0">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} title="Retour au tableau de bord">
@@ -181,80 +275,114 @@ export function CommunitySettingsPage() {
         </div>
       </div>
 
-      <div className="space-y-8">
-        {/* Community info */}
-        <div className="bg-card border rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Informations</h2>
+      {/* Tabs */}
+      <div className="border-b border-border mb-6">
+        <div className="flex gap-1">
+          {([
+            { id: 'general', label: 'Général' },
+            ...(canEdit ? [{ id: 'images' as const, label: 'Images' }] : []),
+            { id: 'spaces', label: `Espaces (${communitySpaces.length})` },
+            { id: 'members', label: `Membres (${community.memberCount || 0})` },
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {canEdit ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Nom</label>
-                <Input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <Input
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Description de la communauté"
-                />
-              </div>
-              {community?.role === 'OWNER' && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isPublic"
-                    checked={editIsPublic}
-                    onChange={(e) => setEditIsPublic(e.target.checked)}
-                    className="rounded border-border"
-                  />
-                  <label htmlFor="isPublic" className="text-sm">
-                    Communauté publique (visible et accessible à tous les utilisateurs)
-                  </label>
+      <div className="space-y-8">
+        {/* === GENERAL TAB === */}
+        {activeTab === 'general' && (
+          <>
+            {/* Community info */}
+            <div className="bg-card border rounded-lg p-6">
+              <h2 className="text-lg font-semibold mb-4">Informations</h2>
+
+              {canEdit ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nom</label>
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <Input
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Description de la communauté"
+                    />
+                  </div>
+                  {community?.role === 'OWNER' && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isPublic"
+                        checked={editIsPublic}
+                        onChange={(e) => setEditIsPublic(e.target.checked)}
+                        className="rounded border-border"
+                      />
+                      <label htmlFor="isPublic" className="text-sm">
+                        Communauté publique (visible et accessible à tous les utilisateurs)
+                      </label>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                    <div>Rôle : <span className="font-medium text-foreground">
+                      {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+                    </span></div>
+                    <div>Membres : <span className="font-medium text-foreground">{community.memberCount || 0}</span></div>
+                    <div>Espaces : <span className="font-medium text-foreground">{communitySpaces.length}</span></div>
+                  </div>
+                  <div>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveInfo}
+                      disabled={updateCommunityMutation.isPending}
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      Enregistrer
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-muted-foreground">Nom:</span> <span className="font-medium">{community.name}</span></div>
+                  <div><span className="text-muted-foreground">Rôle:</span> <span className="font-medium">
+                    {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+                  </span></div>
+                  {community.description && (
+                    <div className="col-span-2"><span className="text-muted-foreground">Description:</span> <span>{community.description}</span></div>
+                  )}
+                  <div><span className="text-muted-foreground">Membres:</span> <span className="font-medium">{community.memberCount || 0}</span></div>
+                  <div><span className="text-muted-foreground">Espaces:</span> <span className="font-medium">{communitySpaces.length}</span></div>
+                  <div><span className="text-muted-foreground">Visibilité:</span> <span className={`font-medium ${community.isPublic ? 'text-green-600' : ''}`}>
+                    {community.isPublic ? 'Publique' : 'Privée'}
+                  </span></div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                <div>Rôle : <span className="font-medium text-foreground">
-                  {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
-                </span></div>
-                <div>Membres : <span className="font-medium text-foreground">{community.memberCount || 0}</span></div>
-                <div>Espaces : <span className="font-medium text-foreground">{communitySpaces.length}</span></div>
-              </div>
-              <div>
-                <Button
-                  size="sm"
-                  onClick={handleSaveInfo}
-                  disabled={updateCommunityMutation.isPending}
-                >
-                  <Save className="w-4 h-4 mr-1" />
-                  Enregistrer
-                </Button>
-              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-muted-foreground">Nom:</span> <span className="font-medium">{community.name}</span></div>
-              <div><span className="text-muted-foreground">Rôle:</span> <span className="font-medium">
-                {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
-              </span></div>
-              {community.description && (
-                <div className="col-span-2"><span className="text-muted-foreground">Description:</span> <span>{community.description}</span></div>
-              )}
-              <div><span className="text-muted-foreground">Membres:</span> <span className="font-medium">{community.memberCount || 0}</span></div>
-              <div><span className="text-muted-foreground">Espaces:</span> <span className="font-medium">{communitySpaces.length}</span></div>
-              <div><span className="text-muted-foreground">Visibilité:</span> <span className={`font-medium ${community.isPublic ? 'text-green-600' : ''}`}>
-                {community.isPublic ? 'Publique' : 'Privée'}
-              </span></div>
-            </div>
-          )}
-        </div>
 
-        {/* Images */}
-        {canEdit && (
+            {/* Community Tags */}
+            {['OWNER', 'ADMIN'].includes(community.role || '') && (
+              <CommunityTagsSection communityId={communityId!} />
+            )}
+          </>
+        )}
+
+        {/* === IMAGES TAB === */}
+        {activeTab === 'images' && canEdit && (
           <div className="bg-card border rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ImageIcon className="w-5 h-5" />
@@ -333,112 +461,86 @@ export function CommunitySettingsPage() {
           </div>
         )}
 
-        {/* Spaces section */}
-        <div className="bg-card border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <FolderKanban className="w-5 h-5" />
-              Espaces ({communitySpaces.length})
-            </h2>
-            {canEdit && availableSpaces.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowAddSpace(!showAddSpace)}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Ajouter un espace
-              </Button>
-            )}
-          </div>
-
-          {/* Add space form */}
-          {showAddSpace && (
-            <div className="p-4 bg-muted rounded-lg mb-4 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Sélectionnez un espace de groupe à rattacher à cette communauté :
-              </p>
-              <Select
-                value={selectedSpaceId}
-                onChange={(e) => setSelectedSpaceId(e.target.value)}
-                options={[
-                  { value: '', label: 'Choisir un espace...' },
-                  ...availableSpaces.map(s => ({ value: s.id, label: s.name })),
-                ]}
-              />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleAddSpace}
-                  disabled={!selectedSpaceId || addSpaceMutation.isPending}
-                >
-                  {addSpaceMutation.isPending ? 'Ajout...' : 'Ajouter'}
-                </Button>
+        {/* === SPACES TAB === */}
+        {activeTab === 'spaces' && (
+          <div className="bg-card border rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <FolderKanban className="w-5 h-5" />
+                Espaces ({communitySpaces.length})
+              </h2>
+              {canEdit && availableSpaces.length > 0 && (
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => {
-                    setShowAddSpace(false);
-                    setSelectedSpaceId('');
-                  }}
+                  onClick={() => setShowAddSpace(!showAddSpace)}
                 >
-                  Annuler
+                  <Plus className="w-4 h-4 mr-1" />
+                  Ajouter un espace
                 </Button>
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Spaces list */}
-          {communitySpaces.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Aucun espace rattaché à cette communauté.
-            </p>
-          ) : (
-            <div className="border border-border rounded-lg divide-y divide-border">
-              {communitySpaces.map((space) => (
-                <div key={space.id} className="flex items-center justify-between p-3">
-                  <div
-                    className="flex items-center gap-3 cursor-pointer hover:text-primary"
-                    onClick={() => navigate(`/spaces/${space.id}`)}
+            {/* Add space form */}
+            {showAddSpace && (
+              <div className="p-4 bg-muted rounded-lg mb-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Sélectionnez un espace de groupe à rattacher à cette communauté :
+                </p>
+                <Select
+                  value={selectedSpaceId}
+                  onChange={(e) => setSelectedSpaceId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Choisir un espace...' },
+                    ...availableSpaces.map(s => ({ value: s.id, label: s.name })),
+                  ]}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleAddSpace}
+                    disabled={!selectedSpaceId || addSpaceMutation.isPending}
                   >
-                    <FolderKanban className="w-4 h-4" />
-                    <div>
-                      <div className="font-medium">{space.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {space.memberCount} membre{(space.memberCount || 0) > 1 ? 's' : ''} · {space.itemCount || 0} élément{(space.itemCount || 0) > 1 ? 's' : ''}
-                      </div>
-                    </div>
-                  </div>
-                  {canEdit && ['OWNER', 'ADMIN'].includes(space.role) && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRemoveSpace(space.id, space.name)}
-                      disabled={removeSpaceMutation.isPending}
-                      title="Retirer l'espace de la communauté"
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  )}
+                    {addSpaceMutation.isPending ? 'Ajout...' : 'Ajouter'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddSpace(false);
+                      setSelectedSpaceId('');
+                    }}
+                  >
+                    Annuler
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            )}
 
-          {canEdit && availableSpaces.length === 0 && communitySpaces.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-3">
-              Tous vos espaces de groupe sont déjà rattachés à une communauté.
-            </p>
-          )}
-        </div>
+            {/* Space tree */}
+            {spaceTree.length > 0 ? (
+              <div className="space-y-1">
+                {canEdit && <RootDropZone onMove={handleMoveSpace} />}
+                {spaceTree.map(node => (
+                  <SpaceTreeNode key={node.id} node={node} level={0} onMove={handleMoveSpace} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun espace rattaché à cette communauté.
+              </p>
+            )}
 
-        {/* Community Tags */}
-        {['OWNER', 'ADMIN'].includes(community.role || '') && (
-          <CommunityTagsSection communityId={communityId!} />
+            {canEdit && availableSpaces.length === 0 && communitySpaces.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Tous vos espaces de groupe sont déjà rattachés à une communauté.
+              </p>
+            )}
+          </div>
         )}
 
-        {/* Members section */}
-        {user && (
+        {/* === MEMBERS TAB === */}
+        {activeTab === 'members' && user && (
           <div className="bg-card border rounded-lg p-6">
             <CommunityMembersManager
               communityId={communityId!}

@@ -6,7 +6,6 @@ import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { SendEmailModal } from '../components/SendEmailModal';
-import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 // Types used implicitly via API responses
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -243,46 +242,36 @@ export function CommunityPage() {
 
         {/* Members section */}
         <div className="mb-8">
-          {isAdminOrOwner && user ? (
-            <CommunityMembersManager
-              communityId={communityId!}
-              currentUserRole={community?.role || 'MEMBER'}
-              currentUserId={user.id}
-            />
-          ) : (
-            <>
-              <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Membres ({sortedMembers.length})
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {sortedMembers.map(member => {
-                  const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
-                  const RoleIcon = config.icon;
-                  return (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                        {member.name?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {member.name}
-                          {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <RoleIcon className={`w-3 h-3 ${config.color}`} />
-                          <span className="text-xs text-muted-foreground">{config.label}</span>
-                        </div>
-                      </div>
+          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Membres ({sortedMembers.length})
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {sortedMembers.map(member => {
+              const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
+              const RoleIcon = config.icon;
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border"
+                >
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                    {member.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {member.name}
+                      {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <RoleIcon className={`w-3 h-3 ${config.color}`} />
+                      <span className="text-xs text-muted-foreground">{config.label}</span>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
