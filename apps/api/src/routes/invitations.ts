@@ -217,13 +217,13 @@ export const invitationsRoutes: FastifyPluginAsync = async (fastify) => {
         const mem = await fastify.prisma.communityMembership.findUnique({
           where: { userId_communityId: { userId: request.user.userId, communityId: invitation.communityId } },
         });
-        isAdmin = mem ? ['OWNER', 'ADMIN'].includes(mem.role) : false;
+        isAdmin = mem ? mem.role === 'OWNER' : false;
       }
       if (!isInviter && invitation.spaceId) {
         const mem = await fastify.prisma.spaceMembership.findUnique({
           where: { userId_spaceId: { userId: request.user.userId, spaceId: invitation.spaceId } },
         });
-        isAdmin = mem ? ['OWNER', 'ADMIN'].includes(mem.role) : false;
+        isAdmin = mem ? mem.role === 'OWNER' : false;
       }
 
       if (!isInviter && !isAdmin) {

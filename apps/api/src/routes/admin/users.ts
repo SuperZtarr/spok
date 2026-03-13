@@ -307,7 +307,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /admin/users/:id/communities - Add user to a community
-  fastify.post<{ Params: UserParams; Body: { communityId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' } }>(
+  fastify.post<{ Params: UserParams; Body: { communityId: string; role: 'OWNER' | 'MEMBER' } }>(
     '/:id/communities',
     async (request, reply) => {
       const { id } = request.params;
@@ -331,11 +331,11 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.conflict('User is already a member of this community');
       }
 
-      // If adding as OWNER, demote current owner to ADMIN
+      // If adding as OWNER, demote current owner to MEMBER
       if (role === 'OWNER') {
         await fastify.prisma.communityMembership.updateMany({
           where: { communityId, role: 'OWNER' },
-          data: { role: 'ADMIN' },
+          data: { role: 'MEMBER' },
         });
       }
 
@@ -378,7 +378,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /admin/users/:id/spaces - Add user to a space
-  fastify.post<{ Params: UserParams; Body: { spaceId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' } }>(
+  fastify.post<{ Params: UserParams; Body: { spaceId: string; role: 'OWNER' | 'MEMBER' } }>(
     ':id/spaces',
     async (request, reply) => {
       const { id } = request.params;
@@ -406,11 +406,11 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.conflict('User is already a member of this space');
       }
 
-      // If adding as OWNER, demote current owner to ADMIN
+      // If adding as OWNER, demote current owner to MEMBER
       if (role === 'OWNER') {
         await fastify.prisma.spaceMembership.updateMany({
           where: { spaceId, role: 'OWNER' },
-          data: { role: 'ADMIN' },
+          data: { role: 'MEMBER' },
         });
       }
 

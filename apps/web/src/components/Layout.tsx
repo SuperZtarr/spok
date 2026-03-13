@@ -408,7 +408,7 @@ export function Layout() {
               </span>
             )}
             <div className="flex items-center gap-1">
-              {currentCommunity && currentCommunity.role && ['OWNER', 'ADMIN'].includes(currentCommunity.role) && (
+              {currentCommunity && currentCommunity.role === 'OWNER' && (
                 <Link to={`/communities/${currentCommunity.id}/settings`} title="Paramètres de la communauté">
                   <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                 </Link>

@@ -105,7 +105,7 @@ export function SpacePage() {
     enabled: !!spaceId,
   });
 
-  const canEdit = space?.role !== 'VIEWER';
+  const canEdit = !!space?.role;
 
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;

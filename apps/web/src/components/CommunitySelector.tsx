@@ -167,9 +167,9 @@ export function CommunitySelector() {
                     )}
                   </button>
                   <span className="text-xs text-muted-foreground">
-                    {community.role === 'OWNER' ? 'Proprio' : community.role === 'ADMIN' ? 'Admin' : 'Membre'}
+                    {community.role === 'OWNER' ? 'Proprio' : 'Membre'}
                   </span>
-                  {community.role && ['OWNER', 'ADMIN'].includes(community.role) && (
+                  {community.role === 'OWNER' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

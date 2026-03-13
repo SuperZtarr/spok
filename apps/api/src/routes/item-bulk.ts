@@ -20,7 +20,7 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (membership.role === 'VIEWER') {
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot duplicate items');
     }
 
@@ -33,7 +33,7 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Target space not found');
     }
 
-    if (targetMembership.role === 'VIEWER') {
+    if (targetMembership.role !== 'OWNER' && targetMembership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot add items to the target space');
     }
 

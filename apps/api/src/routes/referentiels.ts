@@ -56,10 +56,10 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
         const cm = await fastify.prisma.communityMembership.findUnique({
           where: { userId_communityId: { userId, communityId: space.communityId } },
         });
-        if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+        if (cm) return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
       }
       if (space.community?.isPublic) {
-        return { userId: userId || '', spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+        return { userId: userId || '', spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
       }
     }
     return null;
@@ -108,7 +108,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }
 
-    if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -167,7 +167,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }
 
-    if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 

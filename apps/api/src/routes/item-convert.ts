@@ -20,8 +20,8 @@ export const itemConvertRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (!['OWNER', 'ADMIN'].includes(membership.role)) {
-      return reply.forbidden('Only owners and admins can convert items to spaces');
+    if (membership.role !== 'OWNER') {
+      return reply.forbidden('Only owners can convert items to spaces');
     }
 
     const body = convertToSpaceSchema.parse(request.body);

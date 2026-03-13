@@ -20,7 +20,6 @@ const ROLE_LABELS: Record<string, string> = {
 
 const COMMUNITY_ROLE_LABELS: Record<string, string> = {
   OWNER: 'Propriétaire',
-  ADMIN: 'Admin',
   MEMBER: 'Membre',
 };
 

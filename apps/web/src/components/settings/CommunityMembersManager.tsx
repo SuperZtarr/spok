@@ -1,11 +1,7 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Loader2, Trash2, ChevronDown, Crown, Clock, X, Mail } from 'lucide-react';
-import { communitiesApi, invitationsApi } from '../../lib/api';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { ConfirmModal } from '../ConfirmModal';
-import type { CommunityMember, CommunityRole, Invitation } from '@spok/shared';
+import { communitiesApi } from '../../lib/api';
+import { MembersColumnManager } from './MembersColumnManager';
+import type { CommunityRole } from '@spok/shared';
 
 interface CommunityMembersManagerProps {
   communityId: string;
@@ -13,62 +9,39 @@ interface CommunityMembersManagerProps {
   currentUserId: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: 'Propriétaire',
-  ADMIN: 'Administrateur',
-  MEMBER: 'Membre',
-};
-
-const ROLE_OPTIONS = [
-  { value: 'ADMIN', label: 'Administrateur' },
-  { value: 'MEMBER', label: 'Membre' },
-];
-
 export function CommunityMembersManager({
   communityId,
   currentUserRole,
   currentUserId,
 }: CommunityMembersManagerProps) {
   const queryClient = useQueryClient();
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<CommunityRole>('MEMBER');
-  const [removingMember, setRemovingMember] = useState<CommunityMember | null>(null);
-  const [transferTarget, setTransferTarget] = useState<CommunityMember | null>(null);
+  const isOwner = currentUserRole === 'OWNER';
 
-  const { data: members, isLoading } = useQuery({
+  const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['community-members', communityId],
     queryFn: () => communitiesApi.getMembers(communityId),
   });
 
-  const { data: invitations } = useQuery({
-    queryKey: ['community-invitations', communityId],
-    queryFn: () => communitiesApi.getInvitations(communityId),
-    enabled: currentUserRole === 'OWNER' || currentUserRole === 'ADMIN',
+  const { data: availableUsers = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['community-available-users', communityId],
+    queryFn: () => communitiesApi.getAvailableUsers(communityId),
+    enabled: isOwner,
   });
 
-  const pendingInvitations = invitations?.filter((i: Invitation) => i.status === 'PENDING') || [];
-
-  const inviteMutation = useMutation({
-    mutationFn: (data: { email: string; role: CommunityRole }) => communitiesApi.invite(communityId, data),
+  const addMemberMutation = useMutation({
+    mutationFn: (data: { userId: string; role: string }) =>
+      communitiesApi.addMember(communityId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-invitations', communityId] });
-      setInviteEmail('');
-      setInviteRole('MEMBER');
+      queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['community-available-users', communityId] });
     },
   });
 
-  const cancelInvitationMutation = useMutation({
-    mutationFn: (id: string) => invitationsApi.cancel(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-invitations', communityId] });
-    },
-  });
-
-  const removeMutation = useMutation({
+  const removeMemberMutation = useMutation({
     mutationFn: (memberId: string) => communitiesApi.removeMember(communityId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
-      setRemovingMember(null);
+      queryClient.invalidateQueries({ queryKey: ['community-available-users', communityId] });
     },
   });
 
@@ -80,223 +53,25 @@ export function CommunityMembersManager({
     },
   });
 
-  const transferMutation = useMutation({
-    mutationFn: (targetMemberId: string) =>
-      communitiesApi.transferOwnership(communityId, targetMemberId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
-      queryClient.invalidateQueries({ queryKey: ['communities'] });
-      setTransferTarget(null);
-    },
-  });
-
-  const isOwner = currentUserRole === 'OWNER';
-  const isAdmin = currentUserRole === 'ADMIN';
-  const canInvite = isOwner || isAdmin;
-  const canRemove = isOwner || isAdmin;
-
-  const handleInvite = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inviteEmail.trim()) {
-      inviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole });
-    }
-  };
+  const memberInfos = (members || []).map(m => ({
+    id: m.id,
+    userId: m.userId,
+    email: m.email,
+    name: m.name,
+    role: m.role,
+  }));
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <Users className="w-5 h-5" />
-        Membres de la communauté
-      </h2>
-
-      {/* Invite form */}
-      {canInvite && (
-        <form onSubmit={handleInvite} className="flex gap-2 mb-4">
-          <Input
-            type="email"
-            placeholder="Email du membre à inviter"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            className="flex-1"
-          />
-          <div className="relative">
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as CommunityRole)}
-              className="h-9 px-3 pr-8 text-sm border border-border rounded-md bg-background appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              {ROLE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-          </div>
-          <Button
-            type="submit"
-            disabled={!inviteEmail.trim() || inviteMutation.isPending}
-            size="sm"
-          >
-            {inviteMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <UserPlus className="w-4 h-4 mr-1" />
-            )}
-            Inviter
-          </Button>
-        </form>
-      )}
-
-      {inviteMutation.isError && (
-        <p className="text-sm text-destructive mb-3">
-          {(inviteMutation.error as any)?.message || "Erreur lors de l'invitation."}
-        </p>
-      )}
-
-      {/* Pending invitations */}
-      {canInvite && pendingInvitations.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            Invitations en attente ({pendingInvitations.length})
-          </h3>
-          <div className="divide-y divide-border border rounded-md">
-            {pendingInvitations.map((inv: Invitation) => (
-              <div key={inv.id} className="flex items-center gap-3 px-3 py-2">
-                <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm truncate">{inv.email}</span>
-                </div>
-                <span className="text-xs text-muted-foreground px-2 py-0.5 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded">
-                  {ROLE_LABELS[inv.role] || inv.role}
-                </span>
-                <button
-                  onClick={() => cancelInvitationMutation.mutate(inv.id)}
-                  disabled={cancelInvitationMutation.isPending}
-                  className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  title="Annuler l'invitation"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Members list */}
-      {isLoading ? (
-        <div className="flex justify-center py-6">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        </div>
-      ) : !members || members.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-4">Aucun membre.</p>
-      ) : (
-        <div className="divide-y divide-border">
-          {members.map((member) => {
-            const isSelf = member.userId === currentUserId;
-            const memberIsOwner = member.role === 'OWNER';
-            const canChangeRole = isOwner && !memberIsOwner && !isSelf;
-            const canRemoveMember =
-              canRemove && !memberIsOwner && !isSelf &&
-              (member.role !== 'ADMIN' || isOwner);
-
-            return (
-              <div key={member.id} className="flex items-center gap-3 py-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate">
-                      {member.name || member.email}
-                    </span>
-                    {isSelf && (
-                      <span className="text-xs text-muted-foreground">(vous)</span>
-                    )}
-                  </div>
-                  {member.name && (
-                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                  )}
-                </div>
-
-                {canChangeRole ? (
-                  <div className="relative">
-                    <select
-                      value={member.role}
-                      onChange={(e) =>
-                        updateRoleMutation.mutate({
-                          memberId: member.id,
-                          role: e.target.value as CommunityRole,
-                        })
-                      }
-                      disabled={updateRoleMutation.isPending}
-                      className="h-7 px-2 pr-7 text-xs border border-border rounded bg-background appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {ROLE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
-                    {ROLE_LABELS[member.role] || member.role}
-                  </span>
-                )}
-
-                {isOwner && !isSelf && !memberIsOwner && (
-                  <button
-                    onClick={() => setTransferTarget(member)}
-                    className="p-1 text-muted-foreground hover:text-amber-500 transition-colors"
-                    title="Transférer la propriété"
-                  >
-                    <Crown className="w-4 h-4" />
-                  </button>
-                )}
-
-                {canRemoveMember && (
-                  <button
-                    onClick={() => setRemovingMember(member)}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                    title="Retirer ce membre"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <ConfirmModal
-        isOpen={!!removingMember}
-        onClose={() => setRemovingMember(null)}
-        onConfirm={() => {
-          if (removingMember) {
-            removeMutation.mutate(removingMember.id);
-          }
-        }}
-        title="Retirer le membre"
-        message={`Voulez-vous retirer ${removingMember?.name || removingMember?.email} de cette communauté ?`}
-        confirmLabel="Retirer"
-        isPending={removeMutation.isPending}
-      />
-
-      <ConfirmModal
-        isOpen={!!transferTarget}
-        onClose={() => setTransferTarget(null)}
-        onConfirm={() => {
-          if (transferTarget) {
-            transferMutation.mutate(transferTarget.id);
-          }
-        }}
-        title="Transférer la propriété"
-        message={`Voulez-vous transférer la propriété de cette communauté à ${transferTarget?.name || transferTarget?.email} ? Vous deviendrez simple membre.`}
-        confirmLabel="Transférer"
-        isPending={transferMutation.isPending}
-      />
-    </div>
+    <MembersColumnManager
+      members={memberInfos}
+      availableUsers={availableUsers}
+      isLoading={membersLoading || usersLoading}
+      isOwner={isOwner}
+      currentUserId={currentUserId}
+      onAddMember={(userId, role) => addMemberMutation.mutate({ userId, role })}
+      onRemoveMember={(memberId) => removeMemberMutation.mutate(memberId)}
+      onUpdateRole={(memberId, role) => updateRoleMutation.mutate({ memberId, role: role as CommunityRole })}
+      isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending}
+    />
   );
 }

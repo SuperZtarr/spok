@@ -1,13 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Users, Globe, Lock, Crown, Shield, User, Eye, FolderOpen } from 'lucide-react';
+import { Users, Globe, Lock, Crown, User, FolderOpen } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
-  ADMIN: { label: 'Admin', icon: Shield, color: 'text-blue-500' },
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
-  VIEWER: { label: 'Lecteur', icon: Eye, color: 'text-muted-foreground' },
 };
 
 export function CommunityListView() {

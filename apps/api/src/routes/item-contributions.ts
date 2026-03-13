@@ -58,7 +58,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (membership.role === 'VIEWER') {
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot create contributions');
     }
 
@@ -145,7 +145,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
     // Only author, space admins, or owners can update
     const canUpdate =
       contribution.authorId === request.user.userId ||
-      ['OWNER', 'ADMIN'].includes(membership.role);
+      membership.role === 'OWNER';
 
     if (!canUpdate) {
       return reply.forbidden('You cannot update this contribution');
@@ -203,7 +203,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
       // Only author, space admins, or owners can delete
       const canDelete =
         contribution.authorId === request.user.userId ||
-        ['OWNER', 'ADMIN'].includes(membership.role);
+        membership.role === 'OWNER';
 
       if (!canDelete) {
         return reply.forbidden('You cannot delete this contribution');

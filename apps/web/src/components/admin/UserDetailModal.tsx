@@ -21,22 +21,17 @@ const globalRoleOptions = [
 
 const communityRoleOptions = [
   { value: 'OWNER', label: 'Proprietaire' },
-  { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
 ];
 
 const spaceRoleOptions = [
   { value: 'OWNER', label: 'Proprietaire' },
-  { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
-  { value: 'VIEWER', label: 'Lecteur' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
   OWNER: 'Proprietaire',
-  ADMIN: 'Admin',
   MEMBER: 'Membre',
-  VIEWER: 'Lecteur',
 };
 
 export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {

@@ -23,11 +23,11 @@ interface UpdateSpaceBody {
 
 interface AddMemberBody {
   userId: string;
-  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+  role: 'OWNER' | 'MEMBER';
 }
 
 interface UpdateMemberBody {
-  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+  role: 'OWNER' | 'MEMBER';
 }
 
 export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {

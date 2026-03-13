@@ -27,12 +27,12 @@ const updateSpaceSchema = z.object({
   name: z.string().min(1).optional(),
   communityId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
-  defaultRole: z.enum(['ADMIN', 'MEMBER', 'VIEWER']).nullable().optional(),
+  defaultRole: z.enum(['MEMBER']).nullable().optional(),
 });
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']),
+  role: z.enum(['OWNER', 'MEMBER']),
   message: z.string().optional(),
 });
 
@@ -74,7 +74,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       return spaces.map((s) => ({
         ...s,
-        role: 'VIEWER' as Role,
+        role: 'MEMBER' as Role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -178,7 +178,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const nonMemberSpaces = visibleSpaces.map((s) => ({
         ...s,
-        role: 'VIEWER' as Role,
+        role: 'MEMBER' as Role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -380,7 +380,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         if (communityMembership) {
           return {
             ...space,
-            role: 'VIEWER' as Role,
+            role: 'MEMBER' as Role,
             memberCount: space._count.memberships,
             itemCount: space._count.items,
           };
@@ -391,7 +391,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (space.community?.isPublic) {
         return {
           ...space,
-          role: 'VIEWER' as Role,
+          role: 'MEMBER' as Role,
           memberCount: space._count.memberships,
           itemCount: space._count.items,
         };
@@ -429,7 +429,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (!isGlobalAdmin && !['OWNER', 'ADMIN'].includes(membership!.role)) {
+      if (!isGlobalAdmin && membership!.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -570,7 +570,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       });
-      if (communityMembership && ['OWNER', 'ADMIN'].includes(communityMembership.role)) {
+      if (communityMembership && communityMembership.role === 'OWNER') {
         canDelete = true;
       }
     }
@@ -675,7 +675,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (communityMembership && ['OWNER', 'ADMIN'].includes(communityMembership.role)) {
+      if (communityMembership && communityMembership.role === 'OWNER') {
         canDelete = true;
       }
     }
@@ -980,6 +980,118 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
+  // List users not yet members of this space (community members only)
+  fastify.get<{ Params: { id: string } }>('/:id/available-users', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const membership = await fastify.prisma.spaceMembership.findUnique({
+      where: {
+        userId_spaceId: {
+          userId: request.user.userId,
+          spaceId: request.params.id,
+        },
+      },
+    });
+
+    if (!membership || membership.role !== 'OWNER') {
+      return reply.forbidden('Only owners can view available users');
+    }
+
+    // Get the space's community
+    const space = await fastify.prisma.space.findUnique({
+      where: { id: request.params.id },
+      select: { communityId: true },
+    });
+
+    const existingMemberIds = await fastify.prisma.spaceMembership.findMany({
+      where: { spaceId: request.params.id },
+      select: { userId: true },
+    });
+    const memberIds = existingMemberIds.map(m => m.userId);
+
+    // If space has a community, show community members not in the space
+    // Otherwise, show all users not in the space
+    let users;
+    if (space?.communityId) {
+      const communityMembers = await fastify.prisma.communityMembership.findMany({
+        where: {
+          communityId: space.communityId,
+          userId: { notIn: memberIds },
+        },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+        },
+        orderBy: { user: { name: 'asc' } },
+      });
+      users = communityMembers.map(m => ({
+        id: m.user.id,
+        email: m.user.email,
+        name: m.user.name,
+      }));
+    } else {
+      users = await fastify.prisma.user.findMany({
+        where: { id: { notIn: memberIds } },
+        select: { id: true, email: true, name: true },
+        orderBy: { name: 'asc' },
+      });
+    }
+
+    return users;
+  });
+
+  // Add member directly to space
+  fastify.post<{ Params: { id: string }; Body: { userId: string; role: string } }>(
+    '/:id/members',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const ownerMembership = await fastify.prisma.spaceMembership.findUnique({
+        where: {
+          userId_spaceId: {
+            userId: request.user.userId,
+            spaceId: request.params.id,
+          },
+        },
+      });
+
+      if (!ownerMembership || ownerMembership.role !== 'OWNER') {
+        return reply.forbidden('Only owners can add members');
+      }
+
+      const { userId, role } = request.body;
+      if (!['OWNER', 'MEMBER'].includes(role)) {
+        return reply.badRequest('Invalid role');
+      }
+
+      // Check user exists
+      const user = await fastify.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) return reply.notFound('User not found');
+
+      // Check not already member
+      const existing = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId, spaceId: request.params.id } },
+      });
+      if (existing) return reply.conflict('User is already a member');
+
+      const membership = await fastify.prisma.spaceMembership.create({
+        data: {
+          userId,
+          spaceId: request.params.id,
+          role: role as any,
+        },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+        },
+      });
+
+      return {
+        id: membership.id,
+        userId: membership.userId,
+        email: membership.user.email,
+        name: membership.user.name,
+        role: membership.role,
+        joinedAt: membership.joinedAt,
+      };
+    },
+  );
+
   // Invite member to space (creates an Invitation, not a direct membership)
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof inviteSchema> }>(
     '/:id/invite',
@@ -999,7 +1111,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1062,7 +1174,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       const membership = await fastify.prisma.spaceMembership.findUnique({
         where: { userId_spaceId: { userId: request.user.userId, spaceId: request.params.id } },
       });
-      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!membership || membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1096,7 +1208,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1109,11 +1221,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (memberToRemove.role === 'OWNER') {
-        return reply.forbidden('Cannot remove the space owner');
-      }
-
-      if (memberToRemove.role === 'ADMIN' && membership.role !== 'OWNER') {
-        return reply.forbidden('Only the owner can remove admins');
+        return reply.forbidden('Cannot remove a space owner');
       }
 
       await fastify.prisma.spaceMembership.delete({
@@ -1154,12 +1262,14 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Member not found');
       }
 
-      if (memberToUpdate.role === 'OWNER') {
-        return reply.forbidden("Cannot change the owner's role");
-      }
-
-      if (request.body.role === 'OWNER') {
-        return reply.forbidden('Cannot promote to owner');
+      // If demoting an owner, ensure at least one owner remains
+      if (memberToUpdate.role === 'OWNER' && request.body.role !== 'OWNER') {
+        const ownerCount = await fastify.prisma.spaceMembership.count({
+          where: { spaceId: request.params.id, role: 'OWNER' },
+        });
+        if (ownerCount <= 1) {
+          return reply.forbidden('Cannot demote the last owner');
+        }
       }
 
       const updated = await fastify.prisma.spaceMembership.update({
@@ -1245,7 +1355,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { space: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -1294,7 +1404,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { space: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -1322,7 +1432,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { space: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -1370,7 +1480,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { space: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -1412,7 +1522,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!membership || membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 

@@ -66,7 +66,7 @@ function SpaceCardWithChildren({
 }) {
   const canDelete = node.role === 'OWNER' || (
     node.communityId && communityRoles?.get(node.communityId) &&
-    ['OWNER', 'ADMIN'].includes(communityRoles.get(node.communityId)!)
+    communityRoles.get(node.communityId) === 'OWNER'
   );
 
   return (
@@ -102,7 +102,7 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
   const [isDragOver, setIsDragOver] = useState(false);
   const isMember = space.isMember !== false;
   const canLeave = isMember && space.role !== 'OWNER' && space.type !== 'PERSONAL';
-  const canManage = isMember && ['OWNER', 'ADMIN'].includes(space.role);
+  const canManage = isMember && space.role === 'OWNER';
 
   // Build action menu groups
   const actionGroups = useMemo(() => {
@@ -704,7 +704,7 @@ export function DashboardPage() {
             {communityGroups.map((group) => {
               const tree = buildSpaceTree(group.spaces);
               const communityRole = communityRoles.get(group.communityId);
-              const isCommunityOwnerOrAdmin = communityRole === 'OWNER' || communityRole === 'ADMIN';
+              const isCommunityOwnerOrAdmin = communityRole === 'OWNER';
               const communityActionGroups: ItemActionGroup[] = [];
 
               // Navigation actions

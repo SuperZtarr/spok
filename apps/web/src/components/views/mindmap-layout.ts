@@ -438,7 +438,7 @@ export function buildPortalNodesAndEdges(
     const savedPos = savedPositions[childPortalId];
     const pos = savedPos || { x: cx, y: cy };
 
-    const spaceData = portalSpaceEntry.space || { id: portalSpaceEntry.id, name: portalSpaceNames.get(portalSpaceEntry.id) || portalSpaceEntry.id, type: 'FOLDER' as any, createdAt: '', updatedAt: '', role: 'VIEWER' as any };
+    const spaceData = portalSpaceEntry.space || { id: portalSpaceEntry.id, name: portalSpaceNames.get(portalSpaceEntry.id) || portalSpaceEntry.id, type: 'FOLDER' as any, createdAt: '', updatedAt: '', role: 'MEMBER' as any };
 
     portalNodes.push({
       id: childPortalId,

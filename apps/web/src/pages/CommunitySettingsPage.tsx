@@ -157,11 +157,11 @@ export function CommunitySettingsPage() {
   const availableSpaces = allSpaces?.filter(
     s => s.type === 'GROUP' &&
          !s.communityId &&
-         ['OWNER', 'ADMIN'].includes(s.role)
+         s.role === 'OWNER'
   ) || [];
 
   // Check permissions
-  const canEdit = community?.role === 'OWNER' || community?.role === 'ADMIN';
+  const canEdit = community?.role === 'OWNER';
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
@@ -340,7 +340,7 @@ export function CommunitySettingsPage() {
                   )}
                   <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                     <div>Rôle : <span className="font-medium text-foreground">
-                      {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+                      {community.role === 'OWNER' ? 'Propriétaire' : 'Membre'}
                     </span></div>
                     <div>Membres : <span className="font-medium text-foreground">{community.memberCount || 0}</span></div>
                     <div>Espaces : <span className="font-medium text-foreground">{communitySpaces.length}</span></div>
@@ -360,7 +360,7 @@ export function CommunitySettingsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><span className="text-muted-foreground">Nom:</span> <span className="font-medium">{community.name}</span></div>
                   <div><span className="text-muted-foreground">Rôle:</span> <span className="font-medium">
-                    {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+                    {community.role === 'OWNER' ? 'Propriétaire' : 'Membre'}
                   </span></div>
                   {community.description && (
                     <div className="col-span-2"><span className="text-muted-foreground">Description:</span> <span>{community.description}</span></div>
@@ -375,7 +375,7 @@ export function CommunitySettingsPage() {
             </div>
 
             {/* Community Tags */}
-            {['OWNER', 'ADMIN'].includes(community.role || '') && (
+            {community.role === 'OWNER' && (
               <CommunityTagsSection communityId={communityId!} />
             )}
           </>

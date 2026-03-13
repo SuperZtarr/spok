@@ -33,7 +33,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
       const cm = await fastify.prisma.communityMembership.findUnique({
         where: { userId_communityId: { userId, communityId: space.communityId } },
       });
-      if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      if (cm) return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
     }
     return null;
   }
@@ -141,7 +141,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (!['OWNER', 'ADMIN', 'MEMBER'].includes(membership.role)) {
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Insufficient permissions to restore');
     }
 

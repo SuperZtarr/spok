@@ -1,4 +1,4 @@
-export type CommunityRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+export type CommunityRole = 'OWNER' | 'MEMBER';
 
 export interface Community {
   id: string;

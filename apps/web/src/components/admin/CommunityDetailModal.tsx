@@ -16,15 +16,12 @@ interface CommunityDetailModalProps {
 
 const memberRoleOptions = [
   { value: 'OWNER', label: 'Proprietaire' },
-  { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
   OWNER: 'Proprietaire',
-  ADMIN: 'Admin',
   MEMBER: 'Membre',
-  VIEWER: 'Lecteur',
 };
 
 export function CommunityDetailModal({ communityId, onClose }: CommunityDetailModalProps) {

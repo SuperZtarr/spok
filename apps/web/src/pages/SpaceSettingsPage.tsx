@@ -207,11 +207,11 @@ export function SpaceSettingsPage() {
   }, [allSpaces, spaceId]);
 
   // Check permissions
-  const canEdit = space?.role === 'OWNER' || space?.role === 'ADMIN';
+  const canEdit = space?.role === 'OWNER';
 
-  // Check delete permission: space OWNER or community OWNER/ADMIN
+  // Check delete permission: space OWNER or community OWNER
   const communityRole = communities?.find(c => c.id === space?.communityId)?.role;
-  const canDelete = space?.role === 'OWNER' || (communityRole && ['OWNER', 'ADMIN'].includes(communityRole));
+  const canDelete = space?.role === 'OWNER' || communityRole === 'OWNER';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -343,9 +343,7 @@ export function SpaceSettingsPage() {
                   onChange={(e) => setEditDefaultRole(e.target.value)}
                   options={[
                     { value: '', label: 'Pas d\'accès automatique' },
-                    { value: 'VIEWER', label: 'Lecteur' },
                     { value: 'MEMBER', label: 'Membre' },
-                    { value: 'ADMIN', label: 'Administrateur' },
                   ]}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -524,7 +522,7 @@ export function SpaceSettingsPage() {
           <div className="bg-card border rounded-lg p-6 space-y-6">
             <div className="flex items-center justify-between">
               <div />
-              {['OWNER', 'ADMIN'].includes(space.role || '') && spaceMembers && spaceMembers.length > 0 && (
+              {space.role === 'OWNER' && spaceMembers && spaceMembers.length > 0 && (
                 <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)}>
                   <Mail className="w-4 h-4 mr-1.5" />Envoyer un email
                 </Button>
@@ -532,7 +530,7 @@ export function SpaceSettingsPage() {
             </div>
             <SpaceMembersManager
               spaceId={spaceId!}
-              currentUserRole={space.role || 'VIEWER'}
+              currentUserRole={space.role || 'MEMBER'}
               currentUserId={user.id}
               spaceType={space.type}
             />

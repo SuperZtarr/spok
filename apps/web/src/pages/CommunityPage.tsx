@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye, ChevronRight } from 'lucide-react';
+import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, User, ChevronRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -10,9 +10,7 @@ import { SendEmailModal } from '../components/SendEmailModal';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
-  ADMIN: { label: 'Admin', icon: Shield, color: 'text-blue-500' },
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
-  VIEWER: { label: 'Lecteur', icon: Eye, color: 'text-muted-foreground' },
 };
 
 function SpaceTreeNode({ node, level }: { node: any; level: number }) {
@@ -67,10 +65,10 @@ export function CommunityPage() {
     enabled: !!communityId,
   });
 
-  const isAdminOrOwner = community?.role === 'OWNER' || community?.role === 'ADMIN';
+  const isAdminOrOwner = community?.role === 'OWNER';
 
-  // Sort members: OWNER first, then ADMIN, then MEMBER, then VIEWER
-  const roleOrder: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2, VIEWER: 3 };
+  // Sort members: OWNER first, then MEMBER
+  const roleOrder: Record<string, number> = { OWNER: 0, MEMBER: 1 };
   const sortedMembers = [...(members || [])].sort((a, b) =>
     (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
   );

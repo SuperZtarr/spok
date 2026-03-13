@@ -79,13 +79,13 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
         },
       });
       if (communityMembership) {
-        return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+        return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
       }
     }
 
     // Public community: allow anonymous and non-member authenticated users
     if (space.community?.isPublic) {
-      return { userId: userId || '', spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+      return { userId: userId || '', spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
     }
   }
 
@@ -199,7 +199,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot create items');
       }
 
@@ -314,7 +314,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot update items');
       }
 
@@ -471,7 +471,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (!['OWNER', 'ADMIN', 'MEMBER'].includes(membership.role)) {
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Insufficient permissions');
     }
 

@@ -1,5 +1,5 @@
 export type SpaceType = 'PERSONAL' | 'GROUP';
-export type Role = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+export type Role = 'OWNER' | 'MEMBER';
 
 export interface Space {
   id: string;

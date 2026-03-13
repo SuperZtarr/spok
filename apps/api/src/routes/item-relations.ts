@@ -25,7 +25,7 @@ export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (membership.role === 'VIEWER') {
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot create relations');
     }
 
@@ -87,7 +87,7 @@ export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (membership.role === 'VIEWER') {
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot update relations');
     }
 
@@ -137,7 +137,7 @@ export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot delete relations');
       }
 

@@ -395,7 +395,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /admin/communities/:id/members - Add a member (admin bypass)
-  fastify.post<{ Params: CommunityParams; Body: { email: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' } }>(
+  fastify.post<{ Params: CommunityParams; Body: { email: string; role: 'OWNER' | 'MEMBER' } }>(
     '/:id/members',
     async (request, reply) => {
       const { id } = request.params;
@@ -430,11 +430,11 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.conflict('User is already a member');
       }
 
-      // If adding as OWNER, demote current owner to ADMIN
+      // If adding as OWNER, demote current owner to MEMBER
       if (role === 'OWNER') {
         await fastify.prisma.communityMembership.updateMany({
           where: { communityId: id, role: 'OWNER' },
-          data: { role: 'ADMIN' },
+          data: { role: 'MEMBER' },
         });
       }
 

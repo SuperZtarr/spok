@@ -456,6 +456,15 @@ export const spacesApi = {
 
   getMembers: (id: string) => fetchApi<SpaceMember[]>(`/spaces/${id}/members`),
 
+  getAvailableUsers: (id: string) =>
+    fetchApi<{ id: string; email: string; name: string }[]>(`/spaces/${id}/available-users`),
+
+  addMember: (id: string, data: { userId: string; role: string }) =>
+    fetchApi<SpaceMember>(`/spaces/${id}/members`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   invite: (id: string, data: { email: string; role: string; message?: string }) =>
     fetchApi<Invitation>(`/spaces/${id}/invite`, {
       method: 'POST',
@@ -564,6 +573,15 @@ export const communitiesApi = {
     }),
 
   getMembers: (id: string) => fetchApi<CommunityMember[]>(`/communities/${id}/members`),
+
+  getAvailableUsers: (id: string) =>
+    fetchApi<{ id: string; email: string; name: string }[]>(`/communities/${id}/available-users`),
+
+  addMember: (id: string, data: { userId: string; role: string }) =>
+    fetchApi<CommunityMember>(`/communities/${id}/members`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   invite: (id: string, data: InviteCommunityMemberInput & { message?: string }) =>
     fetchApi<Invitation>(`/communities/${id}/invite`, {

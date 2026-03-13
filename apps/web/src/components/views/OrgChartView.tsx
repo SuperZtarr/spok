@@ -8,13 +8,11 @@ interface OrgChartViewProps {
   spaceName: string;
 }
 
-const ROLE_ORDER: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2, VIEWER: 3 };
-const ROLE_LABELS: Record<string, string> = { OWNER: 'Propriétaire', ADMIN: 'Admin', MEMBER: 'Membre', VIEWER: 'Lecteur' };
+const ROLE_ORDER: Record<string, number> = { OWNER: 0, MEMBER: 1 };
+const ROLE_LABELS: Record<string, string> = { OWNER: 'Propriétaire', MEMBER: 'Membre' };
 const ROLE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   OWNER: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
-  ADMIN: { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
   MEMBER: { bg: '#d1fae5', border: '#10b981', text: '#065f46' },
-  VIEWER: { bg: '#f3f4f6', border: '#9ca3af', text: '#374151' },
 };
 
 interface TreeNode {

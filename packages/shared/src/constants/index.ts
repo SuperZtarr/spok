@@ -14,7 +14,7 @@ export const ITEM_TYPES = [
 
 export const SPACE_TYPES = ['PERSONAL', 'GROUP'] as const;
 
-export const ROLES = ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'] as const;
+export const ROLES = ['OWNER', 'MEMBER'] as const;
 
 export const GLOBAL_ROLES = ['USER', 'ADMIN'] as const;
 

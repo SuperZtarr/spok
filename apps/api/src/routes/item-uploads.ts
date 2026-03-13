@@ -44,7 +44,7 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot upload images');
       }
 
@@ -111,7 +111,7 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot upload documents');
       }
 

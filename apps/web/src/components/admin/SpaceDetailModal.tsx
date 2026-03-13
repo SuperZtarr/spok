@@ -14,9 +14,7 @@ interface SpaceDetailModalProps {
 
 const roleOptions = [
   { value: 'OWNER', label: 'Proprietaire' },
-  { value: 'ADMIN', label: 'Administrateur' },
   { value: 'MEMBER', label: 'Membre' },
-  { value: 'VIEWER', label: 'Lecteur' },
 ];
 
 const typeOptions = [

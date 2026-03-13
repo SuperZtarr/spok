@@ -30,10 +30,10 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
         const cm = await fastify.prisma.communityMembership.findUnique({
           where: { userId_communityId: { userId, communityId: space.communityId } },
         });
-        if (cm) return { userId, spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+        if (cm) return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
       }
       if (space.community?.isPublic) {
-        return { userId: userId || '', spaceId, role: 'VIEWER' as const, id: '', joinedAt: new Date() };
+        return { userId: userId || '', spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
       }
     }
     return null;
@@ -82,7 +82,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot create tags');
       }
 
@@ -124,7 +124,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role === 'VIEWER') {
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
         return reply.forbidden('Viewers cannot update tags');
       }
 
@@ -173,8 +173,8 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
-    if (!['OWNER', 'ADMIN'].includes(membership.role)) {
-      return reply.forbidden('Only owners and admins can delete tags');
+    if (membership.role !== 'OWNER') {
+      return reply.forbidden('Only owners can delete tags');
     }
 
     const tag = await fastify.prisma.tag.findFirst({

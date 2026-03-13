@@ -113,7 +113,6 @@ model CommunityMembership {
 
 enum CommunityRole {
   OWNER
-  ADMIN
   MEMBER
 }
 
@@ -134,9 +133,7 @@ model SpaceMembership {
 
 enum Role {
   OWNER
-  ADMIN
   MEMBER
-  VIEWER
 }
 
 // Invitation à rejoindre une communauté ou un espace

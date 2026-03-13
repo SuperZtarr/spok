@@ -25,7 +25,7 @@ const updateCommunitySchema = z.object({
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['ADMIN', 'MEMBER']),
+  role: z.enum(['OWNER', 'MEMBER']),
   message: z.string().optional(),
 });
 
@@ -187,7 +187,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Community not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -536,6 +536,96 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
+  // List users not yet members of this community
+  fastify.get<{ Params: { id: string } }>('/:id/available-users', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const membership = await fastify.prisma.communityMembership.findUnique({
+      where: {
+        userId_communityId: {
+          userId: request.user.userId,
+          communityId: request.params.id,
+        },
+      },
+    });
+
+    if (!membership || membership.role !== 'OWNER') {
+      return reply.forbidden('Only owners can view available users');
+    }
+
+    const existingMemberIds = await fastify.prisma.communityMembership.findMany({
+      where: { communityId: request.params.id },
+      select: { userId: true },
+    });
+
+    const memberIds = existingMemberIds.map(m => m.userId);
+
+    const users = await fastify.prisma.user.findMany({
+      where: {
+        id: { notIn: memberIds },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return users;
+  });
+
+  // Add member directly to community
+  fastify.post<{ Params: { id: string }; Body: { userId: string; role: string } }>(
+    '/:id/members',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership || membership.role !== 'OWNER') {
+        return reply.forbidden('Only owners can add members');
+      }
+
+      const { userId, role } = request.body;
+      if (!['OWNER', 'MEMBER'].includes(role)) {
+        return reply.badRequest('Invalid role');
+      }
+
+      const user = await fastify.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) return reply.notFound('User not found');
+
+      const existing = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId, communityId: request.params.id } },
+      });
+      if (existing) return reply.conflict('User is already a member');
+
+      const newMembership = await fastify.prisma.communityMembership.create({
+        data: {
+          userId,
+          communityId: request.params.id,
+          role: role as any,
+        },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+        },
+      });
+
+      return {
+        id: newMembership.id,
+        userId: newMembership.userId,
+        email: newMembership.user.email,
+        name: newMembership.user.name,
+        role: newMembership.role,
+        joinedAt: newMembership.joinedAt,
+      };
+    },
+  );
+
   // Invite member to community (creates an Invitation, not a direct membership)
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof inviteSchema> }>(
     '/:id/invite',
@@ -555,7 +645,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Community not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(mem.role)) {
+      if (mem.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -614,7 +704,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       const mem = await fastify.prisma.communityMembership.findUnique({
         where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
       });
-      if (!mem || !['OWNER', 'ADMIN'].includes(mem.role)) {
+      if (!mem || mem.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -648,7 +738,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Community not found');
       }
 
-      if (!['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -660,14 +750,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Member not found');
       }
 
-      // Cannot remove the owner
+      // Cannot remove an owner
       if (memberToRemove.role === 'OWNER') {
-        return reply.forbidden('Cannot remove the community owner');
-      }
-
-      // Admins cannot remove other admins (only owner can)
-      if (memberToRemove.role === 'ADMIN' && membership.role !== 'OWNER') {
-        return reply.forbidden('Only the owner can remove admins');
+        return reply.forbidden('Cannot remove a community owner');
       }
 
       await fastify.prisma.communityMembership.delete({
@@ -709,14 +794,14 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Member not found');
       }
 
-      // Cannot change owner's role
-      if (memberToUpdate.role === 'OWNER') {
-        return reply.forbidden('Cannot change the owner\'s role');
-      }
-
-      // Cannot promote to owner
-      if (request.body.role === 'OWNER') {
-        return reply.forbidden('Cannot promote to owner');
+      // If demoting an owner, ensure at least one owner remains
+      if (memberToUpdate.role === 'OWNER' && request.body.role !== 'OWNER') {
+        const ownerCount = await fastify.prisma.communityMembership.count({
+          where: { communityId: request.params.id, role: 'OWNER' },
+        });
+        if (ownerCount <= 1) {
+          return reply.forbidden('Cannot demote the last owner');
+        }
       }
 
       const updated = await fastify.prisma.communityMembership.update({
@@ -802,7 +887,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { community: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -850,7 +935,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { community: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -878,7 +963,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { community: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -926,7 +1011,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       include: { community: true },
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership || membership.role !== 'OWNER') {
       return reply.forbidden('Permissions insuffisantes');
     }
 
@@ -975,7 +1060,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
       });
-      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!membership || membership.role !== 'OWNER') {
         return reply.forbidden('Only owners and admins can manage community tags');
       }
 
@@ -1003,7 +1088,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
       });
-      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!membership || membership.role !== 'OWNER') {
         return reply.forbidden('Only owners and admins can manage community tags');
       }
 
@@ -1037,7 +1122,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
       });
-      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!membership || membership.role !== 'OWNER') {
         return reply.forbidden('Only owners and admins can manage community tags');
       }
 
@@ -1077,7 +1162,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+      if (!membership || membership.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 

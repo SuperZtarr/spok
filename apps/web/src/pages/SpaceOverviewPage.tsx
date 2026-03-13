@@ -1,16 +1,14 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Crown, Shield, User, Eye, ChevronRight, ExternalLink } from 'lucide-react';
+import { Users, FolderOpen, Settings, Crown, User, ChevronRight, ExternalLink } from 'lucide-react';
 import { spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
-  ADMIN: { label: 'Admin', icon: Shield, color: 'text-blue-500' },
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
-  VIEWER: { label: 'Lecteur', icon: Eye, color: 'text-muted-foreground' },
 };
 
 function ChildSpaceNode({ node, level }: { node: any; level: number }) {
@@ -70,9 +68,9 @@ export function SpaceOverviewPage() {
     return communitySpaces.filter(s => s.parentId === spaceId);
   }, [communitySpaces, spaceId]);
 
-  const isAdminOrOwner = space?.role === 'OWNER' || space?.role === 'ADMIN';
+  const isAdminOrOwner = space?.role === 'OWNER';
 
-  const roleOrder: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2, VIEWER: 3 };
+  const roleOrder: Record<string, number> = { OWNER: 0, MEMBER: 1 };
   const sortedMembers = [...(members || [])].sort((a, b) =>
     (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
   );

@@ -324,7 +324,7 @@ export function SpaceToolbar({
               </Button>
             </Link>
           )}
-          {(spaceRole === 'OWNER' || spaceRole === 'ADMIN') && (
+          {spaceRole === 'OWNER' && (
             <Link to={`/spaces/${spaceId}/settings`}>
               <Button variant="ghost" size="sm" title="Paramètres de l'espace">
                 <Settings className="w-4 h-4" />
