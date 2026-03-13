@@ -17,8 +17,28 @@
 - [x] Export PDF données (tableau items + relations, jspdf + autotable) — b4db74f
 - [x] Export PNG capture vue actuelle (html2canvas) — b4db74f
 
+### Priorité
+- [x] Référentiel priorité 4 niveaux (Urgente/Haute/Normale/Basse) — f498b48
+- [x] Sélecteur priorité dans ItemEditModal — f498b48
+- [x] Affichage priorité dans ListView (colonne + tri) et KanbanView (badge) — f498b48
+
 ### Vues
-- [ ] Vue Texte : investiguer pourquoi les données des sous-espaces sélectionnés ne s'affichent pas (la query passe bien `additionalSpaceIds`, vérifier côté composant TextView)
+- [x] Vue Texte : fix portails masqués quand l'espace principal est vide — b3b2c9e
+- [x] Vue Membres (Kanban par membre, drag & drop assignation, support portails) — f0cb1b4
+- [x] Vue Priorités (Kanban P1-P4, drag & drop priorité) — f0cb1b4
+- [x] Filtres partagés GlobalTaskFilterBar (hook + composant réutilisable dans Mes tâches, Échéances, Organisation) — f0cb1b4
+- [x] Menu réorganisé : "Vues globales" + section "Mes activités" (Mes tâches, Échéances, Organisation) — f0cb1b4
+
+### Diagrammes
+- [x] Type DIAGRAM avec éditeur draw.io intégré (iframe embed.diagrams.net) — bd9112f
+- [x] Sauvegarde XML dans content.xml + export PNG vers R2 — ad032dc
+- [x] Preview PNG dans la modale, icône Workflow, thème clair — 2ffc84a
+- [x] Modales d'édition fullscreen — 2ffc84a
+- [x] Migration 101 .drawio existants de R2 vers content.xml — bd9112f
+- [x] getTypeIcon() avec fallback FileText (fix crash prod) — 699d683
+
+### Items
+- [ ] Fusion d'éléments : fusionner un item avec ses enfants (concaténer descriptions, remonter petits-enfants, supprimer les enfants absorbés)
 
 ### Infra & emails
 - [ ] Configurer un domaine custom Resend (ex: `noreply@spok.app`) avec SPF/DKIM/DMARC pour éviter les spams
@@ -59,7 +79,20 @@
 
 ## Historique
 
+### 2026-03-13
+- Type DIAGRAM : éditeur draw.io intégré (iframe, sauvegarde XML, export PNG R2, preview modale) — bd9112f
+- Modales d'édition fullscreen (comme pages communauté) — 2ffc84a
+- getTypeIcon() fallback FileText (fix crash prod items DIAGRAM) — 699d683
+- Migration 101 .drawio existants de R2 vers content.xml — bd9112f
+- Fix : "Enregistrer et Quitter" draw.io sauvegarde XML + PNG sans fermer la modale — 5cc8d47
+
 ### 2026-03-12
+- Fix Vue Texte : portails masqués quand espace principal vide — b3b2c9e
+- Menu réorganisé : "Vues globales" + "Mes activités" — f0cb1b4
+- Filtres partagés GlobalTaskFilterBar (hook + composant) — f0cb1b4
+- Vue Membres Kanban (assignation par drag & drop) — f0cb1b4
+- Vue Priorités Kanban (P1-P4 par drag & drop) — f0cb1b4
+- Priorité : sélecteur ItemEditModal + affichage ListView/KanbanView — f498b48
 - Export PDF données + capture PNG vue actuelle — b4db74f
 
 ### 2026-03-11
