@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye, ChevronRight, GripVertical } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye, ChevronRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -15,76 +15,14 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   VIEWER: { label: 'Lecteur', icon: Eye, color: 'text-muted-foreground' },
 };
 
-function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: string | null) => void }) {
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  return (
-    <div
-      onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('application/spok-space-id')) {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          setIsDragOver(true);
-        }
-      }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-        const draggedId = e.dataTransfer.getData('application/spok-space-id');
-        if (draggedId) {
-          onMove(draggedId, null);
-        }
-      }}
-      className={`flex items-center justify-center p-2 rounded-lg border border-dashed transition-colors text-xs text-muted-foreground ${
-        isDragOver ? 'border-primary bg-primary/5 text-primary' : 'border-transparent'
-      }`}
-    >
-      {isDragOver ? 'Déposer ici pour mettre à la racine' : ''}
-    </div>
-  );
-}
-
-function SpaceTreeNode({ node, level, onMove, canReorder }: { node: any; level: number; onMove: (spaceId: string, newParentId: string | null) => void; canReorder: boolean }) {
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('application/spok-space-id', node.id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes('application/spok-space-id')) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      setIsDragOver(true);
-    }
-  };
-
-  const handleDragLeave = () => setIsDragOver(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const draggedId = e.dataTransfer.getData('application/spok-space-id');
-    if (draggedId && draggedId !== node.id) {
-      onMove(draggedId, node.id);
-    }
-  };
-
+function SpaceTreeNode({ node, level }: { node: any; level: number }) {
   return (
     <>
       <Link
         to={`/spaces/${node.id}`}
-        draggable={canReorder}
-        onDragStart={canReorder ? handleDragStart : undefined}
-        onDragOver={canReorder ? handleDragOver : undefined}
-        onDragLeave={canReorder ? handleDragLeave : undefined}
-        onDrop={canReorder ? handleDrop : undefined}
-        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${isDragOver ? 'border-primary bg-primary/5 ring-2 ring-primary' : 'border-border hover:bg-accent/50'}`}
+        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
         style={{ marginLeft: `${level * 24}px` }}
       >
-        {canReorder && <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />}
         {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
         {node.avatarUrl ? (
           <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
@@ -99,7 +37,7 @@ function SpaceTreeNode({ node, level, onMove, canReorder }: { node: any; level: 
         </div>
       </Link>
       {node.children?.map((child: any) => (
-        <SpaceTreeNode key={child.id} node={child} level={level + 1} onMove={onMove} canReorder={canReorder} />
+        <SpaceTreeNode key={child.id} node={child} level={level + 1} />
       ))}
     </>
   );
@@ -108,21 +46,8 @@ function SpaceTreeNode({ node, level, onMove, canReorder }: { node: any; level: 
 export function CommunityPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const user = useAuthStore(s => s.user);
   const [showEmailModal, setShowEmailModal] = useState(false);
-
-  const moveSpaceMutation = useMutation({
-    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string | null }) =>
-      spacesApi.update(spaceId, { parentId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spaces', communityId] });
-    },
-  });
-
-  const handleMoveSpace = (spaceId: string, newParentId: string | null) => {
-    moveSpaceMutation.mutate({ spaceId, parentId: newParentId });
-  };
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
@@ -230,9 +155,8 @@ export function CommunityPage() {
           </h2>
           {spaceTree.length > 0 ? (
             <div className="space-y-1">
-              {isAdminOrOwner && <RootDropZone onMove={handleMoveSpace} />}
               {spaceTree.map(node => (
-                <SpaceTreeNode key={node.id} node={node} level={0} onMove={handleMoveSpace} canReorder={isAdminOrOwner} />
+                <SpaceTreeNode key={node.id} node={node} level={0} />
               ))}
             </div>
           ) : (
