@@ -32,7 +32,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { spaceId: string; id: string };
     Body: z.infer<typeof mergeItemSchema>;
-  }>('/merge', async (request, reply) => {
+  }>('/:id/merge', async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
@@ -181,7 +181,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
   // Absorb all direct children into this item
   fastify.post<{
     Params: { spaceId: string; id: string };
-  }>('/absorb-children', async (request, reply) => {
+  }>('/:id/absorb-children', async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
