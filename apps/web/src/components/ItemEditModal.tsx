@@ -503,9 +503,7 @@ export function ItemEditModal({
 
   const TypeIcon = TYPE_ICONS[type];
   const typeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[type];
-  const relationCount = (item?.relationsFrom?.length || 0) + (item?.relationsTo?.length || 0);
   const contributionCount = item?.contributions?.length || 0;
-  const tagCount = selectedTagIds.length;
 
 
   return (
