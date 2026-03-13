@@ -25,7 +25,7 @@ import '@xyflow/react/dist/style.css';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ItemWithRelations } from '@spok/shared';
 import { canvasLayoutApi, itemsApi } from '../../lib/api';
-import { TYPE_ICONS } from '../../constants/ui';
+import { getTypeIcon } from '../../constants/ui';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { Plus, Trash2, CheckSquare, FolderInput, FolderPlus, Ban, ArrowLeft, Link2, Copy, Cog, FlaskConical, type LucideIcon } from 'lucide-react';
 
@@ -73,7 +73,7 @@ interface SchemaNodeData {
 
 function SchemaNode({ data }: { data: SchemaNodeData }) {
   const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit } = data;
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const dotColor = TYPE_COLORS[item.type] || '#6b7280';
 
   const menuGroups = useMemo(() => {
@@ -154,7 +154,7 @@ interface SchemaGroupData extends SchemaNodeData {
 
 function SchemaGroupNode({ data }: { data: SchemaGroupData }) {
   const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit, groupWidth, groupHeight } = data;
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const dotColor = TYPE_COLORS[item.type] || '#6b7280';
 
   const menuGroups = useMemo(() => {

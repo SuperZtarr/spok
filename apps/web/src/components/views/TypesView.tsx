@@ -18,7 +18,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS } from '../../constants/ui';
+import { getTypeIcon } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 interface PortalGroup {
@@ -83,7 +83,7 @@ const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
 function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item },
@@ -188,7 +188,7 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
     id: droppableId,
   });
 
-  const Icon = TYPE_ICONS[column.id];
+  const Icon = getTypeIcon(column.id);
 
   return (
     <div
@@ -483,7 +483,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
           <div className="bg-card border rounded-lg p-3 shadow-lg opacity-90 w-[200px]">
             <div className="flex items-start gap-2">
               {(() => {
-                const Icon = TYPE_ICONS[activeItem.type];
+                const Icon = getTypeIcon(activeItem.type);
                 return <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />;
               })()}
               <div className="flex-1 min-w-0">

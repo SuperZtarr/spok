@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
+import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import {
   getCalendarDays,
   isSameDay,
@@ -213,7 +213,7 @@ export function CalendarView({
               {/* Items (max 3 visible) */}
               <div className="flex-1 overflow-hidden space-y-0.5">
                 {dayItems.slice(0, 3).map(item => {
-                  const Icon = TYPE_ICONS[item.type];
+                  const Icon = getTypeIcon(item.type);
                   const statusCfg = statusMap[item.status || ''];
                   const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
                   const isHighlighted =

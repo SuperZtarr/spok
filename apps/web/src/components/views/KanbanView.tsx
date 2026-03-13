@@ -17,7 +17,7 @@ import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, Folder
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { TYPE_ICONS, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
+import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 
@@ -93,7 +93,7 @@ const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
 function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item, columnId },
@@ -502,7 +502,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
           <div className="bg-card border rounded-lg p-3 shadow-lg opacity-90 w-[200px]">
             <div className="flex items-start gap-2">
               {(() => {
-                const Icon = TYPE_ICONS[activeItem.type];
+                const Icon = getTypeIcon(activeItem.type);
                 return <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(activeItem.type, referentiels?.typeLabels)}`} />;
               })()}
               <div className="flex-1 min-w-0">

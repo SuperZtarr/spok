@@ -7,7 +7,7 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { itemsApi } from '../../lib/api';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
-import { TYPE_ICONS } from '../../constants/ui';
+import { getTypeIcon } from '../../constants/ui';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
@@ -673,7 +673,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           ) : (<div className="relative" ref={timelineAreaRef}>
             {flatItems.map((item, itemIndex) => {
               const barStyle = getBarStyle(item);
-              const Icon = TYPE_ICONS[item.type];
+              const Icon = getTypeIcon(item.type);
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);

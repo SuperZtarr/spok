@@ -17,6 +17,10 @@ import { DEFAULT_TYPE_LABELS } from '@spok/shared';
 // =============================================================================
 // TYPE ICONS - Icônes associées à chaque type d'item
 // =============================================================================
+export function getTypeIcon(type: string): typeof FileText {
+  return TYPE_ICONS[type] || FileText;
+}
+
 export const TYPE_ICONS: Record<string, typeof FileText> = {
   NOTE: FileText,
   PROJECT: FolderKanban,

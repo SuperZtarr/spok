@@ -18,7 +18,7 @@ import { GripVertical, User, Users, FolderKanban, GripHorizontal } from 'lucide-
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { spacesApi } from '../../lib/api';
 import type { SpaceMember } from '@spok/shared';
-import { TYPE_ICONS, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
+import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
@@ -86,7 +86,7 @@ function MemberKanbanCard({
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
 }) {
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const pConfig = getPriorityConfig(item.priority);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -510,7 +510,7 @@ export function MembersKanbanView({
           <div className="bg-card border rounded-lg p-3 shadow-lg max-w-[250px] opacity-90">
             <div className="flex items-center gap-2">
               {(() => {
-                const Icon = TYPE_ICONS[draggedItem.type];
+                const Icon = getTypeIcon(draggedItem.type);
                 return <Icon className={`w-4 h-4 flex-shrink-0 ${getTypeTextColor(draggedItem.type, referentiels?.typeLabels)}`} />;
               })()}
               <span className="text-sm font-medium truncate">{draggedItem.title}</span>

@@ -20,7 +20,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
+import { getTypeIcon, getTypeColor } from '../../constants/ui';
 
 // Get start of today (midnight)
 function getStartOfToday(): Date {
@@ -167,7 +167,7 @@ interface PlanningItemProps {
 }
 
 function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;

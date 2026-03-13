@@ -17,7 +17,7 @@ import { itemsApi } from '../lib/api';
 import { Badge } from '../components/ui/Badge';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 import { useSelectionStore } from '../stores/selection';
-import { TYPE_ICONS } from '../constants/ui';
+import { getTypeIcon } from '../constants/ui';
 
 // Root drop zone to move items to root level
 export function RootDropZone({ isOver }: { isOver: boolean }) {
@@ -122,7 +122,7 @@ export function TreeItem({
 
   const currentDropPosition = isOver ? (globalDropPosition || 'nest') : null;
 
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const hasChildren = (item.childCount || 0) > 0;
 
   const handleClick = () => {

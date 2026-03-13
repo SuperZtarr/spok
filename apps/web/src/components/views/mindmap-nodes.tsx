@@ -1,6 +1,6 @@
 import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
-import { TYPE_ICONS } from '../../constants/ui';
+import { getTypeIcon } from '../../constants/ui';
 import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, ExternalLink, X, Copy, Trash2, CheckSquare, Pin, PinOff } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { TreeItem } from './mindmap-utils';
@@ -43,7 +43,7 @@ export interface MindMapNodeProps {
 
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
 
   return (
     <div

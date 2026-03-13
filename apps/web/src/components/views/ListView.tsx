@@ -7,7 +7,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 
 import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
-import { TYPE_ICONS, getTypeColor, getPriorityConfig } from '../../constants/ui';
+import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -239,7 +239,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           <div className="flex-1 overflow-auto">
           <div className="divide-y divide-border">
             {sortedItems.map((item) => {
-              const Icon = TYPE_ICONS[item.type];
+              const Icon = getTypeIcon(item.type);
               const statusLabel = statusLabels[item.status || ''] || 'Non défini';
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;

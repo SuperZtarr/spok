@@ -5,7 +5,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
-import { TYPE_ICONS, getTypeColor } from '../../constants/ui';
+import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 
 interface Contribution {
@@ -298,7 +298,7 @@ function TextItem({
   searchMatchIds?: Set<string>;
 }) {
   const depth = (item as any)._depth || 0;
-  const Icon = TYPE_ICONS[item.type];
+  const Icon = getTypeIcon(item.type);
   const statusLabel = statusLabels[item.status || ''] || 'Non défini';
   const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
   const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
