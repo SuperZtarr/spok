@@ -371,6 +371,7 @@ export function DashboardPage() {
     mutationFn: spacesApi.join,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -383,6 +384,7 @@ export function DashboardPage() {
     mutationFn: spacesApi.leave,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -396,6 +398,7 @@ export function DashboardPage() {
       spacesApi.delete(id, deleteChildren),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -415,6 +418,7 @@ export function DashboardPage() {
       spacesApi.update(spaceId, { parentId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
     onError: (error) => {
       alert(`Erreur: ${error.message}`);
@@ -444,6 +448,7 @@ export function DashboardPage() {
     mutationFn: spacesApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       setNewSpaceName('');
       setSearchParams({});
     },
@@ -805,6 +810,7 @@ export function DashboardPage() {
             communitiesApi.leave(leavingCommunity.id).then(() => {
               queryClient.invalidateQueries({ queryKey: ['communities'] });
               queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
             });
           }
           setLeavingCommunity(null);

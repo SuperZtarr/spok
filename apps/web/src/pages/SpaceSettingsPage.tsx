@@ -50,6 +50,7 @@ export function SpaceSettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -58,6 +59,7 @@ export function SpaceSettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -66,6 +68,7 @@ export function SpaceSettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -74,6 +77,7 @@ export function SpaceSettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 

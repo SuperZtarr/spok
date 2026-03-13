@@ -99,6 +99,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -109,6 +110,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       setShowAddMember(false);
       setNewMemberSearch('');
     },
@@ -128,6 +130,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'spaces'] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 

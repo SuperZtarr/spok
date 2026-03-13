@@ -149,6 +149,7 @@ export function CommunitySettingsPage() {
       spacesApi.update(spaceId, { parentId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 
@@ -181,6 +182,7 @@ export function CommunitySettingsPage() {
     mutationFn: (spaceId: string) => spacesApi.update(spaceId, { communityId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
       setShowAddSpace(false);
       setSelectedSpaceId('');
@@ -193,6 +195,7 @@ export function CommunitySettingsPage() {
     mutationFn: (name: string) => spacesApi.create({ name, type: 'GROUP', communityId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
       setShowCreateSpace(false);
       setNewSpaceName('');

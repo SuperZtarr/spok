@@ -24,6 +24,7 @@ export function useCreateSpace() {
     mutationFn: (data: CreateSpaceInput) => spacesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 }
@@ -35,6 +36,7 @@ export function useUpdateSpace(spaceId: string) {
     mutationFn: (data: { name?: string; communityId?: string | null; parentId?: string | null }) => spacesApi.update(spaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
     },
   });
@@ -48,6 +50,7 @@ export function useDeleteSpace() {
       spacesApi.delete(id, deleteChildren),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 }

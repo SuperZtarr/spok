@@ -232,12 +232,13 @@ export function Layout() {
 
   // Fetch ALL spaces once (stable key, no flash on community change)
   const { data: allSpaces, isFetching: spacesFetching } = useQuery({
-    queryKey: ['spaces', 'sidebar'],
+    queryKey: ['sidebar-spaces'],
     queryFn: () => spacesApi.list(),
     enabled: !!user,
     placeholderData: (prev: any) => prev,
     refetchOnWindowFocus: 'always',
-    staleTime: 30_000,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 30,
     retry: 2,
     retryDelay: 1000,
   });

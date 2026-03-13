@@ -65,6 +65,7 @@ export function useConvertItemToSpace(spaceId: string) {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
 }
