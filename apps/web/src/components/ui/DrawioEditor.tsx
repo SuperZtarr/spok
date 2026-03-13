@@ -1,23 +1,24 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Workflow, Maximize2, Minimize2 } from 'lucide-react';
+import { Workflow } from 'lucide-react';
 import { Button } from './Button';
 
 interface DrawioEditorProps {
   xml: string;
   onChange: (xml: string) => void;
   onImageExport?: (blob: Blob) => void;
+  onSaveAndClose?: () => void;
   previewUrl?: string;
   editable?: boolean;
 }
 
-const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&noSaveBtn=1&noExitBtn=1';
+const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&saveAndExit=1&noExitBtn=1';
 
-export function DrawioEditor({ xml, onChange, onImageExport, previewUrl, editable = true }: DrawioEditorProps) {
+export function DrawioEditor({ xml, onChange, onImageExport, onSaveAndClose, previewUrl, editable = true }: DrawioEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pendingExportRef = useRef(false);
+  const closeAfterExportRef = useRef(false);
 
   // Handle messages from draw.io iframe
   const handleMessage = useCallback((evt: MessageEvent) => {
@@ -27,7 +28,6 @@ export function DrawioEditor({ xml, onChange, onImageExport, previewUrl, editabl
       const msg = JSON.parse(evt.data);
 
       if (msg.event === 'init') {
-        // Editor is ready — load the diagram
         iframeRef.current.contentWindow?.postMessage(
           JSON.stringify({
             action: 'load',
@@ -43,42 +43,38 @@ export function DrawioEditor({ xml, onChange, onImageExport, previewUrl, editabl
         // Request PNG export after save
         if (onImageExport) {
           pendingExportRef.current = true;
+          closeAfterExportRef.current = !!msg.exit;
           iframeRef.current.contentWindow?.postMessage(
             JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
             '*'
           );
+        } else if (msg.exit) {
+          // No image export needed, just close and save
+          setIsEditing(false);
+          onSaveAndClose?.();
         }
       } else if (msg.event === 'export' && pendingExportRef.current) {
         pendingExportRef.current = false;
-        // msg.data is a base64 data URL
         if (onImageExport && msg.data) {
           fetch(msg.data)
             .then(r => r.blob())
-            .then(blob => onImageExport(blob))
+            .then(blob => {
+              onImageExport(blob);
+              if (closeAfterExportRef.current) {
+                closeAfterExportRef.current = false;
+                setIsEditing(false);
+                onSaveAndClose?.();
+              }
+            })
             .catch(() => {});
         }
       } else if (msg.event === 'exit') {
-        // Request PNG export before closing
-        if (onImageExport && xml) {
-          pendingExportRef.current = true;
-          iframeRef.current.contentWindow?.postMessage(
-            JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
-            '*'
-          );
-          // Wait briefly for export, then close
-          setTimeout(() => {
-            setIsEditing(false);
-            setIsFullscreen(false);
-          }, 500);
-        } else {
-          setIsEditing(false);
-          setIsFullscreen(false);
-        }
+        setIsEditing(false);
       }
     } catch {
       /* ignore non-JSON messages */
     }
-  }, [xml, onChange, onImageExport]);
+  }, [xml, onChange, onImageExport, onSaveAndClose]);
 
   useEffect(() => {
     if (isEditing) {
@@ -87,68 +83,16 @@ export function DrawioEditor({ xml, onChange, onImageExport, previewUrl, editabl
     }
   }, [isEditing, handleMessage]);
 
-  // Escape to exit fullscreen
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsFullscreen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isFullscreen]);
-
-  // When closing editor, export PNG
-  const handleClose = useCallback(() => {
-    if (onImageExport && xml && iframeRef.current?.contentWindow) {
-      pendingExportRef.current = true;
-      iframeRef.current.contentWindow.postMessage(
-        JSON.stringify({ action: 'export', format: 'png', scale: 2 }),
-        '*'
-      );
-      // Give time for the export message to come back
-      setTimeout(() => {
-        setIsEditing(false);
-        setIsFullscreen(false);
-      }, 500);
-    } else {
-      setIsEditing(false);
-      setIsFullscreen(false);
-    }
-  }, [onImageExport, xml]);
-
   if (isEditing) {
     return (
       <div
         ref={containerRef}
-        className={isFullscreen
-          ? 'fixed inset-0 z-50 bg-background'
-          : 'relative border rounded-md overflow-hidden'
-        }
+        className="fixed inset-0 z-[100] bg-background"
       >
-        <div className="absolute top-2 right-2 z-10 flex gap-1">
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 rounded bg-background/80 hover:bg-background border shadow-sm"
-            title={isFullscreen ? 'Réduire' : 'Plein écran'}
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleClose}
-          >
-            Fermer
-          </Button>
-        </div>
         <iframe
           ref={iframeRef}
           src={DRAWIO_URL}
-          className="w-full border-0"
-          style={{ height: isFullscreen ? '100vh' : '600px' }}
+          className="w-full h-full border-0"
         />
       </div>
     );

@@ -342,8 +342,7 @@ export function ItemEditModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const doSubmit = () => {
     if (!item) return;
 
     const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
@@ -428,6 +427,11 @@ export function ItemEditModal({
     } else {
       onClose();
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    doSubmit();
   };
 
   // Build parent options excluding current item and its descendants
@@ -626,6 +630,7 @@ export function ItemEditModal({
                   const file = new File([blob], 'diagram.png', { type: 'image/png' });
                   uploadImageMutation.mutate(file);
                 }}
+                onSaveAndClose={doSubmit}
                 previewUrl={url || undefined}
                 editable={canEdit}
               />
