@@ -13,12 +13,13 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
+import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { TagBadge } from '../ui/TagBadge';
 
 // Format date for display
@@ -165,7 +166,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
               {stripMarkup(item.description)}
             </p>
           )}
-          {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+          {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
             <img src={item.url} alt="" className="w-full max-h-32 object-cover rounded border border-border mt-1.5" />
           )}
           {item.tags && item.tags.length > 0 && (
@@ -203,6 +204,12 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
                 actions: [
                   ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
                   ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
+                ],
+              },
+              {
+                actions: [
+                  { id: 'print', label: 'Imprimer', icon: Printer, onClick: () => { printItem({ item: item as any }); } },
+                  { id: 'pdf', label: 'Export PDF', icon: FileDown, onClick: () => { exportItemPDF({ item: item as any }); } },
                 ],
               },
               {

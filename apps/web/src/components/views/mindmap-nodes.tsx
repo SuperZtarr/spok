@@ -90,7 +90,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
         <span className="text-sm font-medium line-clamp-3 break-words" title={item.title}>{item.title}</span>
 
 
-        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+        {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
           <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
         )}
 

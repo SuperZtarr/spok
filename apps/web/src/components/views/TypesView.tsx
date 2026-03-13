@@ -150,7 +150,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
               {stripMarkup(item.description)}
             </p>
           )}
-          {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+          {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
             <img src={item.url} alt="" className="w-full max-h-32 object-cover rounded border border-border mt-1.5" />
           )}
           {statusLabel && (

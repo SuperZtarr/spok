@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, FolderKanban, Copy, FolderPlus, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, FolderKanban, Copy, FolderPlus, UserPlus, Merge, ArrowDownToLine, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -8,6 +8,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
+import { printItem, exportItemPDF } from '../../lib/itemExport';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -247,7 +248,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;
               const isDone = item.status === doneStatusId;
-              const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
+              const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
               const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
               const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
 
@@ -371,6 +372,12 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                             actions: [
                               ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
                               ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
+                            ],
+                          },
+                          {
+                            actions: [
+                              { id: 'print', label: 'Imprimer', icon: Printer, onClick: () => { const children = items.filter(i => i.parentId === item.id); printItem({ item: item as any, children }); } },
+                              { id: 'pdf', label: 'Export PDF', icon: FileDown, onClick: () => { const children = items.filter(i => i.parentId === item.id); exportItemPDF({ item: item as any, children }); } },
                             ],
                           },
                           {

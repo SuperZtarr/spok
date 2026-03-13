@@ -316,7 +316,7 @@ function TextItem({
   const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
   const hasDescription = !!item.description?.trim();
   const contributions = item.contributions || [];
-  const hasImage = item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url);
+  const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
   const hasContent = hasDescription || contributions.length > 0 || hasImage;
   const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
   const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
@@ -391,7 +391,7 @@ function TextItem({
               dangerouslySetInnerHTML={{ __html: item.description! }}
             />
           )}
-          {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+          {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
             <img src={item.url} alt="" className="max-w-sm max-h-48 object-contain rounded border border-border mt-2" />
           )}
 

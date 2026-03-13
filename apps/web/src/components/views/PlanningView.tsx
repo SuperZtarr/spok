@@ -207,7 +207,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
             <span className="truncate max-w-[80px]">{portalSpaceName}</span>
           </Link>
         )}
-        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
+        {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
           <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
         )}
         {item.url && (
