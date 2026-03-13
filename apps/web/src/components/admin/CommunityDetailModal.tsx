@@ -174,10 +174,8 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     addMemberMutation.mutate({ email, role: selectedMemberRole });
   };
 
-  const handleRemoveMember = (memberId: string, memberName: string) => {
-    if (confirm(`Retirer ${memberName} de cette communaute ?`)) {
-      removeMemberMutation.mutate(memberId);
-    }
+  const handleRemoveMember = (memberId: string, _memberName: string) => {
+    removeMemberMutation.mutate(memberId);
   };
 
   const handleAddSpace = () => {
@@ -186,10 +184,8 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     }
   };
 
-  const handleRemoveSpace = (spaceId: string, spaceName: string) => {
-    if (confirm(`Retirer l'espace "${spaceName}" de cette communaute ?`)) {
-      removeSpaceMutation.mutate(spaceId);
-    }
+  const handleRemoveSpace = (spaceId: string, _spaceName: string) => {
+    removeSpaceMutation.mutate(spaceId);
   };
 
   // Filter users not already members

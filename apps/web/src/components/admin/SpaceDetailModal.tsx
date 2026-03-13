@@ -148,10 +148,8 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     addMemberMutation.mutate({ userId, role: 'MEMBER' });
   };
 
-  const handleRemoveMember = (memberId: string, memberName: string) => {
-    if (confirm(`Retirer ${memberName} de cet espace ?`)) {
-      removeMemberMutation.mutate(memberId);
-    }
+  const handleRemoveMember = (memberId: string, _memberName: string) => {
+    removeMemberMutation.mutate(memberId);
   };
 
   const existingMemberIds = space?.members.map((m) => m.userId) || [];

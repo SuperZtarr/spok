@@ -6,6 +6,7 @@ import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import { useSort } from '../../hooks/useSort';
 import type { AdminUser } from '@spok/shared';
 
@@ -28,6 +29,7 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
   // undefined = modal fermé, null = création, string = édition
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
 
   const { sortKey, sortOrder, toggle, sortData } = useSort<AdminUser>('name', 'asc');
 
@@ -47,10 +49,8 @@ export function UsersPage() {
     },
   });
 
-  const handleDelete = async (user: AdminUser) => {
-    if (confirm(`Supprimer l'utilisateur ${user.name} ?`)) {
-      deleteMutation.mutate(user.id);
-    }
+  const handleDelete = (user: AdminUser) => {
+    setDeletingUser(user);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -230,6 +230,17 @@ export function UsersPage() {
           onClose={() => setModalUserId(undefined)}
         />
       )}
+      <ConfirmModal
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={() => {
+          if (deletingUser) deleteMutation.mutate(deletingUser.id);
+          setDeletingUser(null);
+        }}
+        title="Supprimer cet utilisateur ?"
+        message={`Supprimer l'utilisateur « ${deletingUser?.name} » ?`}
+        confirmLabel="Supprimer"
+      />
     </div>
   );
 }

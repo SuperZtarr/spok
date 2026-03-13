@@ -175,10 +175,8 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     }
   };
 
-  const handleRemoveFromCommunity = (communityId: string, communityName: string) => {
-    if (confirm(`Retirer l'utilisateur de la communaute "${communityName}" ?`)) {
-      removeFromCommunityMutation.mutate(communityId);
-    }
+  const handleRemoveFromCommunity = (communityId: string, _communityName: string) => {
+    removeFromCommunityMutation.mutate(communityId);
   };
 
   const handleAddToSpace = () => {
@@ -187,10 +185,8 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     }
   };
 
-  const handleRemoveFromSpace = (spaceId: string, spaceName: string) => {
-    if (confirm(`Retirer l'utilisateur de l'espace "${spaceName}" ?`)) {
-      removeFromSpaceMutation.mutate(spaceId);
-    }
+  const handleRemoveFromSpace = (spaceId: string, _spaceName: string) => {
+    removeFromSpaceMutation.mutate(spaceId);
   };
 
   // Filter available communities and spaces

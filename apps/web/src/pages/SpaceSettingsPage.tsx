@@ -17,6 +17,7 @@ import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
 import { OrgChartView } from '../components/views/OrgChartView';
 import { SendEmailModal } from '../components/SendEmailModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
 
 export function SpaceSettingsPage() {
@@ -35,6 +36,7 @@ export function SpaceSettingsPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'members' | 'danger'>('general');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -136,12 +138,11 @@ export function SpaceSettingsPage() {
   };
 
   const handleReset = async () => {
-    if (!confirm('Réinitialiser tous les paramètres aux valeurs par défaut ?')) return;
-
     const result = await resetMutation.mutateAsync();
     setLocalStatuses(result.referentiels.statuses);
     setLocalTypeLabels(result.referentiels.typeLabels);
     setHasChanges(false);
+    setShowResetConfirm(false);
   };
 
   const handleCheckUsage = async (statusId: string) => {
@@ -474,7 +475,7 @@ export function SpaceSettingsPage() {
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={handleReset}
+                onClick={() => setShowResetConfirm(true)}
                 disabled={resetMutation.isPending}
                 title="Rétablir les paramètres par défaut"
               >
@@ -593,6 +594,16 @@ export function SpaceSettingsPage() {
           target={{ type: 'space', id: space.id, name: space.name }}
         />
       )}
+
+      <ConfirmModal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleReset}
+        title="Réinitialiser les paramètres ?"
+        message="Tous les statuts et libellés de types seront rétablis aux valeurs par défaut."
+        confirmLabel="Réinitialiser"
+        isPending={resetMutation.isPending}
+      />
     </div>
   );
 }

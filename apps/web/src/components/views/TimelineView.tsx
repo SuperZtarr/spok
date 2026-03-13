@@ -7,6 +7,7 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { itemsApi } from '../../lib/api';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
+import { ConfirmModal } from '../ConfirmModal';
 import { getTypeIcon } from '../../constants/ui';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor } from './timeline-utils';
@@ -59,6 +60,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [compactMode, setCompactMode] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [pendingDeleteRelation, setPendingDeleteRelation] = useState<{ fromItemId: string; relationId: string; label: string } | null>(null);
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{
@@ -980,9 +982,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           strokeWidth={12}
                           style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                           onClick={() => {
-                            if (confirm(`Supprimer la relation "${relLabel}" ?`)) {
-                              onDeleteRelation(arrow.fromItemId, arrow.relationId);
-                            }
+                            setPendingDeleteRelation({ fromItemId: arrow.fromItemId, relationId: arrow.relationId, label: relLabel });
                           }}
                         >
                           <title>{`${relLabel} - Cliquer pour supprimer`}</title>
@@ -1070,6 +1070,19 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={!!pendingDeleteRelation}
+        onClose={() => setPendingDeleteRelation(null)}
+        onConfirm={() => {
+          if (pendingDeleteRelation && onDeleteRelation) {
+            onDeleteRelation(pendingDeleteRelation.fromItemId, pendingDeleteRelation.relationId);
+          }
+          setPendingDeleteRelation(null);
+        }}
+        title="Supprimer cette relation ?"
+        message={`Supprimer la relation « ${pendingDeleteRelation?.label || ''} » ?`}
+        confirmLabel="Supprimer"
+      />
     </div>
   );
 }

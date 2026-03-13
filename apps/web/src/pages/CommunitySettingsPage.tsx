@@ -7,6 +7,7 @@ import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 import { useAuthStore } from '../stores/auth';
 
@@ -620,6 +621,7 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [deletingTag, setDeletingTag] = useState<{ id: string; name: string } | null>(null);
 
   const { data: tags = [] } = useQuery({
     queryKey: ['community-tags', communityId],
@@ -707,7 +709,7 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
                 <button
-                  onClick={() => { if (confirm(`Supprimer le tag « ${tag.name} » ?`)) deleteMutation.mutate(tag.id); }}
+                  onClick={() => setDeletingTag({ id: tag.id, name: tag.name })}
                   className="p-1 text-muted-foreground hover:text-destructive hover:bg-accent rounded"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -748,6 +750,18 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
           Ajouter
         </Button>
       </div>
+
+      <ConfirmModal
+        isOpen={!!deletingTag}
+        onClose={() => setDeletingTag(null)}
+        onConfirm={() => {
+          if (deletingTag) deleteMutation.mutate(deletingTag.id);
+          setDeletingTag(null);
+        }}
+        title="Supprimer ce tag ?"
+        message={`Supprimer le tag « ${deletingTag?.name} » ?`}
+        confirmLabel="Supprimer"
+      />
     </div>
   );
 }

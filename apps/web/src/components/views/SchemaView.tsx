@@ -892,13 +892,11 @@ function SchemaViewInner({
               </button>
               <button
                 onClick={() => {
-                  if (confirm('Supprimer cette relation ?')) {
-                    deleteRelationMutation.mutate({
-                      fromItemId: editingEdge.fromItemId,
-                      relationId: editingEdge.relationId,
-                    });
-                    setEditingEdge(null);
-                  }
+                  deleteRelationMutation.mutate({
+                    fromItemId: editingEdge.fromItemId,
+                    relationId: editingEdge.relationId,
+                  });
+                  setEditingEdge(null);
                 }}
                 className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
               >

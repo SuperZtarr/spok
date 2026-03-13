@@ -321,6 +321,7 @@ export function DashboardPage() {
   const [newSpaceCommunityId, setNewSpaceCommunityId] = useState<string>(currentCommunity?.id || '');
   const [newSpaceParentId, setNewSpaceParentId] = useState<string>('');
   const [newSpaceTemplateId, setNewSpaceTemplateId] = useState<string>('blank');
+  const [leavingCommunity, setLeavingCommunity] = useState<{ id: string; name: string } | null>(null);
 
   // Pre-select current community when the form opens
   useEffect(() => {
@@ -730,12 +731,7 @@ export function DashboardPage() {
                   label: 'Quitter',
                   icon: LogOut,
                   onClick: () => {
-                    if (confirm(`Quitter la communauté « ${group.communityName} » ?`)) {
-                      communitiesApi.leave(group.communityId).then(() => {
-                        queryClient.invalidateQueries({ queryKey: ['communities'] });
-                        queryClient.invalidateQueries({ queryKey: ['spaces'] });
-                      });
-                    }
+                    setLeavingCommunity({ id: group.communityId, name: group.communityName });
                   },
                   variant: 'danger',
                 });
@@ -799,6 +795,24 @@ export function DashboardPage() {
       </div>
       </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!leavingCommunity}
+        onClose={() => setLeavingCommunity(null)}
+        onConfirm={() => {
+          if (leavingCommunity) {
+            communitiesApi.leave(leavingCommunity.id).then(() => {
+              queryClient.invalidateQueries({ queryKey: ['communities'] });
+              queryClient.invalidateQueries({ queryKey: ['spaces'] });
+            });
+          }
+          setLeavingCommunity(null);
+        }}
+        title="Quitter cette communauté ?"
+        message={`Quitter la communauté « ${leavingCommunity?.name} » ?`}
+        confirmLabel="Quitter"
+        icon="leave"
+      />
     </div>
   );
 }
