@@ -9,7 +9,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown } from 'lucide-react';
 import { TagSelector } from './ui/TagSelector';
 import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
@@ -23,6 +23,7 @@ import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLoca
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
+import { printItem, exportItemPDF } from '../lib/itemExport';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -1095,6 +1096,34 @@ export function ItemEditModal({
             <Button type="button" variant="outline" onClick={onClose}>
               {canEdit ? 'Annuler' : 'Fermer'}
             </Button>
+            {item && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  title="Imprimer"
+                  onClick={() => {
+                    const children = allItems.filter(i => i.parentId === item.id);
+                    printItem({ item: item as any, children, spaceName });
+                  }}
+                >
+                  <Printer className="w-4 h-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  title="Export PDF"
+                  onClick={() => {
+                    const children = allItems.filter(i => i.parentId === item.id);
+                    exportItemPDF({ item: item as any, children, spaceName });
+                  }}
+                >
+                  <FileDown className="w-4 h-4" />
+                </Button>
+              </>
+            )}
             {canEdit && onDelete && itemId && (
               <Button type="button" variant="destructive" className="ml-auto" onClick={() => { onDelete(itemId); onClose(); }}>
                 <Trash2 className="w-4 h-4" />
