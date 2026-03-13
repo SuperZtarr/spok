@@ -881,7 +881,7 @@ export function ItemEditModal({
                 <p className="text-sm text-muted-foreground">Aucune image</p>
               )}
             </div>
-          ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
+          ) : url && type !== 'DIAGRAM' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Image</label>
               <img
