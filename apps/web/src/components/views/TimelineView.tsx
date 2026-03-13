@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Copy, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban, UserPlus } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Copy, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
@@ -34,6 +34,8 @@ interface TimelineViewProps {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   spaceId?: string;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -43,7 +45,7 @@ interface TimelineViewProps {
   canEdit?: boolean;
 }
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
@@ -744,6 +746,8 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                                 ...(item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
                                 { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                                 ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                                ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                                ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                                 ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                               ],
                             },

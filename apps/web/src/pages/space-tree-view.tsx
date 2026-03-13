@@ -12,6 +12,8 @@ import {
   Copy,
   FolderPlus,
   UserPlus,
+  Merge,
+  ArrowDownToLine,
 } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { itemsApi } from '../lib/api';
@@ -53,6 +55,8 @@ export interface TreeItemProps {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
@@ -87,6 +91,8 @@ export function TreeItem({
   onDuplicateToSpace,
   onConvertToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   spaceId,
   isOver,
   onMove,
@@ -233,6 +239,8 @@ export function TreeItem({
                     ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
                     { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                    ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                     ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                   ],
                 },
@@ -273,6 +281,8 @@ export function TreeItem({
           onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace}
           onSelfAssign={onSelfAssign}
+          onMerge={onMerge}
+          onAbsorbChildren={onAbsorbChildren}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
@@ -308,6 +318,8 @@ export function ItemChildren({
   onDuplicateToSpace,
   onConvertToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   onMove,
   globalOverId,
   globalDropMode,
@@ -336,6 +348,8 @@ export function ItemChildren({
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -380,6 +394,8 @@ export function ItemChildren({
           onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace}
           onSelfAssign={onSelfAssign}
+          onMerge={onMerge}
+          onAbsorbChildren={onAbsorbChildren}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           onMove={onMove}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus, FolderKanban, ExternalLink, UserPlus } from 'lucide-react';
+import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus, FolderKanban, ExternalLink, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -37,6 +37,8 @@ interface TextViewProps {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   highlightType?: string;
@@ -90,7 +92,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
+export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -194,6 +196,8 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               onDuplicateToSpace={onDuplicateToSpace}
               onConvertToSpace={onConvertToSpace}
               onSelfAssign={onSelfAssign}
+              onMerge={onMerge}
+              onAbsorbChildren={onAbsorbChildren}
               canEdit={canEdit}
               doneStatusId={doneStatusId}
               statusLabels={statusLabels}
@@ -272,6 +276,8 @@ function TextItem({
   onDuplicateToSpace,
   onConvertToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   canEdit,
   doneStatusId,
   statusLabels,
@@ -291,6 +297,8 @@ function TextItem({
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   canEdit?: boolean;
   doneStatusId: string;
   statusLabels: Record<string, string>;
@@ -352,6 +360,8 @@ function TextItem({
                     ...(onUpdateStatus && item.status && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
                     ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) }] : []),
                     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                    ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                     ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                   ],
                 },

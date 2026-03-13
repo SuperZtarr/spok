@@ -13,7 +13,7 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -50,6 +50,8 @@ interface KanbanViewProps {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -66,6 +68,8 @@ interface KanbanColumnProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
   nextStatus?: string;
@@ -84,6 +88,8 @@ interface KanbanCardProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
   nextStatus?: string;
@@ -95,7 +101,7 @@ interface KanbanCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
   const Icon = getTypeIcon(item.type);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -188,6 +194,8 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
                   ...(nextStatus !== undefined ? [{ id: 'next-status', label: nextStatusLabel || 'Suivant', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, nextStatus!) }] : []),
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                   ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                 ],
               },
@@ -208,7 +216,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, isOver, nextStatus, nextStatusLabel, canEdit, referentiels }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isOver, nextStatus, nextStatusLabel, canEdit, referentiels }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -254,6 +262,8 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             onDuplicateToSpace={onDuplicateToSpace}
             onConvertToSpace={onConvertToSpace}
             onSelfAssign={onSelfAssign}
+            onMerge={onMerge}
+            onAbsorbChildren={onAbsorbChildren}
             nextStatus={nextStatus}
             nextStatusLabel={nextStatusLabel}
             canEdit={canEdit}
@@ -309,7 +319,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMoveItemToSpace, referentiels, canEdit = true }: KanbanViewProps) {
+export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMoveItemToSpace, referentiels, canEdit = true }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -487,6 +497,8 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                         onDuplicateToSpace={onDuplicateToSpace}
                         onConvertToSpace={onConvertToSpace}
                         onSelfAssign={onSelfAssign}
+                        onMerge={onMerge}
+                        onAbsorbChildren={onAbsorbChildren}
                         isOver={overId === droppableId}
                         nextStatus={nextStatusMap[status.id]?.id}
                         nextStatusLabel={nextStatusMap[status.id]?.label}

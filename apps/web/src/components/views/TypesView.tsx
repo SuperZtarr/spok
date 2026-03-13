@@ -13,7 +13,7 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
@@ -37,6 +37,8 @@ interface TypesViewProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
@@ -60,6 +62,8 @@ interface TypeColumnProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
   statusLabels: Record<string, string>;
@@ -75,6 +79,8 @@ interface TypeCardProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
   statusLabels: Record<string, string>;
@@ -85,7 +91,7 @@ interface TypeCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
   const Icon = getTypeIcon(item.type);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -167,6 +173,8 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
                 actions: [
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                   ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                 ],
               },
@@ -187,7 +195,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   );
 }
 
-function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
+function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -231,6 +239,8 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
             onDuplicateToSpace={onDuplicateToSpace}
             onConvertToSpace={onConvertToSpace}
             onSelfAssign={onSelfAssign}
+            onMerge={onMerge}
+            onAbsorbChildren={onAbsorbChildren}
             statusLabels={statusLabels}
             statusColors={statusColors}
             canEdit={canEdit}
@@ -285,7 +295,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMoveItemToSpace, referentiels, canEdit = true }: TypesViewProps) {
+export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMoveItemToSpace, referentiels, canEdit = true }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -469,6 +479,8 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
                         onDuplicateToSpace={onDuplicateToSpace}
                         onConvertToSpace={onConvertToSpace}
                         onSelfAssign={onSelfAssign}
+                        onMerge={onMerge}
+                        onAbsorbChildren={onAbsorbChildren}
                         isOver={overId === droppableId}
                         statusLabels={statusLabels}
                         statusColors={statusColors}

@@ -61,6 +61,8 @@ interface MindMapViewProps {
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -86,6 +88,8 @@ function MindMapViewInner({
   onUpdateRelation,
   onUpdateStatus,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   referentiels,
   canEdit,
   innerRef,
@@ -291,9 +295,9 @@ function MindMapViewInner({
     onAddPortal: handleAddPortal,
     onToggleCollapse: toggleCollapse,
     onReorganizeChildren: handleReorganizeChildren,
-    onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign,
+    onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren,
     onTogglePin: togglePin,
-  }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, togglePin]);
+  }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, togglePin]);
 
   const layoutOptions: MindMapLayoutOptions = useMemo(() => ({
     hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit,
@@ -1068,7 +1072,7 @@ function MindMapViewInner({
 export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(function MindMapView({
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
-  onSelfAssign, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit,
+  onSelfAssign, onMerge, onAbsorbChildren, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit,
 }, ref) {
   return (
     <div className="h-full w-full">
@@ -1078,7 +1082,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           highlightType={highlightType} highlightStatus={highlightStatus} searchMatchIds={searchMatchIds}
           onEdit={onEdit} onDelete={onDelete} onUpdateStatus={onUpdateStatus} onAddChild={onAddChild}
           onMove={onMove} onMoveToSpace={onMoveToSpace} onDuplicateToSpace={onDuplicateToSpace}
-          onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onCreateRelation={onCreateRelation}
+          onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onMerge={onMerge} onAbsorbChildren={onAbsorbChildren} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
           referentiels={referentiels} canEdit={canEdit}
           innerRef={ref}

@@ -50,6 +50,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const [deletingItem, setDeletingItem] = useState<DeletingItem | null>(null);
   const [convertingItem, setConvertingItem] = useState<ConvertingItem | null>(null);
   const [pendingCrossSpaceMove, setPendingCrossSpaceMove] = useState<PendingCrossSpaceMove | null>(null);
+  const [mergingItemId, setMergingItemId] = useState<string | null>(null);
 
   // Resolve an item's actual spaceId (portal items belong to different spaces)
   const resolveItemSpaceId = useCallback((itemId: string): string => {
@@ -241,6 +242,25 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     updateRelationMutation.mutate({ itemId, itemSpaceId, relationId, data });
   }, [resolveItemSpaceId, updateRelationMutation]);
 
+  // --- Merge ---
+
+  const handleMerge = useCallback((id: string) => {
+    setMergingItemId(id);
+  }, []);
+
+  const absorbChildrenMutation = useMutation({
+    mutationFn: ({ id, itemSpaceId }: { id: string; itemSpaceId: string }) =>
+      itemsApi.absorbChildren(itemSpaceId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  const handleAbsorbChildren = useCallback((id: string) => {
+    const itemSpaceId = resolveItemSpaceId(id);
+    absorbChildrenMutation.mutate({ id, itemSpaceId });
+  }, [resolveItemSpaceId, absorbChildrenMutation]);
+
   return {
     // Delete flow
     handleDelete,
@@ -267,5 +287,10 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     handleCreateRelation,
     handleDeleteRelation,
     handleUpdateRelation,
+    // Merge
+    handleMerge,
+    mergingItemId,
+    setMergingItemId,
+    handleAbsorbChildren,
   };
 }

@@ -27,7 +27,7 @@ import type { ItemWithRelations } from '@spok/shared';
 import { canvasLayoutApi, itemsApi } from '../../lib/api';
 import { getTypeIcon } from '../../constants/ui';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { Plus, Trash2, CheckSquare, FolderInput, FolderPlus, Ban, ArrowLeft, Link2, Copy, Cog, FlaskConical, UserPlus, type LucideIcon } from 'lucide-react';
+import { Plus, Trash2, CheckSquare, FolderInput, FolderPlus, Ban, ArrowLeft, Link2, Copy, Cog, FlaskConical, UserPlus, Merge, ArrowDownToLine, type LucideIcon } from 'lucide-react';
 
 const TYPE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -63,6 +63,8 @@ interface SchemaNodeData {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   doneStatusId?: string;
   isHighlighted: boolean;
   isDimmed: boolean;
@@ -73,7 +75,7 @@ interface SchemaNodeData {
 }
 
 function SchemaNode({ data }: { data: SchemaNodeData }) {
-  const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit } = data;
+  const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit } = data;
   const Icon = getTypeIcon(item.type);
   const dotColor = TYPE_COLORS[item.type] || '#6b7280';
 
@@ -83,6 +85,8 @@ function SchemaNode({ data }: { data: SchemaNodeData }) {
       const createActions = [];
       if (onAddChild) createActions.push({ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) });
       if (onSelfAssign) createActions.push({ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) });
+      if (onMerge) createActions.push({ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) });
+      if (onAbsorbChildren) createActions.push({ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) });
       if (onDuplicateToSpace) createActions.push({ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) });
       if (createActions.length > 0) groups.push({ label: 'Créer', actions: createActions });
 
@@ -97,7 +101,7 @@ function SchemaNode({ data }: { data: SchemaNodeData }) {
       if (onDelete) groups.push({ actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] });
     }
     return groups;
-  }, [canEdit, item, onAddChild, onSelfAssign, onDuplicateToSpace, onUpdateStatus, onMoveToSpace, onConvertToSpace, onDelete, doneStatusId]);
+  }, [canEdit, item, onAddChild, onSelfAssign, onMerge, onAbsorbChildren, onDuplicateToSpace, onUpdateStatus, onMoveToSpace, onConvertToSpace, onDelete, doneStatusId]);
 
   return (
     <div
@@ -155,7 +159,7 @@ interface SchemaGroupData extends SchemaNodeData {
 }
 
 function SchemaGroupNode({ data }: { data: SchemaGroupData }) {
-  const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit, groupWidth, groupHeight } = data;
+  const { item, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, doneStatusId, isHighlighted, isDimmed, isSearchMatch, isPortal, canEdit, groupWidth, groupHeight } = data;
   const Icon = getTypeIcon(item.type);
   const dotColor = TYPE_COLORS[item.type] || '#6b7280';
 
@@ -165,6 +169,8 @@ function SchemaGroupNode({ data }: { data: SchemaGroupData }) {
       const createActions = [];
       if (onAddChild) createActions.push({ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) });
       if (onSelfAssign) createActions.push({ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) });
+      if (onMerge) createActions.push({ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) });
+      if (onAbsorbChildren) createActions.push({ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) });
       if (onDuplicateToSpace) createActions.push({ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) });
       if (createActions.length > 0) groups.push({ label: 'Créer', actions: createActions });
 
@@ -179,7 +185,7 @@ function SchemaGroupNode({ data }: { data: SchemaGroupData }) {
       if (onDelete) groups.push({ actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] });
     }
     return groups;
-  }, [canEdit, item, onAddChild, onSelfAssign, onDuplicateToSpace, onUpdateStatus, onMoveToSpace, onConvertToSpace, onDelete, doneStatusId]);
+  }, [canEdit, item, onAddChild, onSelfAssign, onMerge, onAbsorbChildren, onDuplicateToSpace, onUpdateStatus, onMoveToSpace, onConvertToSpace, onDelete, doneStatusId]);
 
   return (
     <div
@@ -367,6 +373,8 @@ interface SchemaViewProps {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onCreateItem?: (position: { x: number; y: number }) => void;
   doneStatusId?: string;
   highlightType?: string;
@@ -388,6 +396,8 @@ function SchemaViewInner({
   onDuplicateToSpace,
   onConvertToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   onCreateItem,
   doneStatusId,
   highlightType,
@@ -550,6 +560,8 @@ function SchemaViewInner({
         onDuplicateToSpace,
         onConvertToSpace,
         onSelfAssign,
+        onMerge,
+        onAbsorbChildren,
         doneStatusId,
         isHighlighted,
         isDimmed: isDimmed && !isSearchMatch,

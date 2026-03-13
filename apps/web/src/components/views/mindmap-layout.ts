@@ -59,6 +59,8 @@ export interface MindMapCallbacks {
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onTogglePin?: (id: string) => void;
 }
 
@@ -85,7 +87,7 @@ export function calculateLayout(
   callbacks: MindMapCallbacks,
   options: MindMapLayoutOptions,
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number } {
-  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onTogglePin } = callbacks;
+  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onTogglePin } = callbacks;
   const { hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
 
   const nodes: Node[] = [];
@@ -255,6 +257,8 @@ export function calculateLayout(
         onDuplicateToSpace,
         onConvertToSpace,
         onSelfAssign,
+        onMerge,
+        onAbsorbChildren,
         doneStatusId,
         isRoot,
         hasChildren,
@@ -363,7 +367,7 @@ export function buildPortalNodesAndEdges(
   relationEdges: Edge[],
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
   const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions, rootArcEnd } = ctx;
-  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onTogglePin } = callbacks;
+  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onTogglePin } = callbacks;
   const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet } = options;
 
   const portalPosMap = new Map(positionedNodes.map(n => [n.id, n.position]));
@@ -515,6 +519,8 @@ export function buildPortalNodesAndEdges(
           onDuplicateToSpace,
           onConvertToSpace,
           onSelfAssign,
+          onMerge,
+          onAbsorbChildren,
           doneStatusId,
           isRoot: depth === 0,
           hasChildren: item.children.length > 0,

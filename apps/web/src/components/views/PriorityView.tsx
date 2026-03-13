@@ -18,7 +18,7 @@ import { PRIORITIES, getPriorityConfig, getTypeIcon, getTypeTextColor } from '..
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { Trash2, Plus, Copy, FolderInput, FolderPlus, UserPlus } from 'lucide-react';
+import { Trash2, Plus, Copy, FolderInput, FolderPlus, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Column definitions
@@ -58,6 +58,8 @@ function PriorityCard({
   onDuplicateToSpace,
   onConvertToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   isDragging,
   canEdit = true,
   referentiels,
@@ -70,6 +72,8 @@ function PriorityCard({
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
@@ -131,6 +135,8 @@ function PriorityCard({
                 actions: [
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                   ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                 ],
               },
@@ -166,6 +172,8 @@ function PriorityColumn({
   onDuplicateToSpace,
   onConvertToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   canEdit,
   referentiels,
   draggedItemId,
@@ -180,6 +188,8 @@ function PriorityColumn({
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
   draggedItemId: string | null;
@@ -216,6 +226,8 @@ function PriorityColumn({
             onDuplicateToSpace={onDuplicateToSpace}
             onConvertToSpace={onConvertToSpace}
             onSelfAssign={onSelfAssign}
+            onMerge={onMerge}
+            onAbsorbChildren={onAbsorbChildren}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
             referentiels={referentiels}
@@ -242,6 +254,8 @@ interface PriorityViewProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -256,6 +270,8 @@ export function PriorityView({
   onMoveToSpace,
   onDuplicateToSpace,
   onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
   onConvertToSpace,
   referentiels,
   canEdit = true,
@@ -344,6 +360,8 @@ export function PriorityView({
               onDuplicateToSpace={onDuplicateToSpace}
               onConvertToSpace={onConvertToSpace}
               onSelfAssign={onSelfAssign}
+              onMerge={onMerge}
+              onAbsorbChildren={onAbsorbChildren}
               canEdit={canEdit}
               referentiels={referentiels}
               draggedItemId={draggedItemId}

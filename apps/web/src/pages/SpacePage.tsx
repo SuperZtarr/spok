@@ -60,6 +60,7 @@ import { MembersKanbanView } from '../components/views/MembersKanbanView';
 import { PriorityView } from '../components/views/PriorityView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
+import { MergeItemModal } from '../components/MergeItemModal';
 
 import { TYPE_ICONS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
@@ -480,6 +481,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -496,6 +499,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               canEdit={canEdit}
               highlightType={activeTypeFilter}
@@ -516,6 +521,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -533,6 +540,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -550,6 +559,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -594,6 +605,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -620,6 +633,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
               onUpdateRelation={actions.handleUpdateRelation}
@@ -673,6 +688,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               doneStatusId={referentiels?.statuses?.find(s => s.id === 'done')?.id || 'done'}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -773,6 +790,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -787,6 +806,8 @@ export function SpacePage() {
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -824,6 +845,8 @@ export function SpacePage() {
                       onDuplicateToSpace={(id) => setDuplicateItemId(id)}
                       onConvertToSpace={actions.handleConvertToSpace}
                       onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       onMove={actions.handleMove}
@@ -871,6 +894,8 @@ export function SpacePage() {
                           onDuplicateToSpace={(id) => setDuplicateItemId(id)}
                           onConvertToSpace={actions.handleConvertToSpace}
                           onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
                           spaceId={group.spaceId}
                           isOver={overId === item.id}
                           onMove={actions.handleMove}
@@ -970,6 +995,15 @@ export function SpacePage() {
         itemType={actions.deletingItem?.type || 'NOTE'}
         childCount={actions.deletingItem?.childCount || 0}
         contributionCount={actions.deletingItem?.contributionCount || 0}
+      />
+
+      {/* Merge item modal */}
+      <MergeItemModal
+        isOpen={!!actions.mergingItemId}
+        onClose={() => actions.setMergingItemId(null)}
+        sourceItem={allItems.find(i => i.id === actions.mergingItemId) || null}
+        allItems={allItems}
+        spaceId={spaceId!}
       />
 
       {/* Cross-space move confirmation modal */}

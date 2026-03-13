@@ -9,6 +9,7 @@ import { itemBulkRoutes } from './item-bulk.js';
 import { itemUploadRoutes } from './item-uploads.js';
 import { itemContributionRoutes } from './item-contributions.js';
 import { itemConvertRoutes } from './item-convert.js';
+import { itemMergeRoutes } from './item-merge.js';
 
 const createItemSchema = z.object({
   type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']),
@@ -102,6 +103,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemUploadRoutes);
     await authInstance.register(itemContributionRoutes);
     await authInstance.register(itemConvertRoutes);
+    await authInstance.register(itemMergeRoutes);
   });
 
   // List items

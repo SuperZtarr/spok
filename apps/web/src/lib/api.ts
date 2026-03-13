@@ -793,6 +793,32 @@ export const itemsApi = {
       }
     ),
 
+  // Merge
+  merge: (spaceId: string, itemId: string, data: {
+    targetItemId: string;
+    keep: {
+      title: 'source' | 'target';
+      type: 'source' | 'target';
+      status: 'source' | 'target';
+      priority: 'source' | 'target';
+      assignedToId: 'source' | 'target';
+      startDate: 'source' | 'target';
+      endDate: 'source' | 'target';
+      dueDate: 'source' | 'target';
+      url: 'source' | 'target';
+      description: 'source' | 'target' | 'concat';
+    };
+  }) =>
+    fetchApi<Item>(`/spaces/${spaceId}/items/${itemId}/merge`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  absorbChildren: (spaceId: string, itemId: string) =>
+    fetchApi<Item>(`/spaces/${spaceId}/items/${itemId}/absorb-children`, {
+      method: 'POST',
+    }),
+
   // Contributions
   listContributions: (spaceId: string, itemId: string) =>
     fetchApi<ContributionWithAuthor[]>(`/spaces/${spaceId}/items/${itemId}/contributions`),
