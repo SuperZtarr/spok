@@ -828,7 +828,7 @@ export function SpacePage() {
                   {portalGroups.map((group) => (
                     <div key={`portal-${group.spaceId}`} className="mt-2">
                       <Link
-                        to={`/spaces/${group.spaceId}`}
+                        to={`/spaces/${group.spaceId}/content`}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-accent/50 hover:bg-accent transition-colors text-sm font-medium text-muted-foreground"
                       >
                         <FolderKanban className="w-4 h-4 text-primary" />

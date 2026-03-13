@@ -9,6 +9,7 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
+import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
@@ -107,7 +108,8 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
-        <Route path="spaces/:spaceId" element={<SpacePage />} />
+        <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
+        <Route path="spaces/:spaceId/content" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
         <Route path="communities/:communityId" element={<CommunityPage />} />

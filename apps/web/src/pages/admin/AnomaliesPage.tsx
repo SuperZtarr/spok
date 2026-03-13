@@ -129,7 +129,7 @@ function CategoryDetail({ categoryKey }: { categoryKey: string }) {
                     </Link>
                   ) : item.spaceId ? (
                     <Link
-                      to={`/spaces/${item.spaceId}`}
+                      to={`/spaces/${item.spaceId}/content`}
                       className="text-primary hover:text-primary/80"
                       title="Voir l'espace"
                     >

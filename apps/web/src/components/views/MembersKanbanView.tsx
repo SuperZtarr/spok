@@ -464,7 +464,7 @@ export function MembersKanbanView({
                 <div className="flex items-center gap-2 mb-2 mt-1">
                   <FolderKanban className="w-4 h-4 text-primary/70" />
                   <Link
-                    to={`/spaces/${section.spaceId}`}
+                    to={`/spaces/${section.spaceId}/content`}
                     className="text-sm font-medium text-primary/70 hover:text-primary hover:underline"
                   >
                     {section.spaceName}

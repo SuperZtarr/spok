@@ -75,7 +75,7 @@ function SpaceCardWithChildren({
         <SpaceCard space={node} onJoin={onJoin} onLeave={onLeave} onDelete={onDelete} canDelete={!!canDelete} onAddChildSpace={onAddChildSpace} onMoveToParent={onMoveToParent} />
       ) : (
         <Link
-          to={`/spaces/${node.id}`}
+          to={`/spaces/${node.id}/content`}
           className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm"
           style={{ paddingLeft: `${8 + level * 16}px` }}
         >
@@ -304,7 +304,7 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
   };
 
   if (isMember) {
-    return <div {...dragDropProps}>{leaveModal}{deleteModal}<Link to={`/spaces/${space.id}`}>{cardContent}</Link></div>;
+    return <div {...dragDropProps}>{leaveModal}{deleteModal}<Link to={`/spaces/${space.id}/content`}>{cardContent}</Link></div>;
   }
 
   return <div {...dragDropProps}>{leaveModal}{deleteModal}{cardContent}</div>;
@@ -522,7 +522,7 @@ export function DashboardPage() {
         <div className="flex-1 min-h-0 flex flex-col">
           <GraphView
             level="global"
-            onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}`, { state: { openItemId: itemId } })}
+            onNodeClick={(itemId, spaceId) => navigate(`/spaces/${spaceId}/content`, { state: { openItemId: itemId } })}
           />
         </div>
       ) : tab === 'sunburst' ? (

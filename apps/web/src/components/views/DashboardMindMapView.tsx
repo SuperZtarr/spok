@@ -503,7 +503,7 @@ function DashboardMindMapInner({
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     const data = node.data as unknown as TreeDatum;
     if (data.type === 'space' && data.entityId) {
-      navigate(`/spaces/${data.entityId}`);
+      navigate(`/spaces/${data.entityId}/content`);
     } else if (data.type === 'community' && data.entityId) {
       navigate(`/communities/${data.entityId}/settings`);
     }

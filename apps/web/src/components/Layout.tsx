@@ -96,7 +96,7 @@ function SpaceTreeItem({
           <span className="w-4 flex-shrink-0" />
         )}
         <Link
-          to={`/spaces/${node.id}`}
+          to={`/spaces/${node.id}/content`}
           className="flex items-center gap-2 flex-1 min-w-0"
         >
           {node.avatarUrl ? (
@@ -372,7 +372,7 @@ export function Layout() {
             {mySpaces.map((space) => (
               <Link
                 key={space.id}
-                to={`/spaces/${space.id}`}
+                to={`/spaces/${space.id}/content`}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
                   currentSpaceId === space.id
                     ? 'bg-primary/10 text-primary font-medium'

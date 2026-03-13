@@ -213,7 +213,7 @@ export function DeadlinesView() {
                     className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-[140px] flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/spaces/${task.spaceId}`);
+                      navigate(`/spaces/${task.spaceId}/content`);
                     }}
                     title={task.spaceName}
                   >

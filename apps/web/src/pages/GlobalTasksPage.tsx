@@ -208,7 +208,7 @@ export function GlobalTasksPage() {
                       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-full"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/spaces/${task.spaceId}`);
+                        navigate(`/spaces/${task.spaceId}/content`);
                       }}
                       title={task.spaceName}
                     >
@@ -299,7 +299,7 @@ export function GlobalTasksPage() {
                       className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/spaces/${task.spaceId}`);
+                        navigate(`/spaces/${task.spaceId}/content`);
                       }}
                     >
                       <FolderKanban className="w-3 h-3 flex-shrink-0" />

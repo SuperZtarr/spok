@@ -184,7 +184,7 @@ export function ReferentielsPage() {
                         <td className="px-4 py-2 text-center">{space.customTypeCount}</td>
                         <td className="px-4 py-2 text-right">
                           <Link
-                            to={`/spaces/${space.id}`}
+                            to={`/spaces/${space.id}/content`}
                             className="text-primary hover:text-primary/80"
                             title="Voir l'espace"
                           >

@@ -223,7 +223,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
       return;
     }
     if (data.nodeType === 'space') {
-      navigate(`/spaces/${data.id}`);
+      navigate(`/spaces/${data.id}/content`);
     } else if (data.nodeType === 'community' && data.id !== 'personal') {
       navigate(`/communities/${data.id}`);
     }

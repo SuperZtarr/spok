@@ -136,7 +136,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       setConvertingItem(null);
-      navigate(`/spaces/${result.space.id}`);
+      navigate(`/spaces/${result.space.id}/content`);
     },
   });
 
