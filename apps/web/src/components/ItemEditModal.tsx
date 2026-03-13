@@ -501,952 +501,593 @@ export function ItemEditModal({
 
   if (!isOpen) return null;
 
+  const TypeIcon = TYPE_ICONS[type];
+  const typeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[type];
+  const relationCount = (item?.relationsFrom?.length || 0) + (item?.relationsTo?.length || 0);
+  const contributionCount = item?.contributions?.length || 0;
+  const tagCount = selectedTagIds.length;
+
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <span className="font-semibold text-lg flex-shrink-0">
-            {canEdit ? "Modifier" : "Détail"}
-          </span>
-          {item && (breadcrumb.length > 0 || spaceName) && (
-            <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap min-w-0">
-              {spaceName && (
-                <>
-                  <Home className="w-3 h-3 flex-shrink-0" />
-                  <span className="font-medium">{spaceName}</span>
-                </>
-              )}
-              {breadcrumb.map((crumb) => (
-                <span key={crumb.id} className="flex items-center gap-1">
-                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                  {onNavigate ? (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(crumb.id)}
-                      className="hover:text-primary hover:underline transition-colors"
-                    >
-                      {crumb.title}
-                    </button>
-                  ) : (
-                    <span>{crumb.title}</span>
-                  )}
-                </span>
-              ))}
-              {item && (
-                <span className="flex items-center gap-1">
-                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                  <span className="font-semibold text-foreground">{item.title}</span>
-                </span>
-              )}
-            </nav>
-          )}
-          {item?.createdBy && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto flex-shrink-0">
-              <User className="w-3 h-3" />
-              <span>{item.createdBy.name}</span>
-              <span>•</span>
-              <span>
-                {new Date(item.createdAt).toLocaleDateString('fr-FR', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </span>
-            </div>
-          )}
-        </div>
-      }
+      title=""
       size="fullscreen"
     >
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Nom principal de l'élément">Titre</label>
+          {/* Header with type icon + title + breadcrumb */}
+          <div className="flex items-center gap-4 mb-2">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${typeConfig?.bgHover || 'bg-muted'}`}>
+              {TypeIcon && <TypeIcon className={`w-6 h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
+            </div>
+            <div className="flex-1 min-w-0">
               {canEdit ? (
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Titre de l'élément"
+                  className="text-xl font-bold px-2 py-1 h-auto bg-muted/30 hover:bg-muted/60 focus:bg-background transition-colors"
                   autoFocus={!title}
                 />
               ) : (
-                <p className="text-lg font-medium">{title}</p>
+                <h1 className="text-xl font-bold truncate">{title}</h1>
               )}
-            </div>
-            <div className="space-y-2 sm:min-w-[200px]">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium" title="Élément parent dans l'arborescence">Parent</label>
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={toggleParentSortMode}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}
-                  >
-                    {parentSortMode === 'tree' ? (
-                      <>
-                        <GitBranch className="w-3 h-3" />
-                        <span>Arborescence</span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDownAZ className="w-3 h-3" />
-                        <span>A-Z</span>
-                      </>
-                    )}
-                  </button>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                {spaceName && (
+                  <>
+                    <Home className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-medium">{spaceName}</span>
+                  </>
                 )}
-              </div>
-              {canEdit ? (
-                <Select
-                  value={parentId}
-                  onChange={(e) => setParentId(e.target.value)}
-                  options={parentOptions}
-                />
-              ) : (
-                <p className="text-sm">
-                  {parentId
-                    ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu'
-                    : <span className="text-muted-foreground">Aucun parent</span>}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {type === 'DIAGRAM' ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Diagramme draw.io intégré">Diagramme</label>
-              <DrawioEditor
-                xml={diagramXml}
-                onChange={setDiagramXml}
-                onSaveAndClose={async (savedXml, pngBlob) => {
-                  if (!itemId) return;
-                  // 1. Save XML to database (skip optimistic locking — auto-save from draw.io)
-                  await itemsApi.update(spaceId, itemId, {
-                    content: { xml: savedXml },
-                  });
-                  setDiagramXml(savedXml);
-                  // 2. Upload PNG to R2
-                  const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
-                  await uploadImageMutation.mutateAsync(file);
-                  // 3. Refresh list only (NOT individual item — that would reset the form and close the modal)
-                  queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-                }}
-                previewUrl={url || undefined}
-                editable={canEdit}
-              />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Description détaillée, supporte le texte riche">Description</label>
-              <RichTextEditor
-                key={itemId}
-                content={description}
-                onChange={setDescription}
-                editable={canEdit}
-                spaceId={spaceId}
-                mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="État d'avancement de l'élément">Statut</label>
-              <div className="flex flex-wrap gap-2">
-                {canEdit ? (
-                  (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
-                    const isSelected = (s.id === 'undefined' && !status) || s.id === status;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => {
-                          const newStatus = s.id === 'undefined' ? '' : s.id;
-                          setStatus(newStatus);
-                          // Auto-set endDate when marking as done or cancelled
-                          if ((newStatus === 'done' || newStatus === 'cancelled') && !endDate) {
-                            setEndDate(toDatetimeLocal(new Date()));
-                          }
-                        }}
-                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                          isSelected
-                            ? `${s.borderColor} font-semibold shadow-sm`
-                            : `${s.borderColor} opacity-60 hover:opacity-100`
-                        }`}
-                      >
-                        {s.label}
+                {breadcrumb.map((crumb) => (
+                  <span key={crumb.id} className="flex items-center gap-1">
+                    <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                    {onNavigate ? (
+                      <button type="button" onClick={() => onNavigate(crumb.id)} className="hover:text-primary hover:underline transition-colors">
+                        {crumb.title}
                       </button>
-                    );
-                  })
-                ) : (
-                  (() => {
-                    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-                    const selected = statuses.find((s) =>
-                      (s.id === 'undefined' && !status) || s.id === status
-                    );
-                    return selected ? (
-                      <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>
-                        {selected.label}
-                      </span>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Non défini</span>
-                    );
-                  })()
-                )}
+                      <span>{crumb.title}</span>
+                    )}
+                  </span>
+                ))}
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Catégorie de l'élément (note, tâche, projet...)">Type</label>
-              <div className="flex flex-wrap gap-2">
-                {canEdit ? (
-                  (() => {
-                    const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                    return Object.entries(typeLabels)
-                      .filter(([, config]) => config.visible)
-                      .sort(([, a], [, b]) => a.order - b.order)
-                      .map(([key, config]) => {
-                        const Icon = TYPE_ICONS[key];
-                        const isSelected = type === key;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setType(key as ItemType)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
-                              isSelected
-                                ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
-                                : 'opacity-70 hover:opacity-100'
-                            }`}
-                          >
-                            {Icon && <Icon className="w-3.5 h-3.5" />}
-                            {config.labelShort}
-                          </button>
-                        );
-                      });
-                  })()
-                ) : (
-                  (() => {
-                    const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                    const config = typeLabels[type];
-                    const Icon = TYPE_ICONS[type];
-                    return (
-                      <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${config?.color || 'border-border'} ${config?.bgHover || ''} font-semibold`}>
-                        {Icon && <Icon className="w-3.5 h-3.5" />}
-                        {config?.labelShort || TYPE_LABELS[type] || type}
-                      </span>
-                    );
-                  })()
-                )}
+            {item?.createdBy && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
+                <User className="w-3 h-3" />
+                <span>{item.createdBy.name}</span>
+                <span>•</span>
+                <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Priorité */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium" title="Niveau de priorité de l'élément">Priorité</label>
-            <div className="flex flex-wrap gap-2">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto pr-1">
+
+            {/* Type selector — full width */}
+            <div className="flex flex-wrap gap-2 mb-4">
               {canEdit ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setPriority(null)}
-                    className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                      priority === null
-                        ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm'
-                        : 'border-gray-200 opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    Aucune
-                  </button>
-                  {PRIORITIES.map((p) => (
-                    <button
-                      key={p.value}
-                      type="button"
-                      onClick={() => setPriority(p.value)}
-                      className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${p.color} ${
-                        priority === p.value
-                          ? `${p.bgColor} font-semibold shadow-sm`
-                          : 'opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </>
-              ) : (
                 (() => {
-                  const config = PRIORITIES.find(p => p.value === priority);
-                  return config ? (
-                    <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>
-                      {config.label}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Non définie</span>
-                  );
+                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                  return Object.entries(typeLabels)
+                    .filter(([, config]) => config.visible)
+                    .sort(([, a], [, b]) => a.order - b.order)
+                    .map(([key, config]) => {
+                      const Icon = TYPE_ICONS[key];
+                      const isSelected = type === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setType(key as ItemType)}
+                          className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
+                            isSelected
+                              ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
+                              : 'opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                          {config.labelShort}
+                        </button>
+                      );
+                    });
                 })()
-              )}
-            </div>
-          </div>
-
-          {/* Assigné à */}
-          {spaceMembers && spaceMembers.length > 1 && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Membre assigné à cet élément">Assigné à</label>
-              {canEdit ? (
-                <Select
-                  value={assignedToId}
-                  onChange={(e) => setAssignedToId(e.target.value)}
-                  options={[
-                    { value: '', label: 'Non assigné' },
-                    ...spaceMembers.map((m) => ({
-                      value: m.userId,
-                      label: m.name || m.email,
-                    })),
-                  ]}
-                />
               ) : (
-                <p className="text-sm">
-                  {assignedToId
-                    ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu')
-                    : <span className="text-muted-foreground">Non assigné</span>}
-                </p>
-              )}
-            </div>
-          )}
-
-          {type === 'IMAGE' ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Image associée à cet élément">Image</label>
-              {canEdit ? (
-                <>
-                  <ImageUploadZone
-                    currentUrl={url || null}
-                    onUpload={(file) => {
-                      autoFillTitle(fileNameToTitle(file.name));
-                      uploadImageMutation.mutate(file);
-                    }}
-                    onRemove={() => setUrl('')}
-                    isUploading={uploadImageMutation.isPending}
-                  />
-                  {uploadImageMutation.isError && (
-                    <p className="text-sm text-destructive">
-                      {(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}
-                    </p>
-                  )}
-                  <details className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer hover:text-foreground transition-colors">
-                      URL externe (optionnel)
-                    </summary>
-                    <div className="mt-2">
-                      <Input
-                        type="url"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </details>
-                </>
-              ) : url ? (
-                <>
-                  <img
-                    src={url}
-                    alt="Image"
-                    className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => setImageExpanded(true)}
-                    title="Cliquer pour agrandir"
-                  />
-                  {imageExpanded && (
-                    <div
-                      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer"
-                      onClick={() => setImageExpanded(false)}
-                    >
-                      <img
-                        src={url}
-                        alt="Image"
-                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">Aucune image</p>
-              )}
-            </div>
-          ) : url && type !== 'DIAGRAM' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Image</label>
-              <img
-                src={url}
-                alt="Image"
-                className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setImageExpanded(true)}
-                title="Cliquer pour agrandir"
-              />
-              {imageExpanded && (
-                <div
-                  className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer"
-                  onClick={() => setImageExpanded(false)}
-                >
-                  <img
-                    src={url}
-                    alt="Image"
-                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
-                  />
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {type === 'DOCUMENT' ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" title="Fichier associé à cet élément">Fichier</label>
-              {canEdit ? (
-                <>
-                  <FileUploadZone
-                    currentUrl={url || null}
-                    onUpload={(file) => {
-                      autoFillTitle(fileNameToTitle(file.name));
-                      uploadDocumentMutation.mutate(file);
-                    }}
-                    onRemove={() => setUrl('')}
-                    isUploading={uploadDocumentMutation.isPending}
-                  />
-                  {uploadDocumentMutation.isError && (
-                    <p className="text-sm text-destructive">
-                      {(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}
-                    </p>
-                  )}
-                  <details className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer hover:text-foreground transition-colors">
-                      URL externe (optionnel)
-                    </summary>
-                    <div className="mt-2">
-                      <Input
-                        type="url"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </details>
-                </>
-              ) : url ? (
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all"
-                >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                  Télécharger le fichier
-                </a>
-              ) : (
-                <p className="text-sm text-muted-foreground">Aucun fichier</p>
-              )}
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium" title="Adresse web associée à cet élément">URL</label>
-            {type === 'LINK' && canEdit ? (
-              <Input
-                type="url"
-                value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value);
-                  const extracted = urlToTitle(e.target.value);
-                  if (extracted) autoFillTitle(extracted);
-                }}
-                placeholder="https://..."
-              />
-            ) : null}
-            {url ? (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all"
-              >
-                <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                {url}
-              </a>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">Aucune URL</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2 relative">
-              <label className="text-sm font-medium">Début</label>
-              {canEdit ? (
-                <DateTimeField
-                  value={startDate}
-                  onChange={handleStartDateChange}
-                  showTime={type === 'MEETING' || type === 'TASK'}
-                />
-              ) : (
-                <p className="text-sm">
-                  {startDate
-                    ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate))
-                    : <span className="text-muted-foreground">—</span>}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2 relative">
-              <label className="text-sm font-medium">Fin</label>
-              {canEdit ? (
-                <div className="space-y-2">
-                  {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
-                        const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
-                        return (
-                          <button
-                            key={d.ms}
-                            type="button"
-                            onClick={() => {
-                              const end = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                              setEndDate(toDatetimeLocal(end));
-                            }}
-                            className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
-                              isSelected
-                                ? 'border-primary bg-primary/10 font-semibold text-primary'
-                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                            }`}
-                          >
-                            {d.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <DateTimeField
-                    value={endDate}
-                    onChange={handleEndDateChange}
-                    showTime={type === 'MEETING' || type === 'TASK'}
-                    showPresets={type !== 'MEETING' && type !== 'PROJECT' && type !== 'TASK'}
-                    minDate={startDate}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm">
-                  {endDate
-                    ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate))
-                    : <span className="text-muted-foreground">—</span>}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2 relative">
-              <label className="text-sm font-medium">Échéance</label>
-              {canEdit ? (
-                <div className="space-y-2">
-                  {startDate && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {DUE_DATE_DURATIONS.map((d) => {
-                        const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                        const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
-                        return (
-                          <button
-                            key={d.ms}
-                            type="button"
-                            onClick={() => setDueDate(toDatetimeLocal(targetDate))}
-                            className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
-                              isSelected
-                                ? 'border-primary bg-primary/10 font-semibold text-primary'
-                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                            }`}
-                          >
-                            {d.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <DateTimeField
-                    value={dueDate}
-                    onChange={setDueDate}
-                    showTime={false}
-                    minDate={startDate}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm">
-                  {dueDate
-                    ? formatDate(dueDate)
-                    : <span className="text-muted-foreground">—</span>}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Tags section */}
-          <div className="space-y-2 pt-4 border-t border-border">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <TagIcon className="w-4 h-4" />
-              Tags
-            </label>
-            {canEdit ? (
-              <TagSelector
-                spaceId={spaceId}
-                value={selectedTagIds}
-                onChange={setSelectedTagIds}
-              />
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {item?.tags && item.tags.length > 0 ? (
-                  item.tags.map((tag: Tag) => (
-                    <TagBadge key={tag.id} tag={tag} />
-                  ))
-                ) : (
-                  <span className="text-sm text-muted-foreground">Aucun tag</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Dependencies/Relations section */}
-          <div className="space-y-3 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Link2 className="w-4 h-4" />
-                Dépendances
-              </label>
-              {canEdit && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAddRelation(!showAddRelation)}
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Ajouter
-                </Button>
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeConfig?.color || 'border-border'} ${typeConfig?.bgHover || ''} font-semibold`}>
+                  {TypeIcon && <TypeIcon className="w-3.5 h-3.5" />}
+                  {typeConfig?.labelShort || TYPE_LABELS[type] || type}
+                </span>
               )}
             </div>
 
-            {/* Add new relation */}
-            {showAddRelation && (
-              <div className="p-3 bg-muted rounded-lg space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Type</label>
-                    <Select
-                      value={newRelationType}
-                      onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks' | 'relates')}
-                      options={[
-                        { value: 'depends', label: 'Dépend de...' },
-                        { value: 'blocks', label: 'Bloque...' },
-                        { value: 'relates', label: 'Lié à...' },
-                      ]}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Élément</label>
-                    <Select
-                      value={newRelationTargetId}
-                      onChange={(e) => setNewRelationTargetId(e.target.value)}
-                      options={[
-                        { value: '', label: 'Sélectionner...' },
-                        ...allItems
-                          .filter((i) => i.id !== itemId)
-                          .map((i) => ({ value: i.id, label: i.title })),
-                      ]}
-                    />
-                  </div>
-                </div>
-                <Input
-                  value={newRelationLabel}
-                  onChange={(e) => setNewRelationLabel(e.target.value)}
-                  placeholder="Commentaire (optionnel)"
-                  className="text-sm"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddRelation}
-                    disabled={!newRelationTargetId || createRelationMutation.isPending}
-                  >
-                    {createRelationMutation.isPending ? 'Ajout...' : 'Ajouter'}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddRelation(false);
-                      setNewRelationTargetId('');
-                      setNewRelationLabel('');
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* Three-column layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr,1fr,320px] gap-6">
 
-            {/* Existing relations */}
-            {((item.relationsFrom && item.relationsFrom.length > 0) ||
-              (item.relationsTo && item.relationsTo.length > 0)) ? (
+          {/* === LEFT COLUMN: description + contributions === */}
+          <div className="space-y-6 min-w-0">
+
+              {/* Description */}
               <div className="space-y-2">
-                {/* Relations FROM this item (this item depends on / blocks others) */}
-                {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => (
-                  <div key={relation.id} className="p-2 bg-muted/50 rounded-md text-sm space-y-1">
-                    {editingRelationId === relation.id ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={editRelationType}
-                            onChange={(e) => setEditRelationType(e.target.value)}
-                            className="text-xs h-7"
-                            options={[
-                              { value: 'depends', label: 'Dépend de' },
-                              { value: 'blocks', label: 'Bloque' },
-                              { value: 'relates', label: 'Lié à' },
-                            ]}
-                          />
-                          <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                          <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
-                        </div>
-                        <Input
-                          value={editRelationLabel}
-                          onChange={(e) => setEditRelationLabel(e.target.value)}
-                          placeholder="Commentaire (optionnel)"
-                          className="text-xs h-7"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => updateRelationMutation.mutate({
-                              relationId: relation.id,
-                              data: {
-                                type: editRelationType,
-                                label: editRelationLabel.trim() || null,
-                              },
-                            })}
-                            disabled={updateRelationMutation.isPending}
-                          >
-                            {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingRelationId(null)}
-                          >
-                            Annuler
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              relation.type === 'depends' ? 'bg-orange-100 text-orange-700' :
-                              relation.type === 'blocks' ? 'bg-red-100 text-red-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {relation.type === 'depends' ? 'Dépend de' : relation.type === 'blocks' ? 'Bloque' : 'Lié à'}
-                            </span>
-                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                            <span>{relation.toItem?.title || 'Élément inconnu'}</span>
-                          </div>
-                          {canEdit && (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingRelationId(relation.id);
-                                  setEditRelationType(relation.type);
-                                  setEditRelationLabel(relation.label || '');
-                                }}
-                                className="p-1 hover:bg-background rounded transition-colors text-muted-foreground"
-                                title="Modifier"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteRelation(relation.id)}
-                                className="p-1 hover:bg-background rounded transition-colors text-destructive"
-                                title="Supprimer"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {relation.label && (
-                          <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
-
-                {/* Relations TO this item (others depend on / block this item) */}
-                {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => (
-                  <div
-                    key={relation.id}
-                    className="p-2 bg-muted/50 rounded-md text-sm space-y-1"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{relation.fromItem?.title || 'Élément inconnu'}</span>
-                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        relation.type === 'depends' ? 'bg-blue-100 text-blue-700' :
-                        relation.type === 'blocks' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>
-                        {relation.type === 'depends' ? 'dépend de ceci' : relation.type === 'blocks' ? 'est bloqué par ceci' : 'lié à ceci'}
-                      </span>
-                    </div>
-                    {relation.label && (
-                      <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Aucune dépendance</p>
-            )}
-          </div>
-
-          {/* Contributions section */}
-          <div className="space-y-3 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <MessageSquarePlus className="w-4 h-4" />
-                Contributions ({item.contributions?.length || 0})
-              </label>
-            </div>
-
-            {/* Existing contributions */}
-            {item.contributions && item.contributions.length > 0 && (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {item.contributions.map((contribution) => (
-                  <div
-                    key={contribution.id}
-                    className="p-3 bg-card border border-border rounded-lg space-y-2"
-                  >
-                    {editingContributionId === contribution.id ? (
-                      <div className="space-y-2">
-                        <RichTextEditor
-                          key={`edit-${contribution.id}`}
-                          content={editingContributionContent}
-                          onChange={setEditingContributionContent}
-                          spaceId={spaceId}
-                          mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleSaveContribution}
-                            disabled={updateContributionMutation.isPending}
-                          >
-                            Enregistrer
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingContributionId(null);
-                              setEditingContributionContent('');
-                            }}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div
-                          className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                          dangerouslySetInnerHTML={{ __html: contribution.content }}
-                        />
-                        <div className="flex items-center justify-between text-xs text-muted-foreground/80 mt-2">
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            <span className="font-medium text-foreground/70">{contribution.author.name}</span>
-                            <span>·</span>
-                            <span>
-                              {new Date(contribution.createdAt).toLocaleDateString('fr-FR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </div>
-                          {canEdit && (contribution.authorId === user?.id) && (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleEditContribution(contribution)}
-                                className="p-1 hover:bg-background rounded transition-colors"
-                                title="Modifier"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteContribution(contribution.id)}
-                                className="p-1 hover:bg-background rounded transition-colors text-destructive"
-                                title="Supprimer"
-                                disabled={deleteContributionMutation.isPending}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* New contribution input */}
-            {canEdit && (
-              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
                 <RichTextEditor
-                  key={`new-contrib-${item.contributions?.length ?? 0}`}
-                  content={newContribution}
-                  onChange={setNewContribution}
-                  placeholder="Ajouter une contribution..."
+                  key={itemId}
+                  content={description}
+                  onChange={setDescription}
+                  editable={canEdit}
                   spaceId={spaceId}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddContribution}
-                  disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}
-                >
-                  {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
-                </Button>
               </div>
-            )}
+
+              {/* Contributions */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <MessageSquarePlus className="w-5 h-5" />
+                  Contributions ({contributionCount})
+                </h2>
+
+                {item.contributions && item.contributions.length > 0 && (
+                  <div className="space-y-3">
+                    {item.contributions.map((contribution) => (
+                      <div key={contribution.id} className="p-4 bg-card border border-border rounded-lg space-y-2">
+                        {editingContributionId === contribution.id ? (
+                          <div className="space-y-2">
+                            <RichTextEditor key={`edit-${contribution.id}`} content={editingContributionContent} onChange={setEditingContributionContent} spaceId={spaceId}
+                              mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
+                            <div className="flex gap-2">
+                              <Button type="button" size="sm" onClick={handleSaveContribution} disabled={updateContributionMutation.isPending}>Enregistrer</Button>
+                              <Button type="button" size="sm" variant="outline" onClick={() => { setEditingContributionId(null); setEditingContributionContent(''); }}><X className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: contribution.content }} />
+                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 mt-2">
+                              <div className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                <span className="font-medium text-foreground/70">{contribution.author.name}</span>
+                                <span>·</span>
+                                <span>{new Date(contribution.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              {canEdit && (contribution.authorId === user?.id) && (
+                                <div className="flex items-center gap-1">
+                                  <button type="button" onClick={() => handleEditContribution(contribution)} className="p-1 hover:bg-muted rounded transition-colors" title="Modifier"><Pencil className="w-3 h-3" /></button>
+                                  <button type="button" onClick={() => handleDeleteContribution(contribution.id)} className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer" disabled={deleteContributionMutation.isPending}><Trash2 className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {canEdit && (
+                  <div className="space-y-2">
+                    <RichTextEditor key={`new-contrib-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Ajouter une contribution..." spaceId={spaceId}
+                      mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
+                    <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
+                      {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+          </div>{/* end left column */}
+
+          {/* === CENTER COLUMN === */}
+          <div className="space-y-6 min-w-0">
+
+              {/* Statut */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Statut</label>
+                <div className="flex flex-wrap gap-2">
+                  {canEdit ? (
+                    (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
+                      const isSelected = (s.id === 'undefined' && !status) || s.id === status;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            const newStatus = s.id === 'undefined' ? '' : s.id;
+                            setStatus(newStatus);
+                            if ((newStatus === 'done' || newStatus === 'cancelled') && !endDate) {
+                              setEndDate(toDatetimeLocal(new Date()));
+                            }
+                          }}
+                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
+                            isSelected
+                              ? `${s.borderColor} font-semibold shadow-sm`
+                              : `${s.borderColor} opacity-60 hover:opacity-100`
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    (() => {
+                      const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+                      const selected = statuses.find((s) => (s.id === 'undefined' && !status) || s.id === status);
+                      return selected ? (
+                        <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>{selected.label}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Non défini</span>
+                      );
+                    })()
+                  )}
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Début</label>
+                  {canEdit ? (
+                    <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={type === 'MEETING' || type === 'TASK'} />
+                  ) : (
+                    <p className="text-sm">{startDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate)) : <span className="text-muted-foreground">—</span>}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fin</label>
+                  {canEdit ? (
+                    <div className="space-y-2">
+                      {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
+                            const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                            return (
+                              <button key={d.ms} type="button"
+                                onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
+                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                {d.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={type === 'MEETING' || type === 'TASK'} showPresets={type !== 'MEETING' && type !== 'PROJECT' && type !== 'TASK' && type !== 'PERIOD'} minDate={startDate} />
+                    </div>
+                  ) : (
+                    <p className="text-sm">{endDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate)) : <span className="text-muted-foreground">—</span>}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Échéance</label>
+                  {canEdit ? (
+                    <div className="space-y-2">
+                      {startDate && type !== 'PERIOD' && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {DUE_DATE_DURATIONS.map((d) => {
+                            const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                            const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
+                            return (
+                              <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
+                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                {d.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
+                    </div>
+                  ) : (
+                    <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* URL */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">URL</label>
+                {type === 'LINK' && canEdit ? (
+                  <Input type="url" value={url}
+                    onChange={(e) => { setUrl(e.target.value); const extracted = urlToTitle(e.target.value); if (extracted) autoFillTitle(extracted); }}
+                    placeholder="https://..." />
+                ) : null}
+                {url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+                    <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Aucune URL</p>
+                )}
+              </div>
+
+              {/* Diagramme */}
+              {type === 'DIAGRAM' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Diagramme</label>
+                  <DrawioEditor
+                    xml={diagramXml}
+                    onChange={setDiagramXml}
+                    onSaveAndClose={async (savedXml, pngBlob) => {
+                      if (!itemId) return;
+                      await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
+                      setDiagramXml(savedXml);
+                      const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
+                      await uploadImageMutation.mutateAsync(file);
+                      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+                    }}
+                    previewUrl={url || undefined}
+                    editable={canEdit}
+                  />
+                </div>
+              )}
+
+              {/* Image */}
+              {type === 'IMAGE' ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Image</label>
+                  {canEdit ? (
+                    <>
+                      <ImageUploadZone currentUrl={url || null}
+                        onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
+                        onRemove={() => setUrl('')} isUploading={uploadImageMutation.isPending} />
+                      {uploadImageMutation.isError && <p className="text-sm text-destructive">{(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
+                      <details className="text-xs text-muted-foreground">
+                        <summary className="cursor-pointer hover:text-foreground transition-colors">URL externe (optionnel)</summary>
+                        <div className="mt-2"><Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
+                      </details>
+                    </>
+                  ) : url ? (
+                    <>
+                      <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
+                      {imageExpanded && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
+                          <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aucune image</p>
+                  )}
+                </div>
+              ) : url && type !== 'DIAGRAM' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Image</label>
+                  <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
+                  {imageExpanded && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
+                      <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Document */}
+              {type === 'DOCUMENT' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fichier</label>
+                  {canEdit ? (
+                    <>
+                      <FileUploadZone currentUrl={url || null}
+                        onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
+                        onRemove={() => setUrl('')} isUploading={uploadDocumentMutation.isPending} />
+                      {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
+                      <details className="text-xs text-muted-foreground">
+                        <summary className="cursor-pointer hover:text-foreground transition-colors">URL externe (optionnel)</summary>
+                        <div className="mt-2"><Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
+                      </details>
+                    </>
+                  ) : url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+                      <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aucun fichier</p>
+                  )}
+                </div>
+              )}
+
+          </div>{/* end center column */}
+
+          {/* === RIGHT COLUMN === */}
+          <div className="space-y-6">
+
+              {/* Parent */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Parent</label>
+                  {canEdit && (
+                    <button type="button" onClick={toggleParentSortMode}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}>
+                      {parentSortMode === 'tree' ? <><GitBranch className="w-3 h-3" /><span>Arborescence</span></> : <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>}
+                    </button>
+                  )}
+                </div>
+                {canEdit ? (
+                  <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
+                ) : (
+                  <p className="text-sm">
+                    {parentId ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu' : <span className="text-muted-foreground">Aucun parent</span>}
+                  </p>
+                )}
+              </div>
+
+              {/* Priorité */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Priorité</label>
+                <div className="flex flex-wrap gap-2">
+                  {canEdit ? (
+                    <>
+                      <button type="button" onClick={() => setPriority(null)}
+                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
+                        Aucune
+                      </button>
+                      {PRIORITIES.map((p) => (
+                        <button key={p.value} type="button" onClick={() => setPriority(p.value)}
+                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm` : 'opacity-60 hover:opacity-100'}`}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    (() => {
+                      const config = PRIORITIES.find(p => p.value === priority);
+                      return config ? (
+                        <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>{config.label}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Non définie</span>
+                      );
+                    })()
+                  )}
+                </div>
+              </div>
+
+              {/* Assigné à */}
+              {spaceMembers && spaceMembers.length > 1 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assigné à</label>
+                  {canEdit ? (
+                    <Select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
+                      options={[{ value: '', label: 'Non assigné' }, ...spaceMembers.map((m) => ({ value: m.userId, label: m.name || m.email }))]} />
+                  ) : (
+                    <p className="text-sm">
+                      {assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu') : <span className="text-muted-foreground">Non assigné</span>}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Dépendances */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Link2 className="w-4 h-4" />
+                    Dépendances
+                  </h2>
+                  {canEdit && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowAddRelation(!showAddRelation)}>
+                      <Plus className="w-4 h-4 mr-1" /> Ajouter
+                    </Button>
+                  )}
+                </div>
+
+                {showAddRelation && (
+                  <div className="p-3 bg-muted rounded-lg space-y-3">
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Type</label>
+                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks' | 'relates')}
+                          options={[{ value: 'depends', label: 'Dépend de...' }, { value: 'blocks', label: 'Bloque...' }, { value: 'relates', label: 'Lié à...' }]} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Élément</label>
+                        <Select value={newRelationTargetId} onChange={(e) => setNewRelationTargetId(e.target.value)}
+                          options={[{ value: '', label: 'Sélectionner...' }, ...allItems.filter((i) => i.id !== itemId).map((i) => ({ value: i.id, label: i.title }))]} />
+                      </div>
+                    </div>
+                    <Input value={newRelationLabel} onChange={(e) => setNewRelationLabel(e.target.value)} placeholder="Commentaire (optionnel)" className="text-sm" />
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" onClick={handleAddRelation} disabled={!newRelationTargetId || createRelationMutation.isPending}>
+                        {createRelationMutation.isPending ? 'Ajout...' : 'Ajouter'}
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => { setShowAddRelation(false); setNewRelationTargetId(''); setNewRelationLabel(''); }}>
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {((item.relationsFrom && item.relationsFrom.length > 0) || (item.relationsTo && item.relationsTo.length > 0)) ? (
+                  <div className="space-y-2">
+                    {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => (
+                      <div key={relation.id} className="p-3 bg-card border border-border rounded-lg text-sm space-y-1">
+                        {editingRelationId === relation.id ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Select value={editRelationType} onChange={(e) => setEditRelationType(e.target.value)} className="text-xs h-7"
+                                options={[{ value: 'depends', label: 'Dépend de' }, { value: 'blocks', label: 'Bloque' }, { value: 'relates', label: 'Lié à' }]} />
+                              <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
+                            </div>
+                            <Input value={editRelationLabel} onChange={(e) => setEditRelationLabel(e.target.value)} placeholder="Commentaire (optionnel)" className="text-xs h-7" />
+                            <div className="flex gap-2">
+                              <Button type="button" size="sm" onClick={() => updateRelationMutation.mutate({ relationId: relation.id, data: { type: editRelationType, label: editRelationLabel.trim() || null } })} disabled={updateRelationMutation.isPending}>
+                                {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+                              </Button>
+                              <Button type="button" size="sm" variant="outline" onClick={() => setEditingRelationId(null)}>Annuler</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${relation.type === 'depends' ? 'bg-orange-100 text-orange-700' : relation.type === 'blocks' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {relation.type === 'depends' ? 'Dépend de' : relation.type === 'blocks' ? 'Bloque' : 'Lié à'}
+                                </span>
+                                <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
+                              </div>
+                              {canEdit && (
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <button type="button" onClick={() => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); }}
+                                    className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground" title="Modifier"><Pencil className="w-3 h-3" /></button>
+                                  <button type="button" onClick={() => handleDeleteRelation(relation.id)}
+                                    className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                            </div>
+                            {relation.label && <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => (
+                      <div key={relation.id} className="p-3 bg-card border border-border rounded-lg text-sm space-y-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="truncate">{relation.fromItem?.title || 'Élément inconnu'}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${relation.type === 'depends' ? 'bg-blue-100 text-blue-700' : relation.type === 'blocks' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {relation.type === 'depends' ? 'dépend de ceci' : relation.type === 'blocks' ? 'est bloqué par ceci' : 'lié à ceci'}
+                          </span>
+                        </div>
+                        {relation.label && <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucune dépendance</p>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <TagIcon className="w-4 h-4" />
+                  Tags
+                </h2>
+                {canEdit ? (
+                  <TagSelector spaceId={spaceId} value={selectedTagIds} onChange={setSelectedTagIds} />
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {item?.tags && item.tags.length > 0 ? (
+                      item.tags.map((tag: Tag) => <TagBadge key={tag.id} tag={tag} />)
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Aucun tag</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+          </div>{/* end right column */}
+
+            </div>
           </div>
 
-          </div>
-
+          {/* Footer — always visible */}
           <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
             {canEdit && (
               <Button type="submit" disabled={updateMutation.isPending}>
@@ -1457,15 +1098,7 @@ export function ItemEditModal({
               {canEdit ? 'Annuler' : 'Fermer'}
             </Button>
             {canEdit && onDelete && itemId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="ml-auto"
-                onClick={() => {
-                  onDelete(itemId);
-                  onClose();
-                }}
-              >
+              <Button type="button" variant="destructive" className="ml-auto" onClick={() => { onDelete(itemId); onClose(); }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             )}
