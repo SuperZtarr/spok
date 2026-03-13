@@ -34,6 +34,7 @@ export function SpaceSettingsPage() {
   const queryClient = useQueryClient();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'members' | 'danger'>('general');
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -246,72 +247,58 @@ export function SpaceSettingsPage() {
     );
   }
 
+  const tabs = [
+    ...(space?.type === 'GROUP' ? [{ id: 'general' as const, label: 'Général' }] : []),
+    { id: 'images' as const, label: 'Images' },
+    { id: 'referentiels' as const, label: 'Référentiels' },
+    ...(space?.type === 'GROUP' ? [{ id: 'members' as const, label: `Membres (${spaceMembers?.length || 0})` }] : []),
+    ...(canDelete ? [{ id: 'danger' as const, label: 'Danger' }] : []),
+  ];
+
   return (
-    <div className="p-6 max-w-4xl mx-auto overflow-auto flex-1 min-h-0">
+    <div className="p-6 overflow-auto flex-1 min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/spaces/${spaceId}/content`)}
-            title="Retour à l'espace"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Paramètres de l'espace</h1>
-            <p className="text-muted-foreground">{space?.name}</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={resetMutation.isPending}
-            title="Rétablir les paramètres par défaut"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Réinitialiser
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || updateMutation.isPending}
-          >
-            {updateMutation.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            Enregistrer
-          </Button>
+      <div className="flex items-center gap-4 mb-8">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/spaces/${spaceId}/content`)}
+          title="Retour à l'espace"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Retour
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Building2 className="w-6 h-6" />
+            {space?.name}
+          </h1>
+          <p className="text-muted-foreground">Paramètres de l'espace</p>
         </div>
       </div>
 
-      {/* Info banner */}
-      {referentielsData?.isDefault && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-blue-800 text-sm">
-            Cet espace utilise actuellement les paramètres par défaut.
-            Les modifications seront sauvegardées spécifiquement pour cet espace.
-          </p>
+      {/* Tabs */}
+      <div className="border-b border-border mb-6">
+        <div className="flex gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Unsaved changes warning */}
-      {hasChanges && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <p className="text-yellow-800 text-sm">
-            Vous avez des modifications non enregistrées.
-          </p>
-        </div>
-      )}
-
-      {/* Settings sections */}
       <div className="space-y-8">
-        {/* General info */}
-        {space?.type === 'GROUP' && (
+        {/* === GENERAL TAB === */}
+        {activeTab === 'general' && space?.type === 'GROUP' && (
           <div className="bg-card border rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Building2 className="w-5 h-5" />
@@ -383,86 +370,157 @@ export function SpaceSettingsPage() {
           </div>
         )}
 
-        {/* Images */}
-        <div className="bg-card border rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <ImageIcon className="w-5 h-5" />
-            Images
-          </h2>
-          <div className="space-y-6">
-            {/* Avatar */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Avatar</label>
-              <div className="flex items-center gap-4">
-                <div
-                  className="relative group cursor-pointer"
-                  onClick={() => avatarInputRef.current?.click()}
-                >
-                  {space?.avatarUrl ? (
-                    <img
-                      src={space.avatarUrl}
-                      alt="Avatar de l'espace"
-                      className="w-16 h-16 rounded-full object-cover border border-border"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    {uploadAvatarMutation.isPending ? (
-                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+        {/* === IMAGES TAB === */}
+        {activeTab === 'images' && (
+          <div className="bg-card border rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              Images
+            </h2>
+            <div className="space-y-6">
+              {/* Avatar */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Avatar</label>
+                <div className="flex items-center gap-4">
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    {space?.avatarUrl ? (
+                      <img
+                        src={space.avatarUrl}
+                        alt="Avatar de l'espace"
+                        className="w-16 h-16 rounded-full object-cover border border-border"
+                      />
                     ) : (
-                      <Camera className="w-5 h-5 text-white" />
+                      <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      {uploadAvatarMutation.isPending ? (
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      ) : (
+                        <Camera className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-muted-foreground">
+                      256 × 256 px, rond. Cliquez pour modifier.
+                    </p>
+                    {space?.avatarUrl && (
+                      <button
+                        onClick={() => deleteAvatarMutation.mutate()}
+                        disabled={deleteAvatarMutation.isPending}
+                        className="text-xs text-destructive hover:underline self-start"
+                      >
+                        Supprimer l'avatar
+                      </button>
                     )}
                   </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadAvatarMutation.mutate(file);
+                      e.target.value = '';
+                    }}
+                  />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs text-muted-foreground">
-                    256 × 256 px, rond. Cliquez pour modifier.
-                  </p>
-                  {space?.avatarUrl && (
-                    <button
-                      onClick={() => deleteAvatarMutation.mutate()}
-                      disabled={deleteAvatarMutation.isPending}
-                      className="text-xs text-destructive hover:underline self-start"
-                    >
-                      Supprimer l'avatar
-                    </button>
-                  )}
-                </div>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) uploadAvatarMutation.mutate(file);
-                    e.target.value = '';
-                  }}
+              </div>
+
+              {/* Cover */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Image de couverture</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  1200 × 400 px recommandé. Affichée en bandeau sur la carte du Dashboard.
+                </p>
+                <ImageUploadZone
+                  currentUrl={space?.coverUrl}
+                  onUpload={(file) => uploadCoverMutation.mutate(file)}
+                  onRemove={() => deleteCoverMutation.mutate()}
+                  isUploading={uploadCoverMutation.isPending}
                 />
               </div>
             </div>
-
-            {/* Cover */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Image de couverture</label>
-              <p className="text-xs text-muted-foreground mb-2">
-                1200 × 400 px recommandé. Affichée en bandeau sur la carte du Dashboard.
-              </p>
-              <ImageUploadZone
-                currentUrl={space?.coverUrl}
-                onUpload={(file) => uploadCoverMutation.mutate(file)}
-                onRemove={() => deleteCoverMutation.mutate()}
-                isUploading={uploadCoverMutation.isPending}
-              />
-            </div>
           </div>
-        </div>
+        )}
 
-        {/* Members */}
-        {space?.type === 'GROUP' && user && (
+        {/* === REFERENTIELS TAB === */}
+        {activeTab === 'referentiels' && (
+          <>
+            {/* Info banner */}
+            {referentielsData?.isDefault && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm">
+                  Cet espace utilise actuellement les paramètres par défaut.
+                  Les modifications seront sauvegardées spécifiquement pour cet espace.
+                </p>
+              </div>
+            )}
+
+            {/* Unsaved changes warning */}
+            {hasChanges && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800 text-sm">
+                  Vous avez des modifications non enregistrées.
+                </p>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                disabled={resetMutation.isPending}
+                title="Rétablir les paramètres par défaut"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Réinitialiser
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={!hasChanges || updateMutation.isPending}
+              >
+                {updateMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Enregistrer
+              </Button>
+            </div>
+
+            {/* Statuses */}
+            <div className="bg-card border rounded-lg p-6">
+              {localStatuses && (
+                <StatusManager
+                  statuses={localStatuses}
+                  onChange={handleStatusesChange}
+                  onCheckUsage={handleCheckUsage}
+                />
+              )}
+            </div>
+
+            {/* Type Labels */}
+            <div className="bg-card border rounded-lg p-6">
+              {localTypeLabels && (
+                <TypeLabelsManager
+                  typeLabels={localTypeLabels}
+                  onChange={handleTypeLabelsChange}
+                />
+              )}
+            </div>
+          </>
+        )}
+
+        {/* === MEMBERS TAB === */}
+        {activeTab === 'members' && space?.type === 'GROUP' && user && (
           <div className="bg-card border rounded-lg p-6 space-y-6">
             <div className="flex items-center justify-between">
               <div />
@@ -487,29 +545,8 @@ export function SpaceSettingsPage() {
           </div>
         )}
 
-        {/* Statuses */}
-        <div className="bg-card border rounded-lg p-6">
-          {localStatuses && (
-            <StatusManager
-              statuses={localStatuses}
-              onChange={handleStatusesChange}
-              onCheckUsage={handleCheckUsage}
-            />
-          )}
-        </div>
-
-        {/* Type Labels */}
-        <div className="bg-card border rounded-lg p-6">
-          {localTypeLabels && (
-            <TypeLabelsManager
-              typeLabels={localTypeLabels}
-              onChange={handleTypeLabelsChange}
-            />
-          )}
-        </div>
-
-        {/* Danger Zone */}
-        {canDelete && (
+        {/* === DANGER TAB === */}
+        {activeTab === 'danger' && canDelete && (
           <div className="border border-destructive/30 rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-5 h-5" />
