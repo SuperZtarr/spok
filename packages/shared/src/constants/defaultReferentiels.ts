@@ -148,6 +148,14 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     visible: true,
     order: 9,
   },
+  DIAGRAM: {
+    label: 'Diagrammes',
+    labelShort: 'Diag',
+    color: 'border-indigo-400',
+    bgHover: 'bg-indigo-50',
+    visible: true,
+    order: 10,
+  },
 };
 
 // =============================================================================

@@ -1,6 +1,6 @@
 import type { ContributionWithAuthor } from './contribution.js';
 
-export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG';
+export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM';
 
 export interface Item {
   id: string;

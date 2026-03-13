@@ -2,7 +2,7 @@ import { PrismaClient } from '@spok/database';
 
 const p = new PrismaClient();
 
-const TYPES = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'] as const;
+const TYPES = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const;
 const STATUSES = ['undefined', 'todo', 'in_progress', 'late', 'blocked', 'done', 'cancelled'] as const;
 const STATUS_LABELS: Record<string, string> = {
   undefined: 'Non défini', todo: 'À faire', in_progress: 'En cours',

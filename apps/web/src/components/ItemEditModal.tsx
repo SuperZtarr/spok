@@ -14,6 +14,7 @@ import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { RichTextEditor } from './ui/RichTextEditor';
+import { DrawioEditor } from './ui/DrawioEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
 import { FileUploadZone } from './ui/FileUploadZone';
 import { DateTimeField } from './ui/DateTimeField';
@@ -63,6 +64,7 @@ export function ItemEditModal({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [priority, setPriority] = useState<number | null>(null);
+  const [diagramXml, setDiagramXml] = useState('');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
@@ -121,6 +123,7 @@ export function ItemEditModal({
       setPriority(item.priority ?? null);
       setAssignedToId(item.assignedToId || '');
       setType(item.type);
+      setDiagramXml((item.content as Record<string, unknown>)?.xml as string || '');
       // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
       if (item.dueDate) {
         const date = new Date(item.dueDate);
@@ -343,7 +346,7 @@ export function ItemEditModal({
     e.preventDefault();
     if (!item) return;
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -359,6 +362,14 @@ export function ItemEditModal({
     const newDescription = (description && description !== '<p></p>') ? description : null;
     if (newDescription !== (item.description || null)) {
       updates.description = newDescription;
+    }
+
+    // Handle diagram content
+    if (type === 'DIAGRAM') {
+      const currentXml = (item.content as Record<string, unknown>)?.xml as string || '';
+      if (diagramXml !== currentXml) {
+        updates.content = { xml: diagramXml };
+      }
     }
 
     const newUrl = url || null;
@@ -604,17 +615,28 @@ export function ItemEditModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" title="Description détaillée, supporte le texte riche">Description</label>
-            <RichTextEditor
-              key={itemId}
-              content={description}
-              onChange={setDescription}
-              editable={canEdit}
-              spaceId={spaceId}
-              mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
-            />
-          </div>
+          {type === 'DIAGRAM' ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium" title="Diagramme draw.io intégré">Diagramme</label>
+              <DrawioEditor
+                xml={diagramXml}
+                onChange={setDiagramXml}
+                editable={canEdit}
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-sm font-medium" title="Description détaillée, supporte le texte riche">Description</label>
+              <RichTextEditor
+                key={itemId}
+                content={description}
+                onChange={setDescription}
+                editable={canEdit}
+                spaceId={spaceId}
+                mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
