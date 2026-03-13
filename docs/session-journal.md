@@ -694,6 +694,19 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-12] - Priorité : référentiel + sélecteur + affichage
+
+**Demande :** La priorité n'apparaît nulle part dans l'UI alors que le champ existe en base et dans l'API
+**Actions réalisées :**
+- Constantes priorité dans ui.ts : 4 niveaux (Urgente P1 rouge, Haute P2 orange, Normale P3 bleu, Basse P4 gris) + helper getPriorityConfig
+- ItemEditModal : state priority, reset, submit, sélecteur visuel (boutons comme statut)
+- ListView : colonne Prio avec badge coloré + tri par priorité
+- KanbanView : badge priorité à côté du titre
+**État :** TERMINÉ
+**Commit :** f498b48
+
+---
+
 #### [2026-03-12] - Export PDF données + capture PNG vue actuelle
 
 **Demande :** Enrichir les exports avec du PDF pour les vues adaptées, puis capture PNG pour les vues visuelles
@@ -706,6 +719,33 @@ Après chaque commit :
 - Dropdown export enrichi avec séparateur données/visuel (CSV, JSON, Excel | PDF données, PNG vue)
 **État :** TERMINÉ
 **Commit :** b4db74f
+
+---
+
+#### [2026-03-12] - Fix Vue Texte portails sous-espaces
+
+**Demande :** Investiguer pourquoi les données des sous-espaces sélectionnés ne s'affichent pas en vue Texte
+**Actions réalisées :**
+- Investigation : API, client, composant — tout passe correctement `additionalSpaceIds`
+- Bug identifié : `filteredItems.length === 0` masquait tout le contenu (y compris sections portail) quand l'espace principal n'avait aucun item
+- Fix : condition changée en `filteredItems.length === 0 && portalItemGroups.length === 0`
+**État :** TERMINÉ
+**Commit :** b3b2c9e
+
+---
+
+#### [2026-03-12] - Menu réorganisation + filtres partagés + vues Priorités & Membres
+
+**Demande :** Réorganiser le menu (renommer Accueil → "Vues globales", ajouter section "Mes activités"), créer des vues Kanban Membres et Priorités, extraire les filtres en composant réutilisable
+**Actions réalisées :**
+- Menu : "Accueil" → "Vues globales", nouvelle section "Mes activités" (Mes tâches, Échéances, Organisation) avec DashboardGroup dans dashboardTab.ts
+- MembersKanbanView : Kanban par membre, colonnes = membres de l'espace + "Non assigné", drag & drop pour assigner, support portails multi-espaces
+- PriorityView : Kanban P1 (Urgente) à P4 (Basse) + Sans priorité, drag & drop pour changer la priorité
+- useGlobalTaskFilters hook : extraction des ~300 lignes de filtres de GlobalTasksPage en hook réutilisable
+- GlobalTaskFilterBar composant : barre de filtres (type, statut, priorité, échéance, assignation, espaces) réutilisée dans Mes tâches, Échéances, Organisation
+- Nettoyage code mort dans MyOrganizationView (ancien kanban priorité inline)
+**État :** TERMINÉ
+**Commit :** f0cb1b4
 
 ---
 
