@@ -64,8 +64,10 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       itemsApi.delete(itemSpaceId, id, { deleteChildren }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['auditLogs', spaceId] });
       if (variables.itemSpaceId !== spaceId) {
         queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
+        queryClient.invalidateQueries({ queryKey: ['auditLogs', variables.itemSpaceId] });
       }
     },
   });

@@ -224,13 +224,66 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       case 'DELETE': {
-        // Recreate the deleted item
+        // Recreate the deleted entity
         if (!changes?.before) {
           return reply.badRequest('No previous state available to restore');
         }
 
         const before = changes.before;
 
+        // Handle Contribution restore
+        if (log.entity === 'Contribution') {
+          // Check if the parent item still exists
+          const parentItem = await fastify.prisma.item.findUnique({
+            where: { id: before.itemId as string },
+            select: { id: true },
+          });
+          if (!parentItem) {
+            return reply.badRequest('The parent item no longer exists');
+          }
+
+          // Check if the original author still exists
+          let authorId = before.authorId as string | undefined;
+          if (authorId) {
+            const authorExists = await fastify.prisma.user.findUnique({
+              where: { id: authorId },
+              select: { id: true },
+            });
+            if (!authorExists) authorId = request.user.userId;
+          } else {
+            authorId = request.user.userId;
+          }
+
+          const restoredContribution = await fastify.prisma.contribution.create({
+            data: {
+              content: before.content as string,
+              itemId: before.itemId as string,
+              authorId,
+            },
+          });
+
+          await fastify.prisma.auditLog.create({
+            data: {
+              action: 'CREATE',
+              entity: 'Contribution',
+              entityId: restoredContribution.id,
+              spaceId: request.params.spaceId,
+              userId: request.user.userId,
+              changes: {
+                after: { content: restoredContribution.content, itemId: restoredContribution.itemId },
+                restoredFromAuditLogId: log.id,
+              } as any,
+            },
+          });
+
+          return {
+            success: true,
+            restored: restoredContribution,
+            message: 'Contribution restored successfully',
+          };
+        }
+
+        // Handle Item restore
         // Check if item already exists (was already restored)
         const existingItem = await fastify.prisma.item.findUnique({
           where: { id: log.entityId },

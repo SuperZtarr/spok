@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
+import { ConfirmModal } from './ConfirmModal';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
@@ -82,6 +83,10 @@ export function ItemEditModal({
   const [conflictData, setConflictData] = useState<{
     conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>;
   } | null>(null);
+
+  // Confirm delete state
+  const [pendingDeleteRelationId, setPendingDeleteRelationId] = useState<string | null>(null);
+  const [pendingDeleteContributionId, setPendingDeleteContributionId] = useState<string | null>(null);
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
@@ -309,9 +314,7 @@ export function ItemEditModal({
   };
 
   const handleDeleteRelation = (relationId: string) => {
-    if (confirm('Supprimer cette dépendance ?')) {
-      deleteRelationMutation.mutate(relationId);
-    }
+    setPendingDeleteRelationId(relationId);
   };
 
   const isContributionEmpty = (html: string) => !html || html === '<p></p>';
@@ -337,9 +340,7 @@ export function ItemEditModal({
   };
 
   const handleDeleteContribution = (contributionId: string) => {
-    if (confirm('Supprimer cette contribution ?')) {
-      deleteContributionMutation.mutate(contributionId);
-    }
+    setPendingDeleteContributionId(contributionId);
   };
 
   const doSubmit = () => {
@@ -1461,10 +1462,8 @@ export function ItemEditModal({
                 variant="destructive"
                 className="ml-auto"
                 onClick={() => {
-                  if (confirm('Supprimer cet élément ?')) {
-                    onDelete(itemId);
-                    onClose();
-                  }
+                  onDelete(itemId);
+                  onClose();
                 }}
               >
                 <Trash2 className="w-4 h-4" />
@@ -1497,6 +1496,36 @@ export function ItemEditModal({
           }}
         />
       )}
+      {/* Confirm delete relation */}
+      <ConfirmModal
+        isOpen={!!pendingDeleteRelationId}
+        onClose={() => setPendingDeleteRelationId(null)}
+        onConfirm={() => {
+          if (pendingDeleteRelationId) {
+            deleteRelationMutation.mutate(pendingDeleteRelationId);
+            setPendingDeleteRelationId(null);
+          }
+        }}
+        title="Supprimer la dépendance"
+        message="Voulez-vous supprimer cette dépendance ?"
+        confirmLabel="Supprimer"
+        isPending={deleteRelationMutation.isPending}
+      />
+      {/* Confirm delete contribution */}
+      <ConfirmModal
+        isOpen={!!pendingDeleteContributionId}
+        onClose={() => setPendingDeleteContributionId(null)}
+        onConfirm={() => {
+          if (pendingDeleteContributionId) {
+            deleteContributionMutation.mutate(pendingDeleteContributionId);
+            setPendingDeleteContributionId(null);
+          }
+        }}
+        title="Supprimer la contribution"
+        message="Voulez-vous supprimer cette contribution ?"
+        confirmLabel="Supprimer"
+        isPending={deleteContributionMutation.isPending}
+      />
     </Modal>
   );
 }

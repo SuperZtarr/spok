@@ -326,6 +326,46 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
         return { success: true, restored: restoredItem, entity: 'Item' };
       }
 
+      case 'Contribution': {
+        // Check if the parent item still exists
+        const parentItem = await fastify.prisma.item.findUnique({
+          where: { id: before.itemId as string },
+          select: { id: true },
+        });
+        if (!parentItem) {
+          return reply.badRequest('The parent item no longer exists');
+        }
+
+        let authorId = before.authorId as string | undefined;
+        if (authorId) {
+          const authorExists = await fastify.prisma.user.findUnique({ where: { id: authorId }, select: { id: true } });
+          if (!authorExists) authorId = request.user.userId;
+        } else {
+          authorId = request.user.userId;
+        }
+
+        const restoredContribution = await fastify.prisma.contribution.create({
+          data: {
+            content: before.content as string,
+            itemId: before.itemId as string,
+            authorId,
+          },
+        });
+
+        await fastify.prisma.auditLog.create({
+          data: {
+            action: 'CREATE',
+            entity: 'Contribution',
+            entityId: restoredContribution.id,
+            spaceId: log.spaceId,
+            userId: request.user.userId,
+            changes: { after: { content: restoredContribution.content, itemId: restoredContribution.itemId }, restoredFromAuditLogId: log.id } as any,
+          },
+        });
+
+        return { success: true, restored: restoredContribution, entity: 'Contribution' };
+      }
+
       case 'ItemRelation': {
         const existing = await fastify.prisma.itemRelation.findUnique({ where: { id: log.entityId } });
         if (existing) {
