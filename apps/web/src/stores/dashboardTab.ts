@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type DashboardTab = 'communities' | 'spaces' | 'sunburst' | 'mindmap' | 'graph' | 'tasks' | 'deadlines' | 'planning';
+export type DashboardTab = 'communities' | 'spaces' | 'sunburst' | 'mindmap' | 'graph' | 'planning';
 
 export type DashboardGroup = 'global' | 'myActivities';
 
@@ -16,9 +16,7 @@ export const DASHBOARD_TABS: {
   { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', group: 'global' },
   { value: 'mindmap', label: 'Carte mentale', icon: 'GitBranch', group: 'global' },
   { value: 'graph', label: 'Graphe global', icon: 'Network', group: 'global' },
-  { value: 'tasks', label: 'Mes tâches', icon: 'CheckSquare', group: 'myActivities' },
-  { value: 'deadlines', label: 'Mes échéances', icon: 'CalendarCheck', group: 'myActivities' },
-  { value: 'planning', label: 'Mon organisation', icon: 'LayoutDashboard', group: 'myActivities' },
+  { value: 'planning', label: 'Tableau de bord', icon: 'LayoutDashboard', group: 'myActivities' },
 ];
 
 interface DashboardTabState {

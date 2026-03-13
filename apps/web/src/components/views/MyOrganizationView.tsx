@@ -25,6 +25,8 @@ import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
 import { ItemEditModal } from '../ItemEditModal';
 import { Badge } from '../ui/Badge';
+import { DeadlinesView } from './DeadlinesView';
+import { GlobalTasksPage } from '../../pages/GlobalTasksPage';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -486,6 +488,16 @@ export function MyOrganizationView() {
             );
           })}
         </div>
+      </div>
+
+      {/* Échéances */}
+      <div className="bg-card border rounded-lg p-4">
+        <DeadlinesView />
+      </div>
+
+      {/* Toutes les tâches */}
+      <div className="bg-card border rounded-lg p-4">
+        <GlobalTasksPage />
       </div>
 
       {/* Edit modal */}
