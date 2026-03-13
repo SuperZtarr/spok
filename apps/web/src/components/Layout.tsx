@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, GripVertical, Settings } from 'lucide-react';
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
-import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { useQuery } from '@tanstack/react-query';
+import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
@@ -56,54 +54,29 @@ function SpaceTreeItem({
   currentSpaceId,
   expandedIds,
   onToggle,
-  draggedId,
 }: {
   node: SpaceTreeNode;
   level: number;
   currentSpaceId: string | null;
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
-  draggedId: string | null;
 }) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedIds.has(node.id);
-  const isDragged = draggedId === node.id;
 
   const { includeChildrenSpaceIds, toggleIncludeChildren } = useSpaceStore();
   const isIncludeChildren = includeChildrenSpaceIds.has(node.id);
 
-  const { attributes, listeners, setNodeRef: setDragRef } = useDraggable({
-    id: `drag-${node.id}`,
-    data: { spaceId: node.id, name: node.name, parentId: node.parentId },
-  });
-
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `drop-${node.id}`,
-    data: { spaceId: node.id },
-    disabled: isDragged,
-  });
-
   return (
     <>
       <div
-        ref={(el) => { setDragRef(el); setDropRef(el); }}
         className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm group ${
-          isDragged ? 'opacity-30' :
-          isOver && !isDragged ? 'bg-primary/20 ring-1 ring-primary' :
           currentSpaceId === node.id
             ? 'bg-primary/10 text-primary font-medium'
             : 'hover:bg-accent'
         }`}
         style={{ paddingLeft: `${12 + level * 16}px` }}
       >
-        <button
-          {...attributes}
-          {...listeners}
-          className="p-0.5 rounded hover:bg-accent flex-shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing touch-none"
-          tabIndex={-1}
-        >
-          <GripVertical className="w-3 h-3" />
-        </button>
         {hasChildren ? (
           <button
             onClick={(e) => {
@@ -153,31 +126,10 @@ function SpaceTreeItem({
             currentSpaceId={currentSpaceId}
             expandedIds={expandedIds}
             onToggle={onToggle}
-            draggedId={draggedId}
           />
         ))
       )}
     </>
-  );
-}
-
-function RootDropZone({ isVisible }: { isVisible: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: 'drop-root',
-    data: { spaceId: null },
-  });
-
-  if (!isVisible) return null;
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`mx-3 mb-1 px-3 py-1.5 rounded-md border border-dashed text-xs text-muted-foreground transition-colors ${
-        isOver ? 'border-primary bg-primary/10 text-primary' : 'border-border'
-      }`}
-    >
-      Déplacer à la racine
-    </div>
   );
 }
 
@@ -211,48 +163,6 @@ export function Layout() {
       return next;
     });
   }, []);
-
-  // Drag & drop spaces
-  const queryClient = useQueryClient();
-  const [draggedSpace, setDraggedSpace] = useState<{ id: string; name: string } | null>(null);
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
-
-  const moveSpaceMutation = useMutation({
-    mutationFn: ({ spaceId, parentId }: { spaceId: string; parentId: string | null }) =>
-      spacesApi.update(spaceId, { parentId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spaces'] });
-    },
-  });
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const data = event.active.data.current;
-    if (data) {
-      setDraggedSpace({ id: data.spaceId, name: data.name });
-    }
-  }, []);
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setDraggedSpace(null);
-    const { active, over } = event;
-    if (!over) return;
-
-    const draggedId = active.data.current?.spaceId as string;
-    const targetId = over.data.current?.spaceId as string | undefined;
-    const isRootZone = over.id === 'drop-root';
-
-    // Dropping on itself or same parent → no-op
-    const currentParentId = active.data.current?.parentId as string | null;
-    if (!isRootZone && targetId === draggedId) return;
-    if (isRootZone && !currentParentId) return;
-    if (!isRootZone && targetId === currentParentId) return;
-
-    const newParentId = isRootZone ? null : (targetId ?? null);
-    moveSpaceMutation.mutate({ spaceId: draggedId, parentId: newParentId });
-  }, [moveSpaceMutation]);
 
   // Resizable sidebar (desktop only)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -510,34 +420,20 @@ export function Layout() {
               )}
             </div>
           </div>
-          <DndContext sensors={dndSensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            {communitySpaceTree.length > 0 ? (
-              <>
-                <RootDropZone isVisible={!!draggedSpace && !!draggedSpace.id} />
-                {communitySpaceTree.map((node) => (
-                  <SpaceTreeItem
-                    key={node.id}
-                    node={node}
-                    level={0}
-                    currentSpaceId={currentSpaceId}
-                    expandedIds={expandedSpaceIds}
-                    onToggle={toggleSpaceExpand}
-                    draggedId={draggedSpace?.id ?? null}
-                  />
-                ))}
-              </>
+          {communitySpaceTree.length > 0 ? (
+              communitySpaceTree.map((node) => (
+                <SpaceTreeItem
+                  key={node.id}
+                  node={node}
+                  level={0}
+                  currentSpaceId={currentSpaceId}
+                  expandedIds={expandedSpaceIds}
+                  onToggle={toggleSpaceExpand}
+                />
+              ))
             ) : (
               <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
             )}
-            <DragOverlay dropAnimation={null}>
-              {draggedSpace && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-card border border-primary/40 shadow-lg text-sm">
-                  <FolderKanban className="w-4 h-4 flex-shrink-0 text-primary" />
-                  <span className="truncate font-medium">{draggedSpace.name}</span>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
         </div>
       </nav>
 

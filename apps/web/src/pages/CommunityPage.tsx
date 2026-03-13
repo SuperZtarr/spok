@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye, ChevronRight } from 'lucide-react';
+import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, Shield, User, Eye, ChevronRight, GripVertical } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { SendEmailModal } from '../components/SendEmailModal';
+import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 // Types used implicitly via API responses
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -15,7 +16,37 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   VIEWER: { label: 'Lecteur', icon: Eye, color: 'text-muted-foreground' },
 };
 
-function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMove: (spaceId: string, newParentId: string | null) => void }) {
+function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: string | null) => void }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('application/spok-space-id')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setIsDragOver(true);
+        }
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const draggedId = e.dataTransfer.getData('application/spok-space-id');
+        if (draggedId) {
+          onMove(draggedId, null);
+        }
+      }}
+      className={`flex items-center justify-center p-2 rounded-lg border border-dashed transition-colors text-xs text-muted-foreground ${
+        isDragOver ? 'border-primary bg-primary/5 text-primary' : 'border-transparent'
+      }`}
+    >
+      {isDragOver ? 'Déposer ici pour mettre à la racine' : ''}
+    </div>
+  );
+}
+
+function SpaceTreeNode({ node, level, onMove, canReorder }: { node: any; level: number; onMove: (spaceId: string, newParentId: string | null) => void; canReorder: boolean }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -46,14 +77,15 @@ function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMo
     <>
       <Link
         to={`/spaces/${node.id}`}
-        draggable
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        draggable={canReorder}
+        onDragStart={canReorder ? handleDragStart : undefined}
+        onDragOver={canReorder ? handleDragOver : undefined}
+        onDragLeave={canReorder ? handleDragLeave : undefined}
+        onDrop={canReorder ? handleDrop : undefined}
         className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${isDragOver ? 'border-primary bg-primary/5 ring-2 ring-primary' : 'border-border hover:bg-accent/50'}`}
         style={{ marginLeft: `${level * 24}px` }}
       >
+        {canReorder && <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />}
         {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
         {node.avatarUrl ? (
           <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
@@ -68,7 +100,7 @@ function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMo
         </div>
       </Link>
       {node.children?.map((child: any) => (
-        <SpaceTreeNode key={child.id} node={child} level={level + 1} onMove={onMove} />
+        <SpaceTreeNode key={child.id} node={child} level={level + 1} onMove={onMove} canReorder={canReorder} />
       ))}
     </>
   );
@@ -199,8 +231,9 @@ export function CommunityPage() {
           </h2>
           {spaceTree.length > 0 ? (
             <div className="space-y-1">
+              {isAdminOrOwner && <RootDropZone onMove={handleMoveSpace} />}
               {spaceTree.map(node => (
-                <SpaceTreeNode key={node.id} node={node} level={0} onMove={handleMoveSpace} />
+                <SpaceTreeNode key={node.id} node={node} level={0} onMove={handleMoveSpace} canReorder={isAdminOrOwner} />
               ))}
             </div>
           ) : (
@@ -210,36 +243,46 @@ export function CommunityPage() {
 
         {/* Members section */}
         <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Membres ({sortedMembers.length})
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {sortedMembers.map(member => {
-              const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
-              const RoleIcon = config.icon;
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border"
-                >
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                    {member.name?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {member.name}
-                      {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <RoleIcon className={`w-3 h-3 ${config.color}`} />
-                      <span className="text-xs text-muted-foreground">{config.label}</span>
+          {isAdminOrOwner && user ? (
+            <CommunityMembersManager
+              communityId={communityId!}
+              currentUserRole={community?.role || 'MEMBER'}
+              currentUserId={user.id}
+            />
+          ) : (
+            <>
+              <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Membres ({sortedMembers.length})
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {sortedMembers.map(member => {
+                  const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
+                  const RoleIcon = config.icon;
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                        {member.name?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {member.name}
+                          {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <RoleIcon className={`w-3 h-3 ${config.color}`} />
+                          <span className="text-xs text-muted-foreground">{config.label}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
