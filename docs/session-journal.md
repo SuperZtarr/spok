@@ -759,3 +759,44 @@ Après chaque commit :
 **Commit :** ac04cf7
 
 ---
+
+#### [2026-03-14] - Dashboard cockpit view
+
+**Demande :** Nouvelle vue "Dashboard" cockpit pour identifier en un coup d'œil : retards, priorités, en cours, progression par espace, planning semaine.
+**Actions réalisées :**
+- Nouveau tab `dashboard` (icône Gauge) dans dashboardTab.ts, groupe "Mes activités"
+- Nouveau composant `DashboardCockpitView.tsx` : bandeau KPI (en retard, aujourd'hui, en cours, à valider, terminés semaine), colonne gauche (3 panels : en retard avec jours, urgent P1+P2, en cours), colonne droite (grille semaine 7j, progression par espace avec barres %)
+- Wiring dans DashboardPage.tsx et ViewModeSelector.tsx
+- Fix timezone : dates locales au lieu d'UTC pour le matching semaine
+- Layout ajustable : listes étroites (2/7), semaine 300px, progression 600px max
+**État :** TERMINÉ
+**Commit :** 105b7e1
+
+---
+
+#### [2026-03-14] - Écran d'accueil orienté navigation
+
+**Demande :** Nouveau tab "Accueil" comme page d'arrivée, orienté navigation communautés → espaces (au lieu du cockpit KPI)
+**Actions réalisées :**
+- Nouveau tab `home` dans `dashboardTab.ts` (icône Home, défaut pour nouveaux utilisateurs)
+- Nouveau composant `HomeView.tsx` : bandeau "Bonjour {prénom}", communautés en cartes dépliables avec liste hiérarchique des espaces, espaces personnels, espaces de groupe indépendants
+- Câblage dans `DashboardPage.tsx` et `ViewModeSelector.tsx`
+- Ajout à la TODO : onboarding, favoris/récents, refonte sidebar, breadcrumb
+**État :** TERMINÉ
+**Commit :** d222fcf
+
+---
+
+#### [2026-03-14] - Dashboard cockpit : échéances, distributions, tous types
+
+**Demande :** Ajouter panel échéances, ventilation par statut et par type (barres horizontales), et inclure tous les types d'items (pas seulement TASK)
+**Actions réalisées :**
+- Panel "Échéances" dans la colonne gauche (dueDate future, trié par proximité)
+- Barre horizontale empilée "Répartition par statut" avec légende colorée
+- Barre horizontale empilée "Répartition par type" avec légende colorée
+- Fix : queries `userTasksApi.list` avec `type=NOTE,PROJECT,TASK,...` au lieu du défaut TASK seul
+- Panels auto-height plafonnés à 25%
+**État :** TERMINÉ
+**Commit :** d6d225f
+
+---

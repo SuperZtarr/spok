@@ -35,6 +35,7 @@ import { ListView } from '../components/views/ListView';
 import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
 import { TimelineView } from '../components/views/TimelineView';
+
 import { MindMapView } from '../components/views/MindMapView';
 import type { MindMapViewHandle } from '../components/views/MindMapView';
 import { PlanningView } from '../components/views/PlanningView';

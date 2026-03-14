@@ -15,10 +15,9 @@ export function ViewHelpButton({ viewMode }: ViewHelpButtonProps) {
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
   const desc = VIEW_DESCRIPTIONS[viewMode];
-  if (!desc) return null;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !desc) return;
     const btn = buttonRef.current;
     if (btn) {
       const rect = btn.getBoundingClientRect();
@@ -28,10 +27,10 @@ export function ViewHelpButton({ viewMode }: ViewHelpButtonProps) {
       if (left < 8) left = 8;
       setPos({ top: rect.bottom + 6, left });
     }
-  }, [open]);
+  }, [open, desc]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !desc) return;
     const handleClick = (e: MouseEvent) => {
       if (
         popoverRef.current?.contains(e.target as Node) ||
@@ -48,7 +47,9 @@ export function ViewHelpButton({ viewMode }: ViewHelpButtonProps) {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleKey);
     };
-  }, [open]);
+  }, [open, desc]);
+
+  if (!desc) return null;
 
   return (
     <>

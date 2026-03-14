@@ -1,17 +1,15 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings } from 'lucide-react';
+import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
-import { useCommunityStore } from '../stores/community';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
-import { spacesApi, authApi } from '../lib/api';
+import { spacesApi, communitiesApi, authApi } from '../lib/api';
 
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
-import { CommunitySelector } from './CommunitySelector';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
@@ -137,7 +135,6 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, refreshToken, updateUser } = useAuthStore();
-  const { currentCommunity } = useCommunityStore();
   const { initTheme } = useThemeStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -160,6 +157,26 @@ export function Layout() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       localStorage.setItem('spok-expanded-spaces', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  // Expand/collapse state for community sections in sidebar
+  const [expandedCommunityIds, setExpandedCommunityIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('spok-expanded-communities');
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const toggleCommunityExpand = useCallback((id: string) => {
+    setExpandedCommunityIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      localStorage.setItem('spok-expanded-communities', JSON.stringify([...next]));
       return next;
     });
   }, []);
@@ -231,7 +248,7 @@ export function Layout() {
   }, [userMenuOpen]);
 
   // Fetch ALL spaces once (stable key, no flash on community change)
-  const { data: allSpaces, isFetching: spacesFetching } = useQuery({
+  const { data: allSpaces } = useQuery({
     queryKey: ['sidebar-spaces'],
     queryFn: () => spacesApi.list(),
     enabled: !!user,
@@ -243,26 +260,54 @@ export function Layout() {
     retryDelay: 1000,
   });
 
-  // Separate personal and community/group spaces, then build trees
-  const { mySpaces, communitySpaceTree } = useMemo(() => {
+  // Fetch communities for sidebar
+  const { data: communities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: communitiesApi.list,
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  // Separate personal, per-community, and independent spaces
+  const { mySpaces, communityGroups, independentSpaces } = useMemo(() => {
     const all = allSpaces || [];
     const sortByName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 
     const personalList = all.filter(s => s.type === 'PERSONAL').sort(sortByName);
+    const independent = all.filter(s => s.type !== 'PERSONAL' && !s.communityId).sort(sortByName);
 
-    let groupList: SpaceWithRole[];
-    if (currentCommunity) {
-      groupList = all.filter(s => s.type !== 'PERSONAL' && s.communityId === currentCommunity.id).sort(sortByName);
-    } else {
-      groupList = all.filter(s => s.type !== 'PERSONAL').sort(sortByName);
+    // Group by community
+    const byCommunity = new Map<string, SpaceWithRole[]>();
+    for (const space of all) {
+      if (space.type !== 'PERSONAL' && space.communityId) {
+        const list = byCommunity.get(space.communityId) || [];
+        list.push(space);
+        byCommunity.set(space.communityId, list);
+      }
     }
+
+    // Sort spaces within each community
+    for (const [, spaces] of byCommunity) {
+      spaces.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+    }
+
+    // Build groups ordered by community name
+    const sortedCommunities = (communities || []).slice().sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    );
+
+    const groups = sortedCommunities.map(c => ({
+      community: c,
+      spaceTree: buildSpaceTree(byCommunity.get(c.id) || []),
+    }));
 
     return {
       mySpaces: personalList,
-      communitySpaceTree: buildSpaceTree(groupList),
+      communityGroups: groups,
+      independentSpaces: buildSpaceTree(independent),
     };
-  }, [currentCommunity, allSpaces]);
+  }, [allSpaces, communities]);
 
   // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
@@ -377,51 +422,83 @@ export function Layout() {
           </div>
         )}
 
-        {/* Community Selector */}
-        <div className="pt-2 pb-2 border-b border-border">
-          <CommunitySelector />
-        </div>
-
-        {/* Community / Group spaces */}
-        <div className="pt-2">
-          <div className="flex items-center justify-between px-3 mb-2">
-            {currentCommunity ? (
-              <Link to={`/communities/${currentCommunity.id}`} className="text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
-                {currentCommunity.name}
-              </Link>
-            ) : (
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Espaces de groupe
-              </span>
-            )}
-            <div className="flex items-center gap-1">
-              {currentCommunity && currentCommunity.role === 'OWNER' && (
-                <Link to={`/communities/${currentCommunity.id}/settings`} title="Paramètres de la communauté">
-                  <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                </Link>
-              )}
-              {user && (
-                <Link to="/?new=space" title="Créer un nouvel espace">
-                  <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-                </Link>
+        {/* Communities with their spaces */}
+        {communityGroups.map(({ community, spaceTree }) => {
+          const isExpanded = expandedCommunityIds.has(community.id);
+          return (
+            <div key={community.id} className="pt-2 pb-2 border-b border-border">
+              <div className="flex items-center justify-between px-3 mb-1">
+                <button
+                  onClick={() => toggleCommunityExpand(community.id)}
+                  className="flex items-center gap-1.5 min-w-0 group"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  )}
+                  {community.avatarUrl ? (
+                    <img src={community.avatarUrl} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  )}
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate group-hover:text-foreground transition-colors">
+                    {community.name}
+                  </span>
+                </button>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {community.role === 'OWNER' && (
+                    <Link to={`/communities/${community.id}/settings`} title="Paramètres">
+                      <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                    </Link>
+                  )}
+                  {user && (
+                    <Link to="/?new=space" title="Créer un espace">
+                      <Plus className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+              {isExpanded && (
+                spaceTree.length > 0 ? (
+                  spaceTree.map((node) => (
+                    <SpaceTreeItem
+                      key={node.id}
+                      node={node}
+                      level={0}
+                      currentSpaceId={currentSpaceId}
+                      expandedIds={expandedSpaceIds}
+                      onToggle={toggleSpaceExpand}
+                    />
+                  ))
+                ) : (
+                  <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
+                )
               )}
             </div>
+          );
+        })}
+
+        {/* Independent group spaces (no community) */}
+        {independentSpaces.length > 0 && (
+          <div className="pt-2">
+            <div className="flex items-center justify-between px-3 mb-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Autres espaces
+              </span>
+            </div>
+            {independentSpaces.map((node) => (
+              <SpaceTreeItem
+                key={node.id}
+                node={node}
+                level={0}
+                currentSpaceId={currentSpaceId}
+                expandedIds={expandedSpaceIds}
+                onToggle={toggleSpaceExpand}
+              />
+            ))}
           </div>
-          {communitySpaceTree.length > 0 ? (
-              communitySpaceTree.map((node) => (
-                <SpaceTreeItem
-                  key={node.id}
-                  node={node}
-                  level={0}
-                  currentSpaceId={currentSpaceId}
-                  expandedIds={expandedSpaceIds}
-                  onToggle={toggleSpaceExpand}
-                />
-              ))
-            ) : !spacesFetching ? (
-              <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
-            ) : null}
-        </div>
+        )}
       </nav>
 
       {/* Footer sidebar */}
