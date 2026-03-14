@@ -785,10 +785,10 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           : `${item.title}\n(Sans date - cliquer pour définir)`
                         }
                       >
-                        {/* Left resize handle */}
-                        {canEdit && !isPortal && onUpdateDates && (
+                        {/* Left resize handle — arrow pointing left, outside bar */}
+                        {canEdit && onUpdateDates && (
                           <div
-                            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-l group/handle"
+                            className="absolute -left-5 top-1/2 -translate-y-1/2 cursor-ew-resize opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-opacity z-20"
                             onMouseDown={(e) => handleDragStart(
                               e,
                               item.id,
@@ -797,13 +797,15 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                             )}
                             title="Ajuster la date de début"
                           >
-                            <div className="w-0.5 h-4 bg-black/30 group-hover/handle:bg-black/50 rounded" />
+                            <svg width="14" height="20" viewBox="0 0 14 20" className="text-primary drop-shadow-sm">
+                              <path d="M12 2 L2 10 L12 18" fill="currentColor" opacity="0.7" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+                            </svg>
                           </div>
                         )}
 
                         {/* Content - clickable */}
                         <div
-                          className="h-full flex items-center cursor-pointer px-3"
+                          className="h-full flex items-center cursor-pointer px-1 min-w-0"
                           onClick={() => onEdit(item.id)}
                         >
                           {barStyle.width > 50 && (
@@ -813,10 +815,10 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           )}
                         </div>
 
-                        {/* Right resize handle */}
-                        {canEdit && !isPortal && onUpdateDates && (
+                        {/* Right resize handle — arrow pointing right, outside bar */}
+                        {canEdit && onUpdateDates && (
                           <div
-                            className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center hover:bg-black/20 rounded-r group/handle"
+                            className="absolute -right-5 top-1/2 -translate-y-1/2 cursor-ew-resize opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-opacity z-20"
                             onMouseDown={(e) => handleDragStart(
                               e,
                               item.id,
@@ -825,14 +827,16 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                             )}
                             title="Ajuster la date de fin"
                           >
-                            <div className="w-0.5 h-4 bg-black/30 group-hover/handle:bg-black/50 rounded" />
+                            <svg width="14" height="20" viewBox="0 0 14 20" className="text-primary drop-shadow-sm">
+                              <path d="M2 2 L12 10 L2 18" fill="currentColor" opacity="0.7" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+                            </svg>
                           </div>
                         )}
 
-                        {/* Relation connector handle (right end of bar) */}
+                        {/* Relation connector handle — center of bar */}
                         {canEdit && onCreateRelation && (
                           <div
-                            className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-all z-20 flex items-center justify-center"
+                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-all z-20 flex items-center justify-center"
                             onMouseDown={(e) => handleRelationDragStart(e, item.id, barStyle.left + 1, barStyle.width)}
                             title="Glisser vers un élément pour créer une liaison"
                           >
