@@ -1,15 +1,12 @@
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useCallback, useRef } from 'react';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list';
+import type { EventInput, EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
+import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { getTypeIcon, getTypeColor } from '../../constants/ui';
-import {
-  getCalendarDays,
-  isSameDay,
-  addMonths,
-  MONTH_NAMES_FR,
-  DAY_NAMES_SHORT_FR,
-} from '../../lib/dateUtils';
 
 interface PortalGroup {
   spaceId: string;
@@ -28,6 +25,8 @@ interface CalendarViewProps {
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
+  onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
+  onCreateItem?: (startDate: string, endDate?: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
   highlightStatus?: string;
@@ -36,36 +35,22 @@ interface CalendarViewProps {
   canEdit?: boolean;
 }
 
-/** Get all dates an item spans (dueDate as single day, or startDate→endDate range) */
-function getItemDates(item: Item): Date[] {
-  const dates: Date[] = [];
-
-  if (item.startDate && item.endDate) {
-    const start = new Date(item.startDate);
-    const end = new Date(item.endDate);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
-    const current = new Date(start);
-    while (current <= end) {
-      dates.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-  } else if (item.startDate) {
-    const d = new Date(item.startDate);
-    d.setHours(0, 0, 0, 0);
-    dates.push(d);
-  }
-
-  if (item.dueDate) {
-    const d = new Date(item.dueDate);
-    d.setHours(0, 0, 0, 0);
-    // Avoid duplicate if dueDate falls within startDate→endDate range
-    if (!dates.some(existing => isSameDay(existing, d))) {
-      dates.push(d);
-    }
-  }
-
-  return dates;
+// Convert hex-like tailwind color refs to usable CSS
+function typeColorToHex(type: ItemType, _referentiels?: SpaceReferentiels['typeLabels']): { bg: string; border: string; text: string } {
+  const colorMap: Record<string, { bg: string; border: string; text: string }> = {
+    NOTE: { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
+    TASK: { bg: '#dcfce7', border: '#22c55e', text: '#166534' },
+    PROJECT: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
+    MEETING: { bg: '#f3e8ff', border: '#a855f7', text: '#6b21a8' },
+    PERIOD: { bg: '#e0e7ff', border: '#6366f1', text: '#3730a3' },
+    LINK: { bg: '#cffafe', border: '#06b6d4', text: '#155e75' },
+    BUG: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
+    DOCUMENT: { bg: '#f1f5f9', border: '#64748b', text: '#334155' },
+    IMAGE: { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' },
+    DIAGRAM: { bg: '#ecfdf5', border: '#10b981', text: '#065f46' },
+    CONFIG: { bg: '#f5f5f4', border: '#78716c', text: '#44403c' },
+  };
+  return colorMap[type] || colorMap.NOTE;
 }
 
 export function CalendarView({
@@ -73,189 +58,237 @@ export function CalendarView({
   currentSpaceId,
   portalGroups,
   onEdit,
+  onUpdateDates,
+  onCreateItem,
   referentiels,
   highlightType,
   highlightStatus,
-  highlightColor,
   searchMatchIds,
+  canEdit = true,
 }: CalendarViewProps) {
-  const [currentDate, setCurrentDate] = useState(() => new Date());
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  const calendarRef = useRef<FullCalendar>(null);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
-  // Map portal spaceId → spaceName for quick lookup
+  // Portal space names for tooltips
   const portalSpaceNames = useMemo(() => {
     if (!portalGroups?.length) return new Map<string, string>();
     return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
   }, [portalGroups]);
 
-  const days = useMemo(() => getCalendarDays(year, month), [year, month]);
+  // Convert SPOK items to FullCalendar events
+  const events = useMemo<EventInput[]>(() => {
+    return items
+      .filter(item => item.startDate || item.endDate || item.dueDate)
+      .map(item => {
+        const colors = typeColorToHex(item.type as ItemType, referentiels?.typeLabels);
+        const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+        const portalName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
+        const isDimmed =
+          (highlightType ? item.type !== highlightType : false) ||
+          (highlightStatus
+            ? highlightStatus === 'undefined'
+              ? !!item.status
+              : item.status !== highlightStatus
+            : false) ||
+          (searchMatchIds ? !searchMatchIds.has(item.id) : false);
 
-  // Map: dateKey → items for that day
-  const itemsByDate = useMemo(() => {
-    const map = new Map<string, Item[]>();
-    for (const item of items) {
-      const dates = getItemDates(item);
-      for (const d of dates) {
-        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        const list = map.get(key) || [];
-        list.push(item);
-        map.set(key, list);
-      }
+        // Determine start/end
+        let start: string;
+        let end: string | undefined;
+
+        if (item.startDate) {
+          start = item.startDate.split('T')[0];
+          if (item.endDate) {
+            // FullCalendar exclusive end: add 1 day
+            const endDate = new Date(item.endDate);
+            endDate.setDate(endDate.getDate() + 1);
+            end = endDate.toISOString().split('T')[0];
+          }
+        } else if (item.dueDate) {
+          start = item.dueDate.split('T')[0];
+        } else {
+          return null;
+        }
+
+        return {
+          id: item.id,
+          title: `${portalName ? `[${portalName}] ` : ''}${item.title}`,
+          start,
+          end,
+          allDay: true,
+          backgroundColor: isDimmed ? '#e5e7eb' : colors.bg,
+          borderColor: isDimmed ? '#9ca3af' : colors.border,
+          textColor: isDimmed ? '#9ca3af' : colors.text,
+          editable: canEdit,
+          extendedProps: {
+            itemId: item.id,
+            isPortal,
+            type: item.type,
+          },
+          classNames: [
+            isPortal ? 'fc-event-portal' : '',
+            isDimmed ? 'fc-event-dimmed' : '',
+          ].filter(Boolean),
+        };
+      })
+      .filter(Boolean) as EventInput[];
+  }, [items, currentSpaceId, portalSpaceNames, referentiels, highlightType, highlightStatus, searchMatchIds, canEdit]);
+
+  // Click on event → edit
+  const handleEventClick = useCallback((info: EventClickArg) => {
+    const itemId = info.event.extendedProps.itemId || info.event.id;
+    onEdit(itemId);
+  }, [onEdit]);
+
+  // Drag event to new date → update dates
+  const handleEventDrop = useCallback((info: EventDropArg) => {
+    if (!onUpdateDates) { info.revert(); return; }
+    const itemId = info.event.id;
+    const startDate = info.event.start?.toISOString() || null;
+    // FullCalendar end is exclusive, subtract 1 day for SPOK
+    let endDate: string | null = null;
+    if (info.event.end) {
+      const end = new Date(info.event.end);
+      end.setDate(end.getDate() - 1);
+      endDate = end.toISOString();
     }
-    return map;
-  }, [items]);
+    onUpdateDates(itemId, startDate, endDate);
+  }, [onUpdateDates]);
 
-  // Status config
-  const statusMap = useMemo(() => {
-    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-    const map: Record<string, { label: string; color: string }> = {};
-    statuses.forEach(s => {
-      map[s.id] = { label: s.label, color: s.color };
-    });
-    return map;
-  }, [referentiels]);
+  // Resize event → update end date
+  const handleEventResize = useCallback((info: EventResizeDoneArg) => {
+    if (!onUpdateDates) { info.revert(); return; }
+    const itemId = info.event.id;
+    const startDate = info.event.start?.toISOString() || null;
+    let endDate: string | null = null;
+    if (info.event.end) {
+      const end = new Date(info.event.end);
+      end.setDate(end.getDate() - 1);
+      endDate = end.toISOString();
+    }
+    onUpdateDates(itemId, startDate, endDate);
+  }, [onUpdateDates]);
 
-  // Count items with dates
-  const itemsWithDates = useMemo(() => {
-    return items.filter(i => i.startDate || i.endDate || i.dueDate).length;
-  }, [items]);
-
-  const goToPrevMonth = () => setCurrentDate(d => addMonths(d, -1));
-  const goToNextMonth = () => setCurrentDate(d => addMonths(d, 1));
-  const goToToday = () => setCurrentDate(new Date());
+  // Click on empty date → create item
+  const handleDateSelect = useCallback((info: DateSelectArg) => {
+    if (!onCreateItem || !canEdit) return;
+    const end = new Date(info.end);
+    end.setDate(end.getDate() - 1);
+    if (end.getTime() === new Date(info.start).getTime()) {
+      onCreateItem(info.start.toISOString());
+    } else {
+      onCreateItem(info.start.toISOString(), end.toISOString());
+    }
+  }, [onCreateItem, canEdit]);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header: navigation */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={goToPrevMonth}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h2 className="text-lg font-semibold min-w-[200px] text-center capitalize">
-            {MONTH_NAMES_FR[month]} {year}
-          </h2>
-          <button
-            onClick={goToNextMonth}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          <button
-            onClick={goToToday}
-            className="ml-2 px-3 py-1 text-sm rounded-md border border-border hover:bg-accent transition-colors"
-          >
-            Aujourd'hui
-          </button>
-        </div>
-        <span className="text-sm text-muted-foreground">
-          {itemsWithDates} / {items.length} élément{items.length > 1 ? 's' : ''} avec date
-        </span>
-      </div>
-
-      {/* Day names header */}
-      <div className="grid grid-cols-7 border-b border-border">
-        {DAY_NAMES_SHORT_FR.map((name, i) => (
-          <div
-            key={i}
-            className="py-2 text-center text-xs font-medium text-muted-foreground"
-          >
-            {name}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-hidden">
-        {days.map((day, i) => {
-          const isCurrentMonth = day.getMonth() === month;
-          const isToday = isSameDay(day, today);
-          const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
-          const dayItems = itemsByDate.get(key) || [];
-
-          return (
-            <div
-              key={i}
-              className={`border-b border-r border-border p-1 overflow-hidden flex flex-col ${
-                !isCurrentMonth ? 'bg-muted/30' : ''
-              } ${isToday ? 'bg-blue-50/50' : ''}`}
-            >
-              {/* Day number */}
-              <div className="flex items-center justify-between mb-0.5">
-                <span
-                  className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
-                    isToday
-                      ? 'bg-blue-600 text-white'
-                      : !isCurrentMonth
-                        ? 'text-muted-foreground/50'
-                        : 'text-muted-foreground'
-                  }`}
-                >
-                  {day.getDate()}
-                </span>
-                {dayItems.length > 3 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    +{dayItems.length - 3}
-                  </span>
-                )}
-              </div>
-
-              {/* Items (max 3 visible) */}
-              <div className="flex-1 overflow-hidden space-y-0.5">
-                {dayItems.slice(0, 3).map(item => {
-                  const Icon = getTypeIcon(item.type);
-                  const statusCfg = statusMap[item.status || ''];
-                  const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
-                  const isHighlighted =
-                    (highlightType ? item.type === highlightType : false) ||
-                    (highlightStatus
-                      ? highlightStatus === 'undefined'
-                        ? !item.status
-                        : item.status === highlightStatus
-                      : false);
-                  const isDimmed =
-                    (highlightType ? item.type !== highlightType : false) ||
-                    (highlightStatus
-                      ? highlightStatus === 'undefined'
-                        ? !!item.status
-                        : item.status !== highlightStatus
-                      : false) ||
-                    (searchMatchIds ? !searchMatchIds.has(item.id) : false);
-                  const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
-                  const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
-                  const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
-
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => onEdit(item.id)}
-                      className={`w-full text-left px-1.5 py-0.5 rounded text-xs truncate flex items-center gap-1 hover:ring-1 hover:ring-ring transition-all ${
-                        isHighlighted && highlightColor
-                          ? `${highlightColor.bg} ${highlightColor.border} border-l-2`
-                          : `${typeColor.bgHover} border-l-2 ${typeColor.color}`
-                      } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-30' : ''} ${isPortal ? 'border-dashed border-primary/40' : ''}`}
-                      title={`${item.title}${portalSpaceName ? ` [${portalSpaceName}]` : ''}${statusCfg ? ` — ${statusCfg.label}` : ''}`}
-                    >
-                      <Icon className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{item.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex-1 min-h-0 flex flex-col fc-spok-wrapper" style={{ height: 'calc(100vh - 140px)' }}>
+      <style>{`
+        .fc-spok-wrapper {
+          --fc-border-color: hsl(var(--border));
+          --fc-page-bg-color: hsl(var(--background));
+          --fc-neutral-bg-color: hsl(var(--muted));
+          --fc-today-bg-color: hsl(var(--primary) / 0.05);
+          --fc-event-text-color: inherit;
+        }
+        .fc-spok-wrapper .fc {
+          height: 100%;
+          font-family: inherit;
+          font-size: 0.8125rem;
+        }
+        .fc-spok-wrapper .fc-toolbar-title {
+          font-size: 1.1rem !important;
+          font-weight: 600;
+          text-transform: capitalize;
+        }
+        .fc-spok-wrapper .fc-button {
+          font-size: 0.8125rem;
+          padding: 0.25rem 0.625rem;
+          border-radius: 0.375rem;
+          background-color: hsl(var(--background));
+          border-color: hsl(var(--border));
+          color: hsl(var(--foreground));
+        }
+        .fc-spok-wrapper .fc-button:hover {
+          background-color: hsl(var(--accent));
+        }
+        .fc-spok-wrapper .fc-button-active {
+          background-color: hsl(var(--primary)) !important;
+          border-color: hsl(var(--primary)) !important;
+          color: hsl(var(--primary-foreground)) !important;
+        }
+        .fc-spok-wrapper .fc-daygrid-event {
+          border-radius: 0.25rem;
+          padding: 1px 4px;
+          font-size: 0.75rem;
+          border-left-width: 3px;
+          cursor: pointer;
+        }
+        .fc-spok-wrapper .fc-event-portal {
+          border-style: dashed !important;
+        }
+        .fc-spok-wrapper .fc-event-dimmed {
+          opacity: 0.35;
+        }
+        .fc-spok-wrapper .fc-daygrid-day-number {
+          font-size: 0.75rem;
+          padding: 4px 6px;
+          color: hsl(var(--muted-foreground));
+        }
+        .fc-spok-wrapper .fc-day-today .fc-daygrid-day-number {
+          background-color: hsl(var(--primary));
+          color: hsl(var(--primary-foreground));
+          border-radius: 9999px;
+          width: 1.5rem;
+          height: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .fc-spok-wrapper .fc-col-header-cell-cushion {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: hsl(var(--muted-foreground));
+          text-transform: capitalize;
+        }
+        .fc-spok-wrapper .fc-scrollgrid {
+          border-color: hsl(var(--border));
+        }
+        .fc-spok-wrapper .fc-daygrid-more-link {
+          font-size: 0.7rem;
+          color: hsl(var(--primary));
+        }
+      `}</style>
+      <FullCalendar
+        ref={calendarRef}
+        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+        initialView="dayGridMonth"
+        locale="fr"
+        firstDay={1}
+        headerToolbar={{
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,listWeek',
+        }}
+        buttonText={{
+          today: "Aujourd'hui",
+          month: 'Mois',
+          week: 'Semaine',
+          list: 'Liste',
+        }}
+        events={events}
+        editable={canEdit}
+        selectable={canEdit}
+        selectMirror={true}
+        dayMaxEvents={4}
+        eventClick={handleEventClick}
+        eventDrop={handleEventDrop}
+        eventResize={handleEventResize}
+        select={handleDateSelect}
+        height="100%"
+        nowIndicator={true}
+        weekNumbers={true}
+        weekText="S"
+      />
     </div>
   );
 }
