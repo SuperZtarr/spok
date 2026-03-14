@@ -467,32 +467,11 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       const toBar = getBarStyle(toItem);
       if (!fromBar || !toBar) continue;
 
-      // Arrow: connect the closest edges of the two bars
-      // Determine best connection points based on relative positions
-      const fromCenterX = fromBar.left + fromBar.width / 2;
-      const toCenterX = toBar.left + toBar.width / 2;
+      // Arrow: always from end of source bar to start of target bar
+      const fromX = fromBar.left + fromBar.width;
+      const toX = toBar.left;
       const fromY = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
       const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-
-      let fromX: number;
-      let toX: number;
-
-      // If bars don't overlap horizontally, connect nearest edges
-      const fromRight = fromBar.left + fromBar.width;
-      const toRight = toBar.left + toBar.width;
-      if (fromRight < toBar.left) {
-        // Source is fully left of target
-        fromX = fromRight;
-        toX = toBar.left;
-      } else if (toRight < fromBar.left) {
-        // Target is fully left of source
-        fromX = fromBar.left;
-        toX = toRight;
-      } else {
-        // Bars overlap horizontally — use centers
-        fromX = fromCenterX;
-        toX = toCenterX;
-      }
 
       arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId });
     }
@@ -692,7 +671,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
               return (
                 <div
                   key={item.id}
-                  className={`flex border-b hover:bg-muted/30 group h-10 overflow-hidden ${
+                  className={`flex border-b hover:bg-muted/30 group h-10 relative ${
                     isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
                   } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'bg-muted/10' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
@@ -784,7 +763,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                     {/* Item bar */}
                     {barStyle && (
                       <div
-                        className={`absolute top-1 h-8 rounded transition-all group/bar ${statusColor} ${
+                        className={`absolute top-1 h-8 rounded transition-all group/bar hover:z-10 ${statusColor} ${
                           barStyle.hasDate
                             ? isPortal ? 'border-2 border-dashed border-primary/30' : 'shadow-md border border-black/20'
                             : 'border-2 border-dashed border-gray-400 opacity-60'
@@ -850,14 +829,14 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           </div>
                         )}
 
-                        {/* Relation connector handle (center of bar) */}
-                        {canEdit && !isPortal && onCreateRelation && (
+                        {/* Relation connector handle (right end of bar) */}
+                        {canEdit && onCreateRelation && (
                           <div
-                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-70 hover:!opacity-100 transition-opacity z-10 flex items-center justify-center"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-all z-20 flex items-center justify-center"
                             onMouseDown={(e) => handleRelationDragStart(e, item.id, barStyle.left + 1, barStyle.width)}
                             title="Glisser vers un élément pour créer une liaison"
                           >
-                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            <div className="w-2 h-2 rounded-full bg-white" />
                           </div>
                         )}
                       </div>
@@ -944,22 +923,27 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
 
                   const dx = arrow.toX - arrow.fromX;
                   const dy = arrow.toY - arrow.fromY;
-                  const absDy = Math.abs(dy);
+                  const gap = 16; // horizontal offset before turning
+                  const rowH = 40;
+
+                  // Route horizontal segments at row boundaries (between rows) to avoid overlapping bars
+                  // fromY and toY are at row centers; midY goes to the nearest row edge
+                  const fromRowEdge = dy > 0 ? arrow.fromY + rowH / 2 + 2 : arrow.fromY - rowH / 2 - 2;
 
                   let path: string;
-                  if (Math.abs(dx) < 10 && absDy > 0) {
-                    // Nearly vertical — slight S-curve
-                    const offset = 30;
-                    path = `M ${arrow.fromX} ${arrow.fromY} C ${arrow.fromX + offset} ${arrow.fromY}, ${arrow.toX - offset} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
-                  } else if (dx < 0) {
-                    // Target is to the left — route below/above to avoid crossing bars
-                    const detour = Math.max(40, absDy * 0.5);
-                    const midY = (arrow.fromY + arrow.toY) / 2 + (dy > 0 ? -detour : detour);
-                    path = `M ${arrow.fromX} ${arrow.fromY} Q ${arrow.fromX} ${midY}, ${(arrow.fromX + arrow.toX) / 2} ${midY} Q ${arrow.toX} ${midY}, ${arrow.toX} ${arrow.toY}`;
+                  if (Math.abs(dy) < 2) {
+                    // Same row — straight line
+                    path = `M ${arrow.fromX} ${arrow.fromY} H ${arrow.toX}`;
+                  } else if (dx >= gap * 2) {
+                    // Forward: right → down at row edge → across → down to target → right
+                    const midX = arrow.fromX + dx / 2;
+                    path = `M ${arrow.fromX} ${arrow.fromY} H ${midX} V ${arrow.toY} H ${arrow.toX}`;
                   } else {
-                    // Normal left-to-right — smooth cubic Bézier
-                    const cpOffset = Math.max(dx * 0.4, 20);
-                    path = `M ${arrow.fromX} ${arrow.fromY} C ${arrow.fromX + cpOffset} ${arrow.fromY}, ${arrow.toX - cpOffset} ${arrow.toY}, ${arrow.toX} ${arrow.toY}`;
+                    // Backward or short forward: route through row edges
+                    const exitX = arrow.fromX + gap;
+                    const entryX = arrow.toX - gap;
+                    const midY = fromRowEdge;
+                    path = `M ${arrow.fromX} ${arrow.fromY} H ${exitX} V ${midY} H ${entryX} V ${arrow.toY} H ${arrow.toX}`;
                   }
 
                   return (
