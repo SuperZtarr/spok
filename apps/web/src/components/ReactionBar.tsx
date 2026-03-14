@@ -1,0 +1,121 @@
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { itemsApi } from '../lib/api';
+import type { ReactionSummary } from '@spok/shared';
+import { DEFAULT_REACTION_TYPES } from '@spok/shared';
+
+interface ReactionBarProps {
+  spaceId: string;
+  itemId: string;
+  contributionId?: string;
+  summary: ReactionSummary[];
+}
+
+export function ReactionBar({ spaceId, itemId, contributionId, summary }: ReactionBarProps) {
+  const queryClient = useQueryClient();
+  const [localSummary, setLocalSummary] = useState<ReactionSummary[]>(summary);
+  const [showPicker, setShowPicker] = useState(false);
+
+  // Sync from props when they change
+  if (summary !== localSummary && JSON.stringify(summary) !== JSON.stringify(localSummary)) {
+    setLocalSummary(summary);
+  }
+
+  const reactMutation = useMutation({
+    mutationFn: (reactionType: string) =>
+      contributionId
+        ? itemsApi.reactToContribution(spaceId, itemId, contributionId, reactionType)
+        : itemsApi.react(spaceId, itemId, reactionType),
+    onSuccess: (data) => {
+      setLocalSummary(data.summary);
+      queryClient.invalidateQueries({ queryKey: ['item', itemId] });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () =>
+      contributionId
+        ? itemsApi.removeContributionReaction(spaceId, itemId, contributionId)
+        : itemsApi.removeReaction(spaceId, itemId),
+    onSuccess: (data) => {
+      setLocalSummary(data.summary);
+      queryClient.invalidateQueries({ queryKey: ['item', itemId] });
+    },
+  });
+
+  const handleClick = (typeId: string) => {
+    const existing = localSummary.find(s => s.type === typeId && s.userReacted);
+    if (existing) {
+      removeMutation.mutate();
+    } else {
+      reactMutation.mutate(typeId);
+    }
+    setShowPicker(false);
+  };
+
+  // Get reaction config by id
+  const getReactionConfig = (typeId: string) => {
+    return DEFAULT_REACTION_TYPES.find(r => r.id === typeId) || { id: typeId, label: typeId, emoji: '👍' };
+  };
+
+  const userReaction = localSummary.find(s => s.userReacted);
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap relative">
+      {/* Existing reactions with counts */}
+      {localSummary.map(s => {
+        const config = getReactionConfig(s.type);
+        return (
+          <button
+            key={s.type}
+            onClick={() => handleClick(s.type)}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
+              s.userReacted
+                ? 'border-primary bg-primary/10 text-primary font-medium'
+                : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground'
+            }`}
+            title={`${config.label}${s.userReacted ? ' (votre vote)' : ''}`}
+          >
+            <span>{config.emoji}</span>
+            <span>{s.count}</span>
+          </button>
+        );
+      })}
+
+      {/* Add reaction button */}
+      <div className="relative">
+        <button
+          onClick={() => setShowPicker(!showPicker)}
+          className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors text-xs"
+          title="Ajouter une réaction"
+        >
+          +
+        </button>
+
+        {/* Picker dropdown */}
+        {showPicker && (
+          <div className="absolute bottom-full left-0 mb-1 bg-card border border-border rounded-lg shadow-lg p-1 flex gap-0.5 z-50">
+            {DEFAULT_REACTION_TYPES.map(rt => {
+              const isActive = userReaction?.type === rt.id;
+              return (
+                <button
+                  key={rt.id}
+                  onClick={() => handleClick(rt.id)}
+                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md transition-colors text-xs ${
+                    isActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'hover:bg-accent text-foreground'
+                  }`}
+                  title={rt.label}
+                >
+                  <span className="text-base">{rt.emoji}</span>
+                  <span className="text-[10px] text-muted-foreground">{rt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

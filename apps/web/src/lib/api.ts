@@ -748,6 +748,29 @@ export const itemsApi = {
       method: 'DELETE',
     }),
 
+  // Reactions
+  react: (spaceId: string, itemId: string, reactionType: string) =>
+    fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ reactionType }),
+    }),
+
+  removeReaction: (spaceId: string, itemId: string) =>
+    fetchApi<{ summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/reactions`, {
+      method: 'DELETE',
+    }),
+
+  reactToContribution: (spaceId: string, itemId: string, contributionId: string, reactionType: string) =>
+    fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ reactionType }),
+    }),
+
+  removeContributionReaction: (spaceId: string, itemId: string, contributionId: string) =>
+    fetchApi<{ summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}/reactions`, {
+      method: 'DELETE',
+    }),
+
   move: (spaceId: string, id: string, data: { parentId?: string | null; position: number }) =>
     fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${id}/move`, {
       method: 'PATCH',

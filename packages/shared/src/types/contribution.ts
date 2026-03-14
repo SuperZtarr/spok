@@ -13,6 +13,7 @@ export interface ContributionWithAuthor extends Contribution {
     name: string;
     email: string;
   };
+  reactionSummary?: import('./reaction.js').ReactionSummary[];
 }
 
 export interface CreateContributionInput {

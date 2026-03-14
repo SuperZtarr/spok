@@ -10,6 +10,7 @@ import { itemUploadRoutes } from './item-uploads.js';
 import { itemContributionRoutes } from './item-contributions.js';
 import { itemConvertRoutes } from './item-convert.js';
 import { itemMergeRoutes } from './item-merge.js';
+import { itemReactionRoutes } from './item-reactions.js';
 
 const createItemSchema = z.object({
   type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']),
@@ -105,6 +106,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemContributionRoutes);
     await authInstance.register(itemConvertRoutes);
     await authInstance.register(itemMergeRoutes);
+    await authInstance.register(itemReactionRoutes);
   });
 
   // List items
@@ -284,9 +286,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         contributions: {
           include: {
             author: { select: { id: true, name: true, email: true } },
+            reactions: { select: { reactionType: true, userId: true } },
           },
           orderBy: { createdAt: 'desc' },
         },
+        reactions: { select: { reactionType: true, userId: true } },
         _count: {
           select: { contributions: true },
         },
@@ -297,6 +301,20 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Item not found');
     }
 
+    const currentUserId = request.user?.userId;
+
+    // Build reaction summary helper
+    const buildSummary = (reactions: { reactionType: string; userId: string }[]) => {
+      const counts = new Map<string, { count: number; userReacted: boolean }>();
+      for (const r of reactions) {
+        const entry = counts.get(r.reactionType) || { count: 0, userReacted: false };
+        entry.count++;
+        if (r.userId === currentUserId) entry.userReacted = true;
+        counts.set(r.reactionType, entry);
+      }
+      return Array.from(counts.entries()).map(([type, { count, userReacted }]) => ({ type, count, userReacted }));
+    };
+
     return {
       ...item,
       tags: item.tags.map((t) => t.tag),
@@ -304,6 +322,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         ...c,
         tags: c.tags.map((t) => t.tag),
       })),
+      reactionSummary: buildSummary(item.reactions),
+      contributions: item.contributions.map((c: any) => ({
+        ...c,
+        reactionSummary: buildSummary(c.reactions),
+        reactions: undefined,
+      })),
+      reactions: undefined,
     };
   });
 

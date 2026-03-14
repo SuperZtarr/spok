@@ -11,6 +11,7 @@ import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown } from 'lucide-react';
 import { TagSelector } from './ui/TagSelector';
+import { ReactionBar } from './ReactionBar';
 import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
@@ -624,6 +625,18 @@ export function ItemEditModal({
                 />
               </div>
 
+              {/* Reactions on item */}
+              {item && (
+                <div className="space-y-1">
+                  <h2 className="text-sm font-medium text-muted-foreground">Réactions</h2>
+                  <ReactionBar
+                    spaceId={spaceId}
+                    itemId={item.id}
+                    summary={(item as any).reactionSummary || []}
+                  />
+                </div>
+              )}
+
               {/* Contributions */}
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -661,6 +674,13 @@ export function ItemEditModal({
                                 </div>
                               )}
                             </div>
+                            {/* Reactions on contribution */}
+                            <ReactionBar
+                              spaceId={spaceId}
+                              itemId={item.id}
+                              contributionId={contribution.id}
+                              summary={(contribution as any).reactionSummary || []}
+                            />
                           </>
                         )}
                       </div>

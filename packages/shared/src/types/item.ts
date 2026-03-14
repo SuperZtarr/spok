@@ -1,4 +1,5 @@
 import type { ContributionWithAuthor } from './contribution.js';
+import type { ReactionSummary } from './reaction.js';
 
 export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM';
 
@@ -46,6 +47,7 @@ export interface ItemWithRelations extends Item {
     name: string;
     email: string;
   } | null;
+  reactionSummary?: ReactionSummary[];
   _count?: {
     contributions?: number;
   };

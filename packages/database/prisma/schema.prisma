@@ -31,6 +31,7 @@ model User {
   passwordResetTokens        PasswordResetToken[]
   emailVerificationTokens    EmailVerificationToken[]
   sentInvitations            Invitation[] @relation("InvitationInvitedBy")
+  reactions                  Reaction[]
 
   @@map("users")
 }
@@ -207,6 +208,7 @@ model Item {
 
   tags ItemTag[]
   contributions Contribution[]
+  reactions     Reaction[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -296,8 +298,9 @@ model Contribution {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  item      Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  author    User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions Reaction[]
 
   @@index([itemId])
   @@index([authorId])
@@ -393,4 +396,24 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+// Réactions qualitatives sur items et contributions
+model Reaction {
+  id               String   @id @default(cuid())
+  reactionType     String   // ex: "pertinent", "inexact", "inadapte", "j_adore", "trollage"
+  userId           String
+  itemId           String?
+  contributionId   String?
+  createdAt        DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item         Item?         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  contribution Contribution? @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId], name: "unique_user_item_reaction")
+  @@unique([userId, contributionId], name: "unique_user_contribution_reaction")
+  @@index([itemId])
+  @@index([contributionId])
+  @@map("reactions")
 }
