@@ -22,6 +22,7 @@ import { useDashboardTabStore } from '../stores/dashboardTab';
 import { CommunityListView } from '../components/views/CommunityListView';
 import { MyOrganizationView } from '../components/views/MyOrganizationView';
 import { DashboardCockpitView } from '../components/views/DashboardCockpitView';
+import { HomeView } from '../components/views/HomeView';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -509,7 +510,9 @@ export function DashboardPage() {
 
   return (
     <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' || tab === 'planning' || tab === 'dashboard' ? ' h-full overflow-hidden' : ''}`}>
-      {tab === 'communities' ? (
+      {tab === 'home' ? (
+        <HomeView />
+      ) : tab === 'communities' ? (
         <CommunityListView />
       ) : tab === 'dashboard' ? (
         <div className="flex-1 min-h-0 flex flex-col">

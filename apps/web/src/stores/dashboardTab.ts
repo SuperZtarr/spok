@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type DashboardTab = 'communities' | 'spaces' | 'sunburst' | 'mindmap' | 'graph' | 'dashboard' | 'planning';
+export type DashboardTab = 'home' | 'communities' | 'spaces' | 'sunburst' | 'mindmap' | 'graph' | 'dashboard' | 'planning';
 
 export type DashboardGroup = 'global' | 'myActivities';
 
@@ -11,6 +11,7 @@ export const DASHBOARD_TABS: {
   icon: string;
   group: DashboardGroup;
 }[] = [
+  { value: 'home', label: 'Accueil', icon: 'Home', group: 'global' },
   { value: 'communities', label: 'Communautés', icon: 'Users', group: 'global' },
   { value: 'spaces', label: 'Espaces', icon: 'FolderKanban', group: 'global' },
   { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', group: 'global' },
@@ -28,7 +29,7 @@ interface DashboardTabState {
 export const useDashboardTabStore = create<DashboardTabState>()(
   persist(
     (set) => ({
-      tab: 'spaces',
+      tab: 'home',
       setTab: (tab) => set({ tab }),
     }),
     {

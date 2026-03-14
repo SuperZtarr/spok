@@ -43,6 +43,12 @@
 ### Infra & emails
 - [ ] Configurer un domaine custom Resend (ex: `noreply@spok.app`) avec SPF/DKIM/DMARC pour éviter les spams
 
+### UX & navigation
+- [ ] Onboarding pour les nouveaux utilisateurs (guide premier lancement, tutoriel interactif)
+- [ ] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités
+- [ ] Refonte sidebar : voir toutes les communautés d'un coup (au lieu du dropdown mono-communauté)
+- [ ] Breadcrumb communauté → espace dans les pages de contenu
+
 ### Membres & permissions
 - [x] Modèle Invitation dédié (pending/accepted/declined) au lieu de créer directement un membership — b3bf186
 
@@ -78,6 +84,10 @@
 - [ ] Auth : comment authentifier les requêtes MCP (token utilisateur, clé API dédiée) ?
 
 ## Historique
+
+### 2026-03-14
+- Dashboard cockpit : KPIs, en retard, urgent, en cours, semaine, progression par espace — 105b7e1
+- Dashboard : échéances, répartition statut/type, tous types d'items — d6d225f
 
 ### 2026-03-13
 - Type DIAGRAM : éditeur draw.io intégré (iframe, sauvegarde XML, export PNG R2, preview modale) — bd9112f

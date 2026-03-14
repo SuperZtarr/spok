@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   List, GitBranch, Columns3, Share2, LayoutGrid,
   GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Table2, Grid3x3, Focus, Check,
-  ChevronDown, FolderKanban, CheckSquare, LayoutDashboard, ClipboardList, Flame, Gauge,
+  ChevronDown, FolderKanban, CheckSquare, LayoutDashboard, ClipboardList, Flame, Gauge, Home,
   Eye, Users,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -40,6 +40,7 @@ const ICONS: Record<string, typeof List> = {
   LayoutDashboard,
   Flame,
   Gauge,
+  Home,
 };
 
 export function ViewModeSelector() {
