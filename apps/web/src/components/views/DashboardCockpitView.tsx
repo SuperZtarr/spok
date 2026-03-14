@@ -12,6 +12,7 @@ import {
   Target,
 } from 'lucide-react';
 import { userTasksApi, spacesApi } from '../../lib/api';
+import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
 import type { GlobalTask } from '../../lib/api';
 import { getPriorityConfig, TYPE_ICONS } from '../../constants/ui';
 import { ItemEditModal } from '../ItemEditModal';
@@ -162,6 +163,62 @@ function Panel({ title, icon, count, children, variant = 'default', emptyMessage
 }
 
 // ---------------------------------------------------------------------------
+// Status Distribution Bar
+// ---------------------------------------------------------------------------
+
+const STATUS_BAR_COLORS: Record<string, string> = {
+  undefined: '#94a3b8', // slate
+  todo: '#eab308',      // yellow
+  in_progress: '#f97316', // orange
+  late: '#ef4444',      // red
+  to_validate: '#a855f7', // purple
+  done: '#22c55e',      // green
+  cancelled: '#9ca3af', // gray
+};
+
+const TYPE_BAR_COLORS: Record<string, string> = {
+  NOTE: '#3b82f6',      // blue
+  PROJECT: '#a855f7',   // purple
+  TASK: '#22c55e',      // green
+  MEETING: '#f97316',   // orange
+  PERIOD: '#14b8a6',    // teal
+  LINK: '#06b6d4',      // cyan
+  CONFIG: '#6b7280',    // gray
+  DOCUMENT: '#f59e0b',  // amber
+  IMAGE: '#ec4899',     // pink
+  BUG: '#ef4444',       // red
+  DIAGRAM: '#6366f1',   // indigo
+};
+
+function DistributionBar({ counts, total, colorMap }: { counts: { id: string; label: string; count: number }[]; total: number; colorMap: Record<string, string> }) {
+  if (total === 0) return <p className="text-sm text-muted-foreground text-center py-4">Aucun élément</p>;
+  return (
+    <div className="px-3 py-3 space-y-2">
+      <div className="flex h-6 rounded-full overflow-hidden">
+        {counts.filter(s => s.count > 0).map(s => (
+          <div
+            key={s.id}
+            className="h-full transition-all"
+            style={{ width: `${(s.count / total) * 100}%`, backgroundColor: colorMap[s.id] || '#94a3b8' }}
+            title={`${s.label}: ${s.count} (${Math.round((s.count / total) * 100)}%)`}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {counts.filter(s => s.count > 0).map(s => (
+          <div key={s.id} className="flex items-center gap-1.5 text-xs">
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colorMap[s.id] || '#94a3b8' }} />
+            <span className="text-muted-foreground">{s.label}</span>
+            <span className="font-medium">{s.count}</span>
+            <span className="text-muted-foreground">({Math.round((s.count / total) * 100)}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Progress Bar per space
 // ---------------------------------------------------------------------------
 
@@ -199,6 +256,7 @@ export function DashboardCockpitView() {
   const { data: allData, isLoading } = useQuery({
     queryKey: ['dashboard-cockpit'],
     queryFn: () => userTasksApi.list({
+      type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'undefined,todo,in_progress,to_validate',
       pageSize: 500,
     }),
@@ -209,6 +267,7 @@ export function DashboardCockpitView() {
   const { data: doneThisWeekData } = useQuery({
     queryKey: ['dashboard-cockpit-done', localDateKey(weekStart)],
     queryFn: () => userTasksApi.list({
+      type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'done',
       pageSize: 500,
     }),
@@ -264,6 +323,15 @@ export function DashboardCockpitView() {
     [allTasks, today, todayEnd]
   );
 
+  const upcomingTasks = useMemo(() =>
+    allTasks.filter(t => {
+      if (!t.dueDate) return false;
+      const d = new Date(t.dueDate);
+      return d > todayEnd && !DONE_STATUSES.includes(t.status || '');
+    }).sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
+    [allTasks, todayEnd]
+  );
+
   const toValidateTasks = useMemo(() =>
     allTasks.filter(t => t.status === 'to_validate'),
     [allTasks]
@@ -297,6 +365,37 @@ export function DashboardCockpitView() {
     }
     return map;
   }, [allTasks, weekDays]);
+
+  // --- Status distribution ---
+  const statusDistribution = useMemo(() => {
+    const allItems = [...allTasks, ...doneTasks];
+    const countMap = new Map<string, number>();
+    for (const t of allItems) {
+      const status = t.status || 'undefined';
+      countMap.set(status, (countMap.get(status) || 0) + 1);
+    }
+    return {
+      counts: DEFAULT_STATUSES
+        .filter(s => s.visible)
+        .sort((a, b) => a.order - b.order)
+        .map(s => ({ id: s.id, label: s.label, count: countMap.get(s.id) || 0 })),
+      total: allItems.length,
+    };
+  }, [allTasks, doneTasks]);
+
+  // --- Type distribution ---
+  const typeDistribution = useMemo(() => {
+    const allItems = [...allTasks, ...doneTasks];
+    const countMap = new Map<string, number>();
+    for (const t of allItems) {
+      countMap.set(t.type, (countMap.get(t.type) || 0) + 1);
+    }
+    const typeEntries = Object.entries(DEFAULT_TYPE_LABELS)
+      .map(([id, config]) => ({ id, label: config.label, count: countMap.get(id) || 0 }))
+      .filter(e => e.count > 0)
+      .sort((a, b) => b.count - a.count);
+    return { counts: typeEntries, total: allItems.length };
+  }, [allTasks, doneTasks]);
 
   // --- Progress per space ---
   const spaceProgress = useMemo(() => {
@@ -364,6 +463,12 @@ export function DashboardCockpitView() {
           icon={Loader2}
         />
         <KpiBadge
+          label="à échéance"
+          count={upcomingTasks.length}
+          color={upcomingTasks.length > 0 ? 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800' : 'border-border text-muted-foreground'}
+          icon={CalendarDays}
+        />
+        <KpiBadge
           label="à valider"
           count={toValidateTasks.length}
           color={toValidateTasks.length > 0 ? 'border-violet-300 bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800' : 'border-border text-muted-foreground'}
@@ -388,7 +493,7 @@ export function DashboardCockpitView() {
             count={overdueTasks.length}
             variant="danger"
             emptyMessage="Rien en retard"
-            className="max-h-[33%]"
+            className="max-h-[25%]"
           >
             <div className="space-y-0.5">
               {overdueTasks.map(t => (
@@ -403,10 +508,24 @@ export function DashboardCockpitView() {
             count={urgentTasks.length}
             variant="warning"
             emptyMessage="Aucune priorité haute"
-            className="max-h-[33%]"
+            className="max-h-[25%]"
           >
             <div className="space-y-0.5">
               {urgentTasks.map(t => (
+                <CompactTaskRow key={t.id} task={t} onEdit={setEditingItemId} />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Échéances"
+            icon={<CalendarDays className="w-4 h-4 text-yellow-500" />}
+            count={upcomingTasks.length}
+            emptyMessage="Aucune échéance à venir"
+            className="max-h-[25%]"
+          >
+            <div className="space-y-0.5">
+              {upcomingTasks.map(t => (
                 <CompactTaskRow key={t.id} task={t} onEdit={setEditingItemId} />
               ))}
             </div>
@@ -417,7 +536,7 @@ export function DashboardCockpitView() {
             icon={<Loader2 className="w-4 h-4 text-blue-500" />}
             count={inProgressTasks.length}
             emptyMessage="Rien en cours"
-            className="max-h-[33%]"
+            className="max-h-[25%]"
           >
             <div className="space-y-0.5">
               {inProgressTasks.map(t => (
@@ -493,6 +612,30 @@ export function DashboardCockpitView() {
                 })}
               </div>
             </div>
+          </div>
+
+          {/* Status distribution */}
+          <div className="bg-card border rounded-lg flex flex-col" style={{ maxWidth: '600px' }}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <Target className="w-4 h-4 text-violet-500" />
+              <h3 className="text-sm font-semibold">Répartition par statut</h3>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {statusDistribution.total}
+              </span>
+            </div>
+            <DistributionBar counts={statusDistribution.counts} total={statusDistribution.total} colorMap={STATUS_BAR_COLORS} />
+          </div>
+
+          {/* Type distribution */}
+          <div className="bg-card border rounded-lg flex flex-col" style={{ maxWidth: '600px' }}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <Flame className="w-4 h-4 text-blue-500" />
+              <h3 className="text-sm font-semibold">Répartition par type</h3>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {typeDistribution.total}
+              </span>
+            </div>
+            <DistributionBar counts={typeDistribution.counts} total={typeDistribution.total} colorMap={TYPE_BAR_COLORS} />
           </div>
 
           {/* Progress per space */}
