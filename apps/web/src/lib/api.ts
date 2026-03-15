@@ -542,6 +542,15 @@ export const spacesApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getFavorites: () =>
+    fetchApi<string[]>('/spaces/favorites'),
+
+  addFavorite: (id: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/favorite`, { method: 'POST' }),
+
+  removeFavorite: (id: string) =>
+    fetchApi<{ success: boolean }>(`/spaces/${id}/favorite`, { method: 'DELETE' }),
 };
 
 // Communities

@@ -34,6 +34,7 @@ model User {
   reactions                  Reaction[]
   sentCommunityEmails        CommunityEmail[]
   receivedCommunityEmails    CommunityEmailRecipient[]
+  favoriteSpaces             SpaceFavorite[]
 
   @@map("users")
 }
@@ -64,10 +65,23 @@ model Space {
   tags        Tag[]
   auditLogs   AuditLog[]
   invitations Invitation[]
+  favoritedBy SpaceFavorite[]
 
   @@index([communityId])
   @@index([parentId])
   @@map("spaces")
+}
+
+model SpaceFavorite {
+  userId    String
+  spaceId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, spaceId])
+  @@map("space_favorites")
 }
 
 enum SpaceType {

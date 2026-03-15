@@ -1591,4 +1591,48 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       return { sent, failed };
     }
   );
+
+  // ─── FAVORITES ──────────────────────────────────────────────────
+
+  // List favorite space IDs for the current user
+  fastify.get(
+    '/favorites',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      const favorites = await fastify.prisma.spaceFavorite.findMany({
+        where: { userId: request.user.userId },
+        select: { spaceId: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      return favorites.map(f => f.spaceId);
+    }
+  );
+
+  // Add a space to favorites
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/favorite',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      try {
+        await fastify.prisma.spaceFavorite.create({
+          data: { userId: request.user.userId, spaceId: request.params.id },
+        });
+      } catch {
+        // Already favorited — ignore
+      }
+      return { success: true };
+    }
+  );
+
+  // Remove a space from favorites
+  fastify.delete<{ Params: { id: string } }>(
+    '/:id/favorite',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      await fastify.prisma.spaceFavorite.deleteMany({
+        where: { userId: request.user.userId, spaceId: request.params.id },
+      });
+      return { success: true };
+    }
+  );
 };

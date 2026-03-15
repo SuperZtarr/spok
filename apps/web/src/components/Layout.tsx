@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock } from 'lucide-react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -55,6 +55,8 @@ function SpaceTreeItem({
   expandedIds,
   onToggle,
   htmlId,
+  favoriteIds,
+  onToggleFavorite,
 }: {
   node: SpaceTreeNode;
   level: number;
@@ -62,6 +64,8 @@ function SpaceTreeItem({
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
   htmlId?: string;
+  favoriteIds?: Set<string>;
+  onToggleFavorite?: (id: string) => void;
 }) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedIds.has(node.id);
@@ -109,6 +113,19 @@ function SpaceTreeItem({
           )}
           <span className="truncate">{node.name}</span>
         </Link>
+        {onToggleFavorite && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(node.id); }}
+            className={`p-0.5 flex-shrink-0 transition-opacity ${
+              favoriteIds?.has(node.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+            title={favoriteIds?.has(node.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          >
+            <Star className={`w-3 h-3 ${
+              favoriteIds?.has(node.id) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground hover:text-yellow-500'
+            }`} />
+          </button>
+        )}
         <input
           type="checkbox"
           checked={isIncludeChildren}
@@ -129,6 +146,8 @@ function SpaceTreeItem({
             currentSpaceId={currentSpaceId}
             expandedIds={expandedIds}
             onToggle={onToggle}
+            favoriteIds={favoriteIds}
+            onToggleFavorite={onToggleFavorite}
           />
         ))
       )}
@@ -272,6 +291,42 @@ export function Layout() {
     refetchOnWindowFocus: 'always',
   });
 
+  // Fetch favorite space IDs
+  const { data: favoriteIds = [] } = useQuery({
+    queryKey: ['space-favorites'],
+    queryFn: spacesApi.getFavorites,
+    enabled: !!user,
+    refetchOnWindowFocus: 'always',
+  });
+
+  const queryClient = useQueryClient();
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async (spaceId: string) => {
+      if (favoriteIds.includes(spaceId)) {
+        await spacesApi.removeFavorite(spaceId);
+      } else {
+        await spacesApi.addFavorite(spaceId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space-favorites'] });
+    },
+  });
+
+  // Track recent spaces in localStorage
+  const RECENTS_KEY = 'spok_recent_spaces';
+  const MAX_RECENTS = 8;
+
+  useEffect(() => {
+    if (!currentSpaceId || !user) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]') as string[];
+      const filtered = stored.filter(id => id !== currentSpaceId);
+      filtered.unshift(currentSpaceId);
+      localStorage.setItem(RECENTS_KEY, JSON.stringify(filtered.slice(0, MAX_RECENTS)));
+    } catch { /* ignore */ }
+  }, [currentSpaceId, user]);
+
   // Admin: pending public community count
   const { data: pendingData } = useQuery({
     queryKey: ['admin', 'pending-count'],
@@ -282,7 +337,7 @@ export function Layout() {
   const pendingCount = pendingData?.count || 0;
 
   // Separate personal, per-community, and independent spaces
-  const { mySpaces, communityGroups, independentSpaces } = useMemo(() => {
+  const { mySpaces, communityGroups, independentSpaces, favoriteSpaces, recentSpaces } = useMemo(() => {
     const all = allSpaces || [];
     const sortByName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
@@ -315,12 +370,31 @@ export function Layout() {
       spaceTree: buildSpaceTree(byCommunity.get(c.id) || []),
     }));
 
+    // Favorite spaces (ordered by favoriteIds order)
+    const favSpaces = favoriteIds
+      .map(id => all.find(s => s.id === id))
+      .filter((s): s is SpaceWithRole => !!s);
+
+    // Recent spaces from localStorage (exclude favorites to avoid duplication)
+    const favSet = new Set(favoriteIds);
+    let recSpaces: SpaceWithRole[] = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem('spok_recent_spaces') || '[]') as string[];
+      recSpaces = stored
+        .filter(id => !favSet.has(id))
+        .map(id => all.find(s => s.id === id))
+        .filter((s): s is SpaceWithRole => !!s)
+        .slice(0, 5);
+    } catch { /* ignore */ }
+
     return {
       mySpaces: personalList,
       communityGroups: groups,
       independentSpaces: buildSpaceTree(independent),
+      favoriteSpaces: favSpaces,
+      recentSpaces: recSpaces,
     };
-  }, [allSpaces, communities]);
+  }, [allSpaces, communities, favoriteIds]);
 
   // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
@@ -398,6 +472,9 @@ export function Layout() {
     }
   };
 
+  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const handleToggleFavorite = useCallback((id: string) => toggleFavoriteMutation.mutate(id), [toggleFavoriteMutation]);
+
   // Sidebar content (shared between mobile and desktop)
   const sidebarContent = (
     <>
@@ -408,6 +485,78 @@ export function Layout() {
 
       {/* Navigation - scrollable */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+        {/* Favorites */}
+        {user && favoriteSpaces.length > 0 && (
+          <div className="pt-2 pb-2 border-b border-border">
+            <div className="flex items-center px-3 mb-2">
+              <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
+            </div>
+            {favoriteSpaces.map((space) => (
+              <div key={space.id} className="group flex items-center">
+                <Link
+                  to={`/spaces/${space.id}/content`}
+                  className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    currentSpaceId === space.id
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  {space.avatarUrl ? (
+                    <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span className="truncate">{space.name}</span>
+                </Link>
+                <button
+                  onClick={() => toggleFavoriteMutation.mutate(space.id)}
+                  className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  title="Retirer des favoris"
+                >
+                  <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Recents */}
+        {user && recentSpaces.length > 0 && (
+          <div className="pt-2 pb-2 border-b border-border">
+            <div className="flex items-center px-3 mb-2">
+              <Clock className="w-3 h-3 text-muted-foreground mr-1.5 flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Récents</span>
+            </div>
+            {recentSpaces.map((space) => (
+              <div key={space.id} className="group flex items-center">
+                <Link
+                  to={`/spaces/${space.id}/content`}
+                  className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    currentSpaceId === space.id
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  {space.avatarUrl ? (
+                    <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span className="truncate">{space.name}</span>
+                </Link>
+                <button
+                  onClick={() => toggleFavoriteMutation.mutate(space.id)}
+                  className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  title="Ajouter aux favoris"
+                >
+                  <Star className="w-3 h-3 text-muted-foreground hover:text-yellow-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Personal spaces (authenticated only) */}
         {user && mySpaces.length > 0 && (
           <div className="pt-2 pb-2 border-b border-border">
@@ -486,6 +635,8 @@ export function Layout() {
                       expandedIds={expandedSpaceIds}
                       onToggle={toggleSpaceExpand}
                       htmlId={groupIndex === 0 && nodeIndex === 0 && mySpaces.length === 0 ? 'sidebar-first-space' : undefined}
+                      favoriteIds={favoriteIdSet}
+                      onToggleFavorite={handleToggleFavorite}
                     />
                   ))
                 ) : (
@@ -512,6 +663,8 @@ export function Layout() {
                 currentSpaceId={currentSpaceId}
                 expandedIds={expandedSpaceIds}
                 onToggle={toggleSpaceExpand}
+                favoriteIds={favoriteIdSet}
+                onToggleFavorite={handleToggleFavorite}
               />
             ))}
           </div>
