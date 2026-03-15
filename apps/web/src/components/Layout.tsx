@@ -508,7 +508,7 @@ export function Layout() {
                   <span className="truncate">{space.name}</span>
                 </Link>
                 <button
-                  onClick={() => toggleFavoriteMutation.mutate(space.id)}
+                  onClick={() => handleToggleFavorite(space.id)}
                   className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                   title="Retirer des favoris"
                 >
@@ -544,7 +544,7 @@ export function Layout() {
                   <span className="truncate">{space.name}</span>
                 </Link>
                 <button
-                  onClick={() => toggleFavoriteMutation.mutate(space.id)}
+                  onClick={() => handleToggleFavorite(space.id)}
                   className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                   title="Ajouter aux favoris"
                 >
