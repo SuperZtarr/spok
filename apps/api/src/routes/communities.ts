@@ -57,6 +57,27 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Notify admins if pending public approval
+    if (wantsPublic) {
+      const admins = await fastify.prisma.user.findMany({
+        where: { globalRole: 'ADMIN' },
+        select: { id: true },
+      });
+      const creator = await fastify.prisma.user.findUnique({
+        where: { id: request.user.userId },
+        select: { name: true },
+      });
+      for (const admin of admins) {
+        await createNotification(fastify.prisma, {
+          userId: admin.id,
+          type: 'INVITATION',
+          title: 'Demande de publication',
+          message: `${creator?.name || 'Un utilisateur'} demande à rendre la communauté "${body.name}" publique.`,
+          link: '/admin',
+        });
+      }
+    }
+
     return reply.status(201).send({
       ...community,
       role: 'OWNER' as CommunityRole,

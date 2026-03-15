@@ -5,7 +5,7 @@ import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown,
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
-import { spacesApi, communitiesApi, authApi } from '../lib/api';
+import { spacesApi, communitiesApi, authApi, adminApi } from '../lib/api';
 
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { useOnboarding } from '../hooks/useOnboarding';
@@ -273,6 +273,15 @@ export function Layout() {
     enabled: !!user,
     staleTime: 60_000,
   });
+
+  // Admin: pending public community count
+  const { data: pendingData } = useQuery({
+    queryKey: ['admin', 'pending-count'],
+    queryFn: () => adminApi.communities.pendingCount(),
+    enabled: !!user && user.globalRole === 'ADMIN',
+    staleTime: 30_000,
+  });
+  const pendingCount = pendingData?.count || 0;
 
   // Separate personal, per-community, and independent spaces
   const { mySpaces, communityGroups, independentSpaces } = useMemo(() => {
@@ -645,6 +654,11 @@ export function Layout() {
                         >
                           <Shield className="w-4 h-4" />
                           Administration
+                          {pendingCount > 0 && (
+                            <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
+                              {pendingCount}
+                            </span>
+                          )}
                         </Link>
                       )}
                       <div className="border-t border-border my-1" />

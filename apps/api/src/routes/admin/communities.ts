@@ -24,6 +24,12 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // All routes require admin authentication
   fastify.addHook('preHandler', fastify.authenticateAdmin);
 
+  // GET /admin/communities/pending-count - Count communities awaiting public approval
+  fastify.get('/pending-count', async () => {
+    const count = await fastify.prisma.community.count({ where: { pendingPublic: true } });
+    return { count };
+  });
+
   // GET /admin/communities - List all communities with pagination
   fastify.get<{ Querystring: ListCommunitiesQuery }>('/', async (request) => {
     const { search } = request.query;

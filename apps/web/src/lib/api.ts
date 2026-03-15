@@ -1259,6 +1259,9 @@ export const adminApi = {
 
     rejectPublic: (id: string) =>
       fetchApi<AdminCommunity>(`/admin/communities/${id}/reject-public`, { method: 'POST' }),
+
+    pendingCount: () =>
+      fetchApi<{ count: number }>('/admin/communities/pending-count'),
   },
 
   tests: {
