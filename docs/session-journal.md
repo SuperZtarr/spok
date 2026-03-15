@@ -76,6 +76,52 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-16 00:00] - Favoris et récents sidebar
+
+**Demande :** Favoris / récents : accès rapide aux espaces
+**Actions réalisées :**
+- Modèle SpaceFavorite en base + endpoints API (GET/POST/DELETE)
+- Section Favoris en haut de sidebar (étoile jaune, toggle au hover)
+- Section Récents (5 derniers visités, localStorage, hors favoris)
+- Bouton étoile sur chaque espace dans les sections communautés/indépendants
+**État :** TERMINÉ — 3054f7d
+
+---
+
+#### [2026-03-15 23:45] - Invitation membre non inscrit
+
+**Demande :** Flow complet pour inviter un membre qui n'a pas encore de compte
+**Actions réalisées :**
+- RegisterPage redirige vers l'invitation en attente après inscription (localStorage token)
+- Messages contextuels sur login/register quand une invitation est en attente
+**État :** TERMINÉ — 25f35ba
+
+---
+
+#### [2026-03-15 23:30] - Invitation membre déjà inscrit
+
+**Demande :** Implémenter le flow complet d'invitation d'un membre déjà inscrit (email + page d'acceptation)
+**Actions réalisées :**
+- Template email d'invitation avec Resend (inviteur, cible, message, bouton CTA)
+- Envoi email dans endpoints invite communauté et espace
+- Endpoint public GET /invitations/by-token/:token
+- Page /invitation?token=xxx (accept/decline, redirect login, gestion expiration/erreurs)
+- Redirect post-login vers invitation en attente (localStorage)
+**État :** TERMINÉ — 950bec0
+
+---
+
+#### [2026-03-15 23:00] - Fix sidebar espaces disparaissent
+
+**Demande :** Les espaces disparaissent de la sidebar sans raison et reviennent au refresh ou alt-tab
+**Diagnostic :** staleTime: 60_000 ajouté dans le commit 75d49c7 (refonte sidebar) provoquait une race condition avec le token refresh JWT quand la fenêtre perdait le focus >60s
+**Actions réalisées :**
+- Supprimé staleTime et gcTime des queries sidebar-spaces et communities dans Layout.tsx
+- Ajouté refetchOnWindowFocus: 'always' sur la query communities
+**État :** TERMINÉ — 61063bd
+
+---
+
 #### [2026-02-15] - Images avatar et couverture pour espaces et communautés
 
 **Demande :** Implémenter l'upload d'images d'illustration (avatar + couverture) pour les espaces et communautés, avec affichage sur Dashboard, sidebar et CommunitySelector. Organisation R2 structurée par entité.

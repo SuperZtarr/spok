@@ -3,7 +3,7 @@
 ## À faire
 
 ### Items
-- [ ] Fusion d'éléments : fusionner un item avec ses enfants (concaténer descriptions, remonter petits-enfants, supprimer les enfants absorbés)
+- [x] Fusion d'éléments : fusionner un item avec ses enfants (concaténer descriptions, remonter petits-enfants, supprimer les enfants absorbés) — déjà implémenté (item-merge.ts + MergeItemModal)
 
 ### UX & navigation
 - [x] Refonte sidebar : communautés dépliées par défaut, compteur d'espaces quand réduit — 75d49c7 (2026-03-15)
@@ -12,15 +12,15 @@
 - [x] Parcours premier utilisateur (assistant de démarrage) — e179fd8 (2026-03-15)
 - [x] Communautés publiques : rejoindre/quitter depuis page Communautés — 448d67a (2026-03-15)
 - [x] Communautés vides visibles dans page Espaces — bc5e42b (2026-03-15)
-- [ ] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités
+- [x] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités — 3054f7d (2026-03-15)
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
 ### Infra & emails
 - [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
 - [x] Template email avec header/footer SPOK — 5775ae7 (2026-03-15)
-- [ ] invitation d'un nouveau membre non inscrit
-- [ ] invitation d'un membre deja inscrit
+- [x] invitation d'un nouveau membre non inscrit — 25f35ba (2026-03-15)
+- [x] invitation d'un membre deja inscrit — 950bec0 (2026-03-15)
 
 ## Idées (à explorer)
 
@@ -95,6 +95,7 @@
 - [x] Template email header/footer SPOK — 5775ae7
 - [x] Fix détachement parentId cross-communauté — 90d00f6
 - [x] Fix réactions (type=button) — 25859e2
+- [x] Fix sidebar espaces disparaissent (staleTime race condition) — 61063bd (2026-03-15)
 
 ### Supprimé
 - SchemaView (canvas libre) — f6094f1
