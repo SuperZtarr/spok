@@ -16,7 +16,8 @@
 
 ### Infra & emails
 - [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
-- [ ] invitation d'un nouveau membre
+- [ ] invitation d'un nouveau membre non inscrit
+- [ ] invitation d'un  membre deja inscrit
 
 ## Idées (à explorer)
 

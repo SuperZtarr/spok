@@ -92,6 +92,14 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
         description: 'Items regroupés par type (Note, Tâche, Projet…). Glissez une carte vers un autre type pour la convertir.',
       },
     },
+    {
+      element: '[data-tour="types-column"]',
+      popover: {
+        title: 'Colonnes par type',
+        description: 'Chaque colonne représente un type d\'item. Le compteur indique le nombre d\'items. Glissez une carte vers une autre colonne pour changer son type.',
+        side: 'bottom',
+      },
+    },
   ],
 
   priority: [
@@ -101,6 +109,14 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
         description: 'Colonnes P1 (Urgente) à P4 (Basse) + Sans priorité. Glissez pour reprioriser instantanément.',
       },
     },
+    {
+      element: '[data-tour="priority-column"]',
+      popover: {
+        title: 'Colonnes de priorité',
+        description: 'De P1 (Urgente) à P4 (Basse) puis Sans priorité. Glissez une carte d\'une colonne à l\'autre pour changer sa priorité.',
+        side: 'bottom',
+      },
+    },
   ],
 
   members: [
@@ -108,6 +124,14 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
       popover: {
         title: 'Vue Membres',
         description: 'Items organisés par assigné. Glissez une carte vers un membre pour la réassigner. La colonne "Non assigné" regroupe les items libres.',
+      },
+    },
+    {
+      element: '[data-tour="members-column"]',
+      popover: {
+        title: 'Colonnes par membre',
+        description: 'Chaque colonne = un membre de l\'espace. Glissez une carte vers une colonne pour réassigner l\'item. La colonne "Non assigné" regroupe les items libres.',
+        side: 'bottom',
       },
     },
   ],
@@ -167,6 +191,14 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
       popover: {
         title: 'Vue Planning',
         description: 'Vos items avec échéance regroupés par urgence : En retard, Aujourd\'hui, Cette semaine, Ce mois, Plus tard.',
+      },
+    },
+    {
+      element: '[data-tour="planning-sections"]',
+      popover: {
+        title: 'Sections temporelles',
+        description: 'Les items sont groupés par urgence : En retard (rouge), Aujourd\'hui (bleu), Cette semaine, Ce mois, Plus tard et Sans date. Cliquez pour éditer.',
+        side: 'bottom',
       },
     },
   ],
@@ -262,6 +294,14 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
       popover: {
         title: 'Vue Bulles',
         description: 'Cercles imbriqués : les parents contiennent leurs enfants. La taille reflète le volume (enfants, contributions ou égale).',
+      },
+    },
+    {
+      element: '[data-tour="bubble-size"]',
+      popover: {
+        title: 'Mode de taille',
+        description: 'Choisissez comment dimensionner les bulles : taille égale, par nombre de contributions ou par nombre de relations.',
+        side: 'left',
       },
     },
   ],
@@ -548,6 +588,30 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
       popover: {
         title: 'Tableau de bord',
         description: 'Organisation personnelle : vos tâches par statut, priorité et échéance à travers tous vos espaces. Utilisez les filtres pour affiner.',
+      },
+    },
+    {
+      element: '[data-tour="org-filters"]',
+      popover: {
+        title: 'Filtres',
+        description: 'Filtrez par type, statut, priorité ou espace. Triez par date, priorité ou titre pour retrouver rapidement vos tâches.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="org-priorities"]',
+      popover: {
+        title: 'Priorités & urgences',
+        description: 'Trois panneaux : priorités hautes (P1/P2), items en retard et tâches du jour. Les priorités sont réordonnables par glisser-déposer.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="org-week"]',
+      popover: {
+        title: 'Vue semaine',
+        description: 'Planning hebdomadaire de vos tâches. Naviguez entre les semaines avec les flèches. Chaque jour affiche les items prévus.',
+        side: 'top',
       },
     },
   ],

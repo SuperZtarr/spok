@@ -463,7 +463,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
                 className={`overflow-x-auto ${section.isPortal ? 'border border-dashed border-primary/20 rounded-lg p-2' : ''}`}
                 style={{ height: spaceSections.length > 1 ? getHeight(section.spaceId) : undefined }}
               >
-                <div className="flex gap-3 h-full min-h-0">
+                <div className="flex gap-3 h-full min-h-0" {...(idx === 0 ? { 'data-tour': 'types-column' } : {})}>
                   {typeColumns.map((column) => {
                     const droppableId = `${section.spaceId}::${column.id}`;
                     return (

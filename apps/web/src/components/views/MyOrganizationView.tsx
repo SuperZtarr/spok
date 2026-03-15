@@ -297,12 +297,12 @@ export function MyOrganizationView() {
     <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
 
       {/* Filtres */}
-      <div className="bg-card border rounded-lg p-4">
+      <div className="bg-card border rounded-lg p-4" data-tour="org-filters">
         <GlobalTaskFilterBar filters={filters} />
       </div>
 
       {/* Priorités + En retard + Aujourd'hui */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-tour="org-priorities">
 
         {/* Priorités */}
         <div className="bg-card border rounded-lg p-4 space-y-2">
@@ -359,7 +359,7 @@ export function MyOrganizationView() {
       </div>
 
       {/* Semaine */}
-      <div className="bg-card border rounded-lg p-4">
+      <div className="bg-card border rounded-lg p-4" data-tour="org-week">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-muted-foreground" />

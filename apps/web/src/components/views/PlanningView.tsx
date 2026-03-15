@@ -418,7 +418,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
   }
 
   return (
-    <div className="p-4 overflow-y-auto h-full">
+    <div className="p-4 overflow-y-auto h-full" data-tour="planning-sections">
       {PERIOD_CONFIGS.map((config) => (
         <PeriodSection
           key={config.id}

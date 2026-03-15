@@ -346,7 +346,7 @@ export function PriorityView({
       onDragCancel={handleDragCancel}
     >
       <div className="p-4 overflow-x-auto overflow-y-hidden h-full">
-        <div className="flex gap-3 h-full min-w-min">
+        <div className="flex gap-3 h-full min-w-min" data-tour="priority-column">
           {PRIORITY_COLUMNS.map(col => (
             <PriorityColumn
               key={col.id}

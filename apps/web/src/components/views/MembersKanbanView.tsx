@@ -504,7 +504,7 @@ export function MembersKanbanView({
                 className={`overflow-x-auto ${section.isPortal ? 'border border-dashed border-primary/20 rounded-lg p-2' : ''}`}
                 style={{ height: hasMultipleSections ? getHeight(section.spaceId) : undefined }}
               >
-                <div className="flex gap-3 h-full min-h-0 min-w-min">
+                <div className="flex gap-3 h-full min-h-0 min-w-min" {...(idx === 0 ? { 'data-tour': 'members-column' } : {})}>
                   {cols.map(col => (
                     <MemberColumnComponent
                       key={col.id}

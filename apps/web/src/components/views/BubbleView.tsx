@@ -389,7 +389,7 @@ export function BubbleView({
       )}
 
       {/* Size mode selector */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 bg-card/90 backdrop-blur border border-border rounded-md px-1 py-1 text-xs">
+      <div data-tour="bubble-size" className="absolute top-2 right-2 flex items-center gap-1 bg-card/90 backdrop-blur border border-border rounded-md px-1 py-1 text-xs">
         <span className="text-muted-foreground px-1">Taille :</span>
         {([['equal', 'Égale'], ['contributions', 'Contributions'], ['relations', 'Relations']] as [SizeMode, string][]).map(([mode, label]) => (
           <button
