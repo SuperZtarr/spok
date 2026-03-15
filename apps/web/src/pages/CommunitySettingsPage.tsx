@@ -12,6 +12,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
+import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
 
 function CommunitySettingsHelpButton() {
@@ -876,6 +877,7 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
 function CommunityEmailsSection({ communityId }: { communityId: string }) {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showSendModal, setShowSendModal] = useState(false);
 
   const { data: emails, isLoading } = useQuery({
     queryKey: ['community-emails', communityId],
@@ -917,12 +919,34 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
     );
   }
 
+  const community = useQuery({
+    queryKey: ['community', communityId],
+    queryFn: () => communitiesApi.get(communityId),
+  }).data;
+
+  const emailMembers = (members || []).map(m => ({ userId: m.userId, name: m.name, email: m.email }));
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Mail className="w-5 h-5 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">Emails envoyés</h3>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Mail className="w-5 h-5 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">Emails</h3>
+        </div>
+        <Button size="sm" onClick={() => setShowSendModal(true)}>
+          <Send className="w-4 h-4 mr-1" />
+          Nouvel email
+        </Button>
       </div>
+
+      {showSendModal && community && (
+        <SendEmailModal
+          isOpen={showSendModal}
+          onClose={() => { setShowSendModal(false); queryClient.invalidateQueries({ queryKey: ['community-emails', communityId] }); }}
+          members={emailMembers}
+          target={{ type: 'community', id: community.id, name: community.name }}
+        />
+      )}
 
       {!emails || emails.length === 0 ? (
         <p className="text-sm text-muted-foreground py-4">Aucun email envoyé pour le moment.</p>

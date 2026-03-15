@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Mail, Settings, Globe, Lock, Crown, User, ChevronRight } from 'lucide-react';
+import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
-import { SendEmailModal } from '../components/SendEmailModal';
 // Types used implicitly via API responses
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -45,7 +44,6 @@ export function CommunityPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
-  const [showEmailModal, setShowEmailModal] = useState(false);
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
@@ -72,12 +70,6 @@ export function CommunityPage() {
   const sortedMembers = [...(members || [])].sort((a, b) =>
     (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
   );
-
-  const emailMembers = (members || []).map(m => ({
-    userId: m.userId,
-    name: m.name,
-    email: m.email,
-  }));
 
   // Build space tree from flat list
   const spaceTree = useMemo(() => {
@@ -132,11 +124,6 @@ export function CommunityPage() {
             )}
           </div>
           <div className="flex gap-2 pb-1">
-            {isAdminOrOwner && (
-              <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)}>
-                <Mail className="w-4 h-4 mr-1.5" />Envoyer un email
-              </Button>
-            )}
             {isAdminOrOwner && (
               <Button variant="outline" size="sm" onClick={() => navigate(`/communities/${communityId}/settings`)}>
                 <Settings className="w-4 h-4" />
@@ -197,15 +184,6 @@ export function CommunityPage() {
         </div>
       </div>
 
-      {/* Email modal */}
-      {community && (
-        <SendEmailModal
-          isOpen={showEmailModal}
-          onClose={() => setShowEmailModal(false)}
-          members={emailMembers}
-          target={{ type: 'community', id: community.id, name: community.name }}
-        />
-      )}
     </div>
   );
 }
