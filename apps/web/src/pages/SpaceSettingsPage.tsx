@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, Mail } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, Mail, HelpCircle, Play, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { driver } from 'driver.js';
+import type { TourStep } from '../hooks/viewTours';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
@@ -19,6 +22,108 @@ import { OrgChartView } from '../components/views/OrgChartView';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
+
+const SPACE_SETTINGS_TOUR: TourStep[] = [
+  {
+    element: '[data-tour="space-settings-tabs"]',
+    popover: {
+      title: 'Onglets',
+      description: 'Général : nom, communauté, parent, rôle par défaut. Images : avatar et couverture. Référentiels : statuts et types personnalisés. Membres : gestion des accès. Danger : suppression.',
+      side: 'bottom',
+    },
+  },
+];
+
+function SpaceSettingsHelpButton() {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const btn = btnRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const w = 320;
+      let left = rect.right - w;
+      if (left < 8) left = 8;
+      setPos({ top: rect.bottom + 6, left });
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (popRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', handle);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handleKey); };
+  }, [open]);
+
+  const launchTour = () => {
+    setOpen(false);
+    setTimeout(() => {
+      const validSteps = SPACE_SETTINGS_TOUR.filter(s => !s.element || document.querySelector(s.element));
+      if (validSteps.length === 0) return;
+      const d = driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        nextBtnText: 'Suivant',
+        prevBtnText: 'Précédent',
+        doneBtnText: 'Terminer',
+        progressText: '{{current}} / {{total}}',
+        steps: validSteps,
+      });
+      d.drive();
+    }, 200);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto"
+        title="Aide"
+      >
+        <HelpCircle className="w-4 h-4" />
+      </button>
+      {open && createPortal(
+        <div ref={popRef} className="fixed z-[200] w-[320px] rounded-lg border border-border bg-card shadow-lg" style={{ top: pos.top, left: pos.left }}>
+          <div className="flex items-center justify-between px-4 pt-3 pb-2">
+            <h3 className="text-sm font-semibold">Paramètres de l'espace</h3>
+            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">
+            Configurez votre espace : nom, communauté, images, référentiels de statuts et types, gestion des membres et permissions.
+          </p>
+          <ul className="px-4 pb-3 space-y-1">
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Personnalisez les statuts et types dans l'onglet Référentiels</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Définissez un rôle par défaut pour les nouveaux membres de la communauté</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Ajoutez un avatar et une couverture dans l'onglet Images</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Gérez les membres avec le système en 3 colonnes</li>
+          </ul>
+          <div className="px-4 pb-3">
+            <button
+              type="button"
+              onClick={launchTour}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Lancer le tutoriel interactif
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -280,11 +385,12 @@ export function SpaceSettingsPage() {
           </h1>
           <p className="text-muted-foreground">Paramètres de l'espace</p>
         </div>
+        <SpaceSettingsHelpButton />
       </div>
 
       {/* Tabs */}
       <div className="border-b border-border mb-6">
-        <div className="flex gap-1">
+        <div className="flex gap-1" data-tour="space-settings-tabs">
           {tabs.map(tab => (
             <button
               key={tab.id}
