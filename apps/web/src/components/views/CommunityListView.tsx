@@ -98,7 +98,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="communities-grid">
             {communities.map(community => {
               const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
               const RoleIcon = config.icon;

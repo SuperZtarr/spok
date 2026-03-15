@@ -443,7 +443,7 @@ export function DashboardCockpitView() {
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* KPI Banner */}
-      <div className="flex flex-wrap gap-3 px-4 py-3 border-b bg-card">
+      <div className="flex flex-wrap gap-3 px-4 py-3 border-b bg-card" data-tour="dashboard-kpis">
         <KpiBadge
           label="en retard"
           count={overdueTasks.length}
@@ -486,7 +486,7 @@ export function DashboardCockpitView() {
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,5fr)] gap-4 p-4 overflow-y-auto">
 
         {/* Left column: 3 stacked panels */}
-        <div className="flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col gap-4 min-h-0" data-tour="dashboard-panels">
           <Panel
             title="En retard"
             icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
@@ -550,7 +550,7 @@ export function DashboardCockpitView() {
         <div className="flex flex-col gap-4 min-h-0">
 
           {/* Week view */}
-          <div className="bg-card border rounded-lg flex flex-col" style={{ height: '300px' }}>
+          <div className="bg-card border rounded-lg flex flex-col" style={{ height: '300px' }} data-tour="dashboard-week">
             <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0">
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-muted-foreground" />
@@ -639,7 +639,7 @@ export function DashboardCockpitView() {
           </div>
 
           {/* Progress per space */}
-          <div className="bg-card border rounded-lg flex flex-col border-green-200 dark:border-green-900" style={{ maxHeight: '1000px', maxWidth: '600px' }}>
+          <div className="bg-card border rounded-lg flex flex-col border-green-200 dark:border-green-900" style={{ maxHeight: '1000px', maxWidth: '600px' }} data-tour="dashboard-progress">
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
               <h3 className="text-sm font-semibold">Progression par espace</h3>

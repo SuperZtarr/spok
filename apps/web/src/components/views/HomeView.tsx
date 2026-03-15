@@ -187,7 +187,7 @@ export function HomeView() {
     <div className="p-8 flex-1 overflow-auto">
       <div className="max-w-4xl mx-auto">
         {/* Welcome banner */}
-        <div className="mb-8">
+        <div className="mb-8" data-tour="home-welcome">
           <h1 className="text-2xl font-bold">Bonjour {firstName}</h1>
           <p className="text-muted-foreground mt-1">
             {totalCommunities} communauté{totalCommunities > 1 ? 's' : ''}
@@ -198,7 +198,7 @@ export function HomeView() {
 
         {/* Communities */}
         {communities && communities.length > 0 && (
-          <section className="mb-8">
+          <section className="mb-8" data-tour="home-communities">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Mes communautés
             </h2>

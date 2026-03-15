@@ -462,12 +462,36 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
         description: 'Votre page d\'arrivée. Retrouvez toutes vos communautés et leurs espaces pour naviguer rapidement.',
       },
     },
+    {
+      element: '[data-tour="home-welcome"]',
+      popover: {
+        title: 'Bienvenue',
+        description: 'Un résumé de votre organisation : nombre de communautés et d\'espaces accessibles.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="home-communities"]',
+      popover: {
+        title: 'Vos communautés',
+        description: 'Cliquez sur une communauté pour la déplier et voir ses espaces. Cliquez sur un espace pour y naviguer directement.',
+        side: 'top',
+      },
+    },
   ],
   communities: [
     {
       popover: {
         title: 'Communautés',
-        description: 'Toutes les communautés dont vous êtes membre. Cliquez une carte pour accéder à la communauté. Créez-en une nouvelle avec le bouton en haut.',
+        description: 'Toutes les communautés dont vous êtes membre. Gérez-les ou rejoignez-en de nouvelles.',
+      },
+    },
+    {
+      element: '[data-tour="communities-grid"]',
+      popover: {
+        title: 'Cartes communauté',
+        description: 'Chaque carte montre la couverture, le nombre de membres et d\'espaces, et votre rôle. Cliquez pour accéder aux paramètres.',
+        side: 'top',
       },
     },
   ],
@@ -475,7 +499,7 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Espaces',
-        description: 'Vue globale de tous vos espaces. Créez de nouveaux espaces, gérez la hiérarchie et les communautés.',
+        description: 'Vue globale de tous vos espaces, groupés par communauté. Créez, organisez et gérez vos espaces de travail.',
       },
     },
   ],
@@ -483,7 +507,39 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Dashboard',
-        description: 'Cockpit personnel : KPIs, items en retard, urgents et en cours, planning de la semaine, progression par espace.',
+        description: 'Votre cockpit personnel. Identifiez en un coup d\'oeil ce qui demande votre attention.',
+      },
+    },
+    {
+      element: '[data-tour="dashboard-kpis"]',
+      popover: {
+        title: 'Indicateurs clés',
+        description: 'En retard, aujourd\'hui, en cours, à échéance, à valider, terminés cette semaine. Les compteurs colorés résument votre situation.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="dashboard-panels"]',
+      popover: {
+        title: 'Détails par urgence',
+        description: 'Items en retard (rouge), urgents/prioritaires (orange), en cours (bleu) et à échéance prochaine. Cliquez pour éditer.',
+        side: 'right',
+      },
+    },
+    {
+      element: '[data-tour="dashboard-week"]',
+      popover: {
+        title: 'Ma semaine',
+        description: 'Planning de la semaine en cours. Naviguez entre les semaines avec les flèches. Chaque jour affiche les items prévus.',
+        side: 'left',
+      },
+    },
+    {
+      element: '[data-tour="dashboard-progress"]',
+      popover: {
+        title: 'Progression par espace',
+        description: 'Barres d\'avancement : pourcentage d\'items terminés par espace. Vue d\'ensemble de tous vos projets.',
+        side: 'left',
       },
     },
   ],
@@ -491,7 +547,7 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Tableau de bord',
-        description: 'Organisation personnelle : vos tâches par statut, priorité et échéance à travers tous vos espaces.',
+        description: 'Organisation personnelle : vos tâches par statut, priorité et échéance à travers tous vos espaces. Utilisez les filtres pour affiner.',
       },
     },
   ],
@@ -499,7 +555,15 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Graphe global',
-        description: 'Réseau interactif de tous vos items et espaces à travers toutes vos communautés. Explorez les connexions.',
+        description: 'Réseau interactif de tous vos items à travers toutes vos communautés.',
+      },
+    },
+    {
+      element: '[data-tour="graph-scope"]',
+      popover: {
+        title: 'Portée & filtres',
+        description: 'Basculez entre espace, communauté et global. Activez/désactivez hiérarchie, relations et tags.',
+        side: 'bottom',
       },
     },
   ],
@@ -507,7 +571,7 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Sunburst global',
-        description: 'Vue hiérarchique en cercles concentriques de toutes vos communautés, espaces et items.',
+        description: 'Cercles concentriques de toute votre organisation. Le centre = SPOK, puis communautés, espaces et items.',
       },
     },
   ],
@@ -515,7 +579,7 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Carte mentale globale',
-        description: 'Arborescence de toute votre organisation : communautés → espaces → sous-espaces. Glissez pour réorganiser.',
+        description: 'Arborescence de toute votre organisation : communautés → espaces → sous-espaces.',
       },
     },
   ],
