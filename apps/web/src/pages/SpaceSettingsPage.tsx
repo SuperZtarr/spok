@@ -25,51 +25,43 @@ import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
 
 const SPACE_SETTINGS_TOUR: TourStep[] = [
   {
-    element: '[data-tour="space-settings-tabs"]',
-    popover: {
-      title: 'Onglets',
-      description: 'Naviguez entre les différentes sections de paramétrage de votre espace.',
-      side: 'bottom',
-    },
-  },
-  {
-    element: '[data-tour="space-general"]',
+    element: '[data-tour="space-tab-general"]',
     popover: {
       title: 'Général',
-      description: 'Nom de l\'espace, communauté de rattachement, espace parent et rôle par défaut pour les nouveaux membres.',
+      description: 'Nom de l\'espace, communauté de rattachement, espace parent et rôle par défaut pour les nouveaux membres de la communauté.',
       side: 'bottom',
     },
   },
   {
-    element: '[data-tour="space-images"]',
+    element: '[data-tour="space-tab-images"]',
     popover: {
       title: 'Images',
-      description: 'Avatar (affiché dans la sidebar) et image de couverture (affichée sur le dashboard). Glissez une image ou cliquez pour uploader.',
+      description: 'Avatar (affiché dans la sidebar et le dashboard) et image de couverture. Glissez une image ou cliquez pour uploader.',
       side: 'bottom',
     },
   },
   {
-    element: '[data-tour="space-referentiels"]',
+    element: '[data-tour="space-tab-referentiels"]',
     popover: {
       title: 'Référentiels',
-      description: 'Personnalisez les statuts (À faire, En cours, Terminé…) et les types d\'items (Note, Tâche, Projet…). Modifiez les labels, couleurs et l\'ordre.',
+      description: 'Personnalisez les statuts (À faire, En cours, Terminé…) et les types d\'items (Note, Tâche, Projet…). Modifiez labels, couleurs et ordre.',
       side: 'bottom',
     },
   },
   {
-    element: '[data-tour="space-members"]',
+    element: '[data-tour="space-tab-members"]',
     popover: {
       title: 'Membres',
-      description: 'Gérez les accès : 3 colonnes (non-membres → membres → propriétaires). Envoyez des emails groupés. Invitez de nouveaux utilisateurs.',
+      description: 'Gérez les accès avec 3 colonnes : non-membres → membres → propriétaires. Envoyez des emails et invitez de nouveaux utilisateurs.',
       side: 'bottom',
     },
   },
   {
-    element: '[data-tour="space-danger"]',
+    element: '[data-tour="space-tab-danger"]',
     popover: {
       title: 'Zone de danger',
       description: 'Supprimez l\'espace avec prévisualisation des éléments impactés. Choix entre supprimer les enfants ou les détacher.',
-      side: 'top',
+      side: 'bottom',
     },
   },
 ];
@@ -434,6 +426,7 @@ export function SpaceSettingsPage() {
           {tabs.map(tab => (
             <button
               key={tab.id}
+              data-tour={`space-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id

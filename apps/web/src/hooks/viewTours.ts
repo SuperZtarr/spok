@@ -530,10 +530,42 @@ export const ITEM_MODAL_TOUR: TourStep[] = [
 // Tour for CommunitySettings
 export const COMMUNITY_SETTINGS_TOUR: TourStep[] = [
   {
-    element: '[data-tour="community-tabs"]',
+    element: '[data-tour="community-tab-general"]',
     popover: {
-      title: 'Paramètres de la communauté',
-      description: 'Général : nom, description, visibilité. Images : avatar et couverture. Espaces : gérer les espaces. Membres : ajouter/retirer. Emails : historique des envois.',
+      title: 'Général',
+      description: 'Nom, description et visibilité (publique/privée) de la communauté. Les tags partagés entre tous les espaces de la communauté.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="community-tab-images"]',
+    popover: {
+      title: 'Images',
+      description: 'Avatar (affiché dans la sidebar et les cartes) et image de couverture. Glissez ou cliquez pour uploader.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="community-tab-spaces"]',
+    popover: {
+      title: 'Espaces',
+      description: 'Liste des espaces de la communauté. Réorganisez la hiérarchie par glisser-déposer. Créez de nouveaux espaces.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="community-tab-members"]',
+    popover: {
+      title: 'Membres',
+      description: '3 colonnes : non-membres → membres → propriétaires. Cliquez les flèches pour déplacer entre colonnes.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="community-tab-emails"]',
+    popover: {
+      title: 'Emails',
+      description: 'Historique des emails envoyés à la communauté. Renvoyez un email aux nouveaux membres ou individuellement.',
       side: 'bottom',
     },
   },

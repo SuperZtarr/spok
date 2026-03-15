@@ -399,6 +399,7 @@ export function CommunitySettingsPage() {
           ] as const).map(tab => (
             <button
               key={tab.id}
+              data-tour={`community-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
