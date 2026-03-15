@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { HelpCircle, X } from 'lucide-react';
+import { HelpCircle, X, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { VIEW_DESCRIPTIONS } from '../constants/viewDescriptions';
 import type { ViewMode } from '../stores/viewMode';
 
 interface ViewHelpButtonProps {
   viewMode: ViewMode;
+  onStartTour?: () => void;
 }
 
-export function ViewHelpButton({ viewMode }: ViewHelpButtonProps) {
+export function ViewHelpButton({ viewMode, onStartTour }: ViewHelpButtonProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -87,6 +88,17 @@ export function ViewHelpButton({ viewMode }: ViewHelpButtonProps) {
                 </li>
               ))}
             </ul>
+          )}
+          {onStartTour && (
+            <div className="px-4 pb-3">
+              <button
+                onClick={() => { setOpen(false); setTimeout(onStartTour, 200); }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+              >
+                <Play className="w-3.5 h-3.5" />
+                Lancer le tutoriel interactif
+              </button>
+            </div>
           )}
         </div>,
         document.body

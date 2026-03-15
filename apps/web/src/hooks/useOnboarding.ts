@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { VIEW_TOURS, type TourStep } from './viewTours';
+import { VIEW_TOURS, DASHBOARD_TOURS, type TourStep } from './viewTours';
 import type { ViewMode } from '../stores/viewMode';
+import type { DashboardTab } from '../stores/dashboardTab';
 
 const STORAGE_KEY = 'spok-onboarding-done';
 const VIEW_STORAGE_PREFIX = 'spok-view-tour-done-';
@@ -140,4 +141,34 @@ export function useViewOnboarding(viewMode: ViewMode | null) {
   }, [viewMode]);
 
   return { startViewTour };
+}
+
+const DASHBOARD_STORAGE_PREFIX = 'spok-dashboard-tour-done-';
+
+export function useDashboardOnboarding(tab: DashboardTab | null) {
+  const prevTabRef = useRef<DashboardTab | null>(null);
+
+  const startDashboardTour = useCallback((t: DashboardTab) => {
+    const steps = DASHBOARD_TOURS[t];
+    if (!steps) return;
+    runTour(steps, DASHBOARD_STORAGE_PREFIX + t);
+  }, []);
+
+  useEffect(() => {
+    if (!tab || tab === prevTabRef.current) return;
+    prevTabRef.current = tab;
+
+    if (localStorage.getItem(DASHBOARD_STORAGE_PREFIX + tab)) return;
+
+    const steps = DASHBOARD_TOURS[tab];
+    if (!steps) return;
+
+    const timer = setTimeout(() => {
+      runTour(steps, DASHBOARD_STORAGE_PREFIX + tab);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [tab]);
+
+  return { startDashboardTour };
 }

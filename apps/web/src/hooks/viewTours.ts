@@ -450,3 +450,73 @@ export const COMMUNITY_SETTINGS_TOUR: TourStep[] = [
     },
   },
 ];
+
+// Tours for dashboard/global views
+import type { DashboardTab } from '../stores/dashboardTab';
+
+export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
+  home: [
+    {
+      popover: {
+        title: 'Accueil',
+        description: 'Votre page d\'arrivée. Retrouvez toutes vos communautés et leurs espaces pour naviguer rapidement.',
+      },
+    },
+  ],
+  communities: [
+    {
+      popover: {
+        title: 'Communautés',
+        description: 'Toutes les communautés dont vous êtes membre. Cliquez une carte pour accéder à la communauté. Créez-en une nouvelle avec le bouton en haut.',
+      },
+    },
+  ],
+  spaces: [
+    {
+      popover: {
+        title: 'Espaces',
+        description: 'Vue globale de tous vos espaces. Créez de nouveaux espaces, gérez la hiérarchie et les communautés.',
+      },
+    },
+  ],
+  dashboard: [
+    {
+      popover: {
+        title: 'Dashboard',
+        description: 'Cockpit personnel : KPIs, items en retard, urgents et en cours, planning de la semaine, progression par espace.',
+      },
+    },
+  ],
+  planning: [
+    {
+      popover: {
+        title: 'Tableau de bord',
+        description: 'Organisation personnelle : vos tâches par statut, priorité et échéance à travers tous vos espaces.',
+      },
+    },
+  ],
+  graph: [
+    {
+      popover: {
+        title: 'Graphe global',
+        description: 'Réseau interactif de tous vos items et espaces à travers toutes vos communautés. Explorez les connexions.',
+      },
+    },
+  ],
+  sunburst: [
+    {
+      popover: {
+        title: 'Sunburst global',
+        description: 'Vue hiérarchique en cercles concentriques de toutes vos communautés, espaces et items.',
+      },
+    },
+  ],
+  mindmap: [
+    {
+      popover: {
+        title: 'Carte mentale globale',
+        description: 'Arborescence de toute votre organisation : communautés → espaces → sous-espaces. Glissez pour réorganiser.',
+      },
+    },
+  ],
+};

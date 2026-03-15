@@ -59,6 +59,7 @@ export interface SpaceToolbarProps {
   items?: Item[];
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
 }
 
 export function SpaceToolbar({
@@ -87,6 +88,7 @@ export function SpaceToolbar({
   items: exportItems,
   spaceName,
   viewContainerRef,
+  onStartTour,
 }: SpaceToolbarProps) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -258,7 +260,7 @@ export function SpaceToolbar({
           })()}
         </span>
 
-        <ViewHelpButton viewMode={viewMode} />
+        <ViewHelpButton viewMode={viewMode} onStartTour={onStartTour} />
 
         {showExpandCollapse && (
           <>
