@@ -9,7 +9,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2 } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -598,14 +598,37 @@ export function ItemEditModal({
                 <h1 className="text-xl font-bold truncate">{title}</h1>
               )}
             </div>
-            {item?.createdBy && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
-                <User className="w-3 h-3" />
-                <span>{item.createdBy.name}</span>
-                <span>•</span>
-                <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {item?.createdBy && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <User className="w-3 h-3" />
+                  <span>{item.createdBy.name}</span>
+                  <span>•</span>
+                  <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  const validSteps = ITEM_MODAL_TOUR.filter(s => !s.element || document.querySelector(s.element));
+                  if (validSteps.length === 0) return;
+                  const d = driver({
+                    showProgress: true,
+                    showButtons: ['next', 'previous', 'close'],
+                    nextBtnText: 'Suivant',
+                    prevBtnText: 'Précédent',
+                    doneBtnText: 'Terminer',
+                    progressText: '{{current}} / {{total}}',
+                    steps: validSteps,
+                  });
+                  d.drive();
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Aide sur cette page"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Scrollable content */}
