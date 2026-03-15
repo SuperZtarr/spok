@@ -8,7 +8,7 @@ export interface ModalProps {
   title: ReactNode;
   children: ReactNode;
   className?: string;
-  size?: 'small' | 'default' | 'large' | 'fullscreen';
+  size?: 'small' | 'default' | 'large' | 'xl' | 'fullscreen';
 }
 
 export function Modal({ isOpen, onClose, title, children, className, size = 'default' }: ModalProps) {
@@ -50,6 +50,8 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
           // Desktop: size-specific constraints
           size === 'fullscreen'
             ? 'sm:w-full sm:h-full sm:max-w-none sm:max-h-none sm:rounded-none sm:border-0'
+            : size === 'xl'
+            ? 'sm:w-[90vw] sm:max-w-[90vw] sm:h-[90vh] sm:max-h-[90vh]'
             : size === 'large'
             ? 'sm:w-[80vw] sm:max-w-[80vw] sm:h-[80vh] sm:max-h-[80vh]'
             : size === 'small'

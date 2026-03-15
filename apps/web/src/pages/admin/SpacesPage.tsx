@@ -107,9 +107,9 @@ export function SpacesPage() {
   );
 
   const SpaceTable = ({ spaces, showCommunity = false }: { spaces: AdminSpace[]; showCommunity?: boolean }) => (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-auto max-h-[70vh]">
       <table className="w-full">
-        <thead className="bg-muted">
+        <thead className="bg-muted sticky top-0 z-10">
           <tr>
             <SortHeader label="Nom" column="name" />
             {showCommunity && (

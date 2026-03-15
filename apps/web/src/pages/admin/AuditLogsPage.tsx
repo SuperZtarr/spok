@@ -239,7 +239,7 @@ export function AuditLogsPage() {
       </div>
 
       {/* Logs table */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-auto max-h-[70vh]">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -248,7 +248,7 @@ export function AuditLogsPage() {
           <div className="py-12 text-center text-muted-foreground">Aucun log trouve</div>
         ) : (
           <table className="w-full text-sm">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-4 py-3 text-left font-medium">Date</th>
                 <th className="px-4 py-3 text-left font-medium">Utilisateur</th>

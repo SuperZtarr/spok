@@ -214,7 +214,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   // Creation form
   if (isCreating) {
     return (
-      <Modal isOpen={true} onClose={onClose} title="Nouvel utilisateur">
+      <Modal isOpen={true} onClose={onClose} title="Nouvel utilisateur" size="xl">
         <form onSubmit={handleCreate} className="space-y-4">
           {createMutation.error && (
             <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
@@ -280,7 +280,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
 
   // Detail/edit view
   return (
-    <Modal isOpen={true} onClose={onClose} title="Details de l'utilisateur">
+    <Modal isOpen={true} onClose={onClose} title="Details de l'utilisateur" size="xl">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : user ? (

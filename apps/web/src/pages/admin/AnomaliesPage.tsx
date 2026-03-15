@@ -92,9 +92,9 @@ function CategoryDetail({ categoryKey }: { categoryKey: string }) {
 
   return (
     <div className="border-t border-border">
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh]">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50">
+          <thead className="bg-muted/50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-2 text-left font-medium">Titre</th>
               {!isSpaceCategory && (
