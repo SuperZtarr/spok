@@ -291,12 +291,12 @@ export function Layout() {
     refetchOnWindowFocus: 'always',
   });
 
-  // Fetch favorite space IDs
+  // Fetch favorite space IDs (stabilize reference with select)
   const { data: favoriteIds = [] } = useQuery({
     queryKey: ['space-favorites'],
     queryFn: spacesApi.getFavorites,
     enabled: !!user,
-    refetchOnWindowFocus: 'always',
+    select: (data) => data, // structural sharing handles stability
   });
 
   const queryClient = useQueryClient();
@@ -313,7 +313,7 @@ export function Layout() {
   const pendingCount = pendingData?.count || 0;
 
   // Separate personal, per-community, and independent spaces
-  const { mySpaces, communityGroups, independentSpaces, favoriteSpaces, recentSpaces } = useMemo(() => {
+  const { mySpaces, communityGroups, independentSpaces } = useMemo(() => {
     const all = allSpaces || [];
     const sortByName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
@@ -346,31 +346,34 @@ export function Layout() {
       spaceTree: buildSpaceTree(byCommunity.get(c.id) || []),
     }));
 
-    // Favorite spaces (ordered by favoriteIds order)
-    const favSpaces = favoriteIds
-      .map(id => all.find(s => s.id === id))
-      .filter((s): s is SpaceWithRole => !!s);
-
-    // Recent spaces from localStorage (exclude favorites to avoid duplication)
-    const favSet = new Set(favoriteIds);
-    let recSpaces: SpaceWithRole[] = [];
-    try {
-      const stored = JSON.parse(localStorage.getItem('spok_recent_spaces') || '[]') as string[];
-      recSpaces = stored
-        .filter(id => !favSet.has(id))
-        .map(id => all.find(s => s.id === id))
-        .filter((s): s is SpaceWithRole => !!s)
-        .slice(0, 5);
-    } catch { /* ignore */ }
-
     return {
       mySpaces: personalList,
       communityGroups: groups,
       independentSpaces: buildSpaceTree(independent),
-      favoriteSpaces: favSpaces,
-      recentSpaces: recSpaces,
     };
-  }, [allSpaces, communities, favoriteIds]);
+  }, [allSpaces, communities]);
+
+  // Favorite & recent spaces (separate memo to avoid coupling with main space memo)
+  const favoriteIdKey = JSON.stringify(favoriteIds);
+  const favoriteSpaces = useMemo(() => {
+    const all = allSpaces || [];
+    return favoriteIds
+      .map(id => all.find(s => s.id === id))
+      .filter((s): s is SpaceWithRole => !!s);
+  }, [allSpaces, favoriteIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const recentSpaces = useMemo(() => {
+    const all = allSpaces || [];
+    const favSet = new Set(favoriteIds);
+    try {
+      const stored = JSON.parse(localStorage.getItem('spok_recent_spaces') || '[]') as string[];
+      return stored
+        .filter(id => !favSet.has(id))
+        .map(id => all.find(s => s.id === id))
+        .filter((s): s is SpaceWithRole => !!s)
+        .slice(0, 5);
+    } catch { return []; }
+  }, [allSpaces, favoriteIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get current space from URL - fetch independently from sidebar list
   const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)/);
