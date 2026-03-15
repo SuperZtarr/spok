@@ -4,20 +4,23 @@
 
 ### Items
 - [ ] Fusion d'éléments : fusionner un item avec ses enfants (concaténer descriptions, remonter petits-enfants, supprimer les enfants absorbés)
-- [ ] Breadcrumb dans l'item (Communauté, Espaces, hiérarchie)
 
 ### UX & navigation
 - [x] Refonte sidebar : communautés dépliées par défaut, compteur d'espaces quand réduit — 75d49c7 (2026-03-15)
-- [ ] Breadcrumb communauté → espace dans les pages de contenu
-- [ ] Onboarding pour les nouveaux utilisateurs (guide premier lancement, tutoriel interactif)
+- [x] Breadcrumb dans l'item (Communauté → Espace → Parents) — 0676f90 (2026-03-15)
+- [x] Onboarding : modale bienvenue + tours guidés toutes vues + modales — 13e605d (2026-03-15)
+- [x] Parcours premier utilisateur (assistant de démarrage) — e179fd8 (2026-03-15)
+- [x] Communautés publiques : rejoindre/quitter depuis page Communautés — 448d67a (2026-03-15)
+- [x] Communautés vides visibles dans page Espaces — bc5e42b (2026-03-15)
 - [ ] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
 ### Infra & emails
 - [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
+- [x] Template email avec header/footer SPOK — 5775ae7 (2026-03-15)
 - [ ] invitation d'un nouveau membre non inscrit
-- [ ] invitation d'un  membre deja inscrit
+- [ ] invitation d'un membre deja inscrit
 
 ## Idées (à explorer)
 
@@ -63,15 +66,38 @@
 ### UX & navigation
 - [x] Écran d'accueil orienté navigation (communautés → espaces) — d222fcf
 - [x] Sidebar multi-communauté : dépliées par défaut, compteur quand réduit — 75d49c7
+- [x] Breadcrumb item : Communauté → Espace (cliquable) → Parents — 0676f90
+- [x] Enfants dans ItemEditModal avec compteur petits-enfants — 7d60d73, 7965059
+- [x] Logo → page Accueil — f491243
+- [x] Parcours premier utilisateur (assistant de démarrage) — e179fd8
+- [x] Communautés publiques : rejoindre/quitter — 448d67a
+- [x] Communautés vides visibles dans page Espaces — bc5e42b
 
 ### Communautés
 - [x] Flow création communauté multi-étapes avec approbation admin — 75d49c7
 - [x] Historique emails communauté + renvoi aux nouveaux/anciens membres — 0a833f6, ad6f162
+- [x] Notification admins pour demandes de publication — 1e2e5df
+- [x] Banner admin + lien direct pour communautés en attente — f2eed72
+- [x] Bouton envoi email déplacé dans paramètres communauté — f8a3aa5
 - [x] Modales admin 90% viewport + en-têtes tableau sticky — a4b1220
+
+### Onboarding
+- [x] Modale bienvenue avec présentation fonctionnalités — 13e605d
+- [x] Tours guidés toutes vues d'espace (25 vues) — 25322ee, ca03733
+- [x] Tours guidés vues globales dashboard (8 tabs) — 326fe29, 88d75a1
+- [x] Tour ItemEditModal (12 étapes) — 10e32df
+- [x] Tours paramètres espace et communauté — 56e13af, df0b63b, 96cf287
+- [x] Bouton aide avec popover + lancer tuto dans toutes les vues — 326fe29, 2bea233
+- [x] Toolbar dashboard avec boutons contextuels — 8e99d14
 
 ### Infra
 - [x] Domaine Resend spok.space (SPF/DKIM/DMARC) — 30fbf6d
+- [x] Template email header/footer SPOK — 5775ae7
 - [x] Fix détachement parentId cross-communauté — 90d00f6
+- [x] Fix réactions (type=button) — 25859e2
+
+### Supprimé
+- SchemaView (canvas libre) — f6094f1
 
 ### Éditeur & contenu
 - [x] @mentions dans TipTap — 000593b
@@ -123,13 +149,28 @@
 ## Historique
 
 ### 2026-03-15
-- Sidebar multi-communauté : dépliées par défaut, compteur espaces quand réduit — 75d49c7
-- Flow création communauté multi-étapes + approbation admin (pendingPublic) — 75d49c7
+- Sidebar multi-communauté dépliées par défaut + compteur — 75d49c7
+- Flow création communauté multi-étapes + approbation admin — 75d49c7
 - Modales admin 90% viewport + en-têtes tableau sticky — a4b1220
-- Fix détachement parentId cross-communauté — 90d00f6
+- Fix détachement parentId cross-communauté + données prod — 90d00f6
 - Fix dépendance wx-react-gantt + colonnes membres pleine hauteur — 839b929
 - Historique emails communauté + renvoi individuel/groupé — 0a833f6, ad6f162
-- Domaine Resend spok.space (SPF/DKIM/DMARC) — 30fbf6d
+- Domaine Resend spok.space — 30fbf6d
+- Fix réactions (type=button + icône SmilePlus) — 25859e2
+- Onboarding : modale bienvenue + tours guidés toutes vues — 13e605d
+- Tours vues d'espace (data-tour sur 16 composants) — 25322ee, ca03733
+- Tours dashboard (8 tabs) + toolbar avec boutons contextuels — 326fe29, 88d75a1, 8e99d14
+- Tour ItemEditModal 12 étapes + bouton aide — 10e32df, 82b4896
+- Tours paramètres espace et communauté — 56e13af, df0b63b, 96cf287
+- Breadcrumb item (Communauté → Espace → Parents) + enfants — 0676f90, 7d60d73
+- Logo → page Accueil — f491243
+- Rejoindre/quitter communautés publiques — 448d67a
+- Communautés vides visibles dans page Espaces — bc5e42b
+- Notification admins pour demandes de publication + banner admin — 1e2e5df, f2eed72
+- Bouton envoi email déplacé dans paramètres communauté — f8a3aa5
+- Parcours premier utilisateur (assistant de démarrage) — e179fd8
+- Template email header/footer SPOK — 5775ae7
+- Suppression SchemaView — f6094f1
 
 ### 2026-03-14
 - Écran d'accueil orienté navigation (communautés → espaces) — d222fcf
