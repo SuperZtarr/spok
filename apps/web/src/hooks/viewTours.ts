@@ -272,23 +272,6 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
     },
   ],
 
-  schema: [
-    {
-      popover: {
-        title: 'Vue Schéma',
-        description: 'Canvas libre : positionnez vos items où vous voulez. Les positions sont sauvegardées automatiquement.',
-      },
-    },
-    {
-      element: '[data-tour="schema-canvas"]',
-      popover: {
-        title: 'Canvas interactif',
-        description: 'Déplacez les nœuds librement. Tirez d\'un point de connexion à un autre pour créer une relation. Double-cliquez pour éditer.',
-        side: 'top',
-      },
-    },
-  ],
-
   bubble: [
     {
       popover: {

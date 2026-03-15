@@ -6,7 +6,6 @@ import type { SpaceTemplateItem } from '@spok/shared';
 import { itemsRoutes } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
-import { canvasLayoutRoutes } from './canvas-layout.js';
 import { auditLogsRoutes } from './auditLogs.js';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
@@ -43,7 +42,6 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     await optInstance.register(itemsRoutes, { prefix: '/:spaceId/items' });
     await optInstance.register(tagsRoutes, { prefix: '/:spaceId/tags' });
     await optInstance.register(referentielsRoutes, { prefix: '/:spaceId/referentiels' });
-    await optInstance.register(canvasLayoutRoutes, { prefix: '/:spaceId/canvas-layout' });
     await optInstance.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
   });
 

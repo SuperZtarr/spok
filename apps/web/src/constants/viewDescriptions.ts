@@ -119,16 +119,6 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Cliquez sur un nœud pour l\'éditer',
     ],
   },
-  schema: {
-    title: 'Schéma',
-    description: 'Vue libre type tableau blanc pour organiser spatialement les éléments.',
-    tips: [
-      'Glissez les éléments pour les positionner librement',
-      'Les positions sont sauvegardées automatiquement',
-      'Double-cliquez sur un élément pour l\'éditer',
-      'Zoomez avec la molette pour ajuster la vue',
-    ],
-  },
   bubble: {
     title: 'Bulles',
     description: 'Visualisation en bulles dont la taille reflète le nombre d\'enfants ou de relations.',

@@ -21,7 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
-import type { Item, ItemType, ItemWithRelations } from '@spok/shared';
+import type { Item, ItemType } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useViewOnboarding } from '../hooks/useOnboarding';
@@ -48,7 +48,6 @@ import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
 import { SunburstView } from '../components/views/SunburstView';
 import { RelationsMapView } from '../components/views/RelationsMapView';
-import { SchemaView } from '../components/views/SchemaView';
 import { BubbleView } from '../components/views/BubbleView';
 import { RadialTreeView } from '../components/views/RadialTreeView';
 import { TreemapView } from '../components/views/TreemapView';
@@ -89,7 +88,6 @@ export function SpacePage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const mindmapRef = useRef<MindMapViewHandle>(null);
   const viewContainerRef = useRef<HTMLDivElement>(null);
-  const schemaReorganizeRef = useRef<(() => void) | null>(null);
   const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -146,8 +144,8 @@ export function SpacePage() {
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority';
-  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority';
+  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
 
@@ -413,12 +411,8 @@ export function SpacePage() {
   }, [viewMode, mindmapExpanded, hasExpandedItems]);
 
   const handleResetLayout = useCallback(() => {
-    if (viewMode === 'schema') {
-      schemaReorganizeRef.current?.();
-    } else {
-      mindmapRef.current?.resetLayout();
-    }
-  }, [viewMode]);
+    mindmapRef.current?.resetLayout();
+  }, []);
 
   const handleFitAll = useCallback(() => {
     mindmapRef.current?.fitAll();
@@ -434,8 +428,8 @@ export function SpacePage() {
 
   // --- Render ---
   return (
-    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full' : ''}`}>
+    <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -467,7 +461,7 @@ export function SpacePage() {
         />
 
         {/* Items / Views */}
-        <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'schema' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -681,28 +675,6 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
-            />
-          ) : viewMode === 'schema' ? (
-            <SchemaView
-              items={(allItemsData?.data || []) as ItemWithRelations[]}
-              spaceId={spaceId!}
-              onEdit={(itemId) => setEditingItemId(itemId)}
-              onDelete={actions.handleDelete}
-              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
-              onAddChild={handleAddChild}
-              onMoveToSpace={(id) => setMoveItemId(id)}
-              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={actions.handleConvertToSpace}
-              onSelfAssign={handleSelfAssign}
-              onMerge={actions.handleMerge}
-              onAbsorbChildren={actions.handleAbsorbChildren}
-              doneStatusId={referentiels?.statuses?.find(s => s.id === 'done')?.id || 'done'}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-              portalItems={portalGroups.flatMap(g => g.items) as ItemWithRelations[]}
-              canEdit={canEdit}
-              onReorganizeRef={schemaReorganizeRef}
             />
           ) : viewMode === 'bubble' ? (
             <BubbleView

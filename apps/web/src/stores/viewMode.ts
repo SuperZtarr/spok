@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'schema' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -25,8 +25,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'graph', label: 'Graphe', icon: 'Network', category: 'exploration' },
   { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', category: 'exploration' },
   { value: 'relations', label: 'Relations', icon: 'Waypoints', category: 'exploration' },
-  { value: 'schema', label: 'Schéma', icon: 'PenTool', category: 'exploration' },
-  { value: 'bubble', label: 'Bulles', icon: 'Circle', category: 'exploration' },
+{ value: 'bubble', label: 'Bulles', icon: 'Circle', category: 'exploration' },
   { value: 'radialTree', label: 'Arbre radial', icon: 'Orbit', category: 'exploration' },
   { value: 'treemap', label: 'Treemap', icon: 'SquareStack', category: 'exploration' },
   { value: 'chord', label: 'Chord', icon: 'Disc', category: 'exploration' },
