@@ -367,12 +367,21 @@ export function DashboardPage() {
       }
     }
 
+    // Include communities with no spaces
+    if (communities) {
+      for (const c of communities) {
+        if (!byCommunity.has(c.id)) {
+          byCommunity.set(c.id, { communityName: c.name, spaces: [] });
+        }
+      }
+    }
+
     const groups = Array.from(byCommunity.entries())
       .map(([communityId, { communityName, spaces }]) => ({ communityId, communityName, spaces }))
       .sort((a, b) => a.communityName.localeCompare(b.communityName));
 
     return { personalSpaces: personal, communityGroups: groups, independentSpaces: independent };
-  }, [allSpaces]);
+  }, [allSpaces, communities]);
 
   // Join space mutation
   const joinSpaceMutation = useMutation({
@@ -796,13 +805,31 @@ export function DashboardPage() {
                       </div>
                     )}
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {tree.map((node) => (
-                      <div key={node.id}>
-                        <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} onLeave={handleLeaveSpace} onDelete={handleDeleteSpace} onAddChildSpace={handleAddChildSpace} onMoveToParent={handleMoveToParent} communityRoles={communityRoles} />
-                      </div>
-                    ))}
-                  </div>
+                  {tree.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {tree.map((node) => (
+                        <div key={node.id}>
+                          <SpaceCardWithChildren node={node} onJoin={handleJoinSpace} onLeave={handleLeaveSpace} onDelete={handleDeleteSpace} onAddChildSpace={handleAddChildSpace} onMoveToParent={handleMoveToParent} communityRoles={communityRoles} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-border rounded-lg p-6 text-center">
+                      <p className="text-sm text-muted-foreground mb-3">Aucun espace dans cette communauté</p>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setNewSpaceType('GROUP');
+                          setNewSpaceCommunityId(group.communityId);
+                          setNewSpaceParentId('');
+                          setSearchParams({ new: 'space' });
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Créer un espace
+                      </Button>
+                    </div>
+                  )}
                 </section>
               );
             })}
