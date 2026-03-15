@@ -260,8 +260,6 @@ export function Layout() {
     enabled: !!user,
     placeholderData: (prev: any) => prev,
     refetchOnWindowFocus: 'always',
-    staleTime: 60_000,
-    gcTime: 1000 * 60 * 30,
     retry: 2,
     retryDelay: 1000,
   });
@@ -271,7 +269,7 @@ export function Layout() {
     queryKey: ['communities'],
     queryFn: communitiesApi.list,
     enabled: !!user,
-    staleTime: 60_000,
+    refetchOnWindowFocus: 'always',
   });
 
   // Admin: pending public community count
