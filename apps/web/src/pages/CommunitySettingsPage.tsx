@@ -911,6 +911,11 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
     return members.filter(m => !alreadySent.has(m.userId));
   }, [emailDetail, members]);
 
+  const community = useQuery({
+    queryKey: ['community', communityId],
+    queryFn: () => communitiesApi.get(communityId),
+  }).data;
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -918,11 +923,6 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
       </div>
     );
   }
-
-  const community = useQuery({
-    queryKey: ['community', communityId],
-    queryFn: () => communitiesApi.get(communityId),
-  }).data;
 
   const emailMembers = (members || []).map(m => ({ userId: m.userId, name: m.name, email: m.email }));
 
