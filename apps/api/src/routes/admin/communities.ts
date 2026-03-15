@@ -465,4 +465,38 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   );
+
+  // POST /admin/communities/:id/approve-public - Approve pending public request
+  fastify.post<{ Params: CommunityParams }>('/:id/approve-public', async (request, reply) => {
+    const { id } = request.params;
+
+    const community = await fastify.prisma.community.findUnique({ where: { id } });
+    if (!community) return reply.notFound('Community not found');
+    if (!community.pendingPublic) return reply.badRequest('Community has no pending public request');
+
+    const updated = await fastify.prisma.community.update({
+      where: { id },
+      data: { isPublic: true, pendingPublic: false },
+      include: { _count: { select: { memberships: true, spaces: true } } },
+    });
+
+    return { ...updated, memberCount: updated._count.memberships, spaceCount: updated._count.spaces };
+  });
+
+  // POST /admin/communities/:id/reject-public - Reject pending public request
+  fastify.post<{ Params: CommunityParams }>('/:id/reject-public', async (request, reply) => {
+    const { id } = request.params;
+
+    const community = await fastify.prisma.community.findUnique({ where: { id } });
+    if (!community) return reply.notFound('Community not found');
+    if (!community.pendingPublic) return reply.badRequest('Community has no pending public request');
+
+    const updated = await fastify.prisma.community.update({
+      where: { id },
+      data: { pendingPublic: false },
+      include: { _count: { select: { memberships: true, spaces: true } } },
+    });
+
+    return { ...updated, memberCount: updated._count.memberships, spaceCount: updated._count.spaces };
+  });
 };

@@ -1239,6 +1239,12 @@ export const adminApi = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    approvePublic: (id: string) =>
+      fetchApi<AdminCommunity>(`/admin/communities/${id}/approve-public`, { method: 'POST' }),
+
+    rejectPublic: (id: string) =>
+      fetchApi<AdminCommunity>(`/admin/communities/${id}/reject-public`, { method: 'POST' }),
   },
 
   tests: {

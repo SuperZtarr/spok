@@ -13,7 +13,7 @@ const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif
 
 const createCommunitySchema = z.object({
   name: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().min(1),
   isPublic: z.boolean().optional(),
 });
 
@@ -34,11 +34,15 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = createCommunitySchema.parse(request.body);
 
+    // If user requests public, create as private with pendingPublic flag
+    const wantsPublic = body.isPublic ?? false;
+
     const community = await fastify.prisma.community.create({
       data: {
         name: body.name,
         description: body.description,
-        isPublic: body.isPublic ?? false,
+        isPublic: false,
+        pendingPublic: wantsPublic,
         memberships: {
           create: {
             userId: request.user.userId,

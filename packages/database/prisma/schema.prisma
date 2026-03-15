@@ -83,8 +83,9 @@ model Community {
   id          String   @id @default(cuid())
   name        String
   description String?
-  isPublic    Boolean  @default(false)
-  avatarUrl   String?
+  isPublic      Boolean  @default(false)
+  pendingPublic Boolean  @default(false)
+  avatarUrl     String?
   coverUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff, Clock, Check, X } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -13,6 +13,7 @@ interface AdminCommunity {
   name: string;
   description?: string;
   isPublic: boolean;
+  pendingPublic?: boolean;
   createdAt: string;
   updatedAt: string;
   memberCount: number;
@@ -49,6 +50,22 @@ export function CommunitiesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
       setCommunityToDelete(null);
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => adminApi.communities.approvePublic(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => adminApi.communities.rejectPublic(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
     },
   });
 
@@ -115,9 +132,9 @@ export function CommunitiesPage() {
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="border border-border rounded-lg overflow-auto max-h-[70vh]">
             <table className="w-full">
-              <thead className="bg-muted">
+              <thead className="bg-muted sticky top-0 z-10">
                 <tr>
                   <SortHeader label="Nom" column="name" />
                   <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
@@ -141,14 +158,22 @@ export function CommunitiesPage() {
                       {community.description || '-'}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                        community.isPublic
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
-                        {community.isPublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                        {community.isPublic ? 'Publique' : 'Privée'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          community.isPublic
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        }`}>
+                          {community.isPublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                          {community.isPublic ? 'Publique' : 'Privée'}
+                        </span>
+                        {community.pendingPublic && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            <Clock className="w-3 h-3" />
+                            En attente
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
@@ -166,7 +191,29 @@ export function CommunitiesPage() {
                       {new Date(community.createdAt).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
+                        {community.pendingPublic && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); approveMutation.mutate(community.id); }}
+                              disabled={approveMutation.isPending}
+                              title="Approuver la publication"
+                            >
+                              <Check className="w-4 h-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(community.id); }}
+                              disabled={rejectMutation.isPending}
+                              title="Rejeter la demande"
+                            >
+                              <X className="w-4 h-4 text-amber-600" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"

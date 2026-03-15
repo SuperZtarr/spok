@@ -161,10 +161,10 @@ export function Layout() {
     });
   }, []);
 
-  // Expand/collapse state for community sections in sidebar
-  const [expandedCommunityIds, setExpandedCommunityIds] = useState<Set<string>>(() => {
+  // Collapsed community IDs (inverted: communities are expanded by default)
+  const [collapsedCommunityIds, setCollapsedCommunityIds] = useState<Set<string>>(() => {
     try {
-      const saved = localStorage.getItem('spok-expanded-communities');
+      const saved = localStorage.getItem('spok-collapsed-communities');
       return saved ? new Set(JSON.parse(saved)) : new Set<string>();
     } catch {
       return new Set<string>();
@@ -172,11 +172,11 @@ export function Layout() {
   });
 
   const toggleCommunityExpand = useCallback((id: string) => {
-    setExpandedCommunityIds(prev => {
+    setCollapsedCommunityIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      localStorage.setItem('spok-expanded-communities', JSON.stringify([...next]));
+      localStorage.setItem('spok-collapsed-communities', JSON.stringify([...next]));
       return next;
     });
   }, []);
@@ -424,7 +424,9 @@ export function Layout() {
 
         {/* Communities with their spaces */}
         {communityGroups.map(({ community, spaceTree }) => {
-          const isExpanded = expandedCommunityIds.has(community.id);
+          const isExpanded = !collapsedCommunityIds.has(community.id);
+          // Count all spaces (flat, not just root nodes)
+          const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
           return (
             <div key={community.id} className="pt-2 pb-2 border-b border-border">
               <div className="flex items-center justify-between px-3 mb-1">
@@ -445,6 +447,11 @@ export function Layout() {
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate group-hover:text-foreground transition-colors">
                     {community.name}
                   </span>
+                  {!isExpanded && spaceCount > 0 && (
+                    <span className="text-[10px] text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                      {spaceCount}
+                    </span>
+                  )}
                 </button>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {community.role === 'OWNER' && (
@@ -453,7 +460,11 @@ export function Layout() {
                     </Link>
                   )}
                   {user && (
-                    <Link to="/?new=space" title="Créer un espace">
+                    <Link
+                      to="/?new=space"
+                      title="Créer un espace"
+                      onClick={() => useDashboardTabStore.getState().setTab('spaces')}
+                    >
                       <Plus className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                     </Link>
                   )}

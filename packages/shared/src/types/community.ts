@@ -5,6 +5,7 @@ export interface Community {
   name: string;
   description?: string;
   isPublic: boolean;
+  pendingPublic: boolean;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   createdAt: string;
@@ -57,6 +58,7 @@ export interface AdminCommunity {
   name: string;
   description?: string;
   isPublic: boolean;
+  pendingPublic: boolean;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   createdAt: string;
