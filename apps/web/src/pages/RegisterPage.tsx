@@ -21,7 +21,13 @@ export function RegisterPage() {
     mutationFn: authApi.register,
     onSuccess: (data) => {
       setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
-      navigate('/');
+      const pendingToken = localStorage.getItem('spok_pending_invitation_token');
+      if (pendingToken) {
+        localStorage.removeItem('spok_pending_invitation_token');
+        navigate(`/invitation?token=${pendingToken}`);
+      } else {
+        navigate('/');
+      }
     },
     onError: (err) => {
       if (err instanceof ApiError) {
@@ -58,7 +64,12 @@ export function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src="/logo.png" alt="SPOK" className="h-12 w-auto mx-auto mb-2" />
-          <CardDescription>Créez votre compte</CardDescription>
+          <CardDescription>
+            {localStorage.getItem('spok_pending_invitation_token')
+              ? 'Créez votre compte pour accepter votre invitation'
+              : 'Créez votre compte'
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

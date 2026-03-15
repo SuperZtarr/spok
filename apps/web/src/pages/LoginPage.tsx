@@ -60,7 +60,12 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src="/logo.png" alt="SPOK" className="h-12 w-auto mx-auto mb-2" />
-          <CardDescription>Connectez-vous à votre compte</CardDescription>
+          <CardDescription>
+            {localStorage.getItem('spok_pending_invitation_token')
+              ? 'Connectez-vous pour accepter votre invitation'
+              : 'Connectez-vous à votre compte'
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
