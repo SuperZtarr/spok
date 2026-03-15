@@ -711,10 +711,10 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8" data-tour="spaces-list">
             {/* Personal spaces */}
             {personalSpaces.length > 0 && (
-              <section>
+              <section data-tour="spaces-personal">
                 <div className="flex items-center gap-2 mb-4">
                   <User className="w-5 h-5 text-muted-foreground" />
                   <h2 className="text-lg font-semibold">Espaces personnels</h2>
@@ -778,7 +778,7 @@ export function DashboardPage() {
               }
 
               return (
-                <section key={group.communityId}>
+                <section key={group.communityId} data-tour="spaces-community">
                   <div className="group/community flex items-center gap-2 mb-4">
                     {group.spaces[0]?.community?.avatarUrl ? (
                       <img src={group.spaces[0].community.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />

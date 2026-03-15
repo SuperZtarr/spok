@@ -619,7 +619,31 @@ export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
     {
       popover: {
         title: 'Espaces',
-        description: 'Vue globale de tous vos espaces, groupés par communauté. Créez, organisez et gérez vos espaces de travail.',
+        description: 'Vue globale de tous vos espaces. Créez, organisez et gérez vos espaces de travail.',
+      },
+    },
+    {
+      element: '[data-tour="spaces-personal"]',
+      popover: {
+        title: 'Espaces personnels',
+        description: 'Vos espaces privés, visibles uniquement par vous. Cliquez sur une carte pour y accéder.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="spaces-community"]',
+      popover: {
+        title: 'Espaces de communauté',
+        description: 'Espaces partagés au sein d\'une communauté. Utilisez le menu (⋮) pour accéder aux paramètres ou ajouter un sous-espace.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="spaces-list"]',
+      popover: {
+        title: 'Organisation',
+        description: 'Les espaces sont regroupés par communauté. Glissez-déposez les cartes pour réorganiser la hiérarchie.',
+        side: 'top',
       },
     },
   ],
