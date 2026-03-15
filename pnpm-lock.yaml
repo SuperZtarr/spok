@@ -177,6 +177,9 @@ importers:
       d3-shape:
         specifier: ^3.2.0
         version: 3.2.0
+      driver.js:
+        specifier: ^1.4.0
+        version: 1.4.0
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
@@ -4108,6 +4111,10 @@ packages:
   /dotenv@17.2.3:
     resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
     engines: {node: '>=12'}
+    dev: false
+
+  /driver.js@1.4.0:
+    resolution: {integrity: sha512-Gm64jm6PmcU+si21sQhBrTAM1JvUrR0QhNmjkprNLxohOBzul9+pNHXgQaT9lW84gwg9GMLB3NZGuGolsz5uew==}
     dev: false
 
   /eastasianwidth@0.2.0:

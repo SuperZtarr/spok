@@ -24,6 +24,7 @@ import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType, ItemWithRelations } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
+import { useViewOnboarding } from '../hooks/useOnboarding';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -96,6 +97,7 @@ export function SpacePage() {
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  useViewOnboarding(viewMode);
   const { includeChildrenSpaceIds } = useSpaceStore();
 
   // Clear selection when leaving the page or changing space

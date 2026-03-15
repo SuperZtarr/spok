@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2 } from 'lucide-react';
+import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi } from '../lib/api';
 
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { WelcomeModal } from './WelcomeModal';
 import { ViewModeSelector } from './ViewModeSelector';
 import { UserProfileModal } from './UserProfileModal';
 import { GlobalSearch } from './GlobalSearch';
@@ -52,12 +54,14 @@ function SpaceTreeItem({
   currentSpaceId,
   expandedIds,
   onToggle,
+  htmlId,
 }: {
   node: SpaceTreeNode;
   level: number;
   currentSpaceId: string | null;
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
+  htmlId?: string;
 }) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedIds.has(node.id);
@@ -68,6 +72,7 @@ function SpaceTreeItem({
   return (
     <>
       <div
+        id={htmlId}
         className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm group ${
           currentSpaceId === node.id
             ? 'bg-primary/10 text-primary font-medium'
@@ -136,6 +141,7 @@ export function Layout() {
   const location = useLocation();
   const { user, logout, refreshToken, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
+  const { startTour, showWelcome, closeWelcome } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -389,7 +395,7 @@ export function Layout() {
   const sidebarContent = (
     <>
       {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
-      <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
+      <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
         <Link to="/" className="block" title={`Dernière MEP : ${new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
       </div>
 
@@ -401,9 +407,10 @@ export function Layout() {
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
             </div>
-            {mySpaces.map((space) => (
+            {mySpaces.map((space, i) => (
               <Link
                 key={space.id}
+                id={i === 0 ? 'sidebar-first-space' : undefined}
                 to={`/spaces/${space.id}/content`}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
                   currentSpaceId === space.id
@@ -423,12 +430,12 @@ export function Layout() {
         )}
 
         {/* Communities with their spaces */}
-        {communityGroups.map(({ community, spaceTree }) => {
+        {communityGroups.map(({ community, spaceTree }, groupIndex) => {
           const isExpanded = !collapsedCommunityIds.has(community.id);
           // Count all spaces (flat, not just root nodes)
           const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
           return (
-            <div key={community.id} className="pt-2 pb-2 border-b border-border">
+            <div key={community.id} id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-2 border-b border-border">
               <div className="flex items-center justify-between px-3 mb-1">
                 <button
                   onClick={() => toggleCommunityExpand(community.id)}
@@ -463,7 +470,7 @@ export function Layout() {
               </div>
               {isExpanded && (
                 spaceTree.length > 0 ? (
-                  spaceTree.map((node) => (
+                  spaceTree.map((node, nodeIndex) => (
                     <SpaceTreeItem
                       key={node.id}
                       node={node}
@@ -471,6 +478,7 @@ export function Layout() {
                       currentSpaceId={currentSpaceId}
                       expandedIds={expandedSpaceIds}
                       onToggle={toggleSpaceExpand}
+                      htmlId={groupIndex === 0 && nodeIndex === 0 && mySpaces.length === 0 ? 'sidebar-first-space' : undefined}
                     />
                   ))
                 ) : (
@@ -505,6 +513,14 @@ export function Layout() {
 
       {/* Footer sidebar */}
       <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
+        <button
+          id="sidebar-help-button"
+          onClick={() => startTour()}
+          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+        >
+          <HelpCircle className="w-4 h-4" />
+          Guide de démarrage
+        </button>
         <DevModeToggle />
         <DevDbStatus />
       </div>
@@ -580,12 +596,12 @@ export function Layout() {
           </div>
           {/* Right: navbar menu + search + user avatar */}
           <div className="flex items-center gap-2 ml-auto flex-shrink-0 px-4 md:px-5">
-            <ViewModeSelector />
-            <GlobalSearch />
+            <div id="header-view-selector"><ViewModeSelector /></div>
+            <div id="header-global-search"><GlobalSearch /></div>
             {user ? (
               <>
                 <NotificationBell />
-                <div className="relative" ref={userMenuRef}>
+                <div id="header-user-menu" className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent transition-colors"
@@ -663,6 +679,12 @@ export function Layout() {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         user={user}
+      />
+
+      <WelcomeModal
+        isOpen={showWelcome}
+        onClose={closeWelcome}
+        onStartTour={startTour}
       />
     </div>
   );

@@ -135,7 +135,7 @@ export function SpaceToolbar({
         )}
 
         {/* Type filter dropdown */}
-        <div ref={typeDropdownRef} className="relative flex-shrink-0">
+        <div ref={typeDropdownRef} className="relative flex-shrink-0" data-tour="toolbar-filters">
           <button
             onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
             className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
@@ -224,7 +224,7 @@ export function SpaceToolbar({
         </div>
 
         {/* Search input */}
-        <div className="relative flex-shrink-0">
+        <div className="relative flex-shrink-0" data-tour="toolbar-search">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
@@ -342,7 +342,7 @@ export function SpaceToolbar({
             </Button>
           )}
           {canEdit && (
-            <Button size="sm" onClick={onNewItem}>
+            <Button size="sm" onClick={onNewItem} data-tour="toolbar-new-item">
               <Plus className="w-4 h-4 mr-1" />
               Nouveau
             </Button>

@@ -800,3 +800,20 @@ Après chaque commit :
 **Commit :** d6d225f
 
 ---
+
+#### [2026-03-15] - Refonte sidebar multi-communauté + gestion communautés + emails
+
+**Demande :** Refonte sidebar (communautés dépliées par défaut, compteur), flow création communauté avec approbation admin, historique emails communauté avec renvoi, admin UI améliorée, fix cross-communauté parentId, domaine Resend.
+**Actions réalisées :**
+- Sidebar : logique inversée (collapsedCommunityIds), compteur d'espaces quand réduit, suppression bouton +
+- Création communauté : modale 2 étapes (sensibilisation + formulaire), description obligatoire, demande publication → pendingPublic → approbation admin
+- Schema Prisma : pendingPublic sur Community, CommunityEmail + CommunityEmailRecipient
+- Backend : approve/reject public, persist emails, list/get/resend emails, préfixe objet [SPOK · Communauté]
+- Frontend : badge pendingPublic, onglet Emails dans paramètres communauté, renvoi individuel (clic sur nom)
+- Admin : modales 90% viewport (taille xl), en-têtes tableau sticky, boutons approuver/rejeter
+- Fix : détachement parentId quand espace change de communauté (données prod corrigées)
+- Fix : domaine email spok.app → spok.space, colonnes membres pleine hauteur, wx-react-gantt supprimé
+**État :** TERMINÉ
+**Commits :** 75d49c7, a4b1220, 90d00f6, 839b929, 0a833f6, 30fbf6d, ad6f162
+
+---

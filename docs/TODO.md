@@ -7,7 +7,7 @@
 - [ ] Breadcrumb dans l'item (Communauté, Espaces, hiérarchie)
 
 ### UX & navigation
-- [ ] Refonte sidebar : voir toutes les communautés d'un coup (au lieu du dropdown mono-communauté)
+- [x] Refonte sidebar : communautés dépliées par défaut, compteur d'espaces quand réduit — 75d49c7 (2026-03-15)
 - [ ] Breadcrumb communauté → espace dans les pages de contenu
 - [ ] Onboarding pour les nouveaux utilisateurs (guide premier lancement, tutoriel interactif)
 - [ ] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités
@@ -15,7 +15,8 @@
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
 ### Infra & emails
-- [ ] Configurer un domaine custom Resend (ex: `noreply@spok.app`) avec SPF/DKIM/DMARC pour éviter les spams
+- [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
+- [ ] invitation d'un nouveau membre
 
 ## Idées (à explorer)
 
@@ -60,6 +61,16 @@
 
 ### UX & navigation
 - [x] Écran d'accueil orienté navigation (communautés → espaces) — d222fcf
+- [x] Sidebar multi-communauté : dépliées par défaut, compteur quand réduit — 75d49c7
+
+### Communautés
+- [x] Flow création communauté multi-étapes avec approbation admin — 75d49c7
+- [x] Historique emails communauté + renvoi aux nouveaux/anciens membres — 0a833f6, ad6f162
+- [x] Modales admin 90% viewport + en-têtes tableau sticky — a4b1220
+
+### Infra
+- [x] Domaine Resend spok.space (SPF/DKIM/DMARC) — 30fbf6d
+- [x] Fix détachement parentId cross-communauté — 90d00f6
 
 ### Éditeur & contenu
 - [x] @mentions dans TipTap — 000593b
@@ -109,6 +120,15 @@
 - [x] Vue matricielle — 5e73a0f
 
 ## Historique
+
+### 2026-03-15
+- Sidebar multi-communauté : dépliées par défaut, compteur espaces quand réduit — 75d49c7
+- Flow création communauté multi-étapes + approbation admin (pendingPublic) — 75d49c7
+- Modales admin 90% viewport + en-têtes tableau sticky — a4b1220
+- Fix détachement parentId cross-communauté — 90d00f6
+- Fix dépendance wx-react-gantt + colonnes membres pleine hauteur — 839b929
+- Historique emails communauté + renvoi individuel/groupé — 0a833f6, ad6f162
+- Domaine Resend spok.space (SPF/DKIM/DMARC) — 30fbf6d
 
 ### 2026-03-14
 - Écran d'accueil orienté navigation (communautés → espaces) — d222fcf

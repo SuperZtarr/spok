@@ -37,6 +37,7 @@
     "d3-hierarchy": "^3.1.2",
     "d3-interpolate": "^3.0.1",
     "d3-shape": "^3.2.0",
+    "driver.js": "^1.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
