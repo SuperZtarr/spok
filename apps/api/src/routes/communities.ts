@@ -1153,6 +1153,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     prisma: typeof fastify.prisma,
     emailRecord: { id: string; subject: string; html: string },
     userIds: string[],
+    communityName?: string,
   ) {
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
@@ -1172,11 +1173,13 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         await resend.emails.send({
           from: 'SPOK <notifications@spok.space>',
           to: user.email,
-          subject: emailRecord.subject,
+          subject: communityName ? `[SPOK · ${communityName}] ${emailRecord.subject}` : emailRecord.subject,
           html: emailRecord.html,
         });
-        await prisma.communityEmailRecipient.create({
-          data: { emailId: emailRecord.id, userId: user.id },
+        await prisma.communityEmailRecipient.upsert({
+          where: { emailId_userId: { emailId: emailRecord.id, userId: user.id } },
+          create: { emailId: emailRecord.id, userId: user.id },
+          update: { sentAt: new Date() },
         });
         sent++;
       } catch {
@@ -1225,6 +1228,11 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('No valid recipients found among community members');
       }
 
+      const community = await fastify.prisma.community.findUnique({
+        where: { id: request.params.id },
+        select: { name: true },
+      });
+
       // Persist the email
       const emailRecord = await fastify.prisma.communityEmail.create({
         data: {
@@ -1235,7 +1243,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      const result = await sendEmailsToUsers(fastify.prisma, emailRecord, validUserIds);
+      const result = await sendEmailsToUsers(fastify.prisma, emailRecord, validUserIds, community?.name);
       return result;
     }
   );
@@ -1347,17 +1355,21 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.forbidden('Insufficient permissions');
       }
 
-      const email = await fastify.prisma.communityEmail.findUnique({
-        where: { id: request.params.emailId, communityId: request.params.id },
-        include: { recipients: { select: { userId: true } } },
-      });
+      const [email, community] = await Promise.all([
+        fastify.prisma.communityEmail.findUnique({
+          where: { id: request.params.emailId, communityId: request.params.id },
+        }),
+        fastify.prisma.community.findUnique({
+          where: { id: request.params.id },
+          select: { name: true },
+        }),
+      ]);
 
       if (!email) return reply.notFound('Email not found');
 
       const { recipientIds } = request.body;
 
-      // Filter: only community members who haven't received this email yet
-      const alreadySent = new Set(email.recipients.map((r) => r.userId));
+      // Filter: only community members
       const members = await fastify.prisma.communityMembership.findMany({
         where: {
           communityId: request.params.id,
@@ -1366,12 +1378,12 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         select: { userId: true },
       });
 
-      const newUserIds = members.map((m) => m.userId).filter((id) => !alreadySent.has(id));
-      if (newUserIds.length === 0) {
-        return reply.badRequest('All selected recipients have already received this email');
+      const validUserIds = members.map((m) => m.userId);
+      if (validUserIds.length === 0) {
+        return reply.badRequest('No valid recipients found among community members');
       }
 
-      const result = await sendEmailsToUsers(fastify.prisma, email, newUserIds);
+      const result = await sendEmailsToUsers(fastify.prisma, email, validUserIds, community?.name);
       return result;
     }
   );

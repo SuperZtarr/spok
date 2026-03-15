@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw } from 'lucide-react';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -871,13 +871,25 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
                     {/* Recipients list */}
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Destinataires ({emailDetail.recipients.length})
+                        Déjà envoyé ({emailDetail.recipients.length})
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {emailDetail.recipients.map(r => (
-                          <span key={r.userId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted text-foreground">
+                          <button
+                            key={r.userId}
+                            onClick={() => {
+                              resendMutation.mutate({
+                                emailId: email.id,
+                                recipientIds: [r.userId],
+                              });
+                            }}
+                            disabled={resendMutation.isPending}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-muted text-foreground hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
+                            title={`Renvoyer à ${r.name}`}
+                          >
+                            <RotateCw className="w-3 h-3" />
                             {r.name}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -903,15 +915,27 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
                             {resendMutation.isPending ? (
                               <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Envoi...</>
                             ) : (
-                              <><Send className="w-3.5 h-3.5 mr-1.5" />Envoyer aux nouveaux</>
+                              <><Send className="w-3.5 h-3.5 mr-1.5" />Envoyer à tous</>
                             )}
                           </Button>
                         </div>
                         <div className="flex flex-wrap gap-1 mt-2">
                           {newRecipients.map(m => (
-                            <span key={m.userId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                            <button
+                              key={m.userId}
+                              onClick={() => {
+                                resendMutation.mutate({
+                                  emailId: email.id,
+                                  recipientIds: [m.userId],
+                                });
+                              }}
+                              disabled={resendMutation.isPending}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors cursor-pointer disabled:opacity-50"
+                              title={`Envoyer à ${m.name}`}
+                            >
+                              <Send className="w-3 h-3" />
                               {m.name}
-                            </span>
+                            </button>
                           ))}
                         </div>
                       </div>
