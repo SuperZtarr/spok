@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
@@ -12,6 +12,8 @@ import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown } from 'lucide-react';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
+import { driver } from 'driver.js';
+import { ITEM_MODAL_TOUR } from '../hooks/viewTours';
 import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
@@ -54,6 +56,31 @@ export function ItemEditModal({
   onDelete,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
+  const tourShownRef = useRef(false);
+
+  // Show modal tour on first open
+  useEffect(() => {
+    if (!isOpen || tourShownRef.current) return;
+    const key = 'spok-item-modal-tour-done';
+    if (localStorage.getItem(key)) return;
+    tourShownRef.current = true;
+    const timer = setTimeout(() => {
+      const validSteps = ITEM_MODAL_TOUR.filter(s => !s.element || document.querySelector(s.element));
+      if (validSteps.length === 0) return;
+      const d = driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        nextBtnText: 'Suivant',
+        prevBtnText: 'Précédent',
+        doneBtnText: 'Terminer',
+        progressText: '{{current}} / {{total}}',
+        steps: validSteps,
+        onDestroyed: () => localStorage.setItem(key, 'true'),
+      });
+      d.drive();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -524,7 +551,7 @@ export function ItemEditModal({
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${typeConfig?.bgHover || 'bg-muted'}`}>
               {TypeIcon && <TypeIcon className={`w-6 h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0" data-tour="item-title">
               {canEdit ? (
                 <Input
                   value={title}
@@ -613,7 +640,7 @@ export function ItemEditModal({
           <div className="space-y-6 min-w-0">
 
               {/* Description */}
-              <div className="space-y-2">
+              <div className="space-y-2" data-tour="item-description">
                 <label className="text-sm font-medium">Description</label>
                 <RichTextEditor
                   key={itemId}
@@ -627,7 +654,7 @@ export function ItemEditModal({
 
               {/* Reactions on item */}
               {item && (
-                <div className="space-y-1">
+                <div className="space-y-1" data-tour="item-reactions">
                   <h2 className="text-sm font-medium text-muted-foreground">Réactions</h2>
                   <ReactionBar
                     spaceId={spaceId}
@@ -638,7 +665,7 @@ export function ItemEditModal({
               )}
 
               {/* Contributions */}
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="item-contributions">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <MessageSquarePlus className="w-5 h-5" />
                   Contributions ({contributionCount})
@@ -912,7 +939,7 @@ export function ItemEditModal({
           </div>{/* end center column */}
 
           {/* === RIGHT COLUMN === */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="item-details">
 
               {/* Parent */}
               <div className="space-y-2">
@@ -1107,7 +1134,7 @@ export function ItemEditModal({
           </div>
 
           {/* Footer — always visible */}
-          <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
+          <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
             {canEdit && (
               <Button type="submit" disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}

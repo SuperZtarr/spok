@@ -77,6 +77,7 @@ interface KanbanColumnProps {
   nextStatusLabel?: string;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
+  isFirstColumn?: boolean;
 }
 
 interface KanbanCardProps {
@@ -97,12 +98,13 @@ interface KanbanCardProps {
   nextStatusLabel?: string;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
+  isFirstCard?: boolean;
 }
 
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, isFirstCard }: KanbanCardProps) {
   const Icon = getTypeIcon(item.type);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -119,6 +121,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
     <div
       ref={setNodeRef}
       style={style}
+      {...(isFirstCard ? { 'data-tour': 'kanban-card' } : {})}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
       }`}
@@ -223,7 +226,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isOver, nextStatus, nextStatusLabel, canEdit, referentiels }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isOver, nextStatus, nextStatusLabel, canEdit, referentiels, isFirstColumn }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -235,6 +238,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
 
   return (
     <div
+      {...(isFirstColumn ? { 'data-tour': 'kanban-column' } : {})}
       className={`flex-1 min-w-[180px] bg-muted/50 rounded-lg border-t-4 flex flex-col ${borderColorClass} transition-colors ${
         isOver ? bgHoverClass : ''
       }`}
@@ -256,7 +260,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
           isOver ? 'ring-2 ring-primary ring-inset' : ''
         }`}
       >
-        {items.map((item) => (
+        {items.map((item, cardIdx) => (
           <KanbanCard
             key={item.id}
             item={item}
@@ -275,6 +279,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             nextStatusLabel={nextStatusLabel}
             canEdit={canEdit}
             referentiels={referentiels}
+            isFirstCard={isFirstColumn && cardIdx === 0}
           />
         ))}
 
@@ -488,7 +493,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                 style={{ height: spaceSections.length > 1 ? getHeight(section.spaceId) : undefined }}
               >
                 <div className="flex gap-3 h-full min-h-0">
-                  {statuses.map((status) => {
+                  {statuses.map((status, statusIdx) => {
                     const droppableId = `${section.spaceId}::${status.id}`;
                     return (
                       <KanbanColumn
@@ -511,6 +516,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                         nextStatusLabel={nextStatusMap[status.id]?.label}
                         canEdit={canEdit}
                         referentiels={referentiels}
+                        isFirstColumn={idx === 0 && statusIdx === 0}
                       />
                     );
                   })}

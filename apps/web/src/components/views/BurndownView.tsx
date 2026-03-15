@@ -224,7 +224,7 @@ export function BurndownView({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Controls */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
+      <div data-tour="burndown-toggle" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
         <span className="text-xs text-muted-foreground">Mode :</span>
         {([
           { value: 'burnup' as ChartMode, label: 'Burnup' },

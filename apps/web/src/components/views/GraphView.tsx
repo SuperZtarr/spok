@@ -392,7 +392,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
         {scopeOptions.length > 1 && (
           <>
             <div className="text-xs font-medium text-muted-foreground mb-1">Perimetre</div>
-            <div className="flex flex-col gap-1">
+            <div data-tour="graph-scope" className="flex flex-col gap-1">
               {scopeOptions.map(opt => {
                 const Icon = opt.icon;
                 return (

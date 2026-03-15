@@ -181,7 +181,7 @@ export function CalendarView({
   }, [onCreateItem, canEdit]);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col fc-spok-wrapper" style={{ height: 'calc(100vh - 140px)' }}>
+    <div data-tour="calendar-toolbar" className="flex-1 min-h-0 flex flex-col fc-spok-wrapper" style={{ height: 'calc(100vh - 140px)' }}>
       <style>{`
         .fc-spok-wrapper {
           --fc-border-color: hsl(var(--border));

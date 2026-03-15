@@ -869,6 +869,7 @@ export function SpacePage() {
                       searchMatchIds={searchMatchIds}
                       statusColorMap={statusColorMap}
                       statusLabelMap={statusLabelMap}
+                      isFirstTreeItem={index === 0}
                     />
                   ))}
                   {/* Portal sections for items from checked child spaces */}

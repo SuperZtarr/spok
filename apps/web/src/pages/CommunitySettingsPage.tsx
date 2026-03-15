@@ -294,7 +294,7 @@ export function CommunitySettingsPage() {
 
       {/* Tabs */}
       <div className="border-b border-border mb-6">
-        <div className="flex gap-1">
+        <div className="flex gap-1" data-tour="community-tabs">
           {([
             { id: 'general', label: 'Général' },
             ...(canEdit ? [{ id: 'images' as const, label: 'Images' }] : []),

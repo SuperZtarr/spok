@@ -74,6 +74,7 @@ export interface TreeItemProps {
   searchMatchIds?: Set<string>;
   statusColorMap: Record<string, string>;
   statusLabelMap: Record<string, string>;
+  isFirstTreeItem?: boolean;
 }
 
 // Tree item component - uses useDraggable + useDroppable (no transform/reorder animations)
@@ -110,6 +111,7 @@ export function TreeItem({
   searchMatchIds,
   statusColorMap,
   statusLabelMap,
+  isFirstTreeItem,
 }: TreeItemProps) {
   // Draggable (for the grip handle)
   const {
@@ -173,6 +175,7 @@ export function TreeItem({
             ref={setDragRef}
             {...attributes}
             {...listeners}
+            {...(isFirstTreeItem ? { 'data-tour': 'tree-drag' } : {})}
             className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
             title="Glisser pour réorganiser"
@@ -187,6 +190,7 @@ export function TreeItem({
               e.stopPropagation();
               onToggleExpand(item.id);
             }}
+            {...(isFirstTreeItem ? { 'data-tour': 'tree-expand' } : {})}
             className="p-0.5 hover:bg-muted rounded"
             title={isExpanded ? 'Réduire' : 'Développer'}
           >

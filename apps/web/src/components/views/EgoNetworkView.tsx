@@ -234,7 +234,7 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
   return (
     <div className="flex flex-col h-full">
       {/* Controls */}
-      <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm flex-shrink-0">
+      <div data-tour="ego-controls" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm flex-shrink-0">
         {/* Center item selector */}
         <div ref={dropdownRef} className="relative">
           <button

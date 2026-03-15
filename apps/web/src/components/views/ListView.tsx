@@ -207,7 +207,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
       ) : (
         <>
           {/* Header — fixed outside scroll */}
-          <div className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
+          <div data-tour="list-headers" className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre
@@ -242,7 +242,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           {/* Rows — scrollable */}
           <div className="flex-1 overflow-auto">
           <div className="divide-y divide-border">
-            {sortedItems.map((item) => {
+            {sortedItems.map((item, index) => {
               const Icon = getTypeIcon(item.type);
               const statusLabel = statusLabels[item.status || ''] || 'Non défini';
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
@@ -255,6 +255,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               return (
                 <div
                   key={item.id}
+                  {...(index === 0 ? { 'data-tour': 'list-row' } : {})}
                   className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >

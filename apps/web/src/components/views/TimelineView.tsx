@@ -536,7 +536,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           </Button>
 
           {/* Zoom controls */}
-          <div className="flex items-center gap-1 border rounded-md">
+          <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
             <Button
               variant="ghost"
               size="sm"
@@ -763,6 +763,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                     {/* Item bar */}
                     {barStyle && (
                       <div
+                        {...(itemIndex === 0 ? { 'data-tour': 'timeline-bar' } : {})}
                         className={`absolute top-1 h-8 rounded transition-all group/bar hover:z-10 ${statusColor} ${
                           barStyle.hasDate
                             ? isPortal ? 'border-2 border-dashed border-primary/30' : 'shadow-md border border-black/20'

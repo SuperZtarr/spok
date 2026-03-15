@@ -305,7 +305,7 @@ export function ChordView({ items }: ChordViewProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Controls */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 flex-wrap">
+      <div data-tour="chord-mode" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 flex-wrap">
         <span className="text-xs text-muted-foreground">Grouper par</span>
         <div className="flex items-center gap-1">
           <button

@@ -743,7 +743,7 @@ function SchemaViewInner({
   }, [canEdit, onCreateItem]);
 
   return (
-    <div className="w-full h-full relative">
+    <div data-tour="schema-canvas" className="w-full h-full relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}

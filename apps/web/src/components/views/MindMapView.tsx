@@ -475,7 +475,8 @@ function MindMapViewInner({
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], edgePosMap);
     setNodes(allNodes);
     setEdges(allEdges);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId]);
+    setTimeout(() => fitView({ padding: 0.1 }), 50);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -850,7 +851,7 @@ function MindMapViewInner({
         }}
       >
         <Background color="#e2e8f0" gap={20} />
-        <Controls className="hidden sm:flex" position="bottom-right" />
+        <Controls className="hidden sm:flex" position="bottom-right" data-tour="mindmap-controls" />
         <MiniMap
           className="hidden md:block"
           nodeColor={(node) => node.data?.hexColor as string || '#f3f4f6'}

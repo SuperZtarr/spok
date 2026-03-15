@@ -155,7 +155,7 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
   return (
     <div className="flex flex-col h-full">
       {/* Dimension selectors */}
-      <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm">
+      <div data-tour="crosstable-dimensions" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm">
         <label className="flex items-center gap-2">
           <span className="text-muted-foreground">Lignes :</span>
           <select

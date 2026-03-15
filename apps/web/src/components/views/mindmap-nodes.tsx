@@ -171,6 +171,7 @@ export function SpaceNode({ data }: SpaceNodeProps) {
 
   return (
     <div
+      data-tour="mindmap-node"
       className={`px-6 py-3 rounded-xl shadow-lg border-3 border-primary bg-primary/10 min-w-[140px] cursor-default transition-all ${isDropTarget ? 'ring-3 ring-primary ring-offset-2 scale-110' : ''}`}
     >
       <Handle type="source" position={Position.Top} className="!bg-primary !w-3 !h-3" id="top-source" />
