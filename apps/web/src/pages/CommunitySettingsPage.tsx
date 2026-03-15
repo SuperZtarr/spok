@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { driver } from 'driver.js';
+import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -10,6 +13,97 @@ import { Select } from '../components/ui/Select';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 import { useAuthStore } from '../stores/auth';
+
+function CommunitySettingsHelpButton() {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const btn = btnRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const w = 320;
+      let left = rect.right - w;
+      if (left < 8) left = 8;
+      setPos({ top: rect.bottom + 6, left });
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (popRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', handle);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handleKey); };
+  }, [open]);
+
+  const launchTour = () => {
+    setOpen(false);
+    setTimeout(() => {
+      const validSteps = COMMUNITY_SETTINGS_TOUR.filter(s => !s.element || document.querySelector(s.element));
+      if (validSteps.length === 0) return;
+      const d = driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        nextBtnText: 'Suivant',
+        prevBtnText: 'Précédent',
+        doneBtnText: 'Terminer',
+        progressText: '{{current}} / {{total}}',
+        steps: validSteps,
+      });
+      d.drive();
+    }, 200);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto"
+        title="Aide"
+      >
+        <HelpCircle className="w-4 h-4" />
+      </button>
+      {open && createPortal(
+        <div ref={popRef} className="fixed z-[200] w-[320px] rounded-lg border border-border bg-card shadow-lg" style={{ top: pos.top, left: pos.left }}>
+          <div className="flex items-center justify-between px-4 pt-3 pb-2">
+            <h3 className="text-sm font-semibold">Paramètres de la communauté</h3>
+            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">
+            Gérez votre communauté : informations, images, espaces, membres, tags et emails.
+          </p>
+          <ul className="px-4 pb-3 space-y-1">
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Général : nom, description et visibilité publique/privée</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Espaces : organisez la hiérarchie par glisser-déposer</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Membres : 3 colonnes (non-membres, membres, propriétaires)</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Emails : historique des envois, renvoi aux nouveaux membres</li>
+          </ul>
+          <div className="px-4 pb-3">
+            <button
+              type="button"
+              onClick={launchTour}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Lancer le tutoriel interactif
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: string | null) => void }) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -290,6 +384,7 @@ export function CommunitySettingsPage() {
           </h1>
           <p className="text-muted-foreground">Paramètres de la communauté</p>
         </div>
+        <CommunitySettingsHelpButton />
       </div>
 
       {/* Tabs */}
