@@ -959,6 +959,7 @@ export function SpacePage() {
         referentiels={referentiels}
         canEdit={canEdit}
         spaceName={space?.name}
+        communityName={space?.community?.name}
         onNavigate={setEditingItemId}
         onDelete={actions.handleDelete}
       />

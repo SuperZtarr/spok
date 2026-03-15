@@ -9,7 +9,8 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
 import { driver } from 'driver.js';
@@ -39,6 +40,7 @@ interface ItemEditModalProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   spaceName?: string;
+  communityName?: string;
   onNavigate?: (itemId: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -52,6 +54,7 @@ export function ItemEditModal({
   referentiels,
   canEdit = true,
   spaceName,
+  communityName,
   onNavigate,
   onDelete,
 }: ItemEditModalProps) {
@@ -546,8 +549,39 @@ export function ItemEditModal({
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          {/* Header with type icon + title + breadcrumb */}
-          <div className="flex items-center gap-4 mb-2">
+          {/* Breadcrumb */}
+          {(communityName || spaceName || breadcrumb.length > 0) && (
+            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3 px-1 flex-wrap" data-tour="item-breadcrumb">
+              {communityName && (
+                <>
+                  <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{communityName}</span>
+                  <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground/50" />
+                </>
+              )}
+              {spaceName && (
+                <Link to={`/spaces/${spaceId}/content`} onClick={onClose} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Home className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="font-medium">{spaceName}</span>
+                </Link>
+              )}
+              {breadcrumb.map((crumb) => (
+                <span key={crumb.id} className="flex items-center gap-1.5">
+                  <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground/50" />
+                  {onNavigate ? (
+                    <button type="button" onClick={() => onNavigate(crumb.id)} className="hover:text-primary hover:underline transition-colors">
+                      {crumb.title}
+                    </button>
+                  ) : (
+                    <span>{crumb.title}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          )}
+
+          {/* Header with type icon + title */}
+          <div className="flex items-center gap-4 mb-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${typeConfig?.bgHover || 'bg-muted'}`}>
               {TypeIcon && <TypeIcon className={`w-6 h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
             </div>
@@ -563,26 +597,6 @@ export function ItemEditModal({
               ) : (
                 <h1 className="text-xl font-bold truncate">{title}</h1>
               )}
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                {spaceName && (
-                  <>
-                    <Home className="w-3 h-3 flex-shrink-0" />
-                    <span className="font-medium">{spaceName}</span>
-                  </>
-                )}
-                {breadcrumb.map((crumb) => (
-                  <span key={crumb.id} className="flex items-center gap-1">
-                    <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                    {onNavigate ? (
-                      <button type="button" onClick={() => onNavigate(crumb.id)} className="hover:text-primary hover:underline transition-colors">
-                        {crumb.title}
-                      </button>
-                    ) : (
-                      <span>{crumb.title}</span>
-                    )}
-                  </span>
-                ))}
-              </div>
             </div>
             {item?.createdBy && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
