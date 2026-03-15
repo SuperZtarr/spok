@@ -430,10 +430,18 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
 // Tour for ItemEditModal
 export const ITEM_MODAL_TOUR: TourStep[] = [
   {
+    element: '[data-tour="item-breadcrumb"]',
+    popover: {
+      title: 'Fil d\'Ariane',
+      description: 'Communauté → Espace → Parents. Cliquez sur l\'espace pour y retourner, ou sur un parent pour naviguer dans la hiérarchie.',
+      side: 'bottom',
+    },
+  },
+  {
     element: '[data-tour="item-title"]',
     popover: {
       title: 'Titre & type',
-      description: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type (note, tâche, projet…). Le fil d\'Ariane montre la position dans la hiérarchie.',
+      description: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type (note, tâche, projet…).',
       side: 'bottom',
     },
   },
@@ -467,6 +475,14 @@ export const ITEM_MODAL_TOUR: TourStep[] = [
       title: 'Détails',
       description: 'Parent, type, statut, priorité, dates, assigné, tags et relations. Tout se configure ici.',
       side: 'left',
+    },
+  },
+  {
+    element: '[data-tour="item-children"]',
+    popover: {
+      title: 'Éléments enfants',
+      description: 'Les sous-éléments de cet item. Cliquez pour naviguer. Le compteur indique les petits-enfants.',
+      side: 'top',
     },
   },
   {

@@ -1152,7 +1152,7 @@ export function ItemEditModal({
             const children = allItems.filter(i => i.parentId === item.id);
             if (children.length === 0) return null;
             return (
-              <div className="border-t border-border mt-4 pt-4">
+              <div className="border-t border-border mt-4 pt-4" data-tour="item-children">
                 <h2 className="text-sm font-semibold flex items-center gap-2 mb-2">
                   <GitBranch className="w-4 h-4" />
                   Éléments enfants ({children.length})
