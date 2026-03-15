@@ -5,6 +5,7 @@ import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from '../utils/audit.js';
 import { createNotification } from '../utils/notifications.js';
+import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
 
 // autoJoinCommunitySpaces is imported from invitations.ts
@@ -1195,7 +1196,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
           from: 'SPOK <notifications@spok.space>',
           to: user.email,
           subject: communityName ? `[SPOK · ${communityName}] ${emailRecord.subject}` : emailRecord.subject,
-          html: emailRecord.html,
+          html: wrapEmailTemplate(emailRecord.html),
         });
         await prisma.communityEmailRecipient.upsert({
           where: { emailId_userId: { emailId: emailRecord.id, userId: user.id } },

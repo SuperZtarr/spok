@@ -8,6 +8,7 @@ import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
+import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
 import { createNotification } from '../utils/notifications.js';
 import { createInvitation as createInvitationHelper } from './invitations.js';
@@ -1567,7 +1568,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             from: 'SPOK <notifications@spok.space>',
             to: email,
             subject: body.subject,
-            html: body.html,
+            html: wrapEmailTemplate(body.html),
           });
           sent++;
         } catch {

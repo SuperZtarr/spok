@@ -2,6 +2,7 @@ import type { PrismaClient, NotificationType } from '@spok/database';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@spok/shared';
 import type { NotificationPreferences, NotificationChannel } from '@spok/shared';
 import { Resend } from 'resend';
+import { wrapEmailTemplate } from './emailTemplate.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -39,17 +40,10 @@ async function sendNotificationEmail(
       from: 'SPOK <notifications@spok.space>',
       to: email,
       subject: title,
-      html: `
-        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #333;">${title}</h2>
-          ${message ? `<p style="color: #666;">${message}</p>` : ''}
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 12px;">
-            Vous recevez cet email car vous avez activé les notifications email sur SPOK.
-            Vous pouvez modifier vos préférences dans votre profil.
-          </p>
-        </div>
-      `,
+      html: wrapEmailTemplate(`
+        <h2 style="margin: 0 0 12px; color: #18181b; font-size: 18px;">${title}</h2>
+        ${message ? `<p style="margin: 0; color: #52525b; font-size: 14px; line-height: 1.6;">${message}</p>` : ''}
+      `),
     });
   } catch (err) {
     console.error('[notification] Failed to send email:', err);
