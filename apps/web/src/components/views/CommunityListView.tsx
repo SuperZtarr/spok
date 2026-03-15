@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Globe, Lock, Crown, User, FolderOpen, Plus, X, AlertTriangle, Search, ArrowRight, Clock } from 'lucide-react';
+import { Users, Globe, Lock, Crown, User, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -11,7 +11,11 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
 
 type CreateStep = 'awareness' | 'form';
 
-export function CommunityListView() {
+export interface CommunityListViewHandle {
+  openCreate: () => void;
+}
+
+export const CommunityListView = forwardRef<CommunityListViewHandle>(function CommunityListView(_props, ref) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
@@ -20,6 +24,10 @@ export function CommunityListView() {
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [wantPublic, setWantPublic] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    openCreate: () => setShowCreate(true),
+  }));
 
   const { data: communities, isLoading } = useQuery({
     queryKey: ['communities'],
@@ -80,17 +88,6 @@ export function CommunityListView() {
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Action bar */}
-        <div className="flex items-center justify-end mb-6">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4" />
-            Nouvelle communauté
-          </button>
-        </div>
-
         {/* Community cards */}
         {!communities || communities.length === 0 ? (
           <div className="flex items-center justify-center py-16">
@@ -370,4 +367,4 @@ export function CommunityListView() {
       )}
     </div>
   );
-}
+});

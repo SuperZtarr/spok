@@ -32,6 +32,7 @@ interface DashboardMindMapViewProps {
   personalSpaces: SpaceWithRole[];
   independentSpaces: SpaceWithRole[];
   onMoveSpace?: (spaceId: string, newParentId: string | null) => void;
+  resetRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 interface TreeDatum {
@@ -459,6 +460,7 @@ function DashboardMindMapInner({
   personalSpaces,
   independentSpaces,
   onMoveSpace,
+  resetRef,
 }: DashboardMindMapViewProps) {
   const navigate = useNavigate();
   const { getIntersectingNodes, getNodes, fitView } = useReactFlow();
@@ -670,6 +672,11 @@ function DashboardMindMapInner({
     setEdges(newEdges);
     setTimeout(() => fitView({ padding: 0.3 }), 50);
   }, [treeData, setNodes, setEdges, fitView]);
+
+  useEffect(() => {
+    if (resetRef) resetRef.current = resetLayout;
+    return () => { if (resetRef) resetRef.current = null; };
+  }, [resetRef, resetLayout]);
 
   return (
     <ReactFlow

@@ -69,8 +69,19 @@ function buildMainSteps() {
   ];
 }
 
+const HELP_BUTTON_STEP: TourStep = {
+  element: '[title="Aide sur cette vue"]',
+  popover: {
+    title: 'Besoin d\'aide ?',
+    description: 'Relancez ce tutoriel à tout moment en cliquant sur ce bouton.',
+    side: 'bottom',
+  },
+};
+
 function runTour(steps: TourStep[], storageKey: string) {
-  const validSteps = steps.filter(step =>
+  // Add help button reminder as final step
+  const allSteps = [...steps, HELP_BUTTON_STEP];
+  const validSteps = allSteps.filter(step =>
     !step.element || document.querySelector(step.element)
   );
 

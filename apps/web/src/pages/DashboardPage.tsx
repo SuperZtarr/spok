@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid, RotateCcw } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -20,6 +20,7 @@ import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '../components/ui/ItemActionMenu';
 import { useDashboardTabStore } from '../stores/dashboardTab';
 import { CommunityListView } from '../components/views/CommunityListView';
+import type { CommunityListViewHandle } from '../components/views/CommunityListView';
 import { MyOrganizationView } from '../components/views/MyOrganizationView';
 import { DashboardCockpitView } from '../components/views/DashboardCockpitView';
 import { HomeView } from '../components/views/HomeView';
@@ -320,6 +321,8 @@ export function DashboardPage() {
   const { currentCommunity } = useCommunityStore();
   const { tab } = useDashboardTabStore();
   const { startDashboardTour } = useDashboardOnboarding(tab);
+  const communityListRef = useRef<CommunityListViewHandle>(null);
+  const mindmapResetRef = useRef<(() => void) | null>(null);
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -513,11 +516,34 @@ export function DashboardPage() {
 
   return (
     <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' || tab === 'planning' || tab === 'dashboard' ? ' h-full overflow-hidden' : ''}`}>
-      <DashboardToolbar tab={tab} onStartTour={() => startDashboardTour(tab)} />
+      <DashboardToolbar
+        tab={tab}
+        onStartTour={() => startDashboardTour(tab)}
+        actions={<>
+          {tab === 'communities' && (
+            <Button size="sm" onClick={() => communityListRef.current?.openCreate()}>
+              <Plus className="w-4 h-4 mr-1" />
+              Nouvelle communauté
+            </Button>
+          )}
+          {tab === 'spaces' && (
+            <Button size="sm" onClick={() => setSearchParams({ new: 'space' })}>
+              <Plus className="w-4 h-4 mr-1" />
+              Nouvel espace
+            </Button>
+          )}
+          {tab === 'mindmap' && (
+            <Button size="sm" variant="outline" onClick={() => mindmapResetRef.current?.()}>
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Réorganiser
+            </Button>
+          )}
+        </>}
+      />
       {tab === 'home' ? (
         <HomeView />
       ) : tab === 'communities' ? (
-        <CommunityListView />
+        <CommunityListView ref={communityListRef} />
       ) : tab === 'dashboard' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <DashboardCockpitView />
@@ -544,19 +570,12 @@ export function DashboardPage() {
             personalSpaces={personalSpaces}
             independentSpaces={independentSpaces}
             onMoveSpace={handleMoveToParent}
+            resetRef={mindmapResetRef}
           />
         </div>
       ) : (
       <div className="p-8 flex-1">
       <div className="max-w-6xl mx-auto">
-        {/* Action bar */}
-        <div className="flex items-center justify-end mb-6">
-          <Button onClick={() => setSearchParams({ new: 'space' })}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvel espace
-          </Button>
-        </div>
-
         {/* New space form */}
         {showNewSpace && (
           <Card className="mb-8">

@@ -7,9 +7,10 @@ import type { DashboardTab } from '../stores/dashboardTab';
 interface DashboardToolbarProps {
   tab: DashboardTab;
   onStartTour?: () => void;
+  actions?: React.ReactNode;
 }
 
-export function DashboardToolbar({ tab, onStartTour }: DashboardToolbarProps) {
+export function DashboardToolbar({ tab, onStartTour, actions }: DashboardToolbarProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -45,7 +46,8 @@ export function DashboardToolbar({ tab, onStartTour }: DashboardToolbarProps) {
   if (!desc) return null;
 
   return (
-    <div className="flex items-center justify-end px-6 pt-4 pb-2 flex-shrink-0">
+    <div className="flex items-center justify-end gap-2 px-6 pt-4 pb-2 flex-shrink-0">
+      {actions}
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
