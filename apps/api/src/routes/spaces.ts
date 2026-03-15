@@ -1566,7 +1566,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       for (const email of emails) {
         try {
           await resend.emails.send({
-            from: 'SPOK <notifications@spok.app>',
+            from: 'SPOK <notifications@spok.space>',
             to: email,
             subject: body.subject,
             html: body.html,

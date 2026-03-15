@@ -1170,7 +1170,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     for (const user of users) {
       try {
         await resend.emails.send({
-          from: 'SPOK <notifications@spok.app>',
+          from: 'SPOK <notifications@spok.space>',
           to: user.email,
           subject: emailRecord.subject,
           html: emailRecord.html,

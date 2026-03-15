@@ -36,7 +36,7 @@ async function sendNotificationEmail(
   if (!process.env.RESEND_API_KEY) return;
   try {
     await resend.emails.send({
-      from: 'SPOK <notifications@spok.app>',
+      from: 'SPOK <notifications@spok.space>',
       to: email,
       subject: title,
       html: `
