@@ -1161,6 +1161,7 @@ export function ItemEditModal({
                   {children.map(child => {
                     const ChildIcon = TYPE_ICONS[child.type];
                     const childTypeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[child.type];
+                    const grandChildCount = allItems.filter(i => i.parentId === child.id).length;
                     return (
                       <button
                         key={child.id}
@@ -1170,6 +1171,11 @@ export function ItemEditModal({
                       >
                         {ChildIcon && <ChildIcon className={`w-4 h-4 flex-shrink-0 ${childTypeConfig?.color || 'text-muted-foreground'}`} />}
                         <span className="truncate flex-1">{child.title}</span>
+                        {grandChildCount > 0 && (
+                          <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
+                            {grandChildCount} enfant{grandChildCount > 1 ? 's' : ''}
+                          </span>
+                        )}
                         {child.status && (
                           <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted flex-shrink-0">
                             {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((s: any) => s.id === child.status)?.label || child.status}
