@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { healthApi, ApiError } from '../lib/api';
+import { useAuthStore } from '../stores/auth';
 import { Bug, AlertCircle } from 'lucide-react';
 
 type DbStatus = 'checking' | 'connected' | 'disconnected' | 'api_error' | 'wrong_server' | 'network_error';
@@ -24,8 +25,11 @@ export function DevModeToggle() {
     window.dispatchEvent(new CustomEvent('spok:devmode', { detail: newValue }));
   };
 
-  // Only show toggle if VITE_DEV_MODE is set (dev environment)
-  if (import.meta.env.VITE_DEV_MODE !== 'true') return null;
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.globalRole === 'ADMIN';
+
+  // Show toggle in dev environment or for admin users in prod
+  if (!isAdmin && import.meta.env.VITE_DEV_MODE !== 'true') return null;
 
   return (
     <button
