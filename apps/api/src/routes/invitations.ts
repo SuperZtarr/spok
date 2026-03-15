@@ -63,6 +63,21 @@ function serializeInvitation(inv: any) {
 
 export const invitationsRoutes: FastifyPluginAsync = async (fastify) => {
 
+  // ─── GET INVITATION BY TOKEN (public, no auth) ─────────────────
+  fastify.get<{ Params: { token: string } }>(
+    '/by-token/:token',
+    async (request, reply) => {
+      const invitation = await fastify.prisma.invitation.findUnique({
+        where: { token: request.params.token },
+        include: invitationInclude,
+      });
+
+      if (!invitation) return reply.notFound('Invitation not found');
+
+      return serializeInvitation(invitation);
+    }
+  );
+
   // ─── MY PENDING INVITATIONS ────────────────────────────────────
   fastify.get(
     '/my',

@@ -1551,6 +1551,9 @@ export const notificationsApi = {
 };
 
 export const invitationsApi = {
+  getByToken: (token: string) =>
+    fetchApi<Invitation>(`/invitations/by-token/${token}`),
+
   my: () =>
     fetchApi<Invitation[]>('/invitations/my'),
 

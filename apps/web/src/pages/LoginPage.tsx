@@ -22,7 +22,14 @@ export function LoginPage() {
     onSuccess: (data) => {
       setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
       queryClient.clear();
-      navigate('/');
+      // Redirect to pending invitation if any
+      const pendingToken = localStorage.getItem('spok_pending_invitation_token');
+      if (pendingToken) {
+        localStorage.removeItem('spok_pending_invitation_token');
+        navigate(`/invitation?token=${pendingToken}`);
+      } else {
+        navigate('/');
+      }
     },
     onError: (err) => {
       if (err instanceof ApiError) {

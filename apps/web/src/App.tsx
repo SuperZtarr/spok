@@ -6,6 +6,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { InvitationPage } from './pages/InvitationPage';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SpacePage } from './pages/SpacePage';
@@ -102,6 +103,7 @@ export default function App() {
         }
       />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/invitation" element={<InvitationPage />} />
       <Route
         path="/"
         element={<HomeRoute />}

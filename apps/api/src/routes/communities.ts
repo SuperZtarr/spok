@@ -4,7 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from '../utils/audit.js';
-import { createNotification } from '../utils/notifications.js';
+import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
 
@@ -706,9 +706,10 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         invitedById: request.user.userId,
       });
 
-      // Notify invited user if they have an account
+      // Notify invited user
+      const inviterName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
+
       if (invitedUser) {
-        const inviterName = (await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { name: true } }))?.name || 'Quelqu\'un';
         await createNotification(fastify.prisma, {
           userId: invitedUser.id,
           type: 'INVITATION',
@@ -717,6 +718,17 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
           metadata: { actorId: request.user.userId, actorName: inviterName, communityName: mem.community.name, invitationId: invitation.id },
         });
       }
+
+      // Send invitation email
+      await sendInvitationEmail({
+        to: body.email,
+        inviterName,
+        targetName: mem.community.name,
+        targetType: 'communauté',
+        token: invitation.token,
+        message: body.message,
+        role: body.role,
+      });
 
       return reply.status(201).send(invitation);
     }

@@ -57,6 +57,60 @@ async function sendNotificationEmail(
  * - 'none': skip entirely
  * Silently catches errors to never block the main operation.
  */
+/**
+ * Send an invitation email via Resend.
+ */
+export async function sendInvitationEmail(opts: {
+  to: string;
+  inviterName: string;
+  targetName: string;
+  targetType: 'communauté' | 'espace';
+  token: string;
+  message?: string | null;
+  role: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const siteUrl = process.env.SITE_URL || 'https://spok.space';
+  const acceptUrl = `${siteUrl}/invitation?token=${opts.token}`;
+
+  const roleLabel = opts.role === 'OWNER' ? 'Propriétaire' : opts.role === 'MEMBER' ? 'Membre' : opts.role;
+  const messageBlock = opts.message
+    ? `<div style="margin: 16px 0; padding: 12px 16px; background: #f4f4f5; border-radius: 6px; border-left: 3px solid #6366f1;">
+        <p style="margin: 0; color: #52525b; font-size: 14px; font-style: italic;">"${opts.message}"</p>
+      </div>`
+    : '';
+
+  const html = wrapEmailTemplate(`
+    <h2 style="margin: 0 0 16px; color: #18181b; font-size: 18px;">
+      Vous êtes invité(e) à rejoindre ${opts.targetType === 'communauté' ? 'la communauté' : "l'espace"} « ${opts.targetName} »
+    </h2>
+    <p style="margin: 0 0 8px; color: #52525b; font-size: 14px; line-height: 1.6;">
+      <strong>${opts.inviterName}</strong> vous invite en tant que <strong>${roleLabel}</strong>.
+    </p>
+    ${messageBlock}
+    <div style="text-align: center; margin: 24px 0 16px;">
+      <a href="${acceptUrl}" style="display: inline-block; padding: 12px 32px; background: #6366f1; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
+        Voir l'invitation
+      </a>
+    </div>
+    <p style="margin: 0; color: #a1a1aa; font-size: 12px; text-align: center;">
+      Cette invitation expire dans 30 jours.
+    </p>
+  `);
+
+  try {
+    await resend.emails.send({
+      from: 'SPOK <notifications@spok.space>',
+      to: opts.to,
+      subject: `${opts.inviterName} vous invite sur SPOK`,
+      html,
+    });
+  } catch (err) {
+    console.error('[invitation] Failed to send email:', err);
+  }
+}
+
 export async function createNotification(
   prisma: PrismaClient,
   input: CreateNotificationInput,
