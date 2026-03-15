@@ -28,8 +28,48 @@ const SPACE_SETTINGS_TOUR: TourStep[] = [
     element: '[data-tour="space-settings-tabs"]',
     popover: {
       title: 'Onglets',
-      description: 'Général : nom, communauté, parent, rôle par défaut. Images : avatar et couverture. Référentiels : statuts et types personnalisés. Membres : gestion des accès. Danger : suppression.',
+      description: 'Naviguez entre les différentes sections de paramétrage de votre espace.',
       side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="space-general"]',
+    popover: {
+      title: 'Général',
+      description: 'Nom de l\'espace, communauté de rattachement, espace parent et rôle par défaut pour les nouveaux membres.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="space-images"]',
+    popover: {
+      title: 'Images',
+      description: 'Avatar (affiché dans la sidebar) et image de couverture (affichée sur le dashboard). Glissez une image ou cliquez pour uploader.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="space-referentiels"]',
+    popover: {
+      title: 'Référentiels',
+      description: 'Personnalisez les statuts (À faire, En cours, Terminé…) et les types d\'items (Note, Tâche, Projet…). Modifiez les labels, couleurs et l\'ordre.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="space-members"]',
+    popover: {
+      title: 'Membres',
+      description: 'Gérez les accès : 3 colonnes (non-membres → membres → propriétaires). Envoyez des emails groupés. Invitez de nouveaux utilisateurs.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="space-danger"]',
+    popover: {
+      title: 'Zone de danger',
+      description: 'Supprimez l\'espace avec prévisualisation des éléments impactés. Choix entre supprimer les enfants ou les détacher.',
+      side: 'top',
     },
   },
 ];
@@ -410,7 +450,7 @@ export function SpaceSettingsPage() {
       <div className="space-y-8">
         {/* === GENERAL TAB === */}
         {activeTab === 'general' && space?.type === 'GROUP' && (
-          <div className="bg-card border rounded-lg p-6">
+          <div className="bg-card border rounded-lg p-6" data-tour="space-general">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Building2 className="w-5 h-5" />
               Informations générales
@@ -481,7 +521,7 @@ export function SpaceSettingsPage() {
 
         {/* === IMAGES TAB === */}
         {activeTab === 'images' && (
-          <div className="bg-card border rounded-lg p-6">
+          <div className="bg-card border rounded-lg p-6" data-tour="space-images">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ImageIcon className="w-5 h-5" />
               Images
@@ -561,7 +601,7 @@ export function SpaceSettingsPage() {
 
         {/* === REFERENTIELS TAB === */}
         {activeTab === 'referentiels' && (
-          <>
+          <div data-tour="space-referentiels">
             {/* Info banner */}
             {referentielsData?.isDefault && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -625,12 +665,12 @@ export function SpaceSettingsPage() {
                 />
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* === MEMBERS TAB === */}
         {activeTab === 'members' && space?.type === 'GROUP' && user && (
-          <div className="bg-card border rounded-lg p-6 space-y-6">
+          <div className="bg-card border rounded-lg p-6 space-y-6" data-tour="space-members">
             <div className="flex items-center justify-between">
               <div />
               {space.role === 'OWNER' && spaceMembers && spaceMembers.length > 0 && (
@@ -656,7 +696,7 @@ export function SpaceSettingsPage() {
 
         {/* === DANGER TAB === */}
         {activeTab === 'danger' && canDelete && (
-          <div className="border border-destructive/30 rounded-lg p-6">
+          <div className="border border-destructive/30 rounded-lg p-6" data-tour="space-danger">
             <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-5 h-5" />
               Zone de danger
