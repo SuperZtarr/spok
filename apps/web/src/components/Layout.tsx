@@ -313,20 +313,6 @@ export function Layout() {
     },
   });
 
-  // Track recent spaces in localStorage
-  const RECENTS_KEY = 'spok_recent_spaces';
-  const MAX_RECENTS = 8;
-
-  useEffect(() => {
-    if (!currentSpaceId || !user) return;
-    try {
-      const stored = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]') as string[];
-      const filtered = stored.filter(id => id !== currentSpaceId);
-      filtered.unshift(currentSpaceId);
-      localStorage.setItem(RECENTS_KEY, JSON.stringify(filtered.slice(0, MAX_RECENTS)));
-    } catch { /* ignore */ }
-  }, [currentSpaceId, user]);
-
   // Admin: pending public community count
   const { data: pendingData } = useQuery({
     queryKey: ['admin', 'pending-count'],
@@ -404,6 +390,19 @@ export function Layout() {
     queryFn: () => spacesApi.get(currentSpaceId!),
     enabled: !!currentSpaceId,
   });
+
+  // Track recent spaces in localStorage
+  const RECENTS_KEY = 'spok_recent_spaces';
+  const MAX_RECENTS = 8;
+  useEffect(() => {
+    if (!currentSpaceId || !user) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]') as string[];
+      const filtered = stored.filter(id => id !== currentSpaceId);
+      filtered.unshift(currentSpaceId);
+      localStorage.setItem(RECENTS_KEY, JSON.stringify(filtered.slice(0, MAX_RECENTS)));
+    } catch { /* ignore */ }
+  }, [currentSpaceId, user]);
 
   // Current view/function name helpers
   const { mode } = useViewModeStore();
