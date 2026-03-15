@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesApi } from '../../lib/api';
 import { MembersColumnManager } from './MembersColumnManager';
+import { RoleGuard } from '../RoleGuard';
 
 interface SpaceMembersManagerProps {
   spaceId: string;
@@ -67,16 +68,18 @@ export function SpaceMembersManager({
   }));
 
   return (
-    <MembersColumnManager
-      members={memberInfos}
-      availableUsers={availableUsers}
-      isLoading={membersLoading || usersLoading}
-      isOwner={isOwner}
-      currentUserId={currentUserId}
-      onAddMember={(userId, role) => addMemberMutation.mutate({ userId, role })}
-      onRemoveMember={(memberId) => removeMemberMutation.mutate(memberId)}
-      onUpdateRole={(memberId, role) => updateRoleMutation.mutate({ memberId, role })}
-      isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending}
-    />
+    <RoleGuard role="OWNER">
+      <MembersColumnManager
+        members={memberInfos}
+        availableUsers={availableUsers}
+        isLoading={membersLoading || usersLoading}
+        isOwner={isOwner}
+        currentUserId={currentUserId}
+        onAddMember={(userId, role) => addMemberMutation.mutate({ userId, role })}
+        onRemoveMember={(memberId) => removeMemberMutation.mutate(memberId)}
+        onUpdateRole={(memberId, role) => updateRoleMutation.mutate({ memberId, role })}
+        isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending}
+      />
+    </RoleGuard>
   );
 }

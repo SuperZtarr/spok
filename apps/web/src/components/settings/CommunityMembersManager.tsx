@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { communitiesApi } from '../../lib/api';
 import { MembersColumnManager } from './MembersColumnManager';
+import { RoleGuard } from '../RoleGuard';
 import type { CommunityRole } from '@spok/shared';
 
 interface CommunityMembersManagerProps {
@@ -62,16 +63,18 @@ export function CommunityMembersManager({
   }));
 
   return (
-    <MembersColumnManager
-      members={memberInfos}
-      availableUsers={availableUsers}
-      isLoading={membersLoading || usersLoading}
-      isOwner={isOwner}
-      currentUserId={currentUserId}
-      onAddMember={(userId, role) => addMemberMutation.mutate({ userId, role })}
-      onRemoveMember={(memberId) => removeMemberMutation.mutate(memberId)}
-      onUpdateRole={(memberId, role) => updateRoleMutation.mutate({ memberId, role: role as CommunityRole })}
-      isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending}
-    />
+    <RoleGuard role="OWNER">
+      <MembersColumnManager
+        members={memberInfos}
+        availableUsers={availableUsers}
+        isLoading={membersLoading || usersLoading}
+        isOwner={isOwner}
+        currentUserId={currentUserId}
+        onAddMember={(userId, role) => addMemberMutation.mutate({ userId, role })}
+        onRemoveMember={(memberId) => removeMemberMutation.mutate(memberId)}
+        onUpdateRole={(memberId, role) => updateRoleMutation.mutate({ memberId, role: role as CommunityRole })}
+        isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending}
+      />
+    </RoleGuard>
   );
 }

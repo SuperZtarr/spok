@@ -8,6 +8,7 @@ import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, adminApi } from '../lib/api';
 
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
+import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
 import { ViewModeSelector } from './ViewModeSelector';
@@ -619,9 +620,11 @@ export function Layout() {
                 </button>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {community.role === 'OWNER' && (
-                    <Link to={`/communities/${community.id}/settings`} title="Paramètres">
-                      <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                    </Link>
+                    <RoleGuard role="OWNER">
+                      <Link to={`/communities/${community.id}/settings`} title="Paramètres">
+                        <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                      </Link>
+                    </RoleGuard>
                   )}
                 </div>
               </div>
@@ -799,7 +802,7 @@ export function Layout() {
                         Profil
                       </button>
                       {user.globalRole === 'ADMIN' && (
-                        <>
+                        <RoleGuard role="ADMIN">
                           <Link
                             to="/admin"
                             onClick={() => setUserMenuOpen(false)}
@@ -818,7 +821,7 @@ export function Layout() {
                               {pendingCount} en attente
                             </Link>
                           )}
-                        </>
+                        </RoleGuard>
                       )}
                       <div className="border-t border-border my-1" />
                       <button

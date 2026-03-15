@@ -21,6 +21,7 @@ export function DevModeToggle() {
     const newValue = !devModeEnabled;
     setDevModeEnabled(newValue);
     localStorage.setItem(DEV_MODE_KEY, String(newValue));
+    window.dispatchEvent(new CustomEvent('spok:devmode', { detail: newValue }));
   };
 
   // Only show toggle if VITE_DEV_MODE is set (dev environment)

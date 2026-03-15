@@ -26,6 +26,7 @@ import { DashboardCockpitView } from '../components/views/DashboardCockpitView';
 import { HomeView } from '../components/views/HomeView';
 import { useDashboardOnboarding } from '../hooks/useOnboarding';
 import { DashboardToolbar } from '../components/DashboardToolbar';
+import { RoleGuard } from '../components/RoleGuard';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -233,7 +234,9 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
         </div>
         <CardDescription>
           {isMember
-            ? (space.role === 'OWNER' ? 'Propriétaire' : space.role)
+            ? (space.role === 'OWNER'
+                ? <RoleGuard role="OWNER">Propriétaire</RoleGuard>
+                : <RoleGuard role="MEMBER">{space.role}</RoleGuard>)
             : null
           }
         </CardDescription>
@@ -252,50 +255,56 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
           </span>
         </div>
         {!isMember && onJoin && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3 w-full"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onJoin(space.id);
-            }}
-          >
-            <LogIn className="w-4 h-4 mr-2" />
-            Rejoindre
-          </Button>
+          <RoleGuard role="MEMBER">
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onJoin(space.id);
+              }}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Rejoindre
+            </Button>
+          </RoleGuard>
         )}
       </CardContent>
     </Card>
   );
 
   const leaveModal = canLeave && onLeave && (
-    <ConfirmModal
-      isOpen={showLeaveModal}
-      onClose={() => setShowLeaveModal(false)}
-      onConfirm={() => {
-        onLeave(space.id);
-        setShowLeaveModal(false);
-      }}
-      title="Quitter l'espace"
-      message={`Vous êtes sur le point de quitter l'espace « ${space.name} ».`}
-      confirmLabel="Quitter"
-      icon="leave"
-    />
+    <RoleGuard role="MEMBER">
+      <ConfirmModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={() => {
+          onLeave(space.id);
+          setShowLeaveModal(false);
+        }}
+        title="Quitter l'espace"
+        message={`Vous êtes sur le point de quitter l'espace « ${space.name} ».`}
+        confirmLabel="Quitter"
+        icon="leave"
+      />
+    </RoleGuard>
   );
 
   const deleteModal = canDelete && onDelete && (
-    <SpaceDeleteConfirmModal
-      isOpen={showDeleteModal}
-      onClose={() => setShowDeleteModal(false)}
-      onConfirm={(deleteChildren) => {
-        onDelete(space.id, deleteChildren);
-        setShowDeleteModal(false);
-      }}
-      spaceId={space.id}
-      spaceName={space.name}
-    />
+    <RoleGuard role="OWNER">
+      <SpaceDeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={(deleteChildren) => {
+          onDelete(space.id, deleteChildren);
+          setShowDeleteModal(false);
+        }}
+        spaceId={space.id}
+        spaceName={space.name}
+      />
+    </RoleGuard>
   );
 
   const dragDropProps = {

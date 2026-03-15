@@ -5,6 +5,7 @@ import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight } f
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
+import { RoleGuard } from '../components/RoleGuard';
 // Types used implicitly via API responses
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -125,9 +126,11 @@ export function CommunityPage() {
           </div>
           <div className="flex gap-2 pb-1">
             {isAdminOrOwner && (
-              <Button variant="outline" size="sm" onClick={() => navigate(`/communities/${communityId}/settings`)}>
-                <Settings className="w-4 h-4" />
-              </Button>
+              <RoleGuard role="OWNER">
+                <Button variant="outline" size="sm" onClick={() => navigate(`/communities/${communityId}/settings`)}>
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </RoleGuard>
             )}
           </div>
         </div>

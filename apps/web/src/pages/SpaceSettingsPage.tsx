@@ -22,6 +22,7 @@ import { OrgChartView } from '../components/views/OrgChartView';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
+import { RoleGuard } from '../components/RoleGuard';
 
 const SPACE_SETTINGS_TOUR: TourStep[] = [
   {
@@ -667,9 +668,11 @@ export function SpaceSettingsPage() {
             <div className="flex items-center justify-between">
               <div />
               {space.role === 'OWNER' && spaceMembers && spaceMembers.length > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)}>
-                  <Mail className="w-4 h-4 mr-1.5" />Envoyer un email
-                </Button>
+                <RoleGuard role="OWNER">
+                  <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)}>
+                    <Mail className="w-4 h-4 mr-1.5" />Envoyer un email
+                  </Button>
+                </RoleGuard>
               )}
             </div>
             <SpaceMembersManager

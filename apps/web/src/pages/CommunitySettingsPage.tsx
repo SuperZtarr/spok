@@ -14,6 +14,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
+import { RoleGuard } from '../components/RoleGuard';
 
 function CommunitySettingsHelpButton() {
   const [open, setOpen] = useState(false);
@@ -423,7 +424,7 @@ export function CommunitySettingsPage() {
               <h2 className="text-lg font-semibold mb-4">Informations</h2>
 
               {canEdit ? (
-                <div className="space-y-4">
+                <RoleGuard role="OWNER"><div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Nom</label>
                     <Input
@@ -470,7 +471,7 @@ export function CommunitySettingsPage() {
                       Enregistrer
                     </Button>
                   </div>
-                </div>
+                </div></RoleGuard>
               ) : (
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><span className="text-muted-foreground">Nom:</span> <span className="font-medium">{community.name}</span></div>
@@ -491,14 +492,16 @@ export function CommunitySettingsPage() {
 
             {/* Community Tags */}
             {community.role === 'OWNER' && (
-              <CommunityTagsSection communityId={communityId!} />
+              <RoleGuard role="OWNER">
+                <CommunityTagsSection communityId={communityId!} />
+              </RoleGuard>
             )}
           </>
         )}
 
         {/* === IMAGES TAB === */}
         {activeTab === 'images' && canEdit && (
-          <div className="bg-card border rounded-lg p-6">
+          <RoleGuard role="OWNER"><div className="bg-card border rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ImageIcon className="w-5 h-5" />
               Images
@@ -573,7 +576,7 @@ export function CommunitySettingsPage() {
                 />
               </div>
             </div>
-          </div>
+          </div></RoleGuard>
         )}
 
         {/* === SPACES TAB === */}

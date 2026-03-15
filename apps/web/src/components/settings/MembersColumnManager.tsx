@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Users, Crown, User, ChevronRight, ChevronLeft, Loader2, Search } from 'lucide-react';
+import { RoleGuard } from '../RoleGuard';
 
 interface MemberInfo {
   id: string; // membership id (for existing members) or user id (for available)
@@ -130,14 +131,16 @@ export function MembersColumnManager({
                   <UserCard name={user.name} email={user.email} />
                 </div>
                 {isOwner && (
-                  <button
-                    onClick={() => onAddMember(user.id, 'MEMBER')}
-                    disabled={isUpdating}
-                    className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
-                    title="Ajouter comme membre"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  <RoleGuard role="OWNER">
+                    <button
+                      onClick={() => onAddMember(user.id, 'MEMBER')}
+                      disabled={isUpdating}
+                      className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                      title="Ajouter comme membre"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </RoleGuard>
                 )}
               </div>
             ))
@@ -178,27 +181,31 @@ export function MembersColumnManager({
                   className="flex items-center gap-1 p-2 rounded hover:bg-accent/50 group"
                 >
                   {isOwner && !isSelf && (
-                    <button
-                      onClick={() => onRemoveMember(member.id)}
-                      disabled={isUpdating}
-                      className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                      title="Retirer du groupe"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
+                    <RoleGuard role="OWNER">
+                      <button
+                        onClick={() => onRemoveMember(member.id)}
+                        disabled={isUpdating}
+                        className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                        title="Retirer du groupe"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    </RoleGuard>
                   )}
                   <div className="flex-1 min-w-0">
                     <UserCard name={member.name} email={member.email} isSelf={isSelf} />
                   </div>
                   {isOwner && !isSelf && (
-                    <button
-                      onClick={() => onUpdateRole(member.id, 'OWNER')}
-                      disabled={isUpdating}
-                      className="p-1 text-muted-foreground hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-all"
-                      title="Promouvoir propriétaire"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <RoleGuard role="OWNER">
+                      <button
+                        onClick={() => onUpdateRole(member.id, 'OWNER')}
+                        disabled={isUpdating}
+                        className="p-1 text-muted-foreground hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Promouvoir propriétaire"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </RoleGuard>
                   )}
                 </div>
               );
@@ -240,14 +247,16 @@ export function MembersColumnManager({
                   className="flex items-center gap-1 p-2 rounded hover:bg-accent/50 group"
                 >
                   {isOwner && !isSelf && (
-                    <button
-                      onClick={() => onUpdateRole(member.id, 'MEMBER')}
-                      disabled={isUpdating}
-                      className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
-                      title="Rétrograder en membre"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
+                    <RoleGuard role="OWNER">
+                      <button
+                        onClick={() => onUpdateRole(member.id, 'MEMBER')}
+                        disabled={isUpdating}
+                        className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                        title="Rétrograder en membre"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    </RoleGuard>
                   )}
                   <div className="flex-1 min-w-0">
                     <UserCard name={member.name} email={member.email} isSelf={isSelf} />

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Globe, Lock, Crown, User, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, LogOut } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
+import { RoleGuard } from '../RoleGuard';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
@@ -186,21 +187,23 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                       </span>
                     </div>
                     {community.role === 'MEMBER' && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (confirm(`Quitter la communauté "${community.name}" ?`)) {
-                            leaveMutation.mutate(community.id);
-                          }
-                        }}
-                        className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                        disabled={leaveMutation.isPending}
-                      >
-                        <LogOut className="w-3 h-3" />
-                        Quitter
-                      </button>
+                      <RoleGuard role="MEMBER">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm(`Quitter la communauté "${community.name}" ?`)) {
+                              leaveMutation.mutate(community.id);
+                            }
+                          }}
+                          className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                          disabled={leaveMutation.isPending}
+                        >
+                          <LogOut className="w-3 h-3" />
+                          Quitter
+                        </button>
+                      </RoleGuard>
                     )}
                   </div>
                 </Link>

@@ -5,6 +5,7 @@ import { Users, FolderOpen, Settings, Crown, User, ChevronRight, ExternalLink } 
 import { spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
+import { RoleGuard } from '../components/RoleGuard';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
@@ -147,9 +148,11 @@ export function SpaceOverviewPage() {
               <ExternalLink className="w-4 h-4 mr-1.5" />Ouvrir
             </Button>
             {isAdminOrOwner && (
-              <Button variant="outline" size="sm" onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
-                <Settings className="w-4 h-4" />
-              </Button>
+              <RoleGuard role="OWNER">
+                <Button variant="outline" size="sm" onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </RoleGuard>
             )}
           </div>
         </div>

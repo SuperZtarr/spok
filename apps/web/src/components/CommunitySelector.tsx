@@ -6,6 +6,7 @@ import { communitiesApi, spacesApi } from '../lib/api';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import type { CommunityWithRole } from '@spok/shared';
 import { ConfirmModal } from './ConfirmModal';
+import { RoleGuard } from './RoleGuard';
 
 export function CommunitySelector() {
   const navigate = useNavigate();
@@ -171,31 +172,35 @@ export function CommunitySelector() {
                     {community.role === 'OWNER' ? 'Proprio' : 'Membre'}
                   </span>
                   {community.role === 'OWNER' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsOpen(false);
-                        navigate(`/communities/${community.id}/settings`);
-                      }}
-                      className="p-1 hover:bg-background rounded transition-colors"
-                      title="Paramètres de la communauté"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                    </button>
+                    <RoleGuard role="OWNER">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsOpen(false);
+                          navigate(`/communities/${community.id}/settings`);
+                        }}
+                        className="p-1 hover:bg-background rounded transition-colors"
+                        title="Paramètres de la communauté"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </button>
+                    </RoleGuard>
                   )}
                   {community.role === 'MEMBER' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLeaveTarget(community);
-                        setIsOpen(false);
-                      }}
-                      disabled={leaveMutation.isPending}
-                      className="p-1 hover:bg-destructive/10 rounded transition-colors text-destructive"
-                      title="Quitter la communauté"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                    </button>
+                    <RoleGuard role="MEMBER">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLeaveTarget(community);
+                          setIsOpen(false);
+                        }}
+                        disabled={leaveMutation.isPending}
+                        className="p-1 hover:bg-destructive/10 rounded transition-colors text-destructive"
+                        title="Quitter la communauté"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                      </button>
+                    </RoleGuard>
                   )}
                 </div>
               ))}

@@ -21,6 +21,7 @@ import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constant
 import { stripMarkup } from '../../lib/bbcode';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { TagBadge } from '../ui/TagBadge';
+import { RoleGuard } from '../RoleGuard';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -129,6 +130,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
     >
       <div className="flex items-start gap-2">
         {canEdit && (
+          <RoleGuard role="MEMBER">
           <div
             {...listeners}
             {...attributes}
@@ -138,6 +140,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
           >
             <GripVertical className="w-4 h-4" />
           </div>
+          </RoleGuard>
         )}
         <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
         <div className="flex-1 min-w-0">
@@ -190,6 +193,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
 
       {/* Action menu */}
       {canEdit && (
+        <RoleGuard role="MEMBER">
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={[
@@ -221,6 +225,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             ].filter(g => g.actions.length > 0)}
           />
         </div>
+        </RoleGuard>
       )}
     </div>
   );
