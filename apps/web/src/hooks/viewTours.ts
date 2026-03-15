@@ -440,8 +440,16 @@ export const ITEM_MODAL_TOUR: TourStep[] = [
   {
     element: '[data-tour="item-title"]',
     popover: {
-      title: 'Titre & type',
-      description: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type (note, tâche, projet…).',
+      title: 'Titre',
+      description: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type de l\'élément.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="item-type-selector"]',
+    popover: {
+      title: 'Type',
+      description: 'Changez le type de l\'élément : Note, Tâche, Projet, Réunion, Document, Diagramme, etc.',
       side: 'bottom',
     },
   },
@@ -465,15 +473,39 @@ export const ITEM_MODAL_TOUR: TourStep[] = [
     element: '[data-tour="item-contributions"]',
     popover: {
       title: 'Contributions',
-      description: 'Discussions et commentaires sur cet item. Chaque contribution a ses propres réactions.',
+      description: 'Discussions et commentaires sur cet élément. Chaque contribution a ses propres réactions.',
       side: 'top',
     },
   },
   {
-    element: '[data-tour="item-details"]',
+    element: '[data-tour="item-status"]',
     popover: {
-      title: 'Détails',
-      description: 'Parent, type, statut, priorité, dates, assigné, tags et relations. Tout se configure ici.',
+      title: 'Statut',
+      description: 'Cliquez sur un statut pour le sélectionner : À faire, En cours, Terminé, À valider…',
+      side: 'left',
+    },
+  },
+  {
+    element: '[data-tour="item-dates"]',
+    popover: {
+      title: 'Dates',
+      description: 'Date de début, de fin et d\'échéance. Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning.',
+      side: 'left',
+    },
+  },
+  {
+    element: '[data-tour="item-relations"]',
+    popover: {
+      title: 'Relations',
+      description: 'Liez cet élément à d\'autres : bloque, dépend de, lié à, duplique, implémente, teste. Ajoutez un commentaire sur chaque relation.',
+      side: 'left',
+    },
+  },
+  {
+    element: '[data-tour="item-tags"]',
+    popover: {
+      title: 'Tags',
+      description: 'Classez avec des tags. Les tags d\'espace et de communauté sont disponibles. Créez-en de nouveaux en tapant.',
       side: 'left',
     },
   },
@@ -489,7 +521,7 @@ export const ITEM_MODAL_TOUR: TourStep[] = [
     element: '[data-tour="item-actions"]',
     popover: {
       title: 'Actions',
-      description: 'Enregistrez, annulez, ou supprimez. Vous pouvez aussi exporter en PDF ou imprimer.',
+      description: 'Enregistrez, annulez, supprimez, imprimez ou exportez en PDF.',
       side: 'top',
     },
   },

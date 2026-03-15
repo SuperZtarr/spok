@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
@@ -9,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -28,6 +29,98 @@ import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
+
+function ItemHelpButton() {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const btn = btnRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const w = 320;
+      let left = rect.right - w;
+      if (left < 8) left = 8;
+      setPos({ top: rect.bottom + 6, left });
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (popRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', handle);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handleKey); };
+  }, [open]);
+
+  const launchTour = () => {
+    setOpen(false);
+    setTimeout(() => {
+      const validSteps = ITEM_MODAL_TOUR.filter(s => !s.element || document.querySelector(s.element));
+      if (validSteps.length === 0) return;
+      const d = driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        nextBtnText: 'Suivant',
+        prevBtnText: 'Précédent',
+        doneBtnText: 'Terminer',
+        progressText: '{{current}} / {{total}}',
+        steps: validSteps,
+      });
+      d.drive();
+    }, 200);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        title="Aide"
+      >
+        <HelpCircle className="w-3.5 h-3.5" />
+      </button>
+      {open && createPortal(
+        <div ref={popRef} className="fixed z-[200] w-[320px] rounded-lg border border-border bg-card shadow-lg" style={{ top: pos.top, left: pos.left }}>
+          <div className="flex items-center justify-between px-4 pt-3 pb-2">
+            <h3 className="text-sm font-semibold">Fiche élément</h3>
+            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">
+            Cette fiche regroupe toutes les informations d'un élément : description, contributions, relations, tags, dates et priorité.
+          </p>
+          <ul className="px-4 pb-3 space-y-1">
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Utilisez @mentions et #références dans la description</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Ajoutez des réactions pour donner votre avis</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Les contributions permettent de discuter sur l'élément</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Créez des relations pour lier les éléments entre eux</li>
+            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Les enfants sont listés en bas de la fiche</li>
+          </ul>
+          <div className="px-4 pb-3">
+            <button
+              type="button"
+              onClick={launchTour}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Lancer le tutoriel interactif
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -607,27 +700,7 @@ export function ItemEditModal({
                   <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  const validSteps = ITEM_MODAL_TOUR.filter(s => !s.element || document.querySelector(s.element));
-                  if (validSteps.length === 0) return;
-                  const d = driver({
-                    showProgress: true,
-                    showButtons: ['next', 'previous', 'close'],
-                    nextBtnText: 'Suivant',
-                    prevBtnText: 'Précédent',
-                    doneBtnText: 'Terminer',
-                    progressText: '{{current}} / {{total}}',
-                    steps: validSteps,
-                  });
-                  d.drive();
-                }}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Aide sur cette page"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-              </button>
+              <ItemHelpButton />
             </div>
           </div>
 
@@ -635,7 +708,7 @@ export function ItemEditModal({
           <div className="flex-1 overflow-y-auto pr-1">
 
             {/* Type selector — full width */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4" data-tour="item-type-selector">
               {canEdit ? (
                 (() => {
                   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
@@ -769,7 +842,7 @@ export function ItemEditModal({
           <div className="space-y-6 min-w-0">
 
               {/* Statut */}
-              <div className="space-y-2">
+              <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
                 <div className="flex flex-wrap gap-2">
                   {canEdit ? (
@@ -811,7 +884,7 @@ export function ItemEditModal({
               </div>
 
               {/* Dates */}
-              <div className="space-y-4">
+              <div className="space-y-4" data-tour="item-dates">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Début</label>
                   {canEdit ? (
@@ -1045,7 +1118,7 @@ export function ItemEditModal({
               )}
 
               {/* Dépendances */}
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -1147,7 +1220,7 @@ export function ItemEditModal({
               </div>
 
               {/* Tags */}
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="item-tags">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <TagIcon className="w-4 h-4" />
                   Tags
