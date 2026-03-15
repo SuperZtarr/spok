@@ -1,7 +1,7 @@
 import { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Globe, Lock, Crown, User, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock } from 'lucide-react';
+import { Users, Globe, Lock, Crown, User, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, LogOut } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -37,7 +37,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
   const { data: publicCommunities } = useQuery({
     queryKey: ['communities-public'],
     queryFn: communitiesApi.listPublic,
-    enabled: showCreate,
   });
 
   const filteredPublicCommunities = useMemo(() => {
@@ -58,6 +57,31 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
       navigate(`/communities/${community.id}/settings`);
     },
   });
+
+  const joinMutation = useMutation({
+    mutationFn: (id: string) => communitiesApi.join(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities-public'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+    },
+  });
+
+  const leaveMutation = useMutation({
+    mutationFn: (id: string) => communitiesApi.leave(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities-public'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+    },
+  });
+
+  // Public communities the user hasn't joined yet
+  const joinableCommunities = useMemo(() => {
+    if (!publicCommunities || !communities) return [];
+    const myIds = new Set(communities.map(c => c.id));
+    return publicCommunities.filter(c => !myIds.has(c.id));
+  }, [publicCommunities, communities]);
 
   const closeCreate = () => {
     setShowCreate(false);
@@ -161,10 +185,68 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                         {config.label}
                       </span>
                     </div>
+                    {community.role === 'MEMBER' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (confirm(`Quitter la communauté "${community.name}" ?`)) {
+                            leaveMutation.mutate(community.id);
+                          }
+                        }}
+                        className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        disabled={leaveMutation.isPending}
+                      >
+                        <LogOut className="w-3 h-3" />
+                        Quitter
+                      </button>
+                    )}
                   </div>
                 </Link>
               );
             })}
+          </div>
+        )}
+      </div>
+
+        {/* Joinable public communities */}
+        {joinableCommunities.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Communautés publiques à rejoindre
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {joinableCommunities.map(community => (
+                <div
+                  key={community.id}
+                  className="border border-dashed border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-medium truncate">{community.name}</h3>
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  </div>
+                  {community.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{community.description}</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {community.memberCount} membre{community.memberCount > 1 ? 's' : ''} · {community.spaceCount} espace{community.spaceCount > 1 ? 's' : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => joinMutation.mutate(community.id)}
+                      disabled={joinMutation.isPending}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      <LogIn className="w-3 h-3" />
+                      Rejoindre
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -246,7 +328,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                 {/* Continue button */}
                 <div className="flex justify-end pt-2">
                   <button
-                    onClick={() => setStep('form')}
+                    onClick={() => { if (searchExisting.trim() && !newName) setNewName(searchExisting.trim()); setStep('form'); }}
                     className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                   >
                     Je comprends, continuer
