@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle } from 'lucide-react';
+import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -654,12 +654,17 @@ export function Layout() {
                         >
                           <Shield className="w-4 h-4" />
                           Administration
-                          {pendingCount > 0 && (
-                            <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
-                              {pendingCount}
-                            </span>
-                          )}
                         </Link>
+                        {pendingCount > 0 && (
+                          <Link
+                            to="/admin/communities"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors rounded-md mx-1"
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            {pendingCount} communauté{pendingCount > 1 ? 's' : ''} en attente
+                          </Link>
+                        )}
                       )}
                       <div className="border-t border-border my-1" />
                       <button

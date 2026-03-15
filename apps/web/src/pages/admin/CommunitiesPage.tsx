@@ -128,6 +128,55 @@ export function CommunitiesPage() {
         </form>
       </div>
 
+      {/* Pending public approval banner */}
+      {sortedCommunities.filter(c => c.pendingPublic).length > 0 && (
+        <div className="mb-6 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4">
+          <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4" />
+            En attente d'approbation ({sortedCommunities.filter(c => c.pendingPublic).length})
+          </h2>
+          <div className="space-y-2">
+            {sortedCommunities.filter(c => c.pendingPublic).map(community => (
+              <div key={community.id} className="flex items-center justify-between bg-background/80 rounded-md px-4 py-2">
+                <div>
+                  <span className="font-medium">{community.name}</span>
+                  {community.description && (
+                    <span className="text-sm text-muted-foreground ml-2">— {community.description}</span>
+                  )}
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {community.memberCount} membre{community.memberCount > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => approveMutation.mutate(community.id)}
+                    disabled={approveMutation.isPending}
+                    title="Approuver la publication"
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    Approuver
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => rejectMutation.mutate(community.id)}
+                    disabled={rejectMutation.isPending}
+                    title="Rejeter la demande"
+                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Rejeter
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
