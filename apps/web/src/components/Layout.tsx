@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
@@ -300,18 +300,8 @@ export function Layout() {
   });
 
   const queryClient = useQueryClient();
-  const toggleFavoriteMutation = useMutation({
-    mutationFn: async (spaceId: string) => {
-      if (favoriteIds.includes(spaceId)) {
-        await spacesApi.removeFavorite(spaceId);
-      } else {
-        await spacesApi.addFavorite(spaceId);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['space-favorites'] });
-    },
-  });
+  const favoriteIdsRef = useRef(favoriteIds);
+  favoriteIdsRef.current = favoriteIds;
 
   // Admin: pending public community count
   const { data: pendingData } = useQuery({
@@ -472,7 +462,16 @@ export function Layout() {
   };
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-  const handleToggleFavorite = useCallback((id: string) => toggleFavoriteMutation.mutate(id), [toggleFavoriteMutation]);
+  const handleToggleFavorite = useCallback(async (spaceId: string) => {
+    try {
+      if (favoriteIdsRef.current.includes(spaceId)) {
+        await spacesApi.removeFavorite(spaceId);
+      } else {
+        await spacesApi.addFavorite(spaceId);
+      }
+      queryClient.invalidateQueries({ queryKey: ['space-favorites'] });
+    } catch { /* ignore */ }
+  }, [queryClient]);
 
   // Sidebar content (shared between mobile and desktop)
   const sidebarContent = (
