@@ -127,11 +127,16 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
+let isLoggingOut = false;
 function clearAuth() {
+  if (isLoggingOut) return; // prevent re-entrant logout loop
+  isLoggingOut = true;
   localStorage.removeItem('accessToken');
   localStorage.removeItem('auth-storage');
   // Dispatch event to notify the app to logout
   window.dispatchEvent(new CustomEvent('auth:logout'));
+  // Reset flag after a tick to allow future logouts (e.g. after re-login)
+  setTimeout(() => { isLoggingOut = false; }, 100);
 }
 
 async function fetchApi<T>(
