@@ -1147,6 +1147,42 @@ export function ItemEditModal({
             </div>
           </div>
 
+          {/* Children items */}
+          {item && (() => {
+            const children = allItems.filter(i => i.parentId === item.id);
+            if (children.length === 0) return null;
+            return (
+              <div className="border-t border-border mt-4 pt-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <GitBranch className="w-4 h-4" />
+                  Éléments enfants ({children.length})
+                </h2>
+                <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                  {children.map(child => {
+                    const ChildIcon = TYPE_ICONS[child.type];
+                    const childTypeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[child.type];
+                    return (
+                      <button
+                        key={child.id}
+                        type="button"
+                        onClick={() => onNavigate?.(child.id)}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group"
+                      >
+                        {ChildIcon && <ChildIcon className={`w-4 h-4 flex-shrink-0 ${childTypeConfig?.color || 'text-muted-foreground'}`} />}
+                        <span className="truncate flex-1">{child.title}</span>
+                        {child.status && (
+                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted flex-shrink-0">
+                            {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((s: any) => s.id === child.status)?.label || child.status}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Footer — always visible */}
           <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
             {canEdit && (
