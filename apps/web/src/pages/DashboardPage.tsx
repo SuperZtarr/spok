@@ -344,6 +344,12 @@ export function DashboardPage() {
     queryFn: () => spacesApi.list(),
   });
 
+  // Fetch communities (needed for empty communities in spaces view)
+  const { data: communities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: communitiesApi.list,
+  });
+
   // Segment spaces into categories
   const { personalSpaces, communityGroups, independentSpaces } = useMemo(() => {
     if (!allSpaces) return { personalSpaces: [], communityGroups: [] as { communityId: string; communityName: string; spaces: SpaceWithRole[] }[], independentSpaces: [] };
@@ -446,11 +452,6 @@ export function DashboardPage() {
     moveToParentMutation.mutate({ spaceId, parentId: newParentId });
   };
 
-  // Fetch communities for the select dropdown
-  const { data: communities } = useQuery({
-    queryKey: ['communities'],
-    queryFn: communitiesApi.list,
-  });
 
   // Build community role map for delete permission check
   const communityRoles = useMemo(() => {
