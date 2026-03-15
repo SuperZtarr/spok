@@ -1068,7 +1068,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // ==================== Community Tags ====================
 
   // GET /communities/:id/tags — list community-level tags
-  fastify.get<{ Params: { id: string } }>('/:id/tags', async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/:id/tags', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
     const community = await fastify.prisma.community.findUnique({ where: { id: request.params.id } });
     if (!community) return reply.notFound('Community not found');
 
