@@ -231,3 +231,80 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
     ],
   },
 };
+
+import type { DashboardTab } from '../stores/dashboardTab';
+
+export const DASHBOARD_DESCRIPTIONS: Record<DashboardTab, ViewDescription> = {
+  home: {
+    title: 'Accueil',
+    description: 'Page de navigation rapide vers vos communautés et espaces.',
+    tips: [
+      'Cliquez sur une communauté pour la déplier',
+      'Cliquez sur un espace pour y accéder directement',
+      'Les espaces personnels sont listés séparément',
+    ],
+  },
+  communities: {
+    title: 'Communautés',
+    description: 'Toutes les communautés dont vous êtes membre.',
+    tips: [
+      'Cliquez sur une carte pour accéder à la communauté',
+      'Créez une nouvelle communauté avec le bouton en haut',
+      'Les communautés publiques sont visibles par tous',
+    ],
+  },
+  spaces: {
+    title: 'Espaces',
+    description: 'Vue globale de tous vos espaces, groupés par communauté.',
+    tips: [
+      'Créez de nouveaux espaces avec le bouton "Nouvel espace"',
+      'Glissez-déposez pour réorganiser la hiérarchie des espaces',
+      'Cliquez sur un espace pour y accéder',
+    ],
+  },
+  dashboard: {
+    title: 'Dashboard',
+    description: 'Cockpit personnel avec KPIs, items urgents et progression.',
+    tips: [
+      'Les items en retard sont en rouge',
+      'La grille semaine montre votre planning',
+      'Les barres de progression montrent l\'avancement par espace',
+    ],
+  },
+  planning: {
+    title: 'Tableau de bord',
+    description: 'Organisation personnelle de vos tâches à travers tous les espaces.',
+    tips: [
+      'Filtrez par type, statut, priorité ou échéance',
+      'Cliquez sur un item pour l\'éditer',
+      'Les filtres sont persistés entre les sessions',
+    ],
+  },
+  graph: {
+    title: 'Graphe global',
+    description: 'Réseau interactif de tous vos items à travers les communautés.',
+    tips: [
+      'Cliquez sur un nœud pour naviguer vers l\'item',
+      'Utilisez les filtres pour afficher/masquer hiérarchie, relations et tags',
+      'Zoomez avec la molette, déplacez avec le clic-glisser',
+    ],
+  },
+  sunburst: {
+    title: 'Sunburst global',
+    description: 'Hiérarchie en cercles concentriques de toutes vos communautés et espaces.',
+    tips: [
+      'Cliquez sur un segment pour zoomer dans cette branche',
+      'Survolez pour voir les détails',
+      'Les couleurs indiquent le type d\'élément',
+    ],
+  },
+  mindmap: {
+    title: 'Carte mentale globale',
+    description: 'Arborescence de toute votre organisation : communautés → espaces.',
+    tips: [
+      'Cliquez sur un espace pour y naviguer',
+      'Glissez pour réorganiser',
+      'Utilisez les contrôles pour zoomer et recentrer',
+    ],
+  },
+};

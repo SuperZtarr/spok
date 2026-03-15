@@ -24,6 +24,7 @@ import { MyOrganizationView } from '../components/views/MyOrganizationView';
 import { DashboardCockpitView } from '../components/views/DashboardCockpitView';
 import { HomeView } from '../components/views/HomeView';
 import { useDashboardOnboarding } from '../hooks/useOnboarding';
+import { DashboardToolbar } from '../components/DashboardToolbar';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -318,7 +319,7 @@ export function DashboardPage() {
   const showNewSpace = searchParams.get('new') === 'space';
   const { currentCommunity } = useCommunityStore();
   const { tab } = useDashboardTabStore();
-  useDashboardOnboarding(tab);
+  const { startDashboardTour } = useDashboardOnboarding(tab);
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -512,6 +513,7 @@ export function DashboardPage() {
 
   return (
     <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' || tab === 'planning' || tab === 'dashboard' ? ' h-full overflow-hidden' : ''}`}>
+      <DashboardToolbar tab={tab} onStartTour={() => startDashboardTour(tab)} />
       {tab === 'home' ? (
         <HomeView />
       ) : tab === 'communities' ? (
