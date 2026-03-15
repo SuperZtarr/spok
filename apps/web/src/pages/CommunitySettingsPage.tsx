@@ -276,7 +276,7 @@ export function CommunitySettingsPage() {
   }
 
   return (
-    <div className="p-6 overflow-auto flex-1 min-h-0">
+    <div className={`p-6 flex-1 min-h-0 ${activeTab === 'members' ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} title="Retour au tableau de bord">
@@ -316,7 +316,7 @@ export function CommunitySettingsPage() {
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className={`${activeTab === 'members' ? 'flex flex-col flex-1 min-h-0' : 'space-y-8'}`}>
         {/* === GENERAL TAB === */}
         {activeTab === 'general' && (
           <>
@@ -604,7 +604,7 @@ export function CommunitySettingsPage() {
 
         {/* === MEMBERS TAB === */}
         {activeTab === 'members' && user && (
-          <div className="bg-card border rounded-lg p-6">
+          <div className="bg-card border rounded-lg p-6 flex-1 min-h-0 flex flex-col">
             <CommunityMembersManager
               communityId={communityId!}
               currentUserRole={community.role || 'MEMBER'}

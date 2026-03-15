@@ -95,9 +95,9 @@ export function MembersColumnManager({
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
       {/* Column 1: Available users (non-members) */}
-      <div className="border rounded-lg flex flex-col min-h-[300px] max-h-[500px]">
+      <div className="border rounded-lg flex flex-col min-h-0 flex-1">
         <div className="p-3 border-b bg-muted/30">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4 text-muted-foreground" />
@@ -146,7 +146,7 @@ export function MembersColumnManager({
       </div>
 
       {/* Column 2: Members */}
-      <div className="border rounded-lg flex flex-col min-h-[300px] max-h-[500px]">
+      <div className="border rounded-lg flex flex-col min-h-0 flex-1">
         <div className="p-3 border-b bg-muted/30">
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-foreground" />
@@ -208,7 +208,7 @@ export function MembersColumnManager({
       </div>
 
       {/* Column 3: Owners */}
-      <div className="border rounded-lg flex flex-col min-h-[300px] max-h-[500px]">
+      <div className="border rounded-lg flex flex-col min-h-0 flex-1">
         <div className="p-3 border-b bg-muted/30">
           <div className="flex items-center gap-2 mb-2">
             <Crown className="w-4 h-4 text-amber-500" />
