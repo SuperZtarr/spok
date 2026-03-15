@@ -208,7 +208,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
             })}
           </div>
         )}
-      </div>
 
         {/* Joinable public communities */}
         {joinableCommunities.length > 0 && (
