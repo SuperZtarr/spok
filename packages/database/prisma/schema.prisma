@@ -32,6 +32,8 @@ model User {
   emailVerificationTokens    EmailVerificationToken[]
   sentInvitations            Invitation[] @relation("InvitationInvitedBy")
   reactions                  Reaction[]
+  sentCommunityEmails        CommunityEmail[]
+  receivedCommunityEmails    CommunityEmailRecipient[]
 
   @@map("users")
 }
@@ -94,8 +96,37 @@ model Community {
   spaces      Space[]
   tags        Tag[]
   invitations Invitation[]
+  emails      CommunityEmail[]
 
   @@map("communities")
+}
+
+model CommunityEmail {
+  id          String   @id @default(cuid())
+  communityId String
+  subject     String
+  html        String
+  sentById    String
+  sentAt      DateTime @default(now())
+
+  community  Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  sentBy     User      @relation(fields: [sentById], references: [id])
+  recipients CommunityEmailRecipient[]
+
+  @@map("community_emails")
+}
+
+model CommunityEmailRecipient {
+  id      String   @id @default(cuid())
+  emailId String
+  userId  String
+  sentAt  DateTime @default(now())
+
+  email CommunityEmail @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id])
+
+  @@unique([emailId, userId])
+  @@map("community_email_recipients")
 }
 
 // Appartenance à une communauté

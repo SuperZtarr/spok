@@ -35,6 +35,8 @@ import type {
   InviteCommunityMemberInput,
   AdminCommunity,
   AdminCommunityDetail,
+  CommunityEmailSummary,
+  CommunityEmailDetail,
   CommunityRole,
   ContributionWithAuthor,
   CreateContributionInput,
@@ -691,6 +693,18 @@ export const communitiesApi = {
     fetchApi<{ sent: number; failed: number }>(`/communities/${id}/send-email`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  listEmails: (id: string) =>
+    fetchApi<CommunityEmailSummary[]>(`/communities/${id}/emails`),
+
+  getEmail: (id: string, emailId: string) =>
+    fetchApi<CommunityEmailDetail>(`/communities/${id}/emails/${emailId}`),
+
+  resendEmail: (id: string, emailId: string, recipientIds: string[]) =>
+    fetchApi<{ sent: number; failed: number }>(`/communities/${id}/emails/${emailId}/resend`, {
+      method: 'POST',
+      body: JSON.stringify({ recipientIds }),
     }),
 };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Plus, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2 } from 'lucide-react';
+import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -457,15 +457,6 @@ export function Layout() {
                   {community.role === 'OWNER' && (
                     <Link to={`/communities/${community.id}/settings`} title="Paramètres">
                       <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                    </Link>
-                  )}
-                  {user && (
-                    <Link
-                      to="/?new=space"
-                      title="Créer un espace"
-                      onClick={() => useDashboardTabStore.getState().setTab('spaces')}
-                    >
-                      <Plus className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                     </Link>
                   )}
                 </div>

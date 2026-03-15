@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown } from 'lucide-react';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -102,7 +102,7 @@ export function CommunitySettingsPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members' | 'emails'>('general');
 
   // Fetch community details
   const { data: community, isLoading: communityLoading } = useQuery({
@@ -300,6 +300,7 @@ export function CommunitySettingsPage() {
             ...(canEdit ? [{ id: 'images' as const, label: 'Images' }] : []),
             { id: 'spaces', label: `Espaces (${communitySpaces.length})` },
             { id: 'members', label: `Membres (${community.memberCount || 0})` },
+            ...(canEdit ? [{ id: 'emails' as const, label: 'Emails' }] : []),
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -612,6 +613,11 @@ export function CommunitySettingsPage() {
             />
           </div>
         )}
+
+        {/* === EMAILS TAB === */}
+        {activeTab === 'emails' && user && communityId && (
+          <CommunityEmailsSection communityId={communityId} />
+        )}
       </div>
     </div>
   );
@@ -765,6 +771,158 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
         message={`Supprimer le tag « ${deletingTag?.name} » ?`}
         confirmLabel="Supprimer"
       />
+    </div>
+  );
+}
+
+// ==================== Emails Section ====================
+
+function CommunityEmailsSection({ communityId }: { communityId: string }) {
+  const queryClient = useQueryClient();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { data: emails, isLoading } = useQuery({
+    queryKey: ['community-emails', communityId],
+    queryFn: () => communitiesApi.listEmails(communityId),
+  });
+
+  const { data: emailDetail } = useQuery({
+    queryKey: ['community-email', communityId, expandedId],
+    queryFn: () => communitiesApi.getEmail(communityId, expandedId!),
+    enabled: !!expandedId,
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ['community-members', communityId],
+    queryFn: () => communitiesApi.getMembers(communityId),
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: ({ emailId, recipientIds }: { emailId: string; recipientIds: string[] }) =>
+      communitiesApi.resendEmail(communityId, emailId, recipientIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-emails', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['community-email', communityId] });
+    },
+  });
+
+  // Members who haven't received the expanded email
+  const newRecipients = useMemo(() => {
+    if (!emailDetail || !members) return [];
+    const alreadySent = new Set(emailDetail.recipients.map(r => r.userId));
+    return members.filter(m => !alreadySent.has(m.userId));
+  }, [emailDetail, members]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Mail className="w-5 h-5 text-muted-foreground" />
+        <h3 className="text-lg font-semibold">Emails envoyés</h3>
+      </div>
+
+      {!emails || emails.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">Aucun email envoyé pour le moment.</p>
+      ) : (
+        <div className="space-y-2">
+          {emails.map(email => {
+            const isExpanded = expandedId === email.id;
+            return (
+              <div key={email.id} className="border border-border rounded-lg overflow-hidden">
+                {/* Header row */}
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : email.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors text-left"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{email.subject}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(email.sentAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {' · '}{email.sentBy.name}
+                      {' · '}{email.recipientCount} destinataire{email.recipientCount > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Expanded detail */}
+                {isExpanded && emailDetail && emailDetail.id === email.id && (
+                  <div className="border-t border-border px-4 py-4 space-y-4">
+                    {/* Preview */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Contenu</p>
+                      <div
+                        className="text-sm bg-muted/30 rounded-md p-3 max-h-48 overflow-y-auto prose prose-sm dark:prose-invert"
+                        dangerouslySetInnerHTML={{ __html: emailDetail.html }}
+                      />
+                    </div>
+
+                    {/* Recipients list */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        Destinataires ({emailDetail.recipients.length})
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {emailDetail.recipients.map(r => (
+                          <span key={r.userId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted text-foreground">
+                            {r.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resend to new members */}
+                    {newRecipients.length > 0 && (
+                      <div className="border-t border-border pt-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm">
+                            <span className="font-medium">{newRecipients.length}</span> membre{newRecipients.length > 1 ? 's' : ''} n'ont pas reçu cet email
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              resendMutation.mutate({
+                                emailId: email.id,
+                                recipientIds: newRecipients.map(m => m.userId),
+                              });
+                            }}
+                            disabled={resendMutation.isPending}
+                          >
+                            {resendMutation.isPending ? (
+                              <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Envoi...</>
+                            ) : (
+                              <><Send className="w-3.5 h-3.5 mr-1.5" />Envoyer aux nouveaux</>
+                            )}
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {newRecipients.map(m => (
+                            <span key={m.userId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                              {m.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

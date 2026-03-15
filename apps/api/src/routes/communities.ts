@@ -1148,6 +1148,45 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     recipientIds: z.array(z.string()).min(1),
   });
 
+  // Helper: send emails via Resend and track recipients
+  async function sendEmailsToUsers(
+    prisma: typeof fastify.prisma,
+    emailRecord: { id: string; subject: string; html: string },
+    userIds: string[],
+  ) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, email: true },
+    });
+
+    if (users.length === 0) return { sent: 0, failed: 0 };
+
+    const { Resend } = await import('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const user of users) {
+      try {
+        await resend.emails.send({
+          from: 'SPOK <notifications@spok.app>',
+          to: user.email,
+          subject: emailRecord.subject,
+          html: emailRecord.html,
+        });
+        await prisma.communityEmailRecipient.create({
+          data: { emailId: emailRecord.id, userId: user.id },
+        });
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+
+    return { sent, failed };
+  }
+
   // POST /communities/:id/send-email — send email to community members
   fastify.post<{ Params: { id: string }; Body: z.infer<typeof sendEmailSchema> }>(
     '/:id/send-email',
@@ -1172,44 +1211,168 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = sendEmailSchema.parse(request.body);
 
-      // Fetch recipients that are members of this community
+      // Verify recipients are community members
       const members = await fastify.prisma.communityMembership.findMany({
         where: {
           communityId: request.params.id,
           userId: { in: body.recipientIds },
         },
-        include: {
-          user: { select: { email: true } },
-        },
+        select: { userId: true },
       });
 
-      const emails = members.map((m) => m.user.email);
-
-      if (emails.length === 0) {
+      const validUserIds = members.map((m) => m.userId);
+      if (validUserIds.length === 0) {
         return reply.badRequest('No valid recipients found among community members');
       }
 
-      const { Resend } = await import('resend');
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      // Persist the email
+      const emailRecord = await fastify.prisma.communityEmail.create({
+        data: {
+          communityId: request.params.id,
+          subject: body.subject,
+          html: body.html,
+          sentById: request.user.userId,
+        },
+      });
 
-      let sent = 0;
-      let failed = 0;
+      const result = await sendEmailsToUsers(fastify.prisma, emailRecord, validUserIds);
+      return result;
+    }
+  );
 
-      for (const email of emails) {
-        try {
-          await resend.emails.send({
-            from: 'SPOK <notifications@spok.app>',
-            to: email,
-            subject: body.subject,
-            html: body.html,
-          });
-          sent++;
-        } catch {
-          failed++;
-        }
+  // GET /communities/:id/emails — list sent emails
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/emails',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership || membership.role !== 'OWNER') {
+        return reply.forbidden('Insufficient permissions');
       }
 
-      return { sent, failed };
+      const emails = await fastify.prisma.communityEmail.findMany({
+        where: { communityId: request.params.id },
+        include: {
+          sentBy: { select: { id: true, name: true, email: true } },
+          _count: { select: { recipients: true } },
+        },
+        orderBy: { sentAt: 'desc' },
+      });
+
+      return emails.map((e) => ({
+        id: e.id,
+        subject: e.subject,
+        sentAt: e.sentAt,
+        sentBy: e.sentBy,
+        recipientCount: e._count.recipients,
+      }));
+    }
+  );
+
+  // GET /communities/:id/emails/:emailId — get email detail
+  fastify.get<{ Params: { id: string; emailId: string } }>(
+    '/:id/emails/:emailId',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership || membership.role !== 'OWNER') {
+        return reply.forbidden('Insufficient permissions');
+      }
+
+      const email = await fastify.prisma.communityEmail.findUnique({
+        where: { id: request.params.emailId, communityId: request.params.id },
+        include: {
+          sentBy: { select: { id: true, name: true, email: true } },
+          recipients: {
+            include: { user: { select: { id: true, name: true, email: true } } },
+            orderBy: { sentAt: 'asc' },
+          },
+        },
+      });
+
+      if (!email) return reply.notFound('Email not found');
+
+      return {
+        id: email.id,
+        subject: email.subject,
+        html: email.html,
+        sentAt: email.sentAt,
+        sentBy: email.sentBy,
+        recipientCount: email.recipients.length,
+        recipients: email.recipients.map((r) => ({
+          userId: r.user.id,
+          name: r.user.name,
+          email: r.user.email,
+          sentAt: r.sentAt,
+        })),
+      };
+    }
+  );
+
+  // POST /communities/:id/emails/:emailId/resend — resend to new members
+  fastify.post<{ Params: { id: string; emailId: string }; Body: { recipientIds: string[] } }>(
+    '/:id/emails/:emailId/resend',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!process.env.RESEND_API_KEY) {
+        return reply.serviceUnavailable('Email service is not configured');
+      }
+
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership || membership.role !== 'OWNER') {
+        return reply.forbidden('Insufficient permissions');
+      }
+
+      const email = await fastify.prisma.communityEmail.findUnique({
+        where: { id: request.params.emailId, communityId: request.params.id },
+        include: { recipients: { select: { userId: true } } },
+      });
+
+      if (!email) return reply.notFound('Email not found');
+
+      const { recipientIds } = request.body;
+
+      // Filter: only community members who haven't received this email yet
+      const alreadySent = new Set(email.recipients.map((r) => r.userId));
+      const members = await fastify.prisma.communityMembership.findMany({
+        where: {
+          communityId: request.params.id,
+          userId: { in: recipientIds },
+        },
+        select: { userId: true },
+      });
+
+      const newUserIds = members.map((m) => m.userId).filter((id) => !alreadySent.has(id));
+      if (newUserIds.length === 0) {
+        return reply.badRequest('All selected recipients have already received this email');
+      }
+
+      const result = await sendEmailsToUsers(fastify.prisma, email, newUserIds);
+      return result;
     }
   );
 };

@@ -87,3 +87,16 @@ export interface AdminCommunityDetail extends AdminCommunity {
   members: AdminCommunityMember[];
   spaces: AdminCommunitySpace[];
 }
+
+export interface CommunityEmailSummary {
+  id: string;
+  subject: string;
+  sentAt: string;
+  sentBy: { id: string; name: string; email: string };
+  recipientCount: number;
+}
+
+export interface CommunityEmailDetail extends CommunityEmailSummary {
+  html: string;
+  recipients: { userId: string; name: string; email: string; sentAt: string }[];
+}
