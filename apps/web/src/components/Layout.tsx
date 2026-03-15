@@ -396,7 +396,7 @@ export function Layout() {
     <>
       {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
       <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
+        <Link to="/" onClick={() => useDashboardTabStore.getState().setTab('home')} className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
       </div>
 
       {/* Navigation - scrollable */}
