@@ -510,6 +510,18 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      // If communityId changes and parentId wasn't explicitly set,
+      // detach from parent if parent is in a different community
+      if (communityIdOverride !== undefined && body.parentId === undefined && space.parentId) {
+        const currentParent = await fastify.prisma.space.findUnique({
+          where: { id: space.parentId },
+          select: { communityId: true },
+        });
+        if (currentParent && currentParent.communityId !== communityIdOverride) {
+          body.parentId = null;
+        }
+      }
+
       const updateData: Record<string, unknown> = {};
       if (body.name !== undefined) updateData.name = body.name;
       if (body.parentId !== undefined) updateData.parentId = body.parentId;
