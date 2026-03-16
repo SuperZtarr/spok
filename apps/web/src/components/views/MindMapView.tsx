@@ -29,6 +29,9 @@ import {
   countVisible,
   findTreeNode,
   RADIAL_STEP,
+  getStatusColor,
+  tailwindBgToHex,
+  getContrastTextColor,
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
 import { calculateLayout, buildPortalNodesAndEdges, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
@@ -55,6 +58,7 @@ interface MindMapViewProps {
   onAddChild: (parentId: string) => void;
   onMove?: (id: string, parentId: string | null, position: number) => void;
   onMoveToSpace?: (itemId: string) => void;
+  onMoveToSpaceDirect?: (itemId: string, sourceSpaceId: string, targetSpaceId: string) => void;
   onDuplicateToSpace?: (itemId: string) => void;
   onConvertToSpace?: (itemId: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string, label?: string) => void;
@@ -81,6 +85,7 @@ function MindMapViewInner({
   onAddChild,
   onMove,
   onMoveToSpace,
+  onMoveToSpaceDirect,
   onDuplicateToSpace,
   onConvertToSpace,
   onCreateRelation,
@@ -94,6 +99,10 @@ function MindMapViewInner({
   canEdit,
   innerRef,
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
+  // Track previous items to detect content-only vs structural changes
+  const prevStructureRef = useRef<string>('');
+  const prevDepsRef = useRef<string>('');
+
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
@@ -459,8 +468,59 @@ function MindMapViewInner({
     }
   }, [onNodesChangeBase, setNodes, setEdges]);
 
+  // Compute structural signature: ids, parentIds, relations, children count
+  const structureSignature = useMemo(() => {
+    const parts = items.map(i => {
+      const relIds = (i.relationsFrom?.map((r: { id: string }) => r.id) || [])
+        .concat(i.relationsTo?.map((r: { id: string }) => r.id) || [])
+        .sort()
+        .join(',');
+      return `${i.id}:${i.parentId || ''}:${i.children?.length || 0}:${relIds}`;
+    }).sort();
+    return parts.join('|');
+  }, [items]);
+
+  // Deps signature for non-item dependencies that require full layout
+  const depsSignature = `${[...collapsedIds].sort().join(',')}|${displayName}|${portals.map(p => p.id).join(',')}|${items.length}`;
+
   // Update nodes when items, collapsed state, or portals change
   useEffect(() => {
+    const prevSignature = prevStructureRef.current;
+    const prevDeps = prevDepsRef.current;
+    const isFirstRender = prevSignature === '';
+    const isStructuralChange = prevSignature !== structureSignature;
+    const isDepsChange = prevDeps !== depsSignature;
+    prevStructureRef.current = structureSignature;
+    prevDepsRef.current = depsSignature;
+
+    if (!isFirstRender && !isStructuralChange && !isDepsChange) {
+      // Content-only change: patch node data in place, keep positions
+      const itemMap = new Map(items.map(i => [i.id, i]));
+      setNodes(nds => nds.map(n => {
+        if (n.type !== 'mindmap') return n;
+        const item = itemMap.get(n.id);
+        if (!item) return n;
+        const statusColor = getStatusColor(item.status, statuses);
+        const hexColor = tailwindBgToHex(statusColor);
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            label: item.title,
+            item,
+            statusColor,
+            hexColor,
+            textColor: getContrastTextColor(hexColor),
+            isHighlighted: (layoutOptions.highlightType ? item.type === layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !item.status : item.status === layoutOptions.highlightStatus) : false),
+            isDimmed: (layoutOptions.highlightType ? item.type !== layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !!item.status : item.status !== layoutOptions.highlightStatus) : false) || (layoutOptions.searchMatchIds ? !layoutOptions.searchMatchIds.has(item.id) : false),
+            isSearchMatch: !!(layoutOptions.searchMatchIds && layoutOptions.searchMatchIds.has(item.id)),
+          },
+        };
+      }));
+      return;
+    }
+
+    // Structural change: full layout recalculation
     const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
     const positionedNodes = applyPositions(newNodes);
 
@@ -476,7 +536,7 @@ function MindMapViewInner({
     setNodes(allNodes);
     setEdges(allEdges);
     setTimeout(() => fitView({ padding: 0.1 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, structureSignature, depsSignature]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -687,6 +747,22 @@ function MindMapViewInner({
       }
 
       const intersecting = getIntersectingNodes(draggedNode);
+
+      // Check if dropped on a portal node → move to that space
+      const portalTarget = intersecting.find(n => n.type === 'portal' && n.id !== draggedNode.id);
+      if (portalTarget && onMoveToSpaceDirect && spaceId && canEdit !== false) {
+        // Resolve target space ID from portal data
+        const targetSpaceId = (portalTarget.data?.space as { id?: string })?.id
+          || (portalTarget.id.startsWith('child-space-') ? portalTarget.id.replace('child-space-', '') : null)
+          || portals.find(p => p.id === portalTarget.id)?.spaceId;
+        if (targetSpaceId) {
+          onMoveToSpaceDirect(draggedNode.id, spaceId, targetSpaceId);
+          dragDescendants.current = null;
+          setDropTargetId(null);
+          return;
+        }
+      }
+
       const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
       if (target && onMove && canEdit !== false) {
         if (target.id === '__space__') {
@@ -719,7 +795,7 @@ function MindMapViewInner({
       dragDescendants.current = null;
       setDropTargetId(null);
     },
-    [getIntersectingNodes, onMove, items, savePositions, setNodes]
+    [getIntersectingNodes, onMove, onMoveToSpaceDirect, items, savePositions, setNodes, spaceId, portals, canEdit]
   );
 
   // Reset layout function
@@ -1070,7 +1146,7 @@ function MindMapViewInner({
 
 export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(function MindMapView({
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
-  onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
+  onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit,
 }, ref) {
   return (
@@ -1080,7 +1156,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           items={items} spaceName={spaceName} spaceId={spaceId} communitySpaces={communitySpaces}
           highlightType={highlightType} highlightStatus={highlightStatus} searchMatchIds={searchMatchIds}
           onEdit={onEdit} onDelete={onDelete} onUpdateStatus={onUpdateStatus} onAddChild={onAddChild}
-          onMove={onMove} onMoveToSpace={onMoveToSpace} onDuplicateToSpace={onDuplicateToSpace}
+          onMove={onMove} onMoveToSpace={onMoveToSpace} onMoveToSpaceDirect={onMoveToSpaceDirect} onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onMerge={onMerge} onAbsorbChildren={onAbsorbChildren} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
           referentiels={referentiels} canEdit={canEdit}

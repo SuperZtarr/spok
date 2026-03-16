@@ -630,6 +630,7 @@ export function SpacePage() {
               onAddChild={handleAddChild}
               onMove={actions.handleMove}
               onMoveToSpace={(id) => setMoveItemId(id)}
+              onMoveToSpaceDirect={actions.handleMoveItemToSpace}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
