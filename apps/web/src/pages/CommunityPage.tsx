@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight } from 'lucide-react';
+import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight, Info } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -16,24 +16,32 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
 function SpaceTreeNode({ node, level }: { node: any; level: number }) {
   return (
     <>
-      <Link
-        to={`/spaces/${node.id}`}
-        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-        style={{ marginLeft: `${level * 24}px` }}
-      >
-        {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
-        {node.avatarUrl ? (
-          <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
-        ) : (
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FolderOpen className="w-4 h-4 text-primary" />
+      <div className="flex items-center gap-1" style={{ marginLeft: `${level * 24}px` }}>
+        <Link
+          to={`/spaces/${node.id}/content`}
+          className="flex-1 flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+        >
+          {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
+          {node.avatarUrl ? (
+            <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FolderOpen className="w-4 h-4 text-primary" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{node.name}</p>
+            <p className="text-xs text-muted-foreground">{node.itemCount || 0} élément{(node.itemCount || 0) > 1 ? 's' : ''}</p>
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{node.name}</p>
-          <p className="text-xs text-muted-foreground">{node.itemCount || 0} élément{(node.itemCount || 0) > 1 ? 's' : ''}</p>
-        </div>
-      </Link>
+        </Link>
+        <Link
+          to={`/spaces/${node.id}`}
+          className="p-2 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
+          title="Présentation de l'espace"
+        >
+          <Info className="w-4 h-4" />
+        </Link>
+      </div>
       {node.children?.map((child: any) => (
         <SpaceTreeNode key={child.id} node={child} level={level + 1} />
       ))}
