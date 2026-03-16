@@ -762,7 +762,7 @@ export function Layout() {
             </div>
           </div>
           {/* Right: navbar menu + search + user avatar */}
-          <div className="flex items-center gap-2 ml-auto flex-shrink-0 px-4 md:px-5">
+          <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
             <div id="header-view-selector"><ViewModeSelector /></div>
             <div id="header-global-search"><GlobalSearch /></div>
             {user ? (

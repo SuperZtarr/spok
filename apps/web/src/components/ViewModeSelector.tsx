@@ -483,8 +483,8 @@ export function ViewModeSelector() {
   // =============================================
   return (
     <>
-      {/* ===== Mobile (<md): compact menu button ===== */}
-      <div className="md:hidden">
+      {/* ===== Mobile (<lg): compact menu button ===== */}
+      <div className="lg:hidden">
         <button
           ref={mobileButtonRef}
           onClick={() => {
@@ -501,14 +501,14 @@ export function ViewModeSelector() {
         </button>
       </div>
 
-      {/* ===== Desktop nav (md+) ===== */}
-      <nav ref={navRef} className="hidden md:flex items-center">
+      {/* ===== Desktop nav (lg+) ===== */}
+      <nav ref={navRef} className="hidden lg:flex items-center">
         {!isInSpace ? (
           <>
-            {/* md: icons only */}
-            <div className="flex lg:hidden">{renderDashboardInline(false)}</div>
-            {/* lg+: icons + labels */}
-            <div className="hidden lg:flex">{renderDashboardInline(true)}</div>
+            {/* lg: icons only */}
+            <div className="flex xl:hidden">{renderDashboardInline(false)}</div>
+            {/* xl+: icons + labels */}
+            <div className="hidden xl:flex">{renderDashboardInline(true)}</div>
           </>
         ) : (
           renderSpaceCategories()
