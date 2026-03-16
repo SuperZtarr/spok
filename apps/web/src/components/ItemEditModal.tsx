@@ -744,7 +744,7 @@ export function ItemEditModal({
             </div>
 
             {/* Three-column layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr,1fr,320px] gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr,0.85fr,380px] gap-6">
 
           {/* === LEFT COLUMN: description + contributions === */}
           <div className="space-y-6 min-w-0">
@@ -1103,12 +1103,21 @@ export function ItemEditModal({
               </div>
 
               {/* Assigné à */}
-              {spaceMembers && spaceMembers.length > 1 && (
+              {spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
                   {canEdit ? (
-                    <Select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
-                      options={[{ value: '', label: 'Non assigné' }, ...spaceMembers.map((m) => ({ value: m.userId, label: m.name || m.email }))]} />
+                    <div className="flex items-center gap-2">
+                      <Select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
+                        options={[{ value: '', label: 'Non assigné' }, ...spaceMembers.map((m) => ({ value: m.userId, label: m.name || m.email }))]} />
+                      {user && assignedToId !== user.id && (
+                        <button type="button" onClick={() => setAssignedToId(user.id)}
+                          className="shrink-0 px-2 py-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+                          title="M'assigner">
+                          <User className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <p className="text-sm">
                       {assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu') : <span className="text-muted-foreground">Non assigné</span>}
@@ -1238,52 +1247,52 @@ export function ItemEditModal({
                 )}
               </div>
 
+              {/* Children items */}
+              {item && (() => {
+                const children = allItems.filter(i => i.parentId === item.id);
+                if (children.length === 0) return null;
+                return (
+                  <div className="space-y-2" data-tour="item-children">
+                    <h2 className="text-sm font-semibold flex items-center gap-2">
+                      <GitBranch className="w-4 h-4" />
+                      Éléments enfants ({children.length})
+                    </h2>
+                    <div className="space-y-0.5 max-h-[400px] overflow-y-auto">
+                      {children.map(child => {
+                        const ChildIcon = TYPE_ICONS[child.type];
+                        const childTypeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[child.type];
+                        const grandChildCount = allItems.filter(i => i.parentId === child.id).length;
+                        return (
+                          <button
+                            key={child.id}
+                            type="button"
+                            onClick={() => onNavigate?.(child.id)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group"
+                          >
+                            {ChildIcon && <ChildIcon className={`w-4 h-4 flex-shrink-0 ${childTypeConfig?.color || 'text-muted-foreground'}`} />}
+                            <span className="truncate flex-1">{child.title}</span>
+                            {grandChildCount > 0 && (
+                              <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
+                                {grandChildCount} enfant{grandChildCount > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {child.status && (
+                              <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted flex-shrink-0">
+                                {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((s: any) => s.id === child.status)?.label || child.status}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
           </div>{/* end right column */}
 
             </div>
           </div>
-
-          {/* Children items */}
-          {item && (() => {
-            const children = allItems.filter(i => i.parentId === item.id);
-            if (children.length === 0) return null;
-            return (
-              <div className="border-t border-border mt-4 pt-4" data-tour="item-children">
-                <h2 className="text-sm font-semibold flex items-center gap-2 mb-2">
-                  <GitBranch className="w-4 h-4" />
-                  Éléments enfants ({children.length})
-                </h2>
-                <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                  {children.map(child => {
-                    const ChildIcon = TYPE_ICONS[child.type];
-                    const childTypeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[child.type];
-                    const grandChildCount = allItems.filter(i => i.parentId === child.id).length;
-                    return (
-                      <button
-                        key={child.id}
-                        type="button"
-                        onClick={() => onNavigate?.(child.id)}
-                        className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group"
-                      >
-                        {ChildIcon && <ChildIcon className={`w-4 h-4 flex-shrink-0 ${childTypeConfig?.color || 'text-muted-foreground'}`} />}
-                        <span className="truncate flex-1">{child.title}</span>
-                        {grandChildCount > 0 && (
-                          <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
-                            {grandChildCount} enfant{grandChildCount > 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {child.status && (
-                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted flex-shrink-0">
-                            {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((s: any) => s.id === child.status)?.label || child.status}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
 
           {/* Footer — always visible */}
           <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
