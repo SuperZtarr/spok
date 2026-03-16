@@ -16,6 +16,9 @@
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
+### Permissions & accès
+- [ ] Revoir les droits d'accès aux espaces d'une communauté (visibilité, rôles, héritage)
+
 ### Infra & emails
 - [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
 - [x] Template email avec header/footer SPOK — 5775ae7 (2026-03-15)

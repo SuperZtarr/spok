@@ -41,6 +41,23 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-17] - Session ameliorations UX + documentation
+
+**Actions realisees :**
+- MindMap : mise a jour unitaire des items sans reset du layout + drag vers portail — 1ec42ea
+- ItemEditModal : selecteur assignation toujours visible + bouton m'assigner + enfants en 3e colonne — 3f656ce
+- Header responsive : menu vues compact sous 1024px — 0a414d0
+- Fix donnees vides au retour sur l'onglet (gcTime + placeholderData) — ba6f686
+- Script export-doc-to-prod — 3d08627
+- Indicateur tuto non vu sur les boutons de menu — 0742a9c
+- Page communaute : clic espace ouvre le contenu directement — 5eeaff0
+- Documentation communaute "Documentations" : espaces Interface utilisateur, Architecture technique, CLAUDE peuple et exporte en prod
+- Relations pages → modales + identification contradictions (blocks)
+
+**Etat :** TERMINE
+
+---
+
 ## Historique des sessions precedentes (resume)
 
 ### Fonctionnalites implementees
@@ -73,6 +90,17 @@ Après chaque commit :
 - **Workflow Git** : ne plus merger/pusher sans accord explicite de l'utilisateur. Commiter sur branche worktree, tester en local, puis merge sur demande.
 - **Dev Docker** : `pnpm dev:start` lance 3 conteneurs (postgres:25432, api:3001, web:3000). Utilise `node-linker=hoisted` + symlinks manuels pour compatibilite pnpm/Docker.
 - **Prod Railway** : push sur `origin/master` declenche le deploiement automatique.
+
+---
+
+#### [2026-03-16 01:00] - RoleGuard indicateur debug
+
+**Demande :** Indicateur visuel de debug colorant les éléments conditionnés par rôle (bleu=MEMBER, vert=OWNER, rouge=ADMIN)
+**Actions réalisées :**
+- Composant RoleGuard avec bordures colorées + label en mode dev
+- Événement custom spok:devmode pour toggle réactif
+- Appliqué sur 14 fichiers (Layout, Dashboard, Settings, Vues, Members, etc.)
+**État :** TERMINÉ — b5171a6
 
 ---
 
