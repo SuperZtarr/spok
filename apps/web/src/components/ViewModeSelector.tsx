@@ -10,6 +10,22 @@ import { createPortal } from 'react-dom';
 import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewCategory } from '../stores/viewMode';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import { cn } from '../lib/utils';
+import { VIEW_TOURS, DASHBOARD_TOURS } from '../hooks/viewTours';
+
+const VIEW_TOUR_PREFIX = 'spok-view-tour-done-';
+const DASH_TOUR_PREFIX = 'spok-dashboard-tour-done-';
+
+function hasUnseenViewTour(mode: string): boolean {
+  return !!(VIEW_TOURS as Record<string, unknown>)[mode] && !localStorage.getItem(VIEW_TOUR_PREFIX + mode);
+}
+
+function hasUnseenDashTour(tab: string): boolean {
+  return !!(DASHBOARD_TOURS as Record<string, unknown>)[tab] && !localStorage.getItem(DASH_TOUR_PREFIX + tab);
+}
+
+const UnseenDot = () => (
+  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+);
 
 const ICONS: Record<string, typeof List> = {
   List,
@@ -173,7 +189,7 @@ export function ViewModeSelector() {
               >
                 <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="flex-1 text-left">{dashTab.label}</span>
-                {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenDashTour(dashTab.value) && <UnseenDot />}
               </button>
             );
           })}
@@ -193,7 +209,7 @@ export function ViewModeSelector() {
               >
                 <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="flex-1 text-left">{dashTab.label}</span>
-                {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenDashTour(dashTab.value) && <UnseenDot />}
               </button>
             );
           })}
@@ -219,7 +235,7 @@ export function ViewModeSelector() {
             >
               <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
               <span className="flex-1 text-left">{dashTab.label}</span>
-              {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+              {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenDashTour(dashTab.value) && <UnseenDot />}
             </button>
           );
         })}
@@ -244,7 +260,7 @@ export function ViewModeSelector() {
                   >
                     <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
                     <span className="flex-1 text-left">{viewMode.label}</span>
-                    {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                    {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenViewTour(viewMode.value) && <UnseenDot />}
                   </button>
                 );
               })}
@@ -267,7 +283,7 @@ export function ViewModeSelector() {
             >
               <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
               <span className="flex-1 text-left">{dashTab.label}</span>
-              {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+              {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenDashTour(dashTab.value) && <UnseenDot />}
             </button>
           );
         })}
@@ -335,7 +351,7 @@ export function ViewModeSelector() {
           >
             <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
             <span className="flex-1 text-left">{dashTab.label}</span>
-            {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+            {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenDashTour(dashTab.value) && <UnseenDot />}
           </button>
         );
       })}
@@ -359,7 +375,7 @@ export function ViewModeSelector() {
           >
             <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
             <span className="flex-1 text-left">{dashTab.label}</span>
-            {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+            {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenDashTour(dashTab.value) && <UnseenDot />}
           </button>
         );
       })}
@@ -395,7 +411,7 @@ export function ViewModeSelector() {
             >
               <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
               <span className="flex-1 text-left">{viewMode.label}</span>
-              {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+              {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenViewTour(viewMode.value) && <UnseenDot />}
             </button>
           );
         })}
