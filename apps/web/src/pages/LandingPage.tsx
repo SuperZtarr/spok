@@ -1,61 +1,77 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  FolderTree,
-  Users,
-  Eye,
-  CalendarRange,
-  GitBranch,
-  Palette,
-  History,
-  Globe,
-  List,
-  Columns3,
-  GanttChart,
-  Network,
-  Share2,
-  CircleDot,
-  Waypoints,
-  PenTool,
-  Circle,
-  FileText,
-  ArrowDownUp,
-  LayoutGrid,
-  CalendarCheck,
-  Calendar,
+  FolderTree, Users, Eye, CalendarRange, GitBranch, Palette, History, Globe,
+  List, Columns3, GanttChart, Network, Share2, CircleDot, Waypoints, Circle,
+  FileText, LayoutGrid, CalendarCheck, Calendar, Orbit, SquareStack, Disc,
+  TrendingDown, Layers, Table2, Grid3x3, Focus, Flame,
 } from 'lucide-react';
 import { communitiesApi } from '../lib/api';
+import { useViewConfig } from '../hooks/useViewConfig';
+import type { ViewConfigItem } from '@spok/shared';
+
+const VIEW_ICONS: Record<string, typeof List> = {
+  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
+  Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
+  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+};
+
+const VIEW_DESCRIPTIONS: Record<string, string> = {
+  list: 'Vue tabulaire avec tri, filtres et recherche',
+  tree: 'Hiérarchie parent-enfant avec drag & drop',
+  kanban: 'Colonnes par statut, glisser-déposer',
+  text: 'Affichage éditorial des contenus',
+  planning: 'Vue par périodes et jalons',
+  timeline: 'Diagramme de Gantt avec dépendances',
+  calendar: 'Vue mensuelle des échéances',
+  types: 'Grille groupée par type d\'item',
+  mindmap: 'Carte mentale interactive avec zones projet',
+  graph: 'Réseau force-directed interactif',
+  sunburst: 'Diagramme solaire hiérarchique',
+  relations: 'Carte des relations entre items',
+  bubble: 'Cercles imbriqués proportionnels',
+  radialTree: 'Arbre radial concentrique',
+  treemap: 'Rectangles proportionnels à la taille',
+  chord: 'Diagramme de flux entre catégories',
+  burndown: 'Courbe d\'avancement du sprint',
+  cfd: 'Flux cumulatif d\'avancement',
+  members: 'Kanban groupé par membre assigné',
+  priority: 'Kanban groupé par niveau de priorité',
+  crossTable: 'Tableau croisé dynamique',
+  heatmap: 'Carte de chaleur de l\'activité temporelle',
+  ego: 'Réseau égocentrique autour d\'un item',
+};
 
 const features = [
   {
     icon: FolderTree,
     title: 'Structurer',
-    description: '10 types d\'items (projets, tâches, notes, réunions, périodes, liens, documents…) organisés dans des espaces hiérarchiques.',
+    description: '11 types d\'items (projets, tâches, notes, réunions, périodes, liens, documents, diagrammes…) organisés dans des espaces hiérarchiques.',
   },
   {
     icon: Users,
     title: 'Collaborer',
-    description: 'Communautés, contributions sur chaque item, notifications en temps réel, assignation et rôles granulaires.',
+    description: 'Communautés, contributions sur chaque item, notifications, assignation, rôles et permissions granulaires.',
   },
   {
     icon: Eye,
     title: 'Visualiser',
-    description: '15 vues pour explorer vos données sous tous les angles : liste, kanban, gantt, graphe, carte mentale, bulles…',
+    description: 'Plus de 20 vues pour explorer vos données sous tous les angles : liste, kanban, gantt, graphe, carte mentale, bulles…',
   },
   {
     icon: CalendarRange,
     title: 'Planifier',
-    description: 'Timeline Gantt, calendrier, planning, séquences. Statuts personnalisables et suivi de la progression.',
+    description: 'Timeline Gantt, calendrier, planning, burndown. Statuts personnalisables et suivi de la progression.',
   },
   {
     icon: GitBranch,
     title: 'Lier',
-    description: 'Relations typées entre items pour construire un graphe de connaissances. Carte des relations et schéma interactif.',
+    description: 'Relations typées entre items pour construire un graphe de connaissances. Carte des relations et réseau interactif.',
   },
   {
     icon: Palette,
     title: 'Personnaliser',
-    description: 'Référentiels de statuts et de types par espace, tags colorés, templates d\'espaces prédéfinis.',
+    description: 'Référentiels de statuts et de types par espace, tags colorés, templates d\'espaces, visibilité configurable.',
   },
   {
     icon: History,
@@ -65,40 +81,7 @@ const features = [
   {
     icon: Globe,
     title: 'Ouvrir',
-    description: 'Communautés publiques accessibles sans inscription. Accès en lecture seule pour les visiteurs anonymes.',
-  },
-];
-
-const viewCategories = [
-  {
-    title: 'Basique',
-    views: [
-      { icon: List, name: 'Liste', description: 'Vue tabulaire avec tri, filtres et recherche' },
-      { icon: GitBranch, name: 'Arborescence', description: 'Hiérarchie parent-enfant avec drag & drop' },
-      { icon: Columns3, name: 'Kanban', description: 'Colonnes par statut, glisser-déposer' },
-      { icon: FileText, name: 'Texte', description: 'Affichage éditorial des contenus' },
-    ],
-  },
-  {
-    title: 'Planification',
-    views: [
-      { icon: CalendarCheck, name: 'Planning', description: 'Vue par périodes et jalons' },
-      { icon: GanttChart, name: 'Gantt', description: 'Diagramme de Gantt avec dépendances' },
-      { icon: Calendar, name: 'Calendrier', description: 'Vue mensuelle des échéances' },
-      { icon: ArrowDownUp, name: 'Séquence', description: 'Ordre séquentiel avec relations' },
-      { icon: LayoutGrid, name: 'Types', description: 'Grille groupée par type d\'item' },
-    ],
-  },
-  {
-    title: 'Exploration',
-    views: [
-      { icon: Share2, name: 'Carte mentale', description: 'Mind map avec zones projet' },
-      { icon: Network, name: 'Graphe', description: 'Réseau force-directed interactif' },
-      { icon: CircleDot, name: 'Sunburst', description: 'Diagramme solaire hiérarchique' },
-      { icon: Waypoints, name: 'Relations', description: 'Carte des relations entre items' },
-      { icon: PenTool, name: 'Schéma', description: 'Schéma libre avec groupes et liens' },
-      { icon: Circle, name: 'Bulles', description: 'Cercles imbriqués proportionnels' },
-    ],
+    description: 'Communautés publiques accessibles sans inscription. Trois niveaux de visibilité : ouvert, lecture seule, privé.',
   },
 ];
 
@@ -112,6 +95,8 @@ export function LandingPage() {
     queryKey: ['communities', 'public'],
     queryFn: () => communitiesApi.listPublic(),
   });
+
+  const { views, categories } = useViewConfig();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -143,7 +128,7 @@ export function LandingPage() {
         </p>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
           L'outil collaboratif pour structurer vos projets, relier vos idées
-          et les explorer sous 15 vues différentes.
+          et les explorer sous {views.length} vues différentes.
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Link to="/register" className={`${btnDefault} h-10 rounded-md px-8`}>
@@ -220,27 +205,37 @@ export function LandingPage() {
             ))}
           </div>
 
-          {/* Views by category */}
+          {/* Views by category — from config */}
+          <h3 className="mb-6 text-center text-lg font-semibold">
+            {views.length} vues pour explorer vos données
+          </h3>
           <div className="space-y-8">
-            {viewCategories.map((cat) => (
-              <div key={cat.title}>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{cat.title}</h3>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {cat.views.map((v) => (
-                    <div
-                      key={v.name}
-                      className="flex items-start gap-3 rounded-lg border bg-card p-4"
-                    >
-                      <v.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <div>
-                        <p className="font-medium">{v.name}</p>
-                        <p className="text-sm text-muted-foreground">{v.description}</p>
-                      </div>
-                    </div>
-                  ))}
+            {categories.map((cat) => {
+              const catViews = views.filter(v => v.category === cat.id);
+              if (catViews.length === 0) return null;
+              return (
+                <div key={cat.id}>
+                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{cat.label}</h4>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {catViews.map((v: ViewConfigItem) => {
+                      const Icon = VIEW_ICONS[v.icon] || List;
+                      return (
+                        <div
+                          key={v.id}
+                          className="flex items-start gap-3 rounded-lg border bg-card p-4"
+                        >
+                          <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                          <div>
+                            <p className="font-medium">{v.label}</p>
+                            <p className="text-sm text-muted-foreground">{VIEW_DESCRIPTIONS[v.id] || ''}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
