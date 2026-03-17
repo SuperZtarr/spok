@@ -257,7 +257,7 @@ export function SpaceSettingsPage() {
       setEditCommunityId(space.communityId || '');
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
-      setEditVisibility((space as any).visibility || 'OPEN');
+      setEditVisibility(space.visibility || 'OPEN');
     }
   }, [space, editName]);
 
@@ -305,7 +305,7 @@ export function SpaceSettingsPage() {
     if (newParentId !== (space.parentId || null)) updates.parentId = newParentId;
     const newDefaultRole = (editDefaultRole || null) as Role | null;
     if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
-    if (editVisibility !== ((space as any).visibility || 'OPEN')) updates.visibility = editVisibility;
+    if (editVisibility !== (space.visibility || 'OPEN')) updates.visibility = editVisibility;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -317,7 +317,7 @@ export function SpaceSettingsPage() {
     (editCommunityId || null) !== space.communityId ||
     (editParentId || null) !== (space.parentId || null) ||
     (editDefaultRole || null) !== (space.defaultRole || null) ||
-    editVisibility !== ((space as any).visibility || 'OPEN')
+    editVisibility !== (space.visibility || 'OPEN')
   );
 
   const communityOptions = [

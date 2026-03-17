@@ -461,6 +461,7 @@ export function Layout() {
       }
     } finally {
       logout();
+      queryClient.clear();
       navigate('/');
     }
   };

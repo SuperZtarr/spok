@@ -1,5 +1,6 @@
 export type SpaceType = 'PERSONAL' | 'GROUP';
-export type Role = 'OWNER' | 'MEMBER';
+export type Role = 'OWNER' | 'MEMBER' | 'VIEWER';
+export type SpaceVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 
 export interface Space {
   id: string;
@@ -11,6 +12,7 @@ export interface Space {
   avatarUrl?: string | null;
   coverUrl?: string | null;
   defaultRole?: Role | null;
+  visibility?: SpaceVisibility;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +45,7 @@ export interface UpdateSpaceInput {
   name?: string;
   parentId?: string | null;
   defaultRole?: Role | null;
+  visibility?: SpaceVisibility;
 }
 
 export interface InviteMemberInput {
