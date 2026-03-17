@@ -7,7 +7,8 @@ import {
   Eye, Users,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewCategory } from '../stores/viewMode';
+import { useViewModeStore, type ViewCategory } from '../stores/viewMode';
+import { useViewConfig } from '../hooks/useViewConfig';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import { cn } from '../lib/utils';
 import { VIEW_TOURS, DASHBOARD_TOURS } from '../hooks/viewTours';
@@ -64,6 +65,11 @@ export function ViewModeSelector() {
   const { tab, setTab } = useDashboardTabStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const { views: configViews, categories: configCategories } = useViewConfig();
+
+  // Map config to VIEW_MODES-compatible format
+  const VIEW_MODES = configViews.map(v => ({ value: v.id as any, label: v.label, icon: v.icon, category: v.category }));
+  const VIEW_CATEGORIES = configCategories.map(c => ({ value: c.id, label: c.label }));
 
   type MenuCategory = ViewCategory | 'myActivities';
 
