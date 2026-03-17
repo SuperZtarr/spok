@@ -196,13 +196,18 @@ export function LandingPage() {
         </section>
       )}
 
-      {/* Features */}
+      {/* Features + Views */}
       <section className="border-t bg-muted/50 py-16">
         <div className="mx-auto max-w-5xl px-4">
-          <h2 className="mb-10 text-center text-2xl font-bold">
+          <h2 className="mb-2 text-center text-2xl font-bold">
             Tout ce qu'il faut pour avancer
           </h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <p className="mb-10 text-center text-muted-foreground">
+            Structurez, collaborez, visualisez — chaque vue offre une perspective unique
+          </p>
+
+          {/* Core features */}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-12">
             {features.map((f) => (
               <div
                 key={f.title}
@@ -214,18 +219,8 @@ export function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Views */}
-      <section className="py-16">
-        <div className="mx-auto max-w-5xl px-4">
-          <h2 className="mb-2 text-center text-2xl font-bold">
-            15 vues pour explorer vos données
-          </h2>
-          <p className="mb-10 text-center text-muted-foreground">
-            Chaque vue offre une perspective unique sur les mêmes données
-          </p>
+          {/* Views by category */}
           <div className="space-y-8">
             {viewCategories.map((cat) => (
               <div key={cat.title}>
@@ -234,7 +229,7 @@ export function LandingPage() {
                   {cat.views.map((v) => (
                     <div
                       key={v.name}
-                      className="flex items-start gap-3 rounded-lg border p-4"
+                      className="flex items-start gap-3 rounded-lg border bg-card p-4"
                     >
                       <v.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                       <div>
