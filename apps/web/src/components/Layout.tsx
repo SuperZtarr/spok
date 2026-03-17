@@ -461,7 +461,7 @@ export function Layout() {
       }
     } finally {
       logout();
-      navigate('/login');
+      navigate('/');
     }
   };
 

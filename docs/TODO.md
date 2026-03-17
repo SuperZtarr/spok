@@ -17,7 +17,7 @@
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
 ### Permissions & accès
-- [ ] Revoir les droits d'accès aux espaces d'une communauté (visibilité, rôles, héritage)
+- [x] Revoir les droits d'accès aux espaces d'une communauté (visibilité, rôles, héritage) — 0d2f928 (2026-03-17)
 
 ### Infra & emails
 - [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
@@ -151,6 +151,16 @@
 - [x] Vue matricielle — 5e73a0f
 
 ## Historique
+
+### 2026-03-17
+- MindMap : réordonnancement des frères par drag (ordre angulaire persisté en DB) — 45694d1
+- MindMap : support portails pour le reorder — 45694d1
+- MindMap : tri par position uniquement (plus de groupement par type) — 45694d1
+- Fix : rafraîchissement liste après édition modale (await invalidation) — 45694d1
+- UX : autoFocus sur le titre dans ItemEditModal — 45694d1
+- Permissions : visibilité des espaces (OPEN/READONLY/PRIVATE) avec contrôle d'accès centralisé — 0d2f928
+- Refactor : checkSpaceAccess centralisé (tags, referentiels, auditLogs utilisent l'export items.ts) — 0d2f928
+- Templates d'espace : 8 templates enrichis (Projet, Kanban, Réunions, Wiki, Bug Tracker, Brainstorming, Scrum) — f506434
 
 ### 2026-03-15
 - Sidebar multi-communauté dépliées par défaut + compteur — 75d49c7

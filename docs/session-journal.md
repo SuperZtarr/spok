@@ -41,6 +41,55 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-17] - Visibilité des espaces (OPEN/READONLY/PRIVATE)
+
+**Demande :** Reprendre le chantier permissions/visibilité des espaces, commencé lors d'une session précédente (schema Prisma déjà modifié, db:generate avait crashé)
+**Actions réalisées :**
+- db:push + db:generate du schema avec enum SpaceVisibility
+- checkSpaceAccess centralisé dans items.ts avec logique OPEN/READONLY/PRIVATE
+- Refactor tags.ts, referentiels.ts, auditLogs.ts pour utiliser le helper partagé
+- Filtrage des espaces PRIVATE dans les listings, rôle VIEWER pour READONLY
+- updateSpaceSchema accepte visibility
+- Sélecteur visibilité dans SpaceSettingsPage (onglet Général)
+- Commit 0d2f928, pushé sur master
+
+**État :** TERMINÉ
+
+---
+
+#### [2026-03-17] - Templates d'espace enrichis
+
+**Demande :** Enrichir les 4 templates existants (vides) et ajouter 4 nouveaux templates
+**Actions réalisées :**
+- Projet : 5 phases, 18 items (cadrage → livraison + risques)
+- Kanban : 8 tâches/bugs exemples
+- Réunions : 4 types de réunion avec sous-items
+- Wiki : 4 catégories, 14 articles
+- Bug Tracker : groupes par sévérité, statuts dédiés
+- Brainstorming : catégories thématiques + idées libres
+- Sprint Scrum : sprints, user stories, DoD
+- Ajout icônes lucide dans DashboardPage
+- Commit f506434, pushé sur master
+
+**État :** TERMINÉ
+
+---
+
+#### [2026-03-17] - Communauté de démo "Découvrir SPOK"
+
+**Demande :** Créer une communauté de présentation avec des espaces d'exemples en dev
+**Actions réalisées :**
+- Communauté "Découvrir SPOK" (publique) avec 5 espaces
+- Gestion de projet : 2 projets, tâches avec dépendances, sprints
+- Base de connaissances : 3 catégories, notes structurées
+- Suivi de bugs : 12 bugs avec priorités/statuts variés
+- Brainstorming : 10 idées interconnectées (9 relations)
+- Réunions d'équipe : 6 réunions chronologiques
+
+**État :** TERMINÉ
+
+---
+
 #### [2026-03-17] - Session ameliorations UX + documentation
 
 **Actions realisees :**
@@ -55,6 +104,19 @@ Après chaque commit :
 - Relations pages → modales + identification contradictions (blocks)
 
 **Etat :** TERMINE
+
+---
+
+#### [2026-03-17] - MindMap reorder + fix modale + autoFocus
+
+**Demande :** Réordonnancement des éléments dans le MindMap par drag, prise en compte des portails, fix rafraîchissement liste après édition modale, autoFocus titre
+**Actions réalisées :**
+- MindMap : drag d'un nœud parmi ses frères → ordre angulaire persisté en DB via reorder API — 45694d1
+- MindMap : support portails (nœud parent résolu en child-space-*) — 45694d1
+- MindMap : tri enfants par position uniquement (plus de groupement par type) — 45694d1
+- ItemEditModal : await invalidation queries avant fermeture (fix liste pas à jour) — 45694d1
+- ItemEditModal : autoFocus systématique sur le titre — 45694d1
+**État :** TERMINÉ
 
 ---
 
