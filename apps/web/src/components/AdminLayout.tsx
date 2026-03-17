@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History } from 'lucide-react';
+import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History, Eye } from 'lucide-react';
 
 export function AdminLayout() {
   const location = useLocation();
@@ -14,6 +14,7 @@ export function AdminLayout() {
       if (location.pathname === '/admin/communities') return 'Communautes';
       if (location.pathname === '/admin/anomalies') return 'Diagnostics';
       if (location.pathname === '/admin/referentiels') return 'Referentiels';
+      if (location.pathname === '/admin/views') return 'Vues';
       if (location.pathname === '/admin/stats') return 'Statistiques';
       if (location.pathname === '/admin/audit-logs') return 'Audit Logs';
       return 'Administration';
@@ -113,6 +114,18 @@ export function AdminLayout() {
             >
               <AlertTriangle className="w-4 h-4" />
               Diagnostics
+            </Link>
+
+            <Link
+              to="/admin/views"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                isActive('/admin/views')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              Vues
             </Link>
 
             <Link

@@ -1587,6 +1587,19 @@ export const invitationsApi = {
     }),
 };
 
+// Public config API (no auth needed)
+export const configApi = {
+  getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/config/views'),
+};
+
+// Admin config API
+export const adminConfigApi = {
+  getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/admin/config/views'),
+  updateViews: (data: { views: import('@spok/shared').ViewConfigItem[]; categories?: import('@spok/shared').ViewCategoryConfig[] }) =>
+    fetchApi<{ success: boolean }>('/admin/config/views', { method: 'PUT', body: JSON.stringify(data) }),
+  resetViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/admin/config/views/reset', { method: 'POST' }),
+};
+
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {
   return error instanceof ApiError && error.statusCode === 409 && (error.details as any)?.code === 'CONFLICT_DETECTED';
 }

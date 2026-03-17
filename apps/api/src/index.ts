@@ -20,6 +20,7 @@ import { adminReferentielsRoutes } from './routes/admin/referentiels.js';
 import { adminTestsRoutes } from './routes/admin/tests.js';
 import { adminStatsRoutes } from './routes/admin/stats.js';
 import { adminAuditLogsRoutes } from './routes/admin/auditLogs.js';
+import { adminConfigRoutes, publicConfigRoutes } from './routes/admin/config.js';
 import { searchRoutes } from './routes/search.js';
 import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
@@ -213,6 +214,8 @@ async function buildApp() {
   await app.register(adminTestsRoutes, { prefix: '/admin/tests' });
   await app.register(adminStatsRoutes, { prefix: '/admin/stats' });
   await app.register(adminAuditLogsRoutes, { prefix: '/admin/audit-logs' });
+  await app.register(adminConfigRoutes, { prefix: '/admin/config' });
+  await app.register(publicConfigRoutes, { prefix: '/config' });
   await app.register(searchRoutes, { prefix: '/search' });
   await app.register(userRoutes, { prefix: '/user' });
   await app.register(userTasksRoutes, { prefix: '/user' });

@@ -26,6 +26,7 @@ import { AnomaliesPage } from './pages/admin/AnomaliesPage';
 import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
+import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -133,6 +134,7 @@ export default function App() {
         <Route path="referentiels" element={<ReferentielsPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
+        <Route path="views" element={<ViewsConfigPage />} />
       </Route>
     </Routes>
   </>

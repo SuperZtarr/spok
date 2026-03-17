@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Configuration globale (clé-valeur JSON)
+model AppConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("app_config")
+}
+
 // Utilisateur
 model User {
   id           String     @id @default(cuid())
