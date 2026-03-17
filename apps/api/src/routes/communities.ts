@@ -15,13 +15,15 @@ const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif
 const createCommunitySchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  isPublic: z.boolean().optional(),
+  isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
+  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
 });
 
 const updateCommunitySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  isPublic: z.boolean().optional(),
+  isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
+  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
 });
 
 const inviteSchema = z.object({
@@ -35,13 +37,16 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = createCommunitySchema.parse(request.body);
 
-    // If user requests public, create as private with pendingPublic flag
-    const wantsPublic = body.isPublic ?? false;
+    // Determine requested visibility (support both old isPublic and new visibility field)
+    const requestedVisibility = body.visibility || (body.isPublic ? 'OPEN' : 'PRIVATE');
+    const wantsPublic = requestedVisibility !== 'PRIVATE';
 
     const community = await fastify.prisma.community.create({
       data: {
         name: body.name,
         description: body.description,
+        visibility: 'PRIVATE',
+        pendingVisibility: wantsPublic ? requestedVisibility : null,
         isPublic: false,
         pendingPublic: wantsPublic,
         memberships: {
@@ -123,7 +128,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const communities = await fastify.prisma.community.findMany({
       where: {
-        isPublic: true,
+        visibility: { not: 'PRIVATE' },
         ...(myIds.length > 0 ? { id: { notIn: myIds } } : {}),
       },
       include: {
@@ -183,7 +188,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!community || !community.isPublic) {
+    if (!community || community.visibility === 'PRIVATE') {
       return reply.notFound('Community not found or access denied');
     }
 
@@ -219,14 +224,21 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = updateCommunitySchema.parse(request.body);
 
-      // Only OWNER can change visibility
-      if (body.isPublic !== undefined && membership.role !== 'OWNER') {
-        return reply.forbidden('Only the owner can change community visibility');
+      // Sync isPublic from visibility for backward compat
+      const updateData: Record<string, unknown> = {};
+      if (body.name) updateData.name = body.name;
+      if (body.description !== undefined) updateData.description = body.description;
+      if (body.visibility) {
+        updateData.visibility = body.visibility;
+        updateData.isPublic = body.visibility !== 'PRIVATE';
+      } else if (body.isPublic !== undefined) {
+        updateData.isPublic = body.isPublic;
+        updateData.visibility = body.isPublic ? 'OPEN' : 'PRIVATE';
       }
 
       const community = await fastify.prisma.community.update({
         where: { id: request.params.id },
-        data: body,
+        data: updateData,
       });
 
       return community;
@@ -447,7 +459,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Community not found');
     }
 
-    if (!community.isPublic) {
+    if (community.visibility === 'PRIVATE') {
       return reply.forbidden('This community is private. You need an invitation to join.');
     }
 
@@ -1072,8 +1084,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     const community = await fastify.prisma.community.findUnique({ where: { id: request.params.id } });
     if (!community) return reply.notFound('Community not found');
 
-    // Check membership (or public)
-    if (!community.isPublic) {
+    // Check membership (or non-private visibility)
+    if (community.visibility === 'PRIVATE') {
       if (!request.user?.userId) return reply.unauthorized('Authentication required');
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },

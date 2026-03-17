@@ -193,7 +193,7 @@ export function CommunitySettingsPage() {
 
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editIsPublic, setEditIsPublic] = useState(false);
+  const [editVisibility, setEditVisibility] = useState<string>('PRIVATE');
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
@@ -217,7 +217,7 @@ export function CommunitySettingsPage() {
     if (community) {
       setEditName(community.name);
       setEditDescription(community.description || '');
-      setEditIsPublic(community.isPublic);
+      setEditVisibility((community as any).visibility || (community.isPublic ? 'OPEN' : 'PRIVATE'));
     }
   }, [community]);
 
@@ -334,10 +334,11 @@ export function CommunitySettingsPage() {
   });
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string; isPublic?: boolean } = {};
+    const updates: { name?: string; description?: string; visibility?: string } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
-    if (editIsPublic !== community?.isPublic && community?.role === 'OWNER') updates.isPublic = editIsPublic;
+    const currentVisibility = (community as any)?.visibility || (community?.isPublic ? 'OPEN' : 'PRIVATE');
+    if (editVisibility !== currentVisibility && community?.role === 'OWNER') updates.visibility = editVisibility;
     if (Object.keys(updates).length > 0) {
       updateCommunityMutation.mutate(updates);
     }
@@ -441,17 +442,17 @@ export function CommunitySettingsPage() {
                     />
                   </div>
                   {community?.role === 'OWNER' && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="isPublic"
-                        checked={editIsPublic}
-                        onChange={(e) => setEditIsPublic(e.target.checked)}
-                        className="rounded border-border"
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Visibilité</label>
+                      <Select
+                        value={editVisibility}
+                        onChange={(e) => setEditVisibility(e.target.value)}
+                        options={[
+                          { value: 'OPEN', label: 'Ouverte — visible par tous, tout le monde peut rejoindre et contribuer' },
+                          { value: 'READONLY', label: 'Lecture seule — visible par tous, seuls les membres peuvent contribuer' },
+                          { value: 'PRIVATE', label: 'Privée — visible uniquement par les membres' },
+                        ]}
                       />
-                      <label htmlFor="isPublic" className="text-sm">
-                        Communauté publique (visible et accessible à tous les utilisateurs)
-                      </label>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
@@ -483,8 +484,8 @@ export function CommunitySettingsPage() {
                   )}
                   <div><span className="text-muted-foreground">Membres:</span> <span className="font-medium">{community.memberCount || 0}</span></div>
                   <div><span className="text-muted-foreground">Espaces:</span> <span className="font-medium">{communitySpaces.length}</span></div>
-                  <div><span className="text-muted-foreground">Visibilité:</span> <span className={`font-medium ${community.isPublic ? 'text-green-600' : ''}`}>
-                    {community.isPublic ? 'Publique' : 'Privée'}
+                  <div><span className="text-muted-foreground">Visibilité:</span> <span className={`font-medium ${(community as any).visibility !== 'PRIVATE' ? 'text-green-600' : ''}`}>
+                    {(community as any).visibility === 'OPEN' ? 'Ouverte' : (community as any).visibility === 'READONLY' ? 'Lecture seule' : 'Privée'}
                   </span></div>
                 </div>
               )}

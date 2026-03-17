@@ -52,15 +52,15 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     const { communityId } = request.query;
     const userId = request.user?.userId;
 
-    // Anonymous visitor: only public community spaces
+    // Anonymous visitor: only non-PRIVATE community spaces
     if (!userId) {
       if (!communityId || communityId === 'none') return [];
 
       const community = await fastify.prisma.community.findUnique({
         where: { id: communityId },
-        select: { isPublic: true },
+        select: { visibility: true },
       });
-      if (!community?.isPublic) return [];
+      if (!community || community.visibility === 'PRIVATE') return [];
 
       const spaces = await fastify.prisma.space.findMany({
         where: { communityId, type: 'GROUP', visibility: { not: 'PRIVATE' } },

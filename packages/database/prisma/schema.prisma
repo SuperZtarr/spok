@@ -58,7 +58,7 @@ model Space {
   children  Space[] @relation("SpaceHierarchy")
 
   defaultRole Role? // Auto-join role for new community members (null = no auto-join)
-  visibility  SpaceVisibility @default(OPEN) // Access level for community members
+  visibility  SpaceVisibility? // null = inherit from parent space or community
 
   memberships SpaceMembership[]
   items       Item[]
@@ -86,9 +86,9 @@ model SpaceFavorite {
 }
 
 enum SpaceVisibility {
-  OPEN     // All community members can view and edit
-  READONLY // All community members can view, only explicit members can edit
-  PRIVATE  // Only explicit space members can access
+  OPEN     // Anyone (or all community members) can view and edit
+  READONLY // Anyone (or all community members) can view, only explicit members can edit
+  PRIVATE  // Only explicit members can access
 }
 
 enum SpaceType {
@@ -106,8 +106,10 @@ model Community {
   id          String   @id @default(cuid())
   name        String
   description String?
-  isPublic      Boolean  @default(false)
-  pendingPublic Boolean  @default(false)
+  isPublic      Boolean  @default(false)    // @deprecated — use visibility instead
+  pendingPublic Boolean  @default(false)   // @deprecated — use pendingVisibility instead
+  visibility         SpaceVisibility @default(PRIVATE)
+  pendingVisibility  SpaceVisibility? // Requested visibility awaiting admin approval
   avatarUrl     String?
   coverUrl    String?
   createdAt   DateTime @default(now())

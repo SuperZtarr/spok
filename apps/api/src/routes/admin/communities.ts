@@ -478,11 +478,12 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const community = await fastify.prisma.community.findUnique({ where: { id } });
     if (!community) return reply.notFound('Community not found');
-    if (!community.pendingPublic) return reply.badRequest('Community has no pending public request');
+    if (!community.pendingPublic && !(community as any).pendingVisibility) return reply.badRequest('Community has no pending public request');
 
+    const approvedVisibility = (community as any).pendingVisibility || 'OPEN';
     const updated = await fastify.prisma.community.update({
       where: { id },
-      data: { isPublic: true, pendingPublic: false },
+      data: { isPublic: true, pendingPublic: false, visibility: approvedVisibility, pendingVisibility: null },
       include: { _count: { select: { memberships: true, spaces: true } } },
     });
 

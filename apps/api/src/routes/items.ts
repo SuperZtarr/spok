@@ -57,6 +57,32 @@ const querySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(5000).default(20),
 });
 
+// Resolve effective visibility by walking up: space → parent space → community
+export async function getEffectiveVisibility(prisma: any, spaceId: string): Promise<string> {
+  const space = await prisma.space.findUnique({
+    where: { id: spaceId },
+    select: { visibility: true, parentId: true, communityId: true },
+  });
+  if (!space) return 'PRIVATE';
+
+  // Space has explicit visibility → use it
+  if (space.visibility) return space.visibility;
+
+  // Inherit from parent space
+  if (space.parentId) return getEffectiveVisibility(prisma, space.parentId);
+
+  // Inherit from community
+  if (space.communityId) {
+    const community = await prisma.community.findUnique({
+      where: { id: space.communityId },
+      select: { visibility: true },
+    });
+    return community?.visibility || 'PRIVATE';
+  }
+
+  return 'PRIVATE';
+}
+
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string) {
@@ -70,15 +96,15 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
     if (membership) return membership;
   }
 
-  // 2. Community membership or public community → access depends on space visibility
+  // 2. Community membership or public community → access depends on effective visibility
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
-    select: { communityId: true, visibility: true, community: { select: { isPublic: true } } },
+    select: { communityId: true, community: { select: { visibility: true } } },
   });
   if (space?.communityId) {
-    const visibility = space.visibility || 'OPEN';
+    const visibility = await getEffectiveVisibility(prisma, spaceId);
 
-    // PRIVATE spaces: only direct members (checked above) have access
+    // PRIVATE: only direct members (checked above) have access
     if (visibility === 'PRIVATE') return null;
 
     // OPEN → MEMBER role, READONLY → VIEWER role
@@ -95,8 +121,9 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       }
     }
 
-    // Public community: allow anonymous and non-member authenticated users
-    if (space.community?.isPublic) {
+    // Community with OPEN or READONLY visibility: allow anonymous access
+    const communityVisibility = space.community?.visibility || 'PRIVATE';
+    if (communityVisibility !== 'PRIVATE') {
       return { userId: userId || '', spaceId, role: implicitRole, id: '', joinedAt: new Date() };
     }
   }
