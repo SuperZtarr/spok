@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid, RotateCcw } from 'lucide-react';
+import { FolderKanban, Users, FileText, Plus, X, Building2, User, LogIn, LogOut, Trash2, ChevronRight, Settings, FolderInput, FolderPlus, LayoutGrid, RotateCcw, BookOpen, Bug, Lightbulb, Zap } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
@@ -623,7 +623,7 @@ export function DashboardPage() {
                   <label className="text-sm font-medium">Template</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {SPACE_TEMPLATES.map((tpl) => {
-                      const IconMap: Record<string, typeof FileText> = { FileText, FolderKanban, LayoutGrid, Users };
+                      const IconMap: Record<string, typeof FileText> = { FileText, FolderKanban, LayoutGrid, Users, BookOpen, Bug, Lightbulb, Zap };
                       const TplIcon = IconMap[tpl.icon] || FileText;
                       return (
                         <button
