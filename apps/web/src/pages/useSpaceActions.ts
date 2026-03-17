@@ -298,6 +298,18 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     absorbChildrenMutation.mutate({ id, itemSpaceId });
   }, [resolveItemSpaceId, absorbChildrenMutation]);
 
+  const reorderMutation = useMutation({
+    mutationFn: ({ targetSpaceId, groups }: { targetSpaceId: string; groups: { parentId: string | null; itemIds: string[] }[] }) =>
+      itemsApi.reorder(targetSpaceId, groups),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  const handleReorder = useCallback((targetSpaceId: string, groups: { parentId: string | null; itemIds: string[] }[]) => {
+    reorderMutation.mutate({ targetSpaceId, groups });
+  }, [reorderMutation]);
+
   return {
     // Delete flow
     handleDelete,
@@ -333,5 +345,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     mergingItemId,
     setMergingItemId,
     handleAbsorbChildren,
+    // Reorder
+    handleReorder,
   };
 }

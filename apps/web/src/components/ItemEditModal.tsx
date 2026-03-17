@@ -285,9 +285,11 @@ export function ItemEditModal({
   const updateMutation = useMutation({
     mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-      queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['items', spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] }),
+      ]);
       setConflictData(null);
       onClose();
     },
@@ -685,7 +687,7 @@ export function ItemEditModal({
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Titre de l'élément"
                   className="text-xl font-bold px-2 py-1 h-auto bg-muted/30 hover:bg-muted/60 focus:bg-background transition-colors"
-                  autoFocus={!title}
+                  autoFocus
                 />
               ) : (
                 <h1 className="text-xl font-bold truncate">{title}</h1>

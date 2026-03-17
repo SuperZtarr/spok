@@ -636,6 +636,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onReorder={actions.handleReorder}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
               onUpdateRelation={actions.handleUpdateRelation}

@@ -67,6 +67,7 @@ interface MindMapViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onReorder?: (spaceId: string, groups: { parentId: string | null; itemIds: string[] }[]) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }
@@ -95,6 +96,7 @@ function MindMapViewInner({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onReorder,
   referentiels,
   canEdit,
   innerRef,
@@ -789,13 +791,55 @@ function MindMapViewInner({
             }
           }
           savePositions();
+
+          // Angular sibling reorder: persist new order in DB
+          if (onReorder && canEdit !== false) {
+            const draggedItem = items.find(i => i.id === draggedNode.id);
+            if (draggedItem) {
+              const parentId = draggedItem.parentId || null;
+              const isPortalItem = draggedItem.spaceId !== spaceId;
+              const siblings = items.filter(i => (i.parentId || null) === parentId && i.spaceId === draggedItem.spaceId);
+
+              if (siblings.length >= 2) {
+                // For portal root items, parent node is child-space-<spaceId>
+                // For current space root items, parent node is __space__
+                const parentNodeId = parentId
+                  || (isPortalItem ? `child-space-${draggedItem.spaceId}` : '__space__');
+                const parentPos = absPositions.get(parentNodeId);
+
+                if (parentPos) {
+                  const siblingAngles = siblings.map(sib => {
+                    const sibPos = absPositions.get(sib.id);
+                    if (!sibPos) return { id: sib.id, angle: 0 };
+                    return {
+                      id: sib.id,
+                      angle: Math.atan2(sibPos.y - parentPos.y, sibPos.x - parentPos.x),
+                    };
+                  });
+
+                  siblingAngles.sort((a, b) => a.angle - b.angle);
+                  const newOrder = siblingAngles.map(s => s.id);
+
+                  const currentOrder = [...siblings]
+                    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                    .map(s => s.id);
+
+                  const orderChanged = newOrder.some((id, i) => id !== currentOrder[i]);
+                  if (orderChanged) {
+                    onReorder(draggedItem.spaceId, [{ parentId, itemIds: newOrder }]);
+                  }
+                }
+              }
+            }
+          }
+
           return currentNodes;
         });
       }
       dragDescendants.current = null;
       setDropTargetId(null);
     },
-    [getIntersectingNodes, onMove, onMoveToSpaceDirect, items, savePositions, setNodes, spaceId, portals, canEdit]
+    [getIntersectingNodes, onMove, onMoveToSpaceDirect, items, savePositions, setNodes, spaceId, portals, canEdit, onReorder]
   );
 
   // Reset layout function
@@ -1147,7 +1191,7 @@ function MindMapViewInner({
 export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(function MindMapView({
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
-  onSelfAssign, onMerge, onAbsorbChildren, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit,
+  onSelfAssign, onMerge, onAbsorbChildren, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit,
 }, ref) {
   return (
     <div className="h-full w-full">
@@ -1157,7 +1201,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           highlightType={highlightType} highlightStatus={highlightStatus} searchMatchIds={searchMatchIds}
           onEdit={onEdit} onDelete={onDelete} onUpdateStatus={onUpdateStatus} onAddChild={onAddChild}
           onMove={onMove} onMoveToSpace={onMoveToSpace} onMoveToSpaceDirect={onMoveToSpaceDirect} onDuplicateToSpace={onDuplicateToSpace}
-          onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onMerge={onMerge} onAbsorbChildren={onAbsorbChildren} onCreateRelation={onCreateRelation}
+          onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onMerge={onMerge} onAbsorbChildren={onAbsorbChildren} onReorder={onReorder} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
           referentiels={referentiels} canEdit={canEdit}
           innerRef={ref}

@@ -125,14 +125,8 @@ export function buildTree(items: ItemWithRelations[]): TreeItem[] {
     }
   });
 
-  const typeOrder: Record<string, number> = { PROJECT: 0, NOTE: 1, TASK: 2 };
   function setDepths(items: TreeItem[], depth: number) {
-    items.sort((a, b) => {
-      const ta = typeOrder[a.type] ?? 9;
-      const tb = typeOrder[b.type] ?? 9;
-      if (ta !== tb) return ta - tb;
-      return (a.position ?? 0) - (b.position ?? 0);
-    });
+    items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     items.forEach(item => {
       item.depth = depth;
       setDepths(item.children, depth + 1);
