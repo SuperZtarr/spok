@@ -1,11 +1,45 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Crown, User, ChevronRight, ExternalLink } from 'lucide-react';
+import { Users, FolderOpen, Settings, Crown, User, ChevronRight, ExternalLink, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame } from 'lucide-react';
 import { spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
+import { VIEW_MODES, VIEW_CATEGORIES, type ViewMode } from '../stores/viewMode';
+import { useViewModeStore } from '../stores/viewMode';
+
+const VIEW_ICONS: Record<string, typeof List> = {
+  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
+  Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
+  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+};
+
+const VIEW_DESCRIPTIONS: Partial<Record<ViewMode, string>> = {
+  list: 'Tableau avec colonnes triables',
+  tree: 'Hiérarchie parent-enfant',
+  kanban: 'Colonnes par statut',
+  text: 'Document texte continu',
+  planning: 'Planning avec jalons',
+  timeline: 'Diagramme de Gantt',
+  calendar: 'Vue calendrier mensuelle',
+  types: 'Groupé par type d\'item',
+  mindmap: 'Carte mentale interactive',
+  graph: 'Réseau de relations',
+  sunburst: 'Cercles concentriques',
+  relations: 'Carte des relations',
+  bubble: 'Bulles proportionnelles',
+  radialTree: 'Arbre en cercle',
+  treemap: 'Rectangles proportionnels',
+  chord: 'Diagramme de flux',
+  burndown: 'Courbe d\'avancement',
+  cfd: 'Flux cumulatif',
+  members: 'Kanban par membre',
+  priority: 'Kanban par priorité',
+  crossTable: 'Tableau croisé dynamique',
+  heatmap: 'Activité temporelle',
+  ego: 'Réseau égocentrique',
+};
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
@@ -171,6 +205,44 @@ export function SpaceOverviewPage() {
             <p className="text-2xl font-bold">{childSpaces?.length || 0}</p>
             <p className="text-xs text-muted-foreground">Sous-espaces</p>
           </div>
+        </div>
+
+        {/* Views grid */}
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+            <LayoutGrid className="w-4 h-4" />
+            Vues disponibles
+          </h2>
+          {VIEW_CATEGORIES.map(cat => {
+            const views = VIEW_MODES.filter(v => v.category === cat.value);
+            if (views.length === 0) return null;
+            return (
+              <div key={cat.value} className="mb-4">
+                <h3 className="text-xs font-medium text-muted-foreground mb-2">{cat.label}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {views.map(view => {
+                    const Icon = VIEW_ICONS[view.icon] || List;
+                    return (
+                      <button
+                        key={view.value}
+                        onClick={() => {
+                          useViewModeStore.getState().setMode(view.value);
+                          navigate(`/spaces/${spaceId}/content`);
+                        }}
+                        className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 hover:border-primary/30 transition-colors text-left"
+                      >
+                        <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{view.label}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[view.value] || ''}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Child spaces section */}

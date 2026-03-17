@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell, RotateCcw } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser, NotificationType, NotificationChannel } from '@spok/shared';
@@ -336,6 +336,28 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
 
         {/* Préférences de notifications */}
         <NotificationPreferencesSection />
+
+        {/* Tutoriels */}
+        <div className="pt-4 border-t border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Tutoriels</span>
+            </div>
+            <button
+              onClick={() => {
+                const keys = Object.keys(localStorage).filter(k =>
+                  k.startsWith('spok-onboarding') || k.startsWith('spok-view-tour') || k.startsWith('spok-dashboard-tour')
+                );
+                keys.forEach(k => localStorage.removeItem(k));
+                alert(`${keys.length} tutoriel(s) réinitialisé(s). Ils se relanceront à la prochaine visite.`);
+              }}
+              className="text-xs px-2 py-1 rounded bg-muted hover:bg-accent transition-colors"
+            >
+              Réinitialiser tous les tutoriels
+            </button>
+          </div>
+        </div>
 
         {/* Communautés */}
         <div className="pt-4 border-t border-border">

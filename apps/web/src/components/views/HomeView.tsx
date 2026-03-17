@@ -232,7 +232,7 @@ function SpaceRow({
   return (
     <>
       <Link
-        to={`/spaces/${space.id}/content`}
+        to={`/spaces/${space.id}`}
         className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 transition-colors"
         style={{ paddingLeft: `${16 + level * 20}px` }}
       >

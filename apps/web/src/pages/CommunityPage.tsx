@@ -18,7 +18,7 @@ function SpaceTreeNode({ node, level }: { node: any; level: number }) {
     <>
       <div className="flex items-center gap-1" style={{ marginLeft: `${level * 24}px` }}>
         <Link
-          to={`/spaces/${node.id}/content`}
+          to={`/spaces/${node.id}`}
           className="flex-1 flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
         >
           {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
