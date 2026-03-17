@@ -58,8 +58,9 @@ const querySchema = z.object({
 });
 
 // Exported helper: check space access (direct membership, community membership, or public community)
+// Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string) {
-  // 1. If authenticated, check direct space membership
+  // 1. If authenticated, check direct space membership (always has priority)
   if (userId) {
     const membership = await prisma.spaceMembership.findUnique({
       where: {
@@ -69,12 +70,20 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
     if (membership) return membership;
   }
 
-  // 2. Community membership or public community → VIEWER access
+  // 2. Community membership or public community → access depends on space visibility
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
-    select: { communityId: true, community: { select: { isPublic: true } } },
+    select: { communityId: true, visibility: true, community: { select: { isPublic: true } } },
   });
   if (space?.communityId) {
+    const visibility = space.visibility || 'OPEN';
+
+    // PRIVATE spaces: only direct members (checked above) have access
+    if (visibility === 'PRIVATE') return null;
+
+    // OPEN → MEMBER role, READONLY → VIEWER role
+    const implicitRole = visibility === 'OPEN' ? 'MEMBER' as const : 'VIEWER' as const;
+
     if (userId) {
       const communityMembership = await prisma.communityMembership.findUnique({
         where: {
@@ -82,13 +91,13 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
         },
       });
       if (communityMembership) {
-        return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
+        return { userId, spaceId, role: implicitRole, id: '', joinedAt: new Date() };
       }
     }
 
     // Public community: allow anonymous and non-member authenticated users
     if (space.community?.isPublic) {
-      return { userId: userId || '', spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
+      return { userId: userId || '', spaceId, role: implicitRole, id: '', joinedAt: new Date() };
     }
   }
 

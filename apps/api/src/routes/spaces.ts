@@ -28,6 +28,7 @@ const updateSpaceSchema = z.object({
   communityId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   defaultRole: z.enum(['MEMBER']).nullable().optional(),
+  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
 });
 
 const inviteSchema = z.object({
@@ -62,7 +63,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (!community?.isPublic) return [];
 
       const spaces = await fastify.prisma.space.findMany({
-        where: { communityId, type: 'GROUP' },
+        where: { communityId, type: 'GROUP', visibility: { not: 'PRIVATE' } },
         include: {
           _count: { select: { memberships: true, items: true } },
           community: { select: { id: true, name: true, avatarUrl: true } },
@@ -73,7 +74,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       return spaces.map((s) => ({
         ...s,
-        role: 'MEMBER' as Role,
+        role: ((s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -157,6 +158,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           : { in: communityIds },
         type: 'GROUP',
         id: { notIn: Array.from(memberSpaceIds) },
+        visibility: { not: 'PRIVATE' }, // PRIVATE spaces only visible to direct members
       };
 
       const visibleSpaces = await fastify.prisma.space.findMany({
@@ -177,7 +179,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const nonMemberSpaces = visibleSpaces.map((s) => ({
         ...s,
-        role: 'MEMBER' as Role,
+        role: ((s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,

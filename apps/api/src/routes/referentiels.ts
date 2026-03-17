@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_REFERENTIELS, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';
+import { checkSpaceAccess } from './items.js';
 
 const MODULE_KEY = 'referentiels';
 
@@ -38,38 +39,12 @@ function parseReferentiels(config: unknown): SpaceReferentiels | null {
 }
 
 export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Helper to check space access (direct membership, community membership, or public community)
-  async function checkSpaceAccess(userId: string | undefined, spaceId: string) {
-    if (userId) {
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: { userId_spaceId: { userId, spaceId } },
-      });
-      if (membership) return membership;
-    }
-
-    const space = await fastify.prisma.space.findUnique({
-      where: { id: spaceId },
-      select: { communityId: true, community: { select: { isPublic: true } } },
-    });
-    if (space?.communityId) {
-      if (userId) {
-        const cm = await fastify.prisma.communityMembership.findUnique({
-          where: { userId_communityId: { userId, communityId: space.communityId } },
-        });
-        if (cm) return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
-      }
-      if (space.community?.isPublic) {
-        return { userId: userId || '', spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
-      }
-    }
-    return null;
-  }
 
   // GET /spaces/:spaceId/referentiels - Récupérer les référentiels
   fastify.get('/', async (request, reply) => {
     const { spaceId } = request.params as { spaceId: string };
 
-    const membership = await checkSpaceAccess(request.user?.userId, spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, spaceId);
     if (!membership) {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }
@@ -103,7 +78,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.put<{ Body: z.infer<typeof updateReferentielsSchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { spaceId } = request.params as { spaceId: string };
 
-    const membership = await checkSpaceAccess(request.user.userId, spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, spaceId);
     if (!membership) {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }
@@ -162,7 +137,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/reset', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { spaceId } = request.params as { spaceId: string };
 
-    const membership = await checkSpaceAccess(request.user.userId, spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, spaceId);
     if (!membership) {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }
@@ -189,7 +164,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { statusId: string } }>('/check-status-usage/:statusId', async (request, reply) => {
     const { spaceId, statusId } = request.params as { spaceId: string; statusId: string };
 
-    const membership = await checkSpaceAccess(request.user?.userId, spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, spaceId);
     if (!membership) {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }

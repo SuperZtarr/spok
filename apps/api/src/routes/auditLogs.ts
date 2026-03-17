@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
+import { checkSpaceAccess } from './items.js';
 
 const querySchema = z.object({
   entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community']).optional(),
@@ -18,32 +19,12 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   // Audit logs always require authentication
   fastify.addHook('preHandler', fastify.authenticate);
 
-  // Helper to check space access (direct membership OR community membership)
-  async function checkSpaceAccess(userId: string, spaceId: string) {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: { userId_spaceId: { userId, spaceId } },
-    });
-    if (membership) return membership;
-
-    const space = await fastify.prisma.space.findUnique({
-      where: { id: spaceId },
-      select: { communityId: true },
-    });
-    if (space?.communityId) {
-      const cm = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId, communityId: space.communityId } },
-      });
-      if (cm) return { userId, spaceId, role: 'MEMBER' as const, id: '', joinedAt: new Date() };
-    }
-    return null;
-  }
-
   // List audit logs
   fastify.get<{
     Params: { spaceId: string };
     Querystring: z.infer<typeof querySchema>;
   }>('/', async (request, reply) => {
-    const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -100,7 +81,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{
     Params: { spaceId: string; id: string };
   }>('/:id', async (request, reply) => {
-    const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -136,7 +117,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { spaceId: string; id: string };
   }>('/:id/restore', async (request, reply) => {
-    const membership = await checkSpaceAccess(request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
     if (!membership) {
       return reply.notFound('Space not found');
     }

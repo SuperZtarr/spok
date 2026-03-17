@@ -240,6 +240,7 @@ export function SpaceSettingsPage() {
   const [editCommunityId, setEditCommunityId] = useState<string>('');
   const [editParentId, setEditParentId] = useState<string>('');
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
+  const [editVisibility, setEditVisibility] = useState<string>('OPEN');
 
   // Initialize local state when data loads
   useEffect(() => {
@@ -256,6 +257,7 @@ export function SpaceSettingsPage() {
       setEditCommunityId(space.communityId || '');
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
+      setEditVisibility((space as any).visibility || 'OPEN');
     }
   }, [space, editName]);
 
@@ -295,7 +297,7 @@ export function SpaceSettingsPage() {
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
 
-    const updates: { name?: string; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null } = {};
+    const updates: { name?: string; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string } = {};
     if (editName !== space.name) updates.name = editName;
     const newCommunityId = editCommunityId || null;
     if (newCommunityId !== space.communityId) updates.communityId = newCommunityId;
@@ -303,6 +305,7 @@ export function SpaceSettingsPage() {
     if (newParentId !== (space.parentId || null)) updates.parentId = newParentId;
     const newDefaultRole = (editDefaultRole || null) as Role | null;
     if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
+    if (editVisibility !== ((space as any).visibility || 'OPEN')) updates.visibility = editVisibility;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -313,7 +316,8 @@ export function SpaceSettingsPage() {
     editName !== space.name ||
     (editCommunityId || null) !== space.communityId ||
     (editParentId || null) !== (space.parentId || null) ||
-    (editDefaultRole || null) !== (space.defaultRole || null)
+    (editDefaultRole || null) !== (space.defaultRole || null) ||
+    editVisibility !== ((space as any).visibility || 'OPEN')
   );
 
   const communityOptions = [
@@ -493,6 +497,21 @@ export function SpaceSettingsPage() {
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Quand un utilisateur rejoint la communauté, il sera automatiquement ajouté à cet espace avec ce rôle
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Visibilité</label>
+                <Select
+                  value={editVisibility}
+                  onChange={(e) => setEditVisibility(e.target.value)}
+                  options={[
+                    { value: 'OPEN', label: 'Ouvert — tous les membres de la communauté peuvent voir et modifier' },
+                    { value: 'READONLY', label: 'Lecture seule — les membres de la communauté peuvent voir, seuls les membres de l\'espace peuvent modifier' },
+                    { value: 'PRIVATE', label: 'Privé — seuls les membres de l\'espace ont accès' },
+                  ]}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Contrôle l'accès des membres de la communauté qui ne sont pas explicitement membres de cet espace
                 </p>
               </div>
               {hasSpaceInfoChanges && (
