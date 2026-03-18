@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star } from 'lucide-react';
+import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Map as MapIcon } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -827,6 +827,14 @@ export function Layout() {
                         </RoleGuard>
                       )}
                       <div className="border-t border-border my-1" />
+                      <Link
+                        to="/sitemap"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                      >
+                        <MapIcon className="w-4 h-4" />
+                        Plan du site
+                      </Link>
                       <button
                         onClick={() => { setUserMenuOpen(false); handleLogout(); }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors"

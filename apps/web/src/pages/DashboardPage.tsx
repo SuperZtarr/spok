@@ -22,7 +22,6 @@ import { useDashboardTabStore } from '../stores/dashboardTab';
 import { CommunityListView } from '../components/views/CommunityListView';
 import type { CommunityListViewHandle } from '../components/views/CommunityListView';
 import { MyOrganizationView } from '../components/views/MyOrganizationView';
-import { DashboardCockpitView } from '../components/views/DashboardCockpitView';
 import { HomeView } from '../components/views/HomeView';
 import { useDashboardOnboarding } from '../hooks/useOnboarding';
 import { DashboardToolbar } from '../components/DashboardToolbar';
@@ -563,11 +562,7 @@ export function DashboardPage() {
         <HomeView />
       ) : tab === 'communities' ? (
         <CommunityListView ref={communityListRef} />
-      ) : tab === 'dashboard' ? (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <DashboardCockpitView />
-        </div>
-      ) : tab === 'planning' ? (
+      ) : tab === 'dashboard' || tab === 'planning' ? (
         <div className="flex-1 min-h-0 flex flex-col">
           <MyOrganizationView />
         </div>

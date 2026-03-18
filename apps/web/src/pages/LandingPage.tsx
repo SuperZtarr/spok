@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { communitiesApi } from '../lib/api';
 import { useViewConfig } from '../hooks/useViewConfig';
+import { PublicHeader } from '../components/PublicHeader';
+import { PublicFooter } from '../components/PublicFooter';
 import type { ViewConfigItem } from '@spok/shared';
 
 const VIEW_ICONS: Record<string, typeof List> = {
@@ -88,7 +90,6 @@ const features = [
 const btnBase = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
 const btnDefault = `${btnBase} bg-primary text-primary-foreground shadow hover:bg-primary/90`;
 const btnOutline = `${btnBase} border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground`;
-const btnGhost = `${btnBase} hover:bg-accent hover:text-accent-foreground`;
 
 export function LandingPage() {
   const { data: publicCommunities } = useQuery({
@@ -100,22 +101,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link to="/" className="text-xl font-bold tracking-tight">
-            SPOK
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/login" className={`${btnGhost} h-8 rounded-md px-3 text-xs`}>
-              Connexion
-            </Link>
-            <Link to="/register" className={`${btnDefault} h-8 rounded-md px-3 text-xs`}>
-              S'inscrire
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-4 py-20 text-center">
@@ -240,21 +226,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
-          <p>
-            SPOK &mdash;{' '}
-            <Link to="/login" className="underline hover:text-foreground">
-              Connexion
-            </Link>
-            {' '}&middot;{' '}
-            <Link to="/register" className="underline hover:text-foreground">
-              Inscription
-            </Link>
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

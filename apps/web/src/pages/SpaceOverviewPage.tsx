@@ -146,9 +146,9 @@ export function SpaceOverviewPage() {
       {/* Header with cover */}
       <div className="relative">
         {space?.coverUrl ? (
-          <div className="h-32 sm:h-48 bg-cover bg-center" style={{ backgroundImage: `url(${space.coverUrl})` }} />
+          <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${space.coverUrl})` }} />
         ) : (
-          <div className="h-32 sm:h-48 bg-gradient-to-r from-primary/20 to-primary/5" />
+          <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
         )}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16" />
       </div>

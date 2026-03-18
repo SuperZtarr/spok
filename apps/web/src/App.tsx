@@ -27,6 +27,7 @@ import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
+import { SitemapPage } from './pages/SitemapPage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -59,6 +60,43 @@ function HomeRoute() {
   return <Layout />;
 }
 
+const PAGE_NAMES: [RegExp, string][] = [
+  [/^\/login$/, 'LoginPage'],
+  [/^\/register$/, 'RegisterPage'],
+  [/^\/forgot-password$/, 'ForgotPasswordPage'],
+  [/^\/reset-password$/, 'ResetPasswordPage'],
+  [/^\/verify-email$/, 'VerifyEmailPage'],
+  [/^\/invitation$/, 'InvitationPage'],
+  [/^\/sitemap$/, 'SitemapPage'],
+  [/^\/tasks$/, 'GlobalTasksPage'],
+  [/^\/spaces\/[^/]+\/content$/, 'SpacePage'],
+  [/^\/spaces\/[^/]+\/settings$/, 'SpaceSettingsPage'],
+  [/^\/spaces\/[^/]+\/history$/, 'SpaceHistoryPage'],
+  [/^\/spaces\/[^/]+$/, 'SpaceOverviewPage'],
+  [/^\/communities\/[^/]+\/settings$/, 'CommunitySettingsPage'],
+  [/^\/communities\/[^/]+$/, 'CommunityPage'],
+  [/^\/admin\/users$/, 'Admin/UsersPage'],
+  [/^\/admin\/spaces$/, 'Admin/SpacesPage'],
+  [/^\/admin\/communities$/, 'Admin/CommunitiesPage'],
+  [/^\/admin\/anomalies$/, 'Admin/AnomaliesPage'],
+  [/^\/admin\/referentiels$/, 'Admin/ReferentielsPage'],
+  [/^\/admin\/stats$/, 'Admin/StatsPage'],
+  [/^\/admin\/audit-logs$/, 'Admin/AuditLogsPage'],
+  [/^\/admin\/views$/, 'Admin/ViewsConfigPage'],
+  [/^\/$/, 'DashboardPage / LandingPage'],
+];
+
+function DevPageName() {
+  const { pathname } = useLocation();
+  if (import.meta.env.PROD) return null;
+  const name = PAGE_NAMES.find(([re]) => re.test(pathname))?.[1] || pathname;
+  return (
+    <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
+      {name}
+    </div>
+  );
+}
+
 export default function App() {
   const logout = useAuthStore((state) => state.logout);
 
@@ -70,6 +108,7 @@ export default function App() {
 
   return (
     <>
+    <DevPageName />
     <Routes>
       <Route
         path="/login"
@@ -105,6 +144,7 @@ export default function App() {
       />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/invitation" element={<InvitationPage />} />
+      <Route path="/sitemap" element={<SitemapPage />} />
       <Route
         path="/"
         element={<HomeRoute />}

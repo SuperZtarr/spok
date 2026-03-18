@@ -1,4 +1,4 @@
-import type { ViewConfigItem, ViewCategoryConfig } from '../types/viewConfig.js';
+import type { ViewConfigItem, ViewCategoryConfig, GlobalPageConfig, GlobalPageGroupConfig } from '../types/viewConfig.js';
 
 export const DEFAULT_VIEW_CATEGORIES: ViewCategoryConfig[] = [
   { id: 'dashboard', label: 'Tableau de bord', order: 0 },
@@ -31,4 +31,19 @@ export const DEFAULT_VIEW_CONFIG: ViewConfigItem[] = [
   { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2', category: 'basic', order: 20, visible: true, access: 'user' },
   { id: 'heatmap', label: 'Heatmap', icon: 'Grid3x3', category: 'exploration', order: 21, visible: true, access: 'user' },
   { id: 'ego', label: 'Réseau ego', icon: 'Focus', category: 'exploration', order: 22, visible: true, access: 'user' },
+];
+
+export const DEFAULT_GLOBAL_PAGE_GROUPS: GlobalPageGroupConfig[] = [
+  { id: 'global', label: 'Vues globales', order: 0 },
+  { id: 'myActivities', label: 'Mes activités', order: 1 },
+];
+
+export const DEFAULT_GLOBAL_PAGES: GlobalPageConfig[] = [
+  { id: 'home', label: 'Accueil', icon: 'Home', group: 'global', order: 0, visible: true, access: 'user' },
+  { id: 'communities', label: 'Communautés', icon: 'Users', group: 'global', order: 1, visible: true, access: 'user' },
+  { id: 'spaces', label: 'Espaces', icon: 'FolderKanban', group: 'global', order: 2, visible: true, access: 'user' },
+  { id: 'sunburst', label: 'Sunburst', icon: 'CircleDot', group: 'global', order: 3, visible: true, access: 'user' },
+  { id: 'mindmap', label: 'Carte mentale', icon: 'GitBranch', group: 'global', order: 4, visible: true, access: 'user' },
+  { id: 'graph', label: 'Graphe global', icon: 'Network', group: 'global', order: 5, visible: true, access: 'user' },
+  { id: 'planning', label: 'Tableau de bord', icon: 'LayoutDashboard', group: 'myActivities', order: 6, visible: true, access: 'user' },
 ];

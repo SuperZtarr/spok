@@ -17,8 +17,12 @@ import {
   ChevronRight,
   Flame,
   GripVertical,
+  CheckCircle2,
+  Loader2,
+  Target,
 } from 'lucide-react';
-import { userTasksApi } from '../../lib/api';
+import { userTasksApi, spacesApi } from '../../lib/api';
+import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
 import type { GlobalTask } from '../../lib/api';
 import { getPriorityConfig, TYPE_ICONS } from '../../constants/ui';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
@@ -67,6 +71,83 @@ function getDaysOfMonth(year: number, month: number) {
 }
 
 const DONE_STATUSES = ['done', 'cancelled'];
+
+function localDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ---------------------------------------------------------------------------
+// KPI Badge
+// ---------------------------------------------------------------------------
+
+function KpiBadge({ label, count, color, icon: Icon }: {
+  label: string;
+  count: number;
+  color: string;
+  icon: typeof AlertTriangle;
+}) {
+  return (
+    <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border ${color}`}>
+      <Icon className="w-4 h-4" />
+      <span className="text-2xl font-bold">{count}</span>
+      <span className="text-sm">{label}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Distribution Bar
+// ---------------------------------------------------------------------------
+
+const STATUS_BAR_COLORS: Record<string, string> = {
+  undefined: '#94a3b8', todo: '#eab308', in_progress: '#f97316', late: '#ef4444',
+  to_validate: '#a855f7', done: '#22c55e', cancelled: '#9ca3af',
+};
+
+const TYPE_BAR_COLORS: Record<string, string> = {
+  NOTE: '#3b82f6', PROJECT: '#a855f7', TASK: '#22c55e', MEETING: '#f97316',
+  PERIOD: '#14b8a6', LINK: '#06b6d4', CONFIG: '#6b7280', DOCUMENT: '#f59e0b',
+  IMAGE: '#ec4899', BUG: '#ef4444', DIAGRAM: '#6366f1',
+};
+
+function DistributionBar({ counts, total, colorMap }: { counts: { id: string; label: string; count: number }[]; total: number; colorMap: Record<string, string> }) {
+  if (total === 0) return <p className="text-sm text-muted-foreground text-center py-4">Aucun élément</p>;
+  return (
+    <div className="px-3 py-3 space-y-2">
+      <div className="flex h-6 rounded-full overflow-hidden">
+        {counts.filter(s => s.count > 0).map(s => (
+          <div key={s.id} className="h-full transition-all" style={{ width: `${(s.count / total) * 100}%`, backgroundColor: colorMap[s.id] || '#94a3b8' }} title={`${s.label}: ${s.count}`} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {counts.filter(s => s.count > 0).map(s => (
+          <div key={s.id} className="flex items-center gap-1.5 text-xs">
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colorMap[s.id] || '#94a3b8' }} />
+            <span className="text-muted-foreground">{s.label}</span>
+            <span className="font-medium">{s.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Progress per space
+// ---------------------------------------------------------------------------
+
+function SpaceProgressBar({ name, done, total }: { name: string; done: number; total: number }) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5">
+      <span className="text-sm truncate min-w-0 flex-1">{name}</span>
+      <div className="w-32 h-2 bg-muted rounded-full overflow-hidden flex-shrink-0">
+        <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-muted-foreground w-16 text-right flex-shrink-0">{done}/{total} ({pct}%)</span>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Task Row
@@ -197,7 +278,25 @@ export function MyOrganizationView() {
     }),
   });
 
+  // Fetch done items for KPIs
+  const weekStart = getMonday(addDays(today, weekOffset * 7));
+  const { data: doneData } = useQuery({
+    queryKey: ['my-organization-done', localDateKey(weekStart)],
+    queryFn: () => userTasksApi.list({
+      type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
+      status: 'done',
+      pageSize: 500,
+    }),
+  });
+
+  // Fetch spaces for progress
+  const { data: spaces } = useQuery({
+    queryKey: ['spaces', 'all'],
+    queryFn: () => spacesApi.list(),
+  });
+
   const allTasks = allData?.data || [];
+  const doneTasks = doneData?.data || [];
 
   // --- Priorities (P1 + P2, non terminés) ---
   const rawPriorityTasks = useMemo(() =>
@@ -254,8 +353,75 @@ export function MyOrganizationView() {
     [allTasks, today, todayEnd]
   );
 
+  // --- KPI computed ---
+  const inProgressTasks = useMemo(() =>
+    allTasks.filter(t => t.status === 'in_progress'),
+    [allTasks]
+  );
+
+
+  const toValidateTasks = useMemo(() =>
+    allTasks.filter(t => t.status === 'to_validate'),
+    [allTasks]
+  );
+
+  const doneThisWeekCount = useMemo(() => {
+    const wStart = getMonday(today);
+    const wEnd = addDays(wStart, 7);
+    return doneTasks.filter(t => {
+      const d = new Date(t.updatedAt);
+      return d >= wStart && d < wEnd;
+    }).length;
+  }, [doneTasks, today]);
+
+  // --- Status distribution ---
+  const statusDistribution = useMemo(() => {
+    const allItems = [...allTasks, ...doneTasks];
+    const countMap = new Map<string, number>();
+    for (const t of allItems) {
+      const status = t.status || 'undefined';
+      countMap.set(status, (countMap.get(status) || 0) + 1);
+    }
+    return {
+      counts: DEFAULT_STATUSES
+        .filter(s => s.visible)
+        .sort((a, b) => a.order - b.order)
+        .map(s => ({ id: s.id, label: s.label, count: countMap.get(s.id) || 0 })),
+      total: allItems.length,
+    };
+  }, [allTasks, doneTasks]);
+
+  // --- Type distribution ---
+  const typeDistribution = useMemo(() => {
+    const allItems = [...allTasks, ...doneTasks];
+    const countMap = new Map<string, number>();
+    for (const t of allItems) {
+      countMap.set(t.type, (countMap.get(t.type) || 0) + 1);
+    }
+    const typeEntries = Object.entries(DEFAULT_TYPE_LABELS)
+      .map(([id, config]) => ({ id, label: config.label, count: countMap.get(id) || 0 }))
+      .filter(e => e.count > 0)
+      .sort((a, b) => b.count - a.count);
+    return { counts: typeEntries, total: allItems.length };
+  }, [allTasks, doneTasks]);
+
+  // --- Progress per space ---
+  const spaceProgress = useMemo(() => {
+    if (!spaces) return [];
+    const statsMap = new Map<string, { name: string; done: number; total: number }>();
+    for (const t of allTasks) {
+      if (!statsMap.has(t.spaceId)) statsMap.set(t.spaceId, { name: t.spaceName, done: 0, total: 0 });
+      statsMap.get(t.spaceId)!.total++;
+    }
+    for (const t of doneTasks) {
+      if (!statsMap.has(t.spaceId)) statsMap.set(t.spaceId, { name: t.spaceName, done: 0, total: 0 });
+      statsMap.get(t.spaceId)!.total++;
+      statsMap.get(t.spaceId)!.done++;
+    }
+    return Array.from(statsMap.values()).filter(s => s.total > 0).sort((a, b) => (a.done / a.total) - (b.done / b.total));
+  }, [allTasks, doneTasks, spaces]);
+
   // --- Week view ---
-  const weekStart = getMonday(addDays(today, weekOffset * 7));
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const weekTasksByDay = useMemo(() => {
@@ -295,6 +461,25 @@ export function MyOrganizationView() {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+
+      {/* KPI Banner */}
+      <div className="flex flex-wrap gap-3" data-tour="dashboard-kpis">
+        <KpiBadge label="en retard" count={overdueTasks.length}
+          color={overdueTasks.length > 0 ? 'border-red-300 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 dark:border-red-800' : 'border-border text-muted-foreground'}
+          icon={AlertTriangle} />
+        <KpiBadge label="aujourd'hui" count={todayTasks.length}
+          color={todayTasks.length > 0 ? 'border-orange-300 bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800' : 'border-border text-muted-foreground'}
+          icon={Clock} />
+        <KpiBadge label="en cours" count={inProgressTasks.length}
+          color={inProgressTasks.length > 0 ? 'border-blue-300 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800' : 'border-border text-muted-foreground'}
+          icon={Loader2} />
+        <KpiBadge label="à valider" count={toValidateTasks.length}
+          color={toValidateTasks.length > 0 ? 'border-violet-300 bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800' : 'border-border text-muted-foreground'}
+          icon={Target} />
+        <KpiBadge label="terminés cette sem." count={doneThisWeekCount}
+          color={doneThisWeekCount > 0 ? 'border-green-300 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 dark:border-green-800' : 'border-border text-muted-foreground'}
+          icon={CheckCircle2} />
+      </div>
 
       {/* Filtres */}
       <div className="bg-card border rounded-lg p-4" data-tour="org-filters">
@@ -489,6 +674,42 @@ export function MyOrganizationView() {
           })}
         </div>
       </div>
+
+      {/* Distributions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-card border rounded-lg">
+          <div className="flex items-center gap-2 px-4 py-3 border-b">
+            <Target className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold">Répartition par statut</h3>
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{statusDistribution.total}</span>
+          </div>
+          <DistributionBar counts={statusDistribution.counts} total={statusDistribution.total} colorMap={STATUS_BAR_COLORS} />
+        </div>
+        <div className="bg-card border rounded-lg">
+          <div className="flex items-center gap-2 px-4 py-3 border-b">
+            <Flame className="w-4 h-4 text-blue-500" />
+            <h3 className="text-sm font-semibold">Répartition par type</h3>
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{typeDistribution.total}</span>
+          </div>
+          <DistributionBar counts={typeDistribution.counts} total={typeDistribution.total} colorMap={TYPE_BAR_COLORS} />
+        </div>
+      </div>
+
+      {/* Progression par espace */}
+      {spaceProgress.length > 0 && (
+        <div className="bg-card border rounded-lg border-green-200 dark:border-green-900">
+          <div className="flex items-center gap-2 px-4 py-3 border-b">
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <h3 className="text-sm font-semibold">Progression par espace</h3>
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{spaceProgress.length}</span>
+          </div>
+          <div className="p-2 max-h-[300px] overflow-y-auto">
+            {spaceProgress.map(s => (
+              <SpaceProgressBar key={s.name} name={s.name} done={s.done} total={s.total} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Échéances */}
       <div className="bg-card border rounded-lg p-4">

@@ -5,6 +5,7 @@ export type DashboardTab = 'home' | 'communities' | 'spaces' | 'sunburst' | 'min
 
 export type DashboardGroup = 'global' | 'myActivities';
 
+// Legacy static list — kept as fallback only
 export const DASHBOARD_TABS: {
   value: DashboardTab;
   label: string;
@@ -17,7 +18,6 @@ export const DASHBOARD_TABS: {
   { value: 'sunburst', label: 'Sunburst', icon: 'CircleDot', group: 'global' },
   { value: 'mindmap', label: 'Carte mentale', icon: 'GitBranch', group: 'global' },
   { value: 'graph', label: 'Graphe global', icon: 'Network', group: 'global' },
-  { value: 'dashboard', label: 'Dashboard', icon: 'Gauge', group: 'myActivities' },
   { value: 'planning', label: 'Tableau de bord', icon: 'LayoutDashboard', group: 'myActivities' },
 ];
 

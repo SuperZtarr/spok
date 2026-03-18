@@ -133,22 +133,23 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                   to={`/communities/${community.id}`}
                   className="group relative border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors"
                 >
-                  {/* Cover */}
-                  {community.coverUrl ? (
-                    <div className="h-24 bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
-                  ) : (
-                    <div className="h-24 bg-gradient-to-r from-primary/20 to-primary/5" />
-                  )}
-
-                  {/* Avatar overlay */}
-                  <div className="absolute top-16 left-4">
-                    {community.avatarUrl ? (
-                      <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                  {/* Cover + Avatar */}
+                  <div className="relative">
+                    {community.coverUrl ? (
+                      <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
                     ) : (
-                      <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
+                      <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
                     )}
+                    {/* Avatar overlay */}
+                    <div className="absolute -bottom-4 left-4">
+                      {community.avatarUrl ? (
+                        <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Pending badge */}

@@ -43,42 +43,33 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     const pageSize = Math.min(500, Math.max(1, parseInt(pageSizeStr, 10)));
     const skip = (page - 1) * pageSize;
 
-    // 1. Resolve accessible spaceIds based on user role
-    const user = await fastify.prisma.user.findUnique({
-      where: { id: request.user.userId },
-      select: { globalRole: true },
+    // 1. Resolve accessible spaceIds based on user memberships
+    // Always filter by membership — admins see only their spaces in dashboards
+    // (admin pages have their own endpoints for global access)
+    const directMemberships = await fastify.prisma.spaceMembership.findMany({
+      where: { userId: request.user.userId },
+      select: { spaceId: true },
     });
-    const isAdmin = user?.globalRole === 'ADMIN';
+    const directSpaceIds = directMemberships.map((m) => m.spaceId);
 
-    let accessibleSpaceIds: string[] | undefined;
-    if (!isAdmin) {
-      // Direct space memberships
-      const directMemberships = await fastify.prisma.spaceMembership.findMany({
-        where: { userId: request.user.userId },
-        select: { spaceId: true },
+    const communityMemberships = await fastify.prisma.communityMembership.findMany({
+      where: { userId: request.user.userId },
+      select: { communityId: true },
+    });
+    const communityIds = communityMemberships.map((m) => m.communityId);
+
+    let communitySpaceIds: string[] = [];
+    if (communityIds.length > 0) {
+      const communitySpaces = await fastify.prisma.space.findMany({
+        where: { communityId: { in: communityIds } },
+        select: { id: true },
       });
-      const directSpaceIds = directMemberships.map((m) => m.spaceId);
+      communitySpaceIds = communitySpaces.map((s) => s.id);
+    }
 
-      // Community memberships → all spaces in those communities
-      const communityMemberships = await fastify.prisma.communityMembership.findMany({
-        where: { userId: request.user.userId },
-        select: { communityId: true },
-      });
-      const communityIds = communityMemberships.map((m) => m.communityId);
-
-      let communitySpaceIds: string[] = [];
-      if (communityIds.length > 0) {
-        const communitySpaces = await fastify.prisma.space.findMany({
-          where: { communityId: { in: communityIds } },
-          select: { id: true },
-        });
-        communitySpaceIds = communitySpaces.map((s) => s.id);
-      }
-
-      accessibleSpaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
-      if (accessibleSpaceIds.length === 0) {
-        return { data: [], total: 0, page, pageSize, totalPages: 0 };
-      }
+    const accessibleSpaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
+    if (accessibleSpaceIds.length === 0) {
+      return { data: [], total: 0, page, pageSize, totalPages: 0 };
     }
 
     // 2. Build where clause

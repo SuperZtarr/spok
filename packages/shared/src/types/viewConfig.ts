@@ -16,3 +16,22 @@ export interface ViewCategoryConfig {
   label: string;
   order: number;
 }
+
+// Global pages config (dashboard tabs)
+export type GlobalPageGroup = 'global' | 'myActivities';
+
+export interface GlobalPageConfig {
+  id: string;
+  label: string;
+  icon: string;
+  group: GlobalPageGroup;
+  order: number;
+  visible: boolean;
+  access: ViewAccess;
+}
+
+export interface GlobalPageGroupConfig {
+  id: GlobalPageGroup;
+  label: string;
+  order: number;
+}

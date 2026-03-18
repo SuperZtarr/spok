@@ -9,7 +9,9 @@ import {
 import { createPortal } from 'react-dom';
 import { useViewModeStore, type ViewCategory } from '../stores/viewMode';
 import { useViewConfig } from '../hooks/useViewConfig';
-import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
+import { useGlobalPages } from '../hooks/useGlobalPages';
+import { useDashboardTabStore } from '../stores/dashboardTab';
+import type { DashboardTab } from '../stores/dashboardTab';
 import { cn } from '../lib/utils';
 import { VIEW_TOURS, DASHBOARD_TOURS } from '../hooks/viewTours';
 
@@ -66,10 +68,17 @@ export function ViewModeSelector() {
   const navigate = useNavigate();
   const location = useLocation();
   const { views: configViews, categories: configCategories } = useViewConfig();
+  const { pages: globalPagesConfig, groups: globalPageGroups } = useGlobalPages();
 
   // Map config to VIEW_MODES-compatible format
   const VIEW_MODES = configViews.map(v => ({ value: v.id as any, label: v.label, icon: v.icon, category: v.category }));
   const VIEW_CATEGORIES = configCategories.map(c => ({ value: c.id, label: c.label }));
+
+  // Build dashboard tabs from config
+  const globalTabs = globalPagesConfig.filter(p => p.group === 'global').map(p => ({ value: p.id as DashboardTab, label: p.label, icon: p.icon, group: p.group }));
+  const myActivitiesTabs = globalPagesConfig.filter(p => p.group === 'myActivities').map(p => ({ value: p.id as DashboardTab, label: p.label, icon: p.icon, group: p.group }));
+  const globalGroupLabel = globalPageGroups.find(g => g.id === 'global')?.label || 'Vues globales';
+  const myActivitiesGroupLabel = globalPageGroups.find(g => g.id === 'myActivities')?.label || 'Mes activités';
 
   type MenuCategory = ViewCategory | 'myActivities';
 
@@ -89,10 +98,6 @@ export function ViewModeSelector() {
 
   const isDashboard = location.pathname === '/';
   const isInSpace = /^\/spaces\/[^/]+/.test(location.pathname);
-
-  // Dashboard tab groups
-  const globalTabs = DASHBOARD_TABS.filter(t => t.group === 'global');
-  const myActivitiesTabs = DASHBOARD_TABS.filter(t => t.group === 'myActivities');
 
   // Categories visible in space (for md dropdown level)
   const spaceCategories = VIEW_CATEGORIES.filter(cat => cat.value !== 'dashboard');
@@ -180,7 +185,7 @@ export function ViewModeSelector() {
       // Dashboard: show grouped tabs
       return (
         <>
-          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Vues globales</div>
+          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{globalGroupLabel}</div>
           {globalTabs.map(dashTab => {
             const Icon = ICONS[dashTab.icon];
             const isActive = isDashboard && tab === dashTab.value;
@@ -200,7 +205,7 @@ export function ViewModeSelector() {
             );
           })}
           <div className="h-px bg-border mx-1 my-1" />
-          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Mes activités</div>
+          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{myActivitiesGroupLabel}</div>
           {myActivitiesTabs.map(dashTab => {
             const Icon = ICONS[dashTab.icon];
             const isActive = isDashboard && tab === dashTab.value;
@@ -226,7 +231,7 @@ export function ViewModeSelector() {
     // Space: vues globales + mes activités + all view modes grouped by category
     return (
       <>
-        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Vues globales</div>
+        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{globalGroupLabel}</div>
         {globalTabs.map(dashTab => {
           const Icon = ICONS[dashTab.icon];
           const isActive = isDashboard && tab === dashTab.value;
@@ -274,7 +279,7 @@ export function ViewModeSelector() {
           );
         })}
         <div className="h-px bg-border mx-1 my-1" />
-        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Mes activités</div>
+        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{myActivitiesGroupLabel}</div>
         {myActivitiesTabs.map(dashTab => {
           const Icon = ICONS[dashTab.icon];
           const isActive = isDashboard && tab === dashTab.value;
@@ -442,7 +447,7 @@ export function ViewModeSelector() {
           )}
         >
           <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-          <span>Vues globales</span>
+          <span>{globalGroupLabel}</span>
           <ChevronDown className={cn('w-3 h-3 transition-transform duration-150', openCategory === 'dashboard' && 'rotate-180')} />
         </button>
       </li>
@@ -493,7 +498,7 @@ export function ViewModeSelector() {
           )}
         >
           <ClipboardList className="w-4 h-4 flex-shrink-0" />
-          <span>Mes activités</span>
+          <span>{myActivitiesGroupLabel}</span>
           <ChevronDown className={cn('w-3 h-3 transition-transform duration-150', openCategory === 'myActivities' && 'rotate-180')} />
         </button>
       </li>

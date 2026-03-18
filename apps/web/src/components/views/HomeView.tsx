@@ -151,9 +151,9 @@ function CommunityCard({
       >
         {/* Cover */}
         {community.coverUrl ? (
-          <div className="h-20 bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
+          <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
         ) : (
-          <div className="h-20 bg-gradient-to-r from-primary/20 to-primary/5" />
+          <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
         )}
 
         <div className="relative px-4 pb-3 pt-7">

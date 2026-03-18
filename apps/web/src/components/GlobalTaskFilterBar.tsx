@@ -119,18 +119,9 @@ export function GlobalTaskFilterBar({ filters, showSearch = true }: GlobalTaskFi
   return (
     <div className="flex-shrink-0">
       <div className="flex items-center gap-2 mb-2">
-        {filters.hasAnyFilter && (
-          <button
-            onClick={filters.clearAllFilters}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="w-3 h-3" />
-            <span className="hidden sm:inline">Effacer les filtres</span>
-          </button>
-        )}
         <button
           onClick={() => setFiltersOpen(!filtersOpen)}
-          className="sm:hidden inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border border-border hover:bg-accent transition-colors ml-auto"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-border hover:bg-accent transition-colors"
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Filtres
@@ -140,21 +131,29 @@ export function GlobalTaskFilterBar({ filters, showSearch = true }: GlobalTaskFi
             </span>
           )}
         </button>
+        {filters.hasAnyFilter && (
+          <button
+            onClick={filters.clearAllFilters}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Effacer
+          </button>
+        )}
+        {showSearch && (
+          <div className="relative ml-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={filters.search}
+              onChange={(e) => filters.setSearch(e.target.value)}
+              placeholder="Rechercher..."
+              className="pl-10 h-8 text-sm w-48 sm:w-64"
+            />
+          </div>
+        )}
       </div>
 
-      {showSearch && (
-        <div className="relative mb-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={filters.search}
-            onChange={(e) => filters.setSearch(e.target.value)}
-            placeholder="Rechercher..."
-            className="pl-10 h-8 text-sm w-full sm:max-w-[400px]"
-          />
-        </div>
-      )}
-
-      <div className={`space-y-2 ${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+      <div className={`space-y-2 overflow-hidden transition-all duration-200 ${filtersOpen ? 'max-h-[500px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
         {renderFilterRow('Type', typeOptions, filters.selectedTypes, (id) => filters.setSelectedTypes((prev) => toggleValue(prev, id)), (p) => filters.setPage(p), true)}
         {renderFilterRow('Statut', statusOptions, filters.selectedStatuses, (id) => filters.setSelectedStatuses((prev) => toggleValue(prev, id)), (p) => filters.setPage(p))}
         {renderFilterRow('Priorite', priorityOptions, filters.selectedPriorities, (id) => filters.setSelectedPriorities((prev) => toggleValue(prev, id)), (p) => filters.setPage(p))}

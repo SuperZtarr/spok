@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, RotateCcw, Loader2, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { adminConfigApi } from '../../lib/api';
-import type { ViewConfigItem, ViewCategoryConfig, ViewAccess, ViewCategory } from '@spok/shared';
+import type { ViewConfigItem, ViewCategoryConfig, ViewAccess, ViewCategory, GlobalPageConfig, GlobalPageGroupConfig, GlobalPageGroup } from '@spok/shared';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -27,8 +27,15 @@ export function ViewsConfigPage() {
     queryFn: adminConfigApi.getViews,
   });
 
+  const { data: gpData, isLoading: gpLoading } = useQuery({
+    queryKey: ['admin', 'global-pages-config'],
+    queryFn: adminConfigApi.getGlobalPages,
+  });
+
   const [views, setViews] = useState<ViewConfigItem[]>([]);
   const [categories, setCategories] = useState<ViewCategoryConfig[]>([]);
+  const [globalPages, setGlobalPages] = useState<GlobalPageConfig[]>([]);
+  const [pageGroups, setPageGroups] = useState<GlobalPageGroupConfig[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -38,22 +45,42 @@ export function ViewsConfigPage() {
     }
   }, [data]);
 
+  useEffect(() => {
+    if (gpData) {
+      setGlobalPages([...gpData.pages].sort((a, b) => a.order - b.order));
+      setPageGroups([...gpData.groups].sort((a, b) => a.order - b.order));
+    }
+  }, [gpData]);
+
   const saveMutation = useMutation({
-    mutationFn: () => adminConfigApi.updateViews({ views, categories }),
+    mutationFn: async () => {
+      await adminConfigApi.updateViews({ views, categories });
+      await adminConfigApi.updateGlobalPages({ pages: globalPages, groups: pageGroups });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'view-config'] });
       queryClient.invalidateQueries({ queryKey: ['view-config'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'global-pages-config'] });
+      queryClient.invalidateQueries({ queryKey: ['global-pages-config'] });
       setHasChanges(false);
     },
   });
 
   const resetMutation = useMutation({
-    mutationFn: adminConfigApi.resetViews,
-    onSuccess: (result) => {
-      setViews([...result.views].sort((a, b) => a.order - b.order));
-      setCategories([...result.categories].sort((a, b) => a.order - b.order));
+    mutationFn: async () => {
+      const viewResult = await adminConfigApi.resetViews();
+      const gpResult = await adminConfigApi.resetGlobalPages();
+      return { viewResult, gpResult };
+    },
+    onSuccess: ({ viewResult, gpResult }) => {
+      setViews([...viewResult.views].sort((a, b) => a.order - b.order));
+      setCategories([...viewResult.categories].sort((a, b) => a.order - b.order));
+      setGlobalPages([...gpResult.pages].sort((a, b) => a.order - b.order));
+      setPageGroups([...gpResult.groups].sort((a, b) => a.order - b.order));
       queryClient.invalidateQueries({ queryKey: ['admin', 'view-config'] });
       queryClient.invalidateQueries({ queryKey: ['view-config'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'global-pages-config'] });
+      queryClient.invalidateQueries({ queryKey: ['global-pages-config'] });
       setHasChanges(false);
     },
   });
@@ -84,7 +111,40 @@ export function ViewsConfigPage() {
     setHasChanges(true);
   }, []);
 
-  if (isLoading) {
+  const updateGlobalPage = useCallback((id: string, updates: Partial<GlobalPageConfig>) => {
+    setGlobalPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    setHasChanges(true);
+  }, []);
+
+  const moveGlobalPage = useCallback((id: string, direction: 'up' | 'down') => {
+    setGlobalPages(prev => {
+      const sorted = [...prev].sort((a, b) => a.order - b.order);
+      const idx = sorted.findIndex(p => p.id === id);
+      if (idx < 0) return prev;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= sorted.length) return prev;
+      const tmpOrder = sorted[idx].order;
+      sorted[idx] = { ...sorted[idx], order: sorted[swapIdx].order };
+      sorted[swapIdx] = { ...sorted[swapIdx], order: tmpOrder };
+      return sorted.sort((a, b) => a.order - b.order);
+    });
+    setHasChanges(true);
+  }, []);
+
+  const updatePageGroup = useCallback((id: string, updates: Partial<GlobalPageGroupConfig>) => {
+    setPageGroups(prev => prev.map(g => g.id === id ? { ...g, ...updates } as GlobalPageGroupConfig : g));
+    setHasChanges(true);
+  }, []);
+
+  const groupOptions = pageGroups.map(g => ({ value: g.id, label: g.label }));
+
+  // Group global pages by group
+  const pagesByGroup = pageGroups.map(grp => ({
+    group: grp,
+    pages: globalPages.filter(p => p.group === grp.id).sort((a, b) => a.order - b.order),
+  }));
+
+  if (isLoading || gpLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -205,6 +265,91 @@ export function ViewsConfigPage() {
                   title={view.visible ? 'Visible — cliquer pour masquer' : 'Masquée — cliquer pour afficher'}
                 >
                   {view.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* ── Pages globales ── */}
+      <div className="mt-12 mb-6 border-t pt-8">
+        <h1 className="text-2xl font-bold mb-1">Pages globales</h1>
+        <p className="text-muted-foreground text-sm mb-6">Gérez les onglets du menu principal (accueil, communautés, dashboard…)</p>
+      </div>
+
+      {/* Page groups config */}
+      <div className="bg-card border rounded-lg p-4 mb-6">
+        <h2 className="text-sm font-semibold mb-3">Groupes</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {pageGroups.map(grp => (
+            <div key={grp.id} className="flex items-center gap-2">
+              <Input
+                value={grp.label}
+                onChange={(e) => updatePageGroup(grp.id, { label: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Global pages by group */}
+      {pagesByGroup.map(({ group, pages: grpPages }) => (
+        <div key={group.id} className="mb-6">
+          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-2">{group.label}</h2>
+          <div className="bg-card border rounded-lg divide-y">
+            {grpPages.map((page) => (
+              <div key={page.id} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => moveGlobalPage(page.id, 'up')}
+                    className="p-0.5 rounded hover:bg-accent text-muted-foreground"
+                    title="Monter"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveGlobalPage(page.id, 'down')}
+                    className="p-0.5 rounded hover:bg-accent text-muted-foreground"
+                    title="Descendre"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <span className="text-xs font-mono text-muted-foreground w-24 flex-shrink-0">{page.id}</span>
+
+                <Input
+                  value={page.label}
+                  onChange={(e) => updateGlobalPage(page.id, { label: e.target.value })}
+                  className="text-sm w-40"
+                />
+
+                <Select
+                  value={page.group}
+                  onChange={(e) => updateGlobalPage(page.id, { group: e.target.value as GlobalPageGroup })}
+                  options={groupOptions}
+                  className="text-sm w-40"
+                />
+
+                <Select
+                  value={page.access}
+                  onChange={(e) => updateGlobalPage(page.id, { access: e.target.value as ViewAccess })}
+                  options={ACCESS_OPTIONS}
+                  className="text-sm w-44"
+                />
+
+                <span className={`text-xs px-2 py-0.5 rounded-full ${ACCESS_COLORS[page.access]}`}>
+                  {page.access}
+                </span>
+
+                <button
+                  onClick={() => updateGlobalPage(page.id, { visible: !page.visible })}
+                  className={`p-1.5 rounded transition-colors ${page.visible ? 'text-foreground hover:bg-accent' : 'text-muted-foreground/40 hover:bg-accent'}`}
+                  title={page.visible ? 'Visible — cliquer pour masquer' : 'Masquée — cliquer pour afficher'}
+                >
+                  {page.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
               </div>
             ))}

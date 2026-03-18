@@ -1590,6 +1590,7 @@ export const invitationsApi = {
 // Public config API (no auth needed)
 export const configApi = {
   getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/config/views'),
+  getGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/config/global-pages'),
 };
 
 // Admin config API
@@ -1598,6 +1599,10 @@ export const adminConfigApi = {
   updateViews: (data: { views: import('@spok/shared').ViewConfigItem[]; categories?: import('@spok/shared').ViewCategoryConfig[] }) =>
     fetchApi<{ success: boolean }>('/admin/config/views', { method: 'PUT', body: JSON.stringify(data) }),
   resetViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/admin/config/views/reset', { method: 'POST' }),
+  getGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/admin/config/global-pages'),
+  updateGlobalPages: (data: { pages: import('@spok/shared').GlobalPageConfig[]; groups?: import('@spok/shared').GlobalPageGroupConfig[] }) =>
+    fetchApi<{ success: boolean }>('/admin/config/global-pages', { method: 'PUT', body: JSON.stringify(data) }),
+  resetGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/admin/config/global-pages/reset', { method: 'POST' }),
 };
 
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {
