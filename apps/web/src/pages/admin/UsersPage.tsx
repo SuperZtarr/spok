@@ -17,6 +17,7 @@ const anomalyLabels: Record<string, string> = {
 const accessors: Record<string, (u: AdminUser) => string | number> = {
   name: (u) => u.name?.toLowerCase() ?? '',
   email: (u) => u.email?.toLowerCase() ?? '',
+  communities: (u) => u._count?.communityMemberships ?? 0,
   spaces: (u) => u._count?.memberships ?? 0,
   createdAt: (u) => u.createdAt,
 };
@@ -91,6 +92,7 @@ export function UsersPage() {
           <tr>
             <SortHeader label="Nom" column="name" />
             <SortHeader label="Email" column="email" />
+            <SortHeader label="Communautés" column="communities" />
             <SortHeader label="Espaces" column="spaces" />
             <SortHeader label="Date creation" column="createdAt" />
             <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
@@ -110,6 +112,9 @@ export function UsersPage() {
                 </div>
               </td>
               <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+              <td className="px-4 py-3 text-muted-foreground">
+                {user._count?.communityMemberships ?? 0}
+              </td>
               <td className="px-4 py-3 text-muted-foreground">
                 {user._count?.memberships ?? 0}
               </td>
@@ -133,7 +138,7 @@ export function UsersPage() {
           ))}
           {users.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+              <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                 Aucun utilisateur trouve
               </td>
             </tr>

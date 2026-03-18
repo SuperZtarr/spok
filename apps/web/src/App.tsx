@@ -88,7 +88,8 @@ const PAGE_NAMES: [RegExp, string][] = [
 
 function DevPageName() {
   const { pathname } = useLocation();
-  if (import.meta.env.PROD) return null;
+  const isDevMode = !import.meta.env.PROD || localStorage.getItem('devMode') === 'true';
+  if (!isDevMode) return null;
   const name = PAGE_NAMES.find(([re]) => re.test(pathname))?.[1] || pathname;
   return (
     <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">

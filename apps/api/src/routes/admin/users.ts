@@ -48,7 +48,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
           createdAt: true,
           updatedAt: true,
           _count: {
-            select: { memberships: true },
+            select: { memberships: true, communityMemberships: true },
           },
         },
         skip,

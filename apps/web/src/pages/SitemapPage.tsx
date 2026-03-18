@@ -3,7 +3,7 @@ import { Globe, User, Shield, ChevronRight } from 'lucide-react';
 import { PublicHeader } from '../components/PublicHeader';
 import { PublicFooter } from '../components/PublicFooter';
 
-const isDev = !import.meta.env.PROD;
+const isDev = !import.meta.env.PROD || localStorage.getItem('devMode') === 'true';
 
 interface SiteNode {
   label: string;

@@ -57,6 +57,7 @@ export interface AdminUser {
   updatedAt: string;
   _count?: {
     memberships: number;
+    communityMemberships: number;
   };
 }
 
