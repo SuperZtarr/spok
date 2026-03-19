@@ -5,7 +5,16 @@
 ### Items
 - [x] Fusion d'éléments : fusionner un item avec ses enfants (concaténer descriptions, remonter petits-enfants, supprimer les enfants absorbés) — déjà implémenté (item-merge.ts + MergeItemModal)
 
+### Admin
+- [x] Refonte des 8 pages admin (pattern uniforme, pagination, search debounce, export CSV, avatars) — a8eeb74 (2026-03-19)
+- [x] Sidebar drag & drop reorder communautes — a8eeb74 (2026-03-19)
+- [x] Cartes communautes publiques enrichies (cover, avatar) — a8eeb74 (2026-03-19)
+
 ### UX & navigation
+- [x] Plan du site + composants publics réutilisables (PublicHeader/Footer/PageLayout) — a303f5a (2026-03-19)
+- [x] Config admin des pages globales (menu principal dynamique) — a303f5a (2026-03-19)
+- [x] Fusion Dashboard + Tableau de bord en vue unique — a303f5a (2026-03-19)
+- [x] Filtrage dashboard par membership (admins ne voient plus les espaces non-membres) — a303f5a (2026-03-19)
 - [x] Refonte sidebar : communautés dépliées par défaut, compteur d'espaces quand réduit — 75d49c7 (2026-03-15)
 - [x] Breadcrumb dans l'item (Communauté → Espace → Parents) — 0676f90 (2026-03-15)
 - [x] Onboarding : modale bienvenue + tours guidés toutes vues + modales — 13e605d (2026-03-15)
@@ -13,6 +22,8 @@
 - [x] Communautés publiques : rejoindre/quitter depuis page Communautés — 448d67a (2026-03-15)
 - [x] Communautés vides visibles dans page Espaces — bc5e42b (2026-03-15)
 - [x] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités — 3054f7d (2026-03-15)
+- [ ] Revoir les tutoriels dynamiques (onboarding, tours guides)
+- [ ] Page de contact / support (formulaire vers les admins, demande technique, signalement)
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 

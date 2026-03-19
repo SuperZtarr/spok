@@ -36,6 +36,7 @@ export const DEFAULT_VIEW_CONFIG: ViewConfigItem[] = [
 export const DEFAULT_GLOBAL_PAGE_GROUPS: GlobalPageGroupConfig[] = [
   { id: 'global', label: 'Vues globales', order: 0 },
   { id: 'myActivities', label: 'Mes activités', order: 1 },
+  { id: 'misc', label: 'Divers', order: 2 },
 ];
 
 export const DEFAULT_GLOBAL_PAGES: GlobalPageConfig[] = [
@@ -46,4 +47,8 @@ export const DEFAULT_GLOBAL_PAGES: GlobalPageConfig[] = [
   { id: 'mindmap', label: 'Carte mentale', icon: 'GitBranch', group: 'global', order: 4, visible: true, access: 'user' },
   { id: 'graph', label: 'Graphe global', icon: 'Network', group: 'global', order: 5, visible: true, access: 'user' },
   { id: 'planning', label: 'Tableau de bord', icon: 'LayoutDashboard', group: 'myActivities', order: 6, visible: true, access: 'user' },
+  { id: 'search', label: 'Recherche', icon: 'Search', group: 'misc', order: 100, visible: true, access: 'user' },
+  { id: 'profile', label: 'Profil', icon: 'User', group: 'misc', order: 101, visible: true, access: 'user' },
+  { id: 'sitemap', label: 'Plan du site', icon: 'MapIcon', group: 'misc', order: 102, visible: true, access: 'public' },
+  { id: 'logout', label: 'Deconnexion', icon: 'LogOut', group: 'misc', order: 103, visible: true, access: 'user' },
 ];

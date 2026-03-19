@@ -89,7 +89,7 @@ export function SpaceOverviewPage() {
   const { data: members } = useQuery({
     queryKey: ['space-members', spaceId],
     queryFn: () => spacesApi.getMembers(spaceId!),
-    enabled: !!spaceId,
+    enabled: !!spaceId && !!user,
   });
 
   // Fetch sibling spaces from same community to find children
@@ -146,9 +146,9 @@ export function SpaceOverviewPage() {
       {/* Header with cover */}
       <div className="relative">
         {space?.coverUrl ? (
-          <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${space.coverUrl})` }} />
+          <div className="aspect-[5/1] bg-cover bg-center" style={{ backgroundImage: `url(${space.coverUrl})` }} />
         ) : (
-          <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
+          <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5" />
         )}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16" />
       </div>
@@ -261,8 +261,8 @@ export function SpaceOverviewPage() {
           </div>
         )}
 
-        {/* Members section */}
-        <div className="mb-8">
+        {/* Members section (authenticated only) */}
+        {user && <div className="mb-8">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
             <Users className="w-4 h-4" />
             Membres ({sortedMembers.length})
@@ -297,7 +297,7 @@ export function SpaceOverviewPage() {
           ) : (
             <p className="text-sm text-muted-foreground">Aucun membre direct dans cet espace.</p>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

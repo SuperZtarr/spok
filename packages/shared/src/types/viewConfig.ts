@@ -18,7 +18,7 @@ export interface ViewCategoryConfig {
 }
 
 // Global pages config (dashboard tabs)
-export type GlobalPageGroup = 'global' | 'myActivities';
+export type GlobalPageGroup = 'global' | 'myActivities' | 'misc';
 
 export interface GlobalPageConfig {
   id: string;

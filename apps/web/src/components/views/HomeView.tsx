@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Globe, Lock, Crown, User, FolderKanban, FolderOpen, FileText, ChevronDown, ChevronRight, Rocket, LogIn, Plus, ArrowRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
-import { useDashboardTabStore } from '../../stores/dashboardTab';
 import type { SpaceWithRole, CommunityWithRole } from '@spok/shared';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
@@ -89,7 +88,7 @@ function FirstTimeSetup({ userName }: { userName: string }) {
             Une communauté regroupe des personnes autour d'un sujet commun. Vous en serez le propriétaire.
           </p>
           <button
-            onClick={() => { useDashboardTabStore.getState().setTab('communities'); navigate('/'); }}
+            onClick={() => navigate('/communities')}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -110,7 +109,7 @@ function FirstTimeSetup({ userName }: { userName: string }) {
             Un espace personnel est privé et visible uniquement par vous. Idéal pour tester SPOK.
           </p>
           <button
-            onClick={() => { useDashboardTabStore.getState().setTab('spaces'); navigate('/?new=space'); }}
+            onClick={() => navigate('/spaces?new=space')}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
           >
             <FolderKanban className="w-4 h-4" />
@@ -262,11 +261,13 @@ export function HomeView() {
   const { data: communities, isLoading: loadingCommunities } = useQuery({
     queryKey: ['communities'],
     queryFn: communitiesApi.list,
+    enabled: !!user,
   });
 
   const { data: allSpaces, isLoading: loadingSpaces } = useQuery({
     queryKey: ['spaces', 'all'],
     queryFn: () => spacesApi.list(),
+    enabled: !!user,
   });
 
   const isLoading = loadingCommunities || loadingSpaces;
@@ -306,10 +307,10 @@ export function HomeView() {
   }
 
   return (
-    <div className="p-8 flex-1 overflow-auto">
+    <div className="p-4 md:p-6 flex-1 overflow-auto">
       <div className="max-w-4xl mx-auto">
         {/* Welcome banner */}
-        <div className="mb-8" data-tour="home-welcome">
+        <div className="mb-6" data-tour="home-welcome">
           <h1 className="text-2xl font-bold">Bonjour {firstName}</h1>
           <p className="text-muted-foreground mt-1">
             {totalCommunities} communauté{totalCommunities > 1 ? 's' : ''}

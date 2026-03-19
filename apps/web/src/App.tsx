@@ -8,7 +8,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { InvitationPage } from './pages/InvitationPage';
 import { LandingPage } from './pages/LandingPage';
-import { DashboardPage } from './pages/DashboardPage';
+// DashboardPage now accessed via SpacesListPage
 import { SpacePage } from './pages/SpacePage';
 import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
@@ -17,7 +17,7 @@ import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GlobalTasksPage } from './pages/GlobalTasksPage';
 import { Layout } from './components/Layout';
-import { AdminLayout } from './components/AdminLayout';
+// AdminLayout removed — admin pages now inside main Layout
 import { AdminRoute } from './components/AdminRoute';
 import { UsersPage } from './pages/admin/UsersPage';
 import { SpacesPage } from './pages/admin/SpacesPage';
@@ -29,6 +29,13 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
+import { HomePage } from './pages/HomePage';
+import { CommunitiesListPage } from './pages/CommunitiesListPage';
+import { SpacesListPage } from './pages/SpacesListPage';
+import { DashboardViewPage } from './pages/DashboardViewPage';
+import { GraphPage } from './pages/GraphPage';
+import { SunburstPage } from './pages/SunburstPage';
+import { MindMapPage } from './pages/MindMapPage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -69,6 +76,12 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/verify-email$/, 'VerifyEmailPage'],
   [/^\/invitation$/, 'InvitationPage'],
   [/^\/sitemap$/, 'SitemapPage'],
+  [/^\/communities$/, 'CommunitiesListPage'],
+  [/^\/spaces$/, 'SpacesListPage'],
+  [/^\/dashboard$/, 'DashboardViewPage'],
+  [/^\/graph$/, 'GraphPage'],
+  [/^\/sunburst$/, 'SunburstPage'],
+  [/^\/mindmap$/, 'MindMapPage'],
   [/^\/tasks$/, 'GlobalTasksPage'],
   [/^\/search$/, 'SearchPage'],
   [/^\/spaces\/[^/]+\/content$/, 'SpacePage'],
@@ -85,7 +98,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/admin\/stats$/, 'Admin/StatsPage'],
   [/^\/admin\/audit-logs$/, 'Admin/AuditLogsPage'],
   [/^\/admin\/views$/, 'Admin/ViewsConfigPage'],
-  [/^\/$/, 'DashboardPage / LandingPage'],
+  [/^\/$/, 'HomePage / LandingPage'],
 ];
 
 export { PAGE_NAMES };
@@ -103,9 +116,14 @@ function DevPageName() {
 
   const name = PAGE_NAMES.find(([re]) => re.test(path))?.[1];
   return (
-    <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
-      {name || path}
-    </div>
+    <>
+      <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[9999] bg-black/80 text-white text-lg font-bold px-4 py-1.5 rounded-lg pointer-events-none font-mono shadow-lg">
+        {name || path}
+      </div>
+      <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
+        {path}
+      </div>
+    </>
   );
 }
 
@@ -161,7 +179,13 @@ export default function App() {
         path="/"
         element={<HomeRoute />}
       >
-        <Route index element={<DashboardPage />} />
+        <Route index element={<HomePage />} />
+        <Route path="communities" element={<CommunitiesListPage />} />
+        <Route path="spaces" element={<SpacesListPage />} />
+        <Route path="dashboard" element={<DashboardViewPage />} />
+        <Route path="graph" element={<GraphPage />} />
+        <Route path="sunburst" element={<SunburstPage />} />
+        <Route path="mindmap" element={<MindMapPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
@@ -170,24 +194,15 @@ export default function App() {
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
         <Route path="communities/:communityId" element={<CommunityPage />} />
         <Route path="communities/:communityId/settings" element={<CommunitySettingsPage />} />
-      </Route>
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }
-      >
-        <Route index element={<Navigate to="/admin/users" replace />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="spaces" element={<SpacesPage />} />
-        <Route path="communities" element={<CommunitiesPage />} />
-        <Route path="anomalies" element={<AnomaliesPage />} />
-        <Route path="referentiels" element={<ReferentielsPage />} />
-        <Route path="stats" element={<StatsPage />} />
-        <Route path="audit-logs" element={<AuditLogsPage />} />
-        <Route path="views" element={<ViewsConfigPage />} />
+        <Route path="admin" element={<AdminRoute><Navigate to="/admin/users" replace /></AdminRoute>} />
+        <Route path="admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+        <Route path="admin/spaces" element={<AdminRoute><SpacesPage /></AdminRoute>} />
+        <Route path="admin/communities" element={<AdminRoute><CommunitiesPage /></AdminRoute>} />
+        <Route path="admin/anomalies" element={<AdminRoute><AnomaliesPage /></AdminRoute>} />
+        <Route path="admin/referentiels" element={<AdminRoute><ReferentielsPage /></AdminRoute>} />
+        <Route path="admin/stats" element={<AdminRoute><StatsPage /></AdminRoute>} />
+        <Route path="admin/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
+        <Route path="admin/views" element={<AdminRoute><ViewsConfigPage /></AdminRoute>} />
       </Route>
     </Routes>
   </>

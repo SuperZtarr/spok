@@ -35,8 +35,8 @@ export function PublicHeader({ maxWidth = 'max-w-5xl', showBack = false, rightSl
                 </Link>
               ) : (
                 <>
-                  <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Connexion</Link>
-                  <Link to="/register" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">S'inscrire</Link>
+                  <Link to="/login" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">Connexion</Link>
+                  <Link to="/register" className="text-sm text-muted-foreground hover:text-foreground transition-colors">S'inscrire</Link>
                 </>
               )
             )}

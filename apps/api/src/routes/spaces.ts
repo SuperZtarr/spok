@@ -54,13 +54,36 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Anonymous visitor: only non-PRIVATE community spaces
     if (!userId) {
-      if (!communityId || communityId === 'none') return [];
+      // No communityId: return all spaces from public communities
+      if (!communityId || communityId === 'none') {
+        const spaces = await fastify.prisma.space.findMany({
+          where: {
+            type: 'GROUP',
+            community: { isPublic: true, visibility: { not: 'PRIVATE' } },
+            OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
+          },
+          include: {
+            _count: { select: { memberships: true, items: true } },
+            community: { select: { id: true, name: true, avatarUrl: true } },
+            parent: { select: { id: true, name: true } },
+          },
+          orderBy: { name: 'asc' },
+        });
+
+        return spaces.map((s) => ({
+          ...s,
+          role: ((s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
+          memberCount: s._count.memberships,
+          itemCount: s._count.items,
+          isMember: false,
+        }));
+      }
 
       const community = await fastify.prisma.community.findUnique({
         where: { id: communityId },
-        select: { visibility: true },
+        select: { visibility: true, isPublic: true },
       });
-      if (!community || community.visibility === 'PRIVATE') return [];
+      if (!community || community.visibility === 'PRIVATE' || !community.isPublic) return [];
 
       const spaces = await fastify.prisma.space.findMany({
         where: { communityId, type: 'GROUP', OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] },

@@ -350,23 +350,21 @@ export function Layout() {
   const { data: allSpaces, refetch: refetchSpaces } = useQuery({
     queryKey: ['sidebar-spaces', user?.id],
     queryFn: () => spacesApi.list(),
-    enabled: !!user,
     placeholderData: (prev: any) => prev,
     staleTime: 10_000,
-    refetchInterval: 30_000,
+    refetchInterval: user ? 30_000 : undefined,
     refetchOnWindowFocus: 'always',
     retry: 2,
     retryDelay: 1000,
   });
 
-  // Fetch communities — poll every 30s
+  // Fetch communities — authenticated: user's communities, anonymous: public communities
   const { data: communities, refetch: refetchCommunities } = useQuery({
-    queryKey: ['communities', user?.id],
-    queryFn: communitiesApi.list,
-    enabled: !!user,
+    queryKey: ['communities', user?.id || 'public'],
+    queryFn: user ? communitiesApi.list : (() => communitiesApi.listPublic().then(list => list.map(c => ({ ...c, role: null, order: 0 })))) as typeof communitiesApi.list,
     placeholderData: (prev: any) => prev,
     staleTime: 10_000,
-    refetchInterval: 30_000,
+    refetchInterval: user ? 30_000 : undefined,
     refetchOnWindowFocus: 'always',
   });
 
@@ -555,8 +553,48 @@ export function Layout() {
     } catch { /* ignore */ }
   }, [queryClient]);
 
+  // Sidebar content for anonymous visitors
+  const visitorSidebarContent = (
+    <>
+      <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
+        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
+      </div>
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+        {communityGroups.map(({ community, spaceTree }) => (
+          <div key={community.id} className="pt-2 pb-2 border-b border-border">
+            <div className="flex items-center gap-1.5 px-3 mb-1">
+              {community.avatarUrl ? (
+                <img src={community.avatarUrl} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              )}
+              <Link to={`/communities/${community.id}`} className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate hover:text-foreground transition-colors">
+                {community.name}
+              </Link>
+            </div>
+            {spaceTree.map((node) => (
+              <SpaceTreeItem
+                key={node.id}
+                node={node}
+                level={0}
+                currentSpaceId={currentSpaceId}
+                expandedIds={expandedSpaceIds}
+                onToggle={toggleSpaceExpand}
+                favoriteIds={new Set()}
+                onToggleFavorite={() => {}}
+              />
+            ))}
+          </div>
+        ))}
+        {communityGroups.length === 0 && (
+          <p className="text-xs text-muted-foreground px-3">Aucun espace public disponible.</p>
+        )}
+      </nav>
+    </>
+  );
+
   // Sidebar content (shared between mobile and desktop)
-  const sidebarContent = (
+  const sidebarContent = user ? (
     <>
       {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
       <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
@@ -566,7 +604,7 @@ export function Layout() {
       {/* Navigation - scrollable */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
         {/* Favorites */}
-        {user && favoriteSpaces.length > 0 && (
+        {favoriteSpaces.length > 0 && (
           <div className="pt-2 pb-2 border-b border-border">
             <div className="flex items-center px-3 mb-2">
               <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
@@ -733,7 +771,7 @@ export function Layout() {
         <DevDbStatus />
       </div>
     </>
-  );
+  ) : visitorSidebarContent;
 
   return (
     <div className="h-screen flex overflow-hidden">
@@ -804,19 +842,26 @@ export function Layout() {
           </div>
           {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
-            {user && <MainMenu onOpenProfile={() => setIsProfileOpen(true)} />}
-            <div id="header-global-search"><GlobalSearch /></div>
-            {user && <NotificationBell />}
-            {user && (
-              <div className="flex items-center gap-2 flex-shrink-0 px-1">
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                    <User className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
-                )}
-                <span className="text-xs font-medium text-foreground truncate max-w-[80px] hidden md:inline">{user.name}</span>
+            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} />
+            {user ? (
+              <>
+                <div id="header-global-search"><GlobalSearch /></div>
+                <NotificationBell />
+                <div className="flex items-center gap-2 flex-shrink-0 px-1">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <span className="text-xs font-medium text-foreground truncate max-w-[80px] hidden md:inline">{user.name}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link to="/login" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">Connexion</Link>
+                <Link to="/register" className="text-sm text-muted-foreground hover:text-foreground transition-colors">S'inscrire</Link>
               </div>
             )}
           </div>

@@ -104,7 +104,8 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-h-96 overflow-y-auto rounded-xl border border-border/50 bg-card shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-h-96 flex flex-col rounded-xl border border-border/50 bg-card shadow-lg z-50">
+          <div className="flex-1 overflow-y-auto min-h-0">
           {isLoading && (
             <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -186,7 +187,8 @@ export function GlobalSearch() {
             </>
           )}
 
-          {/* Advanced search link */}
+          </div>
+          {/* Advanced search link — always visible at bottom */}
           {debouncedQuery.length >= 2 && (
             <Link
               to={`/search?q=${encodeURIComponent(debouncedQuery)}`}

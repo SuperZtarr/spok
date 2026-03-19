@@ -63,7 +63,7 @@ export function CommunityPage() {
   const { data: members } = useQuery({
     queryKey: ['community-members', communityId],
     queryFn: () => communitiesApi.getMembers(communityId!),
-    enabled: !!communityId,
+    enabled: !!communityId && !!user,
   });
 
   const { data: spaces } = useQuery({
@@ -102,9 +102,9 @@ export function CommunityPage() {
       {/* Header with cover */}
       <div className="relative">
         {community?.coverUrl ? (
-          <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
+          <div className="aspect-[5/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
         ) : (
-          <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
+          <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5" />
         )}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16" />
       </div>
@@ -160,8 +160,8 @@ export function CommunityPage() {
           )}
         </div>
 
-        {/* Members section */}
-        <div className="mb-8">
+        {/* Members section (authenticated only) */}
+        {user && <div className="mb-8">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
             <Users className="w-4 h-4" />
             Membres ({sortedMembers.length})
@@ -192,7 +192,7 @@ export function CommunityPage() {
               );
             })}
           </div>
-        </div>
+        </div>}
       </div>
 
     </div>

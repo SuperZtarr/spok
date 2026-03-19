@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  FolderTree, Users, Eye, CalendarRange, GitBranch, Palette, History, Globe, FolderOpen,
+  FolderTree, Users, Eye, CalendarRange, GitBranch, Palette, Globe, FolderOpen,
   List, Columns3, GanttChart, Network, Share2, CircleDot, Waypoints, Circle,
   FileText, LayoutGrid, CalendarCheck, Calendar, Orbit, SquareStack, Disc,
   TrendingDown, Layers, Table2, Grid3x3, Focus, Flame,
@@ -48,43 +48,33 @@ const VIEW_DESCRIPTIONS: Record<string, string> = {
 const features = [
   {
     icon: FolderTree,
-    title: 'Structurer',
-    description: '11 types d\'items (projets, taches, notes, reunions, periodes, liens, documents, images, bugs, diagrammes) dans des espaces hierarchiques avec sous-espaces.',
-  },
-  {
-    icon: Users,
-    title: 'Collaborer',
-    description: 'Communautes avec roles (owner/membre), contributions sur chaque item, invitations par email, notifications en temps reel, assignation de taches.',
-  },
-  {
-    icon: Eye,
-    title: 'Visualiser',
-    description: 'Plus de 20 vues : liste, kanban, gantt, graphe, carte mentale, sunburst, bulles, heatmap, burndown, tableau croise, treemap, diagramme chord...',
-  },
-  {
-    icon: CalendarRange,
-    title: 'Planifier',
-    description: 'Timeline Gantt avec dependances, calendrier semaine/mois, tableau de bord avec KPIs, taches prioritaires, echeances et progression par espace.',
-  },
-  {
-    icon: GitBranch,
-    title: 'Lier',
-    description: 'Relations typees entre items (depends de, lie a, parent de...). Graphe interactif, reseau egocentrique, diagramme chord des flux entre categories.',
+    title: 'Centralisez tout',
+    description: 'Projets, notes, reunions, documents, bugs, liens, images — regroupez toutes vos informations au meme endroit. Un seul outil pour tout retrouver.',
   },
   {
     icon: Palette,
-    title: 'Personnaliser',
-    description: 'Statuts et types personnalisables par espace, tags colores, 8 templates d\'espaces prets a l\'emploi, themes clair/sombre, avatars et covers.',
+    title: 'Organisez a votre facon',
+    description: 'Espaces, sous-espaces, statuts, types, tags, priorites : chaque equipe adapte SPOK a sa maniere de travailler. 8 templates pour demarrer vite.',
   },
   {
-    icon: History,
-    title: 'Tracer',
-    description: 'Journal d\'audit complet avec historique de chaque modification. Restauration selective ou par lot vers un etat precedent.',
+    icon: Eye,
+    title: 'Visualisez a votre maniere',
+    description: '23 vues differentes parce que chacun apprehende les donnees a sa facon : kanban, gantt, graphe, carte mentale, sunburst, heatmap, tableau croise... Changez de perspective en un clic.',
   },
   {
-    icon: Globe,
-    title: 'Ouvrir',
-    description: 'Communautes publiques visitables sans inscription. Trois niveaux de visibilite (ouvert, lecture seule, prive) pour chaque espace et communaute.',
+    icon: Users,
+    title: 'Collaborez et partagez',
+    description: 'Creez des communautes, invitez vos collaborateurs, contribuez ensemble. Ouvrez au public ou gardez prive — trois niveaux de visibilite pour controler qui voit quoi.',
+  },
+  {
+    icon: CalendarRange,
+    title: 'Planifiez et suivez l\'avancement',
+    description: 'Timeline, calendrier, tableau de bord, echeances, priorites. Suivez l\'avancement des travaux en temps reel pour garder le cap.',
+  },
+  {
+    icon: GitBranch,
+    title: 'Reliez vos idees',
+    description: 'Connectez vos elements entre eux pour construire un reseau de connaissances. Visualisez les dependances et les liens.',
   },
 ];
 
@@ -120,12 +110,12 @@ export function LandingPage() {
           et les explorer sous {views.length} vues différentes.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <a href="#public-communities" className={`${btnDefault} h-10 rounded-md px-8`}>
-            Découvrez sans connexion
-          </a>
-          <Link to="/login" className={`${btnOutline} h-10 rounded-md px-8`}>
+          <Link to="/login" className={`${btnDefault} h-10 rounded-md px-8`}>
             Se connecter
           </Link>
+          <a href="#public-communities" className={`${btnOutline} h-10 rounded-md px-8`}>
+            Découvrez sans connexion
+          </a>
         </div>
       </section>
 
@@ -202,7 +192,7 @@ export function LandingPage() {
           </p>
 
           {/* Core features */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-12">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-12">
             {features.map((f) => (
               <div
                 key={f.title}
