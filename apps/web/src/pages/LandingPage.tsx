@@ -49,42 +49,42 @@ const features = [
   {
     icon: FolderTree,
     title: 'Structurer',
-    description: '11 types d\'items (projets, tâches, notes, réunions, périodes, liens, documents, diagrammes…) organisés dans des espaces hiérarchiques.',
+    description: '11 types d\'items (projets, taches, notes, reunions, periodes, liens, documents, images, bugs, diagrammes) dans des espaces hierarchiques avec sous-espaces.',
   },
   {
     icon: Users,
     title: 'Collaborer',
-    description: 'Communautés, contributions sur chaque item, notifications, assignation, rôles et permissions granulaires.',
+    description: 'Communautes avec roles (owner/membre), contributions sur chaque item, invitations par email, notifications en temps reel, assignation de taches.',
   },
   {
     icon: Eye,
     title: 'Visualiser',
-    description: 'Plus de 20 vues pour explorer vos données sous tous les angles : liste, kanban, gantt, graphe, carte mentale, bulles…',
+    description: 'Plus de 20 vues : liste, kanban, gantt, graphe, carte mentale, sunburst, bulles, heatmap, burndown, tableau croise, treemap, diagramme chord...',
   },
   {
     icon: CalendarRange,
     title: 'Planifier',
-    description: 'Timeline Gantt, calendrier, planning, burndown. Statuts personnalisables et suivi de la progression.',
+    description: 'Timeline Gantt avec dependances, calendrier semaine/mois, tableau de bord avec KPIs, taches prioritaires, echeances et progression par espace.',
   },
   {
     icon: GitBranch,
     title: 'Lier',
-    description: 'Relations typées entre items pour construire un graphe de connaissances. Carte des relations et réseau interactif.',
+    description: 'Relations typees entre items (depends de, lie a, parent de...). Graphe interactif, reseau egocentrique, diagramme chord des flux entre categories.',
   },
   {
     icon: Palette,
     title: 'Personnaliser',
-    description: 'Référentiels de statuts et de types par espace, tags colorés, templates d\'espaces, visibilité configurable.',
+    description: 'Statuts et types personnalisables par espace, tags colores, 8 templates d\'espaces prets a l\'emploi, themes clair/sombre, avatars et covers.',
   },
   {
     icon: History,
     title: 'Tracer',
-    description: 'Historique complet des modifications avec audit détaillé. Restauration en un clic vers un état précédent.',
+    description: 'Journal d\'audit complet avec historique de chaque modification. Restauration selective ou par lot vers un etat precedent.',
   },
   {
     icon: Globe,
     title: 'Ouvrir',
-    description: 'Communautés publiques accessibles sans inscription. Trois niveaux de visibilité : ouvert, lecture seule, privé.',
+    description: 'Communautes publiques visitables sans inscription. Trois niveaux de visibilite (ouvert, lecture seule, prive) pour chaque espace et communaute.',
   },
 ];
 
