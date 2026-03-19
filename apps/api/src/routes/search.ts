@@ -117,10 +117,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let totalSpaces = 0;
     if (enabledTypes.has('spaces')) {
       const spaceWhere: Record<string, unknown> = {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-        ],
+        name: { contains: query, mode: 'insensitive' },
       };
       if (communityId) spaceWhere.communityId = communityId;
       if (effectiveSpaceFilter) spaceWhere.id = effectiveSpaceFilter;
