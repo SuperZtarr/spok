@@ -361,24 +361,37 @@ export function Layout() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [userMenuOpen]);
 
-  // Fetch ALL spaces once (stable key, no flash on community change)
-  const { data: allSpaces } = useQuery({
-    queryKey: ['sidebar-spaces'],
+  // Fetch ALL spaces — poll every 30s so sidebar never goes stale
+  const { data: allSpaces, refetch: refetchSpaces } = useQuery({
+    queryKey: ['sidebar-spaces', user?.id],
     queryFn: () => spacesApi.list(),
     enabled: !!user,
     placeholderData: (prev: any) => prev,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: 'always',
     retry: 2,
     retryDelay: 1000,
   });
 
-  // Fetch communities for sidebar
-  const { data: communities } = useQuery({
-    queryKey: ['communities'],
+  // Fetch communities — poll every 30s
+  const { data: communities, refetch: refetchCommunities } = useQuery({
+    queryKey: ['communities', user?.id],
     queryFn: communitiesApi.list,
     enabled: !!user,
+    placeholderData: (prev: any) => prev,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: 'always',
   });
+
+  // Refetch sidebar data on every route change
+  useEffect(() => {
+    if (user) {
+      refetchSpaces();
+      refetchCommunities();
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCommunityDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
