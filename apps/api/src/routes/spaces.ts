@@ -63,7 +63,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (!community || community.visibility === 'PRIVATE') return [];
 
       const spaces = await fastify.prisma.space.findMany({
-        where: { communityId, type: 'GROUP', visibility: { not: 'PRIVATE' } },
+        where: { communityId, type: 'GROUP', OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] },
         include: {
           _count: { select: { memberships: true, items: true } },
           community: { select: { id: true, name: true, avatarUrl: true } },
@@ -158,7 +158,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           : { in: communityIds },
         type: 'GROUP',
         id: { notIn: Array.from(memberSpaceIds) },
-        visibility: { not: 'PRIVATE' }, // PRIVATE spaces only visible to direct members
+        OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
       };
 
       const visibleSpaces = await fastify.prisma.space.findMany({
