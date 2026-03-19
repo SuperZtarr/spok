@@ -43,12 +43,14 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
         select: {
           id: true,
           email: true,
+          emailVerified: true,
           name: true,
+          avatarUrl: true,
           globalRole: true,
           createdAt: true,
           updatedAt: true,
           _count: {
-            select: { memberships: true, communityMemberships: true },
+            select: { memberships: true, communityMemberships: true, createdItems: true },
           },
         },
         skip,

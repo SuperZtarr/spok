@@ -220,30 +220,56 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
               <Globe className="w-4 h-4" />
               Communautés publiques à rejoindre
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {joinableCommunities.map(community => (
                 <div
                   key={community.id}
-                  className="border border-dashed border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
+                  className="relative border border-dashed border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors"
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium truncate">{community.name}</h3>
-                    <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  {/* Cover + Avatar */}
+                  <div className="relative">
+                    {community.coverUrl ? (
+                      <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
+                    ) : (
+                      <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
+                    )}
+                    <div className="absolute -bottom-4 left-4">
+                      {community.avatarUrl ? (
+                        <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {community.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{community.description}</p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      {community.memberCount} membre{community.memberCount > 1 ? 's' : ''} · {community.spaceCount} espace{community.spaceCount > 1 ? 's' : ''}
-                    </span>
+
+                  {/* Content */}
+                  <div className="pt-8 px-4 pb-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold truncate">{community.name}</h3>
+                      <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    </div>
+                    {community.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" />
+                        {community.memberCount} membre{community.memberCount > 1 ? 's' : ''}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        {community.spaceCount} espace{community.spaceCount > 1 ? 's' : ''}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => joinMutation.mutate(community.id)}
                       disabled={joinMutation.isPending}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                      className="flex items-center gap-1.5 mt-3 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
                     >
-                      <LogIn className="w-3 h-3" />
+                      <LogIn className="w-3.5 h-3.5" />
                       Rejoindre
                     </button>
                   </div>

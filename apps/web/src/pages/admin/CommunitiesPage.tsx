@@ -1,12 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff, Clock, Check, X } from 'lucide-react';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff, Clock, Check, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
 import { CommunityDetailModal } from '../../components/admin/CommunityDetailModal';
 import { CommunityDeleteConfirmModal } from '../../components/CommunityDeleteConfirmModal';
 import { useSort } from '../../hooks/useSort';
+
+const PAGE_SIZE = 20;
 
 interface AdminCommunity {
   id: string;
@@ -14,6 +17,8 @@ interface AdminCommunity {
   description?: string;
   isPublic: boolean;
   pendingPublic?: boolean;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   memberCount: number;
@@ -27,21 +32,58 @@ const accessors: Record<string, (c: AdminCommunity) => string | number> = {
   createdAt: (c) => c.createdAt,
 };
 
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays}j`;
+  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} sem.`;
+  if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+  return date.toLocaleDateString('fr-FR');
+}
+
+function CommunityAvatar({ community }: { community: AdminCommunity }) {
+  if (community.avatarUrl) {
+    return (
+      <img
+        src={community.avatarUrl}
+        alt={community.name}
+        className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+      <Building2 className="w-4 h-4 text-primary" />
+    </div>
+  );
+}
+
 export function CommunitiesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [modalCommunityId, setModalCommunityId] = useState<string | null | undefined>(undefined);
-  // undefined = modal fermé, null = création, string = édition
+  const [communityToDelete, setCommunityToDelete] = useState<AdminCommunity | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { sortKey, sortOrder, toggle, sortData } = useSort<AdminCommunity>('name', 'asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'communities', { page, search }],
-    queryFn: () => adminApi.communities.list({ page, pageSize: 20, search: search || undefined }),
+    queryKey: ['admin', 'communities', { page, search: debouncedSearch }],
+    queryFn: () => adminApi.communities.list({ page, pageSize: PAGE_SIZE, search: debouncedSearch || undefined }),
   });
-
-  const [communityToDelete, setCommunityToDelete] = useState<AdminCommunity | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren: boolean }) =>
@@ -69,31 +111,46 @@ export function CommunitiesPage() {
     },
   });
 
-  const handleDelete = (community: AdminCommunity) => {
-    setCommunityToDelete(community);
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-  };
-
   const sortedCommunities = useMemo(
     () => sortData(data?.data || [], accessors),
     [data, sortData]
   );
 
-  const SortHeader = ({ label, column }: { label: string; column: string }) => (
+  const pendingCommunities = sortedCommunities.filter(c => c.pendingPublic);
+  const totalPages = data?.pagination.totalPages ?? 1;
+
+  const handleExportCSV = () => {
+    if (!data?.data) return;
+    const headers = ['Nom', 'Description', 'Visibilite', 'Membres', 'Espaces', 'Date creation'];
+    const rows = data.data.map((c) => [
+      c.name,
+      c.description || '',
+      c.isPublic ? 'Publique' : 'Privee',
+      c.memberCount,
+      c.spaceCount,
+      new Date(c.createdAt).toLocaleDateString('fr-FR'),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `communities-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const SortHeader = ({ label, column, className }: { label: string; column: string; className?: string }) => (
     <th
-      className="px-4 py-3 text-left text-sm font-medium cursor-pointer select-none hover:bg-muted/80"
+      className={`px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors ${className ?? ''}`}
       onClick={() => toggle(column)}
     >
       <span className="inline-flex items-center gap-1">
         {label}
         {sortKey === column && (
           sortOrder === 'asc'
-            ? <ArrowUp className="w-3.5 h-3.5" />
-            : <ArrowDown className="w-3.5 h-3.5" />
+            ? <ArrowUp className="w-3 h-3" />
+            : <ArrowDown className="w-3 h-3" />
         )}
       </span>
     </th>
@@ -101,51 +158,69 @@ export function CommunitiesPage() {
 
   return (
     <div className="p-6">
+      {/* Header sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Communautes</h1>
-          <Button onClick={() => setModalCommunityId(null)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvelle communaute
-          </Button>
-        </div>
-
-        <form onSubmit={handleSearch}>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher par nom..."
-                className="pl-10"
-              />
-            </div>
-            <Button type="submit" variant="secondary">
-              Rechercher
+          <div>
+            <h1 className="text-2xl font-bold">Communautes</h1>
+            {data && (
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {data.pagination.total} communaute{data.pagination.total > 1 ? 's' : ''} au total
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
+              <Download className="w-4 h-4 mr-1.5" />
+              CSV
+            </Button>
+            <Button onClick={() => setModalCommunityId(null)}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              Nouvelle communaute
             </Button>
           </div>
-        </form>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par nom ou description..."
+            className="pl-10"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pending public approval banner */}
-      {sortedCommunities.filter(c => c.pendingPublic).length > 0 && (
+      {pendingCommunities.length > 0 && (
         <div className="mb-6 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4">
           <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4" />
-            En attente d'approbation ({sortedCommunities.filter(c => c.pendingPublic).length})
+            En attente d'approbation ({pendingCommunities.length})
           </h2>
           <div className="space-y-2">
-            {sortedCommunities.filter(c => c.pendingPublic).map(community => (
-              <div key={community.id} className="flex items-center justify-between bg-background/80 rounded-md px-4 py-2">
-                <div>
-                  <span className="font-medium">{community.name}</span>
-                  {community.description && (
-                    <span className="text-sm text-muted-foreground ml-2">— {community.description}</span>
-                  )}
-                  <span className="text-xs text-muted-foreground ml-2">
+            {pendingCommunities.map(community => (
+              <div key={community.id} className="flex items-center justify-between bg-background/80 rounded-md px-4 py-2.5">
+                <div className="flex items-center gap-3">
+                  <CommunityAvatar community={community} />
+                  <div>
+                    <span className="font-medium text-sm">{community.name}</span>
+                    {community.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-1">{community.description}</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">
                     {community.memberCount} membre{community.memberCount > 1 ? 's' : ''}
-                  </span>
+                  </Badge>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -153,7 +228,6 @@ export function CommunitiesPage() {
                     size="sm"
                     onClick={() => approveMutation.mutate(community.id)}
                     disabled={approveMutation.isPending}
-                    title="Approuver la publication"
                     className="text-green-600 hover:text-green-700 hover:bg-green-50"
                   >
                     <Check className="w-4 h-4 mr-1" />
@@ -164,7 +238,6 @@ export function CommunitiesPage() {
                     size="sm"
                     onClick={() => rejectMutation.mutate(community.id)}
                     disabled={rejectMutation.isPending}
-                    title="Rejeter la demande"
                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                   >
                     <X className="w-4 h-4 mr-1" />
@@ -181,30 +254,31 @@ export function CommunitiesPage() {
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-auto max-h-[70vh]">
+          <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full">
-              <thead className="bg-muted sticky top-0 z-10">
+              <thead className="bg-muted/50">
                 <tr>
-                  <SortHeader label="Nom" column="name" />
-                  <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Visibilité</th>
-                  <SortHeader label="Membres" column="members" />
-                  <SortHeader label="Espaces" column="spaces" />
-                  <SortHeader label="Date creation" column="createdAt" />
-                  <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                  <SortHeader label="Communaute" column="name" />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Visibilite</th>
+                  <SortHeader label="Membres" column="members" className="text-center" />
+                  <SortHeader label="Espaces" column="spaces" className="text-center" />
+                  <SortHeader label="Creation" column="createdAt" />
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {sortedCommunities.map((community) => (
-                  <tr key={community.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setModalCommunityId(community.id)}>
+                  <tr key={community.id} className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => setModalCommunityId(community.id)}>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-primary" />
-                        {community.name}
+                      <div className="flex items-center gap-3">
+                        <CommunityAvatar community={community} />
+                        <div className="min-w-0">
+                          <span className="font-medium text-sm truncate block">{community.name}</span>
+                          {community.description && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">{community.description}</p>
+                          )}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {community.description || '-'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
@@ -214,30 +288,29 @@ export function CommunitiesPage() {
                             : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                         }`}>
                           {community.isPublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                          {community.isPublic ? 'Publique' : 'Privée'}
+                          {community.isPublic ? 'Publique' : 'Privee'}
                         </span>
                         {community.pendingPublic && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                             <Clock className="w-3 h-3" />
-                            En attente
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span>{community.memberCount}</span>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                        <Users className="w-3.5 h-3.5" />
+                        {community.memberCount}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <FolderKanban className="w-4 h-4 text-muted-foreground" />
-                        <span>{community.spaceCount}</span>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                        <FolderKanban className="w-3.5 h-3.5" />
+                        {community.spaceCount}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(community.createdAt).toLocaleDateString('fr-FR')}
+                    <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(community.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
+                      {formatRelativeDate(community.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -248,29 +321,32 @@ export function CommunitiesPage() {
                               size="sm"
                               onClick={(e) => { e.stopPropagation(); approveMutation.mutate(community.id); }}
                               disabled={approveMutation.isPending}
-                              title="Approuver la publication"
+                              title="Approuver"
+                              className="h-7 w-7 p-0"
                             >
-                              <Check className="w-4 h-4 text-green-600" />
+                              <Check className="w-3.5 h-3.5 text-green-600" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(community.id); }}
                               disabled={rejectMutation.isPending}
-                              title="Rejeter la demande"
+                              title="Rejeter"
+                              className="h-7 w-7 p-0"
                             >
-                              <X className="w-4 h-4 text-amber-600" />
+                              <X className="w-3.5 h-3.5 text-amber-600" />
                             </Button>
                           </>
                         )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(community); }}
+                          onClick={(e) => { e.stopPropagation(); setCommunityToDelete(community); }}
                           disabled={deleteMutation.isPending}
                           title="Supprimer"
+                          className="h-7 w-7 p-0"
                         >
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </Button>
                       </div>
                     </td>
@@ -278,7 +354,7 @@ export function CommunitiesPage() {
                 ))}
                 {sortedCommunities.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       Aucune communaute trouvee
                     </td>
                   </tr>
@@ -287,30 +363,51 @@ export function CommunitiesPage() {
             </table>
           </div>
 
-          {data && data.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
               <p className="text-sm text-muted-foreground">
-                {data.pagination.total} communaute(s) au total
+                Page {page} sur {totalPages}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4 -ml-2.5" />
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
+                  className="h-8 w-8 p-0"
                 >
-                  Precedent
+                  <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm">
-                  Page {page} sur {data.pagination.totalPages}
-                </span>
+                <span className="text-sm px-3">{page} / {totalPages}</span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                  disabled={page === data.pagination.totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 p-0"
                 >
-                  Suivant
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 -ml-2.5" />
                 </Button>
               </div>
             </div>

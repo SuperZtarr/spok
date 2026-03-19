@@ -52,12 +52,14 @@ export interface AdminUser {
   email: string;
   emailVerified: boolean;
   name: string;
+  avatarUrl?: string;
   globalRole: GlobalRole;
   createdAt: string;
   updatedAt: string;
   _count?: {
     memberships: number;
     communityMemberships: number;
+    createdItems: number;
   };
 }
 

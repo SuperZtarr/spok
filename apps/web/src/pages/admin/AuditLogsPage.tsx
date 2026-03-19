@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { History, RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter } from 'lucide-react';
+import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -140,11 +140,9 @@ export function AuditLogsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <History className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Audit Logs</h1>
-        </div>
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+        <h1 className="text-2xl font-bold">Audit Logs</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Historique des modifications et restauration</p>
       </div>
 
       {/* Stats cards */}

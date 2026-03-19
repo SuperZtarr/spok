@@ -162,10 +162,10 @@ export function ViewsConfigPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Configuration des vues</h1>
-          <p className="text-muted-foreground text-sm">Gérez les libellés, l'ordre, les catégories et les droits d'accès des vues</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Libelles, ordre, categories et droits d'acces</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -274,8 +274,8 @@ export function ViewsConfigPage() {
 
       {/* ── Pages globales ── */}
       <div className="mt-12 mb-6 border-t pt-8">
-        <h1 className="text-2xl font-bold mb-1">Pages globales</h1>
-        <p className="text-muted-foreground text-sm mb-6">Gérez les onglets du menu principal (accueil, communautés, dashboard…)</p>
+        <h1 className="text-2xl font-bold mb-0.5">Pages globales</h1>
+        <p className="text-sm text-muted-foreground mb-6">Onglets du menu principal (accueil, communautes, dashboard...)</p>
       </div>
 
       {/* Page groups config */}

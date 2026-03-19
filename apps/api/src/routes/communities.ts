@@ -92,7 +92,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // List user's communities
+  // List user's communities (sorted by user order)
   fastify.get('/', { preHandler: [fastify.authenticate] }, async (request) => {
     const memberships = await fastify.prisma.communityMembership.findMany({
       where: { userId: request.user.userId },
@@ -105,14 +105,32 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
+      orderBy: { order: 'asc' },
     });
 
     return memberships.map((m) => ({
       ...m.community,
       role: m.role,
+      order: m.order,
       memberCount: m.community._count.memberships,
       spaceCount: m.community._count.spaces,
     }));
+  });
+
+  // Reorder user's communities
+  fastify.put<{ Body: { communityIds: string[] } }>('/reorder', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { communityIds } = request.body;
+    if (!Array.isArray(communityIds)) return reply.badRequest('communityIds must be an array');
+
+    const updates = communityIds.map((communityId, index) =>
+      fastify.prisma.communityMembership.updateMany({
+        where: { userId: request.user.userId, communityId },
+        data: { order: index },
+      })
+    );
+    await fastify.prisma.$transaction(updates);
+
+    return { success: true };
   });
 
   // List public communities (authenticated: exclude joined; anonymous: all public)

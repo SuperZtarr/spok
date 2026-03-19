@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw, FileText, MessageSquare, Users, FolderKanban } from 'lucide-react';
+import { RefreshCw, FileText, MessageSquare, Users, FolderKanban, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -19,7 +19,7 @@ const PERIODS = [
   { value: '7d', label: '7j' },
   { value: '30d', label: '30j' },
   { value: '90d', label: '90j' },
-  { value: '365d', label: '1a' },
+  { value: '365d', label: '1an' },
   { value: 'all', label: 'Tout' },
 ] as const;
 
@@ -33,17 +33,33 @@ const TYPE_COLORS: Record<string, string> = {
   CONFIG: '#64748b',
   DOCUMENT: '#0ea5e9',
   IMAGE: '#14b8a6',
+  BUG: '#ef4444',
 };
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: typeof FileText }) {
+function StatCard({ label, value, icon: Icon, trend }: { label: string; value: number; icon: typeof FileText; trend?: number }) {
   return (
     <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-card">
-      <div className="p-2 rounded-md bg-accent/50">
+      <div className="p-2.5 rounded-lg bg-accent/50">
         <Icon className="w-5 h-5 text-muted-foreground" />
       </div>
-      <div>
-        <p className="text-2xl font-bold">{value.toLocaleString('fr-FR')}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="flex-1">
+        <p className="text-2xl font-bold tabular-nums">{value.toLocaleString('fr-FR')}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          {trend !== undefined && trend !== 0 && (
+            <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
+              trend > 0 ? 'text-green-600' : 'text-red-500'
+            }`}>
+              {trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {trend > 0 ? '+' : ''}{trend}%
+            </span>
+          )}
+          {trend === 0 && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+              <Minus className="w-3 h-3" />
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -59,16 +75,19 @@ export function StatsPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
+      {/* Header sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Statistiques</h1>
-          <div className="flex items-center gap-1 bg-accent/50 rounded-lg p-1">
+          <div>
+            <h1 className="text-2xl font-bold">Statistiques</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Vue d'ensemble de l'activite</p>
+          </div>
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
                 onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   period === p.value
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-accent text-muted-foreground'
@@ -100,8 +119,8 @@ export function StatsPage() {
 
           {/* Activity chart */}
           <div className="border border-border rounded-lg bg-card p-4 mb-6">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-              Activite
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              Activite sur la periode
             </h2>
             {data.timeSeries.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -130,34 +149,13 @@ export function StatsPage() {
                     }}
                   />
                   <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="itemsCreated"
-                    name="Creations"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="itemsModified"
-                    name="Modifications"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="contributions"
-                    name="Contributions"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={false}
-                  />
+                  <Line type="monotone" dataKey="itemsCreated" name="Creations" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="itemsModified" name="Modifications" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="contributions" name="Contributions" stroke="#10b981" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-center py-8 text-muted-foreground">Aucune donnee pour cette periode</p>
+              <p className="text-center py-8 text-sm text-muted-foreground">Aucune donnee pour cette periode</p>
             )}
           </div>
 
@@ -165,7 +163,7 @@ export function StatsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* By type */}
             <div className="border border-border rounded-lg bg-card p-4">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                 Repartition par type
               </h2>
               {data.byType.length > 0 ? (
@@ -192,7 +190,6 @@ export function StatsPage() {
                       name="Items"
                       radius={[0, 4, 4, 0]}
                       fill="#3b82f6"
-                      // Custom color per bar
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       shape={(props: any) => {
                         const { x, y, width, height, payload } = props;
@@ -203,17 +200,17 @@ export function StatsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center py-8 text-muted-foreground">Aucun item</p>
+                <p className="text-center py-8 text-sm text-muted-foreground">Aucun item</p>
               )}
             </div>
 
             {/* Top spaces */}
             <div className="border border-border rounded-lg bg-card p-4">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-                Top 10 espaces
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                Top 10 espaces les plus actifs
               </h2>
               {data.topSpaces.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {data.topSpaces.map((space, i) => {
                     const total = space.itemCount + space.contributionCount;
                     const maxTotal = data.topSpaces[0].itemCount + data.topSpaces[0].contributionCount;
@@ -221,12 +218,12 @@ export function StatsPage() {
 
                     return (
                       <div key={space.spaceId} className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
+                        <span className="text-xs text-muted-foreground w-5 text-right font-medium">{i + 1}.</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-sm font-medium truncate">{space.spaceName}</span>
-                            <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                              {space.itemCount} items, {space.contributionCount} contribs
+                            <span className="text-xs text-muted-foreground ml-2 flex-shrink-0 tabular-nums">
+                              {space.itemCount} items · {space.contributionCount} contribs
                             </span>
                           </div>
                           <div className="w-full bg-accent/50 rounded-full h-1.5">
@@ -241,7 +238,7 @@ export function StatsPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-center py-8 text-muted-foreground">Aucun espace</p>
+                <p className="text-center py-8 text-sm text-muted-foreground">Aucun espace</p>
               )}
             </div>
           </div>

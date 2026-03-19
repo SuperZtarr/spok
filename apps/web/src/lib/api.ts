@@ -562,6 +562,12 @@ export const spacesApi = {
 export const communitiesApi = {
   list: () => fetchApi<CommunityWithRole[]>('/communities'),
 
+  reorder: (communityIds: string[]) =>
+    fetchApi<{ success: boolean }>('/communities/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ communityIds }),
+    }),
+
   create: (data: CreateCommunityInput) =>
     fetchApi<CommunityWithRole>('/communities', {
       method: 'POST',

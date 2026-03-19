@@ -1,14 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useSort } from '../../hooks/useSort';
 import type { AdminUser } from '@spok/shared';
+
+const PAGE_SIZE = 20;
 
 const anomalyLabels: Record<string, string> = {
   'no-personal-space': 'Utilisateurs sans espace personnel',
@@ -19,24 +22,76 @@ const accessors: Record<string, (u: AdminUser) => string | number> = {
   email: (u) => u.email?.toLowerCase() ?? '',
   communities: (u) => u._count?.communityMemberships ?? 0,
   spaces: (u) => u._count?.memberships ?? 0,
+  items: (u) => u._count?.createdItems ?? 0,
   createdAt: (u) => u.createdAt,
 };
+
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays}j`;
+  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} sem.`;
+  if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+  return date.toLocaleDateString('fr-FR');
+}
+
+function UserAvatar({ user, size = 'sm' }: { user: AdminUser; size?: 'sm' | 'md' }) {
+  const sizeClass = size === 'md' ? 'w-8 h-8 text-xs' : 'w-6 h-6 text-[10px]';
+
+  if (user.avatarUrl) {
+    return (
+      <img
+        src={user.avatarUrl}
+        alt={user.name}
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
+      />
+    );
+  }
+
+  const initials = (user.name || user.email)
+    .split(/[\s@]+/)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join('');
+
+  return (
+    <div
+      className={`${sizeClass} rounded-full bg-primary/10 text-primary font-medium flex items-center justify-center flex-shrink-0`}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export function UsersPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const anomaly = searchParams.get('anomaly') || undefined;
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
-  // undefined = modal fermé, null = création, string = édition
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { sortKey, sortOrder, toggle, sortData } = useSort<AdminUser>('name', 'asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'users', { page, search, anomaly }],
-    queryFn: () => adminApi.users.list({ page, pageSize: 100, search: search || undefined, anomaly }),
+    queryKey: ['admin', 'users', { page, search: debouncedSearch, anomaly }],
+    queryFn: () => adminApi.users.list({ page, pageSize: PAGE_SIZE, search: debouncedSearch || undefined, anomaly }),
   });
 
   const clearAnomaly = () => {
@@ -50,120 +105,179 @@ export function UsersPage() {
     },
   });
 
-  const handleDelete = (user: AdminUser) => {
-    setDeletingUser(user);
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-  };
-
-  // Séparer les utilisateurs par rôle puis trier chaque groupe
-  const adminUsers = useMemo(
-    () => sortData(data?.data.filter((u) => u.globalRole === 'ADMIN') || [], accessors),
-    [data, sortData]
-  );
-  const regularUsers = useMemo(
-    () => sortData(data?.data.filter((u) => u.globalRole === 'USER') || [], accessors),
+  const allUsers = useMemo(
+    () => sortData(data?.data || [], accessors),
     [data, sortData]
   );
 
-  const SortHeader = ({ label, column }: { label: string; column: string }) => (
+  const adminUsers = useMemo(() => allUsers.filter((u) => u.globalRole === 'ADMIN'), [allUsers]);
+  const regularUsers = useMemo(() => allUsers.filter((u) => u.globalRole === 'USER'), [allUsers]);
+
+  const totalPages = data?.pagination.totalPages ?? 1;
+
+  const handleExportCSV = () => {
+    if (!data?.data) return;
+    const headers = ['Nom', 'Email', 'Role', 'Email verifie', 'Communautes', 'Espaces', 'Items', 'Date creation'];
+    const rows = data.data.map((u) => [
+      u.name,
+      u.email,
+      u.globalRole,
+      u.emailVerified ? 'Oui' : 'Non',
+      u._count?.communityMemberships ?? 0,
+      u._count?.memberships ?? 0,
+      u._count?.createdItems ?? 0,
+      new Date(u.createdAt).toLocaleDateString('fr-FR'),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const SortHeader = ({ label, column, className }: { label: string; column: string; className?: string }) => (
     <th
-      className="px-4 py-3 text-left text-sm font-medium cursor-pointer select-none hover:bg-muted/80"
+      className={`px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors ${className ?? ''}`}
       onClick={() => toggle(column)}
     >
       <span className="inline-flex items-center gap-1">
         {label}
         {sortKey === column && (
           sortOrder === 'asc'
-            ? <ArrowUp className="w-3.5 h-3.5" />
-            : <ArrowDown className="w-3.5 h-3.5" />
+            ? <ArrowUp className="w-3 h-3" />
+            : <ArrowDown className="w-3 h-3" />
         )}
       </span>
     </th>
   );
 
-  const UserTable = ({ users }: { users: AdminUser[] }) => (
-    <div className="border border-border rounded-lg overflow-auto max-h-[70vh]">
-      <table className="w-full">
-        <thead className="bg-muted sticky top-0 z-10">
-          <tr>
-            <SortHeader label="Nom" column="name" />
-            <SortHeader label="Email" column="email" />
-            <SortHeader label="Communautés" column="communities" />
-            <SortHeader label="Espaces" column="spaces" />
-            <SortHeader label="Date creation" column="createdAt" />
-            <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {users.map((user) => (
-            <tr key={user.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setModalUserId(user.id)}>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  {user.globalRole === 'ADMIN' ? (
-                    <Shield className="w-4 h-4 text-primary" />
-                  ) : (
-                    <User className="w-4 h-4 text-muted-foreground" />
-                  )}
-                  {user.name}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {user._count?.communityMemberships ?? 0}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {user._count?.memberships ?? 0}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(user); }}
-                    disabled={deleteMutation.isPending}
-                    title="Supprimer"
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-          {users.length === 0 && (
+  const UserRow = ({ user }: { user: AdminUser }) => (
+    <tr
+      className="hover:bg-muted/50 cursor-pointer transition-colors"
+      onClick={() => setModalUserId(user.id)}
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <UserAvatar user={user} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm truncate">{user.name}</span>
+              {user.globalRole === 'ADMIN' && (
+                <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                  <Shield className="w-3 h-3 mr-0.5" />
+                  Admin
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {user.emailVerified ? (
+                <MailCheck className="w-3 h-3 text-green-500" />
+              ) : (
+                <Mail className="w-3 h-3 text-orange-400" />
+              )}
+              <span className="truncate">{user.email}</span>
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground text-center">
+        {user._count?.communityMemberships ?? 0}
+      </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground text-center">
+        {user._count?.memberships ?? 0}
+      </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground text-center">
+        {user._count?.createdItems ?? 0}
+      </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(user.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
+        {formatRelativeDate(user.createdAt)}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); setDeletingUser(user); }}
+            disabled={deleteMutation.isPending}
+            title="Supprimer"
+            className="h-7 w-7 p-0"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  const UserTable = ({ users, title, icon: Icon, iconColor }: { users: AdminUser[]; title: string; icon: typeof Shield; iconColor: string }) => (
+    <div>
+      <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Icon className={`w-4 h-4 ${iconColor}`} />
+        {title}
+        <span className="text-xs font-normal text-muted-foreground">({users.length})</span>
+      </h2>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-muted/50">
             <tr>
-              <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                Aucun utilisateur trouve
-              </td>
+              <SortHeader label="Utilisateur" column="name" />
+              <SortHeader label="Communautes" column="communities" className="text-center" />
+              <SortHeader label="Espaces" column="spaces" className="text-center" />
+              <SortHeader label="Items" column="items" className="text-center" />
+              <SortHeader label="Inscription" column="createdAt" />
+              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-12"></th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {users.map((user) => (
+              <UserRow key={user.id} user={user} />
+            ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  Aucun utilisateur
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
   return (
     <div className="p-6">
+      {/* Header sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Utilisateurs</h1>
-          <Button onClick={() => setModalUserId(null)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvel utilisateur
-          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Utilisateurs</h1>
+            {data && (
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {data.pagination.total} utilisateur{data.pagination.total > 1 ? 's' : ''} au total
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
+              <Download className="w-4 h-4 mr-1.5" />
+              CSV
+            </Button>
+            <Button onClick={() => setModalUserId(null)}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              Nouvel utilisateur
+            </Button>
+          </div>
         </div>
 
         {anomaly && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+          <div className="mb-4 flex items-center gap-3 px-4 py-2.5 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
             <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
             <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
-              Filtre anomalie : {anomalyLabels[anomaly] || anomaly}
+              {anomalyLabels[anomaly] || anomaly}
             </span>
             <button
               onClick={clearAnomaly}
@@ -175,56 +289,82 @@ export function UsersPage() {
           </div>
         )}
 
-        <form onSubmit={handleSearch}>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher par nom ou email..."
-                className="pl-10"
-              />
-            </div>
-            <Button type="submit" variant="secondary">
-              Rechercher
-            </Button>
-          </div>
-        </form>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par nom ou email..."
+            className="pl-10"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
-        <div className="space-y-8">
-          {/* Administrateurs */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Administrateurs
-              <span className="text-sm font-normal text-muted-foreground">
-                ({adminUsers.length})
-              </span>
-            </h2>
-            <UserTable users={adminUsers} />
-          </div>
+        <div className="space-y-6">
+          {adminUsers.length > 0 && (
+            <UserTable users={adminUsers} title="Administrateurs" icon={Shield} iconColor="text-primary" />
+          )}
+          <UserTable users={regularUsers} title="Utilisateurs" icon={User} iconColor="text-muted-foreground" />
 
-          {/* Utilisateurs */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-muted-foreground" />
-              Utilisateurs
-              <span className="text-sm font-normal text-muted-foreground">
-                ({regularUsers.length})
-              </span>
-            </h2>
-            <UserTable users={regularUsers} />
-          </div>
-
-          {data && (
-            <p className="text-sm text-muted-foreground text-center">
-              {data.pagination.total} utilisateur(s) au total
-            </p>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">
+                Page {page} sur {totalPages}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4 -ml-2.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm px-3">{page} / {totalPages}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 -ml-2.5" />
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -243,7 +383,7 @@ export function UsersPage() {
           setDeletingUser(null);
         }}
         title="Supprimer cet utilisateur ?"
-        message={`Supprimer l'utilisateur « ${deletingUser?.name} » ?`}
+        message={`Supprimer l'utilisateur « ${deletingUser?.name} » ? Cette action est irreversible.`}
         confirmLabel="Supprimer"
       />
     </div>

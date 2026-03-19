@@ -14,6 +14,7 @@ export interface Community {
 
 export interface CommunityWithRole extends Community {
   role: CommunityRole | null;
+  order?: number;
   memberCount?: number;
   spaceCount?: number;
 }

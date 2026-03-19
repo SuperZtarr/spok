@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Map as MapIcon } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Map as MapIcon, GripVertical } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -48,6 +51,82 @@ function collectDescendantIds(node: SpaceTreeNode): string[] {
     ids.push(...collectDescendantIds(child));
   }
   return ids;
+}
+
+function SortableCommunitySection({
+  community, spaceTree, isExpanded, spaceCount, groupIndex,
+  onToggleExpand, currentSpaceId, expandedSpaceIds, onToggleSpace, mySpacesEmpty, favoriteIds, onToggleFavorite,
+}: {
+  community: any; spaceTree: any[]; isExpanded: boolean; spaceCount: number; groupIndex: number;
+  onToggleExpand: (id: string) => void; currentSpaceId: string | null;
+  expandedSpaceIds: Set<string>; onToggleSpace: (id: string) => void;
+  mySpacesEmpty: boolean; favoriteIds: Set<string>; onToggleFavorite: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: community.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-2 border-b border-border">
+      <div className="flex items-center justify-between px-3 mb-1">
+        <div className="flex items-center gap-0.5 min-w-0 flex-1">
+          <div {...attributes} {...listeners} className="cursor-grab p-0.5 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0">
+            <GripVertical className="w-3 h-3" />
+          </div>
+          <button
+            onClick={() => onToggleExpand(community.id)}
+            className="flex items-center gap-1.5 min-w-0 group"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            ) : (
+              <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            )}
+            {community.avatarUrl ? (
+              <img src={community.avatarUrl} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            )}
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate group-hover:text-foreground transition-colors">
+              {community.name}
+            </span>
+            {!isExpanded && spaceCount > 0 && (
+              <span className="text-[10px] text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                {spaceCount}
+              </span>
+            )}
+          </button>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {community.role === 'OWNER' && (
+            <RoleGuard role="OWNER">
+              <Link to={`/communities/${community.id}/settings`} title="Paramètres">
+                <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+              </Link>
+            </RoleGuard>
+          )}
+        </div>
+      </div>
+      {isExpanded && (
+        spaceTree.length > 0 ? (
+          spaceTree.map((node: any, nodeIndex: number) => (
+            <SpaceTreeItem
+              key={node.id}
+              node={node}
+              level={0}
+              currentSpaceId={currentSpaceId}
+              expandedIds={expandedSpaceIds}
+              onToggle={onToggleSpace}
+              htmlId={groupIndex === 0 && nodeIndex === 0 && mySpacesEmpty ? 'sidebar-first-space' : undefined}
+              favoriteIds={favoriteIds}
+              onToggleFavorite={onToggleFavorite}
+            />
+          ))
+        ) : (
+          <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
+        )
+      )}
+    </div>
+  );
 }
 
 function SpaceTreeItem({
@@ -168,6 +247,13 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Community reorder drag & drop
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const reorderMutation = useMutation({
+    mutationFn: communitiesApi.reorder,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['communities'] }),
+  });
 
   // Expand/collapse state for space tree (persisted in localStorage)
   const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => {
@@ -294,6 +380,17 @@ export function Layout() {
     refetchOnWindowFocus: 'always',
   });
 
+  const handleCommunityDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !communities) return;
+    const ids = communities.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name)).map(c => c.id);
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newIds = arrayMove(ids, oldIndex, newIndex);
+    reorderMutation.mutate(newIds);
+  }, [communities, reorderMutation]);
+
   // Fetch favorite space IDs (stabilize reference with select)
   const { data: favoriteIds = [] } = useQuery({
     queryKey: ['space-favorites'],
@@ -339,9 +436,9 @@ export function Layout() {
       spaces.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
     }
 
-    // Build groups ordered by community name
+    // Build groups ordered by user preference (order field), fallback to name
     const sortedCommunities = (communities || []).slice().sort((a, b) =>
-      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+      (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
     );
 
     const groups = sortedCommunities.map(c => ({
@@ -590,69 +687,32 @@ export function Layout() {
           </div>
         )}
 
-        {/* Communities with their spaces */}
-        {communityGroups.map(({ community, spaceTree }, groupIndex) => {
-          const isExpanded = !collapsedCommunityIds.has(community.id);
-          // Count all spaces (flat, not just root nodes)
-          const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
-          return (
-            <div key={community.id} id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-2 border-b border-border">
-              <div className="flex items-center justify-between px-3 mb-1">
-                <button
-                  onClick={() => toggleCommunityExpand(community.id)}
-                  className="flex items-center gap-1.5 min-w-0 group"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                  )}
-                  {community.avatarUrl ? (
-                    <img src={community.avatarUrl} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  )}
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate group-hover:text-foreground transition-colors">
-                    {community.name}
-                  </span>
-                  {!isExpanded && spaceCount > 0 && (
-                    <span className="text-[10px] text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                      {spaceCount}
-                    </span>
-                  )}
-                </button>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {community.role === 'OWNER' && (
-                    <RoleGuard role="OWNER">
-                      <Link to={`/communities/${community.id}/settings`} title="Paramètres">
-                        <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                      </Link>
-                    </RoleGuard>
-                  )}
-                </div>
-              </div>
-              {isExpanded && (
-                spaceTree.length > 0 ? (
-                  spaceTree.map((node, nodeIndex) => (
-                    <SpaceTreeItem
-                      key={node.id}
-                      node={node}
-                      level={0}
-                      currentSpaceId={currentSpaceId}
-                      expandedIds={expandedSpaceIds}
-                      onToggle={toggleSpaceExpand}
-                      htmlId={groupIndex === 0 && nodeIndex === 0 && mySpaces.length === 0 ? 'sidebar-first-space' : undefined}
-                      favoriteIds={favoriteIdSet}
-                      onToggleFavorite={handleToggleFavorite}
-                    />
-                  ))
-                ) : (
-                  <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
-                )
-              )}
-            </div>
-          );
-        })}
+        {/* Communities with their spaces — drag to reorder */}
+        <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleCommunityDragEnd}>
+          <SortableContext items={communityGroups.map(g => g.community.id)} strategy={verticalListSortingStrategy}>
+            {communityGroups.map(({ community, spaceTree }, groupIndex) => {
+              const isExpanded = !collapsedCommunityIds.has(community.id);
+              const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
+              return (
+                <SortableCommunitySection
+                  key={community.id}
+                  community={community}
+                  spaceTree={spaceTree}
+                  isExpanded={isExpanded}
+                  spaceCount={spaceCount}
+                  groupIndex={groupIndex}
+                  onToggleExpand={toggleCommunityExpand}
+                  currentSpaceId={currentSpaceId}
+                  expandedSpaceIds={expandedSpaceIds}
+                  onToggleSpace={toggleSpaceExpand}
+                  mySpacesEmpty={mySpaces.length === 0}
+                  favoriteIds={favoriteIdSet}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              );
+            })}
+          </SortableContext>
+        </DndContext>
 
         {/* Independent group spaces (no community) */}
         {independentSpaces.length > 0 && (

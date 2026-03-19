@@ -168,6 +168,7 @@ model CommunityMembership {
   communityId String
   role        CommunityRole
   joinedAt    DateTime      @default(now())
+  order       Int           @default(0)
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
