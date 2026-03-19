@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Loader2, FileText, MessageSquare, X } from 'lucide-react';
+import { Search, Loader2, FileText, MessageSquare, X, ArrowRight } from 'lucide-react';
 import { searchApi } from '../lib/api';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 
@@ -184,6 +184,18 @@ export function GlobalSearch() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Advanced search link */}
+          {debouncedQuery.length >= 2 && (
+            <Link
+              to={`/search?q=${encodeURIComponent(debouncedQuery)}`}
+              onClick={() => { setIsOpen(false); setQuery(''); setDebouncedQuery(''); }}
+              className="flex items-center justify-between px-3 py-2.5 text-sm text-primary hover:bg-accent/50 transition-colors border-t border-border/50"
+            >
+              <span>Recherche avancee</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           )}
         </div>
       )}
