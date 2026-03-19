@@ -98,7 +98,9 @@ export function LandingPage() {
     queryFn: () => communitiesApi.listPublic(),
   });
 
-  const { views, categories } = useViewConfig();
+  const { allViews, categories } = useViewConfig();
+  // Show all views on landing (not just public-access ones)
+  const views = allViews.filter(v => v.visible).sort((a, b) => a.order - b.order);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
