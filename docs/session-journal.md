@@ -41,6 +41,55 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-20] - Refonte header, menu principal, routes individuelles, visiteurs
+
+- Menu principal restructure : 5 sections (Vues globales, Basique, Planification, Exploration, Administration, Divers)
+- Responsive dynamique base sur la largeur reelle (expanded/dropdowns/hamburger)
+- Chaque vue globale a sa propre route (/communities, /spaces, /dashboard, /graph, /sunburst, /mindmap)
+- Admin integre dans le Layout principal (plus d'AdminLayout separe)
+- Visiteurs : sidebar avec espaces publics, menu avec vues publiques, boutons Connexion/S'inscrire
+- API /spaces retourne les espaces publics pour les anonymes
+- Recherche avancee : 5 types (communautes, espaces, items, users, contributions), filtres tags/url
+- Page de recherche avec filtres, pagination, surlignage
+- ViewsConfigPage en 4 onglets (Pages globales, Vues d'espace, Divers, Categories)
+- Config Divers editable (ordre, acces) avec profil/logout verrouilles
+- Landing : features actualisees, boutons inverses, communautes avec covers
+- Sitemap complet avec descriptions, filtrage par auth
+- Pages publiques : header/footer + bouton aide contextuel
+- Fix sidebar spaces (poll + refetch navigation), dev badge, covers 5:1
+- Commits 5a4d2e4, 6652c5e, pushes sur master
+
+**Etat :** TERMINE
+
+---
+
+#### [2026-03-19] - Refonte admin pages, sidebar drag & drop, community cards
+
+- Refonte des 8 pages admin : pattern uniforme (header sticky, debounce search, pagination 20/page, export CSV, dates relatives, avatars, badges)
+- Sidebar : drag & drop reorder communautes (dnd-kit + API /communities/reorder)
+- CommunityListView : cartes enrichies (cover, avatar)
+- AdminUser type : avatarUrl + createdItems count
+- Commit a8eeb74, pushe sur master
+
+**Etat :** TERMINE
+
+---
+
+#### [2026-03-19] - Sitemap, config pages globales, fusion dashboard, filtrage admin
+
+- Plan du site (/sitemap) avec arborescence, infos dev conditionnelles
+- Composants PublicHeader/PublicFooter/PublicPageLayout réutilisables
+- Badge dev (nom composant page) en bas à gauche
+- Config admin des pages globales (menu principal dynamique, API + hook + admin UI)
+- Fusion Dashboard + Tableau de bord en une seule vue (KPIs + filtres + priorités + calendriers + distributions + progression)
+- Fix /user/tasks : admins filtrés par membership (plus de pollution cross-communautés)
+- Fix meta apple-mobile-web-app-capable déprécié
+- Commit a303f5a, pushé sur master
+
+**État :** TERMINÉ
+
+---
+
 #### [2026-03-17] - Visibilité des espaces (OPEN/READONLY/PRIVATE)
 
 **Demande :** Reprendre le chantier permissions/visibilité des espaces, commencé lors d'une session précédente (schema Prisma déjà modifié, db:generate avait crashé)

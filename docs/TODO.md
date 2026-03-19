@@ -24,6 +24,8 @@
 - [x] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités — 3054f7d (2026-03-15)
 - [ ] Revoir les tutoriels dynamiques (onboarding, tours guides)
 - [ ] Page de contact / support (formulaire vers les admins, demande technique, signalement)
+- [ ] Page favoris / liens rapides (espaces, items, pages epingles par l'utilisateur)
+- [ ] Prod : rendre des communautes publiques + bouton "Decouvrez sans connexion" masque s'il n'y en a aucune
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
