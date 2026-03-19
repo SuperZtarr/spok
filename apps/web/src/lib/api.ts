@@ -984,11 +984,47 @@ interface SearchResults {
   totalContributions: number;
 }
 
+export interface AdvancedSearchParams {
+  q: string;
+  types?: string;
+  communityId?: string;
+  spaceId?: string;
+  itemType?: string;
+  itemStatus?: string;
+  itemPriority?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdvancedSearchResponse {
+  communities: Array<{ id: string; name: string; description: string | null; avatarUrl: string | null; isPublic: boolean; memberCount: number; spaceCount: number }>;
+  spaces: Array<{ id: string; name: string; type: string; communityId: string | null; communityName: string | null; memberCount: number; itemCount: number }>;
+  items: Array<{ id: string; title: string; type: string; status: string | null; priority: number | null; description: string | null; spaceId: string; spaceName: string; communityName: string | null; createdAt: string; tags: Array<{ id: string; name: string; color: string | null }> }>;
+  users: Array<{ id: string; name: string; email: string | null; avatarUrl: string | null; globalRole: string; communityCount: number; spaceCount: number }>;
+  contributions: Array<{ id: string; content: string | null; authorName: string; itemId: string; itemTitle: string; spaceId: string; spaceName: string; createdAt: string }>;
+  totals: { communities: number; spaces: number; items: number; users: number; contributions: number };
+  pagination: { page: number; pageSize: number };
+}
+
 export const searchApi = {
   search: (q: string, page?: number, pageSize?: number) =>
     fetchApi<SearchResults>(
       `/search?q=${encodeURIComponent(q)}&page=${page || 1}&pageSize=${pageSize || 20}`
     ),
+
+  advanced: (params: AdvancedSearchParams) => {
+    const sp = new URLSearchParams();
+    sp.set('q', params.q);
+    if (params.types) sp.set('types', params.types);
+    if (params.communityId) sp.set('communityId', params.communityId);
+    if (params.spaceId) sp.set('spaceId', params.spaceId);
+    if (params.itemType) sp.set('itemType', params.itemType);
+    if (params.itemStatus) sp.set('itemStatus', params.itemStatus);
+    if (params.itemPriority) sp.set('itemPriority', params.itemPriority);
+    if (params.page) sp.set('page', params.page.toString());
+    if (params.pageSize) sp.set('pageSize', params.pageSize.toString());
+    return fetchApi<AdvancedSearchResponse>(`/search/advanced?${sp.toString()}`);
+  },
 };
 
 // Health check (no auth required)

@@ -28,6 +28,7 @@ import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { SitemapPage } from './pages/SitemapPage';
+import { SearchPage } from './pages/SearchPage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -69,6 +70,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/invitation$/, 'InvitationPage'],
   [/^\/sitemap$/, 'SitemapPage'],
   [/^\/tasks$/, 'GlobalTasksPage'],
+  [/^\/search$/, 'SearchPage'],
   [/^\/spaces\/[^/]+\/content$/, 'SpacePage'],
   [/^\/spaces\/[^/]+\/settings$/, 'SpaceSettingsPage'],
   [/^\/spaces\/[^/]+\/history$/, 'SpaceHistoryPage'],
@@ -161,6 +163,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
