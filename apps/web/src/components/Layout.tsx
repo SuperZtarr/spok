@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, adminApi } from '../lib/api';
+import { PAGE_NAMES } from '../App';
 
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
@@ -949,6 +950,13 @@ export function Layout() {
         onClose={closeWelcome}
         onStartTour={startTour}
       />
+
+      {/* Dev page name badge */}
+      {(!import.meta.env.PROD || localStorage.getItem('devMode') === 'true') && (
+        <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
+          {PAGE_NAMES.find(([re]) => re.test(location.pathname))?.[1] || location.pathname}
+        </div>
+      )}
     </div>
   );
 }

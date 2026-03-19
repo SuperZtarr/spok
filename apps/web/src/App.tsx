@@ -86,17 +86,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/$/, 'DashboardPage / LandingPage'],
 ];
 
-function DevPageName() {
-  const { pathname } = useLocation();
-  const isDevMode = !import.meta.env.PROD || localStorage.getItem('devMode') === 'true';
-  if (!isDevMode) return null;
-  const name = PAGE_NAMES.find(([re]) => re.test(pathname))?.[1] || pathname;
-  return (
-    <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
-      {name}
-    </div>
-  );
-}
+export { PAGE_NAMES };
 
 export default function App() {
   const logout = useAuthStore((state) => state.logout);
@@ -109,7 +99,6 @@ export default function App() {
 
   return (
     <>
-    <DevPageName />
     <Routes>
       <Route
         path="/login"
