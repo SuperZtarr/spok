@@ -119,7 +119,7 @@ export function LandingPage() {
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <a href="#public-communities" className={`${btnDefault} h-10 rounded-md px-8`}>
-            Visitez sans connexion
+            Découvrez sans connexion
           </a>
           <Link to="/login" className={`${btnOutline} h-10 rounded-md px-8`}>
             Se connecter
