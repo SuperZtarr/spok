@@ -118,9 +118,9 @@ export function LandingPage() {
           et les explorer sous {views.length} vues différentes.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Link to="/register" className={`${btnDefault} h-10 rounded-md px-8`}>
-            Commencer gratuitement
-          </Link>
+          <a href="#public-communities" className={`${btnDefault} h-10 rounded-md px-8`}>
+            Visitez sans connexion
+          </a>
           <Link to="/login" className={`${btnOutline} h-10 rounded-md px-8`}>
             Se connecter
           </Link>
@@ -129,7 +129,7 @@ export function LandingPage() {
 
       {/* Public communities */}
       {publicCommunities && publicCommunities.length > 0 && (
-        <section className="border-t py-16">
+        <section id="public-communities" className="border-t py-16 scroll-mt-24">
           <div className="mx-auto max-w-5xl px-4">
             <h2 className="mb-2 text-center text-2xl font-bold">
               Communautés publiques
