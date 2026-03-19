@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  FolderTree, Users, Eye, CalendarRange, GitBranch, Palette, History, Globe,
+  FolderTree, Users, Eye, CalendarRange, GitBranch, Palette, History, Globe, FolderOpen,
   List, Columns3, GanttChart, Network, Share2, CircleDot, Waypoints, Circle,
   FileText, LayoutGrid, CalendarCheck, Calendar, Orbit, SquareStack, Disc,
   TrendingDown, Layers, Table2, Grid3x3, Focus, Flame,
@@ -142,23 +142,44 @@ export function LandingPage() {
                 <Link
                   key={c.id}
                   to={`/communities/${c.id}`}
-                  className="flex items-start gap-3 rounded-lg border bg-card p-5 shadow-sm hover:border-primary/50 hover:shadow-md transition-all"
+                  className="border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
                 >
-                  {c.avatarUrl ? (
-                    <img src={c.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Globe className="w-5 h-5 text-primary" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">{c.name}</p>
-                    {c.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{c.description}</p>
+                  {/* Cover + Avatar */}
+                  <div className="relative">
+                    {c.coverUrl ? (
+                      <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${c.coverUrl})` }} />
+                    ) : (
+                      <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
                     )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span>{c.memberCount} membre{c.memberCount !== 1 ? 's' : ''}</span>
-                      <span>{c.spaceCount} espace{c.spaceCount !== 1 ? 's' : ''}</span>
+                    <div className="absolute -bottom-4 left-4">
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
+                          <Globe className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="pt-8 px-4 pb-4">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold truncate">{c.name}</p>
+                      <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    </div>
+                    {c.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" />
+                        {c.memberCount} membre{c.memberCount !== 1 ? 's' : ''}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        {c.spaceCount} espace{c.spaceCount !== 1 ? 's' : ''}
+                      </span>
                     </div>
                   </div>
                 </Link>
