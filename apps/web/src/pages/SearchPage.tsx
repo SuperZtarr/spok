@@ -55,6 +55,7 @@ export function SearchPage() {
   const spaceIdParam = searchParams.get('spaceId') || '';
   const itemTypeParam = searchParams.get('itemType') || '';
   const itemStatusParam = searchParams.get('itemStatus') || '';
+  const tagIdsParam = searchParams.get('tagIds') || '';
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
 
   const [search, setSearch] = useState(qParam);
@@ -138,7 +139,7 @@ export function SearchPage() {
 
   // Search query
   const { data, isLoading } = useQuery({
-    queryKey: ['advanced-search', qParam, typesParam, communityIdParam, spaceIdParam, itemTypeParam, itemStatusParam, pageParam],
+    queryKey: ['advanced-search', qParam, typesParam, communityIdParam, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, pageParam],
     queryFn: () => searchApi.advanced({
       q: qParam,
       types: typesParam,
@@ -146,6 +147,7 @@ export function SearchPage() {
       spaceId: spaceIdParam || undefined,
       itemType: itemTypeParam || undefined,
       itemStatus: itemStatusParam || undefined,
+      tagIds: tagIdsParam || undefined,
       page: pageParam,
       pageSize: 20,
     }),
@@ -156,7 +158,7 @@ export function SearchPage() {
   const totalPages = data ? Math.ceil(Math.max(...Object.values(data.totals)) / 20) : 1;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto w-full">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <h1 className="text-2xl font-bold mb-1">Recherche avancee</h1>
@@ -239,6 +241,17 @@ export function SearchPage() {
               />
             </div>
           )}
+          {enabledTypes.has('items') && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground">Tags :</label>
+              <input
+                value={tagIdsParam}
+                onChange={e => updateParam('tagIds', e.target.value)}
+                placeholder="tag1,tag2..."
+                className="w-44 h-8 px-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -268,7 +281,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.communities.map(c => (
-                  <Link key={c.id} to={`/communities/${c.id}`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                  <Link key={c.id} to={`/communities/${c.id}`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     {c.avatarUrl ? (
                       <img src={c.avatarUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                     ) : (
@@ -301,7 +314,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.spaces.map(s => (
-                  <Link key={s.id} to={`/spaces/${s.id}/content`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                  <Link key={s.id} to={`/spaces/${s.id}/content`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <FolderKanban className={`w-5 h-5 flex-shrink-0 ${s.type === 'GROUP' ? 'text-green-500' : 'text-blue-500'}`} />
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-sm"><Highlight text={s.name} query={qParam} /></span>
@@ -325,7 +338,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.items.map(item => (
-                  <Link key={item.id} to={`/spaces/${item.spaceId}/content`} state={{ openItemId: item.id }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                  <Link key={item.id} to={`/spaces/${item.spaceId}/content`} state={{ openItemId: item.id }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>
                       <span className="font-medium text-sm"><Highlight text={item.title} query={qParam} /></span>
@@ -362,7 +375,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.users.map(u => (
-                  <div key={u.id} className="flex items-center gap-3 p-3 border border-border rounded-lg">
+                  <div key={u.id} className="flex items-center gap-3 p-3 border border-border rounded-lg overflow-hidden">
                     {u.avatarUrl ? (
                       <img src={u.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                     ) : (
@@ -397,7 +410,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.contributions.map(c => (
-                  <Link key={c.id} to={`/spaces/${c.spaceId}/content`} state={{ openItemId: c.itemId }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                  <Link key={c.id} to={`/spaces/${c.spaceId}/content`} state={{ openItemId: c.itemId }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     {c.content && (
                       <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={qParam} /></p>
                     )}

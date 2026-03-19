@@ -1,23 +1,24 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { LogOut, FolderKanban, Shield, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Map as MapIcon, GripVertical, Search } from 'lucide-react';
+import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, GripVertical } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
-import { spacesApi, communitiesApi, authApi, adminApi } from '../lib/api';
+import { spacesApi, communitiesApi, authApi } from '../lib/api';
 
 import { DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
-import { ViewModeSelector } from './ViewModeSelector';
+// ViewModeSelector replaced by MainMenu
 import { UserProfileModal } from './UserProfileModal';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
+import { MainMenu } from './MainMenu';
 import { useViewModeStore } from '../stores/viewMode';
 import { useViewConfig } from '../hooks/useViewConfig';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
@@ -237,16 +238,13 @@ function SpaceTreeItem({
 }
 
 export function Layout() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, refreshToken, updateUser } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
   const { views: configViews } = useViewConfig();
   const { startTour, showWelcome, closeWelcome } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Community reorder drag & drop
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -346,20 +344,7 @@ export function Layout() {
   // Close sidebar on navigation (mobile)
   useEffect(() => {
     setSidebarOpen(false);
-    setUserMenuOpen(false);
   }, [location.pathname]);
-
-  // Close user menu on click outside
-  useEffect(() => {
-    if (!userMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [userMenuOpen]);
 
   // Fetch ALL spaces — poll every 30s so sidebar never goes stale
   const { data: allSpaces, refetch: refetchSpaces } = useQuery({
@@ -416,14 +401,6 @@ export function Layout() {
   const favoriteIdsRef = useRef(favoriteIds);
   favoriteIdsRef.current = favoriteIds;
 
-  // Admin: pending public community count
-  const { data: pendingData } = useQuery({
-    queryKey: ['admin', 'pending-count'],
-    queryFn: () => adminApi.communities.pendingCount(),
-    enabled: !!user && user.globalRole === 'ADMIN',
-    staleTime: 30_000,
-  });
-  const pendingCount = pendingData?.count || 0;
 
   // Separate personal, per-community, and independent spaces
   const { mySpaces, communityGroups, independentSpaces } = useMemo(() => {
@@ -565,18 +542,6 @@ export function Layout() {
 
     document.title = import.meta.env.DEV ? `[DEV] ${title}` : title;
   }, [currentSpace, location.pathname, mode, tab]);
-
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await authApi.logout(refreshToken);
-      }
-    } finally {
-      logout();
-      queryClient.clear();
-      navigate('/');
-    }
-  };
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const handleToggleFavorite = useCallback(async (spaceId: string) => {
@@ -837,104 +802,21 @@ export function Layout() {
               )}
             </div>
           </div>
-          {/* Right: navbar menu + search + user avatar */}
+          {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
-            <div id="header-view-selector"><ViewModeSelector /></div>
+            {user && <MainMenu onOpenProfile={() => setIsProfileOpen(true)} />}
             <div id="header-global-search"><GlobalSearch /></div>
-            {user ? (
-              <>
-                <NotificationBell />
-                <div id="header-user-menu" className="relative" ref={userMenuRef}>
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent transition-colors"
-                    title="Menu utilisateur"
-                  >
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="hidden md:flex flex-col items-start leading-tight">
-                      <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{user.name}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {user.globalRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
-                      </span>
-                    </div>
-                  </button>
-                  {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
-                      <div className="px-3 py-2 border-b border-border">
-                        <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                      </div>
-                      <button
-                        onClick={() => { setUserMenuOpen(false); setIsProfileOpen(true); }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
-                      >
-                        <User className="w-4 h-4" />
-                        Profil
-                      </button>
-                      {user.globalRole === 'ADMIN' && (
-                        <RoleGuard role="ADMIN">
-                          <Link
-                            to="/admin"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
-                          >
-                            <Shield className="w-4 h-4" />
-                            Administration
-                          </Link>
-                          {pendingCount > 0 && (
-                            <Link
-                              to="/admin/communities"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors rounded-md mx-1"
-                            >
-                              <Clock className="w-3.5 h-3.5" />
-                              {pendingCount} en attente
-                            </Link>
-                          )}
-                        </RoleGuard>
-                      )}
-                      <div className="border-t border-border my-1" />
-                      <Link
-                        to="/search"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
-                      >
-                        <Search className="w-4 h-4" />
-                        Recherche avancee
-                      </Link>
-                      <Link
-                        to="/sitemap"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
-                      >
-                        <MapIcon className="w-4 h-4" />
-                        Plan du site
-                      </Link>
-                      <button
-                        onClick={() => { setUserMenuOpen(false); handleLogout(); }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Déconnexion
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login" className="text-sm text-foreground hover:text-primary transition-colors px-3 py-1.5">
-                  Connexion
-                </Link>
-                <Link to="/register" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">
-                  Inscription
-                </Link>
+            {user && <NotificationBell />}
+            {user && (
+              <div className="flex items-center gap-2 flex-shrink-0 px-1">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                )}
+                <span className="text-xs font-medium text-foreground truncate max-w-[80px] hidden md:inline">{user.name}</span>
               </div>
             )}
           </div>

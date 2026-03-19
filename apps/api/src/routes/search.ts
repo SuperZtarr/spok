@@ -8,6 +8,7 @@ interface AdvancedSearchQuery {
   itemType?: string;
   itemStatus?: string;
   itemPriority?: string;
+  tagIds?: string;
   page?: string;
   pageSize?: string;
 }
@@ -16,7 +17,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── Advanced search (multiple entity types) ──
   fastify.get<{ Querystring: AdvancedSearchQuery }>('/advanced', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
-    const { q, types: typesParam, communityId, spaceId, itemType, itemStatus, itemPriority } = request.query;
+    const { q, types: typesParam, communityId, spaceId, itemType, itemStatus, itemPriority, tagIds: tagIdsParam } = request.query;
 
     if (!q || q.trim().length < 2) {
       return reply.status(400).send({ statusCode: 400, message: 'Le terme de recherche doit contenir au moins 2 caracteres' });
@@ -154,6 +155,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         OR: [
           { title: { contains: query, mode: 'insensitive' } },
           { description: { contains: query, mode: 'insensitive' } },
+          { url: { contains: query, mode: 'insensitive' } },
         ],
       };
       if (effectiveSpaceFilter) itemWhere.spaceId = effectiveSpaceFilter;
@@ -162,6 +164,13 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       if (itemType) itemWhere.type = itemType;
       if (itemStatus) itemWhere.status = itemStatus;
       if (itemPriority) itemWhere.priority = parseInt(itemPriority, 10);
+      if (tagIdsParam) {
+        const tagValues = tagIdsParam.split(',').filter(Boolean);
+        if (tagValues.length > 0) {
+          // Support both IDs and names
+          itemWhere.tags = { some: { tag: { OR: [{ id: { in: tagValues } }, { name: { in: tagValues } }] } } };
+        }
+      }
 
       const [rows, count] = await Promise.all([
         fastify.prisma.item.findMany({

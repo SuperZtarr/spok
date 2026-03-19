@@ -137,7 +137,7 @@ const SITE_TREE: SiteNode[] = [
       { label: 'Sidebar', component: 'Layout (sidebar)', auth: 'authenticated',
         description: 'Navigation par communautes (depliables, reordonnables par drag & drop), espaces avec hierarchie, favoris (etoile), espaces recents, lien admin' },
       { label: 'Header', component: 'Layout (header)', auth: 'authenticated',
-        description: 'Bouton menu mobile, lien accueil, notifications, selecteur de theme (clair/sombre/systeme), menu utilisateur (profil, admin, deconnexion)' },
+        description: 'Bouton menu mobile, lien accueil, recherche rapide (GlobalSearch), selecteur de vues, notifications, selecteur de theme (clair/sombre/systeme), menu utilisateur (profil, recherche avancee, plan du site, admin, deconnexion)' },
       { label: 'Notifications', component: 'NotificationBell', auth: 'authenticated',
         description: 'Badge avec compteur, liste des invitations en attente (communaute ou espace), accepter/refuser en un clic' },
       { label: 'Profil utilisateur', component: 'UserProfileModal', auth: 'authenticated',

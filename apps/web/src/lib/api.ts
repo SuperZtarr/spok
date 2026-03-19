@@ -992,6 +992,7 @@ export interface AdvancedSearchParams {
   itemType?: string;
   itemStatus?: string;
   itemPriority?: string;
+  tagIds?: string;
   page?: number;
   pageSize?: number;
 }
@@ -1021,6 +1022,7 @@ export const searchApi = {
     if (params.itemType) sp.set('itemType', params.itemType);
     if (params.itemStatus) sp.set('itemStatus', params.itemStatus);
     if (params.itemPriority) sp.set('itemPriority', params.itemPriority);
+    if (params.tagIds) sp.set('tagIds', params.tagIds);
     if (params.page) sp.set('page', params.page.toString());
     if (params.pageSize) sp.set('pageSize', params.pageSize.toString());
     return fetchApi<AdvancedSearchResponse>(`/search/advanced?${sp.toString()}`);
