@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Globe, User, Shield, ChevronRight } from 'lucide-react';
 import { PublicHeader } from '../components/PublicHeader';
 import { PublicFooter } from '../components/PublicFooter';
+import { HelpBubble } from '../components/PublicPageLayout';
 import { useAuthStore } from '../stores/auth';
 
 interface SiteNode {
@@ -264,6 +265,7 @@ export function SitemapPage() {
           ))}
         </div>
       </div>
+      <HelpBubble />
       <PublicFooter />
     </div>
   );

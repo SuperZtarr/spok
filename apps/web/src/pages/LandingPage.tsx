@@ -10,6 +10,7 @@ import { communitiesApi } from '../lib/api';
 import { useViewConfig } from '../hooks/useViewConfig';
 import { PublicHeader } from '../components/PublicHeader';
 import { PublicFooter } from '../components/PublicFooter';
+import { HelpBubble } from '../components/PublicPageLayout';
 import type { ViewConfigItem } from '@spok/shared';
 
 const VIEW_ICONS: Record<string, typeof List> = {
@@ -226,6 +227,7 @@ export function LandingPage() {
         </div>
       </section>
 
+      <HelpBubble />
       <PublicFooter />
     </div>
   );
