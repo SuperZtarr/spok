@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { LoginPage } from './pages/LoginPage';
@@ -88,6 +88,25 @@ const PAGE_NAMES: [RegExp, string][] = [
 
 export { PAGE_NAMES };
 
+function DevPageName() {
+  const location = useLocation();
+  const [path, setPath] = useState(location.pathname);
+
+  useEffect(() => {
+    setPath(location.pathname);
+  }, [location.pathname]);
+
+  const isDevMode = !import.meta.env.PROD || localStorage.getItem('devMode') === 'true';
+  if (!isDevMode) return null;
+
+  const name = PAGE_NAMES.find(([re]) => re.test(path))?.[1];
+  return (
+    <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
+      {name || path}
+    </div>
+  );
+}
+
 export default function App() {
   const logout = useAuthStore((state) => state.logout);
 
@@ -99,6 +118,7 @@ export default function App() {
 
   return (
     <>
+    <DevPageName />
     <Routes>
       <Route
         path="/login"

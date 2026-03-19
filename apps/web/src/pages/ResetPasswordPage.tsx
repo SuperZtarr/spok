@@ -5,6 +5,7 @@ import { ApiError } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
+import { PublicPageLayout } from '../components/PublicPageLayout';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -107,7 +108,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <PublicPageLayout centered>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Nouveau mot de passe</CardTitle>
@@ -172,6 +173,6 @@ export function ResetPasswordPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </PublicPageLayout>
   );
 }

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard } from 'lucide-react';
+import { useAuthStore } from '../stores/auth';
 
 interface PublicHeaderProps {
   maxWidth?: string;
@@ -9,6 +10,7 @@ interface PublicHeaderProps {
 
 export function PublicHeader({ maxWidth = 'max-w-5xl', showBack = false, rightSlot }: PublicHeaderProps) {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   return (
     <header className="sticky top-0 z-50 border-b bg-gradient-to-b from-primary/8 via-primary/3 to-transparent backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -26,10 +28,17 @@ export function PublicHeader({ maxWidth = 'max-w-5xl', showBack = false, rightSl
               </button>
             )}
             {rightSlot ?? (
-              <>
-                <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Connexion</Link>
-                <Link to="/register" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">S'inscrire</Link>
-              </>
+              user ? (
+                <Link to="/" className="flex items-center gap-1.5 text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Connexion</Link>
+                  <Link to="/register" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">S'inscrire</Link>
+                </>
+              )
             )}
           </div>
         </nav>
