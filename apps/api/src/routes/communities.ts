@@ -146,6 +146,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const communities = await fastify.prisma.community.findMany({
       where: {
+        isPublic: true,
         visibility: { not: 'PRIVATE' },
         ...(myIds.length > 0 ? { id: { notIn: myIds } } : {}),
       },
