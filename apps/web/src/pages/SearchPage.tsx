@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
@@ -48,6 +48,7 @@ export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore(s => s.user);
 
+  // All state lives in URL params — local search input synced via debounce
   const qParam = searchParams.get('q') || '';
   const typesParam = searchParams.get('types') || 'communities,spaces,items,users,contributions';
   const communityIdParam = searchParams.get('communityId') || '';
@@ -57,23 +58,32 @@ export function SearchPage() {
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
 
   const [search, setSearch] = useState(qParam);
-  const [debouncedSearch, setDebouncedSearch] = useState(qParam);
+  const searchRef = useRef(search);
+  searchRef.current = search;
 
+  // Debounce: update URL q param after 300ms of typing
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = setTimeout(() => {
+      const current = searchRef.current;
+      if (current !== qParam) {
+        setSearchParams(prev => {
+          const params = new URLSearchParams(prev);
+          if (current) params.set('q', current);
+          else params.delete('q');
+          params.set('page', '1');
+          return params;
+        }, { replace: true });
+      }
+    }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync debounced search to URL
+  // Keep local input in sync if URL changes externally
   useEffect(() => {
-    if (debouncedSearch !== qParam) {
-      const params = new URLSearchParams(searchParams);
-      if (debouncedSearch) params.set('q', debouncedSearch);
-      else params.delete('q');
-      params.set('page', '1');
-      setSearchParams(params, { replace: true });
+    if (qParam !== searchRef.current) {
+      setSearch(qParam);
     }
-  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [qParam]);
 
   const enabledTypes = useMemo(() => new Set(typesParam.split(',').filter(Boolean)), [typesParam]);
 
@@ -81,25 +91,31 @@ export function SearchPage() {
     const next = new Set(enabledTypes);
     if (next.has(type)) next.delete(type);
     else next.add(type);
-    if (next.size === 0) return; // at least one
-    const params = new URLSearchParams(searchParams);
-    params.set('types', Array.from(next).join(','));
-    params.set('page', '1');
-    setSearchParams(params, { replace: true });
+    if (next.size === 0) return;
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      params.set('types', Array.from(next).join(','));
+      params.set('page', '1');
+      return params;
+    }, { replace: true });
   };
 
   const updateParam = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (value) params.set(key, value);
-    else params.delete(key);
-    params.set('page', '1');
-    setSearchParams(params, { replace: true });
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      if (value) params.set(key, value);
+      else params.delete(key);
+      params.set('page', '1');
+      return params;
+    }, { replace: true });
   };
 
   const setPage = (p: number) => {
-    const params = new URLSearchParams(searchParams);
-    params.set('page', p.toString());
-    setSearchParams(params, { replace: true });
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      params.set('page', p.toString());
+      return params;
+    }, { replace: true });
   };
 
   // Fetch communities/spaces for scope selectors
@@ -122,9 +138,9 @@ export function SearchPage() {
 
   // Search query
   const { data, isLoading } = useQuery({
-    queryKey: ['advanced-search', debouncedSearch, typesParam, communityIdParam, spaceIdParam, itemTypeParam, itemStatusParam, pageParam],
+    queryKey: ['advanced-search', qParam, typesParam, communityIdParam, spaceIdParam, itemTypeParam, itemStatusParam, pageParam],
     queryFn: () => searchApi.advanced({
-      q: debouncedSearch,
+      q: qParam,
       types: typesParam,
       communityId: communityIdParam || undefined,
       spaceId: spaceIdParam || undefined,
@@ -133,7 +149,7 @@ export function SearchPage() {
       page: pageParam,
       pageSize: 20,
     }),
-    enabled: debouncedSearch.length >= 2,
+    enabled: qParam.length >= 2,
   });
 
   const totalResults = data ? Object.values(data.totals).reduce((a, b) => a + b, 0) : 0;
@@ -227,7 +243,7 @@ export function SearchPage() {
       </div>
 
       {/* Results */}
-      {debouncedSearch.length < 2 ? (
+      {qParam.length < 2 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="w-12 h-12 mx-auto mb-4 opacity-30" />
           <p>Entrez au moins 2 caracteres pour lancer la recherche</p>
@@ -237,7 +253,7 @@ export function SearchPage() {
       ) : !data || totalResults === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p>Aucun resultat pour "{debouncedSearch}"</p>
+          <p>Aucun resultat pour "{qParam}"</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -262,10 +278,10 @@ export function SearchPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm"><Highlight text={c.name} query={debouncedSearch} /></span>
+                        <span className="font-medium text-sm"><Highlight text={c.name} query={qParam} /></span>
                         {c.isPublic && <Globe className="w-3 h-3 text-muted-foreground" />}
                       </div>
-                      {c.description && <p className="text-xs text-muted-foreground line-clamp-1"><Highlight text={c.description} query={debouncedSearch} /></p>}
+                      {c.description && <p className="text-xs text-muted-foreground line-clamp-1"><Highlight text={c.description} query={qParam} /></p>}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
                       <span>{c.memberCount} membres</span>
@@ -288,7 +304,7 @@ export function SearchPage() {
                   <Link key={s.id} to={`/spaces/${s.id}/content`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                     <FolderKanban className={`w-5 h-5 flex-shrink-0 ${s.type === 'GROUP' ? 'text-green-500' : 'text-blue-500'}`} />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm"><Highlight text={s.name} query={debouncedSearch} /></span>
+                      <span className="font-medium text-sm"><Highlight text={s.name} query={qParam} /></span>
                       {s.communityName && <span className="text-xs text-muted-foreground ml-2">{s.communityName}</span>}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
@@ -312,14 +328,14 @@ export function SearchPage() {
                   <Link key={item.id} to={`/spaces/${item.spaceId}/content`} state={{ openItemId: item.id }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>
-                      <span className="font-medium text-sm"><Highlight text={item.title} query={debouncedSearch} /></span>
+                      <span className="font-medium text-sm"><Highlight text={item.title} query={qParam} /></span>
                       {item.status && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.status}</Badge>}
                       {item.priority != null && item.priority > 0 && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">P{item.priority}</Badge>
                       )}
                     </div>
                     {item.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-1"><Highlight text={item.description} query={debouncedSearch} /></p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-1"><Highlight text={item.description} query={qParam} /></p>
                     )}
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                       <span>{item.spaceName}</span>
@@ -356,12 +372,12 @@ export function SearchPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm"><Highlight text={u.name} query={debouncedSearch} /></span>
+                        <span className="font-medium text-sm"><Highlight text={u.name} query={qParam} /></span>
                         {u.globalRole === 'ADMIN' && (
                           <Badge variant="default" className="text-[10px] px-1.5 py-0"><Shield className="w-3 h-3 mr-0.5" />Admin</Badge>
                         )}
                       </div>
-                      {u.email && <p className="text-xs text-muted-foreground"><Highlight text={u.email} query={debouncedSearch} /></p>}
+                      {u.email && <p className="text-xs text-muted-foreground"><Highlight text={u.email} query={qParam} /></p>}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
                       <span>{u.communityCount} comm.</span>
@@ -383,7 +399,7 @@ export function SearchPage() {
                 {data.contributions.map(c => (
                   <Link key={c.id} to={`/spaces/${c.spaceId}/content`} state={{ openItemId: c.itemId }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                     {c.content && (
-                      <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={debouncedSearch} /></p>
+                      <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={qParam} /></p>
                     )}
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                       <span className="font-medium">{c.authorName}</span>
