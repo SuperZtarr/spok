@@ -95,7 +95,7 @@ export function SpacePage() {
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { startViewTour } = useViewOnboarding(viewMode);
+  const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const { includeChildrenSpaceIds } = useSpaceStore();
 
   // Clear selection when leaving the page or changing space
@@ -458,6 +458,7 @@ export function SpacePage() {
           spaceName={space?.name}
           viewContainerRef={viewContainerRef}
           onStartTour={() => startViewTour(viewMode)}
+          pulseHelp={pulseHelp}
         />
 
         {/* Items / Views */}

@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { driver } from 'driver.js';
 import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
+import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -16,7 +16,7 @@ import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
 import { RoleGuard } from '../components/RoleGuard';
 
-function CommunitySettingsHelpButton() {
+function CommunitySettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -48,20 +48,7 @@ function CommunitySettingsHelpButton() {
 
   const launchTour = () => {
     setOpen(false);
-    setTimeout(() => {
-      const validSteps = COMMUNITY_SETTINGS_TOUR.filter(s => !s.element || document.querySelector(s.element));
-      if (validSteps.length === 0) return;
-      const d = driver({
-        showProgress: true,
-        showButtons: ['next', 'previous', 'close'],
-        nextBtnText: 'Suivant',
-        prevBtnText: 'Précédent',
-        doneBtnText: 'Terminer',
-        progressText: '{{current}} / {{total}}',
-        steps: validSteps,
-      });
-      d.drive();
-    }, 200);
+    setTimeout(onStartTour, 200);
   };
 
   return (
@@ -70,7 +57,7 @@ function CommunitySettingsHelpButton() {
         ref={btnRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto"
+        className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
         title="Aide"
       >
         <HelpCircle className="w-4 h-4" />
@@ -199,6 +186,7 @@ export function CommunitySettingsPage() {
   const [showCreateSpace, setShowCreateSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members' | 'emails'>('general');
+  const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', COMMUNITY_SETTINGS_TOUR);
 
   // Fetch community details
   const { data: community, isLoading: communityLoading } = useQuery({
@@ -387,7 +375,7 @@ export function CommunitySettingsPage() {
           </h1>
           <p className="text-muted-foreground">Paramètres de la communauté</p>
         </div>
-        <CommunitySettingsHelpButton />
+        <CommunitySettingsHelpButton pulse={pulseHelp} onStartTour={startSettingsTour} />
       </div>
 
       {/* Tabs */}

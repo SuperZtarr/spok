@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { VIEW_TOURS, DASHBOARD_TOURS, type TourStep } from './viewTours';
+import { VIEW_TOURS, type TourStep } from './viewTours';
 import type { ViewMode } from '../stores/viewMode';
-import type { DashboardTab } from '../stores/dashboardTab';
 
 const STORAGE_KEY = 'spok-onboarding-done';
 const VIEW_STORAGE_PREFIX = 'spok-view-tour-done-';
@@ -35,11 +34,19 @@ function buildMainSteps() {
       },
     },
     {
-      element: '#header-view-selector',
+      element: '[data-tour="home-communities"]',
       popover: {
-        title: 'Vues',
-        description: 'Changez de vue pour visualiser vos données différemment : liste, kanban, mindmap, timeline, graphe et bien d\'autres.',
-        side: 'bottom' as const,
+        title: 'Vos communautés',
+        description: 'Retrouvez ici toutes vos communautés en cartes. Cliquez sur une carte pour accéder à ses espaces et contenus.',
+        side: 'top' as const,
+      },
+    },
+    {
+      element: '#sidebar-favorites',
+      popover: {
+        title: 'Favoris & Récents',
+        description: 'Vos espaces favoris (étoile) et récemment visités apparaissent ici pour un accès rapide. Cliquez l\'étoile sur n\'importe quel espace pour l\'ajouter aux favoris.',
+        side: 'right' as const,
       },
     },
     {
@@ -47,14 +54,6 @@ function buildMainSteps() {
       popover: {
         title: 'Recherche globale',
         description: 'Recherchez un élément, un espace ou un membre dans tous vos espaces d\'un coup.',
-        side: 'bottom' as const,
-      },
-    },
-    {
-      element: '#header-user-menu',
-      popover: {
-        title: 'Votre profil',
-        description: 'Accédez à vos préférences, notifications et paramètres. Les administrateurs y trouvent aussi le panneau d\'administration.',
         side: 'bottom' as const,
       },
     },
@@ -105,14 +104,25 @@ function runTour(steps: TourStep[], storageKey: string) {
 
 export function useOnboarding() {
   const [showWelcome, setShowWelcome] = useState(false);
+  const [pulseHelp, setPulseHelp] = useState(false);
 
   const startTour = useCallback(() => {
+    setPulseHelp(false);
+    localStorage.setItem(STORAGE_KEY, 'true');
     runTour(buildMainSteps(), STORAGE_KEY);
   }, []);
 
-  // Show welcome modal on first visit
+  // Show welcome modal or pulse help button
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY)) return;
+    const onboardingDone = localStorage.getItem(STORAGE_KEY);
+    const hideWelcome = localStorage.getItem('spok-hide-welcome') === 'true';
+    if (onboardingDone && hideWelcome) return;
+    if (!onboardingDone) {
+      // First visit: pulse the help button
+      const timer = setTimeout(() => setPulseHelp(true), 500);
+      return () => clearTimeout(timer);
+    }
+    // User opted to keep seeing welcome modal
     const timer = setTimeout(() => setShowWelcome(true), 500);
     return () => clearTimeout(timer);
   }, []);
@@ -122,64 +132,64 @@ export function useOnboarding() {
     localStorage.setItem(STORAGE_KEY, 'true');
   }, []);
 
-  return { startTour, showWelcome, closeWelcome };
+  return { startTour, showWelcome, closeWelcome, pulseHelp };
 }
 
 export function useViewOnboarding(viewMode: ViewMode | null) {
   const prevViewRef = useRef<ViewMode | null>(null);
+  const [pulseHelp, setPulseHelp] = useState(false);
 
   const startViewTour = useCallback((mode: ViewMode) => {
+    setPulseHelp(false);
     const steps = VIEW_TOURS[mode];
     if (!steps) return;
     runTour(steps, VIEW_STORAGE_PREFIX + mode);
   }, []);
 
-  // Auto-start when entering a new view for the first time
+  // Pulse help button when entering a new view for the first time
   useEffect(() => {
     if (!viewMode || viewMode === prevViewRef.current) return;
     prevViewRef.current = viewMode;
 
-    if (localStorage.getItem(VIEW_STORAGE_PREFIX + viewMode)) return;
+    if (localStorage.getItem(VIEW_STORAGE_PREFIX + viewMode)) {
+      setPulseHelp(false);
+      return;
+    }
 
     const steps = VIEW_TOURS[viewMode];
-    if (!steps) return;
+    if (!steps) {
+      setPulseHelp(false);
+      return;
+    }
 
-    const timer = setTimeout(() => {
-      runTour(steps, VIEW_STORAGE_PREFIX + viewMode);
-    }, 800);
-
+    const timer = setTimeout(() => setPulseHelp(true), 800);
     return () => clearTimeout(timer);
   }, [viewMode]);
 
-  return { startViewTour };
+  return { startViewTour, pulseHelp };
 }
 
-const DASHBOARD_STORAGE_PREFIX = 'spok-dashboard-tour-done-';
-
-export function useDashboardOnboarding(tab: DashboardTab | null) {
-  const prevTabRef = useRef<DashboardTab | null>(null);
-
-  const startDashboardTour = useCallback((t: DashboardTab) => {
-    const steps = DASHBOARD_TOURS[t];
-    if (!steps) return;
-    runTour(steps, DASHBOARD_STORAGE_PREFIX + t);
-  }, []);
+/**
+ * Generic hook for pages with a guided tour (settings, dashboard, item modal, etc.)
+ * Pulses the help button on first visit, marks done when tour is started.
+ */
+export function usePageTourPulse(pageKey: string, steps: TourStep[]) {
+  const [pulseHelp, setPulseHelp] = useState(false);
+  const storageKey = `spok-page-tour-done-${pageKey}`;
 
   useEffect(() => {
-    if (!tab || tab === prevTabRef.current) return;
-    prevTabRef.current = tab;
-
-    if (localStorage.getItem(DASHBOARD_STORAGE_PREFIX + tab)) return;
-
-    const steps = DASHBOARD_TOURS[tab];
-    if (!steps) return;
-
-    const timer = setTimeout(() => {
-      runTour(steps, DASHBOARD_STORAGE_PREFIX + tab);
-    }, 800);
-
+    if (localStorage.getItem(storageKey)) return;
+    if (steps.length === 0) return;
+    const timer = setTimeout(() => setPulseHelp(true), 800);
     return () => clearTimeout(timer);
-  }, [tab]);
+  }, [storageKey, steps.length]);
 
-  return { startDashboardTour };
+  const startTour = useCallback(() => {
+    setPulseHelp(false);
+    if (steps.length === 0) return;
+    runTour(steps, storageKey);
+  }, [steps, storageKey]);
+
+  return { pulseHelp, startTour };
 }
+

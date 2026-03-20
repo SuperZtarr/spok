@@ -242,7 +242,7 @@ export function Layout() {
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
   const { spaceViews } = useMenuItems();
-  const { startTour, showWelcome, closeWelcome } = useOnboarding();
+  const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -605,7 +605,7 @@ export function Layout() {
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
         {/* Favorites */}
         {favoriteSpaces.length > 0 && (
-          <div className="pt-2 pb-2 border-b border-border">
+          <div id="sidebar-favorites" className="pt-2 pb-2 border-b border-border">
             <div className="flex items-center px-3 mb-2">
               <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
@@ -641,7 +641,7 @@ export function Layout() {
 
         {/* Recents */}
         {user && recentSpaces.length > 0 && (
-          <div className="pt-2 pb-2 border-b border-border">
+          <div id="sidebar-recents" className="pt-2 pb-2 border-b border-border">
             <div className="flex items-center px-3 mb-2">
               <Clock className="w-3 h-3 text-muted-foreground mr-1.5 flex-shrink-0" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Récents</span>
@@ -759,7 +759,11 @@ export function Layout() {
         <button
           id="sidebar-help-button"
           onClick={() => startTour()}
-          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+          className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md transition-colors ${
+            pulseHelp
+              ? 'text-primary-foreground bg-primary animate-pulse'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+          }`}
         >
           <HelpCircle className="w-4 h-4" />
           Guide de démarrage

@@ -29,6 +29,7 @@ import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { ContactPage } from './pages/ContactPage';
+import { LinksPage } from './pages/LinksPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
 import { HomePage } from './pages/HomePage';
@@ -100,6 +101,7 @@ export { PAGE_NAMES };
 
 function DevPageName() {
   const location = useLocation();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [path, setPath] = useState(location.pathname);
 
   useEffect(() => {
@@ -109,14 +111,15 @@ function DevPageName() {
   const isDevMode = !import.meta.env.PROD || localStorage.getItem('devMode') === 'true';
   if (!isDevMode) return null;
 
-  const name = PAGE_NAMES.find(([re]) => re.test(path))?.[1];
+  let name = PAGE_NAMES.find(([re]) => re.test(path))?.[1];
+  // Disambiguate home route based on auth state
+  if (path === '/' && name) {
+    name = isAuthenticated ? 'HomePage' : 'LandingPage';
+  }
   return (
     <>
-      <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[9999] bg-black/80 text-white text-lg font-bold px-4 py-1.5 rounded-lg pointer-events-none font-mono shadow-lg">
-        {name || path}
-      </div>
-      <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
-        {path}
+      <div className="fixed bottom-1 right-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
+        {name || path} — {path}
       </div>
     </>
   );
@@ -156,6 +159,7 @@ export default function App() {
         <Route path="tasks" element={<GlobalTasksPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />
+        <Route path="links" element={<LinksPage />} />
         <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />

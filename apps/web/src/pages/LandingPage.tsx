@@ -107,9 +107,11 @@ export function LandingPage() {
           <Link to="/login" className={`${btnDefault} h-10 rounded-md px-8`}>
             Se connecter
           </Link>
-          <a href="#public-communities" className={`${btnOutline} h-10 rounded-md px-8`}>
-            Découvrez sans connexion
-          </a>
+          {publicCommunities && publicCommunities.length > 0 && (
+            <a href="#public-communities" className={`${btnOutline} h-10 rounded-md px-8`}>
+              Découvrez sans connexion
+            </a>
+          )}
         </div>
       </section>
 

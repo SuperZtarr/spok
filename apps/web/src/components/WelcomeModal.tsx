@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Users, FolderKanban, LayoutGrid, GitBranch, BarChart3, Search, Bell, ArrowRight } from 'lucide-react';
 
 const FEATURES = [
@@ -51,11 +52,24 @@ interface WelcomeModalProps {
   onStartTour: () => void;
 }
 
+const STORAGE_KEY = 'spok-hide-welcome';
+
 export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps) {
+  const [hideNextTime, setHideNextTime] = useState(localStorage.getItem(STORAGE_KEY) === 'true');
+
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (hideNextTime) {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={handleClose}>
       <div
         className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -90,20 +104,31 @@ export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps
         </div>
 
         {/* Actions */}
-        <div className="px-8 pb-8 pt-2 flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Commencer directement
-          </button>
-          <button
-            onClick={() => { onClose(); setTimeout(onStartTour, 300); }}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Faire le tour
-            <ArrowRight className="w-4 h-4" />
-          </button>
+        <div className="px-8 pb-8 pt-2 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!hideNextTime}
+              onChange={(e) => setHideNextTime(!e.target.checked)}
+              className="rounded border-border"
+            />
+            <span className="text-xs text-muted-foreground">Afficher cette page au prochain demarrage</span>
+          </label>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleClose}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Commencer directement
+            </button>
+            <button
+              onClick={() => { handleClose(); setTimeout(onStartTour, 300); }}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Faire le tour
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

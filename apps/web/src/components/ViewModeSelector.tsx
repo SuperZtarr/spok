@@ -13,17 +13,16 @@ import { useGlobalPages } from '../hooks/useGlobalPages';
 import { useDashboardTabStore } from '../stores/dashboardTab';
 import type { DashboardTab } from '../stores/dashboardTab';
 import { cn } from '../lib/utils';
-import { VIEW_TOURS, DASHBOARD_TOURS } from '../hooks/viewTours';
+import { VIEW_TOURS } from '../hooks/viewTours';
 
 const VIEW_TOUR_PREFIX = 'spok-view-tour-done-';
-const DASH_TOUR_PREFIX = 'spok-dashboard-tour-done-';
 
 function hasUnseenViewTour(mode: string): boolean {
   return !!(VIEW_TOURS as Record<string, unknown>)[mode] && !localStorage.getItem(VIEW_TOUR_PREFIX + mode);
 }
 
-function hasUnseenDashTour(tab: string): boolean {
-  return !!(DASHBOARD_TOURS as Record<string, unknown>)[tab] && !localStorage.getItem(DASH_TOUR_PREFIX + tab);
+function hasUnseenDashTour(_tab: string): boolean {
+  return false;
 }
 
 const UnseenDot = () => (

@@ -23,9 +23,10 @@ import { CommunityListView } from '../components/views/CommunityListView';
 import type { CommunityListViewHandle } from '../components/views/CommunityListView';
 import { MyOrganizationView } from '../components/views/MyOrganizationView';
 import { HomeView } from '../components/views/HomeView';
-import { useDashboardOnboarding } from '../hooks/useOnboarding';
 import { DashboardToolbar } from '../components/DashboardToolbar';
 import { RoleGuard } from '../components/RoleGuard';
+import { usePageTourPulse } from '../hooks/useOnboarding';
+import { DASHBOARD_TOUR } from '../hooks/viewTours';
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -328,9 +329,9 @@ export function DashboardPage() {
   const showNewSpace = searchParams.get('new') === 'space';
   const { currentCommunity } = useCommunityStore();
   const { tab } = useDashboardTabStore();
-  const { startDashboardTour } = useDashboardOnboarding(tab);
   const communityListRef = useRef<CommunityListViewHandle>(null);
   const mindmapResetRef = useRef<(() => void) | null>(null);
+  const { pulseHelp: dashPulse, startTour: startDashTour } = usePageTourPulse('dashboard', DASHBOARD_TOUR);
 
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceType, setNewSpaceType] = useState<'PERSONAL' | 'GROUP'>('GROUP');
@@ -536,7 +537,8 @@ export function DashboardPage() {
     <div className={`flex flex-col${tab === 'graph' || tab === 'sunburst' || tab === 'mindmap' || tab === 'planning' || tab === 'dashboard' ? ' h-full overflow-hidden' : ''}`}>
       <DashboardToolbar
         tab={tab}
-        onStartTour={() => startDashboardTour(tab)}
+        onStartTour={(tab === 'dashboard' || tab === 'planning') ? startDashTour : undefined}
+        pulseHelp={(tab === 'dashboard' || tab === 'planning') ? dashPulse : false}
         actions={<>
           {tab === 'communities' && (
             <Button size="sm" onClick={() => communityListRef.current?.openCreate()}>

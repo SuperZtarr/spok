@@ -410,6 +410,48 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
   ],
 };
 
+// Tour for Dashboard (MyOrganizationView)
+export const DASHBOARD_TOUR: TourStep[] = [
+  {
+    popover: {
+      title: 'Tableau de bord',
+      description: 'Vue d\'ensemble de votre activité : KPIs, tâches prioritaires, calendrier semaine et statistiques par espace.',
+    },
+  },
+  {
+    element: '[data-tour="dashboard-kpis"]',
+    popover: {
+      title: 'Indicateurs clés',
+      description: 'En retard, aujourd\'hui, en cours, à valider, terminés cette semaine. Un coup d\'œil suffit pour connaître l\'état de vos tâches.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="org-filters"]',
+    popover: {
+      title: 'Filtres',
+      description: 'Filtrez par espace, communauté, type, statut ou priorité. Combinez les filtres pour cibler exactement ce que vous cherchez.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="org-priorities"]',
+    popover: {
+      title: 'Priorités & urgences',
+      description: 'Trois colonnes : tâches prioritaires, en retard et du jour. Cliquez sur une tâche pour l\'ouvrir directement.',
+      side: 'bottom',
+    },
+  },
+  {
+    element: '[data-tour="org-week"]',
+    popover: {
+      title: 'Calendrier semaine',
+      description: 'Visualisez vos tâches jour par jour. Naviguez entre les semaines avec les flèches. Les badges colorés indiquent le statut.',
+      side: 'top',
+    },
+  },
+];
+
 // Tour for ItemEditModal
 export const ITEM_MODAL_TOUR: TourStep[] = [
   {
@@ -554,184 +596,3 @@ export const COMMUNITY_SETTINGS_TOUR: TourStep[] = [
   },
 ];
 
-// Tours for dashboard/global views
-import type { DashboardTab } from '../stores/dashboardTab';
-
-export const DASHBOARD_TOURS: Partial<Record<DashboardTab, TourStep[]>> = {
-  home: [
-    {
-      popover: {
-        title: 'Accueil',
-        description: 'Votre page d\'arrivée. Retrouvez toutes vos communautés et leurs espaces pour naviguer rapidement.',
-      },
-    },
-    {
-      element: '[data-tour="home-welcome"]',
-      popover: {
-        title: 'Bienvenue',
-        description: 'Un résumé de votre organisation : nombre de communautés et d\'espaces accessibles.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="home-communities"]',
-      popover: {
-        title: 'Vos communautés',
-        description: 'Cliquez sur une communauté pour la déplier et voir ses espaces. Cliquez sur un espace pour y naviguer directement.',
-        side: 'top',
-      },
-    },
-  ],
-  communities: [
-    {
-      popover: {
-        title: 'Communautés',
-        description: 'Toutes les communautés dont vous êtes membre. Gérez-les ou rejoignez-en de nouvelles.',
-      },
-    },
-    {
-      element: '[data-tour="communities-grid"]',
-      popover: {
-        title: 'Cartes communauté',
-        description: 'Chaque carte montre la couverture, le nombre de membres et d\'espaces, et votre rôle. Cliquez pour accéder aux paramètres.',
-        side: 'top',
-      },
-    },
-  ],
-  spaces: [
-    {
-      popover: {
-        title: 'Espaces',
-        description: 'Vue globale de tous vos espaces. Créez, organisez et gérez vos espaces de travail.',
-      },
-    },
-    {
-      element: '[data-tour="spaces-personal"]',
-      popover: {
-        title: 'Espaces personnels',
-        description: 'Vos espaces privés, visibles uniquement par vous. Cliquez sur une carte pour y accéder.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="spaces-community"]',
-      popover: {
-        title: 'Espaces de communauté',
-        description: 'Espaces partagés au sein d\'une communauté. Utilisez le menu (⋮) pour accéder aux paramètres ou ajouter un sous-espace.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="spaces-list"]',
-      popover: {
-        title: 'Organisation',
-        description: 'Les espaces sont regroupés par communauté. Glissez-déposez les cartes pour réorganiser la hiérarchie.',
-        side: 'top',
-      },
-    },
-  ],
-  dashboard: [
-    {
-      popover: {
-        title: 'Dashboard',
-        description: 'Votre cockpit personnel. Identifiez en un coup d\'oeil ce qui demande votre attention.',
-      },
-    },
-    {
-      element: '[data-tour="dashboard-kpis"]',
-      popover: {
-        title: 'Indicateurs clés',
-        description: 'En retard, aujourd\'hui, en cours, à échéance, à valider, terminés cette semaine. Les compteurs colorés résument votre situation.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="dashboard-panels"]',
-      popover: {
-        title: 'Détails par urgence',
-        description: 'Items en retard (rouge), urgents/prioritaires (orange), en cours (bleu) et à échéance prochaine. Cliquez pour éditer.',
-        side: 'right',
-      },
-    },
-    {
-      element: '[data-tour="dashboard-week"]',
-      popover: {
-        title: 'Ma semaine',
-        description: 'Planning de la semaine en cours. Naviguez entre les semaines avec les flèches. Chaque jour affiche les items prévus.',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="dashboard-progress"]',
-      popover: {
-        title: 'Progression par espace',
-        description: 'Barres d\'avancement : pourcentage d\'items terminés par espace. Vue d\'ensemble de tous vos projets.',
-        side: 'left',
-      },
-    },
-  ],
-  planning: [
-    {
-      popover: {
-        title: 'Tableau de bord',
-        description: 'Organisation personnelle : vos tâches par statut, priorité et échéance à travers tous vos espaces. Utilisez les filtres pour affiner.',
-      },
-    },
-    {
-      element: '[data-tour="org-filters"]',
-      popover: {
-        title: 'Filtres',
-        description: 'Filtrez par type, statut, priorité ou espace. Triez par date, priorité ou titre pour retrouver rapidement vos tâches.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="org-priorities"]',
-      popover: {
-        title: 'Priorités & urgences',
-        description: 'Trois panneaux : priorités hautes (P1/P2), items en retard et tâches du jour. Les priorités sont réordonnables par glisser-déposer.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="org-week"]',
-      popover: {
-        title: 'Vue semaine',
-        description: 'Planning hebdomadaire de vos tâches. Naviguez entre les semaines avec les flèches. Chaque jour affiche les items prévus.',
-        side: 'top',
-      },
-    },
-  ],
-  graph: [
-    {
-      popover: {
-        title: 'Graphe global',
-        description: 'Réseau interactif de tous vos items à travers toutes vos communautés.',
-      },
-    },
-    {
-      element: '[data-tour="graph-scope"]',
-      popover: {
-        title: 'Portée & filtres',
-        description: 'Basculez entre espace, communauté et global. Activez/désactivez hiérarchie, relations et tags.',
-        side: 'bottom',
-      },
-    },
-  ],
-  sunburst: [
-    {
-      popover: {
-        title: 'Sunburst global',
-        description: 'Cercles concentriques de toute votre organisation. Le centre = SPOK, puis communautés, espaces et items.',
-      },
-    },
-  ],
-  mindmap: [
-    {
-      popover: {
-        title: 'Carte mentale globale',
-        description: 'Arborescence de toute votre organisation : communautés → espaces → sous-espaces.',
-      },
-    },
-  ],
-};

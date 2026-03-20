@@ -14,8 +14,8 @@ import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Lin
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
-import { driver } from 'driver.js';
 import { ITEM_MODAL_TOUR } from '../hooks/viewTours';
+import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
@@ -30,7 +30,7 @@ import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS,
 import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
 
-function ItemHelpButton() {
+function ItemHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -62,20 +62,7 @@ function ItemHelpButton() {
 
   const launchTour = () => {
     setOpen(false);
-    setTimeout(() => {
-      const validSteps = ITEM_MODAL_TOUR.filter(s => !s.element || document.querySelector(s.element));
-      if (validSteps.length === 0) return;
-      const d = driver({
-        showProgress: true,
-        showButtons: ['next', 'previous', 'close'],
-        nextBtnText: 'Suivant',
-        prevBtnText: 'Précédent',
-        doneBtnText: 'Terminer',
-        progressText: '{{current}} / {{total}}',
-        steps: validSteps,
-      });
-      d.drive();
-    }, 200);
+    setTimeout(onStartTour, 200);
   };
 
   return (
@@ -84,7 +71,7 @@ function ItemHelpButton() {
         ref={btnRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        className={`inline-flex items-center justify-center w-7 h-7 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
         title="Aide"
       >
         <HelpCircle className="w-3.5 h-3.5" />
@@ -152,31 +139,7 @@ export function ItemEditModal({
   onDelete,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
-  const tourShownRef = useRef(false);
-
-  // Show modal tour on first open
-  useEffect(() => {
-    if (!isOpen || tourShownRef.current) return;
-    const key = 'spok-item-modal-tour-done';
-    if (localStorage.getItem(key)) return;
-    tourShownRef.current = true;
-    const timer = setTimeout(() => {
-      const validSteps = ITEM_MODAL_TOUR.filter(s => !s.element || document.querySelector(s.element));
-      if (validSteps.length === 0) return;
-      const d = driver({
-        showProgress: true,
-        showButtons: ['next', 'previous', 'close'],
-        nextBtnText: 'Suivant',
-        prevBtnText: 'Précédent',
-        doneBtnText: 'Terminer',
-        progressText: '{{current}} / {{total}}',
-        steps: validSteps,
-        onDestroyed: () => localStorage.setItem(key, 'true'),
-      });
-      d.drive();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [isOpen]);
+  const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', ITEM_MODAL_TOUR);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -702,7 +665,7 @@ export function ItemEditModal({
                   <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
               )}
-              <ItemHelpButton />
+              <ItemHelpButton pulse={itemPulse} onStartTour={startItemTour} />
             </div>
           </div>
 

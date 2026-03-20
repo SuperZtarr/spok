@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, Mail, HelpCircle, Play, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { driver } from 'driver.js';
 import type { TourStep } from '../hooks/viewTours';
+import { usePageTourPulse } from '../hooks/useOnboarding';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
@@ -67,7 +67,7 @@ const SPACE_SETTINGS_TOUR: TourStep[] = [
   },
 ];
 
-function SpaceSettingsHelpButton() {
+function SpaceSettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -99,20 +99,7 @@ function SpaceSettingsHelpButton() {
 
   const launchTour = () => {
     setOpen(false);
-    setTimeout(() => {
-      const validSteps = SPACE_SETTINGS_TOUR.filter(s => !s.element || document.querySelector(s.element));
-      if (validSteps.length === 0) return;
-      const d = driver({
-        showProgress: true,
-        showButtons: ['next', 'previous', 'close'],
-        nextBtnText: 'Suivant',
-        prevBtnText: 'Précédent',
-        doneBtnText: 'Terminer',
-        progressText: '{{current}} / {{total}}',
-        steps: validSteps,
-      });
-      d.drive();
-    }, 200);
+    setTimeout(onStartTour, 200);
   };
 
   return (
@@ -121,7 +108,7 @@ function SpaceSettingsHelpButton() {
         ref={btnRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto"
+        className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
         title="Aide"
       >
         <HelpCircle className="w-4 h-4" />
@@ -175,6 +162,7 @@ export function SpaceSettingsPage() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'members' | 'danger'>('general');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('space-settings', SPACE_SETTINGS_TOUR);
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -422,7 +410,7 @@ export function SpaceSettingsPage() {
           </h1>
           <p className="text-muted-foreground">Paramètres de l'espace</p>
         </div>
-        <SpaceSettingsHelpButton />
+        <SpaceSettingsHelpButton pulse={pulseHelp} onStartTour={startSettingsTour} />
       </div>
 
       {/* Tabs */}

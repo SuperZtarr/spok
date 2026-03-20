@@ -7,10 +7,11 @@ import type { DashboardTab } from '../stores/dashboardTab';
 interface DashboardToolbarProps {
   tab: DashboardTab;
   onStartTour?: () => void;
+  pulseHelp?: boolean;
   actions?: React.ReactNode;
 }
 
-export function DashboardToolbar({ tab, onStartTour, actions }: DashboardToolbarProps) {
+export function DashboardToolbar({ tab, onStartTour, pulseHelp, actions }: DashboardToolbarProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -51,7 +52,7 @@ export function DashboardToolbar({ tab, onStartTour, actions }: DashboardToolbar
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
+        className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0${pulseHelp ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
         title="Aide sur cette vue"
       >
         <HelpCircle className="w-4 h-4" />
