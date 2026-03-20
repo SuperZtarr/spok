@@ -30,6 +30,7 @@ import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { ContactPage } from './pages/ContactPage';
 import { LinksPage } from './pages/LinksPage';
+import { BookmarksPage } from './pages/BookmarksPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
 import { HomePage } from './pages/HomePage';
@@ -47,6 +48,7 @@ function HomeRoute() {
   if (!isAuthenticated) {
     // Protected paths → redirect to login
     if (location.pathname === '/tasks' ||
+        location.pathname === '/bookmarks' ||
         location.pathname.includes('/settings') ||
         location.pathname.includes('/history')) {
       return <Navigate to="/login" replace />;
@@ -78,6 +80,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/sunburst$/, 'SunburstPage'],
   [/^\/mindmap$/, 'MindMapPage'],
   [/^\/tasks$/, 'GlobalTasksPage'],
+  [/^\/bookmarks$/, 'BookmarksPage'],
   [/^\/search$/, 'SearchPage'],
   [/^\/spaces\/[^/]+\/content$/, 'SpacePage'],
   [/^\/spaces\/[^/]+\/settings$/, 'SpaceSettingsPage'],
@@ -160,6 +163,7 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="links" element={<LinksPage />} />
+        <Route path="bookmarks" element={<BookmarksPage />} />
         <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />

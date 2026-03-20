@@ -64,6 +64,7 @@ model User {
   sentCommunityEmails        CommunityEmail[]
   receivedCommunityEmails    CommunityEmailRecipient[]
   favoriteSpaces             SpaceFavorite[]
+  bookmarkedItems            ItemBookmark[]
 
   @@map("users")
 }
@@ -112,6 +113,18 @@ model SpaceFavorite {
 
   @@id([userId, spaceId])
   @@map("space_favorites")
+}
+
+model ItemBookmark {
+  userId    String
+  itemId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([userId, itemId])
+  @@map("item_bookmarks")
 }
 
 enum SpaceVisibility {
@@ -294,6 +307,7 @@ model Item {
   tags ItemTag[]
   contributions Contribution[]
   reactions     Reaction[]
+  bookmarkedBy  ItemBookmark[]
 
   @@index([spaceId])
   @@index([createdById])

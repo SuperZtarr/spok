@@ -558,6 +558,21 @@ export const spacesApi = {
     fetchApi<{ success: boolean }>(`/spaces/${id}/favorite`, { method: 'DELETE' }),
 };
 
+// Item Bookmarks
+export const bookmarksApi = {
+  list: () =>
+    fetchApi<(Item & { bookmarkedAt: string; space: { id: string; name: string } })[]>('/user/bookmarks'),
+
+  listIds: () =>
+    fetchApi<string[]>('/user/bookmark-ids'),
+
+  add: (itemId: string) =>
+    fetchApi<{ success: boolean }>(`/user/bookmarks/${itemId}`, { method: 'POST' }),
+
+  remove: (itemId: string) =>
+    fetchApi<{ success: boolean }>(`/user/bookmarks/${itemId}`, { method: 'DELETE' }),
+};
+
 // Communities
 export const communitiesApi = {
   list: () => fetchApi<CommunityWithRole[]>('/communities'),

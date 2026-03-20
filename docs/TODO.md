@@ -22,9 +22,10 @@
 - [x] Communautés publiques : rejoindre/quitter depuis page Communautés — 448d67a (2026-03-15)
 - [x] Communautés vides visibles dans page Espaces — bc5e42b (2026-03-15)
 - [x] Favoris / récents : accès rapide aux espaces fréquemment utilisés ou récemment visités — 3054f7d (2026-03-15)
-- [ ] Revoir les tutoriels dynamiques (onboarding, tours guides)
-- [ ] Page de contact / support (formulaire vers les admins, demande technique, signalement)
-- [ ] Page favoris / liens rapides (espaces, items, pages epingles par l'utilisateur)
+- [x] Revoir les tutoriels dynamiques (onboarding, tours guides) — 0cbc6a6 (2026-03-20)
+- [x] Page de contact / support (formulaire vers les admins, demande technique, signalement) — 054ce63 (2026-03-20)
+- [x] Page liens rapides (etiquettes avec favicon et metadonnees) — 182052e (2026-03-20)
+- [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
 - [ ] Prod : rendre des communautes publiques + bouton "Decouvrez sans connexion" masque s'il n'y en a aucune
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions

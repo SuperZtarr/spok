@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { itemsApi, spacesApi, isConflictError } from '../lib/api';
+import { itemsApi, spacesApi, bookmarksApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { ConfirmModal } from './ConfirmModal';
@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -204,6 +204,24 @@ export function ItemEditModal({
     queryFn: () => spacesApi.getMembers(spaceId),
     enabled: isOpen,
   });
+
+  // Bookmarks
+  const { data: bookmarkIds = [] } = useQuery({
+    queryKey: ['bookmark-ids'],
+    queryFn: () => bookmarksApi.listIds(),
+    enabled: isOpen && !!user,
+  });
+  const isBookmarked = itemId ? bookmarkIds.includes(itemId) : false;
+  const toggleBookmark = useCallback(async () => {
+    if (!itemId) return;
+    if (isBookmarked) {
+      await bookmarksApi.remove(itemId);
+    } else {
+      await bookmarksApi.add(itemId);
+    }
+    queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
+    queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+  }, [itemId, isBookmarked, queryClient]);
 
   // Reset form when item changes
   useEffect(() => {
@@ -1295,6 +1313,17 @@ export function ItemEditModal({
                 >
                   <FileDown className="w-4 h-4" />
                 </Button>
+                {user && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    title={isBookmarked ? 'Retirer des épingles' : 'Épingler'}
+                    onClick={toggleBookmark}
+                  >
+                    <Bookmark className={`w-4 h-4 ${isBookmarked ? 'text-blue-500 fill-blue-500' : ''}`} />
+                  </Button>
+                )}
               </>
             )}
             {canEdit && onDelete && itemId && (

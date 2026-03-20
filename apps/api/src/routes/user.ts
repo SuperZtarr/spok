@@ -197,4 +197,73 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true };
   });
+
+  // ─── ITEM BOOKMARKS ──────────────────────────────────────────────
+
+  // List bookmarked items with details
+  fastify.get(
+    '/bookmarks',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      const bookmarks = await fastify.prisma.itemBookmark.findMany({
+        where: { userId: request.user.userId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          item: {
+            include: {
+              space: { select: { id: true, name: true } },
+              createdBy: { select: { id: true, name: true } },
+              assignedTo: { select: { id: true, name: true } },
+              tags: { include: { tag: true } },
+            },
+          },
+        },
+      });
+      return bookmarks.map(b => ({
+        ...b.item,
+        bookmarkedAt: b.createdAt,
+      }));
+    }
+  );
+
+  // List bookmarked item IDs only (lightweight)
+  fastify.get(
+    '/bookmark-ids',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      const bookmarks = await fastify.prisma.itemBookmark.findMany({
+        where: { userId: request.user.userId },
+        select: { itemId: true },
+      });
+      return bookmarks.map(b => b.itemId);
+    }
+  );
+
+  // Add item to bookmarks
+  fastify.post<{ Params: { itemId: string } }>(
+    '/bookmarks/:itemId',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      try {
+        await fastify.prisma.itemBookmark.create({
+          data: { userId: request.user.userId, itemId: request.params.itemId },
+        });
+      } catch {
+        // Already bookmarked — ignore
+      }
+      return { success: true };
+    }
+  );
+
+  // Remove item from bookmarks
+  fastify.delete<{ Params: { itemId: string } }>(
+    '/bookmarks/:itemId',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      await fastify.prisma.itemBookmark.deleteMany({
+        where: { userId: request.user.userId, itemId: request.params.itemId },
+      });
+      return { success: true };
+    }
+  );
 };
