@@ -32,6 +32,9 @@
 ### Permissions & accès
 - [x] Revoir les droits d'accès aux espaces d'une communauté (visibilité, rôles, héritage) — 0d2f928 (2026-03-17)
 
+### Intégrations externes
+- [ ] Connexion calendrier messagerie (Outlook/Hotmail, Gmail) : pousser des RDV (items MEETING) et récupérer les événements via Microsoft Graph API / Google Calendar API
+
 ### Infra & emails
 - [x] Configurer domaine Resend spok.space avec SPF/DKIM/DMARC — 30fbf6d (2026-03-15)
 - [x] Template email avec header/footer SPOK — 5775ae7 (2026-03-15)

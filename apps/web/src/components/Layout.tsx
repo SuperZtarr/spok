@@ -20,7 +20,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { MainMenu } from './MainMenu';
 import { useViewModeStore } from '../stores/viewMode';
-import { useViewConfig } from '../hooks/useViewConfig';
+import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import type { SpaceWithRole } from '@spok/shared';
 
@@ -241,7 +241,7 @@ export function Layout() {
   const location = useLocation();
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
-  const { views: configViews } = useViewConfig();
+  const { spaceViews } = useMenuItems();
   const { startTour, showWelcome, closeWelcome } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -494,8 +494,8 @@ export function Layout() {
     if (path.endsWith('/settings')) return 'Paramètres';
     if (path.endsWith('/history')) return 'Historique';
     if (currentSpace) {
-      const viewMode = configViews.find(v => v.id === mode);
-      return viewMode?.label || '';
+      const viewItem = spaceViews.find(v => v.viewMode === mode);
+      return viewItem?.label || '';
     }
     if (path === '/') {
       const dashTab = DASHBOARD_TABS.find(t => t.value === tab);

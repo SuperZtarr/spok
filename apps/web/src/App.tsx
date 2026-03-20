@@ -27,6 +27,7 @@ import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
+import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
 import { HomePage } from './pages/HomePage';
@@ -98,6 +99,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/admin\/stats$/, 'Admin/StatsPage'],
   [/^\/admin\/audit-logs$/, 'Admin/AuditLogsPage'],
   [/^\/admin\/views$/, 'Admin/ViewsConfigPage'],
+  [/^\/admin\/menu$/, 'Admin/MenuConfigPage'],
   [/^\/$/, 'HomePage / LandingPage'],
 ];
 
@@ -203,6 +205,7 @@ export default function App() {
         <Route path="admin/stats" element={<AdminRoute><StatsPage /></AdminRoute>} />
         <Route path="admin/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
         <Route path="admin/views" element={<AdminRoute><ViewsConfigPage /></AdminRoute>} />
+        <Route path="admin/menu" element={<AdminRoute><MenuConfigPage /></AdminRoute>} />
       </Route>
     </Routes>
   </>

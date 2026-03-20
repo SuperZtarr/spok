@@ -11,3 +11,4 @@ export * from './notification.js';
 export * from './invitation.js';
 export * from './reaction.js';
 export * from './viewConfig.js';
+export * from './menuItem.js';

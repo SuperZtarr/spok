@@ -9,11 +9,11 @@ import {
   Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 } from 'lucide-react';
 import { useViewModeStore } from '../stores/viewMode';
-import { useViewConfig } from '../hooks/useViewConfig';
-import { useGlobalPages } from '../hooks/useGlobalPages';
+import { useMenuItems } from '../hooks/useMenuItems';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { cn } from '../lib/utils';
+import type { MenuItemConfig } from '@spok/shared';
 
 const ICONS: Record<string, typeof List> = {
   List, GitBranch, FileText, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck,
@@ -26,7 +26,7 @@ const EXTRA_ICONS: Record<string, typeof List> = {
 };
 const getIcon = (name: string) => ICONS[name] || EXTRA_ICONS[name] || List;
 
-interface MenuItem {
+interface RenderItem {
   id: string;
   label: string;
   icon: string;
@@ -34,14 +34,13 @@ interface MenuItem {
   onClick: () => void;
 }
 
-interface MenuSection {
+interface RenderSection {
   id: string;
   label: string;
-  expandable: boolean; // true = can be shown inline when there's room (only "global")
-  items: MenuItem[];
+  expandable: boolean;
+  items: RenderItem[];
 }
 
-// Layout modes based on available width
 type LayoutMode = 'hamburger' | 'dropdowns' | 'expanded';
 
 interface MainMenuProps {
@@ -52,8 +51,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode, setMode } = useViewModeStore();
-  const { views: configViews, categories: configCategories } = useViewConfig();
-  const { pages: globalPagesConfig, groups: globalPageGroups } = useGlobalPages();
+  const { sections: menuSections } = useMenuItems();
   const { user, logout, refreshToken } = useAuthStore();
 
   const isInSpace = /^\/spaces\/[^/]+\//.test(location.pathname);
@@ -73,7 +71,6 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
 
   const closeAll = useCallback(() => { setMobileOpen(false); setOpenSection(null); }, []);
 
-  // Close on outside click
   useEffect(() => {
     if (!mobileOpen && !openSection) return;
     const handler = (e: MouseEvent) => {
@@ -89,7 +86,6 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [mobileOpen, openSection, closeAll]);
 
-  // Close on Escape
   useEffect(() => {
     if (!mobileOpen && !openSection) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeAll(); };
@@ -97,7 +93,6 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     return () => document.removeEventListener('keydown', handler);
   }, [mobileOpen, openSection, closeAll]);
 
-  // Measure real text widths using a hidden canvas
   const measureTextWidth = useCallback((text: string, font = '12px ui-sans-serif, system-ui, sans-serif') => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -106,121 +101,55 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     return ctx.measureText(text).width;
   }, []);
 
-  // Layout measurement moved after sections declaration below
-
-  // Global tab → route mapping
-  const globalTabRoutes: Record<string, string> = {
-    home: '/',
-    communities: '/communities',
-    spaces: '/spaces',
-    dashboard: '/dashboard',
-    graph: '/graph',
-    sunburst: '/sunburst',
-    mindmap: '/mindmap',
-  };
-
-  const handleViewMode = (modeValue: string) => {
-    setMode(modeValue as any);
+  // Handle menu item click
+  const handleItemClick = (item: MenuItemConfig) => {
     closeAll();
+    if (item.key === 'logout') {
+      handleLogout();
+    } else if (item.key === 'profile') {
+      onOpenProfile();
+    } else if (item.viewMode) {
+      setMode(item.viewMode as any);
+    } else if (item.route) {
+      navigate(item.route);
+    }
   };
 
   const handleLogout = async () => {
-    closeAll();
     try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
     logout();
     navigate('/login');
   };
 
-  const handleNavigate = (path: string) => {
-    closeAll();
-    navigate(path);
+  // Is item active?
+  const isItemActive = (item: MenuItemConfig): boolean => {
+    if (item.viewMode) return mode === item.viewMode;
+    if (item.route) return location.pathname === item.route;
+    return false;
   };
 
-  // Build sections
-  const globalGroupLabel = globalPageGroups.find(g => g.id === 'global')?.label || 'Vues globales';
-  // Filter global tabs by access level
-  const globalTabs = globalPagesConfig.filter(p => {
-    if (p.group !== 'global') return false;
-    if (!user && p.access !== 'public') return false;
-    return true;
-  });
-  const spaceCategories = configCategories.filter(c => c.id !== 'dashboard');
-  const viewModes = configViews.map(v => ({ value: v.id, label: v.label, icon: v.icon, category: v.category }));
-
-  const sections: MenuSection[] = [
-    {
-      id: 'global',
-      label: globalGroupLabel,
-      expandable: true,
-      items: [
-        ...globalTabs.map(t => {
-          const route = globalTabRoutes[t.id] || '/';
-          return {
-            id: t.id, label: t.label, icon: t.icon,
-            active: location.pathname === route,
-            onClick: () => handleNavigate(route),
-          };
-        }),
-        ...(user ? [{ id: 'dashboard', label: 'Tableau de bord', icon: 'LayoutDashboard', active: location.pathname === '/dashboard', onClick: () => handleNavigate('/dashboard') }] : []),
-      ],
-    },
-    ...(isInSpace ? spaceCategories.map(cat => ({
-      id: cat.id,
-      label: cat.label,
-      expandable: false,
-      items: viewModes.filter(v => v.category === cat.id).map(v => ({
-        id: v.value, label: v.label, icon: v.icon,
-        active: mode === v.value,
-        onClick: () => handleViewMode(v.value),
+  // Build render sections from menu data
+  const sections: RenderSection[] = menuSections
+    .filter(s => {
+      // Show space view sections only when in a space
+      if (['basic', 'planning', 'exploration'].includes(s.id) && !isInSpace) return false;
+      return true;
+    })
+    .map(s => ({
+      id: s.id,
+      label: s.label,
+      expandable: s.id === 'global',
+      items: s.items.map(item => ({
+        id: item.key,
+        label: item.label,
+        icon: item.icon,
+        active: isItemActive(item),
+        onClick: () => handleItemClick(item),
       })),
-    })).filter(s => s.items.length > 0) : []),
-    ...(user?.globalRole === 'ADMIN' ? [{
-      id: 'admin',
-      label: 'Administration',
-      expandable: false,
-      items: [
-        { id: 'admin-communities', label: 'Communautes', icon: 'Building2', active: location.pathname === '/admin/communities', onClick: () => handleNavigate('/admin/communities') },
-        { id: 'admin-spaces', label: 'Espaces', icon: 'FolderKanban', active: location.pathname === '/admin/spaces', onClick: () => handleNavigate('/admin/spaces') },
-        { id: 'admin-users', label: 'Utilisateurs', icon: 'Users', active: location.pathname === '/admin/users', onClick: () => handleNavigate('/admin/users') },
-        { id: 'admin-stats', label: 'Statistiques', icon: 'BarChart3', active: location.pathname === '/admin/stats', onClick: () => handleNavigate('/admin/stats') },
-        { id: 'admin-audit', label: 'Audit', icon: 'History', active: location.pathname === '/admin/audit-logs', onClick: () => handleNavigate('/admin/audit-logs') },
-        { id: 'admin-anomalies', label: 'Diagnostics', icon: 'AlertTriangle', active: location.pathname === '/admin/anomalies', onClick: () => handleNavigate('/admin/anomalies') },
-        { id: 'admin-views', label: 'Vues', icon: 'Eye', active: location.pathname === '/admin/views', onClick: () => handleNavigate('/admin/views') },
-        { id: 'admin-referentiels', label: 'Referentiels', icon: 'Settings', active: location.pathname === '/admin/referentiels', onClick: () => handleNavigate('/admin/referentiels') },
-      ],
-    }] : []),
-    ...(() => {
-      const miscTabs = globalPagesConfig.filter(p => p.group === 'misc');
-      if (miscTabs.length === 0 && !user) return [];
-      const miscGroupLabel = globalPageGroups.find(g => g.id === 'misc')?.label || 'Divers';
+    }))
+    .filter(s => s.items.length > 0);
 
-      const miscRoutes: Record<string, string> = { search: '/search', sitemap: '/sitemap' };
-      const miscHandlers: Record<string, () => void> = {
-        search: () => handleNavigate('/search'),
-        profile: () => { closeAll(); onOpenProfile(); },
-        sitemap: () => handleNavigate('/sitemap'),
-        logout: () => handleLogout(),
-      };
-
-      const miscItems = miscTabs
-        .filter(t => {
-          if (!user && t.access !== 'public') return false;
-          return true;
-        })
-        .map(t => ({
-          id: t.id,
-          label: t.label,
-          icon: t.icon,
-          active: miscRoutes[t.id] ? location.pathname === miscRoutes[t.id] : false,
-          onClick: miscHandlers[t.id] || (() => {}),
-        }));
-
-      if (miscItems.length === 0) return [];
-      return [{ id: 'personal', label: miscGroupLabel, expandable: false, items: miscItems }];
-    })(),
-  ];
-
-  // Measure available width and decide layout
+  // Measure and decide layout
   const sectionKey = sections.map(s => `${s.id}:${s.items.map(i => i.label).join(',')}`).join('|');
   useEffect(() => {
     if (sections.length === 0) { setLayoutMode('hamburger'); return; }
@@ -271,7 +200,6 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     return () => window.removeEventListener('resize', measure);
   }, [sectionKey, measureTextWidth, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Section dropdown
   const openSectionDropdown = (sectionId: string) => {
     if (openSection === sectionId) { setOpenSection(null); return; }
     const btn = sectionButtonRefs.current.get(sectionId);
@@ -289,10 +217,9 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     if (openSection && openSection !== sectionId) openSectionDropdown(sectionId);
   };
 
-  const sectionHasActive = (s: MenuSection) => s.items.some(i => i.active);
+  const sectionHasActive = (s: RenderSection) => s.items.some(i => i.active);
 
-  // Render item
-  const renderItem = (item: MenuItem, compact = false) => {
+  const renderItem = (item: RenderItem, compact = false) => {
     const Icon = getIcon(item.icon);
     const isDanger = item.id === 'logout';
     return (
@@ -314,8 +241,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     );
   };
 
-  // Render section as dropdown button
-  const renderSectionDropdown = (s: MenuSection) => (
+  const renderSectionDropdown = (s: RenderSection) => (
     <div key={s.id}>
       <button
         ref={el => { if (el) sectionButtonRefs.current.set(s.id, el); }}
@@ -333,8 +259,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
     </div>
   );
 
-  // Render section expanded inline
-  const renderSectionExpanded = (s: MenuSection) => (
+  const renderSectionExpanded = (s: RenderSection) => (
     <div key={s.id} className="flex items-center gap-0.5">
       <div className="flex items-center gap-0.5">
         {s.items.map(item => renderItem(item, true))}
@@ -346,7 +271,6 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
 
   return (
     <div ref={containerRef} className="flex items-center">
-      {/* ─── Hamburger mode ─── */}
       {layoutMode === 'hamburger' && (
         <button
           ref={mobileButtonRef}
@@ -358,21 +282,18 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
         </button>
       )}
 
-      {/* ─── Dropdowns mode: all sections as dropdown buttons ─── */}
       {layoutMode === 'dropdowns' && (
         <nav className="flex items-end gap-1">
           {sections.map(s => renderSectionDropdown(s))}
         </nav>
       )}
 
-      {/* ─── Expanded mode: global inline, rest as dropdowns ─── */}
       {layoutMode === 'expanded' && (
         <nav className="flex items-end gap-2">
           {sections.map(s => s.expandable ? renderSectionExpanded(s) : renderSectionDropdown(s))}
         </nav>
       )}
 
-      {/* ─── Hamburger dropdown (portal) ─── */}
       {mobileOpen && createPortal(
         <div
           ref={mobileRef}
@@ -391,7 +312,6 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
         document.body
       )}
 
-      {/* ─── Section dropdown (portal, shared by dropdowns + expanded modes) ─── */}
       {openSection && currentSection && createPortal(
         <div
           ref={portalRef}

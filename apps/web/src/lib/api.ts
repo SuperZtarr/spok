@@ -1631,13 +1631,13 @@ export const invitationsApi = {
     }),
 };
 
-// Public config API (no auth needed)
+// Public config API (no auth needed) — legacy, kept for backward compat
 export const configApi = {
   getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/config/views'),
   getGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/config/global-pages'),
 };
 
-// Admin config API
+// Admin config API — legacy, kept for backward compat
 export const adminConfigApi = {
   getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/admin/config/views'),
   updateViews: (data: { views: import('@spok/shared').ViewConfigItem[]; categories?: import('@spok/shared').ViewCategoryConfig[] }) =>
@@ -1647,6 +1647,18 @@ export const adminConfigApi = {
   updateGlobalPages: (data: { pages: import('@spok/shared').GlobalPageConfig[]; groups?: import('@spok/shared').GlobalPageGroupConfig[] }) =>
     fetchApi<{ success: boolean }>('/admin/config/global-pages', { method: 'PUT', body: JSON.stringify(data) }),
   resetGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/admin/config/global-pages/reset', { method: 'POST' }),
+};
+
+// Unified menu API
+export const menuApi = {
+  getAll: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/menu'),
+};
+
+export const adminMenuApi = {
+  getAll: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu'),
+  update: (items: import('@spok/shared').MenuItemConfig[]) =>
+    fetchApi<{ success: boolean }>('/admin/menu', { method: 'PUT', body: JSON.stringify(items) }),
+  reset: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu/reset', { method: 'POST' }),
 };
 
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {

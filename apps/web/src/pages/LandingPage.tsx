@@ -7,11 +7,10 @@ import {
   TrendingDown, Layers, Table2, Grid3x3, Focus, Flame,
 } from 'lucide-react';
 import { communitiesApi } from '../lib/api';
-import { useViewConfig } from '../hooks/useViewConfig';
+import { useMenuItems } from '../hooks/useMenuItems';
 import { PublicHeader } from '../components/PublicHeader';
 import { PublicFooter } from '../components/PublicFooter';
 import { HelpBubble } from '../components/PublicPageLayout';
-import type { ViewConfigItem } from '@spok/shared';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
@@ -88,9 +87,9 @@ export function LandingPage() {
     queryFn: () => communitiesApi.listPublic(),
   });
 
-  const { allViews, categories } = useViewConfig();
-  // Show all views on landing (not just public-access ones)
-  const views = allViews.filter(v => v.visible).sort((a, b) => a.order - b.order);
+  const { allItems } = useMenuItems();
+  // Show all space views on landing
+  const views = allItems.filter(v => v.viewMode && v.visible).sort((a, b) => a.order - b.order);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -210,24 +209,25 @@ export function LandingPage() {
             {views.length} vues pour explorer vos données
           </h3>
           <div className="space-y-8">
-            {categories.map((cat) => {
-              const catViews = views.filter(v => v.category === cat.id);
-              if (catViews.length === 0) return null;
+            {['basic', 'planning', 'exploration'].map((sectionId) => {
+              const sectionViews = views.filter(v => v.section === sectionId);
+              if (sectionViews.length === 0) return null;
+              const sectionLabel = sectionViews[0]?.sectionLabel || sectionId;
               return (
-                <div key={cat.id}>
-                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{cat.label}</h4>
+                <div key={sectionId}>
+                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{sectionLabel}</h4>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {catViews.map((v: ViewConfigItem) => {
+                    {sectionViews.map((v) => {
                       const Icon = VIEW_ICONS[v.icon] || List;
                       return (
                         <div
-                          key={v.id}
+                          key={v.key}
                           className="flex items-start gap-3 rounded-lg border bg-card p-4"
                         >
                           <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                           <div>
                             <p className="font-medium">{v.label}</p>
-                            <p className="text-sm text-muted-foreground">{VIEW_DESCRIPTIONS[v.id] || ''}</p>
+                            <p className="text-sm text-muted-foreground">{VIEW_DESCRIPTIONS[v.viewMode || ''] || ''}</p>
                           </div>
                         </div>
                       );

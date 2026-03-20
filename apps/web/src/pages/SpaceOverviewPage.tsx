@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
 import { useViewModeStore, type ViewMode } from '../stores/viewMode';
-import { useViewConfig } from '../hooks/useViewConfig';
+import { useMenuItems } from '../hooks/useMenuItems';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
@@ -78,7 +78,7 @@ export function SpaceOverviewPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
-  const { views: configViews, categories: configCategories } = useViewConfig();
+  const { spaceViewSections } = useMenuItems();
 
   const { data: space } = useQuery({
     queryKey: ['space', spaceId],
@@ -214,20 +214,20 @@ export function SpaceOverviewPage() {
             <LayoutGrid className="w-4 h-4" />
             Vues disponibles
           </h2>
-          {configCategories.map(cat => {
-            const views = configViews.filter(v => v.category === cat.id);
+          {spaceViewSections.map(section => {
+            const views = section.items;
             if (views.length === 0) return null;
             return (
-              <div key={cat.id} className="mb-4">
-                <h3 className="text-xs font-medium text-muted-foreground mb-2">{cat.label}</h3>
+              <div key={section.id} className="mb-4">
+                <h3 className="text-xs font-medium text-muted-foreground mb-2">{section.label}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {views.map(view => {
                     const Icon = VIEW_ICONS[view.icon] || List;
                     return (
                       <button
-                        key={view.id}
+                        key={view.key}
                         onClick={() => {
-                          useViewModeStore.getState().setMode(view.id as ViewMode);
+                          useViewModeStore.getState().setMode(view.viewMode as ViewMode);
                           navigate(`/spaces/${spaceId}/content`);
                         }}
                         className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 hover:border-primary/30 transition-colors text-left"
@@ -235,7 +235,7 @@ export function SpaceOverviewPage() {
                         <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{view.label}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[view.id as ViewMode] || ''}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[(view.viewMode || '') as ViewMode] || ''}</p>
                         </div>
                       </button>
                     );
