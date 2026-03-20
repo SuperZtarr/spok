@@ -773,18 +773,22 @@ export function Layout() {
     </>
   ) : visitorSidebarContent;
 
+  // Hide sidebar on auth/public pages and landing page (non-authenticated)
+  const noSidebarRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/invitation', '/sitemap'];
+  const isAuthPage = noSidebarRoutes.includes(location.pathname) || (!user && location.pathname === '/');
+
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Mobile overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && !isAuthPage && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar - desktop: static resizable, mobile: slide-over */}
-      <aside
+      {/* Sidebar - desktop: static resizable, mobile: slide-over (hidden on auth pages) */}
+      {!isAuthPage && <aside
         className={`
           bg-card border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
@@ -807,7 +811,7 @@ export function Layout() {
           <X className="w-5 h-5" />
         </button>
         {sidebarContent}
-      </aside>
+      </aside>}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
@@ -815,14 +819,16 @@ export function Layout() {
         <header className="border-b border-border bg-card flex items-center flex-shrink-0">
           {/* Left: hamburger + title + badges */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 py-2">
-            {/* Hamburger menu (mobile) */}
-            <button
-              className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
-              onClick={() => setSidebarOpen(true)}
-              title="Ouvrir le menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+            {/* Hamburger menu (mobile, hidden on auth pages) */}
+            {!isAuthPage && (
+              <button
+                className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
+                onClick={() => setSidebarOpen(true)}
+                title="Ouvrir le menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
             <div className="min-w-0">
               <h2 className="text-sm md:text-base font-semibold text-foreground truncate">{getPageTitle()}</h2>
               {currentSpace && (
@@ -843,9 +849,9 @@ export function Layout() {
           {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
             <MainMenu onOpenProfile={() => setIsProfileOpen(true)} />
+            <div id="header-global-search"><GlobalSearch /></div>
             {user ? (
               <>
-                <div id="header-global-search"><GlobalSearch /></div>
                 <NotificationBell />
                 <div className="flex items-center gap-2 flex-shrink-0 px-1">
                   {user.avatarUrl ? (

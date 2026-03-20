@@ -5,7 +5,7 @@ import { ApiError } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { PublicPageLayout } from '../components/PublicPageLayout';
+
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -47,7 +47,7 @@ export function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <PublicPageLayout centered>
+      <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Email envoyé</CardTitle>
@@ -62,12 +62,12 @@ export function ForgotPasswordPage() {
             </Link>
           </CardContent>
         </Card>
-      </PublicPageLayout>
+      </div>
     );
   }
 
   return (
-    <PublicPageLayout centered>
+    <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Mot de passe oublié</CardTitle>
@@ -113,6 +113,6 @@ export function ForgotPasswordPage() {
           </form>
         </CardContent>
       </Card>
-    </PublicPageLayout>
+    </div>
   );
 }

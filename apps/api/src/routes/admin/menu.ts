@@ -21,19 +21,12 @@ const menuItemSchema = z.object({
 export const adminMenuRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticateAdmin);
 
-  // GET /admin/menu — all menu items
+  // GET /admin/menu — all menu items (auto-sync missing defaults)
   fastify.get('/', async () => {
-    const items = await fastify.prisma.menuItem.findMany({
+    await syncDefaults(fastify);
+    return fastify.prisma.menuItem.findMany({
       orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
     });
-    if (items.length === 0) {
-      // Seed defaults on first access
-      await seedDefaults(fastify);
-      return fastify.prisma.menuItem.findMany({
-        orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
-      });
-    }
-    return items;
   });
 
   // PUT /admin/menu — bulk update all menu items
@@ -71,7 +64,7 @@ export const adminMenuRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /admin/menu/reset — reset to defaults
   fastify.post('/reset', async () => {
     await fastify.prisma.menuItem.deleteMany();
-    await seedDefaults(fastify);
+    await syncDefaults(fastify);
     return fastify.prisma.menuItem.findMany({
       orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
     });
@@ -80,24 +73,24 @@ export const adminMenuRoutes: FastifyPluginAsync = async (fastify) => {
 
 // Public route (no auth)
 export const publicMenuRoutes: FastifyPluginAsync = async (fastify) => {
-  // GET /menu — all visible menu items
+  // GET /menu — all visible menu items (auto-sync missing defaults)
   fastify.get('/', async () => {
-    let items = await fastify.prisma.menuItem.findMany({
+    await syncDefaults(fastify);
+    return fastify.prisma.menuItem.findMany({
       orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
     });
-    if (items.length === 0) {
-      await seedDefaults(fastify);
-      items = await fastify.prisma.menuItem.findMany({
-        orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
-      });
-    }
-    return items;
   });
 };
 
-// Seed helper
-async function seedDefaults(fastify: any) {
-  for (const item of DEFAULT_MENU_ITEMS) {
+// Sync helper — adds missing default items without touching existing ones
+async function syncDefaults(fastify: any) {
+  const existing = await fastify.prisma.menuItem.findMany({ select: { key: true } });
+  const existingKeys = new Set(existing.map((e: any) => e.key));
+
+  const missing = DEFAULT_MENU_ITEMS.filter(item => !existingKeys.has(item.key));
+  if (missing.length === 0) return;
+
+  for (const item of missing) {
     await fastify.prisma.menuItem.create({
       data: {
         key: item.key,

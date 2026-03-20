@@ -1,4 +1,13 @@
-// Re-export DashboardPage as SpacesListPage
-// The DashboardPage component handles the spaces grid view
-// Other views (home, communities, graph, etc.) are now on their own routes
-export { DashboardPage as SpacesListPage } from './DashboardPage';
+import { Navigate } from 'react-router-dom';
+import { useCommunityStore } from '../stores/community';
+import { DashboardPage } from './DashboardPage';
+
+export function SpacesListPage() {
+  const { currentCommunity } = useCommunityStore();
+
+  if (!currentCommunity) {
+    return <Navigate to="/communities" replace />;
+  }
+
+  return <DashboardPage />;
+}

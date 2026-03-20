@@ -311,6 +311,7 @@ export function HomeView() {
       <div className="max-w-4xl mx-auto">
         {/* Welcome banner */}
         <div className="mb-6" data-tour="home-welcome">
+          <img src="/logo.png" alt="SPOK" className="h-28 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Bonjour {firstName}</h1>
           <p className="text-muted-foreground mt-1">
             {totalCommunities} communauté{totalCommunities > 1 ? 's' : ''}

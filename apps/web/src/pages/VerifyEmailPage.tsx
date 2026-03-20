@@ -4,7 +4,6 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { PublicPageLayout } from '../components/PublicPageLayout';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 export function VerifyEmailPage() {
@@ -27,7 +26,6 @@ export function VerifyEmailPage() {
     authApi.verifyEmail(token)
       .then(() => {
         setStatus('success');
-        // Update store if user is logged in
         if (user) {
           updateUser({ emailVerified: true });
         }
@@ -40,10 +38,10 @@ export function VerifyEmailPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Vérification en cours...</CardTitle>
+            <CardTitle className="text-2xl">Verification en cours...</CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -55,15 +53,15 @@ export function VerifyEmailPage() {
 
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-2">
               <CheckCircle className="w-12 h-12 text-green-500" />
             </div>
-            <CardTitle className="text-2xl">Email vérifié !</CardTitle>
+            <CardTitle className="text-2xl">Email verifie !</CardTitle>
             <CardDescription>
-              Votre adresse email a été vérifiée avec succès.
+              Votre adresse email a ete verifiee avec succes.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -79,13 +77,13 @@ export function VerifyEmailPage() {
   }
 
   return (
-    <PublicPageLayout centered>
+    <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
             <XCircle className="w-12 h-12 text-destructive" />
           </div>
-          <CardTitle className="text-2xl">Vérification échouée</CardTitle>
+          <CardTitle className="text-2xl">Verification echouee</CardTitle>
           <CardDescription>
             {errorMessage}
           </CardDescription>
@@ -98,6 +96,6 @@ export function VerifyEmailPage() {
           </Link>
         </CardContent>
       </Card>
-    </PublicPageLayout>
+    </div>
   );
 }

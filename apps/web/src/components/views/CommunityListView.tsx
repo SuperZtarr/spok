@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Globe, Lock, Crown, User, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, LogOut } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
+import { useAuthStore } from '../../stores/auth';
 import { RoleGuard } from '../RoleGuard';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -19,6 +20,7 @@ export interface CommunityListViewHandle {
 export const CommunityListView = forwardRef<CommunityListViewHandle>(function CommunityListView(_props, ref) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore(s => s.user);
   const [showCreate, setShowCreate] = useState(false);
   const [step, setStep] = useState<CreateStep>('awareness');
   const [searchExisting, setSearchExisting] = useState('');
@@ -31,7 +33,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
   }));
 
   const { data: communities, isLoading } = useQuery({
-    queryKey: ['communities'],
+    queryKey: ['communities', user?.id || 'public'],
     queryFn: communitiesApi.list,
   });
 
@@ -77,9 +79,10 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
     },
   });
 
-  // Public communities the user hasn't joined yet
+  // Public communities the user hasn't joined yet (or all public for visitors)
   const joinableCommunities = useMemo(() => {
-    if (!publicCommunities || !communities) return [];
+    if (!publicCommunities) return [];
+    if (!communities) return publicCommunities; // visitor: show all public
     const myIds = new Set(communities.map(c => c.id));
     return publicCommunities.filter(c => !myIds.has(c.id));
   }, [publicCommunities, communities]);

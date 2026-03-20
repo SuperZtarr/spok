@@ -219,8 +219,8 @@ async function buildGraph(
 }
 
 export const graphRoutes: FastifyPluginAsync = async (fastify) => {
-  // All routes require authentication
-  fastify.addHook('preHandler', fastify.authenticate);
+  // All graph routes are read-only — use optional auth for visitor access
+  fastify.addHook('preHandler', fastify.optionalAuthenticate);
 
   // Space-level graph
   fastify.get<{ Params: { spaceId: string }; Querystring: { linkTypes?: string; additionalSpaceIds?: string } }>(

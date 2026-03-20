@@ -103,6 +103,60 @@ Deploye sur Railway :
 - **PostgreSQL** : service Railway
 - Push sur `origin/master` declenche le deploiement automatique
 
+## Lexique des pages
+
+### Publiques (sans auth)
+| Route | Composant | Description |
+|---|---|---|
+| `/` (non connecte) | `LandingPage` | Page d'atterrissage, hero, communautes publiques, showcase vues |
+| `/login` | `LoginPage` | Connexion (rendu dans Layout sans sidebar) |
+| `/register` | `RegisterPage` | Inscription (rendu dans Layout sans sidebar) |
+| `/forgot-password` | `ForgotPasswordPage` | Mot de passe oublie (rendu dans Layout sans sidebar) |
+| `/reset-password` | `ResetPasswordPage` | Reinitialisation mot de passe |
+| `/verify-email` | `VerifyEmailPage` | Verification email |
+| `/invitation` | `InvitationPage` | Acceptation d'invitation |
+| `/sitemap` | `SitemapPage` | Plan du site |
+
+### Utilisateur connecte (Layout avec sidebar)
+| Route | Composant | Description |
+|---|---|---|
+| `/` | `HomePage` → `HomeView` | Page d'accueil, communautes et espaces de l'utilisateur |
+| `/communities` | `CommunitiesListPage` | Liste des communautes |
+| `/spaces` | `SpacesListPage` | Liste des espaces |
+| `/dashboard` | `DashboardViewPage` | Tableau de bord |
+| `/graph` | `GraphPage` | Graphe global |
+| `/sunburst` | `SunburstPage` | Sunburst global |
+| `/mindmap` | `MindMapPage` | Carte mentale globale |
+| `/tasks` | `GlobalTasksPage` | Taches globales (protege) |
+| `/search` | `SearchPage` | Recherche avancee |
+
+### Espaces
+| Route | Composant | Description |
+|---|---|---|
+| `/spaces/:id` | `SpaceOverviewPage` | Apercu d'un espace (stats, membres, vues dispo) |
+| `/spaces/:id/content` | `SpacePage` | Contenu d'un espace (23 vues : list, kanban, gantt, mindmap...) |
+| `/spaces/:id/settings` | `SpaceSettingsPage` | Parametres de l'espace (protege) |
+| `/spaces/:id/history` | `SpaceHistoryPage` | Historique / audit log (protege) |
+
+### Communautes
+| Route | Composant | Description |
+|---|---|---|
+| `/communities/:id` | `CommunityPage` | Page d'une communaute |
+| `/communities/:id/settings` | `CommunitySettingsPage` | Parametres communaute (protege) |
+
+### Administration (admin uniquement)
+| Route | Composant | Description |
+|---|---|---|
+| `/admin/users` | `UsersPage` | Gestion utilisateurs |
+| `/admin/spaces` | `SpacesPage` | Gestion espaces |
+| `/admin/communities` | `CommunitiesPage` | Gestion communautes |
+| `/admin/stats` | `StatsPage` | Statistiques |
+| `/admin/audit-logs` | `AuditLogsPage` | Logs d'audit |
+| `/admin/anomalies` | `AnomaliesPage` | Diagnostics |
+| `/admin/menu` | `MenuConfigPage` | Configuration des menus (table MenuItem) |
+| `/admin/views` | `ViewsConfigPage` | Configuration des vues (legacy) |
+| `/admin/referentiels` | `ReferentielsPage` | Referentiels (statuts, types, priorites) |
+
 ## Instructions pour Claude
 
 ### Démarrage de session (OBLIGATOIRE — AVANT TOUTE ACTION)

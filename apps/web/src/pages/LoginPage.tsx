@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader } from '../components/ui/Card';
-import { PublicPageLayout } from '../components/PublicPageLayout';
+
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ export function LoginPage() {
   };
 
   return (
-    <PublicPageLayout centered>
+    <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src="/logo.png" alt="SPOK" className="h-12 w-auto mx-auto mb-2" />
@@ -139,6 +139,6 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
-    </PublicPageLayout>
+    </div>
   );
 }

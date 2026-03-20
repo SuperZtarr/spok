@@ -118,7 +118,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
   const handleLogout = async () => {
     try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   // Is item active?

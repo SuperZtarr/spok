@@ -271,11 +271,9 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // ── Basic search (existing) ──
-  fastify.addHook('preHandler', fastify.authenticate);
-
   fastify.get<{
     Querystring: { q?: string; page?: string; pageSize?: string };
-  }>('/', async (request, reply) => {
+  }>('/', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
     const { q, page: pageStr, pageSize: pageSizeStr } = request.query;
 
     if (!q || q.trim().length < 2) {

@@ -960,32 +960,47 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Get space members
-  fastify.get<{ Params: { id: string } }>('/:id/members', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    // Check direct membership
-    let hasAccess = !!(await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
-        },
-      },
-    }));
+  fastify.get<{ Params: { id: string } }>('/:id/members', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
+    let hasAccess = false;
 
-    // Fallback: community membership
+    if (request.user?.userId) {
+      // Check direct membership
+      hasAccess = !!(await fastify.prisma.spaceMembership.findUnique({
+        where: {
+          userId_spaceId: {
+            userId: request.user.userId,
+            spaceId: request.params.id,
+          },
+        },
+      }));
+
+      // Fallback: community membership
+      if (!hasAccess) {
+        const space = await fastify.prisma.space.findUnique({
+          where: { id: request.params.id },
+          select: { communityId: true },
+        });
+        if (space?.communityId) {
+          hasAccess = !!(await fastify.prisma.communityMembership.findUnique({
+            where: {
+              userId_communityId: {
+                userId: request.user.userId,
+                communityId: space.communityId,
+              },
+            },
+          }));
+        }
+      }
+    }
+
+    // Anonymous: allow access to public spaces
     if (!hasAccess) {
       const space = await fastify.prisma.space.findUnique({
         where: { id: request.params.id },
-        select: { communityId: true },
+        select: { visibility: true, community: { select: { isPublic: true } } },
       });
-      if (space?.communityId) {
-        hasAccess = !!(await fastify.prisma.communityMembership.findUnique({
-          where: {
-            userId_communityId: {
-              userId: request.user.userId,
-              communityId: space.communityId,
-            },
-          },
-        }));
+      if (space && space.community?.isPublic && space.visibility !== 'PRIVATE') {
+        hasAccess = true;
       }
     }
 

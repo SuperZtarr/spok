@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight, Info } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
+import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
 // Types used implicitly via API responses
@@ -53,12 +54,20 @@ export function CommunityPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
+  const { setCurrentCommunity } = useCommunityStore();
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
     queryFn: () => communitiesApi.get(communityId!),
     enabled: !!communityId,
   });
+
+  // Set current community for spaces navigation
+  useEffect(() => {
+    if (community) {
+      setCurrentCommunity(community as any);
+    }
+  }, [community, setCurrentCommunity]);
 
   const { data: members } = useQuery({
     queryKey: ['community-members', communityId],

@@ -1,8 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Globe, User, Shield, ChevronRight } from 'lucide-react';
-import { PublicHeader } from '../components/PublicHeader';
-import { PublicFooter } from '../components/PublicFooter';
-import { HelpBubble } from '../components/PublicPageLayout';
 import { useAuthStore } from '../stores/auth';
 
 interface SiteNode {
@@ -237,9 +234,7 @@ export function SitemapPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <PublicHeader maxWidth="max-w-4xl" showBack />
-
+    <div className="flex-1 overflow-auto bg-background text-foreground">
       <div className="mx-auto max-w-4xl px-4">
         <div className="pb-4 pt-6 flex items-center gap-4">
           <div>
@@ -265,8 +260,6 @@ export function SitemapPage() {
           ))}
         </div>
       </div>
-      <HelpBubble />
-      <PublicFooter />
     </div>
   );
 }

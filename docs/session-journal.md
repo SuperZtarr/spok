@@ -49,6 +49,9 @@ Après chaque commit :
 - Admin integre dans le Layout principal (plus d'AdminLayout separe)
 - Visiteurs : sidebar avec espaces publics, menu avec vues publiques, boutons Connexion/S'inscrire
 - API /spaces retourne les espaces publics pour les anonymes
+- Table MenuItem unifiee : remplace JSON appConfig par table Prisma (42 items, 6 sections) — 758cf4b
+- Page admin /admin/menu pour configurer tous les menus depuis une seule vue
+- TODO : ajout integration calendriers messagerie (Outlook/Gmail)
 - Recherche avancee : 5 types (communautes, espaces, items, users, contributions), filtres tags/url
 - Page de recherche avec filtres, pagination, surlignage
 - ViewsConfigPage en 4 onglets (Pages globales, Vues d'espace, Divers, Categories)

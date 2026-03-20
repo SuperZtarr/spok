@@ -21,12 +21,20 @@ export function GlobalSearch() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Search query
-  const { data, isLoading } = useQuery({
+  // Search query (uses advanced endpoint — works with or without auth)
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ['global-search', debouncedQuery],
-    queryFn: () => searchApi.search(debouncedQuery),
+    queryFn: () => searchApi.advanced({ q: debouncedQuery, pageSize: 10 }),
     enabled: debouncedQuery.length >= 2,
   });
+
+  // Normalize advanced response to match display format
+  const data = rawData ? {
+    items: rawData.items,
+    contributions: rawData.contributions,
+    totalItems: rawData.totals.items,
+    totalContributions: rawData.totals.contributions,
+  } : undefined;
 
   // Open dropdown when we have results or are loading
   useEffect(() => {

@@ -6,7 +6,6 @@ import type { Invitation } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { PublicPageLayout } from '../components/PublicPageLayout';
 import { Loader2, CheckCircle, XCircle, Mail, Clock, Users } from 'lucide-react';
 
 const PENDING_TOKEN_KEY = 'spok_pending_invitation_token';
@@ -231,7 +230,7 @@ export function InvitationPage() {
   const isLoading = acceptMutation.isPending || declineMutation.isPending;
 
   return (
-    <PublicPageLayout centered>
+    <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
@@ -295,6 +294,6 @@ export function InvitationPage() {
           </div>
         </CardContent>
       </Card>
-    </PublicPageLayout>
+    </div>
   );
 }

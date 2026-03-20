@@ -92,8 +92,25 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // List user's communities (sorted by user order)
-  fastify.get('/', { preHandler: [fastify.authenticate] }, async (request) => {
+  // List communities — authenticated: user's + public; anonymous: public only
+  fastify.get('/', { preHandler: [fastify.optionalAuthenticate] }, async (request) => {
+    if (!request.user?.userId) {
+      // Anonymous: return public communities
+      const publicCommunities = await fastify.prisma.community.findMany({
+        where: { isPublic: true },
+        include: { _count: { select: { memberships: true, spaces: true } } },
+        orderBy: { name: 'asc' },
+      });
+      return publicCommunities.map(c => ({
+        ...c,
+        role: null,
+        order: 0,
+        memberCount: c._count.memberships,
+        spaceCount: c._count.spaces,
+      }));
+    }
+
+    // Authenticated: user's communities (sorted by user order)
     const memberships = await fastify.prisma.communityMembership.findMany({
       where: { userId: request.user.userId },
       include: {
@@ -108,13 +125,31 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { order: 'asc' },
     });
 
-    return memberships.map((m) => ({
+    const userCommunities = memberships.map((m) => ({
       ...m.community,
       role: m.role,
       order: m.order,
       memberCount: m.community._count.memberships,
       spaceCount: m.community._count.spaces,
     }));
+
+    // Also include public communities the user hasn't joined
+    const myIds = new Set(memberships.map(m => m.communityId));
+    const publicCommunities = await fastify.prisma.community.findMany({
+      where: { isPublic: true, id: { notIn: Array.from(myIds) } },
+      include: { _count: { select: { memberships: true, spaces: true } } },
+      orderBy: { name: 'asc' },
+    });
+
+    const publicMapped = publicCommunities.map(c => ({
+      ...c,
+      role: null,
+      order: 999,
+      memberCount: c._count.memberships,
+      spaceCount: c._count.spaces,
+    }));
+
+    return [...userCommunities, ...publicMapped];
   });
 
   // Reorder user's communities

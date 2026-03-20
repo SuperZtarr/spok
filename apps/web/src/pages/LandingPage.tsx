@@ -8,9 +8,6 @@ import {
 } from 'lucide-react';
 import { communitiesApi } from '../lib/api';
 import { useMenuItems } from '../hooks/useMenuItems';
-import { PublicHeader } from '../components/PublicHeader';
-import { PublicFooter } from '../components/PublicFooter';
-import { HelpBubble } from '../components/PublicPageLayout';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
@@ -92,19 +89,17 @@ export function LandingPage() {
   const views = allItems.filter(v => v.viewMode && v.visible).sort((a, b) => a.order - b.order);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <PublicHeader />
-
+    <div className="flex-1 overflow-auto bg-background text-foreground">
       {/* Hero */}
-      <section className="mx-auto max-w-5xl px-4 py-20 text-center">
-        <img src="/logo.png" alt="SPOK" className="mx-auto mb-6 h-40 w-auto sm:h-56" />
-        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+      <section className="mx-auto max-w-5xl px-4 -mt-4 text-center">
+        <img src="/logo.png" alt="SPOK" className="mx-auto -mb-16 h-72 w-auto sm:h-96" />
+        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl leading-none">
           SPOK
         </h1>
-        <p className="mt-2 text-xl font-medium tracking-wide text-muted-foreground sm:text-2xl">
+        <p className="-mt-1 text-xl font-medium tracking-wide text-muted-foreground sm:text-2xl">
           Single Point Of Knowledge
         </p>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+        <p className="mx-auto mt-0.5 max-w-2xl text-lg text-muted-foreground">
           L'outil collaboratif pour structurer vos projets, relier vos idées
           et les explorer sous {views.length} vues différentes.
         </p>
@@ -240,8 +235,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      <HelpBubble />
-      <PublicFooter />
     </div>
   );
 }

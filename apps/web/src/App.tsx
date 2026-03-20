@@ -7,7 +7,6 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { InvitationPage } from './pages/InvitationPage';
-import { LandingPage } from './pages/LandingPage';
 // DashboardPage now accessed via SpacesListPage
 import { SpacePage } from './pages/SpacePage';
 import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
@@ -28,6 +27,7 @@ import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { MenuConfigPage } from './pages/admin/MenuConfigPage';
+import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
 import { HomePage } from './pages/HomePage';
@@ -38,24 +38,11 @@ import { GraphPage } from './pages/GraphPage';
 import { SunburstPage } from './pages/SunburstPage';
 import { MindMapPage } from './pages/MindMapPage';
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-}
-
 function HomeRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
 
   if (!isAuthenticated) {
-    // Root → landing page
-    if (location.pathname === '/') return <LandingPage />;
-
     // Protected paths → redirect to login
     if (location.pathname === '/tasks' ||
         location.pathname.includes('/settings') ||
@@ -63,7 +50,12 @@ function HomeRoute() {
       return <Navigate to="/login" replace />;
     }
 
-    // Public paths (communities, spaces) → Layout in anonymous mode
+    // All other paths (including /) → Layout in anonymous mode (no sidebar on auth pages)
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (isAuthenticated && ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)) {
+    return <Navigate to="/" replace />;
   }
 
   return <Layout />;
@@ -143,45 +135,17 @@ export default function App() {
     <DevPageName />
     <Routes>
       <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <RegisterPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/forgot-password"
-        element={
-          <PublicRoute>
-            <ForgotPasswordPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/reset-password"
-        element={
-          <PublicRoute>
-            <ResetPasswordPage />
-          </PublicRoute>
-        }
-      />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/invitation" element={<InvitationPage />} />
-      <Route path="/sitemap" element={<SitemapPage />} />
-      <Route
         path="/"
         element={<HomeRoute />}
       >
         <Route index element={<HomePage />} />
+        <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
+        <Route path="verify-email" element={<VerifyEmailPage />} />
+        <Route path="invitation" element={<InvitationPage />} />
+        <Route path="sitemap" element={<SitemapPage />} />
         <Route path="communities" element={<CommunitiesListPage />} />
         <Route path="spaces" element={<SpacesListPage />} />
         <Route path="dashboard" element={<DashboardViewPage />} />
@@ -206,6 +170,7 @@ export default function App() {
         <Route path="admin/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
         <Route path="admin/views" element={<AdminRoute><ViewsConfigPage /></AdminRoute>} />
         <Route path="admin/menu" element={<AdminRoute><MenuConfigPage /></AdminRoute>} />
+        <Route path="admin/api-doc" element={<AdminRoute><ApiDocPage /></AdminRoute>} />
       </Route>
     </Routes>
   </>
