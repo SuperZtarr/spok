@@ -5,12 +5,63 @@ import { spacesApi, itemsApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { SpaceWithRole } from '@spok/shared';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface LinkItem {
   id: string;
   title: string;
   url: string | null;
   description: string | null;
   spaceId: string;
+}
+
+interface UrlMeta {
+  title: string | null;
+  description: string | null;
+  favicon: string | null;
+}
+
+function LinkTag({ link }: { link: LinkItem }) {
+  const { data: meta } = useQuery<UrlMeta>({
+    queryKey: ['url-meta', link.url],
+    queryFn: async () => {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_URL}/url-meta?url=${encodeURIComponent(link.url!)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return { title: null, description: null, favicon: null };
+      return res.json();
+    },
+    enabled: !!link.url,
+    staleTime: 24 * 60 * 60 * 1000, // 24h cache
+    retry: false,
+  });
+
+  const displayTitle = link.title || meta?.title || link.url;
+  const tooltip = [meta?.description || link.description, link.url].filter(Boolean).join('\n');
+  const faviconUrl = meta?.favicon;
+
+  return (
+    <a
+      href={link.url || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-full hover:bg-accent hover:border-primary/30 transition-colors group shadow-sm"
+      title={tooltip}
+    >
+      {faviconUrl ? (
+        <img
+          src={faviconUrl}
+          alt=""
+          className="w-6 h-6 rounded flex-shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      ) : (
+        <ExternalLink className="w-5 h-5 text-primary flex-shrink-0" />
+      )}
+      <span className="truncate max-w-[250px]">{displayTitle}</span>
+    </a>
+  );
 }
 
 export function LinksPage() {
@@ -141,39 +192,21 @@ export function LinksPage() {
                 {/* Spaces within community */}
                 <div className="space-y-4">
                   {group.spaces.map(({ space, links }) => (
-                    <div key={space.id} className="bg-card border border-border rounded-lg">
+                    <div key={space.id}>
                       {/* Space header */}
-                      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/30 rounded-t-lg">
+                      <div className="flex items-center gap-2 mb-2">
                         {space.avatarUrl ? (
-                          <img src={space.avatarUrl} alt="" className="w-5 h-5 rounded object-cover" />
+                          <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded object-cover" />
                         ) : (
-                          <FolderOpen className="w-4 h-4 text-muted-foreground" />
+                          <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
                         )}
-                        <span className="text-sm font-medium">{space.name}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{links.length} lien{links.length !== 1 ? 's' : ''}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{space.name}</span>
                       </div>
 
-                      {/* Links */}
-                      <div className="divide-y divide-border">
+                      {/* Links as tags with metadata */}
+                      <div className="flex flex-wrap gap-2">
                         {links.map(link => (
-                          <a
-                            key={link.id}
-                            href={link.url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-start gap-3 px-4 py-3 hover:bg-accent/30 transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">{link.title || link.url}</p>
-                              {link.url && link.title && (
-                                <p className="text-xs text-muted-foreground truncate">{link.url}</p>
-                              )}
-                              {link.description && (
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{link.description}</p>
-                              )}
-                            </div>
-                          </a>
+                          <LinkTag key={link.id} link={link} />
                         ))}
                       </div>
                     </div>

@@ -28,6 +28,7 @@ import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
 import { graphRoutes } from './routes/graph.js';
 import { notificationsRoutes } from './routes/notifications.js';
+import { urlMetaRoutes } from './routes/url-meta.js';
 
 const envToLogger = {
   development: {
@@ -226,6 +227,7 @@ async function buildApp() {
   await app.register(userTasksRoutes, { prefix: '/user' });
   await app.register(graphRoutes);
   await app.register(notificationsRoutes, { prefix: '/notifications' });
+  await app.register(urlMetaRoutes);
 
   // Health check
   app.get('/health', async () => {
