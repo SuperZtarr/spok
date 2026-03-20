@@ -143,17 +143,18 @@ export function SpaceOverviewPage() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Header with cover */}
-      <div className="relative">
-        {space?.coverUrl ? (
-          <div className="aspect-[5/1] bg-cover bg-center" style={{ backgroundImage: `url(${space.coverUrl})` }} />
-        ) : (
-          <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5" />
-        )}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16" />
-      </div>
+      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6">
+        {/* Header with cover */}
+        <div className="relative mt-4">
+          {space?.coverUrl ? (
+            <div className="aspect-[5/1] bg-cover bg-center rounded-xl" style={{ backgroundImage: `url(${space.coverUrl})` }} />
+          ) : (
+            <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
+          )}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16 rounded-b-xl" />
+        </div>
 
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 -mt-8 relative z-10">
+      <div className="-mt-8 relative z-10">
         {/* Space info */}
         <div className="flex items-end gap-4 mb-6">
           {space?.avatarUrl ? (
@@ -298,6 +299,7 @@ export function SpaceOverviewPage() {
             <p className="text-sm text-muted-foreground">Aucun membre direct dans cet espace.</p>
           )}
         </div>}
+      </div>
       </div>
     </div>
   );

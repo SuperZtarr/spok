@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Globe, Lock, Crown, User, FolderKanban, FolderOpen, FileText, ChevronDown, ChevronRight, Rocket, LogIn, Plus, ArrowRight } from 'lucide-react';
+import { Users, Globe, Lock, Crown, User, FolderKanban, FolderOpen, FileText, Rocket, LogIn, Plus, ArrowRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
-import type { SpaceWithRole, CommunityWithRole } from '@spok/shared';
+import type { SpaceWithRole } from '@spok/shared';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -129,92 +128,6 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   VIEWER: { label: 'Lecteur', icon: User, color: 'text-muted-foreground' },
 };
 
-function CommunityCard({
-  community,
-  spaces,
-}: {
-  community: CommunityWithRole;
-  spaces: SpaceWithRole[];
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
-  const RoleIcon = config.icon;
-  const rootSpaces = spaces.filter(s => !s.parentId || !spaces.some(p => p.id === s.parentId));
-
-  return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      {/* Community header — clickable to expand */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-left hover:bg-accent/50 transition-colors"
-      >
-        {/* Cover */}
-        {community.coverUrl ? (
-          <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
-        ) : (
-          <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
-        )}
-
-        <div className="relative px-4 pb-3 pt-7">
-          {/* Avatar overlay */}
-          <div className="absolute -top-5 left-4">
-            {community.avatarUrl ? (
-              <img src={community.avatarUrl} alt="" className="w-10 h-10 rounded-xl border-3 border-background object-cover shadow" />
-            ) : (
-              <div className="w-10 h-10 rounded-xl border-3 border-background bg-primary/10 flex items-center justify-center shadow">
-                <Users className="w-4 h-4 text-primary" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="font-semibold truncate">{community.name}</h3>
-              {community.isPublic ? (
-                <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-              ) : (
-                <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <FolderOpen className="w-3.5 h-3.5" />
-                {spaces.length}
-              </span>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <RoleIcon className={`w-3.5 h-3.5 ${config.color}`} />
-                {config.label}
-              </span>
-              {expanded ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-            </div>
-          </div>
-          {community.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{community.description}</p>
-          )}
-        </div>
-      </button>
-
-      {/* Expanded space list */}
-      {expanded && (
-        <div className="border-t border-border bg-muted/30">
-          {rootSpaces.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-4 py-3">Aucun espace dans cette communauté.</p>
-          ) : (
-            <div className="divide-y divide-border">
-              {rootSpaces.map(space => (
-                <SpaceRow key={space.id} space={space} allSpaces={spaces} level={0} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function SpaceRow({
   space,
@@ -259,9 +172,8 @@ export function HomeView() {
   const user = useAuthStore(s => s.user);
 
   const { data: communities, isLoading: loadingCommunities } = useQuery({
-    queryKey: ['communities'],
+    queryKey: ['communities', user?.id || 'public'],
     queryFn: communitiesApi.list,
-    enabled: !!user,
   });
 
   const { data: allSpaces, isLoading: loadingSpaces } = useQuery({
@@ -326,14 +238,58 @@ export function HomeView() {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Mes communautés
             </h2>
-            <div className="space-y-3">
-              {communities.map(community => (
-                <CommunityCard
-                  key={community.id}
-                  community={community}
-                  spaces={spacesByCommunity.get(community.id) || []}
-                />
-              ))}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {communities.map(community => {
+                const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
+                const RoleIcon = config.icon;
+                return (
+                  <Link
+                    key={community.id}
+                    to={`/communities/${community.id}`}
+                    className="border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
+                  >
+                    <div className="relative">
+                      {community.coverUrl ? (
+                        <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
+                      ) : (
+                        <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
+                      )}
+                      <div className="absolute -bottom-4 left-4">
+                        {community.avatarUrl ? (
+                          <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
+                            <Users className="w-5 h-5 text-primary" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="pt-8 px-4 pb-4">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold truncate">{community.name}</p>
+                        {community.isPublic ? (
+                          <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        )}
+                      </div>
+                      {community.description && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          {(spacesByCommunity.get(community.id) || []).length} espace{(spacesByCommunity.get(community.id) || []).length !== 1 ? 's' : ''}
+                        </span>
+                        <span className="flex items-center gap-1 ml-auto">
+                          <RoleIcon className={`w-3.5 h-3.5 ${config.color}`} />
+                          {config.label}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

@@ -52,7 +52,8 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
 
   // ── Section: misc (Divers) ──
   { id: '', key: 'search', label: 'Recherche', icon: 'Search', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: '/search', viewMode: null, order: 0, visible: true, access: 'user' },
-  { id: '', key: 'profile', label: 'Profil', icon: 'User', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: null, viewMode: null, order: 1, visible: true, access: 'user' },
-  { id: '', key: 'sitemap', label: 'Plan du site', icon: 'MapIcon', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: '/sitemap', viewMode: null, order: 2, visible: true, access: 'public' },
-  { id: '', key: 'logout', label: 'Déconnexion', icon: 'LogOut', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: null, viewMode: null, order: 3, visible: true, access: 'user' },
+  { id: '', key: 'contact', label: 'Contact', icon: 'MessageSquare', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: '/contact', viewMode: null, order: 1, visible: true, access: 'public' },
+  { id: '', key: 'profile', label: 'Profil', icon: 'User', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: null, viewMode: null, order: 2, visible: true, access: 'user' },
+  { id: '', key: 'sitemap', label: 'Plan du site', icon: 'MapIcon', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: '/sitemap', viewMode: null, order: 3, visible: true, access: 'public' },
+  { id: '', key: 'logout', label: 'Déconnexion', icon: 'LogOut', section: 'misc', sectionLabel: 'Divers', sectionOrder: 5, route: null, viewMode: null, order: 4, visible: true, access: 'user' },
 ];

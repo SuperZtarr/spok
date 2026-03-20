@@ -17,7 +17,7 @@ export function AdminLayout() {
       if (refreshToken) await authApi.logout(refreshToken);
     } catch { /* ignore */ }
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   useEffect(() => {

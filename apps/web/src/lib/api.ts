@@ -1665,4 +1665,13 @@ export function isConflictError(error: unknown): error is ApiError & { details: 
   return error instanceof ApiError && error.statusCode === 409 && (error.details as any)?.code === 'CONFLICT_DETECTED';
 }
 
+// Contact form
+export const contactApi = {
+  submit: (data: { name: string; email: string; category: string; message: string }) =>
+    fetchApi<{ success: boolean; itemId: string }>('/contact', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
 export { ApiError };

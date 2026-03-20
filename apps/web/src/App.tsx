@@ -28,6 +28,7 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
+import { ContactPage } from './pages/ContactPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
 import { HomePage } from './pages/HomePage';
@@ -154,6 +155,7 @@ export default function App() {
         <Route path="mindmap" element={<MindMapPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
         <Route path="search" element={<SearchPage />} />
+        <Route path="contact" element={<ContactPage />} />
         <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpacePage />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />

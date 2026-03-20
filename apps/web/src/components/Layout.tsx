@@ -774,7 +774,7 @@ export function Layout() {
   ) : visitorSidebarContent;
 
   // Hide sidebar on auth/public pages and landing page (non-authenticated)
-  const noSidebarRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/invitation', '/sitemap'];
+  const noSidebarRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/invitation', '/sitemap', '/contact'];
   const isAuthPage = noSidebarRoutes.includes(location.pathname) || (!user && location.pathname === '/');
 
   return (
