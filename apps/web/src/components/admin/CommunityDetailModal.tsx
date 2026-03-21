@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building2, Users, FolderKanban, Plus, Trash2, Save, UserPlus, Loader2 } from 'lucide-react';
+import { useCtrlS } from '../../hooks/useCtrlS';
 import { adminApi } from '../../lib/api';
 import { groupSpacesByCommunity } from '../../lib/spaceGrouping';
 import { Button } from '../ui/Button';
@@ -169,6 +170,8 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     editDescription !== (community.description || '') ||
     editIsPublic !== community.isPublic
   );
+
+  useCtrlS(!!hasInfoChanges && !updateMutation.isPending, handleSaveInfo);
 
   const handleAddMember = (email: string) => {
     addMemberMutation.mutate({ email, role: selectedMemberRole });

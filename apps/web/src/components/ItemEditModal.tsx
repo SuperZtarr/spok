@@ -20,6 +20,7 @@ import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
+import { useCtrlS } from '../hooks/useCtrlS';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { DrawioEditor } from './ui/DrawioEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
@@ -573,6 +574,8 @@ export function ItemEditModal({
     e.preventDefault();
     doSubmit();
   };
+
+  useCtrlS(hasChanges && !updateMutation.isPending, doSubmit);
 
   // Build parent options excluding current item and its descendants
   const parentOptions = useMemo(() => {

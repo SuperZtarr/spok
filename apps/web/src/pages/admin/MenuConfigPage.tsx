@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, RotateCcw, Loader2, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { adminMenuApi } from '../../lib/api';
+import { useCtrlS } from '../../hooks/useCtrlS';
 import type { MenuItemConfig, MenuAccess } from '@spok/shared';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -55,6 +56,8 @@ export function MenuConfigPage() {
       setHasChanges(false);
     },
   });
+
+  useCtrlS(hasChanges && !saveMutation.isPending, () => saveMutation.mutate());
 
   const resetMutation = useMutation({
     mutationFn: () => adminMenuApi.reset(),

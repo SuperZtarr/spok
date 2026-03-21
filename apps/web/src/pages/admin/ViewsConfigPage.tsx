@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, RotateCcw, Loader2, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { adminConfigApi } from '../../lib/api';
+import { useCtrlS } from '../../hooks/useCtrlS';
 import type { ViewConfigItem, ViewCategoryConfig, ViewAccess, ViewCategory, GlobalPageConfig, GlobalPageGroupConfig, GlobalPageGroup } from '@spok/shared';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -68,6 +69,8 @@ export function ViewsConfigPage() {
       setHasChanges(false);
     },
   });
+
+  useCtrlS(hasChanges && !saveMutation.isPending, () => saveMutation.mutate());
 
   const resetMutation = useMutation({
     mutationFn: async () => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Building2, FolderKanban, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { useCtrlS } from '../../hooks/useCtrlS';
 import { adminApi } from '../../lib/api';
 import { groupSpacesByCommunity } from '../../lib/spaceGrouping';
 import { Button } from '../ui/Button';
@@ -168,6 +169,8 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     editGlobalRole !== user.globalRole ||
     editPassword.length > 0
   );
+
+  useCtrlS(!!hasInfoChanges && !updateMutation.isPending, handleSaveInfo);
 
   const handleAddToCommunity = () => {
     if (selectedCommunityId) {

@@ -8,6 +8,7 @@ import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { usePasteUpload } from '../hooks/usePasteUpload';
+import { useCtrlS } from '../hooks/useCtrlS';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -350,6 +351,8 @@ export function CommunitySettingsPage() {
       updateCommunityMutation.mutate(updates);
     }
   };
+
+  useCtrlS(!!hasInfoChanges && !updateCommunityMutation.isPending, handleSaveInfo);
 
   const handleAddSpace = () => {
     if (selectedSpaceId) {

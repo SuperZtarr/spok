@@ -9,6 +9,7 @@ import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { usePasteUpload } from '../hooks/usePasteUpload';
+import { useCtrlS } from '../hooks/useCtrlS';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
@@ -320,6 +321,8 @@ export function SpaceSettingsPage() {
     (editDefaultRole || null) !== (space.defaultRole || null) ||
     editVisibility !== (space.visibility || 'OPEN')
   );
+
+  useCtrlS(!!hasSpaceInfoChanges && !updateSpaceMutation.isPending, handleSaveSpaceInfo);
 
   const communityOptions = [
     { value: '', label: 'Aucune communauté' },

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, Trash2, Save, Loader2 } from 'lucide-react';
+import { useCtrlS } from '../../hooks/useCtrlS';
 import { adminApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -153,6 +154,8 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
       updateMutation.mutate(data);
     }
   };
+
+  useCtrlS(!!hasInfoChanges && !updateMutation.isPending, handleSaveEdit);
 
   const handleAddMember = (userId: string) => {
     addMemberMutation.mutate({ userId, role: 'MEMBER' });
