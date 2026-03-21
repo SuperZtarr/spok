@@ -199,18 +199,22 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
 
   const cardContent = (
     <Card className={`group transition-colors h-full overflow-hidden ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'} ${isDragOver ? 'ring-2 ring-primary border-primary bg-primary/5' : ''}`}>
-      {space.coverUrl && (
+      {space.coverUrl ? (
         <div className="h-24 overflow-hidden">
           <img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(space as any).coverPosition ?? 50}%` }} />
         </div>
+      ) : (
+        <div className="h-24 bg-gradient-to-r from-primary/10 to-primary/5" />
       )}
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 min-w-0">
             {space.avatarUrl ? (
-              <img src={space.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+              <img src={space.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
             ) : (
-              <FolderKanban className={`w-5 h-5 flex-shrink-0 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <FolderKanban className={`w-4 h-4 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />
+              </div>
             )}
             <CardTitle className="text-lg truncate">{space.name}</CardTitle>
           </div>

@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Globe, Lock, Crown, User, FolderKanban, FolderOpen, FileText, Rocket, LogIn, Plus, ArrowRight } from 'lucide-react';
+import { Users, Globe, Lock, Crown, User, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import type { SpaceWithRole } from '@spok/shared';
+import { SpaceCard } from '../ui/SpaceCard';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -129,44 +130,7 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
 };
 
 
-function SpaceRow({
-  space,
-  allSpaces,
-  level,
-}: {
-  space: SpaceWithRole;
-  allSpaces: SpaceWithRole[];
-  level: number;
-}) {
-  const children = allSpaces.filter(s => s.parentId === space.id);
-  const isMember = !!space.role;
-
-  return (
-    <>
-      <Link
-        to={`/spaces/${space.id}`}
-        className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 transition-colors"
-        style={{ paddingLeft: `${16 + level * 20}px` }}
-      >
-        {space.avatarUrl ? (
-          <img src={space.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-        ) : (
-          <FolderKanban className={`w-4 h-4 flex-shrink-0 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />
-        )}
-        <span className={`text-sm truncate ${isMember ? 'font-medium' : 'text-muted-foreground'}`}>
-          {space.name}
-        </span>
-        <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1 flex-shrink-0">
-          <FileText className="w-3 h-3" />
-          {space.itemCount || 0}
-        </span>
-      </Link>
-      {children.map(child => (
-        <SpaceRow key={child.id} space={child} allSpaces={allSpaces} level={level + 1} />
-      ))}
-    </>
-  );
-}
+// SpaceRow replaced by SpaceCard component
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
@@ -300,9 +264,9 @@ export function HomeView() {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Espaces personnels
             </h2>
-            <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {personalSpaces.map(space => (
-                <SpaceRow key={space.id} space={space} allSpaces={personalSpaces} level={0} />
+                <SpaceCard key={space.id} space={space} />
               ))}
             </div>
           </section>
@@ -314,9 +278,9 @@ export function HomeView() {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Espaces de groupe
             </h2>
-            <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {independentSpaces.map(space => (
-                <SpaceRow key={space.id} space={space} allSpaces={independentSpaces} level={0} />
+                <SpaceCard key={space.id} space={space} />
               ))}
             </div>
           </section>
