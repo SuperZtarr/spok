@@ -11,6 +11,8 @@ export interface Space {
   parentId?: string | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
+  coverPosition?: number;
+  coverZoom?: number;
   defaultRole?: Role | null;
   visibility?: SpaceVisibility;
   createdAt: string;

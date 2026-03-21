@@ -8,6 +8,8 @@ export interface Community {
   pendingPublic: boolean;
   avatarUrl?: string | null;
   coverUrl?: string | null;
+  coverPosition?: number;
+  coverZoom?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,6 +64,8 @@ export interface AdminCommunity {
   pendingPublic: boolean;
   avatarUrl?: string | null;
   coverUrl?: string | null;
+  coverPosition?: number;
+  coverZoom?: number;
   createdAt: string;
   updatedAt: string;
   memberCount: number;

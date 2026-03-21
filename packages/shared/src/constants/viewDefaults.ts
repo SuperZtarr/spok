@@ -3,8 +3,9 @@ import type { ViewConfigItem, ViewCategoryConfig, GlobalPageConfig, GlobalPageGr
 export const DEFAULT_VIEW_CATEGORIES: ViewCategoryConfig[] = [
   { id: 'dashboard', label: 'Tableau de bord', order: 0 },
   { id: 'basic', label: 'Basique', order: 1 },
-  { id: 'planning', label: 'Planification', order: 2 },
-  { id: 'exploration', label: 'Exploration', order: 3 },
+  { id: 'itemTypes', label: 'Types', order: 2 },
+  { id: 'planning', label: 'Planification', order: 3 },
+  { id: 'exploration', label: 'Exploration', order: 4 },
 ];
 
 export const DEFAULT_VIEW_CONFIG: ViewConfigItem[] = [
@@ -31,6 +32,10 @@ export const DEFAULT_VIEW_CONFIG: ViewConfigItem[] = [
   { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2', category: 'basic', order: 20, visible: true, access: 'user' },
   { id: 'heatmap', label: 'Heatmap', icon: 'Grid3x3', category: 'exploration', order: 21, visible: true, access: 'user' },
   { id: 'ego', label: 'Réseau ego', icon: 'Focus', category: 'exploration', order: 22, visible: true, access: 'user' },
+  { id: 'links', label: 'Liens', icon: 'ExternalLink', category: 'itemTypes', order: 23, visible: true, access: 'public' },
+  { id: 'images', label: 'Images', icon: 'Image', category: 'itemTypes', order: 24, visible: true, access: 'public' },
+  { id: 'documents', label: 'Documents', icon: 'FileText', category: 'itemTypes', order: 25, visible: true, access: 'user' },
+  { id: 'bugs', label: 'Bugs', icon: 'Bug', category: 'itemTypes', order: 26, visible: true, access: 'user' },
 ];
 
 export const DEFAULT_GLOBAL_PAGE_GROUPS: GlobalPageGroupConfig[] = [

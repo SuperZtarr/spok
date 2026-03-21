@@ -45,7 +45,7 @@ export async function processAvatar(buffer: Buffer): Promise<Buffer> {
 
 export async function processCover(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
-    .resize(1200, 400, { fit: 'cover', withoutEnlargement: true })
+    .resize(1200, undefined, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();
 }

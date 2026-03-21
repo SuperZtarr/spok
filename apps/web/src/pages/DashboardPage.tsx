@@ -201,7 +201,7 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
     <Card className={`group transition-colors h-full overflow-hidden ${isMember ? 'hover:border-primary/50 cursor-pointer' : 'opacity-75 border-dashed'} ${isDragOver ? 'ring-2 ring-primary border-primary bg-primary/5' : ''}`}>
       {space.coverUrl && (
         <div className="h-24 overflow-hidden">
-          <img src={space.coverUrl} alt="" className="w-full h-full object-cover" />
+          <img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(space as any).coverPosition ?? 50}%` }} />
         </div>
       )}
       <CardHeader>

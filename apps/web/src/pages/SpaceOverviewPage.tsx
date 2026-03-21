@@ -147,7 +147,7 @@ export function SpaceOverviewPage() {
         {/* Header with cover */}
         <div className="relative mt-4">
           {space?.coverUrl ? (
-            <div className="aspect-[5/1] bg-cover bg-center rounded-xl" style={{ backgroundImage: `url(${space.coverUrl})` }} />
+            <div className="aspect-[5/1] rounded-xl overflow-hidden"><img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(space as any).coverPosition ?? 50}%` }} /></div>
           ) : (
             <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
           )}

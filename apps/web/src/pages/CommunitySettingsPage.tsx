@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
+import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -321,6 +322,14 @@ export function CommunitySettingsPage() {
     },
   });
 
+  const updateCoverCropMutation = useMutation({
+    mutationFn: (data: { coverPosition: number; coverZoom: number }) => communitiesApi.update(communityId!, data as any),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+    },
+  });
+
   const handleSaveInfo = () => {
     const updates: { name?: string; description?: string; visibility?: string } = {};
     if (editName !== community?.name) updates.name = editName;
@@ -563,6 +572,16 @@ export function CommunitySettingsPage() {
                   onRemove={() => deleteCoverMutation.mutate()}
                   isUploading={uploadCoverMutation.isPending}
                 />
+                {community.coverUrl && (
+                  <div className="mt-3">
+                    <CoverPositionEditor
+                      coverUrl={community.coverUrl}
+                      position={(community as any).coverPosition ?? 50}
+                      zoom={(community as any).coverZoom ?? 100}
+                      onSave={(pos, zm) => updateCoverCropMutation.mutate({ coverPosition: pos, coverZoom: zm })}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div></RoleGuard>

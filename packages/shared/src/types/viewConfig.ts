@@ -1,5 +1,5 @@
 export type ViewAccess = 'public' | 'user' | 'admin';
-export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
+export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 
 export interface ViewConfigItem {
   id: string;        // matches ViewMode in the frontend

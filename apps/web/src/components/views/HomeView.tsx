@@ -250,7 +250,7 @@ export function HomeView() {
                   >
                     <div className="relative">
                       {community.coverUrl ? (
-                        <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${community.coverUrl})` }} />
+                        <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(community as any).coverPosition ?? 50}%` }} /></div>
                       ) : (
                         <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
                       )}

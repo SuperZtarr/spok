@@ -25,6 +25,7 @@
 - [x] Revoir les tutoriels dynamiques (onboarding, tours guides) — 0cbc6a6 (2026-03-20)
 - [x] Page de contact / support (formulaire vers les admins, demande technique, signalement) — 054ce63 (2026-03-20)
 - [x] Page liens rapides (etiquettes avec favicon et metadonnees) — 182052e (2026-03-20)
+- [x] Vues d'espace Images, Liens, Documents + section Types — e843737 (2026-03-21)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
 - [x] Prod : rendre des communautes publiques + bouton "Decouvrez sans connexion" masque s'il n'y en a aucune — déjà implémenté (LandingPage.tsx)
@@ -47,6 +48,15 @@
 ## Idées (à explorer)
 
 ### Libs & intégrations
+- [ ] fuse.js
+- [ ] Yjs.js
+- [ ] MCP
+- [ ] visx
+- [ ] cmdk
+- [ ] react-admin
+- [ ] Appflowy
+- [ ] Affine
+- [ ] Nocobase
 
 #### Visualisation / diagrammes
 - [ ] Mermaid — texte → diagramme, idéal pour contenu généré

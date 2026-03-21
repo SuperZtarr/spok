@@ -7,6 +7,7 @@ import type { TourStep } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
+import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
@@ -204,6 +205,14 @@ export function SpaceSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+    },
+  });
+
+  const updateCoverCropMutation = useMutation({
+    mutationFn: (data: { coverPosition: number; coverZoom: number }) => spacesApi.update(spaceId!, data as any),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
     },
   });
 
@@ -595,6 +604,16 @@ export function SpaceSettingsPage() {
                   onRemove={() => deleteCoverMutation.mutate()}
                   isUploading={uploadCoverMutation.isPending}
                 />
+                {space?.coverUrl && (
+                  <div className="mt-3">
+                    <CoverPositionEditor
+                      coverUrl={space.coverUrl}
+                      position={(space as any).coverPosition ?? 50}
+                      zoom={(space as any).coverZoom ?? 100}
+                      onSave={(pos, zm) => updateCoverCropMutation.mutate({ coverPosition: pos, coverZoom: zm })}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

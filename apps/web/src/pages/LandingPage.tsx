@@ -135,7 +135,7 @@ export function LandingPage() {
                   {/* Cover + Avatar */}
                   <div className="relative">
                     {c.coverUrl ? (
-                      <div className="aspect-[3/1] bg-cover bg-center" style={{ backgroundImage: `url(${c.coverUrl})` }} />
+                      <div className="aspect-[3/1] overflow-hidden"><img src={c.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(c as any).coverPosition ?? 50}%`, transform: `scale(${((c as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(c as any).coverPosition ?? 50}%` }} /></div>
                     ) : (
                       <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
                     )}
