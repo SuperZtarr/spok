@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, Users, FolderKanban, Plus, Trash2, Save, UserPlus } from 'lucide-react';
+import { Building2, Users, FolderKanban, Plus, Trash2, Save, UserPlus, Loader2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { groupSpacesByCommunity } from '../../lib/spaceGrouping';
 import { Button } from '../ui/Button';
@@ -323,16 +323,15 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
               <div className="text-sm text-muted-foreground">
                 Cree le {new Date(community.createdAt).toLocaleDateString('fr-FR')}
               </div>
-              {hasInfoChanges && (
-                <Button
-                  size="sm"
-                  onClick={handleSaveInfo}
-                  disabled={updateMutation.isPending}
-                >
-                  <Save className="w-4 h-4 mr-1" />
-                  {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                onClick={handleSaveInfo}
+                disabled={!hasInfoChanges || updateMutation.isPending}
+                className={!hasInfoChanges ? 'opacity-40' : ''}
+              >
+                {updateMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                Enregistrer
+              </Button>
             </div>
           </div>
 

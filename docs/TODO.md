@@ -2,7 +2,8 @@
 
 ## À faire
 
-### UX & navigation
+### UX & formulaires
+- [ ] Uniformiser tous les formulaires : edition inline directe (pas de mode lecture/edition), bouton Enregistrer gris→actif→gris, audit des incoherences de structure
 - [ ] Revoir les listes d'espaces (affichage, navigation, cohérence)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)

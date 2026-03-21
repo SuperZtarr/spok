@@ -41,12 +41,18 @@ Après chaque commit :
 
 ---
 
-#### [2026-03-21] - Vues d'espace par type d'item
+#### [2026-03-21] - Vues par type, covers, TipTap, navigation restructuree
 
-- ImagesView (galerie grille + lightbox), LinksView (etiquettes favicon), DocumentsView (cartes fichiers)
-- Nouvelle section menu "Types" (itemTypes) pour regrouper ces vues
-- LinksPage globale supprimee, remplacee par vue d'espace
-- TODO : revoir filtre pages globales, covers repositionnables — e843737
+- Vues d'espace : ImagesView, LinksView, DocumentsView, BugsView + section Types — e843737
+- Covers repositionnables (drag Y + zoom slider) sur communautes et espaces — 34381d8
+- Menu header restructure : separation vues globales / vues espace, nom espace en bleu — 083c74f
+- Couleurs sections menu (bleu espaces, rouge admin, gris divers), acces par defaut revus — e72efaa, f3297cb
+- Extensions TipTap : tableaux, checklists, blocs de code (lowlight), slash commands, citations — 0f31fbd
+- Sidebar : communaute cliquable + surlignee + auto-expand — 0f31fbd
+- Navigation : fusion /spaces/:id et /content, OverviewView comme vue d'espace — 0f31fbd
+- CommunityPage : espaces en cartes avec covers — 0f31fbd
+- Import 640+ images en prod (screenshots + sous-dossiers en sous-espaces)
+- ViewConfig : categorie itemTypes synchronisee avec menuDefaults — 34381d8
 
 #### [2026-03-20] - Refonte header, menu principal, routes individuelles, visiteurs
 

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Trash2, Save } from 'lucide-react';
+import { UserPlus, Trash2, Save, Loader2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -134,6 +134,13 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
     },
   });
 
+  const hasInfoChanges = space && (
+    editName !== space.name ||
+    editType !== space.type ||
+    (editCommunityId || null) !== space.communityId ||
+    (editParentId || null) !== (space.parentId || null)
+  );
+
   const handleSaveEdit = () => {
     const data: { name?: string; type?: 'PERSONAL' | 'GROUP'; communityId?: string | null; parentId?: string | null } = {};
     if (editName !== space?.name) data.name = editName;
@@ -215,9 +222,10 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
                 <Button
                   size="sm"
                   onClick={handleSaveEdit}
-                  disabled={updateMutation.isPending}
+                  disabled={!hasInfoChanges || updateMutation.isPending}
+                  className={!hasInfoChanges ? 'opacity-40' : ''}
                 >
-                  <Save className="w-4 h-4 mr-1" />
+                  {updateMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
                   Enregistrer
                 </Button>
               </div>

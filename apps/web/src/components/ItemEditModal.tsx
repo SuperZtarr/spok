@@ -19,6 +19,7 @@ import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
+import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { DrawioEditor } from './ui/DrawioEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
@@ -451,6 +452,36 @@ export function ItemEditModal({
     setPendingDeleteContributionId(contributionId);
   };
 
+  // Track whether any field has changed from the original item
+  const hasChanges = useMemo(() => {
+    if (!item) return title.trim().length > 0; // creation mode
+    if (type !== item.type) return true;
+    if (title !== item.title) return true;
+    const newDesc = (description && description !== '<p></p>') ? description : null;
+    if (newDesc !== (item.description || null)) return true;
+    if (type === 'DIAGRAM') {
+      const currentXml = (item.content as Record<string, unknown>)?.xml as string || '';
+      if (diagramXml !== currentXml) return true;
+    }
+    if ((url || null) !== (item.url || null)) return true;
+    if ((parentId || null) !== item.parentId) return true;
+    if (status !== (item.status || '')) return true;
+    if (priority !== (item.priority ?? null)) return true;
+    if ((assignedToId || null) !== (item.assignedToId || null)) return true;
+    const newDueDate = dueDate ? new Date(dueDate).toISOString() : null;
+    if (newDueDate !== (item.dueDate ? new Date(item.dueDate).toISOString() : null)) return true;
+    const newStartDate = startDate ? new Date(startDate).toISOString() : null;
+    if (newStartDate !== (item.startDate ? new Date(item.startDate).toISOString() : null)) return true;
+    const newEndDate = endDate ? new Date(endDate).toISOString() : null;
+    if (newEndDate !== (item.endDate ? new Date(item.endDate).toISOString() : null)) return true;
+    const sortedCurrent = [...selectedTagIds].sort();
+    const sortedOriginal = [...originalTagIds].sort();
+    if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) return true;
+    return false;
+  }, [item, type, title, description, diagramXml, url, parentId, status, priority, assignedToId, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
+
+  const { guard: guardClose, ConfirmDialog } = useUnsavedGuard(hasChanges);
+
   const doSubmit = () => {
     if (!item) return;
 
@@ -614,7 +645,7 @@ export function ItemEditModal({
   const contributionCount = item?.contributions?.length || 0;
 
 
-  return (
+  return (<>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -1280,12 +1311,12 @@ export function ItemEditModal({
           {/* Footer — always visible */}
           <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
             {canEdit && (
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={!hasChanges || updateMutation.isPending} className={!hasChanges ? 'opacity-40' : ''}>
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             )}
-            <Button type="button" variant="outline" onClick={onClose}>
-              {canEdit ? 'Annuler' : 'Fermer'}
+            <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
+              {canEdit ? 'Fermer' : 'Fermer'}
             </Button>
             {item && (
               <>
@@ -1389,5 +1420,8 @@ export function ItemEditModal({
         isPending={deleteContributionMutation.isPending}
       />
     </Modal>
+    <UnsavedChangesGuard hasChanges={hasChanges} onConfirmLeave={onClose} />
+    {ConfirmDialog}
+    </>
   );
 }

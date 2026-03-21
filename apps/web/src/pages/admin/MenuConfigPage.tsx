@@ -182,7 +182,7 @@ export function MenuConfigPage() {
         <div className="sticky bottom-4 flex justify-end mt-4">
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="shadow-lg">
             {saveMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-            Enregistrer les modifications
+            Enregistrer
           </Button>
         </div>
       )}

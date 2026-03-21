@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Building2, FolderKanban, Plus, Trash2, Save } from 'lucide-react';
+import { User, Building2, FolderKanban, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { groupSpacesByCommunity } from '../../lib/spaceGrouping';
 import { Button } from '../ui/Button';
@@ -329,16 +329,15 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                   />
                 </div>
               </div>
-              {hasInfoChanges && (
-                <Button
-                  size="sm"
-                  onClick={handleSaveInfo}
-                  disabled={updateMutation.isPending}
-                >
-                  <Save className="w-4 h-4 mr-1" />
-                  {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                onClick={handleSaveInfo}
+                disabled={!hasInfoChanges || updateMutation.isPending}
+                className={!hasInfoChanges ? 'opacity-40' : ''}
+              >
+                {updateMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                Enregistrer
+              </Button>
               {updateMutation.error && (
                 <p className="text-sm text-destructive">{updateMutation.error.message}</p>
               )}

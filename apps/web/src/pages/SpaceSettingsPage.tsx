@@ -511,20 +511,19 @@ export function SpaceSettingsPage() {
                   Contrôle l'accès des membres de la communauté qui ne sont pas explicitement membres de cet espace
                 </p>
               </div>
-              {hasSpaceInfoChanges && (
-                <Button
-                  onClick={handleSaveSpaceInfo}
-                  disabled={updateSpaceMutation.isPending}
-                  size="sm"
-                >
-                  {updateSpaceMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Enregistrer les modifications
-                </Button>
-              )}
+              <Button
+                onClick={handleSaveSpaceInfo}
+                disabled={!hasSpaceInfoChanges || updateSpaceMutation.isPending}
+                className={!hasSpaceInfoChanges ? 'opacity-40' : ''}
+                size="sm"
+              >
+                {updateSpaceMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Enregistrer
+              </Button>
             </div>
           </div>
         )}

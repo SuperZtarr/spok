@@ -330,6 +330,12 @@ export function CommunitySettingsPage() {
     },
   });
 
+  const hasInfoChanges = community && (
+    editName !== community.name ||
+    editDescription !== (community.description || '') ||
+    editVisibility !== ((community as any)?.visibility || (community.isPublic ? 'OPEN' : 'PRIVATE'))
+  );
+
   const handleSaveInfo = () => {
     const updates: { name?: string; description?: string; visibility?: string } = {};
     if (editName !== community?.name) updates.name = editName;
@@ -463,9 +469,10 @@ export function CommunitySettingsPage() {
                     <Button
                       size="sm"
                       onClick={handleSaveInfo}
-                      disabled={updateCommunityMutation.isPending}
+                      disabled={!hasInfoChanges || updateCommunityMutation.isPending}
+                      className={!hasInfoChanges ? 'opacity-40' : ''}
                     >
-                      <Save className="w-4 h-4 mr-1" />
+                      {updateCommunityMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
                       Enregistrer
                     </Button>
                   </div>
