@@ -22,6 +22,7 @@ const ACCESS_COLORS: Record<MenuAccess, string> = {
 const SECTION_OPTIONS = [
   { value: 'global', label: 'Vues globales' },
   { value: 'basic', label: 'Basique' },
+  { value: 'itemTypes', label: 'Types' },
   { value: 'planning', label: 'Planification' },
   { value: 'exploration', label: 'Exploration' },
   { value: 'admin', label: 'Administration' },
