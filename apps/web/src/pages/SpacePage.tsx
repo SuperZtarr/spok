@@ -59,6 +59,9 @@ import { HeatmapView } from '../components/views/HeatmapView';
 import { EgoNetworkView } from '../components/views/EgoNetworkView';
 import { MembersKanbanView } from '../components/views/MembersKanbanView';
 import { PriorityView } from '../components/views/PriorityView';
+import { ImagesView } from '../components/views/ImagesView';
+import { LinksView } from '../components/views/LinksView';
+import { DocumentsView } from '../components/views/DocumentsView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
@@ -144,7 +147,7 @@ export function SpacePage() {
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents';
   const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
@@ -462,7 +465,7 @@ export function SpacePage() {
         />
 
         {/* Items / Views */}
-        <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -791,6 +794,21 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               referentiels={referentiels}
               canEdit={canEdit}
+            />
+          ) : viewMode === 'documents' ? (
+            <DocumentsView
+              items={filterBySearch(itemsData?.data)}
+              onEdit={setEditingItemId}
+            />
+          ) : viewMode === 'links' ? (
+            <LinksView
+              items={filterBySearch(itemsData?.data)}
+              onEdit={setEditingItemId}
+            />
+          ) : viewMode === 'images' ? (
+            <ImagesView
+              items={filterBySearch(itemsData?.data)}
+              onEdit={setEditingItemId}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">

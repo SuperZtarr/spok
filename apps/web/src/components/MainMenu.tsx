@@ -5,7 +5,7 @@ import {
   List, GitBranch, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Calendar,
   Network, FileText, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Check,
-  Menu as MenuIcon, ChevronDown, Search, User, Shield, LogOut,
+  Menu as MenuIcon, ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image,
   Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 } from 'lucide-react';
 import { useViewModeStore } from '../stores/viewMode';
@@ -21,7 +21,7 @@ const ICONS: Record<string, typeof List> = {
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home,
 };
 const EXTRA_ICONS: Record<string, typeof List> = {
-  Search, User, Shield, LogOut, MapIcon: MapIconLucide,
+  Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image,
   Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 };
 const getIcon = (name: string) => ICONS[name] || EXTRA_ICONS[name] || List;
@@ -132,7 +132,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
   const sections: RenderSection[] = menuSections
     .filter(s => {
       // Show space view sections only when in a space
-      if (['basic', 'planning', 'exploration'].includes(s.id) && !isInSpace) return false;
+      if (['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id) && !isInSpace) return false;
       return true;
     })
     .map(s => ({

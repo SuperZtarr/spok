@@ -220,6 +220,34 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'La colonne "Non assigné" regroupe les items sans responsable',
     ],
   },
+  links: {
+    title: 'Liens',
+    description: 'Affichage des items de type LINK sous forme d\'etiquettes avec favicon et metadonnees.',
+    tips: [
+      'Cliquez sur un lien pour l\'ouvrir dans un nouvel onglet',
+      'Double-cliquez pour editer l\'item',
+      'Le favicon et le titre sont recuperes automatiquement',
+    ],
+  },
+  documents: {
+    title: 'Documents',
+    description: 'Liste des documents attaches a l\'espace avec apercu du type de fichier.',
+    tips: [
+      'Cliquez sur un document pour l\'editer',
+      'Le bouton de telechargement apparait au survol',
+      'Le type de fichier est indique par l\'icone et l\'extension',
+    ],
+  },
+  images: {
+    title: 'Images',
+    description: 'Galerie d\'images de l\'espace. Cliquez pour agrandir, double-cliquez pour editer.',
+    tips: [
+      'Cliquez sur une image pour l\'ouvrir en plein ecran',
+      'Utilisez les fleches gauche/droite pour naviguer',
+      'Double-cliquez pour editer l\'item',
+      'Appuyez sur Echap pour fermer',
+    ],
+  },
 };
 
 import type { DashboardTab } from '../stores/dashboardTab';

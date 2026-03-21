@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -36,6 +36,9 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'crossTable', label: 'Tableau croisé', icon: 'Table2', category: 'basic' },
   { value: 'heatmap', label: 'Heatmap', icon: 'Grid3x3', category: 'exploration' },
   { value: 'ego', label: 'Réseau ego', icon: 'Focus', category: 'exploration' },
+  { value: 'links', label: 'Liens', icon: 'ExternalLink', category: 'basic' },
+  { value: 'images', label: 'Images', icon: 'Image', category: 'basic' },
+  { value: 'documents', label: 'Documents', icon: 'FileText', category: 'basic' },
 ];
 
 interface ViewModeState {

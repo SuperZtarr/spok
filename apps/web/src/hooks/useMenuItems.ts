@@ -43,7 +43,7 @@ export function useMenuItems() {
   const spaceViews = visibleItems.filter(item => item.viewMode);
 
   // Convenience: space view sections (basic, planning, exploration)
-  const spaceViewSections = sections.filter(s => ['basic', 'planning', 'exploration'].includes(s.id));
+  const spaceViewSections = sections.filter(s => ['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id));
 
   // Convenience: global pages (items with route in global section)
   const globalPages = visibleItems.filter(item => item.section === 'global');

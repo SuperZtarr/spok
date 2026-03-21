@@ -29,7 +29,6 @@ import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { ContactPage } from './pages/ContactPage';
-import { LinksPage } from './pages/LinksPage';
 import { BookmarksPage } from './pages/BookmarksPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
@@ -162,7 +161,6 @@ export default function App() {
         <Route path="tasks" element={<GlobalTasksPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />
-        <Route path="links" element={<LinksPage />} />
         <Route path="bookmarks" element={<BookmarksPage />} />
         <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpacePage />} />
