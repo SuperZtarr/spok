@@ -23,6 +23,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'links', label: 'Liens', icon: 'ExternalLink', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 2, route: null, viewMode: 'links', order: 0, visible: true, access: 'public' },
   { id: '', key: 'images', label: 'Images', icon: 'Image', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 2, route: null, viewMode: 'images', order: 1, visible: true, access: 'public' },
   { id: '', key: 'documents', label: 'Documents', icon: 'FileText', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 2, route: null, viewMode: 'documents', order: 2, visible: true, access: 'user' },
+  { id: '', key: 'bugs', label: 'Bugs', icon: 'Bug', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 2, route: null, viewMode: 'bugs', order: 3, visible: true, access: 'user' },
 
   // ── Section: planning (Planification) ──
   { id: '', key: 'kanban', label: 'Kanban', icon: 'Columns3', section: 'planning', sectionLabel: 'Planification', sectionOrder: 3, route: null, viewMode: 'kanban', order: 0, visible: true, access: 'user' },

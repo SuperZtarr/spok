@@ -4,7 +4,7 @@ import {
   List, GitBranch, Columns3, Share2, LayoutGrid,
   GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Table2, Grid3x3, Focus, Check,
   ChevronDown, FolderKanban, CheckSquare, LayoutDashboard, ClipboardList, Flame, Gauge, Home,
-  Eye, Users, ExternalLink, Image,
+  Eye, Users, ExternalLink, Image, Bug,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useViewModeStore, type ViewCategory } from '../stores/viewMode';
@@ -61,6 +61,7 @@ const ICONS: Record<string, typeof List> = {
   Home,
   ExternalLink,
   Image,
+  Bug,
 };
 
 export function ViewModeSelector() {

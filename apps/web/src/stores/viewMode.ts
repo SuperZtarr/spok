@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'bugs';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'planning' | 'exploration';
 
@@ -39,6 +39,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'links', label: 'Liens', icon: 'ExternalLink', category: 'basic' },
   { value: 'images', label: 'Images', icon: 'Image', category: 'basic' },
   { value: 'documents', label: 'Documents', icon: 'FileText', category: 'basic' },
+  { value: 'bugs', label: 'Bugs', icon: 'Bug', category: 'basic' },
 ];
 
 interface ViewModeState {

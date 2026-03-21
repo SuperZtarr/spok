@@ -5,7 +5,7 @@ import {
   List, GitBranch, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Calendar,
   Network, FileText, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Check,
-  Menu as MenuIcon, ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image,
+  Menu as MenuIcon, ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image, Bug,
   Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 } from 'lucide-react';
 import { useViewModeStore } from '../stores/viewMode';
@@ -21,10 +21,19 @@ const ICONS: Record<string, typeof List> = {
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home,
 };
 const EXTRA_ICONS: Record<string, typeof List> = {
-  Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image,
+  Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image, Bug,
   Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 };
 const getIcon = (name: string) => ICONS[name] || EXTRA_ICONS[name] || List;
+
+const SECTION_BG: Record<string, string> = {
+  admin: 'bg-red-100/60 dark:bg-red-950/30',
+  basic: 'bg-blue-100/60 dark:bg-blue-950/30',
+  itemTypes: 'bg-blue-100/60 dark:bg-blue-950/30',
+  planning: 'bg-blue-100/60 dark:bg-blue-950/30',
+  exploration: 'bg-blue-100/60 dark:bg-blue-950/30',
+  misc: 'bg-gray-100/60 dark:bg-gray-900/30',
+};
 
 interface RenderItem {
   id: string;
@@ -54,7 +63,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
   const { sections: menuSections } = useMenuItems();
   const { user, logout, refreshToken } = useAuthStore();
 
-  const isInSpace = /^\/spaces\/[^/]+\//.test(location.pathname);
+  const isInSpace = /^\/spaces\/[^/]+(\/|$)/.test(location.pathname);
 
   // State
   const [openSection, setOpenSection] = useState<string | null>(null);
@@ -249,6 +258,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
         onMouseEnter={() => handleSectionMouseEnter(s.id)}
         className={cn(
           'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap',
+          SECTION_BG[s.id],
           openSection === s.id ? 'bg-accent text-foreground' :
           sectionHasActive(s) ? 'text-primary' : 'text-foreground/70 hover:bg-accent/50'
         )}
@@ -302,7 +312,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
         >
           <div className="absolute top-12 left-2 right-2 max-h-[80vh] overflow-y-auto bg-card border border-border rounded-xl shadow-xl py-1 sm:left-auto sm:right-4 sm:w-72">
             {sections.map((s, i) => (
-              <div key={s.id} className={i > 0 ? 'border-t border-border' : ''}>
+              <div key={s.id} className={`${i > 0 ? 'border-t border-border' : ''} ${SECTION_BG[s.id] || ''}`}>
                 <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{s.label}</p>
                 {s.items.map(item => renderItem(item))}
               </div>
@@ -315,7 +325,7 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
       {openSection && currentSection && createPortal(
         <div
           ref={portalRef}
-          className="fixed z-[9999] w-52 max-h-[70vh] overflow-y-auto bg-card border border-border rounded-lg shadow-xl py-1"
+          className={`fixed z-[9999] w-52 max-h-[70vh] overflow-y-auto border border-border rounded-lg shadow-xl py-1 ${SECTION_BG[openSection] || 'bg-card'}`}
           style={{ top: dropdownPos.top, left: dropdownPos.left }}
         >
           {currentSection.items.map(item => renderItem(item))}

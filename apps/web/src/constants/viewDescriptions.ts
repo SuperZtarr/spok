@@ -229,6 +229,14 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Le favicon et le titre sont recuperes automatiquement',
     ],
   },
+  bugs: {
+    title: 'Bugs',
+    description: 'Liste des bugs de l\'espace, filtree depuis la vue liste.',
+    tips: [
+      'Affiche uniquement les items de type BUG',
+      'Memes fonctionnalites que la vue Liste (tri, actions, statut)',
+    ],
+  },
   documents: {
     title: 'Documents',
     description: 'Liste des documents attaches a l\'espace avec apercu du type de fichier.',

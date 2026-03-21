@@ -19,15 +19,16 @@ const ACCESS_COLORS: Record<MenuAccess, string> = {
   admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 };
 
-const SECTION_OPTIONS = [
-  { value: 'global', label: 'Vues globales' },
-  { value: 'basic', label: 'Basique' },
-  { value: 'itemTypes', label: 'Types' },
-  { value: 'planning', label: 'Planification' },
-  { value: 'exploration', label: 'Exploration' },
-  { value: 'admin', label: 'Administration' },
-  { value: 'misc', label: 'Divers' },
+const SECTION_CONFIG: { value: string; label: string; order: number; color: string }[] = [
+  { value: 'global', label: 'Vues globales', order: 0, color: '' },
+  { value: 'basic', label: 'Basique', order: 1, color: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40' },
+  { value: 'itemTypes', label: 'Types', order: 2, color: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40' },
+  { value: 'planning', label: 'Planification', order: 3, color: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40' },
+  { value: 'exploration', label: 'Exploration', order: 4, color: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40' },
+  { value: 'admin', label: 'Administration', order: 5, color: 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40' },
+  { value: 'misc', label: 'Divers', order: 6, color: 'bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800' },
 ];
+const SECTION_OPTIONS = SECTION_CONFIG.map(s => ({ value: s.value, label: s.label }));
 
 export function MenuConfigPage() {
   const queryClient = useQueryClient();
@@ -118,7 +119,10 @@ export function MenuConfigPage() {
         </div>
         <span className="text-xs font-mono text-muted-foreground w-32 flex-shrink-0 truncate" title={item.key}>{item.key}</span>
         <Input value={item.label} onChange={(e) => updateItem(item.key, { label: e.target.value })} className="text-sm w-40" />
-        <Select value={item.section} onChange={(e) => updateItem(item.key, { section: e.target.value })} options={SECTION_OPTIONS} className="text-sm w-40" />
+        <Select value={item.section} onChange={(e) => {
+          const sec = SECTION_CONFIG.find(s => s.value === e.target.value);
+          if (sec) updateItem(item.key, { section: sec.value, sectionLabel: sec.label, sectionOrder: sec.order });
+        }} options={SECTION_OPTIONS} className="text-sm w-40" />
         <Select
           value={item.access}
           onChange={(e) => updateItem(item.key, { access: e.target.value as MenuAccess })}
@@ -167,7 +171,7 @@ export function MenuConfigPage() {
               {section.label}
               <span className="ml-2 text-muted-foreground/60">({section.items.length})</span>
             </h2>
-            <div className="bg-card border rounded-lg divide-y divide-border">
+            <div className={`border rounded-lg divide-y divide-border ${SECTION_CONFIG.find(s => s.value === sectionId)?.color || 'bg-card'}`}>
               {section.items.sort((a, b) => a.order - b.order).map(item => renderRow(item))}
             </div>
           </div>
