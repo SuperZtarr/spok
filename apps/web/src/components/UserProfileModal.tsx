@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
 import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell, RotateCcw } from 'lucide-react';
 import { communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
+import { usePasteUpload } from '../hooks/usePasteUpload';
 import type { AuthUser, NotificationType, NotificationChannel } from '@spok/shared';
 import { useThemeStore } from '../stores/theme';
 
@@ -54,10 +55,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
 
   if (!user) return null;
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadFile = async (file: File) => {
     setError(null);
     setUploading(true);
     try {
@@ -70,6 +68,14 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+  };
+
+  const handlePasteUpload = useCallback((file: File) => uploadFile(file), []); // eslint-disable-line react-hooks/exhaustive-deps
+  usePasteUpload(isOpen, handlePasteUpload);
 
   const handleSaveName = async () => {
     const trimmed = nameValue.trim();

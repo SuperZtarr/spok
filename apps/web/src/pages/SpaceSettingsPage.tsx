@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, Mail, HelpCircle, Play, X } from 'lucide-react';
@@ -8,6 +8,7 @@ import { usePageTourPulse } from '../hooks/useOnboarding';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
+import { usePasteUpload } from '../hooks/usePasteUpload';
 import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
@@ -189,6 +190,9 @@ export function SpaceSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
+
+  const handlePasteAvatar = useCallback((file: File) => uploadAvatarMutation.mutate(file), []); // eslint-disable-line react-hooks/exhaustive-deps
+  usePasteUpload(true, handlePasteAvatar);
 
   const uploadCoverMutation = useMutation({
     mutationFn: (file: File) => spacesApi.uploadCover(spaceId!, file),

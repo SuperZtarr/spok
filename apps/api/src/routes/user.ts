@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';
-import sharp from 'sharp';
+import { processAvatar, uploadEntityImage, isR2Configured, deleteFileFromR2 } from '../utils/r2.js';
 import { generateTokens, sendVerificationEmail } from './auth.js';
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -171,14 +171,21 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
     }
 
-    // Resize and convert to webp
-    const processed = await sharp(buffer)
-      .resize(256, 256, { fit: 'cover' })
-      .webp({ quality: 80 })
-      .toBuffer();
+    const processed = await processAvatar(buffer);
 
-    // Store as data URI in DB (no filesystem dependency)
-    const avatarUrl = `data:image/webp;base64,${processed.toString('base64')}`;
+    // Delete old avatar from R2 if exists
+    const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { avatarUrl: true } });
+    if (currentUser?.avatarUrl?.startsWith('http')) {
+      await deleteFileFromR2(currentUser.avatarUrl).catch(() => {});
+    }
+
+    let avatarUrl: string;
+    if (isR2Configured()) {
+      avatarUrl = await uploadEntityImage(processed, `users/${request.user.userId}/avatar`);
+    } else {
+      avatarUrl = `data:image/webp;base64,${processed.toString('base64')}`;
+    }
+
     const user = await fastify.prisma.user.update({
       where: { id: request.user.userId },
       data: { avatarUrl },
@@ -190,6 +197,11 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
 
   // DELETE /user/avatar — remove avatar
   fastify.delete('/avatar', { preHandler: [fastify.authenticate] }, async (request) => {
+    const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { avatarUrl: true } });
+    if (currentUser?.avatarUrl?.startsWith('http')) {
+      await deleteFileFromR2(currentUser.avatarUrl).catch(() => {});
+    }
+
     await fastify.prisma.user.update({
       where: { id: request.user.userId },
       data: { avatarUrl: null },

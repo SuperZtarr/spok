@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play } from 'lucide-react';
@@ -7,6 +7,7 @@ import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
+import { usePasteUpload } from '../hooks/usePasteUpload';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -305,6 +306,9 @@ export function CommunitySettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
     },
   });
+
+  const handlePasteAvatar = useCallback((file: File) => uploadAvatarMutation.mutate(file), []); // eslint-disable-line react-hooks/exhaustive-deps
+  usePasteUpload(true, handlePasteAvatar);
 
   const uploadCoverMutation = useMutation({
     mutationFn: (file: File) => communitiesApi.uploadCover(communityId!, file),
