@@ -54,9 +54,11 @@ type LayoutMode = 'hamburger' | 'dropdowns' | 'expanded';
 
 interface MainMenuProps {
   onOpenProfile: () => void;
+  currentSpaceId?: string | null;
+  currentSpaceName?: string | null;
 }
 
-export function MainMenu({ onOpenProfile }: MainMenuProps) {
+export function MainMenu({ onOpenProfile, currentSpaceId, currentSpaceName }: MainMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode, setMode } = useViewModeStore();
@@ -138,10 +140,11 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
   };
 
   // Build render sections from menu data
-  const sections: RenderSection[] = menuSections
+  const SPACE_SECTION_IDS = ['basic', 'itemTypes', 'planning', 'exploration'];
+
+  const allSections: RenderSection[] = menuSections
     .filter(s => {
-      // Show space view sections only when in a space
-      if (['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id) && !isInSpace) return false;
+      if (SPACE_SECTION_IDS.includes(s.id) && !isInSpace) return false;
       return true;
     })
     .map(s => ({
@@ -157,6 +160,10 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
       })),
     }))
     .filter(s => s.items.length > 0);
+
+  const globalSections = allSections.filter(s => !SPACE_SECTION_IDS.includes(s.id));
+  const spaceSections = allSections.filter(s => SPACE_SECTION_IDS.includes(s.id));
+  const sections = allSections;
 
   // Measure and decide layout
   const sectionKey = sections.map(s => `${s.id}:${s.items.map(i => i.label).join(',')}`).join('|');
@@ -293,14 +300,38 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
       )}
 
       {layoutMode === 'dropdowns' && (
-        <nav className="flex items-end gap-1">
-          {sections.map(s => renderSectionDropdown(s))}
+        <nav className="flex items-center gap-1">
+          {globalSections.map(s => renderSectionDropdown(s))}
+          {spaceSections.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <button
+                onClick={() => { closeAll(); navigate(`/spaces/${currentSpaceId}`); }}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100/60 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 whitespace-nowrap"
+              >
+                {currentSpaceName || 'Espace'}
+              </button>
+              {spaceSections.map(s => renderSectionDropdown(s))}
+            </>
+          )}
         </nav>
       )}
 
       {layoutMode === 'expanded' && (
-        <nav className="flex items-end gap-2">
-          {sections.map(s => s.expandable ? renderSectionExpanded(s) : renderSectionDropdown(s))}
+        <nav className="flex items-center gap-2">
+          {globalSections.map(s => s.expandable ? renderSectionExpanded(s) : renderSectionDropdown(s))}
+          {spaceSections.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <button
+                onClick={() => { closeAll(); navigate(`/spaces/${currentSpaceId}`); }}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100/60 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 whitespace-nowrap"
+              >
+                {currentSpaceName || 'Espace'}
+              </button>
+              {spaceSections.map(s => renderSectionDropdown(s))}
+            </>
+          )}
         </nav>
       )}
 
@@ -311,8 +342,27 @@ export function MainMenu({ onOpenProfile }: MainMenuProps) {
           onClick={(e) => { if (e.target === e.currentTarget) closeAll(); }}
         >
           <div className="absolute top-12 left-2 right-2 max-h-[80vh] overflow-y-auto bg-card border border-border rounded-xl shadow-xl py-1 sm:left-auto sm:right-4 sm:w-72">
-            {sections.map((s, i) => (
+            {globalSections.map((s, i) => (
               <div key={s.id} className={`${i > 0 ? 'border-t border-border' : ''} ${SECTION_BG[s.id] || ''}`}>
+                <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{s.label}</p>
+                {s.items.map(item => renderItem(item))}
+              </div>
+            ))}
+            {spaceSections.length > 0 && (
+              <>
+                <div className="border-t-2 border-blue-300 dark:border-blue-800" />
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 px-3 py-1.5">
+                  <button
+                    onClick={() => { closeAll(); navigate(`/spaces/${currentSpaceId}`); }}
+                    className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider"
+                  >
+                    {currentSpaceName || 'Espace'}
+                  </button>
+                </div>
+              </>
+            )}
+            {spaceSections.map((s) => (
+              <div key={s.id} className={`border-t border-border ${SECTION_BG[s.id] || ''}`}>
                 <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{s.label}</p>
                 {s.items.map(item => renderItem(item))}
               </div>

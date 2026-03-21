@@ -852,7 +852,7 @@ export function Layout() {
           </div>
           {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
-            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} />
+            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceId={currentSpaceId} currentSpaceName={currentSpace?.name || null} />
             <div id="header-global-search"><GlobalSearch /></div>
             {user ? (
               <>
