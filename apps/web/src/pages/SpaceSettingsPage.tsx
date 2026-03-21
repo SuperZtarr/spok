@@ -470,7 +470,16 @@ export function SpaceSettingsPage() {
                 <label className="block text-sm font-medium mb-1">Communauté</label>
                 <Select
                   value={editCommunityId}
-                  onChange={(e) => setEditCommunityId(e.target.value)}
+                  onChange={(e) => {
+                    setEditCommunityId(e.target.value);
+                    // Reset parent si le parent actuel n'est pas dans la nouvelle communauté
+                    if (editParentId) {
+                      const parentSpace = allSpaces?.find((s: any) => s.id === editParentId);
+                      if (parentSpace && parentSpace.communityId !== (e.target.value || null)) {
+                        setEditParentId('');
+                      }
+                    }
+                  }}
                   options={communityOptions}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
