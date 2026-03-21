@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { healthApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
-import { Bug, AlertCircle } from 'lucide-react';
+import { Bug, AlertCircle, Shield } from 'lucide-react';
 
 type DbStatus = 'checking' | 'connected' | 'disconnected' | 'api_error' | 'wrong_server' | 'network_error';
 
@@ -12,6 +12,52 @@ interface StatusInfo {
 }
 
 const DEV_MODE_KEY = 'spok-dev-mode';
+const ADMIN_MODE_KEY = 'spok-admin-mode';
+
+export function AdminModeToggle() {
+  const [adminModeEnabled, setAdminModeEnabled] = useState(() => {
+    return localStorage.getItem(ADMIN_MODE_KEY) === 'true';
+  });
+
+  const toggleAdminMode = () => {
+    const newValue = !adminModeEnabled;
+    setAdminModeEnabled(newValue);
+    localStorage.setItem(ADMIN_MODE_KEY, String(newValue));
+    window.dispatchEvent(new CustomEvent('spok:adminmode', { detail: newValue }));
+  };
+
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.globalRole === 'ADMIN';
+
+  if (!isAdmin) return null;
+
+  return (
+    <button
+      onClick={toggleAdminMode}
+      className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs w-full transition-colors ${
+        adminModeEnabled
+          ? 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+      }`}
+    >
+      <Shield className="w-4 h-4" />
+      <span>Mode admin {adminModeEnabled ? 'activé' : 'désactivé'}</span>
+    </button>
+  );
+}
+
+export function useAdminMode(): boolean {
+  const [enabled, setEnabled] = useState(() => localStorage.getItem(ADMIN_MODE_KEY) === 'true');
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    const handler = (e: Event) => setEnabled((e as CustomEvent).detail);
+    window.addEventListener('spok:adminmode', handler);
+    return () => window.removeEventListener('spok:adminmode', handler);
+  }, []);
+
+  return enabled && user?.globalRole === 'ADMIN';
+}
 
 export function DevModeToggle() {
   const [devModeEnabled, setDevModeEnabled] = useState(() => {

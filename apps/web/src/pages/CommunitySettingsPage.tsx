@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
@@ -15,6 +15,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
+import { CommunityDeleteConfirmModal } from '../components/CommunityDeleteConfirmModal';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
 import { RoleGuard } from '../components/RoleGuard';
@@ -188,7 +189,9 @@ export function CommunitySettingsPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members' | 'emails'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', COMMUNITY_SETTINGS_TOUR);
 
   // Fetch community details
@@ -287,6 +290,33 @@ export function CommunitySettingsPage() {
       setShowCreateSpace(false);
       setNewSpaceName('');
     },
+  });
+
+  // Delete community
+  const deleteCommunityMutation = useMutation({
+    mutationFn: (deleteChildren: boolean) => communitiesApi.delete(communityId!, deleteChildren),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      navigate('/');
+    },
+  });
+
+  // Transfer ownership
+  const transferOwnershipMutation = useMutation({
+    mutationFn: (targetMemberId: string) => communitiesApi.transferOwnership(communityId!, targetMemberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      setTransferTargetId('');
+    },
+  });
+
+  // Fetch members for transfer selector
+  const { data: communityMembers } = useQuery({
+    queryKey: ['community-members', communityId],
+    queryFn: () => communitiesApi.getMembers(communityId!),
+    enabled: !!communityId && !!user,
   });
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -409,6 +439,7 @@ export function CommunitySettingsPage() {
             { id: 'spaces', label: `Espaces (${communitySpaces.length})` },
             { id: 'members', label: `Membres (${community.memberCount || 0})` },
             ...(canEdit ? [{ id: 'emails' as const, label: 'Emails' }] : []),
+            ...(canEdit ? [{ id: 'danger' as const, label: 'Danger' }] : []),
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -739,6 +770,96 @@ export function CommunitySettingsPage() {
         {/* === EMAILS TAB === */}
         {activeTab === 'emails' && user && communityId && (
           <CommunityEmailsSection communityId={communityId} />
+        )}
+
+        {/* === DANGER TAB === */}
+        {activeTab === 'danger' && canEdit && (
+          <div className="space-y-6">
+            {/* Transfer ownership */}
+            <div className="border border-border rounded-lg p-6">
+              <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <ArrowRightLeft className="w-5 h-5" />
+                Transférer la propriété
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Transférez la propriété de cette communauté à un autre membre. Vous deviendrez simple membre.
+              </p>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">Nouveau propriétaire</label>
+                  <Select
+                    value={transferTargetId}
+                    onChange={(e) => setTransferTargetId(e.target.value)}
+                    options={[
+                      { value: '', label: 'Sélectionner un membre...' },
+                      ...(communityMembers?.filter(m => m.userId !== user?.id).map(m => ({
+                        value: m.id,
+                        label: `${m.name} (${m.email})`,
+                      })) || []),
+                    ]}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (transferTargetId && confirm('Êtes-vous sûr de vouloir transférer la propriété ? Cette action est irréversible.')) {
+                      transferOwnershipMutation.mutate(transferTargetId);
+                    }
+                  }}
+                  disabled={!transferTargetId || transferOwnershipMutation.isPending}
+                >
+                  {transferOwnershipMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <ArrowRightLeft className="w-4 h-4 mr-2" />
+                  )}
+                  Transférer
+                </Button>
+              </div>
+              {transferOwnershipMutation.isSuccess && (
+                <p className="text-sm text-green-600 mt-2">Propriété transférée avec succès.</p>
+              )}
+              {transferOwnershipMutation.isError && (
+                <p className="text-sm text-destructive mt-2">{(transferOwnershipMutation.error as any)?.message || 'Erreur lors du transfert'}</p>
+              )}
+            </div>
+
+            {/* Delete community */}
+            <div className="border border-destructive/30 rounded-lg p-6">
+              <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+                Supprimer la communauté
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                La suppression est irréversible. Tous les membres perdront leur accès. Les espaces peuvent être conservés ou supprimés.
+              </p>
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteModal(true)}
+                disabled={deleteCommunityMutation.isPending}
+              >
+                {deleteCommunityMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Supprimer cette communauté
+              </Button>
+            </div>
+
+            <CommunityDeleteConfirmModal
+              isOpen={showDeleteModal}
+              onClose={() => setShowDeleteModal(false)}
+              onConfirm={(deleteChildren) => {
+                setShowDeleteModal(false);
+                deleteCommunityMutation.mutate(deleteChildren);
+              }}
+              communityId={communityId!}
+              communityName={community.name}
+              isPending={deleteCommunityMutation.isPending}
+            />
+          </div>
         )}
       </div>
     </div>

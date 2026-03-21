@@ -10,7 +10,7 @@ import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi } from '../lib/api';
 
-import { DevModeToggle, DevDbStatus } from './DevDbStatus';
+import { DevModeToggle, AdminModeToggle, DevDbStatus } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
@@ -793,6 +793,7 @@ export function Layout() {
         <span className="text-[10px] text-muted-foreground/50 px-3">
           MEP {new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </span>
+        <AdminModeToggle />
         <DevModeToggle />
         <DevDbStatus />
       </div>
@@ -875,7 +876,7 @@ export function Layout() {
           {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
             <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} />
-            <div id="header-global-search"><GlobalSearch /></div>
+            <div id="header-global-search" className="hidden sm:block"><GlobalSearch /></div>
             {user ? (
               <>
                 <NotificationBell />

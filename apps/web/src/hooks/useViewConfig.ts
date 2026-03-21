@@ -3,9 +3,11 @@ import { configApi } from '../lib/api';
 import { DEFAULT_VIEW_CONFIG, DEFAULT_VIEW_CATEGORIES } from '@spok/shared';
 import type { ViewAccess } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
+import { useAdminMode } from '../components/DevDbStatus';
 
 export function useViewConfig() {
   const user = useAuthStore(s => s.user);
+  const adminMode = useAdminMode();
 
   const { data } = useQuery({
     queryKey: ['view-config'],
@@ -17,8 +19,8 @@ export function useViewConfig() {
   const allViews = data?.views || DEFAULT_VIEW_CONFIG;
   const categories = data?.categories || DEFAULT_VIEW_CATEGORIES;
 
-  // Filter views based on user access level
-  const userAccess: ViewAccess = user?.globalRole === 'ADMIN' ? 'admin' : user ? 'user' : 'public';
+  // Filter views based on user access level — admin views only when admin mode is active
+  const userAccess: ViewAccess = adminMode ? 'admin' : user ? 'user' : 'public';
   const accessOrder: Record<ViewAccess, number> = { public: 0, user: 1, admin: 2 };
 
   const views = allViews

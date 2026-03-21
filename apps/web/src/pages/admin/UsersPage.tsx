@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download, Ban, CheckCircle } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -105,6 +105,20 @@ export function UsersPage() {
     },
   });
 
+  const disableMutation = useMutation({
+    mutationFn: (id: string) => adminApi.users.disable(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+
+  const enableMutation = useMutation({
+    mutationFn: (id: string) => adminApi.users.enable(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+
   const allUsers = useMemo(
     () => sortData(data?.data || [], accessors),
     [data, sortData]
@@ -171,6 +185,12 @@ export function UsersPage() {
                   Admin
                 </Badge>
               )}
+              {(user as any).disabledAt && (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                  <Ban className="w-3 h-3 mr-0.5" />
+                  Inactif
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {user.emailVerified ? (
@@ -196,7 +216,35 @@ export function UsersPage() {
         {formatRelativeDate(user.createdAt)}
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-1">
+          {(user as any).disabledAt ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); enableMutation.mutate(user.id); }}
+              disabled={enableMutation.isPending}
+              title="Réactiver"
+              className="h-7 w-7 p-0"
+            >
+              <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Désactiver le compte de « ${user.name} » ?`)) {
+                  disableMutation.mutate(user.id);
+                }
+              }}
+              disabled={disableMutation.isPending}
+              title="Désactiver"
+              className="h-7 w-7 p-0"
+            >
+              <Ban className="w-3.5 h-3.5 text-orange-500" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

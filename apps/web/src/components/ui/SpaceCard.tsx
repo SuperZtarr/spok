@@ -33,6 +33,8 @@ export function SpaceCard({ space, onClick }: SpaceCardProps) {
       <div className="p-3 flex items-center gap-3">
         {space.avatarUrl ? (
           <img src={space.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+        ) : space.coverUrl ? (
+          <img src={space.coverUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" style={{ objectPosition: 'top right' }} />
         ) : (
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <FolderOpen className="w-4 h-4 text-primary" />

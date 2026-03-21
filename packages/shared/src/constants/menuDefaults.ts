@@ -9,6 +9,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'global-mindmap', label: 'Carte mentale', icon: 'GitBranch', section: 'global', sectionLabel: 'Vues globales', sectionOrder: 0, route: '/mindmap', viewMode: null, order: 4, visible: true, access: 'user' },
   { id: '', key: 'global-graph', label: 'Graphe global', icon: 'Network', section: 'global', sectionLabel: 'Vues globales', sectionOrder: 0, route: '/graph', viewMode: null, order: 5, visible: true, access: 'user' },
   { id: '', key: 'dashboard', label: 'Tableau de bord', icon: 'LayoutDashboard', section: 'global', sectionLabel: 'Vues globales', sectionOrder: 0, route: '/dashboard', viewMode: null, order: 6, visible: true, access: 'user' },
+  { id: '', key: 'global-links', label: 'Liens', icon: 'ExternalLink', section: 'global', sectionLabel: 'Vues globales', sectionOrder: 0, route: '/links', viewMode: null, order: 7, visible: true, access: 'user' },
 
   // ── Section: basic (Basique) ──
   { id: '', key: 'list', label: 'Liste', icon: 'List', section: 'basic', sectionLabel: 'Basique', sectionOrder: 1, route: null, viewMode: 'list', order: 0, visible: true, access: 'public' },

@@ -142,6 +142,8 @@ export function LandingPage() {
                     <div className="absolute -bottom-4 left-4">
                       {c.avatarUrl ? (
                         <img src={c.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                      ) : c.coverUrl ? (
+                        <img src={c.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
                       ) : (
                         <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
                           <Globe className="w-5 h-5 text-primary" />

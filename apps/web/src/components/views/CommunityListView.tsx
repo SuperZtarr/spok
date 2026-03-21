@@ -147,6 +147,8 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                     <div className="absolute -bottom-4 left-4">
                       {community.avatarUrl ? (
                         <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                      ) : community.coverUrl ? (
+                        <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
                       ) : (
                         <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
                           <Users className="w-5 h-5 text-primary" />
@@ -239,6 +241,8 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                     <div className="absolute -bottom-4 left-4">
                       {community.avatarUrl ? (
                         <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+                      ) : community.coverUrl ? (
+                        <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
                       ) : (
                         <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
                           <Users className="w-5 h-5 text-primary" />

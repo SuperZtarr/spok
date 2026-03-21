@@ -133,6 +133,8 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
           <div className="flex items-end gap-4 mb-6">
             {space?.avatarUrl ? (
               <img src={space.avatarUrl} alt="" className="w-16 h-16 rounded-xl border-4 border-background object-cover shadow" />
+            ) : space?.coverUrl ? (
+              <img src={space.coverUrl} alt="" className="w-16 h-16 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
             ) : (
               <div className="w-16 h-16 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
                 <FolderOpen className="w-7 h-7 text-primary" />

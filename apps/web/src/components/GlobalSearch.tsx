@@ -81,7 +81,7 @@ export function GlobalSearch() {
   const noResults = data && data.items.length === 0 && data.contributions.length === 0;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative min-w-0">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
         <input
@@ -94,7 +94,7 @@ export function GlobalSearch() {
             if (debouncedQuery.length >= 2) setIsOpen(true);
           }}
           placeholder="Rechercher..."
-          className="w-36 sm:w-40 md:w-48 lg:w-56 h-8 pl-8 pr-8 text-sm rounded-full bg-muted/40 border-0 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring/50 focus:bg-muted/60 transition-colors"
+          className="w-40 md:w-48 lg:w-56 h-8 pl-8 pr-8 text-sm rounded-full bg-muted/40 border-0 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring/50 focus:bg-muted/60 transition-colors"
         />
         {query && (
           <button

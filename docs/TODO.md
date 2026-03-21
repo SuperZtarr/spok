@@ -3,8 +3,11 @@
 ## À faire
 
 ### UX & formulaires
-- [ ] Uniformiser tous les formulaires : edition inline directe (pas de mode lecture/edition), bouton Enregistrer gris→actif→gris, audit des incoherences de structure
-- [ ] Revoir les listes d'espaces (affichage, navigation, cohérence)
+- [x] Uniformiser boutons Enregistrer (gris/actif), guard sortie, Ctrl+S, Ctrl+V avatars — c720cf6, b789789, a41db60 (2026-03-21)
+- [x] Avatar sur cover : fallback top-right de la cover quand pas d'avatar (2026-03-22)
+- [x] Revoir les listes d'espaces : SpaceCard uniforme, grilles partout, SpacesListPage filtree — fce8e91 (2026-03-21)
+- [x] Transferer des fonctions admin vers la gestion directe : mode admin toggle, onglet Danger communaute/espace, desactivation compte (2026-03-22)
+- [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)

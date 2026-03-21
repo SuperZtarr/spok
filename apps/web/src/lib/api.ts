@@ -383,6 +383,7 @@ export interface GlobalTask {
   assignedToId: string | null;
   parentId: string | null;
   description: string | null;
+  url: string | null;
   spaceName: string;
   createdByName: string;
   assignedToName: string | null;
@@ -1201,6 +1202,16 @@ export const adminApi = {
     delete: (id: string) =>
       fetchApi<{ success: boolean }>(`/admin/users/${id}`, {
         method: 'DELETE',
+      }),
+
+    disable: (id: string) =>
+      fetchApi<{ success: boolean }>(`/admin/users/${id}/disable`, {
+        method: 'POST',
+      }),
+
+    enable: (id: string) =>
+      fetchApi<{ success: boolean }>(`/admin/users/${id}/enable`, {
+        method: 'POST',
       }),
 
     addToCommunity: (userId: string, data: { communityId: string; role: CommunityRole }) =>

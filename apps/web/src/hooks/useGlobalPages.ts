@@ -3,9 +3,11 @@ import { configApi } from '../lib/api';
 import { DEFAULT_GLOBAL_PAGES, DEFAULT_GLOBAL_PAGE_GROUPS } from '@spok/shared';
 import type { ViewAccess } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
+import { useAdminMode } from '../components/DevDbStatus';
 
 export function useGlobalPages() {
   const user = useAuthStore(s => s.user);
+  const adminMode = useAdminMode();
 
   const { data } = useQuery({
     queryKey: ['global-pages-config'],
@@ -17,7 +19,7 @@ export function useGlobalPages() {
   const allPages = data?.pages || DEFAULT_GLOBAL_PAGES;
   const groups = data?.groups || DEFAULT_GLOBAL_PAGE_GROUPS;
 
-  const userAccess: ViewAccess = user?.globalRole === 'ADMIN' ? 'admin' : user ? 'user' : 'public';
+  const userAccess: ViewAccess = adminMode ? 'admin' : user ? 'user' : 'public';
   const accessOrder: Record<ViewAccess, number> = { public: 0, user: 1, admin: 2 };
 
   const pages = allPages

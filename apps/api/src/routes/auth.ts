@@ -116,6 +116,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.unauthorized('Email ou mot de passe incorrect');
     }
 
+    if (user.disabledAt) {
+      return reply.unauthorized('Ce compte a été désactivé. Contactez un administrateur.');
+    }
+
     const validPassword = await compare(body.password, user.passwordHash);
     if (!validPassword) {
       return reply.unauthorized('Email ou mot de passe incorrect');

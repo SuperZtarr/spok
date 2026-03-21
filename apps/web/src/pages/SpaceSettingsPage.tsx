@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, Mail, HelpCircle, Play, X } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, HelpCircle, Play, X, ArrowRightLeft } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import type { TourStep } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
@@ -22,10 +22,8 @@ import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
 import { OrgChartView } from '../components/views/OrgChartView';
-import { SendEmailModal } from '../components/SendEmailModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
-import { RoleGuard } from '../components/RoleGuard';
 
 const SPACE_SETTINGS_TOUR: TourStep[] = [
   {
@@ -162,15 +160,25 @@ export function SpaceSettingsPage() {
   const deleteSpaceMutation = useDeleteSpace();
   const queryClient = useQueryClient();
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [showEmailModal, setShowEmailModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'members' | 'danger'>('general');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('space-settings', SPACE_SETTINGS_TOUR);
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
     queryFn: () => spacesApi.getMembers(spaceId!),
     enabled: !!spaceId && space?.type === 'GROUP',
+  });
+
+  // Transfer ownership
+  const transferOwnershipMutation = useMutation({
+    mutationFn: (targetMemberId: string) => spacesApi.transferOwnership(spaceId!, targetMemberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      setTransferTargetId('');
+    },
   });
 
   // Image mutations
@@ -706,16 +714,6 @@ export function SpaceSettingsPage() {
         {/* === MEMBERS TAB === */}
         {activeTab === 'members' && space?.type === 'GROUP' && user && (
           <div className="bg-card border rounded-lg p-6 space-y-6" data-tour="space-members">
-            <div className="flex items-center justify-between">
-              <div />
-              {space.role === 'OWNER' && spaceMembers && spaceMembers.length > 0 && (
-                <RoleGuard role="OWNER">
-                  <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)}>
-                    <Mail className="w-4 h-4 mr-1.5" />Envoyer un email
-                  </Button>
-                </RoleGuard>
-              )}
-            </div>
             <SpaceMembersManager
               spaceId={spaceId!}
               currentUserRole={space.role || 'MEMBER'}
@@ -733,27 +731,81 @@ export function SpaceSettingsPage() {
 
         {/* === DANGER TAB === */}
         {activeTab === 'danger' && canDelete && (
-          <div className="border border-destructive/30 rounded-lg p-6" data-tour="space-danger">
-            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              Zone de danger
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              La suppression d'un espace est irréversible. Tous les éléments, relations et contributions seront définitivement perdus.
-            </p>
-            <Button
-              variant="outline"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => setShowDeleteModal(true)}
-              disabled={deleteSpaceMutation.isPending}
-            >
-              {deleteSpaceMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
-              Supprimer cet espace
-            </Button>
+          <div className="space-y-6" data-tour="space-danger">
+            {/* Transfer ownership */}
+            {space?.type === 'GROUP' && space.role === 'OWNER' && (
+              <div className="border border-border rounded-lg p-6">
+                <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <ArrowRightLeft className="w-5 h-5" />
+                  Transférer la propriété
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Transférez la propriété de cet espace à un autre membre. Vous deviendrez simple membre.
+                </p>
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Nouveau propriétaire</label>
+                    <Select
+                      value={transferTargetId}
+                      onChange={(e) => setTransferTargetId(e.target.value)}
+                      options={[
+                        { value: '', label: 'Sélectionner un membre...' },
+                        ...(spaceMembers?.filter(m => m.userId !== user?.id).map(m => ({
+                          value: m.id,
+                          label: `${m.name} (${m.email})`,
+                        })) || []),
+                      ]}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (transferTargetId && confirm('Êtes-vous sûr de vouloir transférer la propriété ? Cette action est irréversible.')) {
+                        transferOwnershipMutation.mutate(transferTargetId);
+                      }
+                    }}
+                    disabled={!transferTargetId || transferOwnershipMutation.isPending}
+                  >
+                    {transferOwnershipMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <ArrowRightLeft className="w-4 h-4 mr-2" />
+                    )}
+                    Transférer
+                  </Button>
+                </div>
+                {transferOwnershipMutation.isSuccess && (
+                  <p className="text-sm text-green-600 mt-2">Propriété transférée avec succès.</p>
+                )}
+                {transferOwnershipMutation.isError && (
+                  <p className="text-sm text-destructive mt-2">{(transferOwnershipMutation.error as any)?.message || 'Erreur lors du transfert'}</p>
+                )}
+              </div>
+            )}
+
+            {/* Delete space */}
+            <div className="border border-destructive/30 rounded-lg p-6">
+              <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+                Supprimer l'espace
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                La suppression est irréversible. Tous les éléments, relations et contributions seront définitivement perdus.
+              </p>
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteModal(true)}
+                disabled={deleteSpaceMutation.isPending}
+              >
+                {deleteSpaceMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Supprimer cet espace
+              </Button>
+            </div>
           </div>
         )}
 
@@ -772,15 +824,6 @@ export function SpaceSettingsPage() {
         )}
       </div>
 
-      {/* Email modal */}
-      {space && spaceMembers && (
-        <SendEmailModal
-          isOpen={showEmailModal}
-          onClose={() => setShowEmailModal(false)}
-          members={spaceMembers.map(m => ({ userId: m.userId, name: m.name, email: m.email }))}
-          target={{ type: 'space', id: space.id, name: space.name }}
-        />
-      )}
 
       <ConfirmModal
         isOpen={showResetConfirm}

@@ -47,6 +47,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
           name: true,
           avatarUrl: true,
           globalRole: true,
+          disabledAt: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -276,9 +277,65 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    // Check if user has contributions — if so, must disable instead of delete
+    const contributionCount = await fastify.prisma.contribution.count({ where: { authorId: id } });
+    const itemCount = await fastify.prisma.item.count({ where: { createdById: id } });
+
+    if (contributionCount > 0 || itemCount > 0) {
+      return reply.badRequest(
+        `Ce compte a ${itemCount} item(s) et ${contributionCount} contribution(s). Utilisez la désactivation au lieu de la suppression.`
+      );
+    }
+
     // Delete user (cascade will handle memberships, etc.)
     await fastify.prisma.user.delete({
       where: { id },
+    });
+
+    return { success: true };
+  });
+
+  // POST /admin/users/:id/disable - Disable a user account
+  fastify.post<{ Params: UserParams }>('/:id/disable', async (request, reply) => {
+    const { id } = request.params;
+
+    if (id === request.user.userId) {
+      return reply.badRequest('Cannot disable your own account');
+    }
+
+    const user = await fastify.prisma.user.findUnique({ where: { id } });
+    if (!user) return reply.notFound('User not found');
+    if (user.disabledAt) return reply.badRequest('Account is already disabled');
+
+    // Prevent disabling the last admin
+    if (user.globalRole === 'ADMIN') {
+      const activeAdminCount = await fastify.prisma.user.count({
+        where: { globalRole: 'ADMIN', disabledAt: null },
+      });
+      if (activeAdminCount <= 1) {
+        return reply.badRequest('Cannot disable the last active admin');
+      }
+    }
+
+    await fastify.prisma.user.update({
+      where: { id },
+      data: { disabledAt: new Date() },
+    });
+
+    return { success: true };
+  });
+
+  // POST /admin/users/:id/enable - Re-enable a user account
+  fastify.post<{ Params: UserParams }>('/:id/enable', async (request, reply) => {
+    const { id } = request.params;
+
+    const user = await fastify.prisma.user.findUnique({ where: { id } });
+    if (!user) return reply.notFound('User not found');
+    if (!user.disabledAt) return reply.badRequest('Account is not disabled');
+
+    await fastify.prisma.user.update({
+      where: { id },
+      data: { disabledAt: null },
     });
 
     return { success: true };

@@ -218,6 +218,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
           assignedToId: true,
           parentId: true,
           description: true,
+          url: true,
           space: { select: { id: true, name: true } },
           createdBy: { select: { id: true, name: true } },
           assignedTo: { select: { id: true, name: true } },

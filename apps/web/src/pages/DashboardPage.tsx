@@ -211,6 +211,8 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
           <div className="flex items-center gap-2 min-w-0">
             {space.avatarUrl ? (
               <img src={space.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+            ) : space.coverUrl ? (
+              <img src={space.coverUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" style={{ objectPosition: 'top right' }} />
             ) : (
               <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <FolderKanban className={`w-4 h-4 ${isMember ? 'text-primary' : 'text-muted-foreground'}`} />

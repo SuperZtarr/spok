@@ -101,6 +101,8 @@ export function CommunityPage() {
         <div className="flex items-end gap-4 mb-6">
           {community?.avatarUrl ? (
             <img src={community.avatarUrl} alt="" className="w-16 h-16 rounded-xl border-4 border-background object-cover shadow" />
+          ) : community?.coverUrl ? (
+            <img src={community.coverUrl} alt="" className="w-16 h-16 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
           ) : (
             <div className="w-16 h-16 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
               <Users className="w-7 h-7 text-primary" />

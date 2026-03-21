@@ -15,6 +15,7 @@ import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GlobalTasksPage } from './pages/GlobalTasksPage';
+import { GlobalLinksPage } from './pages/GlobalLinksPage';
 import { Layout } from './components/Layout';
 // AdminLayout removed — admin pages now inside main Layout
 import { AdminRoute } from './components/AdminRoute';
@@ -47,6 +48,7 @@ function HomeRoute() {
   if (!isAuthenticated) {
     // Protected paths → redirect to login
     if (location.pathname === '/tasks' ||
+        location.pathname === '/links' ||
         location.pathname === '/bookmarks' ||
         location.pathname.includes('/settings') ||
         location.pathname.includes('/history')) {
@@ -85,6 +87,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/sunburst$/, 'SunburstPage'],
   [/^\/mindmap$/, 'MindMapPage'],
   [/^\/tasks$/, 'GlobalTasksPage'],
+  [/^\/links$/, 'GlobalLinksPage'],
   [/^\/bookmarks$/, 'BookmarksPage'],
   [/^\/search$/, 'SearchPage'],
   [/^\/spaces\/[^/]+\/content$/, 'SpacePage'],
@@ -165,6 +168,7 @@ export default function App() {
         <Route path="sunburst" element={<SunburstPage />} />
         <Route path="mindmap" element={<MindMapPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
+        <Route path="links" element={<GlobalLinksPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="bookmarks" element={<BookmarksPage />} />
