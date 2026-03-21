@@ -180,7 +180,7 @@ export function SpaceOverviewPage() {
             )}
           </div>
           <div className="flex gap-2 pb-1">
-            <Button variant="default" size="sm" onClick={() => navigate(`/spaces/${spaceId}/content`)}>
+            <Button variant="default" size="sm" onClick={() => navigate(`/spaces/${spaceId}`)}>
               <ExternalLink className="w-4 h-4 mr-1.5" />Ouvrir
             </Button>
             {isAdminOrOwner && (
@@ -229,7 +229,7 @@ export function SpaceOverviewPage() {
                         key={view.key}
                         onClick={() => {
                           useViewModeStore.getState().setMode(view.viewMode as ViewMode);
-                          navigate(`/spaces/${spaceId}/content`);
+                          navigate(`/spaces/${spaceId}`);
                         }}
                         className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 hover:border-primary/30 transition-colors text-left"
                       >

@@ -84,7 +84,7 @@ const SITE_TREE: SiteNode[] = [
       { label: 'Presentation', path: '/spaces/:id', component: 'SpaceOverviewPage', auth: 'authenticated',
         description: 'Apercu de l\'espace : stats, membres, vues disponibles' },
       {
-        label: 'Contenu', path: '/spaces/:id/content', component: 'SpacePage', auth: 'authenticated',
+        label: 'Contenu', path: '/spaces/:id/', component: 'SpacePage', auth: 'authenticated',
         description: 'Espace de travail avec 23 vues disponibles',
         children: [
           { label: 'Liste', component: 'ListView', description: 'Tableau triable, edition inline, drag & drop' },

@@ -41,6 +41,13 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-21] - Vues d'espace par type d'item
+
+- ImagesView (galerie grille + lightbox), LinksView (etiquettes favicon), DocumentsView (cartes fichiers)
+- Nouvelle section menu "Types" (itemTypes) pour regrouper ces vues
+- LinksPage globale supprimee, remplacee par vue d'espace
+- TODO : revoir filtre pages globales, covers repositionnables — e843737
+
 #### [2026-03-20] - Refonte header, menu principal, routes individuelles, visiteurs
 
 - Menu principal restructure : 5 sections (Vues globales, Basique, Planification, Exploration, Administration, Divers)

@@ -381,7 +381,7 @@ export function SpaceSettingsPage() {
             Vous n'avez pas les permissions pour modifier les paramètres de cet espace.
           </p>
           <Link
-            to={`/spaces/${spaceId}/content`}
+            to={`/spaces/${spaceId}`}
             className="text-yellow-700 underline hover:text-yellow-900 mt-2 inline-block"
           >
             Retour à l'espace
@@ -406,7 +406,7 @@ export function SpaceSettingsPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/spaces/${spaceId}/content`)}
+          onClick={() => navigate(`/spaces/${spaceId}`)}
           title="Retour à l'espace"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />

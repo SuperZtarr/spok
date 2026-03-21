@@ -96,7 +96,7 @@ export function CommunitySelector() {
       try {
         const spaces = await spacesApi.list(community.id);
         if (spaces.length > 0) {
-          navigate(`/spaces/${spaces[0].id}/content`);
+          navigate(`/spaces/${spaces[0].id}`);
         }
       } catch {
         // Silently fail — user stays on current page

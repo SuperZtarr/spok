@@ -7,6 +7,14 @@ export interface ViewDescription {
 }
 
 export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
+  overview: {
+    title: 'Presentation',
+    description: 'Vue d\'ensemble de l\'espace : cover, stats, vues disponibles, sous-espaces et membres.',
+    tips: [
+      'Cliquez sur une vue pour y acceder directement',
+      'Les sous-espaces sont affiches avec leur cover',
+    ],
+  },
   list: {
     title: 'Liste',
     description: 'Affichage tabulaire de tous les éléments avec tri et filtrage rapide.',

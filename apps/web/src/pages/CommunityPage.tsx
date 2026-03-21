@@ -1,10 +1,11 @@
 import { useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight, Info } from 'lucide-react';
+import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, ChevronRight } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
+import { useViewModeStore } from '../stores/viewMode';
 import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
 // Types used implicitly via API responses
@@ -17,16 +18,24 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
 function SpaceTreeNode({ node, level }: { node: any; level: number }) {
   return (
     <>
-      <div className="flex items-center gap-1" style={{ marginLeft: `${level * 24}px` }}>
-        <Link
-          to={`/spaces/${node.id}`}
-          className="flex-1 flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-        >
-          {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
+      <Link
+        to={`/spaces/${node.id}`}
+        onClick={() => useViewModeStore.getState().setMode('overview')}
+        className="block rounded-lg border border-border hover:border-primary/30 hover:shadow-md transition-all overflow-hidden"
+        style={{ marginLeft: `${level * 24}px` }}
+      >
+        {node.coverUrl ? (
+          <div className="h-24 overflow-hidden">
+            <img src={node.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${node.coverPosition ?? 50}%`, transform: `scale(${(node.coverZoom ?? 100) / 100})`, transformOrigin: `center ${node.coverPosition ?? 50}%` }} />
+          </div>
+        ) : (
+          <div className="h-24 bg-gradient-to-r from-primary/10 to-primary/5" />
+        )}
+        <div className="p-3 flex items-center gap-3">
           {node.avatarUrl ? (
-            <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
+            <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
           ) : (
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <FolderOpen className="w-4 h-4 text-primary" />
             </div>
           )}
@@ -34,15 +43,9 @@ function SpaceTreeNode({ node, level }: { node: any; level: number }) {
             <p className="text-sm font-medium truncate">{node.name}</p>
             <p className="text-xs text-muted-foreground">{node.itemCount || 0} élément{(node.itemCount || 0) > 1 ? 's' : ''}</p>
           </div>
-        </Link>
-        <Link
-          to={`/spaces/${node.id}`}
-          className="p-2 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
-          title="Présentation de l'espace"
-        >
-          <Info className="w-4 h-4" />
-        </Link>
-      </div>
+          {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
+        </div>
+      </Link>
       {node.children?.map((child: any) => (
         <SpaceTreeNode key={child.id} node={child} level={level + 1} />
       ))}
@@ -160,7 +163,7 @@ export function CommunityPage() {
             Espaces ({spaces?.length || 0})
           </h2>
           {spaceTree.length > 0 ? (
-            <div className="space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {spaceTree.map(node => (
                 <SpaceTreeNode key={node.id} node={node} level={0} />
               ))}

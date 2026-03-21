@@ -71,9 +71,9 @@ export function GlobalSearch() {
     setQuery('');
     setDebouncedQuery('');
     if (itemId) {
-      navigate(`/spaces/${spaceId}/content?item=${itemId}`);
+      navigate(`/spaces/${spaceId}?item=${itemId}`);
     } else {
-      navigate(`/spaces/${spaceId}/content`);
+      navigate(`/spaces/${spaceId}`);
     }
   };
 

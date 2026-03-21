@@ -148,7 +148,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       setConvertingItem(null);
-      navigate(`/spaces/${result.space.id}/content`);
+      navigate(`/spaces/${result.space.id}`);
     },
   });
 

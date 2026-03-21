@@ -55,10 +55,10 @@ function collectDescendantIds(node: SpaceTreeNode): string[] {
 }
 
 function SortableCommunitySection({
-  community, spaceTree, isExpanded, spaceCount, groupIndex,
+  community, spaceTree, isExpanded, spaceCount, groupIndex, isActive,
   onToggleExpand, currentSpaceId, expandedSpaceIds, onToggleSpace, mySpacesEmpty, favoriteIds, onToggleFavorite,
 }: {
-  community: any; spaceTree: any[]; isExpanded: boolean; spaceCount: number; groupIndex: number;
+  community: any; spaceTree: any[]; isExpanded: boolean; spaceCount: number; groupIndex: number; isActive: boolean;
   onToggleExpand: (id: string) => void; currentSpaceId: string | null;
   expandedSpaceIds: Set<string>; onToggleSpace: (id: string) => void;
   mySpacesEmpty: boolean; favoriteIds: Set<string>; onToggleFavorite: (id: string) => void;
@@ -75,19 +75,24 @@ function SortableCommunitySection({
           </div>
           <button
             onClick={() => onToggleExpand(community.id)}
-            className="flex items-center gap-1.5 min-w-0 group"
+            className="p-0.5 rounded hover:bg-accent flex-shrink-0"
           >
             {isExpanded ? (
-              <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
             ) : (
-              <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="w-3 h-3 text-muted-foreground" />
             )}
+          </button>
+          <Link
+            to={`/communities/${community.id}`}
+            className={`flex items-center gap-1.5 min-w-0 group ${isActive ? 'text-primary' : ''}`}
+          >
             {community.avatarUrl ? (
               <img src={community.avatarUrl} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
             ) : (
-              <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
             )}
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate group-hover:text-foreground transition-colors">
+            <span className={`text-xs font-medium uppercase tracking-wider truncate group-hover:text-foreground transition-colors ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
               {community.name}
             </span>
             {!isExpanded && spaceCount > 0 && (
@@ -95,7 +100,7 @@ function SortableCommunitySection({
                 {spaceCount}
               </span>
             )}
-          </button>
+          </Link>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {community.role === 'OWNER' && (
@@ -185,7 +190,7 @@ function SpaceTreeItem({
           <span className="w-4 flex-shrink-0" />
         )}
         <Link
-          to={`/spaces/${node.id}/content`}
+          to={`/spaces/${node.id}`}
           className="flex items-center gap-2 flex-1 min-w-0"
         >
           {node.avatarUrl ? (
@@ -472,6 +477,22 @@ export function Layout() {
     enabled: !!currentSpaceId,
   });
 
+  // Detect current community from URL or from current space
+  const communityMatch = location.pathname.match(/\/communities\/([^/]+)/);
+  const currentCommunityId = communityMatch?.[1] || currentSpace?.communityId || null;
+
+  // Auto-expand community in sidebar when navigating to one of its spaces
+  useEffect(() => {
+    if (currentCommunityId && collapsedCommunityIds.has(currentCommunityId)) {
+      setCollapsedCommunityIds(prev => {
+        const next = new Set(prev);
+        next.delete(currentCommunityId);
+        localStorage.setItem('spok-collapsed-communities', JSON.stringify([...next]));
+        return next;
+      });
+    }
+  }, [currentCommunityId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Track recent spaces in localStorage
   const RECENTS_KEY = 'spok_recent_spaces';
   const MAX_RECENTS = 8;
@@ -613,7 +634,7 @@ export function Layout() {
             {favoriteSpaces.map((space) => (
               <div key={space.id} className="group flex items-center">
                 <Link
-                  to={`/spaces/${space.id}/content`}
+                  to={`/spaces/${space.id}`}
                   className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
                     currentSpaceId === space.id
                       ? 'bg-primary/10 text-primary font-medium'
@@ -649,7 +670,7 @@ export function Layout() {
             {recentSpaces.map((space) => (
               <div key={space.id} className="group flex items-center">
                 <Link
-                  to={`/spaces/${space.id}/content`}
+                  to={`/spaces/${space.id}`}
                   className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
                     currentSpaceId === space.id
                       ? 'bg-primary/10 text-primary font-medium'
@@ -685,7 +706,7 @@ export function Layout() {
               <Link
                 key={space.id}
                 id={i === 0 ? 'sidebar-first-space' : undefined}
-                to={`/spaces/${space.id}/content`}
+                to={`/spaces/${space.id}`}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
                   currentSpaceId === space.id
                     ? 'bg-primary/10 text-primary font-medium'
@@ -715,6 +736,7 @@ export function Layout() {
                   community={community}
                   spaceTree={spaceTree}
                   isExpanded={isExpanded}
+                  isActive={currentCommunityId === community.id}
                   spaceCount={spaceCount}
                   groupIndex={groupIndex}
                   onToggleExpand={toggleCommunityExpand}
@@ -852,7 +874,7 @@ export function Layout() {
           </div>
           {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
-            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceId={currentSpaceId} currentSpaceName={currentSpace?.name || null} />
+            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} />
             <div id="header-global-search"><GlobalSearch /></div>
             {user ? (
               <>

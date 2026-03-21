@@ -198,7 +198,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
         <span className="truncate">{item.title}</span>
         {isPortal && (
           <Link
-            to={`/spaces/${item.spaceId}/content`}
+            to={`/spaces/${item.spaceId}`}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
             title={`Espace : ${portalSpaceName}`}

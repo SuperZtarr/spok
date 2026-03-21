@@ -31,7 +31,7 @@ export function SpaceHistoryPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link to={`/spaces/${spaceId}/content`}>
+          <Link to={`/spaces/${spaceId}`}>
             <Button variant="ghost" size="sm" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Retour à l'espace

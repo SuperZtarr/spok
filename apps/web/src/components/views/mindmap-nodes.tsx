@@ -207,9 +207,9 @@ export function PortalNode({ data }: PortalNodeProps) {
 
   const handleClick = () => {
     if (isChildSpace) {
-      window.location.href = `/spaces/${space.id}/content`;
+      window.location.href = `/spaces/${space.id}`;
     } else {
-      window.open(`/spaces/${space.id}/content`, '_blank');
+      window.open(`/spaces/${space.id}`, '_blank');
     }
   };
 

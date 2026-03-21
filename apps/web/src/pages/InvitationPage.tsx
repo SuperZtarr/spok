@@ -119,7 +119,7 @@ export function InvitationPage() {
     const targetType = invitation.communityId ? 'la communauté' : "l'espace";
     const redirectPath = invitation.communityId
       ? `/communities/${invitation.communityId}`
-      : `/spaces/${invitation.spaceId}/content`;
+      : `/spaces/${invitation.spaceId}`;
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">

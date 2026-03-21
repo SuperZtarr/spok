@@ -226,7 +226,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
             return (
               <div key={`portal-${group.spaceId}`} className="mt-6">
                 <Link
-                  to={`/spaces/${group.spaceId}/content`}
+                  to={`/spaces/${group.spaceId}`}
                   className="flex items-center gap-2 px-3 py-2 rounded-md bg-accent/50 hover:bg-accent transition-colors text-sm font-medium text-muted-foreground mb-2"
                 >
                   <FolderKanban className="w-4 h-4 text-primary" />

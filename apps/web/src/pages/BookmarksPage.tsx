@@ -15,7 +15,7 @@ function SpaceCard({ space, isFavorite, onToggleFavorite }: {
   return (
     <div className="group relative flex items-center gap-3 p-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-accent/50 transition-colors">
       <Link
-        to={`/spaces/${space.id}/content`}
+        to={`/spaces/${space.id}`}
         className="flex-1 min-w-0 flex items-center gap-3"
       >
         <FolderOpen className="w-5 h-5 text-primary flex-shrink-0" />
@@ -44,7 +44,7 @@ function BookmarkedItemCard({ item, onRemove }: {
   return (
     <div className="group flex items-center gap-3 p-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-accent/50 transition-colors">
       <Link
-        to={`/spaces/${item.spaceId || item.space?.id}/content`}
+        to={`/spaces/${item.spaceId || item.space?.id}`}
         className="flex-1 min-w-0 flex items-center gap-3"
       >
         <TypeIcon className="w-5 h-5 text-primary flex-shrink-0" />

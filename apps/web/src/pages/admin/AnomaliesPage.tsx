@@ -100,7 +100,7 @@ function CategoryDetail({ categoryKey }: { categoryKey: string }) {
                   {isSpaceCategory && item.id ? (
                     <Link to="/admin/spaces" className="text-primary hover:text-primary/80"><ExternalLink className="w-3.5 h-3.5 inline" /></Link>
                   ) : item.spaceId ? (
-                    <Link to={`/spaces/${item.spaceId}/content`} className="text-primary hover:text-primary/80"><ExternalLink className="w-3.5 h-3.5 inline" /></Link>
+                    <Link to={`/spaces/${item.spaceId}`} className="text-primary hover:text-primary/80"><ExternalLink className="w-3.5 h-3.5 inline" /></Link>
                   ) : null}
                 </td>
               </tr>

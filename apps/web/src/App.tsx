@@ -9,7 +9,7 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { InvitationPage } from './pages/InvitationPage';
 // DashboardPage now accessed via SpacesListPage
 import { SpacePage } from './pages/SpacePage';
-import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
+import { useParams } from 'react-router-dom';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
@@ -62,6 +62,12 @@ function HomeRoute() {
   }
 
   return <Layout />;
+}
+
+// Redirect /spaces/:id/content → /spaces/:id
+function SpaceContentRedirect() {
+  const { spaceId } = useParams();
+  return <Navigate to={`/spaces/${spaceId}`} replace />;
 }
 
 const PAGE_NAMES: [RegExp, string][] = [
@@ -162,8 +168,8 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="bookmarks" element={<BookmarksPage />} />
-        <Route path="spaces/:spaceId" element={<SpaceOverviewPage />} />
-        <Route path="spaces/:spaceId/content" element={<SpacePage />} />
+        <Route path="spaces/:spaceId" element={<SpacePage />} />
+        <Route path="spaces/:spaceId/content" element={<SpaceContentRedirect />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
         <Route path="communities/:communityId" element={<CommunityPage />} />

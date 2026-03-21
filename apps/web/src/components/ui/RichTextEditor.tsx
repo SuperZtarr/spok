@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
+import { useEditor, EditorContent, ReactRenderer, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Mention from '@tiptap/extension-mention';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TaskList } from '@tiptap/extension-task-list';
+import { TaskItem } from '@tiptap/extension-task-item';
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
+import { common, createLowlight } from 'lowlight';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
 import {
   Bold,
@@ -12,15 +20,23 @@ import {
   Underline as UnderlineIcon,
   Strikethrough,
   Heading2,
+  Heading3,
   List,
   ListOrdered,
+  ListChecks,
   Link as LinkIcon,
   Undo,
   Redo,
   GripHorizontal,
+  Table as TableIcon,
+  Code,
+  Minus,
+  Quote,
 } from 'lucide-react';
 import { MentionList, type MentionItem, type MentionListRef } from './MentionList';
 import { spacesApi } from '../../lib/api';
+
+const lowlight = createLowlight(common);
 
 interface RichTextEditorProps {
   content: string;
@@ -86,6 +102,133 @@ function createSuggestionConfig(
   };
 }
 
+// Slash command menu items
+interface SlashCommandItem {
+  title: string;
+  command: (editor: Editor) => void;
+}
+
+const SLASH_COMMANDS: SlashCommandItem[] = [
+  { title: 'Titre 2', command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+  { title: 'Titre 3', command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+  { title: 'Liste a puces', command: (editor) => editor.chain().focus().toggleBulletList().run() },
+  { title: 'Liste numerotee', command: (editor) => editor.chain().focus().toggleOrderedList().run() },
+  { title: 'Checklist', command: (editor) => editor.chain().focus().toggleTaskList().run() },
+  { title: 'Tableau', command: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+  { title: 'Bloc de code', command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
+  { title: 'Citation', command: (editor) => editor.chain().focus().toggleBlockquote().run() },
+  { title: 'Separateur', command: (editor) => editor.chain().focus().setHorizontalRule().run() },
+];
+
+function SlashCommandList({ items, command, selectedIndex }: {
+  items: SlashCommandItem[];
+  command: (item: SlashCommandItem) => void;
+  selectedIndex: number;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-lg shadow-xl py-1 w-52 max-h-64 overflow-y-auto">
+      {items.map((item, index) => (
+        <button
+          key={item.title}
+          onClick={() => command(item)}
+          className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
+            index === selectedIndex ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent/50'
+          }`}
+        >
+          {item.title}
+        </button>
+      ))}
+      {items.length === 0 && (
+        <p className="px-3 py-2 text-sm text-muted-foreground">Aucune commande</p>
+      )}
+    </div>
+  );
+}
+
+function createSlashCommandSuggestion() {
+  return {
+    char: '/',
+    startOfLine: true,
+    items: ({ query }: { query: string }) => {
+      return SLASH_COMMANDS.filter(item =>
+        item.title.toLowerCase().includes(query.toLowerCase())
+      );
+    },
+    render: () => {
+      let component: ReactRenderer<any> | null = null;
+      let popup: TippyInstance[] | null = null;
+      let selectedIndex = 0;
+
+      return {
+        onStart: (props: any) => {
+          selectedIndex = 0;
+          component = new ReactRenderer(SlashCommandList as any, {
+            props: { ...props, selectedIndex, command: (item: SlashCommandItem) => {
+              item.command(props.editor);
+              popup?.[0]?.hide();
+            }},
+            editor: props.editor,
+          });
+
+          if (!props.clientRect) return;
+
+          popup = tippy('body', {
+            getReferenceClientRect: props.clientRect,
+            appendTo: () => document.body,
+            content: component.element,
+            showOnCreate: true,
+            interactive: true,
+            trigger: 'manual',
+            placement: 'bottom-start',
+          });
+        },
+        onUpdate: (props: any) => {
+          selectedIndex = 0;
+          component?.updateProps({ ...props, selectedIndex, command: (item: SlashCommandItem) => {
+            item.command(props.editor);
+            popup?.[0]?.hide();
+          }});
+          if (popup?.[0] && props.clientRect) {
+            popup[0].setProps({ getReferenceClientRect: props.clientRect });
+          }
+        },
+        onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+          if (event.key === 'Escape') {
+            popup?.[0]?.hide();
+            return true;
+          }
+          if (event.key === 'ArrowDown') {
+            selectedIndex = Math.min(selectedIndex + 1, (component?.props as any)?.items?.length - 1 || 0);
+            component?.updateProps({ ...(component.props as any), selectedIndex });
+            return true;
+          }
+          if (event.key === 'ArrowUp') {
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            component?.updateProps({ ...(component.props as any), selectedIndex });
+            return true;
+          }
+          if (event.key === 'Enter') {
+            const items = (component?.props as any)?.items;
+            if (items?.[selectedIndex]) {
+              items[selectedIndex].command((component?.props as any)?.editor);
+              popup?.[0]?.hide();
+            }
+            return true;
+          }
+          return false;
+        },
+        onExit: () => {
+          popup?.[0]?.destroy();
+          component?.destroy();
+        },
+      };
+    },
+  };
+}
+
+// Slash command extension using Mention mechanism
+const SlashCommand = Mention.extend({ name: 'slashCommand' });
+
 export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems }: RichTextEditorProps) {
   const isUpdatingFromProp = useRef(false);
   const [editorHeight, setEditorHeight] = useState<number | null>(null);
@@ -125,6 +268,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
   const extensions: any[] = [
     StarterKit.configure({
       heading: { levels: [2, 3] },
+      codeBlock: false, // replaced by CodeBlockLowlight
     }),
     Underline,
     Link.configure({
@@ -132,9 +276,23 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
       HTMLAttributes: { class: 'text-primary underline hover:no-underline' },
     }),
     Placeholder.configure({
-      placeholder: placeholder || 'Ajoutez une description...',
+      placeholder: placeholder || 'Ajoutez une description... (tapez / pour les commandes)',
     }),
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableCell,
+    TableHeader,
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    CodeBlockLowlight.configure({ lowlight }),
   ];
+
+  // Slash commands
+  extensions.push(
+    SlashCommand.configure({
+      suggestion: createSlashCommandSuggestion() as any,
+    })
+  );
 
   // @mention extension (users)
   if (spaceId) {
@@ -224,17 +382,21 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
     isActive,
     children,
     title,
+    disabled,
   }: {
     onClick: () => void;
     isActive?: boolean;
     children: React.ReactNode;
     title: string;
+    disabled?: boolean;
   }) => (
     <button
       type="button"
       onClick={onClick}
       title={title}
+      disabled={disabled}
       className={`p-1.5 rounded transition-colors ${
+        disabled ? 'text-muted-foreground/30 cursor-not-allowed' :
         isActive
           ? 'bg-primary/15 text-primary'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -251,6 +413,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
       {/* Toolbar */}
       {editable && (
         <div className="flex items-center gap-0.5 px-2 py-1.5 bg-muted/30 border-b border-input flex-wrap">
+        {/* Text formatting */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
@@ -268,44 +431,95 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           isActive={editor.isActive('underline')}
-          title="Souligné"
+          title="Souligne"
         >
           <UnderlineIcon size={iconSize} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive('strike')}
-          title="Barré"
+          title="Barre"
         >
           <Strikethrough size={iconSize} />
         </ToolbarButton>
 
         <div className="w-px h-5 bg-border mx-1" />
 
+        {/* Headings */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           isActive={editor.isActive('heading', { level: 2 })}
-          title="Titre"
+          title="Titre 2"
         >
           <Heading2 size={iconSize} />
         </ToolbarButton>
         <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          isActive={editor.isActive('heading', { level: 3 })}
+          title="Titre 3"
+        >
+          <Heading3 size={iconSize} />
+        </ToolbarButton>
+
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Lists */}
+        <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
-          title="Liste à puces"
+          title="Liste a puces"
         >
           <List size={iconSize} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
-          title="Liste numérotée"
+          title="Liste numerotee"
         >
           <ListOrdered size={iconSize} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          isActive={editor.isActive('taskList')}
+          title="Checklist"
+        >
+          <ListChecks size={iconSize} />
         </ToolbarButton>
 
         <div className="w-px h-5 bg-border mx-1" />
 
+        {/* Blocks */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          title="Inserer un tableau"
+          disabled={editor.isActive('table')}
+        >
+          <TableIcon size={iconSize} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          isActive={editor.isActive('codeBlock')}
+          title="Bloc de code"
+        >
+          <Code size={iconSize} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive('blockquote')}
+          title="Citation"
+        >
+          <Quote size={iconSize} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          title="Separateur"
+        >
+          <Minus size={iconSize} />
+        </ToolbarButton>
+
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Link */}
         <ToolbarButton
           onClick={toggleLink}
           isActive={editor.isActive('link')}
@@ -316,6 +530,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
 
         <div className="w-px h-5 bg-border mx-1" />
 
+        {/* Undo/Redo */}
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
           title="Annuler"
@@ -324,7 +539,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().redo().run()}
-          title="Rétablir"
+          title="Retablir"
         >
           <Redo size={iconSize} />
         </ToolbarButton>

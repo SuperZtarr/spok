@@ -314,7 +314,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.spaces.map(s => (
-                  <Link key={s.id} to={`/spaces/${s.id}/content`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
+                  <Link key={s.id} to={`/spaces/${s.id}`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <FolderKanban className={`w-5 h-5 flex-shrink-0 ${s.type === 'GROUP' ? 'text-green-500' : 'text-blue-500'}`} />
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-sm"><Highlight text={s.name} query={qParam} /></span>
@@ -338,7 +338,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.items.map(item => (
-                  <Link key={item.id} to={`/spaces/${item.spaceId}/content`} state={{ openItemId: item.id }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
+                  <Link key={item.id} to={`/spaces/${item.spaceId}`} state={{ openItemId: item.id }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>
                       <span className="font-medium text-sm"><Highlight text={item.title} query={qParam} /></span>
@@ -410,7 +410,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.contributions.map(c => (
-                  <Link key={c.id} to={`/spaces/${c.spaceId}/content`} state={{ openItemId: c.itemId }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
+                  <Link key={c.id} to={`/spaces/${c.spaceId}`} state={{ openItemId: c.itemId }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     {c.content && (
                       <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={qParam} /></p>
                     )}

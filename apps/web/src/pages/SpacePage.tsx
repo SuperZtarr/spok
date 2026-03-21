@@ -63,6 +63,7 @@ import { ImagesView } from '../components/views/ImagesView';
 import { LinksView } from '../components/views/LinksView';
 import { DocumentsView } from '../components/views/DocumentsView';
 import { BugsView } from '../components/views/BugsView';
+import { OverviewView } from '../components/views/OverviewView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
@@ -431,6 +432,15 @@ export function SpacePage() {
   }, [filter, createItemMutation]);
 
   // --- Render ---
+  // Overview mode — full page, no toolbar
+  if (viewMode === 'overview') {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <OverviewView spaceId={spaceId!} space={space} />
+      </div>
+    );
+  }
+
   return (
     <div className={`p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full overflow-hidden' : ''}`}>
       <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full' : ''}`}>
@@ -888,7 +898,7 @@ export function SpacePage() {
                   {portalGroups.map((group) => (
                     <div key={`portal-${group.spaceId}`} className="mt-2">
                       <Link
-                        to={`/spaces/${group.spaceId}/content`}
+                        to={`/spaces/${group.spaceId}`}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-accent/50 hover:bg-accent transition-colors text-sm font-medium text-muted-foreground"
                       >
                         <FolderKanban className="w-4 h-4 text-primary" />

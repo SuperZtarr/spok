@@ -54,11 +54,10 @@ type LayoutMode = 'hamburger' | 'dropdowns' | 'expanded';
 
 interface MainMenuProps {
   onOpenProfile: () => void;
-  currentSpaceId?: string | null;
   currentSpaceName?: string | null;
 }
 
-export function MainMenu({ onOpenProfile, currentSpaceId, currentSpaceName }: MainMenuProps) {
+export function MainMenu({ onOpenProfile, currentSpaceName }: MainMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode, setMode } = useViewModeStore();
@@ -306,7 +305,7 @@ export function MainMenu({ onOpenProfile, currentSpaceId, currentSpaceName }: Ma
             <>
               <div className="w-px h-5 bg-border mx-1" />
               <button
-                onClick={() => { closeAll(); navigate(`/spaces/${currentSpaceId}`); }}
+                onClick={() => { closeAll(); setMode('overview' as any); }}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100/60 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 whitespace-nowrap"
               >
                 {currentSpaceName || 'Espace'}
@@ -324,7 +323,7 @@ export function MainMenu({ onOpenProfile, currentSpaceId, currentSpaceName }: Ma
             <>
               <div className="w-px h-5 bg-border mx-1" />
               <button
-                onClick={() => { closeAll(); navigate(`/spaces/${currentSpaceId}`); }}
+                onClick={() => { closeAll(); setMode('overview' as any); }}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100/60 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 whitespace-nowrap"
               >
                 {currentSpaceName || 'Espace'}
@@ -353,7 +352,7 @@ export function MainMenu({ onOpenProfile, currentSpaceId, currentSpaceName }: Ma
                 <div className="border-t-2 border-blue-300 dark:border-blue-800" />
                 <div className="bg-blue-50/50 dark:bg-blue-950/20 px-3 py-1.5">
                   <button
-                    onClick={() => { closeAll(); navigate(`/spaces/${currentSpaceId}`); }}
+                    onClick={() => { closeAll(); setMode('overview' as any); }}
                     className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider"
                   >
                     {currentSpaceName || 'Espace'}

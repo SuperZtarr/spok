@@ -636,7 +636,7 @@ export function ItemEditModal({
                 </>
               )}
               {spaceName && (
-                <Link to={`/spaces/${spaceId}/content`} onClick={onClose} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                <Link to={`/spaces/${spaceId}`} onClick={onClose} className="flex items-center gap-1.5 hover:text-primary transition-colors">
                   <Home className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="font-medium">{spaceName}</span>
                 </Link>

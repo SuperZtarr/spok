@@ -61,6 +61,66 @@
   content: attr(data-placeholder);
 }
 
+/* TipTap table styles */
+.tiptap table {
+  @apply border-collapse w-full my-2;
+}
+.tiptap table td,
+.tiptap table th {
+  @apply border border-border px-3 py-1.5 text-sm align-top min-w-[80px];
+}
+.tiptap table th {
+  @apply bg-muted/50 font-semibold text-left;
+}
+.tiptap table .selectedCell {
+  @apply bg-primary/10;
+}
+
+/* TipTap task list (checklist) */
+.tiptap ul[data-type="taskList"] {
+  @apply list-none pl-0;
+}
+.tiptap ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
+}
+.tiptap ul[data-type="taskList"] li > label {
+  @apply flex-shrink-0 mt-0.5;
+}
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  @apply w-4 h-4 accent-primary cursor-pointer;
+}
+.tiptap ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply line-through text-muted-foreground;
+}
+
+/* TipTap code block with syntax highlighting */
+.tiptap pre {
+  @apply bg-muted/70 dark:bg-muted/30 rounded-lg p-4 my-2 overflow-x-auto text-sm;
+}
+.tiptap pre code {
+  @apply bg-transparent p-0 text-foreground;
+}
+
+/* Lowlight syntax colors */
+.tiptap pre .hljs-comment,
+.tiptap pre .hljs-quote { @apply text-muted-foreground italic; }
+.tiptap pre .hljs-keyword,
+.tiptap pre .hljs-selector-tag { @apply text-purple-600 dark:text-purple-400 font-semibold; }
+.tiptap pre .hljs-string,
+.tiptap pre .hljs-addition { @apply text-green-600 dark:text-green-400; }
+.tiptap pre .hljs-number,
+.tiptap pre .hljs-literal { @apply text-blue-600 dark:text-blue-400; }
+.tiptap pre .hljs-built_in,
+.tiptap pre .hljs-type { @apply text-cyan-600 dark:text-cyan-400; }
+.tiptap pre .hljs-title,
+.tiptap pre .hljs-section { @apply text-orange-600 dark:text-orange-400 font-semibold; }
+.tiptap pre .hljs-attr,
+.tiptap pre .hljs-attribute { @apply text-yellow-600 dark:text-yellow-400; }
+.tiptap pre .hljs-deletion { @apply text-red-600 dark:text-red-400; }
+
 /* BBCode content styles */
 @layer components {
   .bbcode-content {
