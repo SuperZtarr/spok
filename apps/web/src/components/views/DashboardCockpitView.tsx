@@ -17,6 +17,7 @@ import type { GlobalTask } from '../../lib/api';
 import { getPriorityConfig, TYPE_ICONS } from '../../constants/ui';
 import { ItemEditModal } from '../ItemEditModal';
 import { Badge } from '../ui/Badge';
+import { GanttChart } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -236,6 +237,144 @@ function SpaceProgressBar({ name, done, total }: { name: string; done: number; t
       <span className="text-xs text-muted-foreground w-16 text-right flex-shrink-0">
         {done}/{total} ({pct}%)
       </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mini Gantt Widget
+// ---------------------------------------------------------------------------
+
+const GANTT_STATUS_COLORS: Record<string, string> = {
+  undefined: 'bg-slate-400',
+  todo: 'bg-yellow-500',
+  in_progress: 'bg-orange-500',
+  to_validate: 'bg-violet-500',
+  done: 'bg-green-500',
+  cancelled: 'bg-gray-400',
+};
+
+function MiniGantt({ tasks, onEdit }: { tasks: GlobalTask[]; onEdit: (id: string) => void }) {
+  const today = startOfDay(new Date());
+
+  // Filter tasks that have at least a dueDate or startDate
+  const ganttTasks = useMemo(() => {
+    return tasks
+      .filter(t => t.dueDate || t.startDate)
+      .map(t => {
+        const start = t.startDate ? startOfDay(new Date(t.startDate)) : t.dueDate ? startOfDay(new Date(t.dueDate)) : today;
+        const end = t.endDate ? startOfDay(new Date(t.endDate)) : t.dueDate ? startOfDay(new Date(t.dueDate)) : start;
+        return { ...t, ganttStart: start, ganttEnd: end };
+      })
+      .sort((a, b) => a.ganttStart.getTime() - b.ganttStart.getTime());
+  }, [tasks, today]);
+
+  if (ganttTasks.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-6">Aucun élément avec échéance</p>;
+  }
+
+  // Compute date range: from min(today-7, earliest start) to max(latest end, today+30)
+  const minDate = useMemo(() => {
+    const earliest = ganttTasks.reduce((min, t) => t.ganttStart < min ? t.ganttStart : min, ganttTasks[0].ganttStart);
+    const weekAgo = addDays(today, -7);
+    return earliest < weekAgo ? earliest : weekAgo;
+  }, [ganttTasks, today]);
+
+  const maxDate = useMemo(() => {
+    const latest = ganttTasks.reduce((max, t) => t.ganttEnd > max ? t.ganttEnd : max, ganttTasks[0].ganttEnd);
+    const monthAhead = addDays(today, 30);
+    return latest > monthAhead ? latest : monthAhead;
+  }, [ganttTasks, today]);
+
+  const totalDays = Math.max(1, Math.ceil((maxDate.getTime() - minDate.getTime()) / 86400000) + 1);
+
+  // Generate month markers
+  const months = useMemo(() => {
+    const result: { label: string; left: number; width: number }[] = [];
+    let d = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    while (d <= maxDate) {
+      const monthStart = d < minDate ? minDate : d;
+      const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      const monthEnd = nextMonth > maxDate ? maxDate : addDays(nextMonth, -1);
+      const left = Math.ceil((monthStart.getTime() - minDate.getTime()) / 86400000);
+      const width = Math.ceil((monthEnd.getTime() - monthStart.getTime()) / 86400000) + 1;
+      result.push({
+        label: d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+        left: (left / totalDays) * 100,
+        width: (width / totalDays) * 100,
+      });
+      d = nextMonth;
+    }
+    return result;
+  }, [minDate, maxDate, totalDays]);
+
+  // Today marker position
+  const todayPos = ((today.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100;
+
+  return (
+    <div className="space-y-0">
+      {/* Month headers */}
+      <div className="relative h-5 mb-1 mx-2">
+        {months.map((m, i) => (
+          <div
+            key={i}
+            className="absolute text-[10px] text-muted-foreground font-medium border-l border-border pl-1 truncate"
+            style={{ left: `${m.left}%`, width: `${m.width}%` }}
+          >
+            {m.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Gantt rows */}
+      <div className="relative">
+        {/* Today line */}
+        {todayPos >= 0 && todayPos <= 100 && (
+          <div
+            className="absolute top-0 bottom-0 w-px bg-red-500 z-10"
+            style={{ left: `${todayPos}%` }}
+          />
+        )}
+
+        {ganttTasks.map(t => {
+          const barStart = Math.max(0, (t.ganttStart.getTime() - minDate.getTime()) / 86400000);
+          const barEnd = (t.ganttEnd.getTime() - minDate.getTime()) / 86400000;
+          const barWidth = Math.max(0.5, barEnd - barStart + 1);
+          const leftPct = (barStart / totalDays) * 100;
+          const widthPct = (barWidth / totalDays) * 100;
+          const isOverdue = t.dueDate && new Date(t.dueDate) < today && !DONE_STATUSES.includes(t.status || '');
+          const statusColor = GANTT_STATUS_COLORS[t.status || 'undefined'] || GANTT_STATUS_COLORS.undefined;
+
+          return (
+            <div
+              key={t.id}
+              className="flex items-center h-7 hover:bg-accent/50 cursor-pointer group px-2"
+              onClick={() => onEdit(t.id)}
+            >
+              {/* Label */}
+              <div className="w-[140px] flex-shrink-0 flex items-center gap-1 min-w-0 pr-2">
+                <span className={`text-[11px] truncate ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+                  {t.title}
+                </span>
+              </div>
+              {/* Bar area */}
+              <div className="flex-1 relative h-5">
+                <div
+                  className={`absolute top-0.5 h-4 rounded-sm ${statusColor} ${isOverdue ? 'ring-1 ring-red-500' : ''} opacity-80 group-hover:opacity-100 transition-opacity`}
+                  style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 0.5)}%` }}
+                  title={`${t.title}\n${t.spaceName}\n${t.dueDate ? new Date(t.dueDate).toLocaleDateString('fr-FR') : ''}`}
+                >
+                  {widthPct > 5 && (
+                    <span className="text-[9px] text-white px-1 truncate block leading-4">
+                      {t.dueDate && new Date(t.dueDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -519,16 +658,12 @@ export function DashboardCockpitView() {
 
           <Panel
             title="Échéances"
-            icon={<CalendarDays className="w-4 h-4 text-yellow-500" />}
-            count={upcomingTasks.length}
-            emptyMessage="Aucune échéance à venir"
-            className="max-h-[25%]"
+            icon={<GanttChart className="w-4 h-4 text-yellow-500" />}
+            count={[...overdueTasks, ...upcomingTasks, ...todayTasks].length}
+            emptyMessage="Aucune échéance"
+            className="flex-1"
           >
-            <div className="space-y-0.5">
-              {upcomingTasks.map(t => (
-                <CompactTaskRow key={t.id} task={t} onEdit={setEditingItemId} />
-              ))}
-            </div>
+            <MiniGantt tasks={[...overdueTasks, ...upcomingTasks, ...todayTasks]} onEdit={setEditingItemId} />
           </Panel>
 
           <Panel
