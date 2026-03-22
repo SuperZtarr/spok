@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, Search, FolderOpen } from 'lucide-react';
+import { ExternalLink, Search, FolderOpen, Building2, ChevronRight } from 'lucide-react';
 import { userTasksApi } from '../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -50,6 +50,19 @@ function LinkCard({ item }: { item: any }) {
   );
 }
 
+interface SpaceNode {
+  spaceId: string;
+  spaceName: string;
+  items: any[];
+  children: SpaceNode[];
+}
+
+interface CommunityGroup {
+  communityId: string;
+  communityName: string;
+  spaces: SpaceNode[];
+}
+
 export function GlobalLinksPage() {
   const [search, setSearch] = useState('');
 
@@ -64,27 +77,94 @@ export function GlobalLinksPage() {
   const filtered = useMemo(() => {
     if (!search.trim()) return links;
     const q = search.toLowerCase();
-    return links.filter(l =>
+    return links.filter((l: any) =>
       l.title?.toLowerCase().includes(q) ||
       l.url?.toLowerCase().includes(q) ||
-      (l as any).spaceName?.toLowerCase().includes(q) ||
-      (l as any).space?.name?.toLowerCase().includes(q)
+      l.spaceName?.toLowerCase().includes(q) ||
+      l.communityName?.toLowerCase().includes(q)
     );
   }, [links, search]);
 
-  // Group by space
-  const grouped = useMemo(() => {
-    const map = new Map<string, { spaceName: string; spaceId: string; items: any[] }>();
+  // Build hierarchy: community -> space -> sub-space
+  const communities = useMemo(() => {
+    // Collect all spaces and their links
+    const spaceMap = new Map<string, { spaceId: string; spaceName: string; parentId: string | null; communityId: string | null; communityName: string | null; items: any[] }>();
+
     for (const link of filtered) {
-      const spaceId = (link as any).spaceId || (link as any).space?.id || 'unknown';
+      const spaceId = (link as any).spaceId || 'unknown';
       const spaceName = (link as any).spaceName || (link as any).space?.name || 'Sans espace';
-      if (!map.has(spaceId)) {
-        map.set(spaceId, { spaceName, spaceId, items: [] });
+      const parentId = (link as any).spaceParentId || null;
+      const communityId = (link as any).communityId || null;
+      const communityName = (link as any).communityName || null;
+
+      if (!spaceMap.has(spaceId)) {
+        spaceMap.set(spaceId, { spaceId, spaceName, parentId, communityId, communityName, items: [] });
       }
-      map.get(spaceId)!.items.push(link);
+      spaceMap.get(spaceId)!.items.push(link);
     }
-    return Array.from(map.values()).sort((a, b) => a.spaceName.localeCompare(b.spaceName));
+
+    // Build tree per community
+    const communityMap = new Map<string, CommunityGroup>();
+
+    for (const space of spaceMap.values()) {
+      const cId = space.communityId || 'none';
+      const cName = space.communityName || 'Sans communaut\u00e9';
+
+      if (!communityMap.has(cId)) {
+        communityMap.set(cId, { communityId: cId, communityName: cName, spaces: [] });
+      }
+    }
+
+    // Build space trees within each community
+    for (const space of spaceMap.values()) {
+      const cId = space.communityId || 'none';
+      const community = communityMap.get(cId)!;
+
+      // Check if parent is in our spaceMap (has links)
+      const parentInMap = space.parentId && spaceMap.has(space.parentId);
+
+      if (!parentInMap) {
+        // Root level space (or parent has no links)
+        community.spaces.push({
+          spaceId: space.spaceId,
+          spaceName: space.spaceName,
+          items: space.items,
+          children: [],
+        });
+      }
+    }
+
+    // Attach children to parents
+    for (const space of spaceMap.values()) {
+      if (space.parentId && spaceMap.has(space.parentId)) {
+        const cId = space.communityId || 'none';
+        const community = communityMap.get(cId)!;
+        const parentNode = community.spaces.find(s => s.spaceId === space.parentId);
+        if (parentNode) {
+          parentNode.children.push({
+            spaceId: space.spaceId,
+            spaceName: space.spaceName,
+            items: space.items,
+            children: [],
+          });
+        } else {
+          // Parent exists in map but not at root — add as root
+          community.spaces.push({
+            spaceId: space.spaceId,
+            spaceName: space.spaceName,
+            items: space.items,
+            children: [],
+          });
+        }
+      }
+    }
+
+    return Array.from(communityMap.values())
+      .filter(c => c.spaces.length > 0)
+      .sort((a, b) => a.communityName.localeCompare(b.communityName));
   }, [filtered]);
+
+  const totalLinks = filtered.length;
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -94,7 +174,7 @@ export function GlobalLinksPage() {
           <div className="flex items-center gap-3">
             <ExternalLink className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-bold">Liens</h1>
-            <span className="text-sm text-muted-foreground">({filtered.length})</span>
+            <span className="text-sm text-muted-foreground">({totalLinks})</span>
           </div>
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -110,7 +190,7 @@ export function GlobalLinksPage() {
         {/* Content */}
         {isLoading ? (
           <div className="text-center py-16 text-muted-foreground">Chargement...</div>
-        ) : filtered.length === 0 ? (
+        ) : totalLinks === 0 ? (
           <div className="text-center py-16">
             <ExternalLink className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
             <p className="text-lg font-medium">Aucun lien</p>
@@ -119,19 +199,21 @@ export function GlobalLinksPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {grouped.map(group => (
-              <div key={group.spaceId}>
-                <div className="flex items-center gap-2 mb-3">
-                  <FolderOpen className="w-4 h-4 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    {group.spaceName}
-                  </h2>
-                  <span className="text-xs text-muted-foreground">({group.items.length})</span>
+          <div className="space-y-8">
+            {communities.map(community => (
+              <div key={community.communityId} className="rounded-lg border border-border bg-card/50 shadow-sm overflow-hidden">
+                {/* Community header */}
+                <div className="flex items-center gap-2 px-5 py-3 bg-muted/50 border-b border-border">
+                  <Building2 className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-semibold">{community.communityName}</h2>
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({community.spaces.reduce((sum, s) => sum + s.items.length + s.children.reduce((cs, c) => cs + c.items.length, 0), 0)})
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {group.items.map(link => (
-                    <LinkCard key={link.id} item={link} />
+
+                <div className="space-y-4 p-5">
+                  {community.spaces.map(space => (
+                    <SpaceLinks key={space.spaceId} space={space} depth={0} />
                   ))}
                 </div>
               </div>
@@ -139,7 +221,38 @@ export function GlobalLinksPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
+function SpaceLinks({ space, depth }: { space: SpaceNode; depth: number }) {
+  return (
+    <div className={`rounded-md border border-border/60 bg-background ${depth > 0 ? 'ml-4' : ''}`}>
+      {/* Space header */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 border-b border-border/60 rounded-t-md">
+        {depth > 0 && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+        <FolderOpen className="w-4 h-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          {space.spaceName}
+        </h3>
+        <span className="text-xs text-muted-foreground">({space.items.length})</span>
+      </div>
+
+      <div className="p-3 space-y-3">
+        {/* Links */}
+        {space.items.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {space.items.map(link => (
+              <LinkCard key={link.id} item={link} />
+            ))}
+          </div>
+        )}
+
+        {/* Sub-spaces */}
+        {space.children.map(child => (
+          <SpaceLinks key={child.spaceId} space={child} depth={depth + 1} />
+        ))}
+      </div>
     </div>
   );
 }

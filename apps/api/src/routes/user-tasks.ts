@@ -219,7 +219,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
           parentId: true,
           description: true,
           url: true,
-          space: { select: { id: true, name: true } },
+          space: { select: { id: true, name: true, parentId: true, communityId: true, community: { select: { id: true, name: true } } } },
           createdBy: { select: { id: true, name: true } },
           assignedTo: { select: { id: true, name: true } },
           parent: { select: { id: true, title: true } },
@@ -236,6 +236,9 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       data: tasks.map((t) => ({
         ...t,
         spaceName: t.space.name,
+        spaceParentId: t.space.parentId,
+        communityId: t.space.communityId,
+        communityName: t.space.community?.name || null,
         createdByName: t.createdBy.name,
         assignedToName: t.assignedTo?.name || null,
         tags: t.tags.map((it) => it.tag),
