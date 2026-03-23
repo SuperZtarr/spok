@@ -50,6 +50,12 @@ interface DocGroup {
   docs: Item[];
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface DocumentsViewProps {
   items: Item[] | undefined;
   onEdit?: (id: string) => void;
@@ -65,9 +71,11 @@ interface DocumentsViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
+  portalGroups?: PortalGroup[];
+  currentSpaceId?: string;
 }
 
-export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true }: DocumentsViewProps) {
+export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: DocumentsViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const documents = useMemo(() => {
     if (!items) return [];
@@ -214,6 +222,91 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
           </div>
         </DroppableDocGroup>
       ))}
+
+      {/* Portal sections for child spaces */}
+      {portalGroups?.map(group => {
+        const portalDocs = group.items.filter(item => item.type === 'DOCUMENT' && item.url);
+        if (portalDocs.length === 0) return null;
+        // Group portal docs by parent
+        const portalParentNames: Record<string, string> = {};
+        for (const item of group.items) portalParentNames[item.id] = item.title;
+        const portalGroupMap = new Map<string | null, Item[]>();
+        for (const doc of portalDocs) {
+          const key = doc.parentId || null;
+          if (!portalGroupMap.has(key)) portalGroupMap.set(key, []);
+          portalGroupMap.get(key)!.push(doc);
+        }
+        const portalDocGroups: DocGroup[] = [];
+        const rootDocs = portalGroupMap.get(null);
+        if (rootDocs) portalDocGroups.push({ parentId: null, parentTitle: 'Sans parent', docs: rootDocs });
+        for (const [parentId, docs] of portalGroupMap) {
+          if (parentId === null) continue;
+          portalDocGroups.push({ parentId, parentTitle: portalParentNames[parentId] || 'Parent inconnu', docs });
+        }
+        return (
+          <div key={`portal-${group.spaceId}`} className="mt-4">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-accent/50 text-sm font-medium text-muted-foreground mb-2">
+              <FolderKanban className="w-4 h-4 text-primary" />
+              <span>{group.spaceName}</span>
+              <span className="text-xs text-muted-foreground/60">({portalDocs.length})</span>
+            </div>
+            {portalDocGroups.map((pGroup) => (
+              <div key={pGroup.parentId ?? '__root__'} className="border border-border rounded-lg bg-card mb-2">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => pGroup.parentId && onEdit?.(pGroup.parentId)}
+                >
+                  <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">{pGroup.parentTitle}</span>
+                  <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{pGroup.docs.length}</span>
+                </div>
+                <div className="p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {pGroup.docs.map(doc => {
+                      const Icon = getFileIcon(doc.url!);
+                      const ext = getFileExtension(doc.url!);
+                      return (
+                        <div
+                          key={doc.id}
+                          className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
+                          onClick={() => onEdit?.(doc.id)}
+                        >
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                            <Icon className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{doc.title}</p>
+                            {doc.description && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{doc.description}</p>
+                            )}
+                            {ext && (
+                              <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium bg-muted rounded">
+                                {ext}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <a
+                              href={doc.url!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Telecharger"
+                            >
+                              <Download className="w-4 h-4 text-muted-foreground" />
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
     </DndContext>
   );

@@ -25,6 +25,7 @@ interface CrossTableViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
 }
 
 function getDimensionValue(item: Item, dim: Dimension): string {

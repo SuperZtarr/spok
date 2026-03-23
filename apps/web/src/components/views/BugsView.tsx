@@ -3,6 +3,12 @@ import { Bug } from 'lucide-react';
 import { ListView } from './ListView';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface BugsViewProps {
   items: Item[] | undefined;
   currentSpaceId?: string;
@@ -18,15 +24,23 @@ interface BugsViewProps {
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  portalGroups?: PortalGroup[];
 }
 
-export function BugsView({ items, ...rest }: BugsViewProps) {
+export function BugsView({ items, portalGroups, ...rest }: BugsViewProps) {
   const bugs = useMemo(() => {
     if (!items) return [];
     return items.filter(item => item.type === 'BUG');
   }, [items]);
 
-  if (bugs.length === 0) {
+  const bugPortalGroups = useMemo(() => {
+    if (!portalGroups?.length) return undefined;
+    return portalGroups
+      .map(g => ({ ...g, items: g.items.filter(item => item.type === 'BUG') }))
+      .filter(g => g.items.length > 0);
+  }, [portalGroups]);
+
+  if (bugs.length === 0 && (!bugPortalGroups || bugPortalGroups.length === 0)) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
@@ -38,5 +52,5 @@ export function BugsView({ items, ...rest }: BugsViewProps) {
     );
   }
 
-  return <ListView items={bugs} {...rest} />;
+  return <ListView items={bugs} portalGroups={bugPortalGroups} {...rest} />;
 }

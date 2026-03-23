@@ -7,6 +7,8 @@ interface CfdViewProps {
   highlightType?: string;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  currentSpaceId?: string;
 }
 
 // Status rendering order (bottom to top in the stacked chart)

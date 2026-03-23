@@ -687,6 +687,8 @@ export function SpacePage() {
           ) : viewMode === 'relations' ? (
             <RelationsMapView
               items={(itemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onNodeClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -696,6 +698,8 @@ export function SpacePage() {
           ) : viewMode === 'bubble' ? (
             <BubbleView
               items={(allItemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -705,6 +709,8 @@ export function SpacePage() {
           ) : viewMode === 'radialTree' ? (
             <RadialTreeView
               items={(allItemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -713,6 +719,8 @@ export function SpacePage() {
           ) : viewMode === 'treemap' ? (
             <TreemapView
               items={(allItemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -721,6 +729,8 @@ export function SpacePage() {
           ) : viewMode === 'burndown' ? (
             <BurndownView
               items={(allItemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -729,6 +739,8 @@ export function SpacePage() {
           ) : viewMode === 'cfd' ? (
             <CfdView
               items={(allItemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -737,6 +749,8 @@ export function SpacePage() {
           ) : viewMode === 'chord' ? (
             <ChordView
               items={(allItemsData?.data || []) as Item[]}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onItemClick={(itemId) => setEditingItemId(itemId)}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -746,6 +760,7 @@ export function SpacePage() {
             <CrossTableView
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
@@ -755,6 +770,8 @@ export function SpacePage() {
           ) : viewMode === 'heatmap' ? (
             <HeatmapView
               items={filterBySearch(allItemsData?.data)}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
@@ -765,6 +782,8 @@ export function SpacePage() {
             <EgoNetworkView
               items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
@@ -793,6 +812,8 @@ export function SpacePage() {
           ) : viewMode === 'priority' ? (
             <PriorityView
               items={filterBySearch(itemsData?.data)}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdatePriority={(id, priority) => actions.handleInlineUpdate(id, { priority })}
@@ -810,6 +831,7 @@ export function SpacePage() {
             <BugsView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
+              portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
@@ -826,6 +848,8 @@ export function SpacePage() {
           ) : viewMode === 'documents' ? (
             <DocumentsView
               items={filterBySearch(itemsData?.data)}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
@@ -843,6 +867,8 @@ export function SpacePage() {
           ) : viewMode === 'links' ? (
             <LinksView
               items={filterBySearch(itemsData?.data)}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
@@ -860,6 +886,8 @@ export function SpacePage() {
           ) : viewMode === 'images' ? (
             <ImagesView
               items={filterBySearch(itemsData?.data)}
+              portalGroups={portalGroups}
+              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}

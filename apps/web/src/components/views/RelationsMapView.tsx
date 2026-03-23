@@ -51,6 +51,8 @@ interface RelationsMapViewProps {
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  currentSpaceId?: string;
 }
 
 export function RelationsMapView({

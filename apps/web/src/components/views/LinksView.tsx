@@ -144,6 +144,12 @@ interface LinkGroup {
   links: Item[];
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface LinksViewProps {
   items: Item[] | undefined;
   onEdit?: (id: string) => void;
@@ -159,9 +165,11 @@ interface LinksViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
+  portalGroups?: PortalGroup[];
+  currentSpaceId?: string;
 }
 
-export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true }: LinksViewProps) {
+export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const links = useMemo(() => {
     if (!items) return [];
@@ -241,6 +249,56 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
           </div>
         </DroppableLinkGroup>
       ))}
+
+      {/* Portal sections for child spaces */}
+      {portalGroups?.map(group => {
+        const portalLinks = group.items.filter(item => item.type === 'LINK' && item.url);
+        if (portalLinks.length === 0) return null;
+        // Group portal links by parent
+        const portalParentNames: Record<string, string> = {};
+        for (const item of group.items) portalParentNames[item.id] = item.title;
+        const portalGroupMap = new Map<string | null, Item[]>();
+        for (const link of portalLinks) {
+          const key = link.parentId || null;
+          if (!portalGroupMap.has(key)) portalGroupMap.set(key, []);
+          portalGroupMap.get(key)!.push(link);
+        }
+        const portalLinkGroups: LinkGroup[] = [];
+        const rootLinks = portalGroupMap.get(null);
+        if (rootLinks) portalLinkGroups.push({ parentId: null, parentTitle: 'Sans parent', links: rootLinks });
+        for (const [parentId, pLinks] of portalGroupMap) {
+          if (parentId === null) continue;
+          portalLinkGroups.push({ parentId, parentTitle: portalParentNames[parentId] || 'Parent inconnu', links: pLinks });
+        }
+        return (
+          <div key={`portal-${group.spaceId}`} className="mt-4">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-accent/50 text-sm font-medium text-muted-foreground mb-2">
+              <FolderKanban className="w-4 h-4 text-primary" />
+              <span>{group.spaceName}</span>
+              <span className="text-xs text-muted-foreground/60">({portalLinks.length})</span>
+            </div>
+            {portalLinkGroups.map((pGroup) => (
+              <div key={pGroup.parentId ?? '__root__'} className="border border-border rounded-lg bg-card mb-2">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => pGroup.parentId && onEdit?.(pGroup.parentId)}
+                >
+                  <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">{pGroup.parentTitle}</span>
+                  <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{pGroup.links.length}</span>
+                </div>
+                <div className="p-3">
+                  <div className="flex flex-wrap gap-2">
+                    {pGroup.links.map(link => (
+                      <LinkTag key={link.id} item={link} onEdit={onEdit} actions={actions} canEdit={false} referentiels={referentiels} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
     </DndContext>
   );

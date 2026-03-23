@@ -20,6 +20,12 @@ interface ImageGroup {
   images: ImageItem[];
 }
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 function Lightbox({ images, index, onClose, onNavigate }: {
   images: ImageItem[];
   index: number;
@@ -117,9 +123,11 @@ interface ImagesViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
+  portalGroups?: PortalGroup[];
+  currentSpaceId?: string;
 }
 
-export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true }: ImagesViewProps) {
+export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -287,6 +295,85 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
           </div>
         </DroppableGroup>
       ))}
+
+      {/* Portal sections for child spaces */}
+      {portalGroups?.map(group => {
+        const portalImages = group.items
+          .filter(item => item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url))
+          .map(item => ({
+            id: item.id,
+            title: item.title,
+            url: item.url!,
+            description: item.description || null,
+            status: item.status || null,
+            parentId: item.parentId || null,
+          }));
+        if (portalImages.length === 0) return null;
+        // Group portal images by parent
+        const portalParentNames: Record<string, string> = {};
+        for (const item of group.items) portalParentNames[item.id] = item.title;
+        const portalGroupMap = new Map<string | null, ImageItem[]>();
+        for (const img of portalImages) {
+          const key = img.parentId;
+          if (!portalGroupMap.has(key)) portalGroupMap.set(key, []);
+          portalGroupMap.get(key)!.push(img);
+        }
+        const portalImageGroups: ImageGroup[] = [];
+        const rootImgs = portalGroupMap.get(null);
+        if (rootImgs) portalImageGroups.push({ parentId: null, parentTitle: 'Sans parent', images: rootImgs });
+        for (const [parentId, imgs] of portalGroupMap) {
+          if (parentId === null) continue;
+          portalImageGroups.push({ parentId, parentTitle: portalParentNames[parentId] || 'Parent inconnu', images: imgs });
+        }
+        return (
+          <div key={`portal-${group.spaceId}`} className="mt-4">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-accent/50 text-sm font-medium text-muted-foreground mb-2">
+              <FolderKanban className="w-4 h-4 text-primary" />
+              <span>{group.spaceName}</span>
+              <span className="text-xs text-muted-foreground/60">({portalImages.length})</span>
+            </div>
+            {portalImageGroups.map((pGroup) => (
+              <div key={pGroup.parentId ?? '__root__'} className="border border-border rounded-lg bg-card mb-2">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => pGroup.parentId && onEdit?.(pGroup.parentId)}
+                >
+                  <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">{pGroup.parentTitle}</span>
+                  <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{pGroup.images.length}</span>
+                </div>
+                <div className="p-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {pGroup.images.map((img) => (
+                      <div
+                        key={img.id}
+                        className="group relative flex flex-col rounded-lg overflow-hidden border bg-card hover:shadow-md hover:border-primary/30 transition-all"
+                      >
+                        <button
+                          onClick={() => onEdit?.(img.id)}
+                          className="flex-1 flex flex-col"
+                        >
+                          <div className="aspect-square overflow-hidden bg-muted">
+                            <img
+                              src={img.url}
+                              alt={img.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              loading="lazy"
+                            />
+                          </div>
+                          <div className="px-2 py-1.5 min-h-[2.5rem]">
+                            <p className="text-xs font-medium truncate">{img.title}</p>
+                          </div>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
 
       {lightboxIndex !== null && flatImages.length > 0 && (
         <Lightbox

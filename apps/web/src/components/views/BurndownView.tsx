@@ -11,6 +11,8 @@ interface BurndownViewProps {
   highlightType?: string;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  currentSpaceId?: string;
 }
 
 interface DayPoint {

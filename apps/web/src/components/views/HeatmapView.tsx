@@ -8,6 +8,8 @@ interface HeatmapViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  currentSpaceId?: string;
 }
 
 type Period = '6m' | '1y';

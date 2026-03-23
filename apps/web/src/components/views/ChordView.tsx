@@ -9,6 +9,8 @@ interface ChordViewProps {
   highlightType?: string;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  currentSpaceId?: string;
 }
 
 type GroupMode = 'type' | 'space';

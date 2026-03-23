@@ -9,6 +9,8 @@ interface EgoNetworkViewProps {
   highlightType?: ItemType;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
+  portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  currentSpaceId?: string;
 }
 
 const TYPE_COLORS: Record<string, string> = {

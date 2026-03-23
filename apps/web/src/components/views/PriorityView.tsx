@@ -63,6 +63,7 @@ function PriorityCard({
   isDragging,
   canEdit = true,
   referentiels,
+  spaceName,
 }: {
   item: Item;
   onEdit: (id: string) => void;
@@ -77,6 +78,7 @@ function PriorityCard({
   isDragging?: boolean;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
+  spaceName?: string;
 }) {
   const Icon = getTypeIcon(item.type);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -111,7 +113,12 @@ function PriorityCard({
         )}
         <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
+            {spaceName && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary truncate">{spaceName}</span>
+            )}
+          </div>
           {item.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
               {stripMarkup(item.description)}
@@ -177,6 +184,8 @@ function PriorityColumn({
   canEdit,
   referentiels,
   draggedItemId,
+  portalSpaceNames,
+  currentSpaceId,
 }: {
   column: typeof PRIORITY_COLUMNS[number];
   items: Item[];
@@ -193,6 +202,8 @@ function PriorityColumn({
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
   draggedItemId: string | null;
+  portalSpaceNames?: Map<string, string>;
+  currentSpaceId?: string;
 }) {
   const { setNodeRef } = useDroppable({ id: column.id });
 
@@ -231,6 +242,7 @@ function PriorityColumn({
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
             referentiels={referentiels}
+            spaceName={portalSpaceNames && currentSpaceId && (item as any).spaceId !== currentSpaceId ? portalSpaceNames.get((item as any).spaceId) : undefined}
           />
         ))}
         {items.length === 0 && (
@@ -245,8 +257,16 @@ function PriorityColumn({
 // Main View
 // ---------------------------------------------------------------------------
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface PriorityViewProps {
   items: Item[];
+  portalGroups?: PortalGroup[];
+  currentSpaceId?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdatePriority: (id: string, priority: number | null) => void;
@@ -263,6 +283,8 @@ interface PriorityViewProps {
 
 export function PriorityView({
   items,
+  portalGroups,
+  currentSpaceId,
   onEdit,
   onDelete,
   onUpdatePriority,
@@ -279,9 +301,22 @@ export function PriorityView({
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
+  const hasPortals = !!(portalGroups && portalGroups.length > 0);
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+
+  // Combine local items with portal items
+  const allItems = useMemo(() => {
+    if (!portalGroups?.length) return items;
+    const portalItems = portalGroups.flatMap(g => g.items);
+    return [...items, ...portalItems];
+  }, [items, portalGroups]);
 
   // Group items by priority
   const itemsByColumn = useMemo(() => {
@@ -289,7 +324,7 @@ export function PriorityView({
     for (const col of PRIORITY_COLUMNS) {
       map.set(col.id, []);
     }
-    for (const item of items) {
+    for (const item of allItems) {
       const colId = item.priority ? `priority-${item.priority}` : 'priority-null';
       const arr = map.get(colId);
       if (arr) {
@@ -299,7 +334,7 @@ export function PriorityView({
       }
     }
     return map;
-  }, [items]);
+  }, [allItems]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setDraggedItemId(event.active.id as string);
@@ -320,21 +355,21 @@ export function PriorityView({
     const targetCol = PRIORITY_COLUMNS.find(c => c.id === targetColId);
     if (!targetCol) return;
 
-    const item = items.find(i => i.id === active.id);
+    const item = allItems.find(i => i.id === active.id);
     if (!item) return;
 
     const currentPriority = item.priority ?? null;
     if (currentPriority === targetCol.value) return;
 
     onUpdatePriority(item.id, targetCol.value);
-  }, [items, onUpdatePriority]);
+  }, [allItems, onUpdatePriority]);
 
   const handleDragCancel = useCallback(() => {
     setDraggedItemId(null);
     setOverId(null);
   }, []);
 
-  const draggedItem = draggedItemId ? items.find(i => i.id === draggedItemId) : null;
+  const draggedItem = draggedItemId ? allItems.find(i => i.id === draggedItemId) : null;
 
   return (
     <DndContext
@@ -365,6 +400,8 @@ export function PriorityView({
               canEdit={canEdit}
               referentiels={referentiels}
               draggedItemId={draggedItemId}
+              portalSpaceNames={hasPortals ? portalSpaceNames : undefined}
+              currentSpaceId={currentSpaceId}
             />
           ))}
         </div>
