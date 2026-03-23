@@ -1,12 +1,23 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { ImageIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
+import { ImageIcon, ChevronLeft, ChevronRight, X, Trash2, Plus, FolderInput, FolderPlus, FolderKanban, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil } from 'lucide-react';
 import type { Item } from '@spok/shared';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { RoleGuard } from '../RoleGuard';
 
 interface ImageItem {
   id: string;
   title: string;
   url: string;
   description: string | null;
+  status: string | null;
+  parentId: string | null;
+}
+
+interface ImageGroup {
+  parentId: string | null;
+  parentTitle: string;
+  images: ImageItem[];
 }
 
 function Lightbox({ images, index, onClose, onNavigate }: {
@@ -66,13 +77,51 @@ function Lightbox({ images, index, onClose, onNavigate }: {
   );
 }
 
+function DraggableImage({ id, children, canDrag }: { id: string; children: React.ReactNode; canDrag: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !canDrag });
+  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: isDragging ? 50 : undefined } : undefined;
+  return (
+    <div ref={setNodeRef} style={style} className={`group/drag relative ${isDragging ? 'opacity-60 shadow-lg' : ''}`}>
+      {canDrag && (
+        <div {...attributes} {...listeners} className="absolute top-1 left-1 z-10 p-0.5 rounded bg-black/40 hover:bg-black/60 text-white cursor-grab opacity-0 group-hover/drag:opacity-100 transition-opacity">
+          <GripVertical className="w-3.5 h-3.5" />
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function DroppableGroup({ id, children, isOver }: { id: string; children: React.ReactNode; isOver?: boolean }) {
+  const { setNodeRef, isOver: dropping } = useDroppable({ id });
+  const highlight = isOver !== undefined ? isOver : dropping;
+  return (
+    <div ref={setNodeRef} className={`border border-border rounded-lg bg-card transition-colors ${highlight ? 'border-primary bg-primary/5' : ''}`}>
+      {children}
+    </div>
+  );
+}
+
 interface ImagesViewProps {
   items: Item[] | undefined;
   onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onUpdateStatus?: (id: string, status: string) => void;
+  onAddChild?: (id: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
+  onMove?: (id: string, parentId: string | null, position: number) => void;
+  referentiels?: any;
+  canEdit?: boolean;
 }
 
-export function ImagesView({ items, onEdit }: ImagesViewProps) {
+export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true }: ImagesViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const images = useMemo<ImageItem[]>(() => {
     if (!items) return [];
@@ -83,11 +132,67 @@ export function ImagesView({ items, onEdit }: ImagesViewProps) {
         title: item.title,
         url: item.url!,
         description: item.description || null,
+        status: item.status || null,
+        parentId: item.parentId || null,
       }));
   }, [items]);
 
+  // Group images by parent
+  const groups = useMemo<ImageGroup[]>(() => {
+    const parentNames: Record<string, string> = {};
+    if (items) {
+      for (const item of items) {
+        parentNames[item.id] = item.title;
+      }
+    }
+    const groupMap = new Map<string | null, ImageItem[]>();
+    for (const img of images) {
+      const key = img.parentId;
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push(img);
+    }
+    // Root group first, then sorted by parent name
+    const result: ImageGroup[] = [];
+    const rootImages = groupMap.get(null);
+    if (rootImages) result.push({ parentId: null, parentTitle: 'Sans parent', images: rootImages });
+    for (const [parentId, imgs] of groupMap) {
+      if (parentId === null) continue;
+      result.push({ parentId, parentTitle: parentNames[parentId] || 'Parent inconnu', images: imgs });
+    }
+    return result;
+  }, [images, items]);
+
+  // Flat list for lightbox navigation
+  const flatImages = useMemo(() => groups.flatMap(g => g.images), [groups]);
+
+  const doneStatusId = referentiels?.statusLabels
+    ? Object.entries(referentiels.statusLabels).find(([, v]: any) => v.label === 'Terminé')?.[0] || 'done'
+    : 'done';
+
   const openLightbox = useCallback((index: number) => setLightboxIndex(index), []);
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !onMove) return;
+    const itemId = active.id as string;
+    // Droppable IDs are "group:<parentId>" or "group:__root__"
+    const dropId = over.id as string;
+    if (!dropId.startsWith('group:')) return;
+    const newParentId = dropId === 'group:__root__' ? null : dropId.replace('group:', '');
+    // Find current parentId of the dragged item
+    const img = images.find(i => i.id === itemId);
+    if (!img || img.parentId === newParentId) return;
+    // Position at end of target group
+    const targetGroup = groups.find(g => g.parentId === newParentId);
+    const position = targetGroup ? targetGroup.images.length : 0;
+    onMove(itemId, newParentId, position);
+  }, [onMove, images, groups]);
+
+  // Get flat index for lightbox from group image
+  const getFlatIndex = useCallback((img: ImageItem) => {
+    return flatImages.findIndex(fi => fi.id === img.id);
+  }, [flatImages]);
 
   if (images.length === 0) {
     return (
@@ -102,38 +207,96 @@ export function ImagesView({ items, onEdit }: ImagesViewProps) {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {images.map((img, i) => (
-          <button
-            key={img.id}
-            onClick={() => openLightbox(i)}
-            onDoubleClick={() => onEdit?.(img.id)}
-            className="group flex flex-col rounded-lg overflow-hidden border bg-card hover:shadow-md hover:border-primary/30 transition-all"
+    <DndContext sensors={dndSensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
+    <div className="flex-1 overflow-auto p-4 space-y-4">
+      {groups.map((group) => (
+        <DroppableGroup key={group.parentId ?? '__root__'} id={`group:${group.parentId ?? '__root__'}`}>
+          {/* Group header — clickable to open parent */}
+          <div
+            className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
+            onClick={() => group.parentId && onEdit?.(group.parentId)}
           >
-            <div className="aspect-square overflow-hidden bg-muted">
-              <img
-                src={img.url}
-                alt={img.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                loading="lazy"
-              />
-            </div>
-            <div className="px-2 py-1.5 min-h-[2.5rem]">
-              <p className="text-xs font-medium truncate">{img.title}</p>
-            </div>
-          </button>
-        ))}
-      </div>
+            <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium truncate">{group.parentTitle}</span>
+            <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{group.images.length}</span>
+          </div>
 
-      {lightboxIndex !== null && images.length > 0 && (
+          <div className="p-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {group.images.map((img) => {
+                const isDone = img.status === doneStatusId || img.status === 'done';
+                return (
+                  <DraggableImage key={img.id} id={img.id} canDrag={canEdit && !!onMove}>
+                  <div
+                    className="group relative flex flex-col rounded-lg overflow-hidden border bg-card hover:shadow-md hover:border-primary/30 transition-all"
+                  >
+                    <button
+                      onClick={() => openLightbox(getFlatIndex(img))}
+                      onDoubleClick={() => onEdit?.(img.id)}
+                      className="flex-1 flex flex-col"
+                    >
+                      <div className="aspect-square overflow-hidden bg-muted">
+                        <img
+                          src={img.url}
+                          alt={img.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="px-2 py-1.5 min-h-[2.5rem]">
+                        <p className="text-xs font-medium truncate">{img.title}</p>
+                      </div>
+                    </button>
+
+                    {canEdit && onDelete && (
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <RoleGuard role="MEMBER">
+                          <ItemActionMenu
+                            groups={[
+                              {
+                                actions: [
+                                  ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(img.id) }] : []),
+                                  ...(onUpdateStatus && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(img.id, doneStatusId) }] : []),
+                                  ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(img.id) }] : []),
+                                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(img.id) }] : []),
+                                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(img.id) }] : []),
+                                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(img.id) }] : []),
+                                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(img.id) }] : []),
+                                ],
+                              },
+                              {
+                                actions: [
+                                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(img.id) }] : []),
+                                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(img.id) }] : []),
+                                ],
+                              },
+                              {
+                                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(img.id), variant: 'danger' as const }],
+                              },
+                            ].filter(g => g.actions.length > 0)}
+                            triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
+                          />
+                        </RoleGuard>
+                      </div>
+                    )}
+                  </div>
+                  </DraggableImage>
+                );
+              })}
+            </div>
+          </div>
+        </DroppableGroup>
+      ))}
+
+      {lightboxIndex !== null && flatImages.length > 0 && (
         <Lightbox
-          images={images}
+          images={flatImages}
           index={lightboxIndex}
           onClose={closeLightbox}
           onNavigate={setLightboxIndex}
         />
       )}
     </div>
+    </DndContext>
   );
 }

@@ -793,34 +793,40 @@ function MindMapViewInner({
           savePositions();
 
           // Angular sibling reorder: persist new order in DB
+          // Include portal items in angular calculation but only persist same-space items
           if (onReorder && canEdit !== false) {
             const draggedItem = items.find(i => i.id === draggedNode.id);
             if (draggedItem) {
               const parentId = draggedItem.parentId || null;
               const isPortalItem = draggedItem.spaceId !== spaceId;
-              const siblings = items.filter(i => (i.parentId || null) === parentId && i.spaceId === draggedItem.spaceId);
+              // All visual siblings (including portals) for angular sort
+              const allSiblings = items.filter(i => (i.parentId || null) === parentId);
+              const sameSpaceSiblings = allSiblings.filter(i => i.spaceId === draggedItem.spaceId);
 
-              if (siblings.length >= 2) {
-                // For portal root items, parent node is child-space-<spaceId>
-                // For current space root items, parent node is __space__
+              if (sameSpaceSiblings.length >= 2) {
                 const parentNodeId = parentId
                   || (isPortalItem ? `child-space-${draggedItem.spaceId}` : '__space__');
                 const parentPos = absPositions.get(parentNodeId);
 
                 if (parentPos) {
-                  const siblingAngles = siblings.map(sib => {
+                  // Calculate angles for ALL siblings (portals included)
+                  const allAngles = allSiblings.map(sib => {
                     const sibPos = absPositions.get(sib.id);
-                    if (!sibPos) return { id: sib.id, angle: 0 };
+                    if (!sibPos) return { id: sib.id, angle: 0, spaceId: sib.spaceId };
                     return {
                       id: sib.id,
                       angle: Math.atan2(sibPos.y - parentPos.y, sibPos.x - parentPos.x),
+                      spaceId: sib.spaceId,
                     };
                   });
 
-                  siblingAngles.sort((a, b) => a.angle - b.angle);
-                  const newOrder = siblingAngles.map(s => s.id);
+                  allAngles.sort((a, b) => a.angle - b.angle);
+                  // Extract only same-space items in their new visual order
+                  const newOrder = allAngles
+                    .filter(s => s.spaceId === draggedItem.spaceId)
+                    .map(s => s.id);
 
-                  const currentOrder = [...siblings]
+                  const currentOrder = [...sameSpaceSiblings]
                     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
                     .map(s => s.id);
 

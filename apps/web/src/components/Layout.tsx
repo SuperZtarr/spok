@@ -1,10 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, GripVertical } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -54,7 +51,7 @@ function collectDescendantIds(node: SpaceTreeNode): string[] {
   return ids;
 }
 
-function SortableCommunitySection({
+function CommunitySection({
   community, spaceTree, isExpanded, spaceCount, groupIndex, isActive,
   onToggleExpand, currentSpaceId, expandedSpaceIds, onToggleSpace, mySpacesEmpty, favoriteIds, onToggleFavorite,
 }: {
@@ -63,16 +60,10 @@ function SortableCommunitySection({
   expandedSpaceIds: Set<string>; onToggleSpace: (id: string) => void;
   mySpacesEmpty: boolean; favoriteIds: Set<string>; onToggleFavorite: (id: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: community.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
-
   return (
-    <div ref={setNodeRef} style={style} id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-2 border-b border-border">
-      <div className="flex items-center justify-between px-3 mb-1">
+    <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-2 border-b border-border">
+      <div className="flex items-center justify-between px-1.5 py-1 mb-1 bg-foreground/5 rounded-md mx-1">
         <div className="flex items-center gap-0.5 min-w-0 flex-1">
-          <div {...attributes} {...listeners} className="cursor-grab p-0.5 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0">
-            <GripVertical className="w-3 h-3" />
-          </div>
           <button
             onClick={() => onToggleExpand(community.id)}
             className="p-0.5 rounded hover:bg-accent flex-shrink-0"
@@ -92,7 +83,7 @@ function SortableCommunitySection({
             ) : (
               <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
             )}
-            <span className={`text-xs font-medium uppercase tracking-wider truncate group-hover:text-foreground transition-colors ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+            <span className={`text-xs font-medium uppercase tracking-wider truncate group-hover:text-foreground transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground/70'}`}>
               {community.name}
             </span>
             {!isExpanded && spaceCount > 0 && (
@@ -113,23 +104,25 @@ function SortableCommunitySection({
         </div>
       </div>
       {isExpanded && (
-        spaceTree.length > 0 ? (
-          spaceTree.map((node: any, nodeIndex: number) => (
-            <SpaceTreeItem
-              key={node.id}
-              node={node}
-              level={0}
-              currentSpaceId={currentSpaceId}
-              expandedIds={expandedSpaceIds}
-              onToggle={onToggleSpace}
-              htmlId={groupIndex === 0 && nodeIndex === 0 && mySpacesEmpty ? 'sidebar-first-space' : undefined}
-              favoriteIds={favoriteIds}
-              onToggleFavorite={onToggleFavorite}
-            />
-          ))
-        ) : (
-          <p className="px-3 text-xs text-muted-foreground">Aucun espace</p>
-        )
+        <div className="mx-1.5 mt-1 border-2 border-border rounded-md bg-card shadow-sm">
+          {spaceTree.length > 0 ? (
+            spaceTree.map((node: any, nodeIndex: number) => (
+              <SpaceTreeItem
+                key={node.id}
+                node={node}
+                level={0}
+                currentSpaceId={currentSpaceId}
+                expandedIds={expandedSpaceIds}
+                onToggle={onToggleSpace}
+                htmlId={groupIndex === 0 && nodeIndex === 0 && mySpacesEmpty ? 'sidebar-first-space' : undefined}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ))
+          ) : (
+            <p className="px-3 py-1 text-xs text-muted-foreground">Aucun espace</p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -250,13 +243,6 @@ export function Layout() {
   const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Community reorder drag & drop
-  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const reorderMutation = useMutation({
-    mutationFn: communitiesApi.reorder,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['communities'] }),
-  });
 
   // Expand/collapse state for space tree (persisted in localStorage)
   const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => {
@@ -381,16 +367,6 @@ export function Layout() {
     }
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCommunityDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !communities) return;
-    const ids = communities.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name)).map(c => c.id);
-    const oldIndex = ids.indexOf(active.id as string);
-    const newIndex = ids.indexOf(over.id as string);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const newIds = arrayMove(ids, oldIndex, newIndex);
-    reorderMutation.mutate(newIds);
-  }, [communities, reorderMutation]);
 
   // Fetch favorite space IDs (stabilize reference with select)
   const { data: favoriteIds = [] } = useQuery({
@@ -580,7 +556,7 @@ export function Layout() {
       <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
         <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
       </div>
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {communityGroups.map(({ community, spaceTree }) => (
           <div key={community.id} className="pt-2 pb-2 border-b border-border">
             <div className="flex items-center gap-1.5 px-3 mb-1">
@@ -619,11 +595,11 @@ export function Layout() {
     <>
       {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
       <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <Link to="/" onClick={() => useDashboardTabStore.getState().setTab('home')} className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
+        <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></a>
       </div>
 
       {/* Navigation - scrollable */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {/* Favorites */}
         {favoriteSpaces.length > 0 && (
           <div id="sidebar-favorites" className="pt-2 pb-2 border-b border-border">
@@ -724,33 +700,29 @@ export function Layout() {
           </div>
         )}
 
-        {/* Communities with their spaces — drag to reorder */}
-        <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleCommunityDragEnd}>
-          <SortableContext items={communityGroups.map(g => g.community.id)} strategy={verticalListSortingStrategy}>
-            {communityGroups.map(({ community, spaceTree }, groupIndex) => {
-              const isExpanded = !collapsedCommunityIds.has(community.id);
-              const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
-              return (
-                <SortableCommunitySection
-                  key={community.id}
-                  community={community}
-                  spaceTree={spaceTree}
-                  isExpanded={isExpanded}
-                  isActive={currentCommunityId === community.id}
-                  spaceCount={spaceCount}
-                  groupIndex={groupIndex}
-                  onToggleExpand={toggleCommunityExpand}
-                  currentSpaceId={currentSpaceId}
-                  expandedSpaceIds={expandedSpaceIds}
-                  onToggleSpace={toggleSpaceExpand}
-                  mySpacesEmpty={mySpaces.length === 0}
-                  favoriteIds={favoriteIdSet}
-                  onToggleFavorite={handleToggleFavorite}
-                />
-              );
-            })}
-          </SortableContext>
-        </DndContext>
+        {/* Communities with their spaces */}
+        {communityGroups.map(({ community, spaceTree }, groupIndex) => {
+          const isExpanded = !collapsedCommunityIds.has(community.id);
+          const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
+          return (
+            <CommunitySection
+              key={community.id}
+              community={community}
+              spaceTree={spaceTree}
+              isExpanded={isExpanded}
+              isActive={currentCommunityId === community.id}
+              spaceCount={spaceCount}
+              groupIndex={groupIndex}
+              onToggleExpand={toggleCommunityExpand}
+              currentSpaceId={currentSpaceId}
+              expandedSpaceIds={expandedSpaceIds}
+              onToggleSpace={toggleSpaceExpand}
+              mySpacesEmpty={mySpaces.length === 0}
+              favoriteIds={favoriteIdSet}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          );
+        })}
 
         {/* Independent group spaces (no community) */}
         {independentSpaces.length > 0 && (
@@ -817,7 +789,7 @@ export function Layout() {
       {/* Sidebar - desktop: static resizable, mobile: slide-over (hidden on auth pages) */}
       {!isAuthPage && <aside
         className={`
-          bg-card border-r border-border flex flex-col flex-shrink-0 h-full
+          bg-muted border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
           transition-transform duration-200 md:transition-none md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -873,6 +845,18 @@ export function Layout() {
               )}
             </div>
           </div>
+          {/* Quick add button when no space selected */}
+          {user && !currentSpaceId && mySpaces.length > 0 && (
+            <Link
+              to={`/spaces/${mySpaces[0].id}/content`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex-shrink-0"
+              title="Ajouter un item dans mon espace personnel"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nouvel item</span>
+            </Link>
+          )}
+
           {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
           <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
             <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} />

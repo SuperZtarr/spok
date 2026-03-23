@@ -399,15 +399,19 @@ model Contribution {
   content   String
   itemId    String
   authorId  String
+  parentId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   item      Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
   author    User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    Contribution?  @relation("ContributionThread", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Contribution[] @relation("ContributionThread")
   reactions Reaction[]
 
   @@index([itemId])
   @@index([authorId])
+  @@index([parentId])
   @@map("contributions")
 }
 

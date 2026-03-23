@@ -1,7 +1,10 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff, Clock, Check, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { adminApi } from '../../lib/api';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Plus, Search, Trash2, Building2, Users, FolderKanban, ArrowUp, ArrowDown, Eye, EyeOff, Clock, Check, X, ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react';
+import { adminApi, communitiesApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
@@ -62,6 +65,16 @@ function CommunityAvatar({ community }: { community: AdminCommunity }) {
   );
 }
 
+function SortableRow({ id, children }: { id: string; children: (props: { dragHandleProps: Record<string, any> }) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <tr ref={setNodeRef} style={style} className={isDragging ? 'bg-muted' : ''}>
+      {children({ dragHandleProps: { ...attributes, ...listeners } })}
+    </tr>
+  );
+}
+
 export function CommunitiesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -111,10 +124,31 @@ export function CommunitiesPage() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: communitiesApi.reorder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+    },
+  });
+
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   const sortedCommunities = useMemo(
     () => sortData(data?.data || [], accessors),
     [data, sortData]
   );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = sortedCommunities.map(c => c.id);
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newIds = arrayMove(ids, oldIndex, newIndex);
+    reorderMutation.mutate(newIds);
+  }, [sortedCommunities, reorderMutation]);
 
   const pendingCommunities = sortedCommunities.filter(c => c.pendingPublic);
   const totalPages = data?.pagination.totalPages ?? 1;
@@ -258,6 +292,7 @@ export function CommunitiesPage() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
+                  <th className="px-2 py-3 w-8"></th>
                   <SortHeader label="Communaute" column="name" />
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Visibilite</th>
                   <SortHeader label="Membres" column="members" className="text-center" />
@@ -266,20 +301,29 @@ export function CommunitiesPage() {
                   <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {sortedCommunities.map((community) => (
-                  <tr key={community.id} className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => setModalCommunityId(community.id)}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <CommunityAvatar community={community} />
-                        <div className="min-w-0">
-                          <span className="font-medium text-sm truncate block">{community.name}</span>
-                          {community.description && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">{community.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
+              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={sortedCommunities.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                  <tbody className="divide-y divide-border">
+                    {sortedCommunities.map((community) => (
+                      <SortableRow key={community.id} id={community.id}>
+                        {({ dragHandleProps }) => (
+                          <>
+                            <td className="px-2 py-3 w-8">
+                              <div {...dragHandleProps} className="cursor-grab p-1 text-muted-foreground/40 hover:text-muted-foreground">
+                                <GripVertical className="w-4 h-4" />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 cursor-pointer" onClick={() => setModalCommunityId(community.id)}>
+                              <div className="flex items-center gap-3">
+                                <CommunityAvatar community={community} />
+                                <div className="min-w-0">
+                                  <span className="font-medium text-sm truncate block">{community.name}</span>
+                                  {community.description && (
+                                    <p className="text-xs text-muted-foreground truncate max-w-[300px]">{community.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
@@ -349,17 +393,21 @@ export function CommunitiesPage() {
                           <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {sortedCommunities.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      Aucune communaute trouvee
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+                            </td>
+                          </>
+                        )}
+                      </SortableRow>
+                    ))}
+                    {sortedCommunities.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                          Aucune communaute trouvee
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </SortableContext>
+              </DndContext>
             </table>
           </div>
 

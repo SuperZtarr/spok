@@ -458,8 +458,13 @@ export function ItemEditModal({
     if (!item) return title.trim().length > 0; // creation mode
     if (type !== item.type) return true;
     if (title !== item.title) return true;
-    const newDesc = (description && description !== '<p></p>') ? description : null;
-    if (newDesc !== (item.description || null)) return true;
+    const normalizeDesc = (d: string | null | undefined) => {
+      if (!d) return null;
+      const trimmed = d.trim();
+      if (!trimmed || trimmed === '<p></p>' || trimmed === '<p><br></p>' || trimmed === '<p><br/></p>' || trimmed === '<p> </p>') return null;
+      return trimmed;
+    };
+    if (normalizeDesc(description) !== normalizeDesc(item.description)) return true;
     if (type === 'DIAGRAM') {
       const currentXml = (item.content as Record<string, unknown>)?.xml as string || '';
       if (diagramXml !== currentXml) return true;

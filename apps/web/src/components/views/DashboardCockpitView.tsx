@@ -396,7 +396,7 @@ export function DashboardCockpitView() {
     queryKey: ['dashboard-cockpit'],
     queryFn: () => userTasksApi.list({
       type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
-      status: 'undefined,todo,in_progress,to_validate',
+      status: 'none,todo,in_progress,to_validate',
       pageSize: 500,
     }),
   });

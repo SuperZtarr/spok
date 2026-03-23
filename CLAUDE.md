@@ -171,6 +171,12 @@ Deploye sur Railway :
 - Apres commit, attendre que l'utilisateur teste en local (`pnpm dev:start`)
 - Merger et pusher **uniquement** quand l'utilisateur dit "merge et push" (ou equivalent)
 
+### Modifier des donnees en base dev (OBLIGATOIRE)
+- **MenuItem (menus)** : utiliser l'interface `/admin/menu` ou Prisma Studio (`pnpm db:studio`). JAMAIS curl en chaine.
+- **Donnees en base** : Prisma Studio ou script TS one-liner (`npx tsx script.ts`). JAMAIS d'appels API curl complexes.
+- **Quand une interface admin existe** : l'utiliser ou proposer a l'utilisateur de le faire lui-meme. Ne pas reinventer.
+- **Principe general** : toujours choisir la methode la plus simple et directe. Si ca prend plus de 2 commandes, c'est qu'on fait faux.
+
 ### Configuration des ports (NE PAS MODIFIER)
 - **Web** : port 3000 (configure dans `apps/web/vite.config.ts` avec `strictPort: true`)
 - **API** : port 3001 (configure via `API_PORT`)

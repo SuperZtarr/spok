@@ -17,7 +17,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'text', label: 'Texte', icon: 'FileText', section: 'basic', sectionLabel: 'Basique', sectionOrder: 1, route: null, viewMode: 'text', order: 2, visible: true, access: 'public' },
   { id: '', key: 'types', label: 'Types', icon: 'LayoutGrid', section: 'basic', sectionLabel: 'Basique', sectionOrder: 1, route: null, viewMode: 'types', order: 3, visible: true, access: 'user' },
   { id: '', key: 'members', label: 'Membres', icon: 'Users', section: 'basic', sectionLabel: 'Basique', sectionOrder: 1, route: null, viewMode: 'members', order: 4, visible: true, access: 'user' },
-  { id: '', key: 'priority', label: 'Priorités', icon: 'Flame', section: 'basic', sectionLabel: 'Basique', sectionOrder: 1, route: null, viewMode: 'priority', order: 5, visible: true, access: 'user' },
+  { id: '', key: 'priority', label: 'Priorités', icon: 'Flame', section: 'planning', sectionLabel: 'Planification', sectionOrder: 3, route: null, viewMode: 'priority', order: 6, visible: true, access: 'user' },
   { id: '', key: 'crossTable', label: 'Tableau croisé', icon: 'Table2', section: 'basic', sectionLabel: 'Basique', sectionOrder: 1, route: null, viewMode: 'crossTable', order: 6, visible: true, access: 'user' },
 
   // ── Section: itemTypes (Types) ──
