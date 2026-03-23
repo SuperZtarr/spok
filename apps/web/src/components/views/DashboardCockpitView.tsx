@@ -397,7 +397,7 @@ export function DashboardCockpitView() {
     queryFn: () => userTasksApi.list({
       type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'none,todo,in_progress,to_validate',
-      pageSize: 500,
+      pageSize: 2000,
     }),
   });
 
@@ -408,7 +408,7 @@ export function DashboardCockpitView() {
     queryFn: () => userTasksApi.list({
       type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'done',
-      pageSize: 500,
+      pageSize: 2000,
     }),
   });
 
