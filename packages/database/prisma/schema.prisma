@@ -78,8 +78,9 @@ model Space {
   communityId String?
   avatarUrl   String?
   coverUrl      String?
-  coverPosition Int       @default(50)
-  coverZoom     Int       @default(100)
+  coverPosition  Int       @default(50)
+  coverPositionX Int       @default(50)
+  coverZoom      Int       @default(100)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -157,8 +158,9 @@ model Community {
   pendingVisibility  SpaceVisibility? // Requested visibility awaiting admin approval
   avatarUrl     String?
   coverUrl      String?
-  coverPosition Int       @default(50)
-  coverZoom     Int       @default(100)
+  coverPosition  Int       @default(50)
+  coverPositionX Int       @default(50)
+  coverZoom      Int       @default(100)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

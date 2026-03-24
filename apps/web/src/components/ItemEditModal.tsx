@@ -745,7 +745,7 @@ export function ItemEditModal({
                           key={key}
                           type="button"
                           onClick={() => setType(key as ItemType)}
-                          className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
+                          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
                             isSelected
                               ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
                               : 'opacity-60 hover:opacity-100'

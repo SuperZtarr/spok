@@ -222,7 +222,7 @@ export function SpaceSettingsPage() {
   });
 
   const updateCoverCropMutation = useMutation({
-    mutationFn: (data: { coverPosition: number; coverZoom: number }) => spacesApi.update(spaceId!, data as any),
+    mutationFn: (data: { coverPosition: number; coverPositionX: number; coverZoom: number }) => spacesApi.update(spaceId!, data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
@@ -559,85 +559,92 @@ export function SpaceSettingsPage() {
               <ImageIcon className="w-5 h-5" />
               Images
             </h2>
-            <div className="space-y-6">
-              {/* Avatar */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Avatar</label>
-                <div className="flex items-center gap-4">
-                  <div
-                    className="relative group cursor-pointer"
-                    onClick={() => avatarInputRef.current?.click()}
-                  >
-                    {space?.avatarUrl ? (
-                      <img
-                        src={space.avatarUrl}
-                        alt="Avatar de l'espace"
-                        className="w-16 h-16 rounded-full object-cover border border-border"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      {uploadAvatarMutation.isPending ? (
-                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left: Avatar + Cover upload */}
+              <div className="space-y-6">
+                {/* Avatar */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Avatar</label>
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="relative group cursor-pointer"
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      {space?.avatarUrl ? (
+                        <img
+                          src={space.avatarUrl}
+                          alt="Avatar de l'espace"
+                          className="w-16 h-16 rounded-full object-cover border border-border"
+                        />
                       ) : (
-                        <Camera className="w-5 h-5 text-white" />
+                        <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center">
+                          <Building2 className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        {uploadAvatarMutation.isPending ? (
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        ) : (
+                          <Camera className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-muted-foreground">
+                        256 × 256 px, rond. Cliquez pour modifier.
+                      </p>
+                      {space?.avatarUrl && (
+                        <button
+                          onClick={() => deleteAvatarMutation.mutate()}
+                          disabled={deleteAvatarMutation.isPending}
+                          className="text-xs text-destructive hover:underline self-start"
+                        >
+                          Supprimer l'avatar
+                        </button>
                       )}
                     </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadAvatarMutation.mutate(file);
+                        e.target.value = '';
+                      }}
+                    />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-xs text-muted-foreground">
-                      256 × 256 px, rond. Cliquez pour modifier.
-                    </p>
-                    {space?.avatarUrl && (
-                      <button
-                        onClick={() => deleteAvatarMutation.mutate()}
-                        disabled={deleteAvatarMutation.isPending}
-                        className="text-xs text-destructive hover:underline self-start"
-                      >
-                        Supprimer l'avatar
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) uploadAvatarMutation.mutate(file);
-                      e.target.value = '';
-                    }}
+                </div>
+
+                {/* Cover upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Image de couverture</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    1200 × 400 px recommandé. Affichée en bandeau sur la carte du Dashboard.
+                  </p>
+                  <ImageUploadZone
+                    currentUrl={space?.coverUrl}
+                    onUpload={(file) => uploadCoverMutation.mutate(file)}
+                    onRemove={() => deleteCoverMutation.mutate()}
+                    isUploading={uploadCoverMutation.isPending}
                   />
                 </div>
               </div>
 
-              {/* Cover */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Image de couverture</label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  1200 × 400 px recommandé. Affichée en bandeau sur la carte du Dashboard.
-                </p>
-                <ImageUploadZone
-                  currentUrl={space?.coverUrl}
-                  onUpload={(file) => uploadCoverMutation.mutate(file)}
-                  onRemove={() => deleteCoverMutation.mutate()}
-                  isUploading={uploadCoverMutation.isPending}
-                />
-                {space?.coverUrl && (
-                  <div className="mt-3">
-                    <CoverPositionEditor
-                      coverUrl={space.coverUrl}
-                      position={(space as any).coverPosition ?? 50}
-                      zoom={(space as any).coverZoom ?? 100}
-                      onSave={(pos, zm) => updateCoverCropMutation.mutate({ coverPosition: pos, coverZoom: zm })}
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Right: Cover position editor */}
+              {space?.coverUrl && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Cadrage de la couverture</label>
+                  <CoverPositionEditor
+                    coverUrl={space.coverUrl}
+                    position={(space as any).coverPosition ?? 50}
+                    positionX={(space as any).coverPositionX ?? 50}
+                    zoom={(space as any).coverZoom ?? 100}
+                    onSave={(pos, posX, zm) => updateCoverCropMutation.mutate({ coverPosition: pos, coverPositionX: posX, coverZoom: zm })}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

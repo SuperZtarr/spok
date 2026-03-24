@@ -25,6 +25,7 @@ const updateCommunitySchema = z.object({
   isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
   coverPosition: z.number().int().min(0).max(100).optional(),
+  coverPositionX: z.number().int().min(0).max(100).optional(),
   coverZoom: z.number().int().min(100).max(300).optional(),
 });
 
@@ -292,6 +293,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         updateData.visibility = body.isPublic ? 'OPEN' : 'PRIVATE';
       }
       if (body.coverPosition !== undefined) updateData.coverPosition = body.coverPosition;
+      if (body.coverPositionX !== undefined) updateData.coverPositionX = body.coverPositionX;
       if (body.coverZoom !== undefined) updateData.coverZoom = body.coverZoom;
 
       const community = await fastify.prisma.community.update({
@@ -1100,11 +1102,11 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const community = await fastify.prisma.community.update({
       where: { id: request.params.id },
-      data: { coverUrl, coverPosition: 50, coverZoom: 100 },
-      select: { coverUrl: true, coverPosition: true, coverZoom: true },
+      data: { coverUrl, coverPosition: 50, coverPositionX: 50, coverZoom: 100 },
+      select: { coverUrl: true, coverPosition: true, coverPositionX: true, coverZoom: true },
     });
 
-    return { coverUrl: community.coverUrl, coverPosition: community.coverPosition, coverZoom: community.coverZoom };
+    return { coverUrl: community.coverUrl, coverPosition: community.coverPosition, coverPositionX: community.coverPositionX, coverZoom: community.coverZoom };
   });
 
   // Delete community cover

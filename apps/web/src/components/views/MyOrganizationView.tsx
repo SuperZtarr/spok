@@ -259,10 +259,10 @@ export function MyOrganizationView() {
   );
 
   const filters = useGlobalTaskFilters({
-    defaultTypes: ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'DOCUMENT', 'IMAGE', 'BUG'],
+    defaultTypes: ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'],
     defaultSortBy: 'priority',
     defaultSortDir: 'desc',
-    pageSize: 500,
+    pageSize: 2000,
   });
 
   const now = new Date();
@@ -274,7 +274,7 @@ export function MyOrganizationView() {
     queryKey: ['my-organization', filters.queryParams],
     queryFn: () => userTasksApi.list({
       ...filters.queryParams,
-      status: filters.queryParams.status || 'undefined,todo,in_progress,to_validate',
+      status: filters.queryParams.status || 'none,todo,in_progress,to_validate,late',
     }),
   });
 
@@ -285,7 +285,7 @@ export function MyOrganizationView() {
     queryFn: () => userTasksApi.list({
       type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'done',
-      pageSize: 500,
+      pageSize: 2000,
     }),
   });
 

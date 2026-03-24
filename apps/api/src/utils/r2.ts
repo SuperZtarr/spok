@@ -63,7 +63,7 @@ export async function uploadEntityImage(buffer: Buffer, keyPrefix: string): Prom
     })
   );
 
-  return `${R2_PUBLIC_URL}/${key}`;
+  return `${R2_PUBLIC_URL}/${key}?v=${Date.now()}`;
 }
 
 export async function uploadImageToR2(buffer: Buffer, itemId: string): Promise<string> {

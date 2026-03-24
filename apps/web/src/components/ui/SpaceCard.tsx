@@ -21,9 +21,9 @@ export function SpaceCard({ space, onClick }: SpaceCardProps) {
             alt=""
             className="w-full h-full object-cover"
             style={{
-              objectPosition: `center ${(space as any).coverPosition ?? 50}%`,
+              objectPosition: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%`,
               transform: `scale(${((space as any).coverZoom ?? 100) / 100})`,
-              transformOrigin: `center ${(space as any).coverPosition ?? 50}%`,
+              transformOrigin: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%`,
             }}
           />
         </div>

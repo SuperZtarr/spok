@@ -30,6 +30,7 @@ const updateSpaceSchema = z.object({
   defaultRole: z.enum(['MEMBER']).nullable().optional(),
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
   coverPosition: z.number().int().min(0).max(100).optional(),
+  coverPositionX: z.number().int().min(0).max(100).optional(),
   coverZoom: z.number().int().min(100).max(300).optional(),
 });
 
@@ -554,6 +555,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (communityIdOverride !== undefined) updateData.communityId = communityIdOverride;
       if (body.defaultRole !== undefined) updateData.defaultRole = body.defaultRole;
       if (body.coverPosition !== undefined) updateData.coverPosition = body.coverPosition;
+      if (body.coverPositionX !== undefined) updateData.coverPositionX = body.coverPositionX;
       if (body.coverZoom !== undefined) updateData.coverZoom = body.coverZoom;
 
       const updatedSpace = await fastify.prisma.space.update({
@@ -1528,11 +1530,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const space = await fastify.prisma.space.update({
       where: { id: request.params.id },
-      data: { coverUrl, coverPosition: 50, coverZoom: 100 },
-      select: { coverUrl: true, coverPosition: true, coverZoom: true },
+      data: { coverUrl, coverPosition: 50, coverPositionX: 50, coverZoom: 100 },
+      select: { coverUrl: true, coverPosition: true, coverPositionX: true, coverZoom: true },
     });
 
-    return { coverUrl: space.coverUrl, coverPosition: space.coverPosition, coverZoom: space.coverZoom };
+    return { coverUrl: space.coverUrl, coverPosition: space.coverPosition, coverPositionX: space.coverPositionX, coverZoom: space.coverZoom };
   });
 
   // Delete space cover

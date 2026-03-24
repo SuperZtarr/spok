@@ -89,7 +89,7 @@ export function CommunityPage() {
         {/* Header with cover */}
         <div className="relative mt-4">
           {community?.coverUrl ? (
-            <div className="aspect-[5/1] rounded-xl overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(community as any).coverPosition ?? 50}%` }} /></div>
+            <div className="aspect-[5/1] rounded-xl overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
           ) : (
             <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
           )}

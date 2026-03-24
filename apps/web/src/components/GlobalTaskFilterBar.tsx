@@ -33,7 +33,7 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-all whitespace-nowrap flex-shrink-0 ${
+      className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium border transition-all whitespace-nowrap ${
         active
           ? color || 'bg-primary/15 text-primary border-primary/40'
           : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground/40 hover:text-foreground'
@@ -44,19 +44,23 @@ function FilterChip({
   );
 }
 
-function renderFilterRow(
-  label: string,
-  options: { id: string; label: string; color?: string }[],
-  selected: string[],
-  toggle: (id: string) => void,
-  setPage: (p: number) => void,
-  scrollable = false,
-) {
+function FilterRow({
+  label,
+  options,
+  selected,
+  toggle,
+  setPage,
+}: {
+  label: string;
+  options: { id: string; label: string; color?: string }[];
+  selected: string[];
+  toggle: (id: string) => void;
+  setPage: (p: number) => void;
+}) {
   return (
-    <div className={`flex items-start gap-2 ${scrollable ? '' : 'flex-wrap'}`}>
-      <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0 pt-1 hidden sm:block">{label}</span>
-      <span className="text-xs font-medium text-muted-foreground flex-shrink-0 pt-1 sm:hidden">{label}</span>
-      <div className={`flex gap-1.5 ${scrollable ? 'overflow-x-auto pb-1 min-w-0 flex-1 scrollbar-thin' : 'flex-wrap'}`}>
+    <div className="flex items-start gap-2">
+      <span className="text-[11px] font-medium text-muted-foreground w-14 flex-shrink-0 pt-1">{label}</span>
+      <div className="flex gap-1 flex-wrap min-w-0">
         {options.map((opt) => (
           <FilterChip
             key={opt.id}
@@ -153,24 +157,26 @@ export function GlobalTaskFilterBar({ filters, showSearch = true }: GlobalTaskFi
         )}
       </div>
 
-      <div className={`space-y-2 overflow-hidden transition-all duration-200 ${filtersOpen ? 'max-h-[500px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
-        {renderFilterRow('Type', typeOptions, filters.selectedTypes, (id) => filters.setSelectedTypes((prev) => toggleValue(prev, id)), (p) => filters.setPage(p), true)}
-        {renderFilterRow('Statut', statusOptions, filters.selectedStatuses, (id) => filters.setSelectedStatuses((prev) => toggleValue(prev, id)), (p) => filters.setPage(p))}
-        {renderFilterRow('Priorite', priorityOptions, filters.selectedPriorities, (id) => filters.setSelectedPriorities((prev) => toggleValue(prev, id)), (p) => filters.setPage(p))}
-        {renderFilterRow('Echeance', DUE_DATE_OPTIONS, filters.selectedDueDates, (id) => filters.setSelectedDueDates((prev) => toggleValue(prev, id)), (p) => filters.setPage(p))}
-        <div className="flex items-start gap-2">
-          <span className="text-xs font-medium text-muted-foreground w-16 flex-shrink-0 pt-1 hidden sm:block">Assigné</span>
-          <span className="text-xs font-medium text-muted-foreground flex-shrink-0 pt-1 sm:hidden">Assigné</span>
-          <FilterChip
-            label="Assigné à moi"
-            active={filters.assignedToMe}
-            color="bg-violet-100 text-violet-800 border-violet-300"
-            onClick={() => { filters.setAssignedToMe((v) => !v); filters.setPage(1); }}
-          />
+      {filtersOpen && (
+        <div className="space-y-2 mb-2">
+          <FilterRow label="Type" options={typeOptions} selected={filters.selectedTypes} toggle={(id) => filters.setSelectedTypes((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
+          <FilterRow label="Statut" options={statusOptions} selected={filters.selectedStatuses} toggle={(id) => filters.setSelectedStatuses((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
+          <FilterRow label="Priorité" options={priorityOptions} selected={filters.selectedPriorities} toggle={(id) => filters.setSelectedPriorities((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
+          <FilterRow label="Échéance" options={DUE_DATE_OPTIONS} selected={filters.selectedDueDates} toggle={(id) => filters.setSelectedDueDates((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
+          <div className="flex items-start gap-2">
+            <span className="text-[11px] font-medium text-muted-foreground w-14 flex-shrink-0 pt-1">Assigné</span>
+            <FilterChip
+              label="Assigné à moi"
+              active={filters.assignedToMe}
+              color="bg-violet-100 text-violet-800 border-violet-300"
+              onClick={() => { filters.setAssignedToMe((v) => !v); filters.setPage(1); }}
+            />
+          </div>
+          {spaces && spaces.length > 0 &&
+            <FilterRow label="Espaces" options={spaces.map((s) => ({ id: s.id, label: s.name }))} selected={filters.selectedSpaces} toggle={(id) => filters.setSelectedSpaces((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
+          }
         </div>
-        {spaces && spaces.length > 0 &&
-          renderFilterRow('Espaces', spaces.map((s) => ({ id: s.id, label: s.name })), filters.selectedSpaces, (id) => filters.setSelectedSpaces((prev) => toggleValue(prev, id)), (p) => filters.setPage(p), true)}
-      </div>
+      )}
     </div>
   );
 }

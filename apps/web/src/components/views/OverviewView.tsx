@@ -120,7 +120,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
         <div className="relative">
           {space?.coverUrl ? (
             <div className="aspect-[5/1] rounded-xl overflow-hidden">
-              <img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `center ${(space as any).coverPosition ?? 50}%` }} />
+              <img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%` }} />
             </div>
           ) : (
             <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
@@ -231,7 +231,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
                   >
                     {node.coverUrl ? (
                       <div className="h-20 overflow-hidden">
-                        <img src={node.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${(node as any).coverPosition ?? 50}%` }} />
+                        <img src={node.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(node as any).coverPositionX ?? 50}% ${(node as any).coverPosition ?? 50}%` }} />
                       </div>
                     ) : (
                       <div className="h-20 bg-gradient-to-r from-primary/10 to-primary/5" />
