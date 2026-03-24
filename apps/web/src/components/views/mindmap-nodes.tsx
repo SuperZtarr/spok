@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
@@ -47,6 +48,8 @@ export interface MindMapNodeProps {
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type);
+  const [imageHover, setImageHover] = useState(false);
+  const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
 
   return (
     <div
@@ -90,8 +93,19 @@ export function MindMapNode({ data }: MindMapNodeProps) {
         <span className="text-sm font-medium line-clamp-3 break-words" title={item.title}>{item.title}</span>
 
 
-        {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
-          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
+        {hasImage && (
+          <div
+            className="relative flex-shrink-0 nodrag nopan"
+            onMouseEnter={() => setImageHover(true)}
+            onMouseLeave={() => setImageHover(false)}
+          >
+            <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
+            {imageHover && (
+              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 bg-white rounded-lg shadow-2xl border border-border pointer-events-none">
+                <img src={item.url} alt="" className="max-w-[300px] max-h-[300px] object-contain rounded" />
+              </div>
+            )}
+          </div>
         )}
 
         {/* Badge showing child count when collapsed */}
