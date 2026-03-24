@@ -99,10 +99,10 @@ export function MindMapNode({ data }: MindMapNodeProps) {
             onMouseEnter={() => setImageHover(true)}
             onMouseLeave={() => setImageHover(false)}
           >
-            <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
+            <img src={item.url!} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
             {imageHover && (
               <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 bg-white rounded-lg shadow-2xl border border-border pointer-events-none">
-                <img src={item.url} alt="" className="max-w-[300px] max-h-[300px] object-contain rounded" />
+                <img src={item.url!} alt="" className="max-w-[300px] max-h-[300px] object-contain rounded" />
               </div>
             )}
           </div>
