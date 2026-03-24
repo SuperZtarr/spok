@@ -385,6 +385,9 @@ export interface GlobalTask {
   description: string | null;
   url: string | null;
   spaceName: string;
+  spaceParentId: string | null;
+  communityId: string | null;
+  communityName: string | null;
   createdByName: string;
   assignedToName: string | null;
   space: { id: string; name: string };

@@ -7,6 +7,7 @@ export interface GlobalTaskFilterState {
   selectedTypes: string[];
   selectedStatuses: string[];
   selectedPriorities: string[];
+  selectedCommunities: string[];
   selectedSpaces: string[];
   selectedDueDates: string[];
   assignedToMe: boolean;
@@ -18,6 +19,7 @@ export interface GlobalTaskFilterState {
   setSelectedTypes: React.Dispatch<React.SetStateAction<string[]>>;
   setSelectedStatuses: React.Dispatch<React.SetStateAction<string[]>>;
   setSelectedPriorities: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedCommunities: React.Dispatch<React.SetStateAction<string[]>>;
   setSelectedSpaces: React.Dispatch<React.SetStateAction<string[]>>;
   setSelectedDueDates: React.Dispatch<React.SetStateAction<string[]>>;
   setAssignedToMe: React.Dispatch<React.SetStateAction<boolean>>;
@@ -50,6 +52,7 @@ export function useGlobalTaskFilters(options?: {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(defaultTypes);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
   const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
   const [selectedDueDates, setSelectedDueDates] = useState<string[]>([]);
   const [assignedToMe, setAssignedToMe] = useState(false);
@@ -134,6 +137,7 @@ export function useGlobalTaskFilters(options?: {
     isTypeFiltered ||
     selectedStatuses.length > 0 ||
     selectedPriorities.length > 0 ||
+    selectedCommunities.length > 0 ||
     selectedSpaces.length > 0 ||
     selectedDueDates.length > 0 ||
     assignedToMe ||
@@ -143,6 +147,7 @@ export function useGlobalTaskFilters(options?: {
     setSelectedTypes(defaultTypes);
     setSelectedStatuses([]);
     setSelectedPriorities([]);
+    setSelectedCommunities([]);
     setSelectedSpaces([]);
     setSelectedDueDates([]);
     setAssignedToMe(false);
@@ -155,6 +160,7 @@ export function useGlobalTaskFilters(options?: {
     (isTypeFiltered ? selectedTypes.length : 0) +
     selectedStatuses.length +
     selectedPriorities.length +
+    selectedCommunities.length +
     selectedDueDates.length +
     selectedSpaces.length +
     (assignedToMe ? 1 : 0);
@@ -180,9 +186,9 @@ export function useGlobalTaskFilters(options?: {
 
   return {
     search, debouncedSearch, selectedTypes, selectedStatuses, selectedPriorities,
-    selectedSpaces, selectedDueDates, assignedToMe, sortBy, sortDir, page,
+    selectedCommunities, selectedSpaces, selectedDueDates, assignedToMe, sortBy, sortDir, page,
     setSearch, setSelectedTypes, setSelectedStatuses, setSelectedPriorities,
-    setSelectedSpaces, setSelectedDueDates, setAssignedToMe, setSortBy, setSortDir,
+    setSelectedCommunities, setSelectedSpaces, setSelectedDueDates, setAssignedToMe, setSortBy, setSortDir,
     setPage, toggleSort, clearAllFilters,
     hasAnyFilter, activeFilterCount, queryParams,
   };

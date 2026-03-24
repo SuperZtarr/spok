@@ -295,8 +295,19 @@ export function MyOrganizationView() {
     queryFn: () => spacesApi.list(),
   });
 
-  const allTasks = allData?.data || [];
-  const doneTasks = doneData?.data || [];
+  const rawAllTasks = allData?.data || [];
+  const rawDoneTasks = doneData?.data || [];
+
+  // Filter by selected communities (client-side)
+  const allTasks = useMemo(() => {
+    if (filters.selectedCommunities.length === 0) return rawAllTasks;
+    return rawAllTasks.filter(t => t.communityId && filters.selectedCommunities.includes(t.communityId));
+  }, [rawAllTasks, filters.selectedCommunities]);
+
+  const doneTasks = useMemo(() => {
+    if (filters.selectedCommunities.length === 0) return rawDoneTasks;
+    return rawDoneTasks.filter(t => t.communityId && filters.selectedCommunities.includes(t.communityId));
+  }, [rawDoneTasks, filters.selectedCommunities]);
 
   // --- Priorities (P1 + P2, non terminés) ---
   const rawPriorityTasks = useMemo(() =>

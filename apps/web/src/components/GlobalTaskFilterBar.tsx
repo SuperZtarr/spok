@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
-import { spacesApi } from '../lib/api';
+import { spacesApi, communitiesApi } from '../lib/api';
 import { Input } from './ui/Input';
 import { TYPE_LABELS } from '../constants/ui';
 import { DEFAULT_STATUSES } from '@spok/shared';
@@ -115,10 +115,22 @@ interface GlobalTaskFilterBarProps {
 export function GlobalTaskFilterBar({ filters, showSearch = true }: GlobalTaskFilterBarProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const { data: communities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: () => communitiesApi.list(),
+  });
+
   const { data: spaces } = useQuery({
     queryKey: ['spaces'],
     queryFn: () => spacesApi.list(),
   });
+
+  // Filter spaces by selected communities
+  const filteredSpaces = useMemo(() => {
+    if (!spaces) return [];
+    if (filters.selectedCommunities.length === 0) return spaces;
+    return spaces.filter(s => s.communityId && filters.selectedCommunities.includes(s.communityId));
+  }, [spaces, filters.selectedCommunities]);
 
   return (
     <div className="flex-shrink-0">
@@ -172,8 +184,15 @@ export function GlobalTaskFilterBar({ filters, showSearch = true }: GlobalTaskFi
               onClick={() => { filters.setAssignedToMe((v) => !v); filters.setPage(1); }}
             />
           </div>
-          {spaces && spaces.length > 0 &&
-            <FilterRow label="Espaces" options={spaces.map((s) => ({ id: s.id, label: s.name }))} selected={filters.selectedSpaces} toggle={(id) => filters.setSelectedSpaces((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
+          {communities && communities.length > 0 &&
+            <FilterRow label="Communauté" options={communities.map((c) => ({ id: c.id, label: c.name }))} selected={filters.selectedCommunities} toggle={(id) => {
+              filters.setSelectedCommunities((prev) => toggleValue(prev, id));
+              // Reset space selection when community changes
+              filters.setSelectedSpaces([]);
+            }} setPage={(p) => filters.setPage(p)} />
+          }
+          {filteredSpaces.length > 0 &&
+            <FilterRow label="Espaces" options={filteredSpaces.map((s) => ({ id: s.id, label: s.name }))} selected={filters.selectedSpaces} toggle={(id) => filters.setSelectedSpaces((prev) => toggleValue(prev, id))} setPage={(p) => filters.setPage(p)} />
           }
         </div>
       )}
