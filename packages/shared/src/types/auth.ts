@@ -54,12 +54,14 @@ export interface AdminUser {
   name: string;
   avatarUrl?: string;
   globalRole: GlobalRole;
+  lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
     memberships: number;
     communityMemberships: number;
     createdItems: number;
+    contributions: number;
   };
 }
 

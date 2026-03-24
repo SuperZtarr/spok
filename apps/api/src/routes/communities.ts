@@ -146,13 +146,48 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const publicMapped = publicCommunities.map(c => ({
       ...c,
-      role: null,
+      role: null as string | null,
       order: 999,
       memberCount: c._count.memberships,
       spaceCount: c._count.spaces,
     }));
 
-    return [...userCommunities, ...publicMapped];
+    // Pending invitations for this user (by email)
+    const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { email: true, globalRole: true } });
+    const pendingInvitations = await fastify.prisma.invitation.findMany({
+      where: { email: currentUser!.email, status: 'PENDING', communityId: { not: null } },
+      include: { community: { include: { _count: { select: { memberships: true, spaces: true } } } } },
+    });
+    const invitedIds = new Set(pendingInvitations.map(i => i.communityId!));
+    const invitedMapped = pendingInvitations
+      .filter(i => i.community && !myIds.has(i.communityId!))
+      .map(i => ({
+        ...i.community!,
+        role: 'INVITED' as string | null,
+        order: 998,
+        memberCount: i.community!._count.memberships,
+        spaceCount: i.community!._count.spaces,
+      }));
+
+    // Admin: all remaining communities (not member, not public non-member, not invited)
+    let adminMapped: typeof publicMapped = [];
+    if (currentUser?.globalRole === 'ADMIN') {
+      const excludeIds = [...Array.from(myIds), ...publicCommunities.map(c => c.id), ...Array.from(invitedIds)];
+      const otherCommunities = await fastify.prisma.community.findMany({
+        where: { id: { notIn: excludeIds } },
+        include: { _count: { select: { memberships: true, spaces: true } } },
+        orderBy: { name: 'asc' },
+      });
+      adminMapped = otherCommunities.map(c => ({
+        ...c,
+        role: 'ADMIN_VIEW' as string | null,
+        order: 1000,
+        memberCount: c._count.memberships,
+        spaceCount: c._count.spaces,
+      }));
+    }
+
+    return [...userCommunities, ...invitedMapped, ...publicMapped, ...adminMapped];
   });
 
   // Reorder user's communities

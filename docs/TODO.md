@@ -13,6 +13,13 @@
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
+### IA / Résumés
+- [ ] Résumé de conversations avec identification des consensus (style Reddit TL;DR)
+  - Backend : `POST /:id/summarize` → appel Claude API (Haiku), crée une contribution SUMMARY
+  - Prompt structuré : synthèse, points de consensus, désaccords ouverts, décisions actées
+  - Frontend : bouton "Résumer" sur vue détail item (si contributions > 0), style distinct (badge IA)
+  - Prérequis : `@anthropic-ai/sdk` dans apps/api, `ANTHROPIC_API_KEY` dans .env
+
 ### Intégrations externes
 - [ ] Connexion calendrier messagerie (Outlook/Hotmail, Gmail) : pousser des RDV (items MEETING) et récupérer les événements via Microsoft Graph API / Google Calendar API
 

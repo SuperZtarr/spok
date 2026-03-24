@@ -48,6 +48,7 @@ model User {
   themePreference           String     @default("system")
   notificationPreferences   Json?      // { INVITATION: "all", ASSIGNMENT: "all", CONTRIBUTION: "in_app", MENTION: "all" }
   disabledAt        DateTime?
+  lastLoginAt       DateTime?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 

@@ -831,16 +831,25 @@ export function Layout() {
             <div className="min-w-0">
               <h2 className="text-sm md:text-base font-semibold text-foreground truncate">{getPageTitle()}</h2>
               {currentSpace && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   {currentSpace.community && (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      {currentSpace.community.name}
-                    </span>
+                    <>
+                      <Link to={`/communities/${currentSpace.community.id}`} className="hover:text-foreground transition-colors inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                        {currentSpace.community.name}
+                      </Link>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+                    </>
                   )}
-                  <span className="text-[11px] text-muted-foreground/70 px-1.5 py-0.5 bg-muted/50 rounded">
-                    {currentSpace.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}
-                  </span>
+                  {currentSpace.parent && (
+                    <>
+                      <Link to={`/spaces/${currentSpace.parent.id}`} className="hover:text-foreground transition-colors truncate">
+                        {currentSpace.parent.name}
+                      </Link>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+                    </>
+                  )}
+                  <span className="truncate font-medium text-foreground/70">{currentSpace.name}</span>
                 </div>
               )}
             </div>

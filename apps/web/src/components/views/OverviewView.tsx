@@ -115,7 +115,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-4">
+      <div className="w-full px-4 sm:px-6 py-4">
         {/* Cover */}
         <div className="relative">
           {space?.coverUrl ? (

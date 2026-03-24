@@ -73,39 +73,39 @@ function SpaceContentRedirect() {
 }
 
 const PAGE_NAMES: [RegExp, string][] = [
-  [/^\/login$/, 'LoginPage'],
-  [/^\/register$/, 'RegisterPage'],
-  [/^\/forgot-password$/, 'ForgotPasswordPage'],
-  [/^\/reset-password$/, 'ResetPasswordPage'],
-  [/^\/verify-email$/, 'VerifyEmailPage'],
-  [/^\/invitation$/, 'InvitationPage'],
-  [/^\/sitemap$/, 'SitemapPage'],
-  [/^\/communities$/, 'CommunitiesListPage'],
-  [/^\/spaces$/, 'SpacesListPage'],
-  [/^\/dashboard$/, 'DashboardViewPage'],
-  [/^\/graph$/, 'GraphPage'],
-  [/^\/sunburst$/, 'SunburstPage'],
-  [/^\/mindmap$/, 'MindMapPage'],
-  [/^\/tasks$/, 'GlobalTasksPage'],
-  [/^\/links$/, 'GlobalLinksPage'],
-  [/^\/bookmarks$/, 'BookmarksPage'],
-  [/^\/search$/, 'SearchPage'],
-  [/^\/spaces\/[^/]+\/content$/, 'SpacePage'],
-  [/^\/spaces\/[^/]+\/settings$/, 'SpaceSettingsPage'],
-  [/^\/spaces\/[^/]+\/history$/, 'SpaceHistoryPage'],
-  [/^\/spaces\/[^/]+$/, 'SpaceOverviewPage'],
-  [/^\/communities\/[^/]+\/settings$/, 'CommunitySettingsPage'],
-  [/^\/communities\/[^/]+$/, 'CommunityPage'],
-  [/^\/admin\/users$/, 'Admin/UsersPage'],
-  [/^\/admin\/spaces$/, 'Admin/SpacesPage'],
-  [/^\/admin\/communities$/, 'Admin/CommunitiesPage'],
-  [/^\/admin\/anomalies$/, 'Admin/AnomaliesPage'],
-  [/^\/admin\/referentiels$/, 'Admin/ReferentielsPage'],
-  [/^\/admin\/stats$/, 'Admin/StatsPage'],
-  [/^\/admin\/audit-logs$/, 'Admin/AuditLogsPage'],
-  [/^\/admin\/views$/, 'Admin/ViewsConfigPage'],
-  [/^\/admin\/menu$/, 'Admin/MenuConfigPage'],
-  [/^\/$/, 'HomePage / LandingPage'],
+  [/^\/login$/, 'pages/LoginPage.tsx'],
+  [/^\/register$/, 'pages/RegisterPage.tsx'],
+  [/^\/forgot-password$/, 'pages/ForgotPasswordPage.tsx'],
+  [/^\/reset-password$/, 'pages/ResetPasswordPage.tsx'],
+  [/^\/verify-email$/, 'pages/VerifyEmailPage.tsx'],
+  [/^\/invitation$/, 'pages/InvitationPage.tsx'],
+  [/^\/sitemap$/, 'pages/SitemapPage.tsx'],
+  [/^\/communities$/, 'pages/CommunitiesListPage.tsx \u2192 views/CommunityListView.tsx'],
+  [/^\/spaces$/, 'pages/SpacesListPage.tsx'],
+  [/^\/dashboard$/, 'pages/DashboardViewPage.tsx'],
+  [/^\/graph$/, 'pages/GraphPage.tsx'],
+  [/^\/sunburst$/, 'pages/SunburstPage.tsx'],
+  [/^\/mindmap$/, 'pages/MindMapPage.tsx'],
+  [/^\/tasks$/, 'pages/GlobalTasksPage.tsx'],
+  [/^\/links$/, 'pages/GlobalLinksPage.tsx'],
+  [/^\/bookmarks$/, 'pages/BookmarksPage.tsx'],
+  [/^\/search$/, 'pages/SearchPage.tsx'],
+  [/^\/spaces\/[^/]+\/content$/, 'pages/SpacePage.tsx'],
+  [/^\/spaces\/[^/]+\/settings$/, 'pages/SpaceSettingsPage.tsx'],
+  [/^\/spaces\/[^/]+\/history$/, 'pages/SpaceHistoryPage.tsx'],
+  [/^\/spaces\/[^/]+$/, 'pages/SpacePage.tsx \u2192 views/OverviewView.tsx'],
+  [/^\/communities\/[^/]+\/settings$/, 'pages/CommunitySettingsPage.tsx'],
+  [/^\/communities\/[^/]+$/, 'pages/CommunityPage.tsx'],
+  [/^\/admin\/users$/, 'pages/admin/UsersPage.tsx'],
+  [/^\/admin\/spaces$/, 'pages/admin/SpacesPage.tsx'],
+  [/^\/admin\/communities$/, 'pages/admin/CommunitiesPage.tsx'],
+  [/^\/admin\/anomalies$/, 'pages/admin/AnomaliesPage.tsx'],
+  [/^\/admin\/referentiels$/, 'pages/admin/ReferentielsPage.tsx'],
+  [/^\/admin\/stats$/, 'pages/admin/StatsPage.tsx'],
+  [/^\/admin\/audit-logs$/, 'pages/admin/AuditLogsPage.tsx'],
+  [/^\/admin\/views$/, 'pages/admin/ViewsConfigPage.tsx'],
+  [/^\/admin\/menu$/, 'pages/admin/MenuConfigPage.tsx'],
+  [/^\/$/, 'pages/HomePage.tsx \u2192 views/HomeView.tsx'],
 ];
 
 export { PAGE_NAMES };
@@ -114,22 +114,28 @@ function DevPageName() {
   const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [path, setPath] = useState(location.pathname);
+  const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true');
 
   useEffect(() => {
     setPath(location.pathname);
   }, [location.pathname]);
 
-  const isDevMode = !import.meta.env.PROD || localStorage.getItem('devMode') === 'true';
-  if (!isDevMode) return null;
+  useEffect(() => {
+    const handler = (e: Event) => setDevMode((e as CustomEvent).detail);
+    window.addEventListener('spok:devmode', handler);
+    return () => window.removeEventListener('spok:devmode', handler);
+  }, []);
+
+  if (!devMode) return null;
 
   let name = PAGE_NAMES.find(([re]) => re.test(path))?.[1];
   // Disambiguate home route based on auth state
   if (path === '/' && name) {
-    name = isAuthenticated ? 'HomePage' : 'LandingPage';
+    name = isAuthenticated ? 'pages/HomePage.tsx \u2192 views/HomeView.tsx' : 'pages/LandingPage.tsx';
   }
   return (
     <>
-      <div className="fixed bottom-1 right-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none font-mono">
+      <div className="fixed bottom-1 right-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-mono select-all cursor-pointer" onClick={(e) => { navigator.clipboard.writeText((e.target as HTMLElement).textContent || ''); }}>
         {name || path} — {path}
       </div>
     </>

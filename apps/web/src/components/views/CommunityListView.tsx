@@ -1,7 +1,7 @@
 import { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Globe, Lock, Crown, User, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, LogOut } from 'lucide-react';
+import { Users, Globe, Lock, Crown, User, Eye, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { RoleGuard } from '../RoleGuard';
@@ -9,6 +9,9 @@ import { RoleGuard } from '../RoleGuard';
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
+  VIEWER: { label: 'Visiteur', icon: Eye, color: 'text-muted-foreground' },
+  INVITED: { label: 'Invitation', icon: Mail, color: 'text-orange-500' },
+  ADMIN_VIEW: { label: 'Admin', icon: ShieldCheck, color: 'text-purple-500' },
 };
 
 type CreateStep = 'awareness' | 'form';
@@ -113,179 +116,175 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
     );
   }
 
-  return (
-    <div className="p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Community cards */}
-        {!communities || communities.length === 0 ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-lg font-medium">Aucune communauté</p>
-              <p className="text-sm text-muted-foreground">Vous ne faites partie d'aucune communauté pour le moment.</p>
-            </div>
+  // Group communities by role
+  const ownerCommunities = (communities || []).filter(c => c.role === 'OWNER');
+  const memberCommunities = (communities || []).filter(c => c.role === 'MEMBER');
+  const viewerCommunities = (communities || []).filter(c => c.role === 'VIEWER');
+  const invitedCommunities = (communities || []).filter(c => c.role === 'INVITED');
+  const publicNonMember = (communities || []).filter(c => c.role === null);
+  const adminViewCommunities = (communities || []).filter(c => c.role === 'ADMIN_VIEW');
+
+  const renderCommunityCard = (community: any) => {
+    const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
+    const RoleIcon = config.icon;
+    return (
+      <Link
+        key={community.id}
+        to={`/communities/${community.id}`}
+        className="group relative border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
+      >
+        <div className="relative">
+          {community.coverUrl ? (
+            <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
+          ) : (
+            <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
+          )}
+          <div className="absolute -bottom-4 left-4">
+            {community.avatarUrl ? (
+              <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+            ) : community.coverUrl ? (
+              <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
+            ) : (
+              <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+            )}
           </div>
+        </div>
+        {community.pendingPublic && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium">
+            <Clock className="w-3 h-3" />
+            Publication en attente
+          </div>
+        )}
+        <div className="pt-8 px-4 pb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold truncate">{community.name}</h3>
+            {community.isPublic ? (
+              <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            )}
+          </div>
+          {community.description && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
+          )}
+          <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{community.memberCount || 0} membre{(community.memberCount || 0) > 1 ? 's' : ''}</span>
+            <span className="flex items-center gap-1"><FolderOpen className="w-3.5 h-3.5" />{community.spaceCount || 0} espace{(community.spaceCount || 0) > 1 ? 's' : ''}</span>
+            <span className="flex items-center gap-1 ml-auto"><RoleIcon className={`w-3.5 h-3.5 ${config.color}`} />{config.label}</span>
+          </div>
+          {community.role === 'MEMBER' && (
+            <RoleGuard role="MEMBER">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (confirm(`Quitter la communauté "${community.name}" ?`)) {
+                    leaveMutation.mutate(community.id);
+                  }
+                }}
+                className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                disabled={leaveMutation.isPending}
+              >
+                <LogOut className="w-3 h-3" />
+                Quitter
+              </button>
+            </RoleGuard>
+          )}
+        </div>
+      </Link>
+    );
+  };
+
+  const renderJoinableCard = (community: any) => (
+    <div
+      key={community.id}
+      className="relative border border-dashed border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
+    >
+      <div className="relative">
+        {community.coverUrl ? (
+          <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="communities-grid">
-            {communities.map(community => {
-              const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
-              const RoleIcon = config.icon;
-              return (
-                <Link
-                  key={community.id}
-                  to={`/communities/${community.id}`}
-                  className="group relative border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors"
-                >
-                  {/* Cover + Avatar */}
-                  <div className="relative">
-                    {community.coverUrl ? (
-                      <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
-                    ) : (
-                      <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
-                    )}
-                    {/* Avatar overlay */}
-                    <div className="absolute -bottom-4 left-4">
-                      {community.avatarUrl ? (
-                        <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
-                      ) : community.coverUrl ? (
-                        <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
-                          <Users className="w-5 h-5 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pending badge */}
-                  {community.pendingPublic && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium">
-                      <Clock className="w-3 h-3" />
-                      Publication en attente
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="pt-8 px-4 pb-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold truncate">{community.name}</h3>
-                      {community.isPublic ? (
-                        <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                      ) : (
-                        <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                      )}
-                    </div>
-                    {community.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
-                        {community.memberCount || 0} membre{(community.memberCount || 0) > 1 ? 's' : ''}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FolderOpen className="w-3.5 h-3.5" />
-                        {community.spaceCount || 0} espace{(community.spaceCount || 0) > 1 ? 's' : ''}
-                      </span>
-                      <span className="flex items-center gap-1 ml-auto">
-                        <RoleIcon className={`w-3.5 h-3.5 ${config.color}`} />
-                        {config.label}
-                      </span>
-                    </div>
-                    {community.role === 'MEMBER' && (
-                      <RoleGuard role="MEMBER">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (confirm(`Quitter la communauté "${community.name}" ?`)) {
-                              leaveMutation.mutate(community.id);
-                            }
-                          }}
-                          className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                          disabled={leaveMutation.isPending}
-                        >
-                          <LogOut className="w-3 h-3" />
-                          Quitter
-                        </button>
-                      </RoleGuard>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
         )}
-
-        {/* Joinable public communities */}
-        {joinableCommunities.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Communautés publiques à rejoindre
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {joinableCommunities.map(community => (
-                <div
-                  key={community.id}
-                  className="relative border border-dashed border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors"
-                >
-                  {/* Cover + Avatar */}
-                  <div className="relative">
-                    {community.coverUrl ? (
-                      <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
-                    ) : (
-                      <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
-                    )}
-                    <div className="absolute -bottom-4 left-4">
-                      {community.avatarUrl ? (
-                        <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
-                      ) : community.coverUrl ? (
-                        <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
-                          <Users className="w-5 h-5 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="pt-8 px-4 pb-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold truncate">{community.name}</h3>
-                      <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                    </div>
-                    {community.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
-                        {community.memberCount} membre{community.memberCount > 1 ? 's' : ''}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FolderOpen className="w-3.5 h-3.5" />
-                        {community.spaceCount} espace{community.spaceCount > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => joinMutation.mutate(community.id)}
-                      disabled={joinMutation.isPending}
-                      className="flex items-center gap-1.5 mt-3 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      Rejoindre
-                    </button>
-                  </div>
-                </div>
-              ))}
+        <div className="absolute -bottom-4 left-4">
+          {community.avatarUrl ? (
+            <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
+          ) : community.coverUrl ? (
+            <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
+          ) : (
+            <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
+              <Users className="w-5 h-5 text-primary" />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+      <div className="pt-8 px-4 pb-4">
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold truncate">{community.name}</h3>
+          <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+        </div>
+        {community.description && (
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
+        )}
+        <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{community.memberCount} membre{community.memberCount > 1 ? 's' : ''}</span>
+          <span className="flex items-center gap-1"><FolderOpen className="w-3.5 h-3.5" />{community.spaceCount} espace{community.spaceCount > 1 ? 's' : ''}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => joinMutation.mutate(community.id)}
+          disabled={joinMutation.isPending}
+          className="flex items-center gap-1.5 mt-3 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+        >
+          <LogIn className="w-3.5 h-3.5" />
+          Rejoindre
+        </button>
+      </div>
+    </div>
+  );
+
+  type SectionDef = { title: string; icon: typeof Crown; iconColor: string; items: any[]; renderCard: (c: any) => React.ReactNode };
+  const sections: SectionDef[] = [
+    { title: 'Propriétaire', icon: Crown, iconColor: 'text-amber-500', items: ownerCommunities, renderCard: renderCommunityCard },
+    { title: 'Membre', icon: User, iconColor: 'text-foreground', items: memberCommunities, renderCard: renderCommunityCard },
+    { title: 'Visiteur', icon: Eye, iconColor: 'text-muted-foreground', items: viewerCommunities, renderCard: renderCommunityCard },
+    { title: 'Invitations en attente', icon: Mail, iconColor: 'text-orange-500', items: invitedCommunities, renderCard: renderCommunityCard },
+    { title: 'Communautés publiques', icon: Globe, iconColor: 'text-green-500', items: [...publicNonMember, ...joinableCommunities.filter(jc => !publicNonMember.some(p => p.id === jc.id))], renderCard: (c) => c.role === null ? renderCommunityCard(c) : renderJoinableCard(c) },
+    { title: 'Autres communautés', icon: ShieldCheck, iconColor: 'text-purple-500', items: adminViewCommunities, renderCard: renderCommunityCard },
+  ];
+
+  return (
+    <div className="p-4 md:p-6 flex-1 overflow-auto" data-tour="communities-grid">
+      {sections.every(s => s.items.length === 0) ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-lg font-medium">Aucune communauté</p>
+            <p className="text-sm text-muted-foreground">Vous ne faites partie d'aucune communauté pour le moment.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {sections.map(({ title, icon: Icon, iconColor, items, renderCard }) => {
+            if (items.length === 0) return null;
+            return (
+              <section key={title}>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Icon className={`w-4 h-4 ${iconColor}`} />
+                  {title}
+                  <span className="text-xs font-normal">({items.length})</span>
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {items.map(renderCard)}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {/* Create community modal */}
       {showCreate && (

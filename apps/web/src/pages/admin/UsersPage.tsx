@@ -23,6 +23,9 @@ const accessors: Record<string, (u: AdminUser) => string | number> = {
   communities: (u) => u._count?.communityMemberships ?? 0,
   spaces: (u) => u._count?.memberships ?? 0,
   items: (u) => u._count?.createdItems ?? 0,
+  contributions: (u) => u._count?.contributions ?? 0,
+  lastLoginAt: (u) => u.lastLoginAt ?? '',
+  status: (u) => (u as any).disabledAt ? 1 : 0,
   createdAt: (u) => u.createdAt,
 };
 
@@ -76,6 +79,7 @@ export function UsersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
 
   // Debounce search
@@ -87,7 +91,7 @@ export function UsersPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { sortKey, sortOrder, toggle, sortData } = useSort<AdminUser>('name', 'asc');
+  const { sortKey, sortOrder, toggle, sortData } = useSort<AdminUser>('lastLoginAt', 'desc');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', { page, search: debouncedSearch, anomaly }],
@@ -119,10 +123,12 @@ export function UsersPage() {
     },
   });
 
-  const allUsers = useMemo(
-    () => sortData(data?.data || [], accessors),
-    [data, sortData]
-  );
+  const allUsers = useMemo(() => {
+    const sorted = sortData(data?.data || [], accessors);
+    if (statusFilter === 'active') return sorted.filter((u) => !(u as any).disabledAt);
+    if (statusFilter === 'inactive') return sorted.filter((u) => (u as any).disabledAt);
+    return sorted;
+  }, [data, sortData, statusFilter]);
 
   const adminUsers = useMemo(() => allUsers.filter((u) => u.globalRole === 'ADMIN'), [allUsers]);
   const regularUsers = useMemo(() => allUsers.filter((u) => u.globalRole === 'USER'), [allUsers]);
@@ -131,7 +137,7 @@ export function UsersPage() {
 
   const handleExportCSV = () => {
     if (!data?.data) return;
-    const headers = ['Nom', 'Email', 'Role', 'Email verifie', 'Communautes', 'Espaces', 'Items', 'Date creation'];
+    const headers = ['Nom', 'Email', 'Role', 'Email verifie', 'Communautes', 'Espaces', 'Items', 'Contributions', 'Derniere visite', 'Date creation'];
     const rows = data.data.map((u) => [
       u.name,
       u.email,
@@ -140,6 +146,8 @@ export function UsersPage() {
       u._count?.communityMemberships ?? 0,
       u._count?.memberships ?? 0,
       u._count?.createdItems ?? 0,
+      u._count?.contributions ?? 0,
+      u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('fr-FR') : '',
       new Date(u.createdAt).toLocaleDateString('fr-FR'),
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -212,6 +220,19 @@ export function UsersPage() {
       <td className="px-4 py-3 text-sm text-muted-foreground text-center">
         {user._count?.createdItems ?? 0}
       </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground text-center">
+        {user._count?.contributions ?? 0}
+      </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground" title={user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Jamais'}>
+        {user.lastLoginAt ? formatRelativeDate(user.lastLoginAt) : <span className="text-muted-foreground/50">—</span>}
+      </td>
+      <td className="px-4 py-3 text-center">
+        {(user as any).disabledAt ? (
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Inactif</Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-green-600 border-green-300">Actif</Badge>
+        )}
+      </td>
       <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(user.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
         {formatRelativeDate(user.createdAt)}
       </td>
@@ -275,6 +296,9 @@ export function UsersPage() {
               <SortHeader label="Communautes" column="communities" className="text-center" />
               <SortHeader label="Espaces" column="spaces" className="text-center" />
               <SortHeader label="Items" column="items" className="text-center" />
+              <SortHeader label="Contrib." column="contributions" className="text-center" />
+              <SortHeader label="Derniere visite" column="lastLoginAt" />
+              <SortHeader label="Statut" column="status" className="text-center" />
               <SortHeader label="Inscription" column="createdAt" />
               <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-12"></th>
             </tr>
@@ -285,7 +309,7 @@ export function UsersPage() {
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   Aucun utilisateur
                 </td>
               </tr>
@@ -337,14 +361,15 @@ export function UsersPage() {
           </div>
         )}
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par nom ou email..."
-            className="pl-10"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher par nom ou email..."
+              className="pl-10"
+            />
           {search && (
             <button
               onClick={() => setSearch('')}
@@ -353,6 +378,22 @@ export function UsersPage() {
               <X className="w-4 h-4" />
             </button>
           )}
+          </div>
+          <div className="flex items-center rounded-lg border border-border overflow-hidden">
+            {([['active', 'Actifs'], ['inactive', 'Inactifs'], ['all', 'Tous']] as const).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => { setStatusFilter(value); setPage(1); }}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  statusFilter === value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

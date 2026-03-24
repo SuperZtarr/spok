@@ -48,15 +48,16 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
           avatarUrl: true,
           globalRole: true,
           disabledAt: true,
+          lastLoginAt: true,
           createdAt: true,
           updatedAt: true,
           _count: {
-            select: { memberships: true, communityMemberships: true, createdItems: true },
+            select: { memberships: true, communityMemberships: true, createdItems: true, contributions: true },
           },
         },
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { lastLoginAt: { sort: 'desc', nulls: 'last' } },
       }),
       fastify.prisma.user.count({ where }),
     ]);

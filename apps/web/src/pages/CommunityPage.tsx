@@ -17,13 +17,21 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
 };
 
 function SpaceTreeNode({ node }: { node: any }) {
+  const hasChildren = node.children?.length > 0;
+  if (!hasChildren) {
+    return <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />;
+  }
   return (
-    <>
-      <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
-      {node.children?.map((child: any) => (
-        <SpaceTreeNode key={child.id} node={child} />
+    <div className="col-span-full flex items-start gap-3 overflow-x-auto pb-2">
+      <div className="w-72 flex-shrink-0">
+        <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
+      </div>
+      {node.children.map((child: any) => (
+        <div key={child.id} className="w-64 flex-shrink-0 mt-20">
+          <SpaceTreeNode node={child} />
+        </div>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -85,7 +93,7 @@ export function CommunityPage() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6">
+      <div className="w-full px-4 sm:px-6">
         {/* Header with cover */}
         <div className="relative mt-4">
           {community?.coverUrl ? (
@@ -139,7 +147,7 @@ export function CommunityPage() {
             Espaces ({spaces?.length || 0})
           </h2>
           {spaceTree.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {spaceTree.map(node => (
                 <SpaceTreeNode key={node.id} node={node} />
               ))}
@@ -155,7 +163,7 @@ export function CommunityPage() {
             <Users className="w-4 h-4" />
             Membres ({sortedMembers.length})
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {sortedMembers.map(member => {
               const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
               const RoleIcon = config.icon;

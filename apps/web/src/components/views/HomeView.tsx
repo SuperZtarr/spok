@@ -1,9 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Globe, Lock, Crown, User, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight } from 'lucide-react';
+import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star } from 'lucide-react';
 import { communitiesApi, spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
-import type { SpaceWithRole } from '@spok/shared';
 import { SpaceCard } from '../ui/SpaceCard';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
@@ -28,7 +27,6 @@ function FirstTimeSetup({ userName }: { userName: string }) {
   return (
     <div className="p-8 flex-1 overflow-auto">
       <div className="max-w-2xl mx-auto">
-        {/* Welcome */}
         <div className="text-center mb-10">
           <Rocket className="w-12 h-12 mx-auto mb-4 text-primary" />
           <h1 className="text-2xl font-bold">Bienvenue {userName} !</h1>
@@ -37,7 +35,6 @@ function FirstTimeSetup({ userName }: { userName: string }) {
           </p>
         </div>
 
-        {/* Step 1: Join a public community */}
         {publicCommunities && publicCommunities.length > 0 && (
           <section className="mb-8">
             <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
@@ -76,7 +73,6 @@ function FirstTimeSetup({ userName }: { userName: string }) {
           </section>
         )}
 
-        {/* Step 2: Create your own community */}
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
@@ -97,7 +93,6 @@ function FirstTimeSetup({ userName }: { userName: string }) {
           </button>
         </section>
 
-        {/* Step 3: Create a personal space */}
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
@@ -122,15 +117,12 @@ function FirstTimeSetup({ userName }: { userName: string }) {
   );
 }
 
-const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
-  OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
-  ADMIN: { label: 'Admin', icon: Crown, color: 'text-blue-500' },
-  MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
-  VIEWER: { label: 'Lecteur', icon: User, color: 'text-muted-foreground' },
-};
-
-
-// SpaceRow replaced by SpaceCard component
+const SHORTCUTS = [
+  { to: '/communities', icon: Users, label: 'Communautés', description: 'Voir toutes mes communautés et leurs espaces' },
+  { to: '/spaces', icon: FolderKanban, label: 'Espaces', description: 'Rechercher un espace' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', description: 'Suivi des tâches et échéances' },
+  { to: '/search', icon: Search, label: 'Recherche', description: 'Rechercher dans tous les contenus' },
+];
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
@@ -146,28 +138,17 @@ export function HomeView() {
     enabled: !!user,
   });
 
+  const { data: favoriteIds } = useQuery({
+    queryKey: ['spaces', 'favorites'],
+    queryFn: () => spacesApi.getFavorites(),
+    enabled: !!user,
+  });
+
+  const favoriteSpaces = (favoriteIds || [])
+    .map(id => (allSpaces || []).find(s => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => !!s);
+
   const isLoading = loadingCommunities || loadingSpaces;
-
-  // Group spaces by community
-  const spacesByCommunity = new Map<string, SpaceWithRole[]>();
-  const personalSpaces: SpaceWithRole[] = [];
-  const independentSpaces: SpaceWithRole[] = [];
-
-  if (allSpaces) {
-    for (const space of allSpaces) {
-      if (space.type === 'PERSONAL') {
-        personalSpaces.push(space);
-      } else if (space.communityId) {
-        const list = spacesByCommunity.get(space.communityId) || [];
-        list.push(space);
-        spacesByCommunity.set(space.communityId, list);
-      } else {
-        independentSpaces.push(space);
-      }
-    }
-  }
-
-  // First name
   const firstName = user?.name?.split(' ')[0] || '';
 
   if (isLoading) {
@@ -175,18 +156,17 @@ export function HomeView() {
   }
 
   const totalSpaces = allSpaces?.length || 0;
-  const totalCommunities = communities?.length || 0;
+  const totalCommunities = (communities || []).filter(c => c.role && c.role !== 'INVITED' && c.role !== 'ADMIN_VIEW').length;
 
-  // First time setup for users with no communities and no spaces
   if (totalCommunities === 0 && totalSpaces === 0 && !isLoading) {
     return <FirstTimeSetup userName={firstName} />;
   }
 
   return (
     <div className="p-4 md:p-6 flex-1 overflow-auto">
-      <div className="max-w-4xl mx-auto">
-        {/* Welcome banner */}
-        <div className="mb-6" data-tour="home-welcome">
+      <div className="max-w-3xl mx-auto">
+        {/* Welcome */}
+        <div className="mb-8 text-center" data-tour="home-welcome">
           <img src="/logo.png" alt="SPOK" className="h-28 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Bonjour {firstName}</h1>
           <p className="text-muted-foreground mt-1">
@@ -196,90 +176,90 @@ export function HomeView() {
           </p>
         </div>
 
-        {/* Communities */}
-        {communities && communities.length > 0 && (
-          <section className="mb-8" data-tour="home-communities">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Mes communautés
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {communities.map(community => {
-                const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
-                const RoleIcon = config.icon;
-                return (
+        {/* Pending invitations */}
+        {(() => {
+          const invited = (communities || []).filter(c => c.role === 'INVITED');
+          if (invited.length === 0) return null;
+          return (
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-orange-500" />
+                Invitations en attente
+                <span className="text-xs font-normal">({invited.length})</span>
+              </h2>
+              <div className="space-y-2">
+                {invited.map(c => (
                   <Link
-                    key={community.id}
-                    to={`/communities/${community.id}`}
-                    className="border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
+                    key={c.id}
+                    to={`/communities/${c.id}`}
+                    className="flex items-center gap-3 border border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20 rounded-lg p-3 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors"
                   >
-                    <div className="relative">
-                      {community.coverUrl ? (
-                        <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
-                      ) : (
-                        <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
-                      )}
-                      <div className="absolute -bottom-4 left-4">
-                        {community.avatarUrl ? (
-                          <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
-                            <Users className="w-5 h-5 text-primary" />
-                          </div>
-                        )}
+                    {c.avatarUrl ? (
+                      <img src={c.avatarUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-5 h-5 text-orange-500" />
                       </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{c.name}</p>
+                      {c.description && <p className="text-xs text-muted-foreground line-clamp-1">{c.description}</p>}
                     </div>
-                    <div className="pt-8 px-4 pb-4">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold truncate">{community.name}</p>
-                        {community.isPublic ? (
-                          <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        ) : (
-                          <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        )}
-                      </div>
-                      {community.description && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <FolderOpen className="w-3.5 h-3.5" />
-                          {(spacesByCommunity.get(community.id) || []).length} espace{(spacesByCommunity.get(community.id) || []).length !== 1 ? 's' : ''}
-                        </span>
-                        <span className="flex items-center gap-1 ml-auto">
-                          <RoleIcon className={`w-3.5 h-3.5 ${config.color}`} />
-                          {config.label}
-                        </span>
-                      </div>
-                    </div>
+                    <span className="text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1 flex-shrink-0">
+                      Voir <ArrowRight className="w-3 h-3" />
+                    </span>
                   </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                ))}
+              </div>
+            </section>
+          );
+        })()}
 
-        {/* Personal spaces */}
-        {personalSpaces.length > 0 && (
+        {/* Shortcuts */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          {SHORTCUTS.map(({ to, icon: Icon, label, description }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex flex-col items-center gap-2 p-4 border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all bg-card text-center"
+            >
+              <Icon className="w-6 h-6 text-primary" />
+              <span className="font-medium text-sm">{label}</span>
+              <span className="text-[11px] text-muted-foreground leading-tight">{description}</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* Favorite spaces */}
+        {favoriteSpaces.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Espaces personnels
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-500" />
+              Espaces favoris
+              <span className="text-xs font-normal">({favoriteSpaces.length})</span>
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {personalSpaces.map(space => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {favoriteSpaces.map(space => (
                 <SpaceCard key={space.id} space={space} />
               ))}
             </div>
           </section>
         )}
 
-        {/* Independent group spaces */}
-        {independentSpaces.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Espaces de groupe
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {independentSpaces.map(space => (
+        {/* Recent spaces — quick access to last visited */}
+        {allSpaces && allSpaces.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <FolderOpen className="w-4 h-4" />
+                Espaces récents
+              </h2>
+              <Link to="/spaces" className="text-xs text-primary hover:underline flex items-center gap-1">
+                Voir tout <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {allSpaces.slice(0, 8).map(space => (
                 <SpaceCard key={space.id} space={space} />
               ))}
             </div>

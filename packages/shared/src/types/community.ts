@@ -15,7 +15,7 @@ export interface Community {
 }
 
 export interface CommunityWithRole extends Community {
-  role: CommunityRole | null;
+  role: CommunityRole | 'VIEWER' | 'INVITED' | 'ADMIN_VIEW' | null;
   order?: number;
   memberCount?: number;
   spaceCount?: number;

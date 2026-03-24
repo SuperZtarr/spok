@@ -144,6 +144,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
+    // Update last login timestamp
+    await fastify.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+
     const tokens = await generateTokens(fastify, user.id, user.email);
 
     const authUser: AuthUser = {
