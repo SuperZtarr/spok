@@ -9,19 +9,16 @@ import type { TreeItem } from './mindmap-utils';
 
 function ImageThumbnail({ url }: { url: string }) {
   const [hover, setHover] = useState(false);
-  const [style, setStyle] = useState<React.CSSProperties>({});
-  const ref = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
 
-  const onEnter = useCallback(() => {
-    setHover(true);
-    // Position after render so we can measure the popup
-    requestAnimationFrame(() => {
-      if (!ref.current || !imgRef.current) return;
-      const thumb = ref.current.getBoundingClientRect();
-      const img = imgRef.current;
-      const pw = img.offsetWidth + 10; // +padding/border
-      const ph = img.offsetHeight + 10;
+  const positionPopup = useCallback((popup: HTMLDivElement | null) => {
+    if (!popup || !thumbRef.current) return;
+    // Wait for image to have dimensions
+    const img = popup.querySelector('img');
+    const doPosition = () => {
+      const thumb = thumbRef.current!.getBoundingClientRect();
+      const pw = popup.offsetWidth;
+      const ph = popup.offsetHeight;
       const margin = 8;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -29,33 +26,37 @@ function ImageThumbnail({ url }: { url: string }) {
       let x = thumb.left + thumb.width / 2 - pw / 2;
       let y = thumb.top - ph - margin;
 
-      // Trop haut → afficher en dessous
       if (y < margin) y = thumb.bottom + margin;
-      // Trop bas → coller au bas
       if (y + ph > vh - margin) y = vh - margin - ph;
-      // Trop à droite
       if (x + pw > vw - margin) x = vw - margin - pw;
-      // Trop à gauche
       if (x < margin) x = margin;
 
-      setStyle({ left: x, top: y });
-    });
+      popup.style.left = `${x}px`;
+      popup.style.top = `${y}px`;
+      popup.style.visibility = 'visible';
+    };
+    if (img && img.complete) {
+      doPosition();
+    } else if (img) {
+      img.onload = doPosition;
+    }
   }, []);
 
   return (
     <div
-      ref={ref}
+      ref={thumbRef}
       className="flex-shrink-0 nodrag nopan"
-      onMouseEnter={onEnter}
+      onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
       <img src={url} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
       {hover && createPortal(
         <div
+          ref={positionPopup}
           className="fixed z-[9999] p-1 bg-white rounded-lg shadow-2xl border border-border pointer-events-none"
-          style={style}
+          style={{ visibility: 'hidden' }}
         >
-          <img ref={imgRef} src={url} alt="" className="max-w-[500px] max-h-[500px] object-contain rounded" />
+          <img src={url} alt="" className="max-w-[500px] max-h-[500px] object-contain rounded" />
         </div>,
         document.body
       )}
