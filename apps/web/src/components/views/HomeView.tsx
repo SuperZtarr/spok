@@ -119,7 +119,6 @@ function FirstTimeSetup({ userName }: { userName: string }) {
 
 const SHORTCUTS = [
   { to: '/communities', icon: Users, label: 'Communautés', description: 'Voir toutes mes communautés et leurs espaces' },
-  { to: '/spaces', icon: FolderKanban, label: 'Espaces', description: 'Rechercher un espace' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', description: 'Suivi des tâches et échéances' },
   { to: '/search', icon: Search, label: 'Recherche', description: 'Rechercher dans tous les contenus' },
 ];

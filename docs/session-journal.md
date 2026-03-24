@@ -41,6 +41,21 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-24] - Refonte pages, admin users, breadcrumb, dev mode
+
+- Admin Users : lastLoginAt, contributions, tri derniere visite, filtre actifs/inactifs — 41fde94
+- HomePage simplifiee : raccourcis, favoris, espaces recents en cards — 41fde94
+- CommunitiesListPage : sections par role (owner/member/viewer/invited/public/admin) — 41fde94
+- CommunityPage : pleine largeur, espaces en arborescence hierarchique — 41fde94
+- API communities : invitations PENDING + ADMIN_VIEW — 41fde94
+- Header breadcrumb : communaute > parent > espace — 41fde94
+- Dev mode : badge fichier source selectionnable, toggle sidebar — 41fde94
+- TODO : section IA/Resumes (consensus conversations) — 41fde94
+
+**Etat :** TERMINE
+
+---
+
 #### [2026-03-21] - Vues par type, covers, TipTap, navigation restructuree
 
 - Vues d'espace : ImagesView, LinksView, DocumentsView, BugsView + section Types — e843737

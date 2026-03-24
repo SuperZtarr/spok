@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Navigate } from 'react-router-dom';
 import { FolderOpen, Loader2 } from 'lucide-react';
 import { spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
@@ -11,6 +12,11 @@ export function SpacesListPage() {
   const user = useAuthStore(s => s.user);
   const { currentCommunity } = useCommunityStore();
 
+  // Sans communauté sélectionnée, rediriger vers la liste des communautés
+  if (!currentCommunity) {
+    return <Navigate to="/communities" replace />;
+  }
+
   const { data: allSpaces, isLoading } = useQuery({
     queryKey: ['spaces', 'all'],
     queryFn: () => spacesApi.list(),
@@ -19,11 +25,12 @@ export function SpacesListPage() {
 
   const spaces = useMemo(() => {
     if (!allSpaces) return [];
-    let filtered = allSpaces.filter((s: SpaceWithRole) => s.type !== 'PERSONAL');
+    // Sans communauté : uniquement les espaces indépendants (hors communauté, hors perso)
+    // Avec communauté : uniquement les espaces de cette communauté
     if (currentCommunity) {
-      filtered = filtered.filter((s: SpaceWithRole) => s.communityId === currentCommunity.id);
+      return allSpaces.filter((s: SpaceWithRole) => s.communityId === currentCommunity.id);
     }
-    return filtered;
+    return allSpaces.filter((s: SpaceWithRole) => s.type !== 'PERSONAL' && !s.communityId);
   }, [allSpaces, currentCommunity]);
 
   const personalSpaces = useMemo(() => {
