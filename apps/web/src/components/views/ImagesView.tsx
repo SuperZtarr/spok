@@ -1,9 +1,18 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { ImageIcon, ChevronLeft, ChevronRight, X, Trash2, Plus, FolderInput, FolderPlus, FolderKanban, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil } from 'lucide-react';
+import { ImageIcon, ChevronLeft, ChevronRight, X, Trash2, Plus, FolderInput, FolderPlus, FolderKanban, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { RoleGuard } from '../RoleGuard';
+
+const ZOOM_LEVELS = [
+  { cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10', label: 'XS' },
+  { cols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8', label: 'S' },
+  { cols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6', label: 'M' },
+  { cols: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5', label: 'L' },
+  { cols: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4', label: 'XL' },
+  { cols: 'grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3', label: 'XXL' },
+] as const;
 
 interface ImageItem {
   id: string;
@@ -129,7 +138,20 @@ interface ImagesViewProps {
 
 export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(2); // default M
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const toggleGroup = useCallback((groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  }, []);
+
+  const gridCols = ZOOM_LEVELS[zoomLevel].cols;
 
   const images = useMemo<ImageItem[]>(() => {
     if (!items) return [];
@@ -217,20 +239,64 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
   return (
     <DndContext sensors={dndSensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
     <div className="flex-1 overflow-auto p-4 space-y-4">
-      {groups.map((group) => (
-        <DroppableGroup key={group.parentId ?? '__root__'} id={`group:${group.parentId ?? '__root__'}`}>
-          {/* Group header — clickable to open parent */}
-          <div
-            className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
-            onClick={() => group.parentId && onEdit?.(group.parentId)}
+      {/* Zoom controls */}
+      <div className="flex items-center gap-3 px-1">
+        <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-2 py-1">
+          <button
+            onClick={() => setZoomLevel(z => Math.max(0, z - 1))}
+            disabled={zoomLevel === 0}
+            className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
+            title="Réduire"
           >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={ZOOM_LEVELS.length - 1}
+            value={zoomLevel}
+            onChange={(e) => setZoomLevel(Number(e.target.value))}
+            className="w-24 h-1.5 accent-primary cursor-pointer"
+          />
+          <button
+            onClick={() => setZoomLevel(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))}
+            disabled={zoomLevel === ZOOM_LEVELS.length - 1}
+            className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
+            title="Agrandir"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <span className="text-xs text-muted-foreground w-6 text-center">{ZOOM_LEVELS[zoomLevel].label}</span>
+        </div>
+        <span className="text-xs text-muted-foreground">{images.length} image{images.length > 1 ? 's' : ''}</span>
+      </div>
+
+      {groups.map((group) => {
+        const groupKey = group.parentId ?? '__root__';
+        const isCollapsed = collapsedGroups.has(groupKey);
+        return (
+        <DroppableGroup key={groupKey} id={`group:${groupKey}`}>
+          {/* Group header — click chevron to collapse, click title to open parent */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg">
+            <button
+              onClick={() => toggleGroup(groupKey)}
+              className="p-0.5 rounded hover:bg-black/10 flex-shrink-0 transition-transform"
+            >
+              <ChevronDownIcon className={`w-4 h-4 text-muted-foreground transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+            </button>
             <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm font-medium truncate">{group.parentTitle}</span>
+            <span
+              className="text-sm font-medium truncate cursor-pointer hover:text-primary transition-colors"
+              onClick={() => group.parentId && onEdit?.(group.parentId)}
+            >
+              {group.parentTitle}
+            </span>
             <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{group.images.length}</span>
           </div>
 
+          {!isCollapsed && (
           <div className="p-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            <div className={`grid ${gridCols} gap-3`}>
               {group.images.map((img) => {
                 const isDone = img.status === doneStatusId || img.status === 'done';
                 return (
@@ -293,8 +359,10 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
               })}
             </div>
           </div>
+          )}
         </DroppableGroup>
-      ))}
+        );
+      })}
 
       {/* Portal sections for child spaces */}
       {portalGroups?.map(group => {
@@ -343,7 +411,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                   <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{pGroup.images.length}</span>
                 </div>
                 <div className="p-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  <div className={`grid ${gridCols} gap-3`}>
                     {pGroup.images.map((img) => (
                       <div
                         key={img.id}
