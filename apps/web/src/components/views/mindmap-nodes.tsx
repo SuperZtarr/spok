@@ -1,10 +1,67 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, ExternalLink, X, Copy, Trash2, CheckSquare, Pin, PinOff, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { TreeItem } from './mindmap-utils';
+
+function ImageThumbnail({ url }: { url: string }) {
+  const [hover, setHover] = useState(false);
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const ref = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const onEnter = useCallback(() => {
+    setHover(true);
+    // Position after render so we can measure the popup
+    requestAnimationFrame(() => {
+      if (!ref.current || !imgRef.current) return;
+      const thumb = ref.current.getBoundingClientRect();
+      const img = imgRef.current;
+      const pw = img.offsetWidth + 10; // +padding/border
+      const ph = img.offsetHeight + 10;
+      const margin = 8;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let x = thumb.left + thumb.width / 2 - pw / 2;
+      let y = thumb.top - ph - margin;
+
+      // Trop haut → afficher en dessous
+      if (y < margin) y = thumb.bottom + margin;
+      // Trop bas → coller au bas
+      if (y + ph > vh - margin) y = vh - margin - ph;
+      // Trop à droite
+      if (x + pw > vw - margin) x = vw - margin - pw;
+      // Trop à gauche
+      if (x < margin) x = margin;
+
+      setStyle({ left: x, top: y });
+    });
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="flex-shrink-0 nodrag nopan"
+      onMouseEnter={onEnter}
+      onMouseLeave={() => setHover(false)}
+    >
+      <img src={url} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
+      {hover && createPortal(
+        <div
+          className="fixed z-[9999] p-1 bg-white rounded-lg shadow-2xl border border-border pointer-events-none"
+          style={style}
+        >
+          <img ref={imgRef} src={url} alt="" className="max-w-[500px] max-h-[500px] object-contain rounded" />
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
 
 // Custom node component for radial layout
 export interface MindMapNodeProps {
@@ -48,7 +105,6 @@ export interface MindMapNodeProps {
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type);
-  const [imageHover, setImageHover] = useState(false);
   const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
 
   return (
@@ -94,18 +150,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
 
 
         {hasImage && (
-          <div
-            className="relative flex-shrink-0 nodrag nopan"
-            onMouseEnter={() => setImageHover(true)}
-            onMouseLeave={() => setImageHover(false)}
-          >
-            <img src={item.url!} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
-            {imageHover && (
-              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 bg-white rounded-lg shadow-2xl border border-border pointer-events-none">
-                <img src={item.url!} alt="" className="max-w-[300px] max-h-[300px] object-contain rounded" />
-              </div>
-            )}
-          </div>
+          <ImageThumbnail url={item.url!} />
         )}
 
         {/* Badge showing child count when collapsed */}
