@@ -196,7 +196,28 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
 
   const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
-    updateItemMutation.mutate({ id, itemSpaceId, data: { ...data, updatedAt: getItemUpdatedAt(id) } });
+    const updates = { ...data };
+
+    // Auto-fill dates when status changes
+    if (updates.status !== undefined) {
+      const item = allItems.find(i => i.id === id);
+      const now = new Date().toISOString();
+
+      if ((updates.status === 'done' || updates.status === 'cancelled') && !item?.endDate) {
+        updates.endDate = now;
+      }
+      if (updates.status && updates.status !== 'undefined' && !item?.startDate) {
+        if (item?.endDate && new Date(item.endDate) < new Date()) {
+          updates.startDate = item.endDate;
+        } else if (updates.endDate && new Date(updates.endDate) < new Date()) {
+          updates.startDate = updates.endDate;
+        } else {
+          updates.startDate = now;
+        }
+      }
+    }
+
+    updateItemMutation.mutate({ id, itemSpaceId, data: { ...updates, updatedAt: getItemUpdatedAt(id) } });
 
     // If status changed on an item with children, propose propagation
     if (data.status !== undefined) {
