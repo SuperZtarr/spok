@@ -13,7 +13,7 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
+import { Trash2, ExternalLink, GripVertical, Plus, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine, Pencil } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
@@ -171,6 +171,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
             groups={[
               {
                 actions: [
+                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
                   ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),

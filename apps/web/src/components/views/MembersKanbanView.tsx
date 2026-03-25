@@ -22,7 +22,7 @@ import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constant
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { Trash2, Plus, Copy, FolderInput, FolderPlus, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
+import { Trash2, Plus, Copy, FolderInput, FolderPlus, UserPlus, Merge, ArrowDownToLine, Pencil } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -158,6 +158,7 @@ function MemberKanbanCard({
             groups={[
               {
                 actions: [
+                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
                   ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),

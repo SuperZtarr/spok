@@ -18,6 +18,7 @@ import {
   UserPlus,
   Merge,
   ArrowDownToLine,
+  Pencil,
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
@@ -260,6 +261,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
             groups={[
               {
                 actions: [
+                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
                   ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
                   { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                   ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),

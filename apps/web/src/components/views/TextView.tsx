@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus, FolderKanban, ExternalLink, UserPlus, Merge, ArrowDownToLine } from 'lucide-react';
+import { Search, X, FileText, MessageSquare, User, CheckSquare, Plus, Trash2, FolderInput, Copy, FolderPlus, FolderKanban, ExternalLink, UserPlus, Merge, ArrowDownToLine, Pencil } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -357,6 +357,7 @@ function TextItem({
               groups={[
                 {
                   actions: [
+                    { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
                     ...(onUpdateStatus && item.status && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
                     ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) }] : []),
                     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),

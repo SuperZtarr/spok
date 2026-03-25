@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, FolderKanban, Copy, FolderPlus, UserPlus, Merge, ArrowDownToLine, Printer, FileDown } from 'lucide-react';
+import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, FolderKanban, Copy, FolderPlus, UserPlus, Merge, ArrowDownToLine, Printer, FileDown, Pencil } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -363,6 +363,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                         groups={[
                           {
                             actions: [
+                              { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
                               ...(item.status && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
                               { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                               ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),

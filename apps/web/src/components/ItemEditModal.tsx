@@ -877,8 +877,23 @@ export function ItemEditModal({
                           onClick={() => {
                             const newStatus = s.id === 'undefined' ? '' : s.id;
                             setStatus(newStatus);
-                            if ((newStatus === 'done' || newStatus === 'cancelled') && !endDate) {
-                              setEndDate(toDatetimeLocal(new Date()));
+                            if (newStatus === '') {
+                              setStartDate('');
+                              setEndDate('');
+                            } else {
+                              let currentEndDate = endDate;
+                              if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) {
+                                currentEndDate = toDatetimeLocal(new Date());
+                                setEndDate(currentEndDate);
+                              }
+                              if (!startDate) {
+                                const now = new Date();
+                                if (currentEndDate && fromDatetimeLocal(currentEndDate) < now) {
+                                  setStartDate(currentEndDate);
+                                } else {
+                                  setStartDate(toDatetimeLocal(now));
+                                }
+                              }
                             }
                           }}
                           className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
