@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -188,6 +188,9 @@ export function ItemEditModal({
   const [editRelationLabel, setEditRelationLabel] = useState('');
 
   const { user } = useAuthStore();
+  const [previewReadOnly, setPreviewReadOnly] = useState(false);
+  const isAdmin = user?.globalRole === 'ADMIN';
+  const effectiveCanEdit = previewReadOnly ? false : canEdit;
 
   const toggleParentSortMode = () => {
     const newMode = parentSortMode === 'tree' ? 'alpha' : 'tree';
@@ -701,7 +704,7 @@ export function ItemEditModal({
               {TypeIcon && <TypeIcon className={`w-6 h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
             </div>
             <div className="flex-1 min-w-0" data-tour="item-title">
-              {canEdit ? (
+              {effectiveCanEdit ? (
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -731,7 +734,7 @@ export function ItemEditModal({
 
             {/* Type selector — full width */}
             <div className="flex flex-wrap gap-2 mb-4" data-tour="item-type-selector">
-              {canEdit ? (
+              {effectiveCanEdit ? (
                 (() => {
                   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
                   return Object.entries(typeLabels)
@@ -778,7 +781,7 @@ export function ItemEditModal({
                   key={itemId}
                   content={description}
                   onChange={setDescription}
-                  editable={canEdit}
+                  editable={effectiveCanEdit}
                   spaceId={spaceId}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
@@ -850,7 +853,7 @@ export function ItemEditModal({
                             summary={(contribution as any).reactionSummary || []}
                             mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                           />
-                          {canEdit && (contribution.authorId === user?.id) && (
+                          {effectiveCanEdit && (contribution.authorId === user?.id) && (
                             <div className="flex items-center gap-1">
                               <button type="button" onClick={() => handleEditContribution(contribution)} className="p-1 hover:bg-muted rounded transition-colors" title="Modifier"><Pencil className="w-3 h-3" /></button>
                               <button type="button" onClick={() => handleDeleteContribution(contribution.id)} className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer" disabled={deleteContributionMutation.isPending}><Trash2 className="w-3 h-3" /></button>
@@ -900,7 +903,7 @@ export function ItemEditModal({
               <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
                 <div className="flex flex-wrap gap-2">
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
                       const isSelected = (s.id === 'undefined' && !status) || s.id === status;
                       return (
@@ -957,7 +960,7 @@ export function ItemEditModal({
               <div className="space-y-4" data-tour="item-dates">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Début</label>
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={type === 'MEETING' || type === 'TASK'} />
                   ) : (
                     <p className="text-sm">{startDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate)) : <span className="text-muted-foreground">—</span>}</p>
@@ -965,7 +968,7 @@ export function ItemEditModal({
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Fin</label>
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <div className="space-y-2">
                       {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
                         <div className="flex flex-wrap gap-1.5">
@@ -989,7 +992,7 @@ export function ItemEditModal({
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Échéance</label>
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <div className="space-y-2">
                       {startDate && type !== 'PERIOD' && (
                         <div className="flex flex-wrap gap-1.5">
@@ -1016,7 +1019,7 @@ export function ItemEditModal({
               {/* URL */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">URL</label>
-                {type === 'LINK' && canEdit ? (
+                {type === 'LINK' && effectiveCanEdit ? (
                   <Input type="url" value={url}
                     onChange={(e) => { setUrl(e.target.value); const extracted = urlToTitle(e.target.value); if (extracted) autoFillTitle(extracted); }}
                     placeholder="https://..." />
@@ -1046,7 +1049,7 @@ export function ItemEditModal({
                       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
                     }}
                     previewUrl={url || undefined}
-                    editable={canEdit}
+                    editable={effectiveCanEdit}
                   />
                 </div>
               )}
@@ -1055,7 +1058,7 @@ export function ItemEditModal({
               {type === 'IMAGE' ? (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Image</label>
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <>
                       <ImageUploadZone currentUrl={url || null}
                         onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
@@ -1095,7 +1098,7 @@ export function ItemEditModal({
               {type === 'DOCUMENT' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Fichier</label>
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <>
                       <FileUploadZone currentUrl={url || null}
                         onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
@@ -1125,7 +1128,7 @@ export function ItemEditModal({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent</label>
-                  {canEdit && (
+                  {effectiveCanEdit && (
                     <button type="button" onClick={toggleParentSortMode}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}>
@@ -1133,7 +1136,7 @@ export function ItemEditModal({
                     </button>
                   )}
                 </div>
-                {canEdit ? (
+                {effectiveCanEdit ? (
                   <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
                 ) : (
                   <p className="text-sm">
@@ -1146,7 +1149,7 @@ export function ItemEditModal({
               <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
                 <div className="flex flex-wrap gap-2">
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <>
                       <button type="button" onClick={() => setPriority(null)}
                         className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
@@ -1176,7 +1179,7 @@ export function ItemEditModal({
               {spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
-                  {canEdit ? (
+                  {effectiveCanEdit ? (
                     <div className="flex items-center gap-2">
                       <Select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
                         options={[{ value: '', label: 'Non assigné' }, ...spaceMembers.map((m) => ({ value: m.userId, label: m.name || m.email }))]} />
@@ -1203,7 +1206,7 @@ export function ItemEditModal({
                     <Link2 className="w-4 h-4" />
                     Dépendances
                   </h2>
-                  {canEdit && (
+                  {effectiveCanEdit && (
                     <Button type="button" variant="outline" size="sm" onClick={() => setShowAddRelation(!showAddRelation)}>
                       <Plus className="w-4 h-4 mr-1" /> Ajouter
                     </Button>
@@ -1266,7 +1269,7 @@ export function ItemEditModal({
                                 <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                 <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
                               </div>
-                              {canEdit && (
+                              {effectiveCanEdit && (
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <button type="button" onClick={() => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); }}
                                     className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground" title="Modifier"><Pencil className="w-3 h-3" /></button>
@@ -1304,7 +1307,7 @@ export function ItemEditModal({
                   <TagIcon className="w-4 h-4" />
                   Tags
                 </h2>
-                {canEdit ? (
+                {effectiveCanEdit ? (
                   <TagSelector spaceId={spaceId} value={selectedTagIds} onChange={setSelectedTagIds} />
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
@@ -1366,13 +1369,13 @@ export function ItemEditModal({
 
           {/* Footer — always visible */}
           <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
-            {canEdit && (
+            {effectiveCanEdit && (
               <Button type="submit" disabled={!hasChanges || updateMutation.isPending} className={!hasChanges ? 'opacity-40' : ''}>
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             )}
             <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
-              {canEdit ? 'Fermer' : 'Fermer'}
+              {effectiveCanEdit ? 'Fermer' : 'Fermer'}
             </Button>
             {item && (
               <>
@@ -1413,9 +1416,22 @@ export function ItemEditModal({
                 )}
               </>
             )}
-            {canEdit && onDelete && itemId && (
+            {effectiveCanEdit && onDelete && itemId && (
               <Button type="button" variant="destructive" className="ml-auto" onClick={() => { onDelete(itemId); onClose(); }}>
                 <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+            {isAdmin && (
+              <Button
+                type="button"
+                variant={previewReadOnly ? 'default' : 'ghost'}
+                size="sm"
+                className={previewReadOnly ? 'ml-auto' : (!onDelete || !itemId ? 'ml-auto' : '')}
+                title={previewReadOnly ? 'Revenir en mode admin' : 'Prévisualiser en lecture seule'}
+                onClick={() => setPreviewReadOnly(!previewReadOnly)}
+              >
+                {previewReadOnly ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
+                {previewReadOnly ? 'Mode admin' : 'Lecture seule'}
               </Button>
             )}
           </div>

@@ -146,7 +146,7 @@ export function ReactionBar({ spaceId, itemId, contributionId, summary, mentiona
 
           {/* Picker dropdown */}
           {showPicker && (
-            <div className="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-lg p-1 flex gap-0.5 z-[60]" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg p-1 flex gap-0.5 z-[60]" onClick={(e) => e.stopPropagation()}>
               {DEFAULT_REACTION_TYPES.map(rt => {
                 const isActive = userReaction?.type === rt.id;
                 return (
