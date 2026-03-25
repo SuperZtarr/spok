@@ -48,6 +48,7 @@ interface RichTextEditorProps {
   defaultMaxHeight?: number;
   spaceId?: string;
   mentionableItems?: Array<{ id: string; title: string; type: string; spaceName?: string }>;
+  autoFocus?: boolean;
 }
 
 function createSuggestionConfig(
@@ -229,7 +230,7 @@ function createSlashCommandSuggestion() {
 // Slash command extension using Mention mechanism
 const SlashCommand = Mention.extend({ name: 'slashCommand' });
 
-export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems, autoFocus = false }: RichTextEditorProps) {
   const isUpdatingFromProp = useRef(false);
   const [editorHeight, setEditorHeight] = useState<number | null>(null);
   const isDragging = useRef(false);
@@ -348,6 +349,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
     extensions,
     content,
     editable,
+    autofocus: autoFocus ? 'end' : false,
     onUpdate: ({ editor }) => {
       if (!isUpdatingFromProp.current) {
         onChange(editor.getHTML());

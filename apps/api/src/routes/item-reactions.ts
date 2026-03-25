@@ -4,6 +4,7 @@ import { checkSpaceAccess } from './items.js';
 
 const reactionSchema = z.object({
   reactionType: z.string().min(1).max(50),
+  content: z.string().optional(),
 });
 
 /** Compute reaction summary for an item or contribution */
@@ -58,9 +59,25 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
+      // Create linked contribution if content provided
+      let contribution = null;
+      if (body.content && body.content.trim()) {
+        contribution = await fastify.prisma.contribution.create({
+          data: {
+            content: body.content.trim(),
+            reactionType: body.reactionType,
+            itemId: request.params.id,
+            authorId: request.user.userId,
+          },
+          include: {
+            author: { select: { id: true, name: true, email: true } },
+          },
+        });
+      }
+
       const summary = await getReactionSummary(fastify.prisma, request.user.userId, { itemId: request.params.id });
 
-      return { reaction, summary };
+      return { reaction, summary, contribution };
     }
   );
 
@@ -85,7 +102,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // React to a contribution
-  fastify.post<{ Params: { spaceId: string; id: string; contributionId: string }; Body: { reactionType: string } }>(
+  fastify.post<{ Params: { spaceId: string; id: string; contributionId: string }; Body: { reactionType: string; content?: string } }>(
     '/:id/contributions/:contributionId/reactions',
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
@@ -108,9 +125,26 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
+      // Create linked contribution if content provided
+      let contribution = null;
+      if (body.content && body.content.trim()) {
+        contribution = await fastify.prisma.contribution.create({
+          data: {
+            content: body.content.trim(),
+            reactionType: body.reactionType,
+            itemId: request.params.id,
+            authorId: request.user.userId,
+            parentId: request.params.contributionId,
+          },
+          include: {
+            author: { select: { id: true, name: true, email: true } },
+          },
+        });
+      }
+
       const summary = await getReactionSummary(fastify.prisma, request.user.userId, { contributionId: request.params.contributionId });
 
-      return { reaction, summary };
+      return { reaction, summary, contribution };
     }
   );
 

@@ -23,6 +23,7 @@ export const DEFAULT_REACTION_TYPES = [
   { id: 'inexact', label: 'Inexact', emoji: '⚠️' },
   { id: 'inadapte', label: 'Inadapté', emoji: '🚫' },
   { id: 'j_adore', label: "J'adore", emoji: '❤️' },
+  { id: 'complement', label: "Complément d'info", emoji: '💡' },
   { id: 'trollage', label: 'Trollage', emoji: '🤡' },
 ] as const;
 

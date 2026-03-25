@@ -116,7 +116,7 @@ export function ImageUploadZone({
           <img
             src={currentUrl}
             alt="Image uploadée"
-            className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+            className="w-48 h-48 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setExpanded(true)}
             title="Cliquer pour agrandir"
           />

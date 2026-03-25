@@ -802,10 +802,10 @@ export const itemsApi = {
     }),
 
   // Reactions
-  react: (spaceId: string, itemId: string, reactionType: string) =>
-    fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/reactions`, {
+  react: (spaceId: string, itemId: string, reactionType: string, content?: string) =>
+    fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[]; contribution?: any }>(`/spaces/${spaceId}/items/${itemId}/reactions`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType }),
+      body: JSON.stringify({ reactionType, ...(content ? { content } : {}) }),
     }),
 
   removeReaction: (spaceId: string, itemId: string) =>
@@ -813,10 +813,10 @@ export const itemsApi = {
       method: 'DELETE',
     }),
 
-  reactToContribution: (spaceId: string, itemId: string, contributionId: string, reactionType: string) =>
-    fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}/reactions`, {
+  reactToContribution: (spaceId: string, itemId: string, contributionId: string, reactionType: string, content?: string) =>
+    fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[]; contribution?: any }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}/reactions`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType }),
+      body: JSON.stringify({ reactionType, ...(content ? { content } : {}) }),
     }),
 
   removeContributionReaction: (spaceId: string, itemId: string, contributionId: string) =>

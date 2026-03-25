@@ -5,7 +5,7 @@ import { itemsApi, spacesApi, bookmarksApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, DEFAULT_REACTION_TYPES } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -787,26 +787,79 @@ export function ItemEditModal({
               {/* Reactions on item */}
               {item && (
                 <div className="space-y-1" data-tour="item-reactions">
-                  <h2 className="text-sm font-medium text-muted-foreground">Réactions</h2>
                   <ReactionBar
                     spaceId={spaceId}
                     itemId={item.id}
                     summary={(item as any).reactionSummary || []}
+                    mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                   />
                 </div>
               )}
 
-              {/* Contributions */}
+              {/* Commentaires */}
               <div className="space-y-3" data-tour="item-contributions">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <MessageSquarePlus className="w-5 h-5" />
-                  Contributions ({contributionCount})
+                  Commentaires ({contributionCount})
                 </h2>
 
-                {item.contributions && item.contributions.length > 0 && (
-                  <div className="space-y-3">
-                    {item.contributions.map((contribution) => (
-                      <div key={contribution.id} className="p-4 bg-card border border-border rounded-lg space-y-2">
+                {item.contributions && item.contributions.length > 0 && (() => {
+                  // Build tree from flat contributions
+                  type ContribNode = typeof item.contributions[number] & { children?: ContribNode[] };
+                  const contribMap = new Map<string, ContribNode>();
+                  const roots: ContribNode[] = [];
+                  // First pass: index all contributions
+                  for (const c of item.contributions) {
+                    contribMap.set(c.id, { ...c, children: [] });
+                  }
+                  // Second pass: build parent-child relationships
+                  for (const c of item.contributions) {
+                    const node = contribMap.get(c.id)!;
+                    const parentId = (c as any).parentId;
+                    if (parentId && contribMap.has(parentId)) {
+                      contribMap.get(parentId)!.children!.push(node);
+                    } else {
+                      roots.push(node);
+                    }
+                  }
+
+                  const renderContribution = (contribution: ContribNode, depth: number) => (
+                    <div key={contribution.id} className={`border border-border rounded-lg ${depth === 0 ? 'bg-card' : 'bg-muted/30 border-l-2 border-l-primary/30'}`}>
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground/80">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(contribution as any).reactionType && (() => {
+                            const rc = DEFAULT_REACTION_TYPES.find(r => r.id === (contribution as any).reactionType);
+                            return rc ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-primary/30 bg-primary/5">
+                                <span>{rc.emoji}</span>
+                                <span className="text-muted-foreground">{rc.label}</span>
+                              </span>
+                            ) : null;
+                          })()}
+                          <User className="w-3 h-3" />
+                          <span className="font-medium text-foreground/70">{contribution.author.name}</span>
+                          <span>·</span>
+                          <span>{new Date(contribution.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ReactionBar
+                            spaceId={spaceId}
+                            itemId={item.id}
+                            contributionId={contribution.id}
+                            summary={(contribution as any).reactionSummary || []}
+                            mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
+                          />
+                          {canEdit && (contribution.authorId === user?.id) && (
+                            <div className="flex items-center gap-1">
+                              <button type="button" onClick={() => handleEditContribution(contribution)} className="p-1 hover:bg-muted rounded transition-colors" title="Modifier"><Pencil className="w-3 h-3" /></button>
+                              <button type="button" onClick={() => handleDeleteContribution(contribution.id)} className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer" disabled={deleteContributionMutation.isPending}><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Body */}
+                      <div className="p-4 space-y-3">
                         {editingContributionId === contribution.id ? (
                           <div className="space-y-2">
                             <RichTextEditor key={`edit-${contribution.id}`} content={editingContributionContent} onChange={setEditingContributionContent} spaceId={spaceId}
@@ -817,45 +870,25 @@ export function ItemEditModal({
                             </div>
                           </div>
                         ) : (
-                          <>
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: contribution.content }} />
-                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 mt-2">
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                <span className="font-medium text-foreground/70">{contribution.author.name}</span>
-                                <span>·</span>
-                                <span>{new Date(contribution.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                              {canEdit && (contribution.authorId === user?.id) && (
-                                <div className="flex items-center gap-1">
-                                  <button type="button" onClick={() => handleEditContribution(contribution)} className="p-1 hover:bg-muted rounded transition-colors" title="Modifier"><Pencil className="w-3 h-3" /></button>
-                                  <button type="button" onClick={() => handleDeleteContribution(contribution.id)} className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer" disabled={deleteContributionMutation.isPending}><Trash2 className="w-3 h-3" /></button>
-                                </div>
-                              )}
-                            </div>
-                            {/* Reactions on contribution */}
-                            <ReactionBar
-                              spaceId={spaceId}
-                              itemId={item.id}
-                              contributionId={contribution.id}
-                              summary={(contribution as any).reactionSummary || []}
-                            />
-                          </>
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: contribution.content }} />
+                        )}
+                        {contribution.children && contribution.children.length > 0 && (
+                          <div className="space-y-2">
+                            {contribution.children.map((child) => renderContribution(child, depth + 1))}
+                          </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  );
 
-                {canEdit && (
-                  <div className="space-y-2">
-                    <RichTextEditor key={`new-contrib-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Ajouter une contribution..." spaceId={spaceId}
-                      mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
-                    <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
-                      {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
-                    </Button>
-                  </div>
-                )}
+                  return (
+                    <div className="space-y-3">
+                      {roots.map((contribution) => renderContribution(contribution, 0))}
+                    </div>
+                  );
+                })()}
+
+                {/* L'ajout de contribution passe désormais par le formulaire de réaction ci-dessus */}
               </div>
 
           </div>{/* end left column */}
@@ -1035,7 +1068,7 @@ export function ItemEditModal({
                     </>
                   ) : url ? (
                     <>
-                      <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
+                      <img src={url} alt="Image" className="w-48 h-48 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
                       {imageExpanded && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
                           <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
@@ -1049,7 +1082,7 @@ export function ItemEditModal({
               ) : url && type !== 'DIAGRAM' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Image</label>
-                  <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
+                  <img src={url} alt="Image" className="w-48 h-48 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
                   {imageExpanded && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
                       <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />

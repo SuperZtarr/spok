@@ -3,6 +3,7 @@ export interface Contribution {
   content: string;
   itemId: string;
   authorId: string;
+  reactionType?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,6 +19,7 @@ export interface ContributionWithAuthor extends Contribution {
 
 export interface CreateContributionInput {
   content: string;
+  reactionType?: string;
 }
 
 export interface UpdateContributionInput {

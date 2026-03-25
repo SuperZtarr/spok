@@ -402,8 +402,9 @@ model Contribution {
   content   String
   itemId    String
   authorId  String
-  parentId  String?
-  createdAt DateTime @default(now())
+  parentId     String?
+  reactionType String?
+  createdAt    DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   item      Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
