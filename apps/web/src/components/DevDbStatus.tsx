@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { healthApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
-import { Bug, AlertCircle, Shield } from 'lucide-react';
+import { Bug, AlertCircle, Shield, Eye } from 'lucide-react';
 
 type DbStatus = 'checking' | 'connected' | 'disconnected' | 'api_error' | 'wrong_server' | 'network_error';
 
@@ -13,6 +13,7 @@ interface StatusInfo {
 
 const DEV_MODE_KEY = 'spok-dev-mode';
 const ADMIN_MODE_KEY = 'spok-admin-mode';
+const VISITOR_MODE_KEY = 'spok-visitor-mode';
 
 export function AdminModeToggle() {
   const [adminModeEnabled, setAdminModeEnabled] = useState(() => {
@@ -57,6 +58,49 @@ export function useAdminMode(): boolean {
   }, []);
 
   return enabled && user?.globalRole === 'ADMIN';
+}
+
+export function VisitorModeToggle() {
+  const [visitorMode, setVisitorMode] = useState(() => {
+    return localStorage.getItem(VISITOR_MODE_KEY) === 'true';
+  });
+
+  const toggleVisitorMode = () => {
+    const newValue = !visitorMode;
+    setVisitorMode(newValue);
+    localStorage.setItem(VISITOR_MODE_KEY, String(newValue));
+    window.dispatchEvent(new CustomEvent('spok:visitormode', { detail: newValue }));
+  };
+
+  const user = useAuthStore((state) => state.user);
+  if (!user) return null;
+
+  return (
+    <button
+      onClick={toggleVisitorMode}
+      className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs w-full transition-colors ${
+        visitorMode
+          ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/50'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+      }`}
+    >
+      <Eye className="w-4 h-4" />
+      <span>Mode visiteur {visitorMode ? 'activé' : 'désactivé'}</span>
+    </button>
+  );
+}
+
+export function useVisitorMode(): boolean {
+  const [enabled, setEnabled] = useState(() => localStorage.getItem(VISITOR_MODE_KEY) === 'true');
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    const handler = (e: Event) => setEnabled((e as CustomEvent).detail);
+    window.addEventListener('spok:visitormode', handler);
+    return () => window.removeEventListener('spok:visitormode', handler);
+  }, []);
+
+  return enabled && !!user;
 }
 
 export function DevModeToggle() {

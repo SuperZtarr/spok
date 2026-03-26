@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent, ReactRenderer, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -48,6 +48,7 @@ interface RichTextEditorProps {
   defaultMaxHeight?: number;
   spaceId?: string;
   mentionableItems?: Array<{ id: string; title: string; type: string; spaceName?: string }>;
+  autoFocus?: boolean;
 }
 
 function createSuggestionConfig(
@@ -229,7 +230,7 @@ function createSlashCommandSuggestion() {
 // Slash command extension using Mention mechanism
 const SlashCommand = Mention.extend({ name: 'slashCommand' });
 
-export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems, autoFocus }: RichTextEditorProps) {
   const isUpdatingFromProp = useRef(false);
   const [editorHeight, setEditorHeight] = useState<number | null>(null);
   const isDragging = useRef(false);
@@ -264,85 +265,90 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
     document.addEventListener('mouseup', handleMouseUp);
   }, [minHeight, defaultMaxHeight]);
 
-  // Build TipTap extensions
-  const extensions: any[] = [
-    StarterKit.configure({
-      heading: { levels: [2, 3] },
-      codeBlock: false, // replaced by CodeBlockLowlight
-    }),
-    Underline,
-    Link.configure({
-      openOnClick: false,
-      HTMLAttributes: { class: 'text-primary underline hover:no-underline' },
-    }),
-    Placeholder.configure({
-      placeholder: placeholder || 'Ajoutez une description... (tapez / pour les commandes)',
-    }),
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableCell,
-    TableHeader,
-    TaskList,
-    TaskItem.configure({ nested: true }),
-    CodeBlockLowlight.configure({ lowlight }),
-  ];
+  // Build TipTap extensions (memoized to avoid duplicate warnings on re-render)
+  const extensions = useMemo(() => {
+    const exts: any[] = [
+      StarterKit.configure({
+        heading: { levels: [2, 3] },
+        codeBlock: false, // replaced by CodeBlockLowlight
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { class: 'text-primary underline hover:no-underline' },
+      }),
+      Placeholder.configure({
+        placeholder: placeholder || 'Ajoutez une description... (tapez / pour les commandes)',
+      }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      CodeBlockLowlight.configure({ lowlight }),
+    ];
 
-  // Slash commands
-  extensions.push(
-    SlashCommand.configure({
-      suggestion: createSlashCommandSuggestion() as any,
-    })
-  );
-
-  // @mention extension (users)
-  if (spaceId) {
-    extensions.push(
-      Mention.configure({
-        HTMLAttributes: {
-          class: 'mention-user',
-          'data-mention-type': 'user',
-        },
-        suggestion: createSuggestionConfig(async (query: string) => {
-          if (!spaceId) return [];
-          try {
-            const members = await spacesApi.getMembers(spaceId);
-            return members
-              .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
-              .slice(0, 8)
-              .map((m) => ({ id: m.userId, label: m.name, type: 'user' as const }));
-          } catch {
-            return [];
-          }
-        }),
+    // Slash commands
+    exts.push(
+      SlashCommand.configure({
+        suggestion: createSlashCommandSuggestion() as any,
       })
     );
-  }
 
-  // #reference extension (items)
-  if (mentionableItems) {
-    const ItemMention = Mention.extend({ name: 'itemMention' }).configure({
-      HTMLAttributes: {
-        class: 'mention-item',
-        'data-mention-type': 'item',
-      },
-      suggestion: {
-        char: '#',
-        ...createSuggestionConfig(async (query: string) => {
-          if (!mentionableItems) return [];
-          return mentionableItems
-            .filter((item) => item.title.toLowerCase().includes(query.toLowerCase()))
-            .slice(0, 8)
-            .map((item) => ({
-              id: item.id,
-              label: item.title,
-              type: 'item' as const,
-              extra: item.spaceName || item.type,
-            }));
-        }),
-      },
-    });
-    extensions.push(ItemMention);
-  }
+    // @mention extension (users)
+    if (spaceId) {
+      exts.push(
+        Mention.configure({
+          HTMLAttributes: {
+            class: 'mention-user',
+            'data-mention-type': 'user',
+          },
+          suggestion: createSuggestionConfig(async (query: string) => {
+            if (!spaceId) return [];
+            try {
+              const members = await spacesApi.getMembers(spaceId);
+              return members
+                .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
+                .slice(0, 8)
+                .map((m) => ({ id: m.userId, label: m.name, type: 'user' as const }));
+            } catch {
+              return [];
+            }
+          }),
+        })
+      );
+    }
+
+    // #reference extension (items)
+    if (mentionableItems) {
+      const ItemMention = Mention.extend({ name: 'itemMention' }).configure({
+        HTMLAttributes: {
+          class: 'mention-item',
+          'data-mention-type': 'item',
+        },
+        suggestion: {
+          char: '#',
+          ...createSuggestionConfig(async (query: string) => {
+            if (!mentionableItems) return [];
+            return mentionableItems
+              .filter((item) => item.title.toLowerCase().includes(query.toLowerCase()))
+              .slice(0, 8)
+              .map((item) => ({
+                id: item.id,
+                label: item.title,
+                type: 'item' as const,
+                extra: item.spaceName || item.type,
+              }));
+          }),
+        },
+      });
+      exts.push(ItemMention);
+    }
+
+    return exts;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceId, !!mentionableItems, placeholder]);
 
   const editor = useEditor({
     extensions,
@@ -363,6 +369,13 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
       isUpdatingFromProp.current = false;
     }
   }, [content, editor]);
+
+  // Auto-focus the editor when requested
+  useEffect(() => {
+    if (autoFocus && editor && !editor.isDestroyed) {
+      editor.commands.focus('end');
+    }
+  }, [autoFocus, editor]);
 
   if (!editor) return null;
 

@@ -5,7 +5,7 @@ export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timel
 
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 
-export const VIEWER_ALLOWED_VIEWS: ViewMode[] = ['list', 'kanban', 'timeline', 'mindmap'];
+export const VIEWER_ALLOWED_VIEWS: ViewMode[] = ['overview', 'list', 'kanban', 'timeline', 'mindmap'];
 
 export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
   { value: 'dashboard', label: 'Tableau de bord' },

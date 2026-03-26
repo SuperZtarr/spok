@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Lock } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Lock, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -20,6 +20,7 @@ import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
+import { useAdminMode } from './DevDbStatus';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { DrawioEditor } from './ui/DrawioEditor';
@@ -121,6 +122,7 @@ interface ItemEditModalProps {
   allItems: Item[];
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  spaceRole?: string;
   spaceName?: string;
   communityName?: string;
   onNavigate?: (itemId: string) => void;
@@ -134,7 +136,8 @@ export function ItemEditModal({
   itemId,
   allItems,
   referentiels,
-  canEdit = true,
+  canEdit: canEditProp = true,
+  spaceRole,
   spaceName,
   communityName,
   onNavigate,
@@ -142,6 +145,8 @@ export function ItemEditModal({
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', ITEM_MODAL_TOUR);
+  const adminMode = useAdminMode();
+  const [visitorPreview, setVisitorPreview] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -166,6 +171,8 @@ export function ItemEditModal({
 
   // Contributions state
   const [newContribution, setNewContribution] = useState('');
+  const [showContributionField, setShowContributionField] = useState(false);
+  const [replyToContributionId, setReplyToContributionId] = useState<string | null>(null);
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
   const [editingContributionContent, setEditingContributionContent] = useState('');
 
@@ -200,6 +207,15 @@ export function ItemEditModal({
     queryFn: () => itemsApi.get(spaceId, itemId!),
     enabled: !!itemId && isOpen,
   });
+
+  // canEdit: space OWNER, or item author, or item assignee (new items are always editable)
+  const isNewItem = !itemId;
+  const isSpaceOwner = spaceRole === 'OWNER';
+  const isItemAuthor = !!user && !!item && (item as any).createdById === user.id;
+  const isItemAssignee = !!user && !!item && item.assignedToId === user.id;
+  const canEdit = canEditProp && !visitorPreview && (isNewItem || isSpaceOwner || isItemAuthor || isItemAssignee);
+  // canInteract: any authenticated member can react and contribute (even if they can't edit the item)
+  const canInteract = canEditProp && !visitorPreview;
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -284,11 +300,13 @@ export function ItemEditModal({
   });
 
   const createContributionMutation = useMutation({
-    mutationFn: (content: string) =>
-      itemsApi.createContribution(spaceId, itemId!, { content }),
+    mutationFn: (data: { content: string; parentId?: string }) =>
+      itemsApi.createContribution(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
       setNewContribution('');
+      setShowContributionField(false);
+      setReplyToContributionId(null);
     },
   });
 
@@ -431,7 +449,7 @@ export function ItemEditModal({
 
   const handleAddContribution = () => {
     if (!isContributionEmpty(newContribution)) {
-      createContributionMutation.mutate(newContribution);
+      createContributionMutation.mutate({ content: newContribution, parentId: replyToContributionId || undefined });
     }
   };
 
@@ -713,11 +731,20 @@ export function ItemEditModal({
                 <h1 className="text-xl font-bold truncate">{title}</h1>
               )}
             </div>
-            {!canEdit && (
-              <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground bg-muted rounded-md flex-shrink-0">
-                <Lock className="w-3 h-3" />
-                Lecture seule
-              </span>
+            {adminMode && canEditProp && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setVisitorPreview(!visitorPreview); }}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md flex-shrink-0 transition-colors ${
+                  visitorPreview
+                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-300'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+                title="Voir comme un visiteur"
+              >
+                <Eye className="w-3 h-3" />
+                {visitorPreview ? 'Vue visiteur' : 'Voir comme visiteur'}
+              </button>
             )}
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
@@ -734,42 +761,6 @@ export function ItemEditModal({
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto pr-1">
-
-            {/* Type selector — full width */}
-            <div className="flex flex-wrap gap-2 mb-4" data-tour="item-type-selector">
-              {canEdit ? (
-                (() => {
-                  const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                  return Object.entries(typeLabels)
-                    .filter(([, config]) => config.visible)
-                    .sort(([, a], [, b]) => a.order - b.order)
-                    .map(([key, config]) => {
-                      const Icon = TYPE_ICONS[key];
-                      const isSelected = type === key;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setType(key as ItemType)}
-                          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
-                            isSelected
-                              ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
-                              : 'opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
-                          {config.labelShort}
-                        </button>
-                      );
-                    });
-                })()
-              ) : (
-                <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeConfig?.color || 'border-border'} ${typeConfig?.bgHover || ''} font-semibold`}>
-                  {TypeIcon && <TypeIcon className="w-3.5 h-3.5" />}
-                  {typeConfig?.labelShort || TYPE_LABELS[type] || type}
-                </span>
-              )}
-            </div>
 
             {/* Three-column layout */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr,0.85fr,380px] gap-6">
@@ -790,84 +781,169 @@ export function ItemEditModal({
                 />
               </div>
 
-              {/* Reactions on item */}
-              {item && (
-                <div className="space-y-1" data-tour="item-reactions">
-                  <h2 className="text-sm font-medium text-muted-foreground">Réactions</h2>
+              {/* Reactions + Contributions */}
+              <div className="space-y-3" data-tour="item-reactions">
+                {/* Reaction bar on item */}
+                {item && (
                   <ReactionBar
                     spaceId={spaceId}
                     itemId={item.id}
                     summary={(item as any).reactionSummary || []}
+                    onReacted={() => canInteract && setShowContributionField(true)}
+                    label="Réagissez à l'article"
                   />
-                </div>
-              )}
+                )}
 
-              {/* Contributions */}
-              <div className="space-y-3" data-tour="item-contributions">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <MessageSquarePlus className="w-5 h-5" />
-                  Contributions ({contributionCount})
-                </h2>
+                {/* New contribution field (shown after reaction or manual click) */}
+                {canInteract && showContributionField && !replyToContributionId && (
+                  <div className="space-y-2">
+                    <RichTextEditor key={`new-contrib-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Ajouter un commentaire..." spaceId={spaceId} autoFocus
+                      mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
+                        {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => { setShowContributionField(false); setNewContribution(''); }}>
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-                {item.contributions && item.contributions.length > 0 && (
-                  <div className="space-y-3">
-                    {item.contributions.map((contribution) => (
-                      <div key={contribution.id} className="p-4 bg-card border border-border rounded-lg space-y-2">
-                        {editingContributionId === contribution.id ? (
-                          <div className="space-y-2">
-                            <RichTextEditor key={`edit-${contribution.id}`} content={editingContributionContent} onChange={setEditingContributionContent} spaceId={spaceId}
-                              mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
-                            <div className="flex gap-2">
-                              <Button type="button" size="sm" onClick={handleSaveContribution} disabled={updateContributionMutation.isPending}>Enregistrer</Button>
-                              <Button type="button" size="sm" variant="outline" onClick={() => { setEditingContributionId(null); setEditingContributionContent(''); }}><X className="w-4 h-4" /></Button>
+                {/* Threaded contributions */}
+                {item.contributions && item.contributions.length > 0 && (() => {
+                  // Build tree from flat list
+                  const allContribs = item.contributions as (ContributionWithAuthor & { parentId?: string | null })[];
+                  const rootContribs = allContribs.filter(c => !c.parentId);
+                  const childrenMap = new Map<string, typeof allContribs>();
+                  allContribs.filter(c => c.parentId).forEach(c => {
+                    const arr = childrenMap.get(c.parentId!) || [];
+                    arr.push(c);
+                    childrenMap.set(c.parentId!, arr);
+                  });
+
+                  const renderContribution = (contribution: typeof allContribs[number], depth: number) => {
+                    const children = childrenMap.get(contribution.id) || [];
+                    const isReplying = replyToContributionId === contribution.id;
+                    return (
+                      <div key={contribution.id} className={depth > 0 ? 'ml-6 border-l-2 border-border pl-3' : ''}>
+                        <div className="py-2">
+                          {editingContributionId === contribution.id ? (
+                            <div className="space-y-2">
+                              <RichTextEditor key={`edit-${contribution.id}`} content={editingContributionContent} onChange={setEditingContributionContent} spaceId={spaceId}
+                                mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
+                              <div className="flex gap-2">
+                                <Button type="button" size="sm" onClick={handleSaveContribution} disabled={updateContributionMutation.isPending}>Enregistrer</Button>
+                                <Button type="button" size="sm" variant="outline" onClick={() => { setEditingContributionId(null); setEditingContributionContent(''); }}><X className="w-4 h-4" /></Button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: contribution.content }} />
-                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 mt-2">
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                <span className="font-medium text-foreground/70">{contribution.author.name}</span>
+                          ) : (
+                            <>
+                              {/* Content first */}
+                              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground [&>p]:my-0.5" dangerouslySetInnerHTML={{ __html: contribution.content }} />
+                              {/* Author + date + reactions + actions — compact line below */}
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                                <span className="font-medium">{contribution.author.name}</span>
                                 <span>·</span>
                                 <span>{new Date(contribution.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                <ReactionBar
+                                  spaceId={spaceId}
+                                  itemId={item.id}
+                                  contributionId={contribution.id}
+                                  summary={(contribution as any).reactionSummary || []}
+                                  label="Réagissez au commentaire"
+                                  onReacted={() => { if (canInteract) { setReplyToContributionId(contribution.id); setShowContributionField(true); setNewContribution(''); }}}
+                                />
+                                {canInteract && (contribution.authorId === user?.id) && (
+                                  <>
+                                    <button type="button" onClick={() => handleEditContribution(contribution)} className="p-0.5 hover:bg-muted rounded transition-colors" title="Modifier"><Pencil className="w-3 h-3" /></button>
+                                    <button type="button" onClick={() => handleDeleteContribution(contribution.id)} className="p-0.5 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer" disabled={deleteContributionMutation.isPending}><Trash2 className="w-3 h-3" /></button>
+                                  </>
+                                )}
                               </div>
-                              {canEdit && (contribution.authorId === user?.id) && (
-                                <div className="flex items-center gap-1">
-                                  <button type="button" onClick={() => handleEditContribution(contribution)} className="p-1 hover:bg-muted rounded transition-colors" title="Modifier"><Pencil className="w-3 h-3" /></button>
-                                  <button type="button" onClick={() => handleDeleteContribution(contribution.id)} className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer" disabled={deleteContributionMutation.isPending}><Trash2 className="w-3 h-3" /></button>
-                                </div>
-                              )}
-                            </div>
-                            {/* Reactions on contribution */}
-                            <ReactionBar
-                              spaceId={spaceId}
-                              itemId={item.id}
-                              contributionId={contribution.id}
-                              summary={(contribution as any).reactionSummary || []}
-                            />
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                            </>
+                          )}
 
-                {canEdit && (
-                  <div className="space-y-2">
-                    <RichTextEditor key={`new-contrib-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Ajouter une contribution..." spaceId={spaceId}
-                      mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
-                    <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
-                      {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
-                    </Button>
-                  </div>
-                )}
+                          {/* Reply field inline */}
+                          {canInteract && isReplying && showContributionField && (
+                            <div className="mt-2 space-y-2">
+                              <RichTextEditor key={`reply-${contribution.id}-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Répondre..." spaceId={spaceId} autoFocus
+                                mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
+                              <div className="flex gap-2">
+                                <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
+                                  {createContributionMutation.isPending ? 'Ajout...' : 'Répondre'}
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" onClick={() => { setReplyToContributionId(null); setShowContributionField(false); setNewContribution(''); }}>
+                                  Annuler
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Render children recursively */}
+                        {children.map(child => renderContribution(child, depth + 1))}
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <div className="space-y-1">
+                      <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <MessageSquarePlus className="w-4 h-4" />
+                        Contributions ({contributionCount})
+                      </h2>
+                      <div className="divide-y divide-border/50">
+                        {rootContribs.map(c => renderContribution(c, 0))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
           </div>{/* end left column */}
 
           {/* === CENTER COLUMN === */}
           <div className="space-y-6 min-w-0">
+
+              {/* Type */}
+              <div className="space-y-2" data-tour="item-type-selector">
+                <label className="text-sm font-medium">Type</label>
+                <div className="flex flex-wrap gap-2">
+                  {canEdit ? (
+                    (() => {
+                      const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                      return Object.entries(typeLabels)
+                        .filter(([, config]) => config.visible)
+                        .sort(([, a], [, b]) => a.order - b.order)
+                        .map(([key, config]) => {
+                          const Icon = TYPE_ICONS[key];
+                          const isSelected = type === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setType(key as ItemType)}
+                              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
+                                isSelected
+                                  ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
+                                  : 'opacity-60 hover:opacity-100'
+                              }`}
+                            >
+                              {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                              {config.labelShort}
+                            </button>
+                          );
+                        });
+                    })()
+                  ) : (
+                    <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeConfig?.color || 'border-border'} ${typeConfig?.bgHover || ''} font-semibold`}>
+                      {TypeIcon && <TypeIcon className="w-3.5 h-3.5" />}
+                      {typeConfig?.labelShort || TYPE_LABELS[type] || type}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {/* Statut */}
               <div className="space-y-2" data-tour="item-status">
@@ -1094,26 +1170,20 @@ export function ItemEditModal({
           {/* === RIGHT COLUMN === */}
           <div className="space-y-6" data-tour="item-details">
 
-              {/* Parent */}
+              {/* Parent (hidden in viewer mode — breadcrumb is enough) */}
+              {canEdit && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent</label>
-                  {canEdit && (
                     <button type="button" onClick={toggleParentSortMode}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}>
                       {parentSortMode === 'tree' ? <><GitBranch className="w-3 h-3" /><span>Arborescence</span></> : <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>}
                     </button>
-                  )}
                 </div>
-                {canEdit ? (
                   <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
-                ) : (
-                  <p className="text-sm">
-                    {parentId ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu' : <span className="text-muted-foreground">Aucun parent</span>}
-                  </p>
-                )}
               </div>
+              )}
 
               {/* Priorité */}
               <div className="space-y-2">
