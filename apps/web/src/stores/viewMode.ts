@@ -5,6 +5,8 @@ export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timel
 
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 
+export const VIEWER_ALLOWED_VIEWS: ViewMode[] = ['overview', 'list', 'kanban', 'timeline', 'mindmap'];
+
 export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
   { value: 'dashboard', label: 'Tableau de bord' },
   { value: 'basic', label: 'Basique' },
@@ -46,6 +48,8 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
 interface ViewModeState {
   mode: ViewMode;
   setMode: (mode: ViewMode) => void;
+  allowedViews: ViewMode[] | null;
+  setAllowedViews: (views: ViewMode[] | null) => void;
 }
 
 export const useViewModeStore = create<ViewModeState>()(
@@ -53,9 +57,12 @@ export const useViewModeStore = create<ViewModeState>()(
     (set) => ({
       mode: 'tree',
       setMode: (mode) => set({ mode }),
+      allowedViews: null,
+      setAllowedViews: (allowedViews) => set({ allowedViews }),
     }),
     {
       name: 'view-mode-storage',
+      partialize: (state) => ({ mode: state.mode }),
     }
   )
 );

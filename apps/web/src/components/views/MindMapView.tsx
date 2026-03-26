@@ -965,6 +965,7 @@ function MindMapViewInner({
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onConnect={canEdit !== false ? onConnect : undefined}
+        nodesDraggable={canEdit !== false}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.1 }}

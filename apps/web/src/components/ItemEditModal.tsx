@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Lock, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -20,6 +20,7 @@ import { TagBadge } from './ui/TagBadge';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
+import { useAdminMode } from './DevDbStatus';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { DrawioEditor } from './ui/DrawioEditor';
@@ -134,7 +135,7 @@ export function ItemEditModal({
   itemId,
   allItems,
   referentiels,
-  canEdit = true,
+  canEdit: canEditProp = true,
   spaceName,
   communityName,
   onNavigate,
@@ -142,6 +143,9 @@ export function ItemEditModal({
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', ITEM_MODAL_TOUR);
+  const adminMode = useAdminMode();
+  const [visitorPreview, setVisitorPreview] = useState(false);
+  const canEdit = canEditProp && !visitorPreview;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -713,6 +717,21 @@ export function ItemEditModal({
                 <h1 className="text-xl font-bold truncate">{title}</h1>
               )}
             </div>
+            {adminMode && canEditProp && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setVisitorPreview(!visitorPreview); }}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md flex-shrink-0 transition-colors ${
+                  visitorPreview
+                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-300'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+                title="Voir comme un visiteur"
+              >
+                <Eye className="w-3 h-3" />
+                {visitorPreview ? 'Vue visiteur' : 'Voir comme visiteur'}
+              </button>
+            )}
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1088,26 +1107,20 @@ export function ItemEditModal({
           {/* === RIGHT COLUMN === */}
           <div className="space-y-6" data-tour="item-details">
 
-              {/* Parent */}
+              {/* Parent (hidden in viewer mode — breadcrumb is enough) */}
+              {canEdit && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent</label>
-                  {canEdit && (
                     <button type="button" onClick={toggleParentSortMode}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}>
                       {parentSortMode === 'tree' ? <><GitBranch className="w-3 h-3" /><span>Arborescence</span></> : <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>}
                     </button>
-                  )}
                 </div>
-                {canEdit ? (
                   <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
-                ) : (
-                  <p className="text-sm">
-                    {parentId ? parentOptions.find((o) => o.value === parentId)?.label || 'Parent inconnu' : <span className="text-muted-foreground">Aucun parent</span>}
-                  </p>
-                )}
               </div>
+              )}
 
               {/* Priorité */}
               <div className="space-y-2">

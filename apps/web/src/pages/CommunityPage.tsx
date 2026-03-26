@@ -16,21 +16,21 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
 };
 
-function SpaceTreeNode({ node }: { node: any }) {
+function SpaceTreeNode({ node, depth = 0 }: { node: any; depth?: number }) {
   const hasChildren = node.children?.length > 0;
   if (!hasChildren) {
     return <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />;
   }
   return (
-    <div className="col-span-full flex items-start gap-3 overflow-x-auto pb-2">
-      <div className="w-72 flex-shrink-0">
+    <div className="col-span-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" style={{ paddingLeft: depth > 0 ? `${depth * 1.5}rem` : undefined }}>
         <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
       </div>
-      {node.children.map((child: any) => (
-        <div key={child.id} className="w-64 flex-shrink-0 mt-20">
-          <SpaceTreeNode node={child} />
-        </div>
-      ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-2" style={{ paddingLeft: `${(depth + 1) * 1.5}rem` }}>
+        {node.children.map((child: any) => (
+          <SpaceTreeNode key={child.id} node={child} depth={depth + 1} />
+        ))}
+      </div>
     </div>
   );
 }
