@@ -110,6 +110,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item, columnId },
+    disabled: !canEdit,
   });
 
   const style = transform

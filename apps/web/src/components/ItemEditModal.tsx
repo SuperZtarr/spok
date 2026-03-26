@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -713,6 +713,12 @@ export function ItemEditModal({
                 <h1 className="text-xl font-bold truncate">{title}</h1>
               )}
             </div>
+            {!canEdit && (
+              <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground bg-muted rounded-md flex-shrink-0">
+                <Lock className="w-3 h-3" />
+                Lecture seule
+              </span>
+            )}
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

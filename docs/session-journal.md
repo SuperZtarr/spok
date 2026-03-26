@@ -41,6 +41,20 @@ Après chaque commit :
 
 ---
 
+#### [2026-03-25] - Interface lecture seule VIEWER
+
+- EN COURS : interface read-only pour role VIEWER — code pret, pas encore commit
+  - Store viewMode : VIEWER_ALLOWED_VIEWS (list/kanban/timeline/mindmap) + allowedViews dynamique
+  - SpacePage : restriction vues, guard DnD et modales action
+  - ViewModeSelector : filtrage vues/categories par allowedViews
+  - KanbanView : drag desactive (disabled sur useDraggable)
+  - MindMapView : nodesDraggable=false pour VIEWER
+  - ItemEditModal : badge "Lecture seule" avec Lock icon
+  - Fichiers modifies copies vers C:\_dev\spok pour test (worktree avait pb node_modules)
+  - A TESTER : se connecter en VIEWER sur un espace READONLY
+
+---
+
 #### [2026-03-24] - Refonte pages, admin users, breadcrumb, dev mode
 
 - Admin Users : lastLoginAt, contributions, tri derniere visite, filtre actifs/inactifs — 41fde94

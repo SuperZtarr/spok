@@ -65,16 +65,20 @@ const ICONS: Record<string, typeof List> = {
 };
 
 export function ViewModeSelector() {
-  const { mode, setMode } = useViewModeStore();
+  const { mode, setMode, allowedViews } = useViewModeStore();
   const { tab, setTab } = useDashboardTabStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { views: configViews, categories: configCategories } = useViewConfig();
   const { pages: globalPagesConfig, groups: globalPageGroups } = useGlobalPages();
 
-  // Map config to VIEW_MODES-compatible format
-  const VIEW_MODES = configViews.map(v => ({ value: v.id as any, label: v.label, icon: v.icon, category: v.category }));
-  const VIEW_CATEGORIES = configCategories.map(c => ({ value: c.id, label: c.label }));
+  // Map config to VIEW_MODES-compatible format, filtered by allowedViews for VIEWER role
+  const allViewModes = configViews.map(v => ({ value: v.id as any, label: v.label, icon: v.icon, category: v.category }));
+  const VIEW_MODES = allowedViews ? allViewModes.filter(v => allowedViews.includes(v.value)) : allViewModes;
+  const allCategories = configCategories.map(c => ({ value: c.id, label: c.label }));
+  const VIEW_CATEGORIES = allowedViews
+    ? allCategories.filter(c => c.value === 'dashboard' || VIEW_MODES.some(v => v.category === c.value))
+    : allCategories;
 
   // Build dashboard tabs from config
   const globalTabs = globalPagesConfig.filter(p => p.group === 'global').map(p => ({ value: p.id as DashboardTab, label: p.label, icon: p.icon, group: p.group }));

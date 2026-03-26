@@ -7,6 +7,7 @@
 - [x] Avatar sur cover : fallback top-right de la cover quand pas d'avatar (2026-03-22)
 - [x] Revoir les listes d'espaces : SpaceCard uniforme, grilles partout, SpacesListPage filtree — fce8e91 (2026-03-21)
 - [x] Transferer des fonctions admin vers la gestion directe : mode admin toggle, onglet Danger communaute/espace, desactivation compte (2026-03-22)
+- [ ] Interface lecture seule VIEWER : 4 vues (list/kanban/gantt/mindmap), badge "Lecture seule", drag desactive — code pret, a tester
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)

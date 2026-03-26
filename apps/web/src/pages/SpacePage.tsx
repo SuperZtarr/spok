@@ -29,7 +29,7 @@ import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ItemEditModal } from '../components/ItemEditModal';
-import { useViewModeStore } from '../stores/viewMode';
+import { useViewModeStore, VIEWER_ALLOWED_VIEWS } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
 import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
@@ -81,7 +81,7 @@ import { useAuthStore } from '../stores/auth';
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const queryClient = useQueryClient();
-  const { mode: viewMode } = useViewModeStore();
+  const { mode: viewMode, setMode, setAllowedViews } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
   const { user } = useAuthStore();
 
@@ -116,6 +116,19 @@ export function SpacePage() {
   });
 
   const canEdit = !!user && !!space?.role && space.role !== 'VIEWER';
+
+  // Restrict views for VIEWER role
+  useEffect(() => {
+    setAllowedViews(canEdit ? null : VIEWER_ALLOWED_VIEWS);
+    return () => setAllowedViews(null);
+  }, [canEdit, setAllowedViews]);
+
+  // Force allowed view when current view is not in VIEWER_ALLOWED_VIEWS
+  useEffect(() => {
+    if (!canEdit && !VIEWER_ALLOWED_VIEWS.includes(viewMode)) {
+      setMode('list');
+    }
+  }, [canEdit, viewMode, setMode]);
 
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
@@ -1050,24 +1063,28 @@ export function SpacePage() {
       />
 
       {/* Selection action bar */}
-      {isSelectionMode && (
+      {canEdit && isSelectionMode && (
         <SelectionActionBar
           onMoveToSpace={() => setShowMoveModal(true)}
           onDuplicateToSpace={() => setShowDuplicateModal(true)}
         />
       )}
 
-      {/* Move to space modal (selection mode) */}
-      <MoveToSpaceModal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} currentSpaceId={spaceId!} />
+      {canEdit && (
+        <>
+          {/* Move to space modal (selection mode) */}
+          <MoveToSpaceModal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} currentSpaceId={spaceId!} />
 
-      {/* Move to space modal (single item) */}
-      <MoveToSpaceModal isOpen={!!moveItemId} onClose={() => setMoveItemId(null)} currentSpaceId={spaceId!} itemIds={moveItemId ? [moveItemId] : undefined} />
+          {/* Move to space modal (single item) */}
+          <MoveToSpaceModal isOpen={!!moveItemId} onClose={() => setMoveItemId(null)} currentSpaceId={spaceId!} itemIds={moveItemId ? [moveItemId] : undefined} />
 
-      {/* Duplicate to space modal (selection mode) */}
-      <DuplicateToSpaceModal isOpen={showDuplicateModal} onClose={() => setShowDuplicateModal(false)} currentSpaceId={spaceId!} />
+          {/* Duplicate to space modal (selection mode) */}
+          <DuplicateToSpaceModal isOpen={showDuplicateModal} onClose={() => setShowDuplicateModal(false)} currentSpaceId={spaceId!} />
 
-      {/* Duplicate to space modal (single item) */}
-      <DuplicateToSpaceModal isOpen={!!duplicateItemId} onClose={() => setDuplicateItemId(null)} currentSpaceId={spaceId!} itemIds={duplicateItemId ? [duplicateItemId] : undefined} />
+          {/* Duplicate to space modal (single item) */}
+          <DuplicateToSpaceModal isOpen={!!duplicateItemId} onClose={() => setDuplicateItemId(null)} currentSpaceId={spaceId!} itemIds={duplicateItemId ? [duplicateItemId] : undefined} />
+        </>
+      )}
 
       {/* Convert to space modal */}
       <ConvertToSpaceModal
