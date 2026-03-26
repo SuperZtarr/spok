@@ -19,6 +19,7 @@ export interface ReactionSummary {
 
 // Default reaction types — extensible
 export const DEFAULT_REACTION_TYPES = [
+  { id: 'contribution', label: 'Contribution', emoji: '💬' },
   { id: 'pertinent', label: 'Pertinent', emoji: '✅' },
   { id: 'inexact', label: 'Inexact', emoji: '⚠️' },
   { id: 'inadapte', label: 'Inadapté', emoji: '🚫' },

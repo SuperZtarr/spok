@@ -1056,6 +1056,7 @@ export function SpacePage() {
         allItems={allItems}
         referentiels={referentiels}
         canEdit={canEdit}
+        spaceRole={space?.role}
         spaceName={space?.name}
         communityName={space?.community?.name}
         onNavigate={setEditingItemId}

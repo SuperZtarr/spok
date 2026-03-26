@@ -7,6 +7,7 @@ import { checkSpaceAccess } from './items.js';
 
 const createContributionSchema = z.object({
   content: z.string().min(1),
+  parentId: z.string().optional(),
 });
 
 const updateContributionSchema = z.object({
@@ -80,6 +81,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
         content: body.content,
         itemId: request.params.id,
         authorId: request.user.userId,
+        ...(body.parentId ? { parentId: body.parentId } : {}),
       },
       include: {
         author: {

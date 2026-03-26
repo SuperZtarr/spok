@@ -3,6 +3,7 @@ export interface Contribution {
   content: string;
   itemId: string;
   authorId: string;
+  parentId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -14,10 +15,12 @@ export interface ContributionWithAuthor extends Contribution {
     email: string;
   };
   reactionSummary?: import('./reaction.js').ReactionSummary[];
+  children?: ContributionWithAuthor[];
 }
 
 export interface CreateContributionInput {
   content: string;
+  parentId?: string;
 }
 
 export interface UpdateContributionInput {

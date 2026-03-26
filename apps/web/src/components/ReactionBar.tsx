@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SmilePlus } from 'lucide-react';
 import { itemsApi } from '../lib/api';
@@ -10,12 +10,27 @@ interface ReactionBarProps {
   itemId: string;
   contributionId?: string;
   summary: ReactionSummary[];
+  onReacted?: (reactionType: string) => void;
+  label?: string;
 }
 
-export function ReactionBar({ spaceId, itemId, contributionId, summary }: ReactionBarProps) {
+export function ReactionBar({ spaceId, itemId, contributionId, summary, onReacted, label }: ReactionBarProps) {
   const queryClient = useQueryClient();
   const [localSummary, setLocalSummary] = useState<ReactionSummary[]>(summary);
   const [showPicker, setShowPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showPicker) return;
+    const handle = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [showPicker]);
 
   // Sync from props when they change
   if (summary !== localSummary && JSON.stringify(summary) !== JSON.stringify(localSummary)) {
@@ -52,6 +67,7 @@ export function ReactionBar({ spaceId, itemId, contributionId, summary }: Reacti
       removeMutation.mutate();
     } else {
       reactMutation.mutate(typeId);
+      onReacted?.(typeId);
     }
     // Defer unmount so stopPropagation can take effect
     setTimeout(() => setShowPicker(false), 0);
@@ -88,14 +104,17 @@ export function ReactionBar({ spaceId, itemId, contributionId, summary }: Reacti
       })}
 
       {/* Add reaction button */}
-      <div className="relative">
+      <div className="relative" ref={pickerRef}>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
-          className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
+          className={`inline-flex items-center gap-1.5 border border-dashed border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors ${
+            label ? 'px-2.5 py-1 rounded-md text-xs' : 'justify-center w-6 h-6 rounded-full'
+          }`}
           title="Ajouter une réaction"
         >
           <SmilePlus className="w-3.5 h-3.5" />
+          {label && <span>{label}</span>}
         </button>
 
         {/* Picker dropdown */}
