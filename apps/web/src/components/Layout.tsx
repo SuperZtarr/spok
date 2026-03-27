@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus } from 'lucide-react';
+import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -237,6 +237,7 @@ function SpaceTreeItem({
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
   const { spaceViews } = useMenuItems();
@@ -441,6 +442,22 @@ export function Layout() {
   const communityMatch = location.pathname.match(/\/communities\/([^/]+)/);
   const currentCommunityId = communityMatch?.[1] || currentSpace?.communityId || null;
 
+  // Current community object for immersive sidebar
+  const currentCommunity = useMemo(() => {
+    if (!currentCommunityId || !communities) return null;
+    return communities.find(c => c.id === currentCommunityId) || null;
+  }, [currentCommunityId, communities]);
+
+  const currentCommunityGroup = useMemo(() => {
+    if (!currentCommunityId) return null;
+    return communityGroups.find(g => g.community.id === currentCommunityId) || null;
+  }, [currentCommunityId, communityGroups]);
+
+  const communityFavoriteSpaces = useMemo(() => {
+    if (!currentCommunityId) return favoriteSpaces;
+    return favoriteSpaces.filter(s => s.communityId === currentCommunityId);
+  }, [currentCommunityId, favoriteSpaces]);
+
   // Auto-expand community in sidebar when navigating to one of its spaces
   useEffect(() => {
     if (currentCommunityId && collapsedCommunityIds.has(currentCommunityId)) {
@@ -577,158 +594,246 @@ export function Layout() {
   // Sidebar content (shared between mobile and desktop)
   const sidebarContent = user ? (
     <>
-      {/* Header sidebar - logo (image has built-in whitespace, negative margins compensate) */}
-      <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></a>
-      </div>
+      {/* Header sidebar - community immersive or global logo */}
+      {currentCommunity ? (
+        <div className="px-3 py-3 border-b border-border flex-shrink-0">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Toutes les communautés</span>
+          </button>
+          <Link to={`/communities/${currentCommunity.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            {currentCommunity.avatarUrl ? (
+              <img src={currentCommunity.avatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-4 h-4 text-primary" />
+              </div>
+            )}
+            <span className="text-sm font-semibold truncate">{currentCommunity.name}</span>
+          </Link>
+        </div>
+      ) : (
+        <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
+          <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></a>
+        </div>
+      )}
 
       {/* Navigation - scrollable */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
-        {/* Favorites */}
-        {favoriteSpaces.length > 0 && (
-          <div id="sidebar-favorites" className="pt-2 pb-2 border-b border-border">
-            <div className="flex items-center px-3 mb-2">
-              <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
-            </div>
-            {favoriteSpaces.map((space) => (
-              <div key={space.id} className="group flex items-center">
-                <Link
-                  to={`/spaces/${space.id}`}
-                  className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                    currentSpaceId === space.id
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'hover:bg-accent'
-                  }`}
-                >
-                  {space.avatarUrl ? (
-                    <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span className="truncate">{space.name}</span>
-                </Link>
-                <button
-                  onClick={() => handleToggleFavorite(space.id)}
-                  className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                  title="Retirer des favoris"
-                >
-                  <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                </button>
+        {currentCommunity && currentCommunityGroup ? (
+          <>
+            {/* Immersive community mode: favorites + space tree only */}
+            {communityFavoriteSpaces.length > 0 && (
+              <div className="pt-2 pb-2 border-b border-border">
+                <div className="flex items-center px-3 mb-2">
+                  <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
+                </div>
+                {communityFavoriteSpaces.map((space) => (
+                  <div key={space.id} className="group flex items-center">
+                    <Link
+                      to={`/spaces/${space.id}`}
+                      className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                        currentSpaceId === space.id
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'hover:bg-accent'
+                      }`}
+                    >
+                      {space.avatarUrl ? (
+                        <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{space.name}</span>
+                    </Link>
+                    <button
+                      onClick={() => handleToggleFavorite(space.id)}
+                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      title="Retirer des favoris"
+                    >
+                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {/* Recents */}
-        {user && recentSpaces.length > 0 && (
-          <div id="sidebar-recents" className="pt-2 pb-2 border-b border-border">
-            <div className="flex items-center px-3 mb-2">
-              <Clock className="w-3 h-3 text-muted-foreground mr-1.5 flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Récents</span>
-            </div>
-            {recentSpaces.map((space) => (
-              <div key={space.id} className="group flex items-center">
-                <Link
-                  to={`/spaces/${space.id}`}
-                  className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                    currentSpaceId === space.id
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'hover:bg-accent'
-                  }`}
-                >
-                  {space.avatarUrl ? (
-                    <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span className="truncate">{space.name}</span>
-                </Link>
-                <button
-                  onClick={() => handleToggleFavorite(space.id)}
-                  className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                  title="Ajouter aux favoris"
-                >
-                  <Star className="w-3 h-3 text-muted-foreground hover:text-yellow-500" />
-                </button>
+            {/* Community spaces tree */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between px-3 mb-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Espaces</span>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Personal spaces (authenticated only) */}
-        {user && mySpaces.length > 0 && (
-          <div className="pt-2 pb-2 border-b border-border">
-            <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
+              {currentCommunityGroup.spaceTree.length > 0 ? (
+                currentCommunityGroup.spaceTree.map((node) => (
+                  <SpaceTreeItem
+                    key={node.id}
+                    node={node}
+                    level={0}
+                    currentSpaceId={currentSpaceId}
+                    expandedIds={expandedSpaceIds}
+                    onToggle={toggleSpaceExpand}
+                    favoriteIds={favoriteIdSet}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground px-3">Aucun espace dans cette communauté.</p>
+              )}
             </div>
-            {mySpaces.map((space, i) => (
-              <Link
-                key={space.id}
-                id={i === 0 ? 'sidebar-first-space' : undefined}
-                to={`/spaces/${space.id}`}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
-                  currentSpaceId === space.id
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'hover:bg-accent'
-                }`}
-              >
-                {space.avatarUrl ? (
-                  <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                ) : (
-                  <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                )}
-                <span className="truncate">{space.name}</span>
-              </Link>
-            ))}
-          </div>
-        )}
+          </>
+        ) : (
+          <>
+            {/* Global mode: full sidebar */}
+            {/* Favorites */}
+            {favoriteSpaces.length > 0 && (
+              <div id="sidebar-favorites" className="pt-2 pb-2 border-b border-border">
+                <div className="flex items-center px-3 mb-2">
+                  <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
+                </div>
+                {favoriteSpaces.map((space) => (
+                  <div key={space.id} className="group flex items-center">
+                    <Link
+                      to={`/spaces/${space.id}`}
+                      className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                        currentSpaceId === space.id
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'hover:bg-accent'
+                      }`}
+                    >
+                      {space.avatarUrl ? (
+                        <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{space.name}</span>
+                    </Link>
+                    <button
+                      onClick={() => handleToggleFavorite(space.id)}
+                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      title="Retirer des favoris"
+                    >
+                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-        {/* Communities with their spaces */}
-        {communityGroups.map(({ community, spaceTree }, groupIndex) => {
-          const isExpanded = !collapsedCommunityIds.has(community.id);
-          const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
-          return (
-            <CommunitySection
-              key={community.id}
-              community={community}
-              spaceTree={spaceTree}
-              isExpanded={isExpanded}
-              isActive={currentCommunityId === community.id}
-              spaceCount={spaceCount}
-              groupIndex={groupIndex}
-              onToggleExpand={toggleCommunityExpand}
-              currentSpaceId={currentSpaceId}
-              expandedSpaceIds={expandedSpaceIds}
-              onToggleSpace={toggleSpaceExpand}
-              mySpacesEmpty={mySpaces.length === 0}
-              favoriteIds={favoriteIdSet}
-              onToggleFavorite={handleToggleFavorite}
-            />
-          );
-        })}
+            {/* Recents */}
+            {user && recentSpaces.length > 0 && (
+              <div id="sidebar-recents" className="pt-2 pb-2 border-b border-border">
+                <div className="flex items-center px-3 mb-2">
+                  <Clock className="w-3 h-3 text-muted-foreground mr-1.5 flex-shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Récents</span>
+                </div>
+                {recentSpaces.map((space) => (
+                  <div key={space.id} className="group flex items-center">
+                    <Link
+                      to={`/spaces/${space.id}`}
+                      className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                        currentSpaceId === space.id
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'hover:bg-accent'
+                      }`}
+                    >
+                      {space.avatarUrl ? (
+                        <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{space.name}</span>
+                    </Link>
+                    <button
+                      onClick={() => handleToggleFavorite(space.id)}
+                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      title="Ajouter aux favoris"
+                    >
+                      <Star className="w-3 h-3 text-muted-foreground hover:text-yellow-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-        {/* Independent group spaces (no community) */}
-        {independentSpaces.length > 0 && (
-          <div className="pt-2">
-            <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Autres espaces
-              </span>
-            </div>
-            {independentSpaces.map((node) => (
-              <SpaceTreeItem
-                key={node.id}
-                node={node}
-                level={0}
-                currentSpaceId={currentSpaceId}
-                expandedIds={expandedSpaceIds}
-                onToggle={toggleSpaceExpand}
-                favoriteIds={favoriteIdSet}
-                onToggleFavorite={handleToggleFavorite}
-              />
-            ))}
-          </div>
+            {/* Personal spaces (authenticated only) */}
+            {user && mySpaces.length > 0 && (
+              <div className="pt-2 pb-2 border-b border-border">
+                <div className="flex items-center justify-between px-3 mb-2">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
+                </div>
+                {mySpaces.map((space, i) => (
+                  <Link
+                    key={space.id}
+                    id={i === 0 ? 'sidebar-first-space' : undefined}
+                    to={`/spaces/${space.id}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
+                      currentSpaceId === space.id
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'hover:bg-accent'
+                    }`}
+                  >
+                    {space.avatarUrl ? (
+                      <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <FolderKanban className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span className="truncate">{space.name}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Communities with their spaces */}
+            {communityGroups.map(({ community, spaceTree }, groupIndex) => {
+              const isExpanded = !collapsedCommunityIds.has(community.id);
+              const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
+              return (
+                <CommunitySection
+                  key={community.id}
+                  community={community}
+                  spaceTree={spaceTree}
+                  isExpanded={isExpanded}
+                  isActive={currentCommunityId === community.id}
+                  spaceCount={spaceCount}
+                  groupIndex={groupIndex}
+                  onToggleExpand={toggleCommunityExpand}
+                  currentSpaceId={currentSpaceId}
+                  expandedSpaceIds={expandedSpaceIds}
+                  onToggleSpace={toggleSpaceExpand}
+                  mySpacesEmpty={mySpaces.length === 0}
+                  favoriteIds={favoriteIdSet}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              );
+            })}
+
+            {/* Independent group spaces (no community) */}
+            {independentSpaces.length > 0 && (
+              <div className="pt-2">
+                <div className="flex items-center justify-between px-3 mb-2">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Autres espaces
+                  </span>
+                </div>
+                {independentSpaces.map((node) => (
+                  <SpaceTreeItem
+                    key={node.id}
+                    node={node}
+                    level={0}
+                    currentSpaceId={currentSpaceId}
+                    expandedIds={expandedSpaceIds}
+                    onToggle={toggleSpaceExpand}
+                    favoriteIds={favoriteIdSet}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </nav>
 

@@ -1427,14 +1427,14 @@ export const adminApi = {
             order: number;
           }>;
         };
-        customizedSpaces: Array<{
+        customizedCommunities: Array<{
           id: string;
           name: string;
-          type: string;
+          spaceCount: number;
           customStatusCount: number;
           customTypeCount: number;
         }>;
-        totalSpaces: number;
+        totalCommunities: number;
         customizedCount: number;
       }>('/admin/referentiels'),
   },

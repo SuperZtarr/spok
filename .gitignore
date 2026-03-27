@@ -62,3 +62,4 @@ apps/api/scripts/check-*.ts
 apps/api/scripts/compare-*.ts
 apps/api/scripts/reimport-*.ts
 apps/api/scripts/update-*.ts
+.claude/settings.local.json
