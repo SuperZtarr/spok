@@ -43,7 +43,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'images', label: 'Images', icon: 'Image', category: 'itemTypes' },
   { value: 'documents', label: 'Documents', icon: 'FileText', category: 'itemTypes' },
   { value: 'bugs', label: 'Bugs', icon: 'Bug', category: 'itemTypes' },
-  { value: 'thread', label: 'Discussions', icon: 'MessageSquare', category: 'exploration' },
+  { value: 'thread', label: 'Discussions', icon: 'MessageSquare', category: 'basic' },
 ];
 
 interface ViewModeState {
