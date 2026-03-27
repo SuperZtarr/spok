@@ -337,40 +337,24 @@ export function Layout() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // Fetch ALL spaces — poll every 30s so sidebar never goes stale
-  const { data: allSpaces, refetch: refetchSpaces } = useQuery({
+  // Fetch ALL spaces — refreshed via invalidateQueries on mutations
+  const { data: allSpaces } = useQuery({
     queryKey: ['sidebar-spaces', user?.id],
     queryFn: () => spacesApi.list(),
-    placeholderData: (prev: any) => prev,
-    staleTime: 10_000,
-    refetchInterval: user ? 30_000 : undefined,
-    refetchOnWindowFocus: 'always',
-    retry: 2,
-    retryDelay: 1000,
+    staleTime: Infinity,
   });
 
-  // Fetch communities — authenticated: user's communities, anonymous: public communities
-  const { data: communities, refetch: refetchCommunities } = useQuery({
+  // Fetch communities — refreshed via invalidateQueries on mutations
+  const { data: communities } = useQuery({
     queryKey: ['communities', user?.id || 'public'],
     queryFn: user ? communitiesApi.list : (() => communitiesApi.listPublic().then(list => list.map(c => ({ ...c, role: null, order: 0 })))) as typeof communitiesApi.list,
-    placeholderData: (prev: any) => prev,
-    staleTime: 10_000,
-    refetchInterval: user ? 30_000 : undefined,
-    refetchOnWindowFocus: 'always',
+    staleTime: Infinity,
   });
-
-  // Refetch sidebar data on every route change
-  useEffect(() => {
-    if (user) {
-      refetchSpaces();
-      refetchCommunities();
-    }
-  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Fetch favorite space IDs (stabilize reference with select)
   const { data: favoriteIds = [] } = useQuery({
-    queryKey: ['space-favorites'],
+    queryKey: ['space-favorites', user?.id],
     queryFn: spacesApi.getFavorites,
     enabled: !!user,
     select: (data) => data, // structural sharing handles stability

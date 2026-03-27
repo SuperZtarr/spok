@@ -79,7 +79,7 @@ export function BookmarksPage() {
     enabled: !!user,
   });
   const { data: favoriteIds = [] } = useQuery({
-    queryKey: ['space-favorites'],
+    queryKey: ['space-favorites', user?.id],
     queryFn: () => spacesApi.getFavorites(),
     enabled: !!user,
   });
