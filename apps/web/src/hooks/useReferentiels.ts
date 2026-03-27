@@ -2,39 +2,54 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { referentielsApi } from '../lib/api';
 import type { SpaceReferentiels } from '@spok/shared';
 
+// Lecture via espace (résout via communauté côté API)
 export function useReferentiels(spaceId: string) {
   return useQuery({
     queryKey: ['referentiels', spaceId],
     queryFn: () => referentielsApi.get(spaceId),
     enabled: !!spaceId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useUpdateReferentiels(spaceId: string) {
+// Lecture via communauté
+export function useCommunityReferentiels(communityId: string) {
+  return useQuery({
+    queryKey: ['community-referentiels', communityId],
+    queryFn: () => referentielsApi.getCommunity(communityId),
+    enabled: !!communityId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Écriture via communauté
+export function useUpdateCommunityReferentiels(communityId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<SpaceReferentiels>) => referentielsApi.update(spaceId, data),
+    mutationFn: (data: Partial<SpaceReferentiels>) => referentielsApi.updateCommunity(communityId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['referentiels', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['community-referentiels', communityId] });
+      // Invalider aussi les caches espace qui résolvent via cette communauté
+      queryClient.invalidateQueries({ queryKey: ['referentiels'] });
     },
   });
 }
 
-export function useResetReferentiels(spaceId: string) {
+export function useResetCommunityReferentiels(communityId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => referentielsApi.reset(spaceId),
+    mutationFn: () => referentielsApi.resetCommunity(communityId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['referentiels', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['community-referentiels', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['referentiels'] });
     },
   });
 }
 
-export function useCheckStatusUsage(spaceId: string) {
+export function useCheckCommunityStatusUsage(communityId: string) {
   return useMutation({
-    mutationFn: (statusId: string) => referentielsApi.checkStatusUsage(spaceId, statusId),
+    mutationFn: (statusId: string) => referentielsApi.checkStatusUsageCommunity(communityId, statusId),
   });
 }

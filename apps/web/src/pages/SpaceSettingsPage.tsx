@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, RotateCcw, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, HelpCircle, Play, X, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, HelpCircle, Play, X, ArrowRightLeft } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import type { TourStep } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
@@ -10,7 +10,6 @@ import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { usePasteUpload } from '../hooks/usePasteUpload';
 import { useCtrlS } from '../hooks/useCtrlS';
-import { useReferentiels, useUpdateReferentiels, useResetReferentiels, useCheckStatusUsage } from '../hooks/useReferentiels';
 import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
@@ -18,12 +17,9 @@ import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import { StatusManager } from '../components/settings/StatusManager';
-import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
 import { OrgChartView } from '../components/views/OrgChartView';
-import { ConfirmModal } from '../components/ConfirmModal';
-import type { StatusConfig, TypeLabelConfig, Role } from '@spok/shared';
+import type { Role } from '@spok/shared';
 
 const SPACE_SETTINGS_TOUR: TourStep[] = [
   {
@@ -152,16 +148,11 @@ export function SpaceSettingsPage() {
   const user = useAuthStore((s) => s.user);
 
   const { data: space, isLoading: spaceLoading } = useSpace(spaceId!);
-  const { data: referentielsData, isLoading: referentielsLoading } = useReferentiels(spaceId!);
-  const updateMutation = useUpdateReferentiels(spaceId!);
-  const resetMutation = useResetReferentiels(spaceId!);
-  const checkUsageMutation = useCheckStatusUsage(spaceId!);
   const updateSpaceMutation = useUpdateSpace(spaceId!);
   const deleteSpaceMutation = useDeleteSpace();
   const queryClient = useQueryClient();
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'members' | 'danger'>('general');
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'members' | 'danger'>('general');
   const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('space-settings', SPACE_SETTINGS_TOUR);
 
@@ -241,10 +232,6 @@ export function SpaceSettingsPage() {
     queryFn: () => spacesApi.list(),
   });
 
-  const [localStatuses, setLocalStatuses] = useState<StatusConfig[] | null>(null);
-  const [localTypeLabels, setLocalTypeLabels] = useState<Record<string, TypeLabelConfig> | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
-
   // Space info state
   const [editName, setEditName] = useState('');
   const [editCommunityId, setEditCommunityId] = useState<string>('');
@@ -252,13 +239,6 @@ export function SpaceSettingsPage() {
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
   const [editVisibility, setEditVisibility] = useState<string>('OPEN');
 
-  // Initialize local state when data loads
-  useEffect(() => {
-    if (referentielsData && localStatuses === null) {
-      setLocalStatuses(referentielsData.referentiels.statuses);
-      setLocalTypeLabels(referentielsData.referentiels.typeLabels);
-    }
-  }, [referentielsData, localStatuses]);
 
   // Initialize space info state
   useEffect(() => {
@@ -270,39 +250,6 @@ export function SpaceSettingsPage() {
       setEditVisibility(space.visibility || 'OPEN');
     }
   }, [space, editName]);
-
-  const handleStatusesChange = (statuses: StatusConfig[]) => {
-    setLocalStatuses(statuses);
-    setHasChanges(true);
-  };
-
-  const handleTypeLabelsChange = (typeLabels: Record<string, TypeLabelConfig>) => {
-    setLocalTypeLabels(typeLabels);
-    setHasChanges(true);
-  };
-
-  const handleSave = async () => {
-    if (!localStatuses || !localTypeLabels) return;
-
-    await updateMutation.mutateAsync({
-      statuses: localStatuses,
-      typeLabels: localTypeLabels,
-    });
-    setHasChanges(false);
-  };
-
-  const handleReset = async () => {
-    const result = await resetMutation.mutateAsync();
-    setLocalStatuses(result.referentiels.statuses);
-    setLocalTypeLabels(result.referentiels.typeLabels);
-    setHasChanges(false);
-    setShowResetConfirm(false);
-  };
-
-  const handleCheckUsage = async (statusId: string) => {
-    const result = await checkUsageMutation.mutateAsync(statusId);
-    return result;
-  };
 
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
@@ -380,7 +327,7 @@ export function SpaceSettingsPage() {
     navigate('/');
   };
 
-  if (spaceLoading || referentielsLoading) {
+  if (spaceLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -409,7 +356,6 @@ export function SpaceSettingsPage() {
   const tabs = [
     ...(space?.type === 'GROUP' ? [{ id: 'general' as const, label: 'Général' }] : []),
     { id: 'images' as const, label: 'Images' },
-    { id: 'referentiels' as const, label: 'Référentiels' },
     ...(space?.type === 'GROUP' ? [{ id: 'members' as const, label: `Membres (${spaceMembers?.length || 0})` }] : []),
     ...(canDelete ? [{ id: 'danger' as const, label: 'Danger' }] : []),
   ];
@@ -649,75 +595,6 @@ export function SpaceSettingsPage() {
           </div>
         )}
 
-        {/* === REFERENTIELS TAB === */}
-        {activeTab === 'referentiels' && (
-          <div data-tour="space-referentiels">
-            {/* Info banner */}
-            {referentielsData?.isDefault && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-blue-800 text-sm">
-                  Cet espace utilise actuellement les paramètres par défaut.
-                  Les modifications seront sauvegardées spécifiquement pour cet espace.
-                </p>
-              </div>
-            )}
-
-            {/* Unsaved changes warning */}
-            {hasChanges && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-yellow-800 text-sm">
-                  Vous avez des modifications non enregistrées.
-                </p>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowResetConfirm(true)}
-                disabled={resetMutation.isPending}
-                title="Rétablir les paramètres par défaut"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Réinitialiser
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={!hasChanges || updateMutation.isPending}
-              >
-                {updateMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Enregistrer
-              </Button>
-            </div>
-
-            {/* Statuses */}
-            <div className="bg-card border rounded-lg p-6">
-              {localStatuses && (
-                <StatusManager
-                  statuses={localStatuses}
-                  onChange={handleStatusesChange}
-                  onCheckUsage={handleCheckUsage}
-                />
-              )}
-            </div>
-
-            {/* Type Labels */}
-            <div className="bg-card border rounded-lg p-6">
-              {localTypeLabels && (
-                <TypeLabelsManager
-                  typeLabels={localTypeLabels}
-                  onChange={handleTypeLabelsChange}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
         {/* === MEMBERS TAB === */}
         {activeTab === 'members' && space?.type === 'GROUP' && user && (
           <div className="bg-card border rounded-lg p-6 space-y-6" data-tour="space-members">
@@ -832,15 +709,6 @@ export function SpaceSettingsPage() {
       </div>
 
 
-      <ConfirmModal
-        isOpen={showResetConfirm}
-        onClose={() => setShowResetConfirm(false)}
-        onConfirm={handleReset}
-        title="Réinitialiser les paramètres ?"
-        message="Tous les statuts et libellés de types seront rétablis aux valeurs par défaut."
-        confirmLabel="Réinitialiser"
-        isPending={resetMutation.isPending}
-      />
     </div>
   );
 }

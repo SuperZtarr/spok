@@ -21,7 +21,7 @@ export function ReferentielsPage() {
             {data && (
               <p className="text-sm text-muted-foreground mt-0.5">
                 {data.defaults.statuses.length} statuts · {Object.keys(data.defaults.typeLabels).length} types d'items
-                 · {data.customizedCount} espace{data.customizedCount > 1 ? 's' : ''} personnalise{data.customizedCount > 1 ? 's' : ''}
+                 · {data.customizedCount} communauté{data.customizedCount > 1 ? 's' : ''} personnalisée{data.customizedCount > 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -136,50 +136,42 @@ export function ReferentielsPage() {
             </div>
           </div>
 
-          {/* Section 3: Espaces personnalises */}
+          {/* Section 3: Communautés personnalisées */}
           <div>
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Espaces personnalises
+              Communautés personnalisées
               <span className="ml-2 font-normal">
-                ({data.customizedCount} sur {data.totalSpaces})
+                ({data.customizedCount} sur {data.totalCommunities})
               </span>
             </h2>
             <div className="border border-border rounded-lg overflow-hidden">
-              {data.customizedSpaces.length === 0 ? (
+              {data.customizedCommunities.length === 0 ? (
                 <div className="p-8 text-center text-sm text-muted-foreground">
-                  Tous les espaces utilisent les referentiels par defaut
+                  Toutes les communautés utilisent les référentiels par défaut
                 </div>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Espace</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Communauté</th>
+                      <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Espaces</th>
                       <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Statuts</th>
                       <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Types</th>
                       <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {data.customizedSpaces.map((space) => (
-                      <tr key={space.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-2 font-medium">{space.name}</td>
-                        <td className="px-4 py-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            space.type === 'GROUP'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                          }`}>
-                            {space.type === 'GROUP' ? 'Groupe' : 'Perso'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 text-center tabular-nums">{space.customStatusCount}</td>
-                        <td className="px-4 py-2 text-center tabular-nums">{space.customTypeCount}</td>
+                    {data.customizedCommunities.map((c: any) => (
+                      <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-2 font-medium">{c.name}</td>
+                        <td className="px-4 py-2 text-center tabular-nums">{c.spaceCount}</td>
+                        <td className="px-4 py-2 text-center tabular-nums">{c.customStatusCount}</td>
+                        <td className="px-4 py-2 text-center tabular-nums">{c.customTypeCount}</td>
                         <td className="px-4 py-2 text-right">
                           <Link
-                            to={`/spaces/${space.id}`}
+                            to={`/communities/${c.id}/settings`}
                             className="text-primary hover:text-primary/80"
-                            title="Voir l'espace"
+                            title="Paramètres"
                           >
                             <ExternalLink className="w-4 h-4 inline" />
                           </Link>

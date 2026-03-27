@@ -88,7 +88,44 @@ function isJsonResponse(response: Response): boolean {
   return contentType !== null && contentType.includes('application/json');
 }
 
+/**
+ * Decode JWT payload without external lib (no signature verification needed client-side)
+ */
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return typeof payload.exp === 'number' ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if access token is expired or expires within `marginSec` seconds
+ */
+function isTokenExpired(marginSec = 30): boolean {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return true;
+  const exp = decodeJwtExp(token);
+  if (!exp) return true;
+  return Date.now() / 1000 > exp - marginSec;
+}
+
 let refreshPromise: Promise<boolean> | null = null;
+
+// Proactive token refresh on tab focus
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!localStorage.getItem('accessToken')) return;
+  if (!isTokenExpired(60)) return; // still valid for > 60s, skip
+
+  if (!refreshPromise) {
+    refreshPromise = tryRefreshToken().finally(() => { refreshPromise = null; });
+  }
+  refreshPromise.then(ok => {
+    if (!ok) clearAuth();
+  });
+});
 
 async function tryRefreshToken(): Promise<boolean> {
   const authStorage = localStorage.getItem('auth-storage');
@@ -1532,24 +1569,29 @@ export const adminApi = {
 
 // Referentiels
 export const referentielsApi = {
+  // Lecture via espace (résout via communauté côté API)
   get: (spaceId: string) =>
     fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels`),
 
-  update: (spaceId: string, data: Partial<SpaceReferentiels>) =>
-    fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels`, {
+  // Lecture/écriture via communauté
+  getCommunity: (communityId: string) =>
+    fetchApi<ReferentielsResponse>(`/communities/${communityId}/referentiels`),
+
+  updateCommunity: (communityId: string, data: Partial<SpaceReferentiels>) =>
+    fetchApi<ReferentielsResponse>(`/communities/${communityId}/referentiels`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  reset: (spaceId: string) =>
-    fetchApi<ReferentielsResponse>(`/spaces/${spaceId}/referentiels/reset`, {
+  resetCommunity: (communityId: string) =>
+    fetchApi<ReferentielsResponse>(`/communities/${communityId}/referentiels/reset`, {
       method: 'POST',
       body: JSON.stringify({}),
     }),
 
-  checkStatusUsage: (spaceId: string, statusId: string) =>
+  checkStatusUsageCommunity: (communityId: string, statusId: string) =>
     fetchApi<{ statusId: string; itemCount: number; isUsed: boolean }>(
-      `/spaces/${spaceId}/referentiels/check-status-usage/${statusId}`
+      `/communities/${communityId}/referentiels/check-status-usage/${statusId}`
     ),
 };
 

@@ -7,8 +7,7 @@ import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializ
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
-
-// autoJoinCommunitySpaces is imported from invitations.ts
+import { communityReferentielsRoutes } from './community-referentiels.js';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -36,6 +35,12 @@ const inviteSchema = z.object({
 });
 
 export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
+  // Register referentiels sub-routes
+  await fastify.register(async function (optInstance) {
+    optInstance.addHook('preHandler', optInstance.optionalAuthenticate);
+    await optInstance.register(communityReferentielsRoutes, { prefix: '/:communityId/referentiels' });
+  });
+
   // Create a new community
   fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = createCommunitySchema.parse(request.body);

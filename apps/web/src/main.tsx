@@ -10,8 +10,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       gcTime: 1000 * 60 * 30, // 30 minutes — keep cache alive longer
-      refetchOnWindowFocus: 'always',
-      placeholderData: (previousData: unknown) => previousData, // show stale data during refetch
+      refetchOnWindowFocus: false,
       retry: 1,
     },
   },

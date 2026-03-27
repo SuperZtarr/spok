@@ -19,6 +19,10 @@ import { CommunityDeleteConfirmModal } from '../components/CommunityDeleteConfir
 import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
 import { RoleGuard } from '../components/RoleGuard';
+import { StatusManager } from '../components/settings/StatusManager';
+import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
+import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
+import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
 
 function CommunitySettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
   const [open, setOpen] = useState(false);
@@ -189,7 +193,7 @@ export function CommunitySettingsPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', COMMUNITY_SETTINGS_TOUR);
@@ -207,6 +211,16 @@ export function CommunitySettingsPage() {
     queryFn: () => spacesApi.list(),
   });
 
+  // Referentiels
+  const { data: referentielsData } = useCommunityReferentiels(communityId!);
+  const updateRefMutation = useUpdateCommunityReferentiels(communityId!);
+  const resetRefMutation = useResetCommunityReferentiels(communityId!);
+  const checkRefUsageMutation = useCheckCommunityStatusUsage(communityId!);
+  const [localStatuses, setLocalStatuses] = useState<StatusConfig[] | null>(null);
+  const [localTypeLabels, setLocalTypeLabels] = useState<Record<string, TypeLabelConfig> | null>(null);
+  const [refHasChanges, setRefHasChanges] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   useEffect(() => {
     if (community) {
       setEditName(community.name);
@@ -214,6 +228,28 @@ export function CommunitySettingsPage() {
       setEditVisibility((community as any).visibility || (community.isPublic ? 'OPEN' : 'PRIVATE'));
     }
   }, [community]);
+
+  // Initialize referentiels local state
+  useEffect(() => {
+    if (referentielsData && localStatuses === null) {
+      setLocalStatuses(referentielsData.referentiels.statuses);
+      setLocalTypeLabels(referentielsData.referentiels.typeLabels);
+    }
+  }, [referentielsData, localStatuses]);
+
+  const handleRefSave = async () => {
+    if (!localStatuses || !localTypeLabels) return;
+    await updateRefMutation.mutateAsync({ statuses: localStatuses, typeLabels: localTypeLabels });
+    setRefHasChanges(false);
+  };
+
+  const handleRefReset = async () => {
+    const result = await resetRefMutation.mutateAsync();
+    setLocalStatuses(result.referentiels.statuses);
+    setLocalTypeLabels(result.referentiels.typeLabels);
+    setRefHasChanges(false);
+    setShowResetConfirm(false);
+  };
 
   // Spaces in this community
   const communitySpaces = allSpaces?.filter(s => s.communityId === communityId) || [];
@@ -436,6 +472,7 @@ export function CommunitySettingsPage() {
           {([
             { id: 'general', label: 'Général' },
             ...(canEdit ? [{ id: 'images' as const, label: 'Images' }] : []),
+            ...(canEdit ? [{ id: 'referentiels' as const, label: 'Référentiels' }] : []),
             { id: 'spaces', label: `Espaces (${communitySpaces.length})` },
             { id: 'members', label: `Membres (${community.memberCount || 0})` },
             ...(canEdit ? [{ id: 'emails' as const, label: 'Emails' }] : []),
@@ -637,6 +674,65 @@ export function CommunitySettingsPage() {
               )}
             </div>
           </div></RoleGuard>
+        )}
+
+        {/* === REFERENTIELS TAB === */}
+        {activeTab === 'referentiels' && canEdit && (
+          <div className="space-y-6">
+            {referentielsData?.isDefault && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm">
+                  Cette communauté utilise les paramètres par défaut. Les modifications s'appliqueront à tous les espaces de la communauté.
+                </p>
+              </div>
+            )}
+
+            {refHasChanges && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800 text-sm">Modifications non enregistrées.</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowResetConfirm(true)} disabled={resetRefMutation.isPending}>
+                <RotateCw className="w-4 h-4 mr-2" />
+                Réinitialiser
+              </Button>
+              <Button onClick={handleRefSave} disabled={!refHasChanges || updateRefMutation.isPending}>
+                {updateRefMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Enregistrer
+              </Button>
+            </div>
+
+            <div className="bg-card border rounded-lg p-6">
+              {localStatuses && (
+                <StatusManager
+                  statuses={localStatuses}
+                  onChange={(s) => { setLocalStatuses(s); setRefHasChanges(true); }}
+                  onCheckUsage={(statusId) => checkRefUsageMutation.mutateAsync(statusId)}
+                />
+              )}
+            </div>
+
+            <div className="bg-card border rounded-lg p-6">
+              {localTypeLabels && (
+                <TypeLabelsManager
+                  typeLabels={localTypeLabels}
+                  onChange={(t) => { setLocalTypeLabels(t); setRefHasChanges(true); }}
+                />
+              )}
+            </div>
+
+            <ConfirmModal
+              isOpen={showResetConfirm}
+              onClose={() => setShowResetConfirm(false)}
+              onConfirm={handleRefReset}
+              title="Réinitialiser les référentiels ?"
+              message="Tous les statuts et libellés de types seront rétablis aux valeurs par défaut pour cette communauté."
+              confirmLabel="Réinitialiser"
+              isPending={resetRefMutation.isPending}
+            />
+          </div>
         )}
 
         {/* === SPACES TAB === */}

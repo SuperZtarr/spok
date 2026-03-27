@@ -4,31 +4,32 @@ import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
 export const adminReferentielsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticateAdmin);
 
-  // GET /admin/referentiels - Summary of defaults + customized spaces
+  // GET /admin/referentiels - Summary of defaults + customized communities
   fastify.get('/', async () => {
     const prisma = fastify.prisma;
 
-    // Get spaces that have customized their referentiels
-    const customModules = await prisma.spaceModule.findMany({
-      where: { moduleKey: 'referentiels', enabled: true },
-      include: {
-        space: {
-          select: { id: true, name: true, type: true },
-        },
+    // Get communities that have customized referentiels
+    const communities = await prisma.community.findMany({
+      where: { referentiels: { not: null } },
+      select: {
+        id: true,
+        name: true,
+        referentiels: true,
+        _count: { select: { spaces: true } },
       },
     });
 
-    const totalSpaces = await prisma.space.count();
+    const totalCommunities = await prisma.community.count();
 
-    const customizedSpaces = customModules.map((m) => {
-      const config = m.config as Record<string, unknown> | null;
+    const customizedCommunities = communities.map((c) => {
+      const config = c.referentiels as Record<string, unknown> | null;
       const statuses = config?.statuses as unknown[] | undefined;
       const typeLabels = config?.typeLabels as Record<string, unknown> | undefined;
 
       return {
-        id: m.space.id,
-        name: m.space.name,
-        type: m.space.type,
+        id: c.id,
+        name: c.name,
+        spaceCount: c._count.spaces,
         customStatusCount: statuses ? statuses.length : 0,
         customTypeCount: typeLabels ? Object.keys(typeLabels).length : 0,
       };
@@ -39,9 +40,9 @@ export const adminReferentielsRoutes: FastifyPluginAsync = async (fastify) => {
         statuses: DEFAULT_STATUSES,
         typeLabels: DEFAULT_TYPE_LABELS,
       },
-      customizedSpaces,
-      totalSpaces,
-      customizedCount: customizedSpaces.length,
+      customizedCommunities,
+      totalCommunities,
+      customizedCount: customizedCommunities.length,
     };
   });
 };

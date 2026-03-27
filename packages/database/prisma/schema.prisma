@@ -162,6 +162,7 @@ model Community {
   coverPosition  Int       @default(50)
   coverPositionX Int       @default(50)
   coverZoom      Int       @default(100)
+  referentiels   Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
