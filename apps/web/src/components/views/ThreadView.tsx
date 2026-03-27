@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MessageSquare, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2, CheckSquare, UserPlus, FolderInput, FolderPlus, Copy, Merge as MergeIcon, ArrowDownToLine } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2, UserPlus, FolderInput, FolderPlus, Copy, Merge as MergeIcon, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
@@ -61,7 +61,6 @@ export function ThreadView({
   items,
   onEdit,
   onDelete,
-  onUpdateStatus,
   onAddChild,
   onMoveToSpace,
   onDuplicateToSpace,
