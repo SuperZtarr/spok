@@ -46,6 +46,7 @@ import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
+import { ThreadView } from '../components/views/ThreadView';
 import { SunburstView } from '../components/views/SunburstView';
 import { RelationsMapView } from '../components/views/RelationsMapView';
 import { BubbleView } from '../components/views/BubbleView';
@@ -227,7 +228,7 @@ export function SpacePage() {
   const { data: textViewData } = useQuery({
     queryKey: ['items', spaceId, 'all-with-contributions', checkedDescendantIds],
     queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions', additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined }),
-    enabled: !!spaceId && viewMode === 'text',
+    enabled: !!spaceId && (viewMode === 'text' || viewMode === 'thread'),
   });
 
   // All items for lookups (allItemsData preferred, fallback to itemsData)
@@ -533,6 +534,24 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
+            />
+          ) : viewMode === 'thread' ? (
+            <ThreadView
+              items={filterBySearch(textViewData?.data || allItemsData?.data)}
+              currentSpaceId={spaceId}
+              onEdit={setEditingItemId}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
+              referentiels={referentiels}
+              canEdit={canEdit}
               searchMatchIds={searchMatchIds}
             />
           ) : viewMode === 'kanban' ? (

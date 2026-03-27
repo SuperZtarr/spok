@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Crown, User, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame, ExternalLink, Image, Bug } from 'lucide-react';
+import { Users, FolderOpen, Settings, Crown, User, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame, ExternalLink, Image, Bug, MessageSquare } from 'lucide-react';
 import { spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { Button } from '../ui/Button';
@@ -13,8 +13,10 @@ import type { SpaceWithRole } from '@spok/shared';
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
   Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
-  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ExternalLink, Image, Bug,
+  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ExternalLink, Image, Bug, MessageSquare,
 };
+
+const HIGHLIGHTED_VIEWS = new Set<string>(['mindmap', 'kanban', 'timeline', 'images', 'documents', 'priority', 'thread']);
 
 const VIEW_DESCRIPTIONS: Partial<Record<ViewMode, string>> = {
   list: 'Tableau avec colonnes triables',
@@ -44,6 +46,7 @@ const VIEW_DESCRIPTIONS: Partial<Record<ViewMode, string>> = {
   images: 'Galerie d\'images',
   documents: 'Fichiers et documents',
   bugs: 'Liste des bugs',
+  thread: 'Discussions threadées style forum',
 };
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -195,15 +198,20 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                     {views.map(view => {
                       const Icon = VIEW_ICONS[view.icon] || List;
+                      const highlighted = HIGHLIGHTED_VIEWS.has(view.viewMode || '');
                       return (
                         <button
                           key={view.key}
                           onClick={() => setMode(view.viewMode as ViewMode)}
-                          className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 hover:border-primary/30 transition-colors text-left"
+                          className={`flex items-start gap-3 p-3 rounded-lg border transition-colors text-left ${
+                            highlighted
+                              ? 'border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/60 shadow-sm'
+                              : 'border-border hover:bg-accent/50 hover:border-primary/30'
+                          }`}
                         >
-                          <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${highlighted ? 'text-primary' : 'text-primary'}`} />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium">{view.label}</p>
+                            <p className={`text-sm ${highlighted ? 'font-semibold' : 'font-medium'}`}>{view.label}</p>
                             <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[(view.viewMode || '') as ViewMode] || ''}</p>
                           </div>
                         </button>

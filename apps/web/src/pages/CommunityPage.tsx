@@ -18,15 +18,24 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
 
 function SpaceTreeNode({ node, depth = 0 }: { node: any; depth?: number }) {
   const hasChildren = node.children?.length > 0;
+  const indent = depth > 0 ? `${depth * 2.5}rem` : undefined;
   if (!hasChildren) {
-    return <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />;
+    return (
+      <div className="col-span-full" style={{ paddingLeft: indent }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
+        </div>
+      </div>
+    );
   }
   return (
     <div className="col-span-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" style={{ paddingLeft: depth > 0 ? `${depth * 1.5}rem` : undefined }}>
-        <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
+      <div style={{ paddingLeft: indent }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
+        </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-2" style={{ paddingLeft: `${(depth + 1) * 1.5}rem` }}>
+      <div className="mt-2">
         {node.children.map((child: any) => (
           <SpaceTreeNode key={child.id} node={child} depth={depth + 1} />
         ))}

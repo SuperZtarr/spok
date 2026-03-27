@@ -45,6 +45,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'chord', label: 'Chord', icon: 'Disc', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 4, route: null, viewMode: 'chord', order: 7, visible: true, access: 'user' },
   { id: '', key: 'heatmap', label: 'Heatmap', icon: 'Grid3x3', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 4, route: null, viewMode: 'heatmap', order: 8, visible: true, access: 'user' },
   { id: '', key: 'ego', label: 'Réseau ego', icon: 'Focus', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 4, route: null, viewMode: 'ego', order: 9, visible: true, access: 'user' },
+  { id: '', key: 'thread', label: 'Discussions', icon: 'MessageSquare', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 4, route: null, viewMode: 'thread', order: 10, visible: true, access: 'user' },
 
   // ── Section: admin (Administration) ──
   { id: '', key: 'admin-communities', label: 'Communautés', icon: 'Building2', section: 'admin', sectionLabel: 'Administration', sectionOrder: 5, route: '/admin/communities', viewMode: null, order: 0, visible: true, access: 'admin' },
