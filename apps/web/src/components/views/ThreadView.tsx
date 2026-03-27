@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MessageSquare, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2, CheckSquare, UserPlus, FolderInput, FolderPlus, Copy, Merge as MergeIcon, ArrowDownToLine } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
@@ -10,15 +10,8 @@ interface ItemWithContributions extends Item {
   createdBy?: { id: string; name: string; email: string };
 }
 
-interface PortalGroup {
-  spaceId: string;
-  spaceName: string;
-}
-
 interface ThreadViewProps {
   items: ItemWithContributions[];
-  currentSpaceId?: string;
-  portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateStatus?: (id: string, status: string) => void;
@@ -66,7 +59,6 @@ function getContributionCount(item: ItemWithContributions): number {
 
 export function ThreadView({
   items,
-  currentSpaceId,
   onEdit,
   onDelete,
   onUpdateStatus,
@@ -228,18 +220,29 @@ export function ThreadView({
                   {canEdit && (
                     <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
                       <ItemActionMenu
-                        item={item}
-                        onEdit={() => onEdit(item.id)}
-                        onDelete={onDelete ? () => onDelete(item.id) : undefined}
-                        onUpdateStatus={onUpdateStatus}
-                        onAddChild={onAddChild ? () => onAddChild(item.id) : undefined}
-                        onMoveToSpace={onMoveToSpace ? () => onMoveToSpace(item.id) : undefined}
-                        onDuplicateToSpace={onDuplicateToSpace ? () => onDuplicateToSpace(item.id) : undefined}
-                        onConvertToSpace={onConvertToSpace ? () => onConvertToSpace(item.id) : undefined}
-                        onSelfAssign={onSelfAssign ? () => onSelfAssign(item.id) : undefined}
-                        onMerge={onMerge ? () => onMerge(item.id) : undefined}
-                        onAbsorbChildren={onAbsorbChildren ? () => onAbsorbChildren(item.id) : undefined}
-                        referentiels={referentiels}
+                        groups={[
+                          {
+                            actions: [
+                              { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
+                              ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) }] : []),
+                              ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
+                              ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: MergeIcon, onClick: () => onMerge(item.id) }] : []),
+                              ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
+                              ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
+                            ],
+                          },
+                          {
+                            actions: [
+                              ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
+                              ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
+                            ],
+                          },
+                          {
+                            actions: [
+                              ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }] : []),
+                            ],
+                          },
+                        ]}
                       />
                     </div>
                   )}

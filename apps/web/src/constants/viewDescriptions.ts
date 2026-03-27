@@ -254,6 +254,15 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Le type de fichier est indique par l\'icone et l\'extension',
     ],
   },
+  thread: {
+    title: 'Discussions',
+    description: 'Affiche les items sous forme de threads forum avec leurs contributions.',
+    tips: [
+      'Cliquez sur un sujet pour voir les contributions',
+      'Les sujets sont triés par dernière activité',
+      'Cliquez "Ouvrir la fiche complète" pour éditer',
+    ],
+  },
   images: {
     title: 'Images',
     description: 'Galerie d\'images de l\'espace. Cliquez pour agrandir, double-cliquez pour editer.',

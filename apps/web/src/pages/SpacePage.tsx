@@ -539,7 +539,6 @@ export function SpacePage() {
           ) : viewMode === 'thread' ? (
             <ThreadView
               items={filterBySearch(textViewData?.data || allItemsData?.data)}
-              currentSpaceId={spaceId}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
