@@ -64,8 +64,6 @@ interface ItemTreeNode extends ItemWithContributions {
 function buildItemTree(items: ItemWithContributions[]): ItemTreeNode[] {
   const map = new Map<string, ItemTreeNode>();
   const roots: ItemTreeNode[] = [];
-  const itemIds = new Set(items.map(i => i.id));
-
   items.forEach(i => map.set(i.id, { ...i, children: [] }));
   items.forEach(i => {
     if (i.parentId && map.has(i.parentId)) {
