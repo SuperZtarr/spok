@@ -10,7 +10,7 @@ interface DrawioEditorProps {
   editable?: boolean;
 }
 
-const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&saveAndExit=1&noExitBtn=1';
+const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&saveAndExit=1';
 
 export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editable = true }: DrawioEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -19,6 +19,7 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
   const containerRef = useRef<HTMLDivElement>(null);
   const pendingExitRef = useRef(false);
   const savedXmlRef = useRef('');
+  const initialXmlRef = useRef('');
 
   // Handle messages from draw.io iframe
   const handleMessage = useCallback((evt: MessageEvent) => {
@@ -73,6 +74,8 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
           setIsEditing(false);
         }
       } else if (msg.event === 'exit') {
+        // Exit without save: restore original XML (autosave may have changed it)
+        onChange(initialXmlRef.current);
         setIsEditing(false);
       }
     } catch {
@@ -117,7 +120,7 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
         <div
           className="border rounded-md p-4 bg-white dark:bg-gray-900 overflow-auto cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
           style={{ maxHeight: '300px' }}
-          onClick={() => editable && setIsEditing(true)}
+          onClick={() => { if (editable) { initialXmlRef.current = xml; setIsEditing(true); } }}
           title={editable ? 'Cliquer pour modifier' : undefined}
         >
           <img src={previewUrl} alt="Diagramme" className="max-w-full h-auto max-h-[260px] object-contain mx-auto" />
@@ -125,7 +128,7 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
       ) : xml ? (
         <div
           className="border rounded-md p-8 text-center text-muted-foreground cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-          onClick={() => editable && setIsEditing(true)}
+          onClick={() => { if (editable) { initialXmlRef.current = xml; setIsEditing(true); } }}
           title={editable ? 'Cliquer pour modifier' : undefined}
         >
           <Workflow className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -142,7 +145,7 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setIsEditing(true)}
+          onClick={() => { initialXmlRef.current = xml; setIsEditing(true); }}
         >
           <Workflow className="w-4 h-4 mr-1" />
           {xml ? 'Modifier le diagramme' : 'Créer un diagramme'}

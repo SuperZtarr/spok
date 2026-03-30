@@ -492,12 +492,11 @@ export function ItemEditModal({
     if (status !== (item.status || '')) return true;
     if (priority !== (item.priority ?? null)) return true;
     if ((assignedToId || null) !== (item.assignedToId || null)) return true;
-    const newDueDate = dueDate ? new Date(dueDate).toISOString() : null;
-    if (newDueDate !== (item.dueDate ? new Date(item.dueDate).toISOString() : null)) return true;
-    const newStartDate = startDate ? new Date(startDate).toISOString() : null;
-    if (newStartDate !== (item.startDate ? new Date(item.startDate).toISOString() : null)) return true;
-    const newEndDate = endDate ? new Date(endDate).toISOString() : null;
-    if (newEndDate !== (item.endDate ? new Date(item.endDate).toISOString() : null)) return true;
+    // Compare dates using the same format as initialization (ISO slice 0-16)
+    const formatDateForCompare = (d: string | null | undefined) => d ? new Date(d).toISOString().slice(0, 16) : null;
+    if ((dueDate || null) !== formatDateForCompare(item.dueDate)) return true;
+    if ((startDate || null) !== formatDateForCompare(item.startDate)) return true;
+    if ((endDate || null) !== formatDateForCompare(item.endDate)) return true;
     const sortedCurrent = [...selectedTagIds].sort();
     const sortedOriginal = [...originalTagIds].sort();
     if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) return true;
