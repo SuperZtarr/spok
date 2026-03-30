@@ -11,6 +11,15 @@ export interface DeletingItem {
   type: string;
   childCount: number;
   contributionCount: number;
+  description?: string | null;
+  status?: string | null;
+  priority?: number | null;
+  dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  url?: string | null;
+  assignedToName?: string | null;
+  tags?: Array<{ name: string; color?: string | null }>;
 }
 
 export interface ConvertingItem {
@@ -155,13 +164,22 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   // --- Action handlers ---
 
   const handleDelete = useCallback((id: string) => {
-    const item = allItems.find((i) => i.id === id) as (Item & { contributionCount?: number }) | undefined;
+    const item = allItems.find((i) => i.id === id) as (Item & { contributionCount?: number; assignedTo?: { name: string } | null }) | undefined;
     setDeletingItem({
       id,
       title: item?.title || 'cet élément',
       type: item?.type || 'NOTE',
       childCount: countDescendants(allItems, id),
       contributionCount: (item as any)?.contributionCount || 0,
+      description: item?.description,
+      status: item?.status,
+      priority: item?.priority,
+      dueDate: item?.dueDate,
+      startDate: item?.startDate,
+      endDate: item?.endDate,
+      url: item?.url,
+      assignedToName: item?.assignedTo?.name || null,
+      tags: item?.tags?.map(t => ({ name: t.name, color: t.color })),
     });
   }, [allItems]);
 

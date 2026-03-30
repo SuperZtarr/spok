@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Calendar, Link as LinkIcon, User, Tag as TagIcon, Flag } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TYPE_ICONS, TYPE_LABELS } from '../constants/ui';
@@ -12,6 +12,36 @@ interface DeleteConfirmModalProps {
   itemType: string;
   childCount: number;
   contributionCount: number;
+  description?: string | null;
+  status?: string | null;
+  priority?: number | null;
+  dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  url?: string | null;
+  assignedToName?: string | null;
+  tags?: Array<{ name: string; color?: string | null }>;
+}
+
+const PRIORITY_LABELS: Record<number, string> = {
+  1: 'Critique',
+  2: 'Haute',
+  3: 'Moyenne',
+  4: 'Basse',
+};
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function stripHtml(html: string): string {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 }
 
 export function DeleteConfirmModal({
@@ -22,6 +52,15 @@ export function DeleteConfirmModal({
   itemType,
   childCount,
   contributionCount,
+  description,
+  status,
+  priority,
+  dueDate,
+  startDate,
+  endDate,
+  url,
+  assignedToName,
+  tags,
 }: DeleteConfirmModalProps) {
   const Icon = TYPE_ICONS[itemType];
   const hasWarnings = childCount > 0 || contributionCount > 0;
@@ -32,8 +71,93 @@ export function DeleteConfirmModal({
     if (isOpen) setDeleteChildren(false);
   }, [isOpen]);
 
+  // Build list of filled fields
+  const filledFields: Array<{ icon: React.ReactNode; label: string; value: React.ReactNode }> = [];
+
+  if (description) {
+    const plain = stripHtml(description).trim();
+    if (plain) {
+      filledFields.push({
+        icon: null,
+        label: 'Description',
+        value: plain.length > 80 ? plain.slice(0, 80) + '...' : plain,
+      });
+    }
+  }
+
+  if (status) {
+    filledFields.push({
+      icon: null,
+      label: 'Statut',
+      value: status,
+    });
+  }
+
+  if (priority != null) {
+    filledFields.push({
+      icon: <Flag className="w-3 h-3" />,
+      label: 'Priorite',
+      value: PRIORITY_LABELS[priority] || `P${priority}`,
+    });
+  }
+
+  if (assignedToName) {
+    filledFields.push({
+      icon: <User className="w-3 h-3" />,
+      label: 'Assigne',
+      value: assignedToName,
+    });
+  }
+
+  if (dueDate) {
+    filledFields.push({
+      icon: <Calendar className="w-3 h-3" />,
+      label: 'Echeance',
+      value: formatDate(dueDate),
+    });
+  }
+
+  if (startDate || endDate) {
+    const parts = [];
+    if (startDate) parts.push(formatDate(startDate));
+    if (endDate) parts.push(formatDate(endDate));
+    filledFields.push({
+      icon: <Calendar className="w-3 h-3" />,
+      label: 'Periode',
+      value: parts.join(' → '),
+    });
+  }
+
+  if (url) {
+    filledFields.push({
+      icon: <LinkIcon className="w-3 h-3" />,
+      label: 'URL',
+      value: url.length > 50 ? url.slice(0, 50) + '...' : url,
+    });
+  }
+
+  if (tags && tags.length > 0) {
+    filledFields.push({
+      icon: <TagIcon className="w-3 h-3" />,
+      label: 'Tags',
+      value: (
+        <span className="flex flex-wrap gap-1">
+          {tags.map((t, i) => (
+            <span
+              key={i}
+              className="inline-block text-xs px-1.5 py-0.5 rounded-full"
+              style={t.color ? { backgroundColor: t.color + '20', color: t.color } : undefined}
+            >
+              {t.name}
+            </span>
+          ))}
+        </span>
+      ),
+    });
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Supprimer cet élément ?" size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title="Supprimer cet element ?" size="small">
       <div className="space-y-4">
         {/* Item info */}
         <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
@@ -41,6 +165,24 @@ export function DeleteConfirmModal({
           <span className="text-sm text-muted-foreground">{TYPE_LABELS[itemType] || itemType}</span>
           <span className="font-semibold truncate">{itemTitle}</span>
         </div>
+
+        {/* Filled fields summary */}
+        {filledFields.length > 0 && (
+          <div className="border rounded-md p-3 space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Donnees qui seront perdues
+            </p>
+            {filledFields.map((field, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm">
+                <span className="text-muted-foreground flex items-center gap-1 shrink-0 min-w-[80px]">
+                  {field.icon}
+                  {field.label}
+                </span>
+                <span className="text-foreground truncate">{field.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Warnings */}
         {hasWarnings && (
@@ -55,8 +197,8 @@ export function DeleteConfirmModal({
                 <span>
                   <strong>{childCount}</strong> descendant{childCount > 1 ? 's' : ''}{' '}
                   {deleteChildren
-                    ? (childCount > 1 ? 'seront aussi supprimés' : 'sera aussi supprimé')
-                    : (childCount > 1 ? 'seront déplacés' : 'sera déplacé') + ' à la racine'
+                    ? (childCount > 1 ? 'seront aussi supprimes' : 'sera aussi supprime')
+                    : (childCount > 1 ? 'seront deplaces' : 'sera deplace') + ' a la racine'
                   }
                 </span>
               </div>
@@ -66,7 +208,7 @@ export function DeleteConfirmModal({
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>
                   <strong>{contributionCount}</strong> contribution{contributionCount > 1 ? 's' : ''}{' '}
-                  {contributionCount > 1 ? 'seront' : 'sera'} définitivement supprimée{contributionCount > 1 ? 's' : ''}
+                  {contributionCount > 1 ? 'seront' : 'sera'} definitivement supprimee{contributionCount > 1 ? 's' : ''}
                 </span>
               </div>
             )}

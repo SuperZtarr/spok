@@ -1124,6 +1124,15 @@ export function SpacePage() {
         itemType={actions.deletingItem?.type || 'NOTE'}
         childCount={actions.deletingItem?.childCount || 0}
         contributionCount={actions.deletingItem?.contributionCount || 0}
+        description={actions.deletingItem?.description}
+        status={actions.deletingItem?.status}
+        priority={actions.deletingItem?.priority}
+        dueDate={actions.deletingItem?.dueDate}
+        startDate={actions.deletingItem?.startDate}
+        endDate={actions.deletingItem?.endDate}
+        url={actions.deletingItem?.url}
+        assignedToName={actions.deletingItem?.assignedToName}
+        tags={actions.deletingItem?.tags}
       />
 
       {/* Merge item modal */}
