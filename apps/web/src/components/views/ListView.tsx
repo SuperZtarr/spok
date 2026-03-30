@@ -244,7 +244,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           <div className="flex-1 overflow-auto">
           <div className="divide-y divide-border">
             {sortedItems.map((item, index) => {
-              const Icon = getTypeIcon(item.type);
+              const Icon = getTypeIcon(item.type, item.url);
               const statusLabel = statusLabels[item.status || ''] || 'Non défini';
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;

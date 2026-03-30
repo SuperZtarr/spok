@@ -134,7 +134,7 @@ export function TreeItem({
 
   const currentDropPosition = isOver ? (globalDropPosition || 'nest') : null;
 
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(item.type, item.url);
   const hasChildren = (item.childCount || 0) > 0;
 
   const handleClick = () => {

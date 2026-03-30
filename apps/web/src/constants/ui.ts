@@ -10,14 +10,39 @@ import {
   Image,
   Bug,
   Workflow,
+  FileSpreadsheet,
+  FileImage,
+  FileArchive,
+  FileCode,
+  FileVideo,
+  FileAudio,
+  Presentation,
 } from 'lucide-react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
 import { DEFAULT_TYPE_LABELS } from '@spok/shared';
 
 // =============================================================================
+// DOCUMENT FILE ICONS - Icône par extension de fichier
+// =============================================================================
+function getDocumentFileIcon(url: string): typeof FileText {
+  const ext = url.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'pdf') return FileText;
+  if (['doc', 'docx', 'odt', 'rtf', 'txt', 'md'].includes(ext)) return FileText;
+  if (['xls', 'xlsx', 'csv', 'ods', 'tsv'].includes(ext)) return FileSpreadsheet;
+  if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) return Presentation;
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) return FileImage;
+  if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext)) return FileVideo;
+  if (['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext)) return FileAudio;
+  if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) return FileArchive;
+  if (['js', 'ts', 'tsx', 'jsx', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'css', 'html', 'json', 'xml', 'yaml', 'yml', 'sh', 'sql'].includes(ext)) return FileCode;
+  return File;
+}
+
+// =============================================================================
 // TYPE ICONS - Icônes associées à chaque type d'item
 // =============================================================================
-export function getTypeIcon(type: string): typeof FileText {
+export function getTypeIcon(type: string, url?: string | null): typeof FileText {
+  if (type === 'DOCUMENT' && url) return getDocumentFileIcon(url);
   return TYPE_ICONS[type] || FileText;
 }
 

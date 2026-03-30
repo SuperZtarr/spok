@@ -657,7 +657,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           ) : (<div className="relative" ref={timelineAreaRef}>
             {flatItems.map((item, itemIndex) => {
               const barStyle = getBarStyle(item);
-              const Icon = getTypeIcon(item.type);
+              const Icon = getTypeIcon(item.type, item.url);
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);

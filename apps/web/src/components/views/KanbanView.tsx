@@ -106,7 +106,7 @@ const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
 function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, isFirstCard }: KanbanCardProps) {
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item, columnId },
@@ -540,7 +540,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
           <div className="bg-card border rounded-lg p-3 shadow-lg opacity-90 w-[200px]">
             <div className="flex items-start gap-2">
               {(() => {
-                const Icon = getTypeIcon(activeItem.type);
+                const Icon = getTypeIcon(activeItem.type, activeItem.url);
                 return <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(activeItem.type, referentiels?.typeLabels)}`} />;
               })()}
               <div className="flex-1 min-w-0">

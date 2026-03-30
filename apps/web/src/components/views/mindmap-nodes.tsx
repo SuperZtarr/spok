@@ -105,7 +105,7 @@ export interface MindMapNodeProps {
 
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(item.type, item.url);
   const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
 
   return (

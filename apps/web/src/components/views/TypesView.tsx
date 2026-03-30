@@ -92,7 +92,7 @@ const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
 function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item },
@@ -502,7 +502,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
           <div className="bg-card border rounded-lg p-3 shadow-lg opacity-90 w-[200px]">
             <div className="flex items-start gap-2">
               {(() => {
-                const Icon = getTypeIcon(activeItem.type);
+                const Icon = getTypeIcon(activeItem.type, activeItem.url);
                 return <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />;
               })()}
               <div className="flex-1 min-w-0">

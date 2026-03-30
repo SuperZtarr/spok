@@ -38,7 +38,7 @@ function BookmarkedItemCard({ item, onRemove }: {
   item: any;
   onRemove: (id: string) => void;
 }) {
-  const TypeIcon = getTypeIcon(item.type);
+  const TypeIcon = getTypeIcon(item.type, item.url);
   const typeLabel = TYPE_LABELS[item.type] || item.type;
 
   return (

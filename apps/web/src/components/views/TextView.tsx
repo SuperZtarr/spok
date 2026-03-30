@@ -310,7 +310,7 @@ function TextItem({
   searchMatchIds?: Set<string>;
 }) {
   const depth = (item as any)._depth || 0;
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(item.type, item.url);
   const statusLabel = statusLabels[item.status || ''] || 'Non défini';
   const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
   const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
