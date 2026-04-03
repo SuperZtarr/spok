@@ -159,43 +159,14 @@ Deploye sur Railway :
 
 ## Instructions pour Claude
 
-### Démarrage de session (OBLIGATOIRE — AVANT TOUTE ACTION)
-1. Lire `~/.claude/CLAUDE.md` (instructions globales, accords permanents)
-2. Lire `docs/session-journal.md` (accords permanents + historique)
-3. Lire `docs/TODO.md` (tâches en cours)
-4. Faire le point avec l'utilisateur avant de commencer quoi que ce soit
+> Procedures operationnelles (demarrage, commit, push, donnees, ports, redemarrage) : voir `memory/procedures.md`
 
 ### Workflow Git (OBLIGATOIRE)
 - **JAMAIS** merger dans master ni pusher sans accord explicite de l'utilisateur
 - Commiter uniquement sur la branche worktree (`claude/*`)
-- Apres commit, attendre que l'utilisateur teste en local (`pnpm dev:start`)
-- Merger et pusher **uniquement** quand l'utilisateur dit "merge et push" (ou equivalent)
+- Apres commit, attendre que l'utilisateur teste en local
+- Merger et pusher **uniquement** quand l'utilisateur dit "merge et push"
 
-### Modifier des donnees en base dev (OBLIGATOIRE)
-- **MenuItem (menus)** : utiliser l'interface `/admin/menu` ou Prisma Studio (`pnpm db:studio`). JAMAIS curl en chaine.
-- **Donnees en base** : Prisma Studio ou script TS one-liner (`npx tsx script.ts`). JAMAIS d'appels API curl complexes.
-- **Quand une interface admin existe** : l'utiliser ou proposer a l'utilisateur de le faire lui-meme. Ne pas reinventer.
-- **Principe general** : toujours choisir la methode la plus simple et directe. Si ca prend plus de 2 commandes, c'est qu'on fait faux.
-
-### Configuration des ports (NE PAS MODIFIER)
-- **Web** : port 3000 (configure dans `apps/web/vite.config.ts` avec `strictPort: true`)
-- **API** : port 3001 (configure via `API_PORT`)
-- **PostgreSQL dev** : port 25432 (host) / 5432 (Docker interne)
-
-### Demarrage / Arret
-```bash
-pnpm dev:start   # PostgreSQL Docker + API + Web en local
-pnpm dev:stop    # Arrete les processus node (PostgreSQL reste actif)
-```
-
-### Redemarrage des services
-Apres chaque developpement necessitant un redemarrage : `pnpm dev:stop` puis `pnpm dev:start`.
-
-**Redemarrage necessaire apres** :
-- Modifications du schema Prisma
-- Ajout/suppression de dependances
-- Modifications de `vite.config.ts` ou fichiers de configuration
-- Modifications des fichiers `.env`
-
-**Pas de redemarrage necessaire** (hot reload natif) :
-- Modifications de code TypeScript/React (tsx watch + Vite HMR)
+### Documentation technique
+- Specs fonctionnelles/techniques : `docs/specs/` (mecanismes, comportements, decisions)
+- A relire avant de modifier un domaine fonctionnel existant

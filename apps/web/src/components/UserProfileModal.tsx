@@ -53,9 +53,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     enabled: isOpen,
   });
 
-  if (!user) return null;
-
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     setError(null);
     setUploading(true);
     try {
@@ -67,15 +65,16 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  };
+  }, [updateUser]);
+
+  usePasteUpload(isOpen, uploadFile);
+
+  if (!user) return null;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) uploadFile(file);
   };
-
-  const handlePasteUpload = useCallback((file: File) => uploadFile(file), []); // eslint-disable-line react-hooks/exhaustive-deps
-  usePasteUpload(isOpen, handlePasteUpload);
 
   const handleSaveName = async () => {
     const trimmed = nameValue.trim();
