@@ -342,6 +342,7 @@ export function Layout() {
   const { data: allSpaces } = useQuery({
     queryKey: ['sidebar-spaces', user?.id],
     queryFn: () => spacesApi.list(),
+    enabled: !!user,
     staleTime: Infinity,
   });
 

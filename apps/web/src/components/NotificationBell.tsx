@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { notificationsApi, invitationsApi, authApi } from '../lib/api';
+import { useAuthStore } from '../stores/auth';
 import type { Notification, NotificationType, Invitation } from '@spok/shared';
 
 const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }> = {
@@ -30,10 +31,13 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const user = useAuthStore(s => s.user);
+
   // Poll unread count every 30s
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: notificationsApi.unreadCount,
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
@@ -74,6 +78,7 @@ export function NotificationBell() {
   const { data: pendingInvitations } = useQuery({
     queryKey: ['invitations', 'my'],
     queryFn: invitationsApi.my,
+    enabled: !!user,
     refetchInterval: 60000,
   });
 

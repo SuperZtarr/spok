@@ -181,7 +181,21 @@ async function fetchApi<T>(
   options: RequestInit = {},
   isRetry = false
 ): Promise<T> {
-  const token = localStorage.getItem('accessToken');
+  let token = localStorage.getItem('accessToken');
+
+  // Proactive token refresh: if token exists but is expired, refresh BEFORE making the request
+  if (token && isTokenExpired(30) && !isRetry && !endpoint.startsWith('/auth/refresh')) {
+    if (!refreshPromise) {
+      refreshPromise = tryRefreshToken().finally(() => { refreshPromise = null; });
+    }
+    const refreshed = await refreshPromise;
+    if (refreshed) {
+      token = localStorage.getItem('accessToken');
+    } else {
+      clearAuth();
+      throw new ApiError(401, 'Session expirée. Veuillez vous reconnecter.', undefined, 'SESSION_EXPIRED');
+    }
+  }
 
   const headers: Record<string, string> = {
     ...((options.headers as Record<string, string>) || {}),
@@ -212,7 +226,7 @@ async function fetchApi<T>(
 
   if (!response.ok) {
     // Handle 401 Unauthorized - try to refresh token
-    if (response.status === 401 && !isRetry && !endpoint.startsWith('/auth/')) {
+    if (response.status === 401 && !isRetry && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/refresh') && !endpoint.startsWith('/auth/register')) {
       // Coalesce concurrent refresh attempts into a single promise
       if (!refreshPromise) {
         refreshPromise = tryRefreshToken().finally(() => {
