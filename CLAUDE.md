@@ -162,10 +162,11 @@ Deploye sur Railway :
 > Procedures operationnelles (demarrage, commit, push, donnees, ports, redemarrage) : voir `memory/procedures.md`
 
 ### Workflow Git (OBLIGATOIRE)
-- **JAMAIS** merger dans master ni pusher sans accord explicite de l'utilisateur
-- Commiter uniquement sur la branche worktree (`claude/*`)
+- Travailler directement dans `C:\_dev\spok` sur master (pas de worktree)
+- Les conversations sont séparées par thème mais partagent la même base de code
+- **JAMAIS** pusher sans accord explicite de l'utilisateur
 - Apres commit, attendre que l'utilisateur teste en local
-- Merger et pusher **uniquement** quand l'utilisateur dit "merge et push"
+- Pusher **uniquement** quand l'utilisateur dit "commit et push"
 
 ### Documentation technique
 - Specs fonctionnelles/techniques : `docs/specs/` (mecanismes, comportements, decisions)
