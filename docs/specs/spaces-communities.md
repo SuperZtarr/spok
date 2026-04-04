@@ -65,20 +65,33 @@ buildSpaceTree(spaces) :
 2. **communityGroups** : groupes par communityId, chaque groupe a un spaceTree
 3. **independentSpaces** : type !== PERSONAL et pas de communityId, en arbre
 
+### Style visuel (refonte 2026-04)
+- Fond blanc (bg-white / dark:bg-background)
+- Style Notion/Linear : pas de bordures lourdes, hover subtil (bg-accent/50)
+- Section headers : text-base font-bold text-black
+- Titres communautes : text-base font-bold text-black + avatar w-5 h-5
+- Espaces : text-sm, padding px-2 py-1 (compact)
+- Separateurs entre sections : border-border/50 (subtils)
+- Indentation espaces sous communaute : ml-3 (sans bordure ni ombre)
+
 ### Sections sidebar (utilisateur connecte)
-1. Favoris (si > 0) — icone Star
-2. Recents (si > 0) — icone Clock, max 5, stockes dans localStorage['spok_recent_spaces']
-3. Mes espaces (PERSONAL)
-4. Communautes (chacune collapsible, avec arbre d'espaces)
-5. Autres espaces (independants)
+1. Logo toujours visible en haut (meme en mode communaute immersive)
+2. Header communaute (mode immersif seulement) — fleche retour + nom
+3. Favoris (si > 0) — icone Star
+4. Recents (si > 0) — icone Clock, max 5, stockes dans localStorage['spok_recent_spaces']
+5. Mes espaces (PERSONAL)
+6. Communautes (chacune collapsible, avec arbre d'espaces)
+7. Autres espaces (independants)
 
 ### Sections sidebar (visiteur)
 - Communautes publiques seulement, pas de favoris/recents/personnels
 
 ### Etat expand/collapse
 - Espaces : expandedSpaceIds (Set), localStorage['spok-expanded-spaces']
-- Communautes : collapsedCommunityIds (Set, logique inversee : expandues par defaut), localStorage['spok-collapsed-communities']
-- Auto-expand : naviguer vers un espace auto-expand sa communaute
+- Communautes : expandedCommunityIds (Set, fermees par defaut), localStorage['spok-expanded-communities']
+  - Defaut = toutes fermees (Set vide)
+  - Auto-expand : naviguer vers un espace ouvre sa communaute
+  - Le clic sur le header toggle ouvert/ferme, etat persiste dans localStorage
 
 ### Resize sidebar
 - Largeur par defaut : 208px, min 160, max 400
@@ -91,7 +104,7 @@ buildSpaceTree(spaces) :
 - Highlight : bg-primary/10 text-primary font-medium
 
 ### SpaceTreeItem (composant recursif)
-- Indentation : 12 + (level x 16)px
+- Indentation : 8 + (level x 14)px
 - Chevron toggle si enfants
 - Avatar/icone + nom (tronque)
 - Bouton favori au hover

@@ -61,50 +61,50 @@ function CommunitySection({
   mySpacesEmpty: boolean; favoriteIds: Set<string>; onToggleFavorite: (id: string) => void;
 }) {
   return (
-    <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-2 border-b border-border">
-      <div className="flex items-center justify-between px-1.5 py-1 mb-1 bg-foreground/5 rounded-md mx-1">
-        <div className="flex items-center gap-0.5 min-w-0 flex-1">
-          <button
-            onClick={() => onToggleExpand(community.id)}
-            className="p-0.5 rounded hover:bg-accent flex-shrink-0"
-          >
-            {isExpanded ? (
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="w-3 h-3 text-muted-foreground" />
-            )}
-          </button>
-          <Link
-            to={`/communities/${community.id}`}
-            className={`flex items-center gap-1.5 min-w-0 group ${isActive ? 'text-primary' : ''}`}
-          >
-            {community.avatarUrl ? (
-              <img src={community.avatarUrl} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
-            ) : (
-              <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-            )}
-            <span className={`text-xs font-medium uppercase tracking-wider truncate group-hover:text-foreground transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground/70'}`}>
-              {community.name}
-            </span>
-            {!isExpanded && spaceCount > 0 && (
-              <span className="text-[10px] text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                {spaceCount}
-              </span>
-            )}
-          </Link>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {community.role === 'OWNER' && (
-            <RoleGuard role="OWNER">
-              <Link to={`/communities/${community.id}/settings`} title="Paramètres">
-                <Settings className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-              </Link>
-            </RoleGuard>
+    <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-1.5 border-b border-border/50">
+      <div
+        className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-accent/50 cursor-pointer group"
+        onClick={() => onToggleExpand(community.id)}
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+        ) : (
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+        )}
+        <Link
+          to={`/communities/${community.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-2 min-w-0 flex-1"
+        >
+          {community.avatarUrl ? (
+            <img src={community.avatarUrl} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
+          ) : (
+            <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-primary/10' : 'bg-foreground/5'}`}>
+              <Building2 className={`w-3 h-3 ${isActive ? 'text-primary' : 'text-foreground/50'}`} />
+            </div>
           )}
-        </div>
+          <span className={`text-base font-bold truncate transition-colors ${isActive ? 'text-primary' : 'text-black group-hover:text-foreground'}`}>
+            {community.name}
+          </span>
+        </Link>
+        {!isExpanded && spaceCount > 0 && (
+          <span className="text-[10px] text-muted-foreground/40 flex-shrink-0">{spaceCount}</span>
+        )}
+        {community.role === 'OWNER' && (
+          <RoleGuard role="OWNER">
+            <Link
+              to={`/communities/${community.id}/settings`}
+              title="Paramètres"
+              onClick={(e) => e.stopPropagation()}
+              className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+            >
+              <Settings className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+            </Link>
+          </RoleGuard>
+        )}
       </div>
       {isExpanded && (
-        <div className="mx-1.5 mt-1 border-2 border-border rounded-md bg-card shadow-sm">
+        <div className="ml-3">
           {spaceTree.length > 0 ? (
             spaceTree.map((node: any, nodeIndex: number) => (
               <SpaceTreeItem
@@ -120,7 +120,7 @@ function CommunitySection({
               />
             ))
           ) : (
-            <p className="px-3 py-1 text-xs text-muted-foreground">Aucun espace</p>
+            <p className="px-2 py-1 text-[11px] text-muted-foreground/50">Aucun espace</p>
           )}
         </div>
       )}
@@ -157,12 +157,12 @@ function SpaceTreeItem({
     <>
       <div
         id={htmlId}
-        className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors text-sm group ${
+        className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-sm group ${
           currentSpaceId === node.id
             ? 'bg-primary/10 text-primary font-medium'
-            : 'hover:bg-accent'
+            : 'hover:bg-accent/50'
         }`}
-        style={{ paddingLeft: `${12 + level * 16}px` }}
+        style={{ paddingLeft: `${8 + level * 14}px` }}
       >
         {hasChildren ? (
           <button
@@ -265,10 +265,10 @@ export function Layout() {
     });
   }, []);
 
-  // Collapsed community IDs (inverted: communities are expanded by default)
-  const [collapsedCommunityIds, setCollapsedCommunityIds] = useState<Set<string>>(() => {
+  // Expanded community IDs — default empty = all collapsed
+  const [expandedCommunityIds, setExpandedCommunityIds] = useState<Set<string>>(() => {
     try {
-      const saved = localStorage.getItem('spok-collapsed-communities');
+      const saved = localStorage.getItem('spok-expanded-communities');
       return saved ? new Set(JSON.parse(saved)) : new Set<string>();
     } catch {
       return new Set<string>();
@@ -276,11 +276,11 @@ export function Layout() {
   });
 
   const toggleCommunityExpand = useCallback((id: string) => {
-    setCollapsedCommunityIds(prev => {
+    setExpandedCommunityIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      localStorage.setItem('spok-collapsed-communities', JSON.stringify([...next]));
+      localStorage.setItem('spok-expanded-communities', JSON.stringify([...next]));
       return next;
     });
   }, []);
@@ -459,15 +459,24 @@ export function Layout() {
     return favoriteSpaces.filter(s => s.communityId === currentCommunityId);
   }, [currentCommunityId, favoriteSpaces]);
 
-  // Auto-expand community in sidebar when navigating to one of its spaces
+  // Auto-expand active community, collapse all when at root
   useEffect(() => {
-    if (currentCommunityId && collapsedCommunityIds.has(currentCommunityId)) {
-      setCollapsedCommunityIds(prev => {
-        const next = new Set(prev);
-        next.delete(currentCommunityId);
-        localStorage.setItem('spok-collapsed-communities', JSON.stringify([...next]));
-        return next;
-      });
+    if (currentCommunityId) {
+      // Open the active community
+      if (!expandedCommunityIds.has(currentCommunityId)) {
+        setExpandedCommunityIds(prev => {
+          const next = new Set(prev);
+          next.add(currentCommunityId);
+          localStorage.setItem('spok-expanded-communities', JSON.stringify([...next]));
+          return next;
+        });
+      }
+    } else {
+      // No community selected → collapse all
+      if (expandedCommunityIds.size > 0) {
+        setExpandedCommunityIds(new Set());
+        localStorage.removeItem('spok-expanded-communities');
+      }
     }
   }, [currentCommunityId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -595,12 +604,17 @@ export function Layout() {
   // Sidebar content (shared between mobile and desktop)
   const sidebarContent = user ? (
     <>
-      {/* Header sidebar - community immersive or global logo */}
-      {currentCommunity ? (
-        <div className="px-3 py-3 border-b border-border flex-shrink-0">
+      {/* Logo always visible */}
+      <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
+        <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></a>
+      </div>
+
+      {/* Community header when in immersive mode */}
+      {currentCommunity && (
+        <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2 transition-colors"
+            className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground mb-1.5 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Toutes les communautés</span>
@@ -616,10 +630,6 @@ export function Layout() {
             <span className="text-sm font-semibold truncate">{currentCommunity.name}</span>
           </Link>
         </div>
-      ) : (
-        <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-          <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></a>
-        </div>
       )}
 
       {/* Navigation - scrollable */}
@@ -628,19 +638,19 @@ export function Layout() {
           <>
             {/* Immersive community mode: favorites + space tree only */}
             {communityFavoriteSpaces.length > 0 && (
-              <div className="pt-2 pb-2 border-b border-border">
-                <div className="flex items-center px-3 mb-2">
+              <div className="pt-1.5 pb-1.5 border-b border-border/50">
+                <div className="flex items-center px-2 mb-1">
                   <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
+                  <span className="text-base font-bold text-black">Favoris</span>
                 </div>
                 {communityFavoriteSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
                       to={`/spaces/${space.id}`}
-                      className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                      className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-accent'
+                          : 'hover:bg-accent/50'
                       }`}
                     >
                       {space.avatarUrl ? (
@@ -652,7 +662,7 @@ export function Layout() {
                     </Link>
                     <button
                       onClick={() => handleToggleFavorite(space.id)}
-                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       title="Retirer des favoris"
                     >
                       <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
@@ -663,9 +673,9 @@ export function Layout() {
             )}
 
             {/* Community spaces tree */}
-            <div className="pt-2">
-              <div className="flex items-center justify-between px-3 mb-2">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Espaces</span>
+            <div className="pt-1.5">
+              <div className="flex items-center justify-between px-2 mb-1">
+                <span className="text-base font-bold text-black">Espaces</span>
               </div>
               {currentCommunityGroup.spaceTree.length > 0 ? (
                 currentCommunityGroup.spaceTree.map((node) => (
@@ -681,7 +691,7 @@ export function Layout() {
                   />
                 ))
               ) : (
-                <p className="text-xs text-muted-foreground px-3">Aucun espace dans cette communauté.</p>
+                <p className="text-[11px] text-muted-foreground/50 px-2">Aucun espace dans cette communauté.</p>
               )}
             </div>
           </>
@@ -690,19 +700,19 @@ export function Layout() {
             {/* Global mode: full sidebar */}
             {/* Favorites */}
             {favoriteSpaces.length > 0 && (
-              <div id="sidebar-favorites" className="pt-2 pb-2 border-b border-border">
-                <div className="flex items-center px-3 mb-2">
+              <div id="sidebar-favorites" className="pt-1.5 pb-1.5 border-b border-border/50">
+                <div className="flex items-center px-2 mb-1">
                   <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favoris</span>
+                  <span className="text-base font-bold text-black">Favoris</span>
                 </div>
                 {favoriteSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
                       to={`/spaces/${space.id}`}
-                      className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                      className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-accent'
+                          : 'hover:bg-accent/50'
                       }`}
                     >
                       {space.avatarUrl ? (
@@ -714,7 +724,7 @@ export function Layout() {
                     </Link>
                     <button
                       onClick={() => handleToggleFavorite(space.id)}
-                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       title="Retirer des favoris"
                     >
                       <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
@@ -726,19 +736,19 @@ export function Layout() {
 
             {/* Recents */}
             {user && recentSpaces.length > 0 && (
-              <div id="sidebar-recents" className="pt-2 pb-2 border-b border-border">
-                <div className="flex items-center px-3 mb-2">
-                  <Clock className="w-3 h-3 text-muted-foreground mr-1.5 flex-shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Récents</span>
+              <div id="sidebar-recents" className="pt-1.5 pb-1.5 border-b border-border/50">
+                <div className="flex items-center px-2 mb-1">
+                  <Clock className="w-3 h-3 text-muted-foreground/60 mr-1.5 flex-shrink-0" />
+                  <span className="text-base font-bold text-black">Récents</span>
                 </div>
                 {recentSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
                       to={`/spaces/${space.id}`}
-                      className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                      className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-accent'
+                          : 'hover:bg-accent/50'
                       }`}
                     >
                       {space.avatarUrl ? (
@@ -750,7 +760,7 @@ export function Layout() {
                     </Link>
                     <button
                       onClick={() => handleToggleFavorite(space.id)}
-                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       title="Ajouter aux favoris"
                     >
                       <Star className="w-3 h-3 text-muted-foreground hover:text-yellow-500" />
@@ -762,19 +772,19 @@ export function Layout() {
 
             {/* Personal spaces (authenticated only) */}
             {user && mySpaces.length > 0 && (
-              <div className="pt-2 pb-2 border-b border-border">
-                <div className="flex items-center justify-between px-3 mb-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mes espaces</span>
+              <div className="pt-1.5 pb-1.5 border-b border-border/50">
+                <div className="flex items-center justify-between px-2 mb-1">
+                  <span className="text-base font-bold text-black">Mes espaces</span>
                 </div>
                 {mySpaces.map((space, i) => (
                   <Link
                     key={space.id}
                     id={i === 0 ? 'sidebar-first-space' : undefined}
                     to={`/spaces/${space.id}`}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
+                    className={`flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                       currentSpaceId === space.id
                         ? 'bg-primary/10 text-primary font-medium'
-                        : 'hover:bg-accent'
+                        : 'hover:bg-accent/50'
                     }`}
                   >
                     {space.avatarUrl ? (
@@ -790,7 +800,7 @@ export function Layout() {
 
             {/* Communities with their spaces */}
             {communityGroups.map(({ community, spaceTree }, groupIndex) => {
-              const isExpanded = !collapsedCommunityIds.has(community.id);
+              const isExpanded = expandedCommunityIds.has(community.id);
               const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
               return (
                 <CommunitySection
@@ -814,11 +824,9 @@ export function Layout() {
 
             {/* Independent group spaces (no community) */}
             {independentSpaces.length > 0 && (
-              <div className="pt-2">
-                <div className="flex items-center justify-between px-3 mb-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Autres espaces
-                  </span>
+              <div className="pt-1.5">
+                <div className="flex items-center justify-between px-2 mb-1">
+                  <span className="text-base font-bold text-black">Autres espaces</span>
                 </div>
                 {independentSpaces.map((node) => (
                   <SpaceTreeItem
@@ -840,6 +848,24 @@ export function Layout() {
 
       {/* Footer sidebar */}
       <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
+        {user && (
+          <button
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-md hover:bg-accent transition-colors"
+          >
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-medium text-foreground truncate">{user.name}</p>
+              {user.email && <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>}
+            </div>
+          </button>
+        )}
         <button
           id="sidebar-help-button"
           onClick={() => startTour()}
@@ -879,7 +905,7 @@ export function Layout() {
       {/* Sidebar - desktop: static resizable, mobile: slide-over (hidden on auth pages) */}
       {!isAuthPage && <aside
         className={`
-          bg-muted border-r border-border flex flex-col flex-shrink-0 h-full
+          bg-white dark:bg-background border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
           transition-transform duration-200 md:transition-none md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -963,16 +989,6 @@ export function Layout() {
             {user ? (
               <>
                 <NotificationBell />
-                <div className="flex items-center gap-2 flex-shrink-0 px-1">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <span className="text-xs font-medium text-foreground truncate max-w-[80px] hidden md:inline">{user.name}</span>
-                </div>
               </>
             ) : (
               <div className="flex items-center gap-3">
