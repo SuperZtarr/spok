@@ -23,6 +23,7 @@ interface SpaceState {
   // Spaces whose child-space items should be included in views
   includeChildrenSpaceIds: Set<string>;
   toggleIncludeChildren: (spaceId: string, descendantIds?: string[]) => void;
+  clearIncludeChildren: () => void;
 }
 
 export const useSpaceStore = create<SpaceState>()((set) => ({
@@ -40,4 +41,8 @@ export const useSpaceStore = create<SpaceState>()((set) => ({
     persistIds(next);
     return { includeChildrenSpaceIds: next };
   }),
+  clearIncludeChildren: () => {
+    persistIds(new Set());
+    set({ includeChildrenSpaceIds: new Set() });
+  },
 }));

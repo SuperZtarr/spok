@@ -112,7 +112,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-h-96 flex flex-col rounded-xl border border-border/50 bg-card shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-h-[calc(100vh-4rem)] flex flex-col rounded-xl border border-border/50 bg-card shadow-lg z-50">
           <div className="flex-1 overflow-y-auto min-h-0">
           {isLoading && (
             <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
@@ -201,9 +201,9 @@ export function GlobalSearch() {
             <Link
               to={`/search?q=${encodeURIComponent(debouncedQuery)}`}
               onClick={() => { setIsOpen(false); setQuery(''); setDebouncedQuery(''); }}
-              className="flex items-center justify-between px-3 py-2.5 text-sm text-primary hover:bg-accent/50 transition-colors border-t border-border/50"
+              className="flex items-center justify-between px-4 py-3 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors border-t border-border/50 rounded-b-xl"
             >
-              <span>Recherche avancee</span>
+              <span>Recherche avancée</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           )}

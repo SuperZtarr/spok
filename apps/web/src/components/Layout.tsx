@@ -439,9 +439,9 @@ export function Layout() {
     enabled: !!currentSpaceId,
   });
 
-  // Detect current community from URL or from current space
+  // Detect current community from URL only — not from cached space data
   const communityMatch = location.pathname.match(/\/communities\/([^/]+)/);
-  const currentCommunityId = communityMatch?.[1] || currentSpace?.communityId || null;
+  const currentCommunityId = communityMatch?.[1] || (currentSpaceId ? currentSpace?.communityId : null) || null;
 
   // Current community object for immersive sidebar
   const currentCommunity = useMemo(() => {
@@ -931,9 +931,9 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="border-b border-border bg-card flex items-center flex-shrink-0">
+        <header className="border-b border-border bg-card flex items-stretch flex-shrink-0 h-12">
           {/* Left: hamburger + title + badges */}
-          <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 py-2">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 flex-shrink-0">
             {/* Hamburger menu (mobile, hidden on auth pages) */}
             {!isAuthPage && (
               <button
@@ -970,26 +970,27 @@ export function Layout() {
               )}
             </div>
           </div>
-          {/* Quick add button when no space selected */}
-          {user && !currentSpaceId && mySpaces.length > 0 && (
-            <Link
-              to={`/spaces/${mySpaces[0].id}/content`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex-shrink-0"
-              title="Ajouter un item dans mon espace personnel"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nouvel item</span>
-            </Link>
-          )}
 
-          {/* Right: Menu principal + Recherche + Notifications + Vignette utilisateur */}
-          <div className="flex items-center gap-2 ml-auto flex-shrink min-w-0 px-4 md:px-5">
-            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} />
+          {/* Menu principal — prend tout l'espace disponible, plein hauteur */}
+          <div className="flex-1 flex items-stretch min-w-0 overflow-hidden">
+            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} currentCommunityId={currentCommunityId} currentCommunityName={currentCommunity?.name || null} />
+          </div>
+
+          {/* Right: Quick add + Recherche + Notifications */}
+          <div className="flex items-center gap-2 flex-shrink-0 px-4 md:px-5">
+            {user && !currentSpaceId && mySpaces.length > 0 && (
+              <Link
+                to={`/spaces/${mySpaces[0].id}/content`}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                title="Ajouter un item dans mon espace personnel"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Nouvel item</span>
+              </Link>
+            )}
             <div id="header-global-search" className="hidden sm:block"><GlobalSearch /></div>
             {user ? (
-              <>
-                <NotificationBell />
-              </>
+              <NotificationBell />
             ) : (
               <div className="flex items-center gap-3">
                 <Link to="/login" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">Connexion</Link>
