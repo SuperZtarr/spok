@@ -206,16 +206,18 @@ function SpaceTreeItem({
             }`} />
           </button>
         )}
-        <input
-          type="checkbox"
-          checked={isIncludeChildren}
-          onChange={(e) => { e.stopPropagation(); toggleIncludeChildren(node.id, collectDescendantIds(node)); }}
-          onClick={(e) => e.stopPropagation()}
-          className={`w-3.5 h-3.5 rounded flex-shrink-0 cursor-pointer accent-primary transition-opacity ${
-            isIncludeChildren ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
-          }`}
-          title="Inclure les éléments des sous-espaces"
-        />
+        {currentSpaceId && (
+          <input
+            type="checkbox"
+            checked={isIncludeChildren}
+            onChange={(e) => { e.stopPropagation(); toggleIncludeChildren(node.id, collectDescendantIds(node)); }}
+            onClick={(e) => e.stopPropagation()}
+            className={`w-3.5 h-3.5 rounded flex-shrink-0 cursor-pointer accent-primary transition-opacity ${
+              isIncludeChildren ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
+            }`}
+            title="Inclure les éléments des sous-espaces"
+          />
+        )}
       </div>
       {hasChildren && isExpanded && (
         node.children.map((child) => (
@@ -241,6 +243,7 @@ export function Layout() {
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
   const { spaceViews } = useMenuItems();
+  const { clearIncludeChildren } = useSpaceStore();
   const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -478,6 +481,15 @@ export function Layout() {
         localStorage.removeItem('spok-expanded-communities');
       }
     }
+  }, [currentCommunityId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear "include children" checkboxes when switching communities
+  const prevCommunityIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevCommunityIdRef.current !== null && prevCommunityIdRef.current !== currentCommunityId) {
+      clearIncludeChildren();
+    }
+    prevCommunityIdRef.current = currentCommunityId;
   }, [currentCommunityId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track recent spaces in localStorage
