@@ -423,35 +423,24 @@ export function buildPortalNodesAndEdges(
     }
   });
 
-  // 3. Position child-space portal nodes — place in the angular gap after main branches
+  // 3. Position child-space portal nodes — fixed arc centered above the space node.
+  // Items always fill the full circle so gap-based placement is unreliable.
+  // Instead, portals are placed at a large fixed radius (no collision with items)
+  // centered on angle -π/2 (top), spreading symmetrically at 40° per portal.
   const totalPortalSpaces = portalSpacesList.length;
-  const rootStart = arcStart ?? -Math.PI / 2;
-  const arcEnd = rootArcEnd ?? rootStart; // fallback if not provided
-  // Gap = remaining angle in the circle after main branches
-  const gapAngle = (rootStart + 2 * Math.PI) - arcEnd;
-  // Ensure portals always get a minimum arc spread (30° per portal)
-  const MIN_PORTAL_ARC_PER_SPACE = Math.PI / 6; // 30° per portal
-  const minRequiredArc = totalPortalSpaces * MIN_PORTAL_ARC_PER_SPACE;
-  const useExtendedRadius = gapAngle < minRequiredArc;
-  const portalArcSpread = useExtendedRadius
-    ? minRequiredArc
-    : Math.min(gapAngle * 0.8, totalPortalSpaces * (Math.PI / 4));
-  const portalPadding = useExtendedRadius ? 0 : (gapAngle - portalArcSpread) / 2;
-  // When gap is too small, center portals at the gap midpoint (slight overlap with main arc is OK)
-  const gapMid = arcEnd + gapAngle / 2;
-  const portalArcStart = useExtendedRadius
-    ? gapMid - portalArcSpread / 2
-    : arcEnd + portalPadding;
-  // Extra radius to avoid visual collision when portals overlap with main arc
-  const EXTENDED_RADIUS_BONUS = useExtendedRadius ? 200 : 0;
+  const PORTAL_ANGLE_STEP = Math.PI / 4.5; // 40° between portals
+  const PORTAL_CENTER_ANGLE = -Math.PI / 2; // top of space node
+  const portalTotalSpread = (totalPortalSpaces - 1) * PORTAL_ANGLE_STEP;
+  const portalArcStart = PORTAL_CENTER_ANGLE - portalTotalSpread / 2;
+  const PORTAL_BASE_RADIUS = BASE_PORTAL_DIST + 250; // larger than item radius to avoid overlap
 
   portalSpacesList.forEach((portalSpaceEntry, index) => {
     const childPortalId = `child-space-${portalSpaceEntry.id}`;
     const portalItemCount = portalItemsBySpace.get(portalSpaceEntry.id)?.length || 0;
-    const childSpaceRadius = BASE_PORTAL_DIST + Math.sqrt(portalItemCount) * 100 + EXTENDED_RADIUS_BONUS;
+    const childSpaceRadius = PORTAL_BASE_RADIUS + Math.sqrt(portalItemCount) * 80;
     const angle = totalPortalSpaces === 1
-      ? portalArcStart + portalArcSpread / 2
-      : portalArcStart + (index * portalArcSpread) / Math.max(1, totalPortalSpaces - 1);
+      ? PORTAL_CENTER_ANGLE
+      : portalArcStart + index * PORTAL_ANGLE_STEP;
 
     const cx = spacePos.x + childSpaceRadius * Math.cos(angle);
     const cy = spacePos.y + childSpaceRadius * Math.sin(angle);
