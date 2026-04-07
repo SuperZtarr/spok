@@ -17,39 +17,46 @@ import {
   FileVideo,
   FileAudio,
   Presentation,
-  FileType,
 } from 'lucide-react';
+import type { SVGProps } from 'react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
 import { DEFAULT_TYPE_LABELS } from '@spok/shared';
+import { getOfficeFileIcon } from '../components/ui/FileTypeIcon';
+
+// Generic icon component type (compatible with both Lucide icons and custom SVG components)
+export type IconComponent = React.ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
 
 // =============================================================================
 // DOCUMENT FILE ICONS - Icône par extension de fichier
 // =============================================================================
-function getDocumentFileIcon(url: string): typeof FileText {
+function getDocumentFileIcon(url: string): IconComponent {
+  // Try branded Office icons first (Word, Excel, PowerPoint, PDF)
+  const officeIcon = getOfficeFileIcon(url);
+  if (officeIcon) return officeIcon;
+
   // Strip query params and hash before extracting extension (handles Confluence URLs, R2 image URLs, etc.)
   const cleanUrl = url.split('?')[0].split('#')[0];
   const ext = cleanUrl.split('.').pop()?.toLowerCase() || '';
-  if (ext === 'pdf') return FileType;
-  if (['doc', 'docx', 'odt', 'rtf', 'txt', 'md'].includes(ext)) return FileText;
-  if (['xls', 'xlsx', 'csv', 'ods', 'tsv'].includes(ext)) return FileSpreadsheet;
-  if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) return Presentation;
+  if (['txt', 'md', 'rtf'].includes(ext)) return FileText;
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) return FileImage;
   if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext)) return FileVideo;
   if (['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext)) return FileAudio;
   if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) return FileArchive;
   if (['js', 'ts', 'tsx', 'jsx', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'css', 'html', 'json', 'xml', 'yaml', 'yml', 'sh', 'sql'].includes(ext)) return FileCode;
+  if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) return Presentation;
+  if (['xls', 'xlsx', 'csv', 'ods', 'tsv'].includes(ext)) return FileSpreadsheet;
   return File;
 }
 
 // =============================================================================
 // TYPE ICONS - Icônes associées à chaque type d'item
 // =============================================================================
-export function getTypeIcon(type: string, url?: string | null): typeof FileText {
+export function getTypeIcon(type: string, url?: string | null): IconComponent {
   if (type === 'DOCUMENT' && url) return getDocumentFileIcon(url);
   return TYPE_ICONS[type] || FileText;
 }
 
-export const TYPE_ICONS: Record<string, typeof FileText> = {
+export const TYPE_ICONS: Record<string, IconComponent> = {
   NOTE: FileText,
   PROJECT: FolderKanban,
   TASK: CheckSquare,

@@ -1,18 +1,13 @@
 import { useMemo, useCallback } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { FileText, Download, File, FileSpreadsheet, FileImage, FileArchive, FolderKanban, Trash2, Plus, FolderInput, FolderPlus, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil } from 'lucide-react';
+import { FileText, Download, FolderKanban, Trash2, Plus, FolderInput, FolderPlus, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { RoleGuard } from '../RoleGuard';
+import { getTypeIcon } from '../../constants/ui';
 
 function getFileIcon(url: string) {
-  const ext = url.split('.').pop()?.toLowerCase() || '';
-  if (['pdf'].includes(ext)) return FileText;
-  if (['doc', 'docx', 'odt', 'rtf', 'txt', 'md'].includes(ext)) return FileText;
-  if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return FileSpreadsheet;
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return FileImage;
-  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return FileArchive;
-  return File;
+  return getTypeIcon('DOCUMENT', url);
 }
 
 function getFileExtension(url: string): string {
