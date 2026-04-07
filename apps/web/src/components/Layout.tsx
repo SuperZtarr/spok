@@ -991,14 +991,14 @@ export function Layout() {
           {/* Right: Quick add + Recherche + Notifications */}
           <div className="flex items-center gap-2 flex-shrink-0 px-4 md:px-5">
             {user && !currentSpaceId && mySpaces.length > 0 && (
-              <Link
-                to={`/spaces/${mySpaces[0].id}/content`}
+              <button
+                onClick={() => navigate(`/spaces/${mySpaces[0].id}/content?newItem=true`)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                 title="Ajouter un item dans mon espace personnel"
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Nouvel item</span>
-              </Link>
+              </button>
             )}
             <div id="header-global-search" className="hidden sm:block"><GlobalSearch /></div>
             {user ? (

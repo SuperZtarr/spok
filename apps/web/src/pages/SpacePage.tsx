@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -81,6 +81,7 @@ import { useAuthStore } from '../stores/auth';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { mode: viewMode, setMode, setAllowedViews } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
@@ -444,6 +445,14 @@ export function SpacePage() {
       { onSuccess: (created: any) => { setEditingItemId(created.id); } },
     );
   }, [filter, createItemMutation]);
+
+  // Déclencher la création si ?newItem=true (venant du bouton header)
+  useEffect(() => {
+    if (searchParams.get('newItem') === 'true' && !createItemMutation.isPending) {
+      setSearchParams(prev => { prev.delete('newItem'); return prev; }, { replace: true });
+      handleNewItem();
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Render ---
   // Overview mode — full page, no toolbar
