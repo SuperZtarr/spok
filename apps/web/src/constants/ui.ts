@@ -17,6 +17,7 @@ import {
   FileVideo,
   FileAudio,
   Presentation,
+  FileType,
 } from 'lucide-react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
 import { DEFAULT_TYPE_LABELS } from '@spok/shared';
@@ -25,8 +26,10 @@ import { DEFAULT_TYPE_LABELS } from '@spok/shared';
 // DOCUMENT FILE ICONS - Icône par extension de fichier
 // =============================================================================
 function getDocumentFileIcon(url: string): typeof FileText {
-  const ext = url.split('.').pop()?.toLowerCase() || '';
-  if (ext === 'pdf') return FileText;
+  // Strip query params and hash before extracting extension (handles Confluence URLs, R2 image URLs, etc.)
+  const cleanUrl = url.split('?')[0].split('#')[0];
+  const ext = cleanUrl.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'pdf') return FileType;
   if (['doc', 'docx', 'odt', 'rtf', 'txt', 'md'].includes(ext)) return FileText;
   if (['xls', 'xlsx', 'csv', 'ods', 'tsv'].includes(ext)) return FileSpreadsheet;
   if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) return Presentation;
