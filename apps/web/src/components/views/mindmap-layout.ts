@@ -133,7 +133,7 @@ export function calculateLayout(
     const childVisibleCounts = children.map(c => countVisible(c));
     const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
 
-    const MIN_SIBLING_SPACING = 130;
+    const MIN_SIBLING_SPACING = 190;
     const spacingRadius = count > 1
       ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
       : 0;
@@ -175,7 +175,7 @@ export function calculateLayout(
     const rootVisibleCounts = rootChildren.map(c => countVisible(c));
     const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
 
-    const MIN_NODE_SPACING = 160;
+    const MIN_NODE_SPACING = 200;
     const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
 
     const equalArc = (2 * Math.PI) / rootCount;
@@ -560,7 +560,7 @@ export function buildPortalNodesAndEdges(
         const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
         const count = children.length;
 
-        const MIN_SIBLING_SPACING = 130;
+        const MIN_SIBLING_SPACING = 190;
         const spacingRadius = count > 1
           ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
           : 0;
@@ -602,7 +602,7 @@ export function buildPortalNodesAndEdges(
       return equalArc * 0.5 + proportionalArc * 0.5;
     });
 
-    const MIN_NODE_SPACING = 160;
+    const MIN_NODE_SPACING = 200;
     const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
 
     let cumulativeAngle = baseAngle - totalArcSpan / 2;

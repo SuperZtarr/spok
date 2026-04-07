@@ -110,7 +110,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
 
   return (
     <div
-      className={`px-4 py-2 rounded-lg shadow-md min-w-[100px] max-w-[250px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+      className={`px-3 py-2 rounded-lg shadow-md min-w-[90px] max-w-[200px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isPortal ? 'border-2 border-dashed border-primary/40' : isRoot ? 'border-primary border-3' : 'border-2 border-gray-300'
       } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isSearchMatch ? 'ring-4 ring-yellow-400 ring-offset-2 scale-110 z-10 shadow-lg' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
       style={{ backgroundColor: hexColor, color: textColor }}
@@ -147,7 +147,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
 
         <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
 
-        <span className="text-sm font-medium line-clamp-3 break-words" title={item.title}>{item.title}</span>
+        <span className="text-sm font-medium line-clamp-2 break-words" title={item.title}>{item.title}</span>
 
 
         {hasImage && (
