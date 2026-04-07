@@ -86,7 +86,7 @@ export function calculateLayout(
   totalItemCount: number,
   callbacks: MindMapCallbacks,
   options: MindMapLayoutOptions,
-): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number } {
+): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number; arcStart: number } {
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onTogglePin } = callbacks;
   const { hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
 
