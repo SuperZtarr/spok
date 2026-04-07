@@ -280,29 +280,31 @@ export function calculateLayout(
       },
     });
 
-    // Edge from parent
-    const parentId = item.parentId || SPACE_NODE_ID;
-    const parentPos = nodePositionMap.get(parentId);
+    // Edge from parent — fall back to __space__ if parentId not in layout (orphaned item)
+    const effectiveParentId = (item.parentId && nodePositionMap.has(item.parentId))
+      ? item.parentId
+      : SPACE_NODE_ID;
+    const parentPos = nodePositionMap.get(effectiveParentId);
     if (parentPos) {
       const parentAdjusted = { x: parentPos.x - 75, y: parentPos.y - 20 };
       const { sourceHandle, targetHandle } = getBestHandles(parentAdjusted, adjustedPos);
       const depth = maxDepth(item);
-      const edgeWidth = parentId === SPACE_NODE_ID
+      const edgeWidth = effectiveParentId === SPACE_NODE_ID
         ? 4
         : Math.max(1.5, Math.min(4, 1.5 + depth * 0.8));
-      const edgeOpacity = parentId === SPACE_NODE_ID
+      const edgeOpacity = effectiveParentId === SPACE_NODE_ID
         ? 0.9
         : Math.max(0.5, Math.min(0.9, 0.5 + depth * 0.15));
 
       edges.push({
-        id: `${parentId}-${item.id}`,
-        source: parentId,
+        id: `${effectiveParentId}-${item.id}`,
+        source: effectiveParentId,
         target: item.id,
         sourceHandle,
         targetHandle,
         type: 'default',
         style: {
-          stroke: parentId === SPACE_NODE_ID ? 'hsl(var(--primary))' : '#94a3b8',
+          stroke: effectiveParentId === SPACE_NODE_ID ? 'hsl(var(--primary))' : '#94a3b8',
           strokeWidth: edgeWidth,
           opacity: edgeOpacity,
         },
@@ -370,7 +372,7 @@ export function buildPortalNodesAndEdges(
   ctx: PortalBuildContext,
   relationEdges: Edge[],
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
-  const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions, rootArcEnd, arcStart } = ctx;
+  const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions } = ctx;
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onTogglePin } = callbacks;
   const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet } = options;
 

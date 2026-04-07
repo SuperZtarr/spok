@@ -127,15 +127,13 @@ function MindMapViewInner({
   // Pinned node IDs (protected from reorganization)
   const pinnedIds = useRef<Set<string>>(new Set());
 
-  // Load saved positions from localStorage
+  // Load saved positions from localStorage (clear if no data for this space)
   useEffect(() => {
     if (!positionsStorageKey) return;
     try {
       const stored = localStorage.getItem(positionsStorageKey);
-      if (stored) {
-        savedPositions.current = JSON.parse(stored);
-      }
-    } catch { /* ignore */ }
+      savedPositions.current = stored ? JSON.parse(stored) : {};
+    } catch { savedPositions.current = {}; }
   }, [positionsStorageKey]);
 
   // Load pinned IDs from localStorage
