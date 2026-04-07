@@ -523,13 +523,13 @@ function MindMapViewInner({
     }
 
     // Structural change: full layout recalculation
-    const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
+    const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd, arcStart } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
     const positionedNodes = applyPositions(newNodes);
 
     const { portalNodes, portalEdges, portalRelationEdges } = buildPortalNodesAndEdges({
       positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces,
       portalSpaceNames, statuses, collapsedIds, items, callbacks: layoutCallbacks,
-      options: layoutOptions, removePortal, savedPositions: savedPositions.current, rootArcEnd,
+      options: layoutOptions, removePortal, savedPositions: savedPositions.current, rootArcEnd, arcStart,
     }, relationEdges);
 
     const allNodes = [...positionedNodes, ...portalNodes];
@@ -861,7 +861,7 @@ function MindMapViewInner({
     savedPositions.current = {};
     if (positionsStorageKey) localStorage.removeItem(positionsStorageKey);
 
-    const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
+    const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd, arcStart } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
 
     // Restore pinned positions and shift descendants
     const d3PosMap = new Map(newNodes.map(n => [n.id, { x: n.position.x, y: n.position.y }]));
@@ -908,7 +908,7 @@ function MindMapViewInner({
     const { portalNodes, portalEdges, portalRelationEdges } = buildPortalNodesAndEdges({
       positionedNodes: repositionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces,
       portalSpaceNames, statuses, collapsedIds, items, callbacks: layoutCallbacks,
-      options: layoutOptions, removePortal, savedPositions: {}, rootArcEnd,  // Don't apply saved positions in reset
+      options: layoutOptions, removePortal, savedPositions: {}, rootArcEnd, arcStart,  // Don't apply saved positions in reset
     }, relationEdges);
 
     const allNodes = [...repositionedNodes, ...portalNodes];

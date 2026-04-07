@@ -167,7 +167,10 @@ export function calculateLayout(
   // Layout root children with proportional angular allocation
   const rootChildren = rootDatum.children || [];
   const rootCount = rootChildren.length;
-  let rootArcEnd = -Math.PI / 2; // default: no branches
+  // Shift arc start by half a slot to avoid placing items exactly at ±90° (straight up/down),
+  // which causes vertical chains when children inherit the same downward direction.
+  const arcStart = -Math.PI / 2 + (rootCount > 0 ? Math.PI / rootCount : 0);
+  let rootArcEnd = arcStart; // default: no branches
   if (rootCount > 0) {
     const rootVisibleCounts = rootChildren.map(c => countVisible(c));
     const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
@@ -181,7 +184,7 @@ export function calculateLayout(
       return equalArc * 0.5 + proportionalArc * 0.5;
     });
 
-    let cumulativeAngle = -Math.PI / 2;
+    let cumulativeAngle = arcStart;
     for (let i = 0; i < rootCount; i++) {
       const child = rootChildren[i];
       const childArc = rootArcs[i];
@@ -338,7 +341,7 @@ export function calculateLayout(
     });
   });
 
-  return { nodes, edges, relationEdges, rootArcEnd };
+  return { nodes, edges, relationEdges, rootArcEnd, arcStart };
 }
 
 // ===================================================================
@@ -360,13 +363,14 @@ export interface PortalBuildContext {
   removePortal: (id: string) => void;
   savedPositions: Record<string, { x: number; y: number }>;
   rootArcEnd?: number;
+  arcStart?: number;
 }
 
 export function buildPortalNodesAndEdges(
   ctx: PortalBuildContext,
   relationEdges: Edge[],
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
-  const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions, rootArcEnd } = ctx;
+  const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions, rootArcEnd, arcStart } = ctx;
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onTogglePin } = callbacks;
   const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet } = options;
 
@@ -421,7 +425,7 @@ export function buildPortalNodesAndEdges(
 
   // 3. Position child-space portal nodes — place in the angular gap after main branches
   const totalPortalSpaces = portalSpacesList.length;
-  const rootStart = -Math.PI / 2;
+  const rootStart = arcStart ?? -Math.PI / 2;
   const arcEnd = rootArcEnd ?? rootStart; // fallback if not provided
   // Gap = remaining angle in the circle after main branches
   const gapAngle = (rootStart + 2 * Math.PI) - arcEnd;
