@@ -23,7 +23,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           FILENAME="spok-$(date +%Y-%m-%d).dump"
-          pg_dump \
+          /usr/lib/postgresql/17/bin/pg_dump \
             "$DATABASE_URL" \
             --format=custom \
             --no-acl \
