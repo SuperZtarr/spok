@@ -6,9 +6,10 @@ export type AuditAction =
   | 'BULK_MOVE'
   | 'ADD_RELATION'
   | 'UPDATE_RELATION'
-  | 'DELETE_RELATION';
+  | 'DELETE_RELATION'
+  | 'BACKUP';
 
-export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community';
+export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community' | 'System';
 
 export interface AuditLogChanges {
   before?: Record<string, unknown>;

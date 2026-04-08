@@ -27,7 +27,9 @@ jobs:
             --no-acl \
             --no-owner \
             --file="$FILENAME"
+          SIZE=$(stat -c%s "$FILENAME")
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "SIZE=$SIZE" >> $GITHUB_ENV
 
       - name: Upload to R2
         env:
@@ -59,5 +61,17 @@ jobs:
               fi
             done
 
+      - name: Log backup in SPOK
+        run: |
+          TOKEN=$(curl -s -X POST "${{ secrets.SPOK_API_URL }}/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${{ secrets.SPOK_ADMIN_EMAIL }}\",\"password\":\"${{ secrets.SPOK_ADMIN_PASSWORD }}\"}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['tokens']['accessToken'])")
+
+          curl -s -X POST "${{ secrets.SPOK_API_URL }}/admin/backup-log" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN" \
+            -d "{\"filename\":\"$FILENAME\",\"sizeBytes\":$SIZE,\"status\":\"success\"}"
+
       - name: Summary
-        run: echo "✓ Backup $FILENAME uploadé dans R2 (backups/)"
+        run: echo "Backup $FILENAME ($(numfmt --to=iec $SIZE)) uploadé dans R2 et tracé dans SPOK."
