@@ -19,10 +19,12 @@ import {
   FolderInput,
   AlertTriangle,
   Loader2,
+  CalendarClock,
+  EyeOff,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
-import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
+import { buildStatusColorMap, buildStatusLabelMap, isItemDeferred } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useViewOnboarding } from '../hooks/useOnboarding';
 import { useSpaces } from '../hooks/useSpaces';
@@ -66,7 +68,7 @@ import { DocumentsView } from '../components/views/DocumentsView';
 import { BugsView } from '../components/views/BugsView';
 import { OverviewView } from '../components/views/OverviewView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { StatusPropagationModal } from '../components/StatusPropagationModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
 import { MergeItemModal } from '../components/MergeItemModal';
 
@@ -102,6 +104,7 @@ export function SpacePage() {
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeferred, setShowDeferred] = useState(false);
   const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const { includeChildrenSpaceIds } = useSpaceStore();
 
@@ -235,16 +238,28 @@ export function SpacePage() {
   // All items for lookups (allItemsData preferred, fallback to itemsData)
   const allItems = useMemo(() => allItemsData?.data || itemsData?.data || [], [allItemsData?.data, itemsData?.data]);
 
+  // --- Deferred items (statut planifié + startDate > 30j) ---
+  const statuses = useMemo(() => referentiels?.statuses || [], [referentiels]);
+
+  const deferredItems = useMemo(() => {
+    const all = allItemsData?.data || itemsData?.data || [];
+    return all.filter((item: Item) => isItemDeferred(item, statuses));
+  }, [allItemsData?.data, itemsData?.data, statuses]);
+
+  const deferredIds = useMemo(() => new Set(deferredItems.map((i: Item) => i.id)), [deferredItems]);
+
   // --- Search ---
   const filterBySearch = useCallback((items: Item[] | undefined): Item[] => {
     if (!items) return [];
-    if (!searchQuery.trim() || isHighlightMode) return items;
+    // Filter deferred items unless explicitly shown
+    const visible = showDeferred ? items : items.filter((item: Item) => !deferredIds.has(item.id));
+    if (!searchQuery.trim() || isHighlightMode) return visible;
     const query = searchQuery.toLowerCase();
-    return items.filter((item) =>
+    return visible.filter((item) =>
       item.title.toLowerCase().includes(query) ||
       stripMarkup(item.description || '').toLowerCase().includes(query)
     );
-  }, [searchQuery, isHighlightMode]);
+  }, [searchQuery, isHighlightMode, showDeferred, deferredIds]);
 
   const searchMatchIds = useMemo((): Set<string> | undefined => {
     if (!searchQuery.trim()) return undefined;
@@ -497,6 +512,25 @@ export function SpacePage() {
           onStartTour={() => startViewTour(viewMode)}
           pulseHelp={pulseHelp}
         />
+
+        {/* Deferred items banner */}
+        {deferredItems.length > 0 && (
+          <button
+            onClick={() => setShowDeferred(v => !v)}
+            className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md mb-1 border transition-colors ${
+              showDeferred
+                ? 'bg-sky-100 border-sky-300 text-sky-800'
+                : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            {showDeferred ? <EyeOff className="w-3.5 h-3.5 flex-shrink-0" /> : <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" />}
+            <span>
+              {showDeferred
+                ? `Masquer les ${deferredItems.length} élément${deferredItems.length > 1 ? 's' : ''} planifiés à long terme`
+                : `${deferredItems.length} élément${deferredItems.length > 1 ? 's' : ''} planifié${deferredItems.length > 1 ? 's' : ''} à long terme (démarrage dans plus de 30 jours) — cliquer pour afficher`}
+            </span>
+          </button>
+        )}
 
         {/* Items / Views */}
         <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' ? ' overflow-hidden flex flex-col' : ''}`}>
@@ -1206,13 +1240,13 @@ export function SpacePage() {
       </Modal>
 
       {/* Status propagation confirmation */}
-      <ConfirmModal
+      <StatusPropagationModal
         isOpen={!!actions.pendingStatusPropagation}
-        onClose={() => actions.setPendingStatusPropagation(null)}
-        onConfirm={() => actions.confirmStatusPropagation()}
-        title="Propager le statut aux enfants"
-        message={`Voulez-vous aussi appliquer ce statut aux ${actions.pendingStatusPropagation?.childCount || 0} descendant${(actions.pendingStatusPropagation?.childCount || 0) > 1 ? 's' : ''} de « ${actions.pendingStatusPropagation?.itemTitle || ''} » ?`}
-        confirmLabel="Propager"
+        itemTitle={actions.pendingStatusPropagation?.itemTitle || ''}
+        childCount={actions.pendingStatusPropagation?.childCount || 0}
+        onPropagate={() => actions.confirmStatusPropagation()}
+        onKeepOnly={() => actions.setPendingStatusPropagation(null)}
+        onCancel={() => actions.cancelStatusPropagation()}
       />
     </div>
   );

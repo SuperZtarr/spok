@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp, CalendarClock } from 'lucide-react';
 import type { StatusConfig } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -204,7 +204,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                 Aperçu
               </span>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm" title="Masquer dans les vues quand startDate > 30 jours">
                 <input
                   type="checkbox"
                   checked={status.visible}
@@ -212,6 +212,17 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                   className="rounded"
                 />
                 Visible
+              </label>
+
+              <label className="flex items-center gap-1.5 text-sm text-sky-700" title="Masquer automatiquement dans les vues si la date de début est à plus de 30 jours">
+                <input
+                  type="checkbox"
+                  checked={!!status.deferredByDate}
+                  onChange={(e) => handleUpdate(status.id, { deferredByDate: e.target.checked })}
+                  className="rounded"
+                />
+                <CalendarClock className="w-3.5 h-3.5" />
+                Planifié
               </label>
 
               <Button
