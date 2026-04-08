@@ -15,14 +15,11 @@ jobs:
 
       - name: Dump database
         env:
-          PGHOST: ${{ secrets.DB_HOST }}
-          PGPORT: ${{ secrets.DB_PORT }}
-          PGUSER: ${{ secrets.DB_USER }}
-          PGDATABASE: ${{ secrets.DB_NAME }}
-          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           FILENAME="spok-$(date +%Y-%m-%d).dump"
           pg_dump \
+            "$DATABASE_URL" \
             --format=custom \
             --no-acl \
             --no-owner \
