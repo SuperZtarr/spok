@@ -11,6 +11,7 @@ import {
   ArrowRightLeft,
   Eye,
   RotateCcw,
+  DatabaseBackup,
 } from 'lucide-react';
 
 interface AuditLogItemProps {
@@ -32,6 +33,7 @@ const ACTION_CONFIG: Record<
   ADD_RELATION: { label: 'Ajout relation', icon: Link2, color: 'bg-teal-100 text-teal-800' },
   UPDATE_RELATION: { label: 'Modification relation', icon: Pencil, color: 'bg-teal-100 text-teal-800' },
   DELETE_RELATION: { label: 'Suppression relation', icon: Unlink, color: 'bg-orange-100 text-orange-800' },
+  BACKUP: { label: 'Sauvegarde', icon: DatabaseBackup, color: 'bg-gray-100 text-gray-800' },
 };
 
 function formatDate(dateString: string): string {

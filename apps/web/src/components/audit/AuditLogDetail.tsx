@@ -21,6 +21,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   ADD_RELATION: 'Ajout relation',
   UPDATE_RELATION: 'Modification relation',
   DELETE_RELATION: 'Suppression relation',
+  BACKUP: 'Sauvegarde',
 };
 
 function formatDate(dateString: string): string {
