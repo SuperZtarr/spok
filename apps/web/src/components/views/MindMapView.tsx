@@ -12,6 +12,7 @@ import {
   useReactFlow,
   ReactFlowProvider,
   Connection,
+  useNodesInitialized,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
@@ -115,6 +116,17 @@ function MindMapViewInner({
   const [showPortalDialog, setShowPortalDialog] = useState(false);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView, getIntersectingNodes, getNodes } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
+
+  // Recalculer les edges une fois que ReactFlow a mesuré les nœuds
+  useEffect(() => {
+    if (!nodesInitialized) return;
+    setEdges(currentEdges => {
+      const posMap = new Map(getNodes().map(n => [n.id, n.position]));
+      return recalculateEdgeHandles(currentEdges, posMap);
+    });
+    setTimeout(() => fitView({ padding: 0.1 }), 50);
+  }, [nodesInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // localStorage keys
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
