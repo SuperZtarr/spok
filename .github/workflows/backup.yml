@@ -1,0 +1,63 @@
+name: Backup PostgreSQL → R2
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # tous les jours à 2h UTC
+  workflow_dispatch:      # déclenchement manuel possible
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install postgresql-client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          FILENAME="spok-$(date +%Y-%m-%d).dump"
+          pg_dump \
+            --host=${{ secrets.DB_HOST }} \
+            --port=${{ secrets.DB_PORT }} \
+            --username=${{ secrets.DB_USER }} \
+            --dbname=${{ secrets.DB_NAME }} \
+            --format=custom \
+            --no-acl \
+            --no-owner \
+            --file="$FILENAME"
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 cp "$FILENAME" "s3://${{ secrets.R2_BUCKET_NAME }}/backups/$FILENAME" \
+            --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+            --region auto
+
+      - name: Purge dumps older than 30 days
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          CUTOFF=$(date -d '30 days ago' +%Y-%m-%d)
+          aws s3 ls "s3://${{ secrets.R2_BUCKET_NAME }}/backups/" \
+            --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+            --region auto \
+          | awk '{print $4}' \
+          | grep -E '^spok-[0-9]{4}-[0-9]{2}-[0-9]{2}\.dump$' \
+          | while read key; do
+              FILEDATE=$(echo "$key" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+              if [[ "$FILEDATE" < "$CUTOFF" ]]; then
+                echo "Suppression : $key"
+                aws s3 rm "s3://${{ secrets.R2_BUCKET_NAME }}/backups/$key" \
+                  --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+                  --region auto
+              fi
+            done
+
+      - name: Summary
+        run: echo "✓ Backup $FILENAME uploadé dans R2 (backups/)"
