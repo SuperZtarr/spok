@@ -195,7 +195,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
               onAbsorbChildren: canEdit ? onAbsorbChildren : undefined,
             }, {
               statusAction: canEdit && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
-              extraCreate: [
+              extraChildren: [
                 ...(hasPortalSupport && canEdit ? [{ id: 'add-portal', label: 'Ajouter un portail', icon: ExternalLink, onClick: () => onAddPortal(item.id) }] : []),
               ],
               extraOrganise: [
