@@ -13,8 +13,9 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { Trash2, ExternalLink, GripVertical, CheckSquare, Plus, Calendar, FolderInput, Copy, FolderPlus, FolderKanban, GripHorizontal, UserPlus, Merge, ArrowDownToLine, Printer, FileDown, Pencil } from 'lucide-react';
+import { ExternalLink, GripVertical, Calendar, FolderKanban, GripHorizontal, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
@@ -197,34 +198,27 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
         <RoleGuard role="MEMBER">
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
-            groups={[
-              {
-                actions: [
-                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                  ...(nextStatus !== undefined ? [{ id: 'next-status', label: nextStatusLabel || 'Suivant', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, nextStatus!) }] : []),
-                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                ],
-              },
-              {
-                actions: [
-                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                ],
-              },
-              {
+            groups={buildItemMenuGroups(item.id, {
+              onEdit,
+              onDelete,
+              onUpdateStatus,
+              onAddChild,
+              onMoveToSpace,
+              onDuplicateToSpace,
+              onConvertToSpace,
+              onSelfAssign,
+              onMerge,
+              onAbsorbChildren,
+            }, {
+              statusAction: nextStatus !== undefined ? { label: nextStatusLabel || 'Suivant', statusId: nextStatus! } : null,
+              extraSections: [{
+                label: 'Exporter',
                 actions: [
                   { id: 'print', label: 'Imprimer', icon: Printer, onClick: () => { printItem({ item: item as any }); } },
                   { id: 'pdf', label: 'Export PDF', icon: FileDown, onClick: () => { exportItemPDF({ item: item as any }); } },
                 ],
-              },
-              {
-                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-              },
-            ].filter(g => g.actions.length > 0)}
+              }],
+            })}
           />
         </div>
         </RoleGuard>

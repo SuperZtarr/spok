@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
-import { Plus, ChevronRight, ChevronDown, FolderOpen, FolderInput, FolderPlus, RotateCcw, ExternalLink, X, Copy, Trash2, CheckSquare, Pin, PinOff, UserPlus, Merge, ArrowDownToLine, Pencil } from 'lucide-react';
+import { ChevronRight, ChevronDown, FolderOpen, RotateCcw, ExternalLink, X, Pin, PinOff } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
 
 function ImageThumbnail({ url }: { url: string }) {
@@ -181,32 +182,26 @@ export function MindMapNode({ data }: MindMapNodeProps) {
           {/* Action menu inside the node */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
-            groups={[
-              ...(canEdit ? [{
-                label: 'Créer',
-                actions: [
-                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                  ...(hasPortalSupport ? [{ id: 'add-portal', label: 'Ajouter un portail', icon: ExternalLink, onClick: () => onAddPortal(item.id) }] : []),
-                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                ],
-              }] : []),
-              {
-                label: 'Organiser',
-                actions: [
-                  ...(canEdit && item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
-                  ...(hasChildren && !isCollapsed ? [{ id: 'reorganize', label: 'Réorganiser les enfants', icon: RotateCcw, onClick: () => onReorganizeChildren(item.id) }] : []),
-                  ...(canEdit && onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                  ...(canEdit && onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                ],
-              },
-              ...(canEdit ? [{
-                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-              }] : []),
-            ].filter(g => g.actions.length > 0)}
+            groups={buildItemMenuGroups(item.id, {
+              onEdit: canEdit ? onEdit : undefined,
+              onDelete: canEdit ? onDelete : undefined,
+              onUpdateStatus: canEdit ? onUpdateStatus : undefined,
+              onAddChild: canEdit ? onAddChild : undefined,
+              onMoveToSpace: canEdit ? onMoveToSpace : undefined,
+              onDuplicateToSpace: canEdit ? onDuplicateToSpace : undefined,
+              onConvertToSpace: canEdit ? onConvertToSpace : undefined,
+              onSelfAssign,
+              onMerge: canEdit ? onMerge : undefined,
+              onAbsorbChildren: canEdit ? onAbsorbChildren : undefined,
+            }, {
+              statusAction: canEdit && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+              extraCreate: [
+                ...(hasPortalSupport && canEdit ? [{ id: 'add-portal', label: 'Ajouter un portail', icon: ExternalLink, onClick: () => onAddPortal(item.id) }] : []),
+              ],
+              extraOrganise: [
+                ...(hasChildren && !isCollapsed ? [{ id: 'reorganize', label: 'Réorganiser les enfants', icon: RotateCcw, onClick: () => onReorganizeChildren(item.id) }] : []),
+              ],
+            })}
             triggerClassName="p-0.5 rounded hover:bg-black/10 transition-colors"
             side="right"
           />

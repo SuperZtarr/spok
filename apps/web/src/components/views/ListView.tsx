@@ -1,7 +1,8 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ExternalLink, FileText, CheckSquare, Plus, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderInput, FolderKanban, Copy, FolderPlus, UserPlus, Merge, ArrowDownToLine, Printer, FileDown, Pencil } from 'lucide-react';
+import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 
@@ -360,34 +361,27 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     {canEdit && !isPortal && (
                       <RoleGuard role="MEMBER">
                       <ItemActionMenu
-                        groups={[
-                          {
-                            actions: [
-                              { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                              ...(item.status && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
-                              { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                              ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                              ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                              ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                              ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                            ],
-                          },
-                          {
-                            actions: [
-                              ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                              ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                            ],
-                          },
-                          {
+                        groups={buildItemMenuGroups(item.id, {
+                          onEdit,
+                          onDelete,
+                          onUpdateStatus,
+                          onAddChild,
+                          onMoveToSpace,
+                          onDuplicateToSpace,
+                          onConvertToSpace,
+                          onSelfAssign,
+                          onMerge,
+                          onAbsorbChildren,
+                        }, {
+                          statusAction: item.status && !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+                          extraSections: [{
+                            label: 'Exporter',
                             actions: [
                               { id: 'print', label: 'Imprimer', icon: Printer, onClick: () => { const children = items.filter(i => i.parentId === item.id); printItem({ item: item as any, children }); } },
                               { id: 'pdf', label: 'Export PDF', icon: FileDown, onClick: () => { const children = items.filter(i => i.parentId === item.id); exportItemPDF({ item: item as any, children }); } },
                             ],
-                          },
-                          {
-                            actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-                          },
-                        ].filter(g => g.actions.length > 0)}
+                          }],
+                        })}
                       />
                       </RoleGuard>
                     )}

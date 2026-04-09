@@ -1,7 +1,8 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Plus, Copy, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, Trash2, CheckSquare, FolderInput, FolderPlus, FolderKanban, UserPlus, Merge, ArrowDownToLine, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Copy, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
@@ -721,28 +722,20 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                     {canEdit && !isPortal && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <ItemActionMenu
-                          groups={[
-                            {
-                              actions: [
-                                { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                                ...(item.status !== doneStatusId ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, doneStatusId) }] : []),
-                                { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                                ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                                ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                                ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                                ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                              ],
-                            },
-                            {
-                              actions: [
-                                ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                                ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                              ],
-                            },
-                            {
-                              actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-                            },
-                          ].filter(g => g.actions.length > 0)}
+                          groups={buildItemMenuGroups(item.id, {
+                            onEdit,
+                            onDelete,
+                            onUpdateStatus,
+                            onAddChild,
+                            onMoveToSpace,
+                            onDuplicateToSpace,
+                            onConvertToSpace,
+                            onSelfAssign,
+                            onMerge,
+                            onAbsorbChildren,
+                          }, {
+                            statusAction: item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+                          })}
                         />
                       </div>
                     )}

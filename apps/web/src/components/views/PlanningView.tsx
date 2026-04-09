@@ -1,26 +1,17 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Trash2,
   ExternalLink,
-  CheckSquare,
-  Plus,
   AlertTriangle,
   Calendar,
   CalendarDays,
   CalendarRange,
   Clock,
   HelpCircle,
-  FolderInput,
   FolderKanban,
-  FolderPlus,
-  Copy,
-  UserPlus,
-  Merge,
-  ArrowDownToLine,
-  Pencil,
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -258,28 +249,20 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
       <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
         {canEdit && !isPortal && (
           <ItemActionMenu
-            groups={[
-              {
-                actions: [
-                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                  ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
-                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                ],
-              },
-              {
-                actions: [
-                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                ],
-              },
-              {
-                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-              },
-            ].filter(g => g.actions.length > 0)}
+            groups={buildItemMenuGroups(item.id, {
+              onEdit,
+              onDelete,
+              onUpdateStatus,
+              onAddChild,
+              onMoveToSpace,
+              onDuplicateToSpace,
+              onConvertToSpace,
+              onSelfAssign,
+              onMerge,
+              onAbsorbChildren,
+            }, {
+              statusAction: item.status && item.status !== 'done' ? { label: 'Marquer terminé', statusId: 'done' } : null,
+            })}
           />
         )}
       </span>
