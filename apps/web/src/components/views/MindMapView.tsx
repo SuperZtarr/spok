@@ -965,6 +965,15 @@ function MindMapViewInner({
         onConnect={canEdit !== false ? onConnect : undefined}
         nodesDraggable={canEdit !== false}
         nodeTypes={nodeTypes}
+        onInit={() => {
+          setTimeout(() => {
+            setEdges(currentEdges => {
+              const posMap = new Map(getNodes().map(n => [n.id, n.position]));
+              return recalculateEdgeHandles(currentEdges, posMap);
+            });
+            fitView({ padding: 0.1 });
+          }, 50);
+        }}
         fitView
         fitViewOptions={{ padding: 0.1 }}
         minZoom={0.01}
