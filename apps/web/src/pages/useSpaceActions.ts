@@ -33,6 +33,7 @@ export interface PendingStatusPropagation {
   itemTitle: string;
   status: string;
   childCount: number;
+  previousStatus: string | null;
 }
 
 export interface PendingCrossSpaceMove {
@@ -247,6 +248,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
           itemTitle: item?.title || 'cet élément',
           status: data.status,
           childCount,
+          previousStatus: item?.status ?? null,
         });
       }
     }
@@ -318,6 +320,18 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [pendingStatusPropagation, resolveItemSpaceId, updateItemMutation]);
 
+  const cancelStatusPropagation = useCallback(() => {
+    if (pendingStatusPropagation) {
+      const itemSpaceId = resolveItemSpaceId(pendingStatusPropagation.itemId);
+      updateItemMutation.mutate({
+        id: pendingStatusPropagation.itemId,
+        itemSpaceId,
+        data: { status: pendingStatusPropagation.previousStatus ?? undefined },
+      });
+      setPendingStatusPropagation(null);
+    }
+  }, [pendingStatusPropagation, resolveItemSpaceId, updateItemMutation]);
+
   // --- Merge ---
 
   const handleMerge = useCallback((id: string) => {
@@ -379,6 +393,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     pendingStatusPropagation,
     setPendingStatusPropagation,
     confirmStatusPropagation,
+    cancelStatusPropagation,
     // Merge
     handleMerge,
     mergingItemId,

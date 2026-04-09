@@ -30,6 +30,7 @@ import { userTasksRoutes } from './routes/user-tasks.js';
 import { graphRoutes } from './routes/graph.js';
 import { notificationsRoutes } from './routes/notifications.js';
 import { urlMetaRoutes } from './routes/url-meta.js';
+import { spacePreferencesRoutes } from './routes/space-preferences.js';
 
 const envToLogger = {
   development: {
@@ -208,6 +209,7 @@ async function buildApp() {
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(spacesRoutes, { prefix: '/spaces' });
+  await app.register(spacePreferencesRoutes, { prefix: '/spaces' });
   await app.register(communitiesRoutes, { prefix: '/communities' });
   await app.register(invitationsRoutes, { prefix: '/invitations' });
   await app.register(adminUsersRoutes, { prefix: '/admin/users' });

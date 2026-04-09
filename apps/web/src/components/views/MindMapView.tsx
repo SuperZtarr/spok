@@ -157,6 +157,11 @@ function MindMapViewInner({
     localStorage.setItem(pinnedStorageKey, JSON.stringify([...pinnedIds.current]));
   }, [pinnedStorageKey]);
 
+  // Portals state
+  const [portals, setPortals] = useState<PortalState[]>([]);
+  const [portalsLoaded, setPortalsLoaded] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+
   const togglePin = useCallback((id: string) => {
     if (pinnedIds.current.has(id)) {
       pinnedIds.current.delete(id);
@@ -171,29 +176,6 @@ function MindMapViewInner({
       return { ...n, data: { ...n.data, isPinned } };
     }));
   }, [savePinned]);
-
-  // Portals state
-  const [portals, setPortals] = useState<PortalState[]>([]);
-  const [portalsLoaded, setPortalsLoaded] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
-
-  // Load portals from localStorage when spaceId is available
-  useEffect(() => {
-    if (!portalsStorageKey) return;
-    try {
-      const saved = localStorage.getItem(portalsStorageKey);
-      if (saved) {
-        setPortals(JSON.parse(saved));
-      }
-    } catch { /* ignore */ }
-    setPortalsLoaded(true);
-  }, [portalsStorageKey]);
-
-  // Save portals to localStorage when they change
-  useEffect(() => {
-    if (!portalsStorageKey || !portalsLoaded) return;
-    localStorage.setItem(portalsStorageKey, JSON.stringify(portals));
-  }, [portals, portalsStorageKey, portalsLoaded]);
 
   // Filter available spaces (same community, not current space)
   const availableSpaces = useMemo(() => {
@@ -225,6 +207,24 @@ function MindMapViewInner({
   const removePortal = useCallback((portalId: string) => {
     setPortals(prev => prev.filter(p => p.id !== portalId));
   }, []);
+
+  // Load portals from localStorage when spaceId is available
+  useEffect(() => {
+    if (!portalsStorageKey) return;
+    try {
+      const saved = localStorage.getItem(portalsStorageKey);
+      if (saved) {
+        setPortals(JSON.parse(saved));
+      }
+    } catch { /* ignore */ }
+    setPortalsLoaded(true);
+  }, [portalsStorageKey]);
+
+  // Save portals to localStorage when they change
+  useEffect(() => {
+    if (!portalsStorageKey || !portalsLoaded) return;
+    localStorage.setItem(portalsStorageKey, JSON.stringify(portals));
+  }, [portals, portalsStorageKey, portalsLoaded]);
 
   const hasPortalSupport = availableSpaces.length > 0;
 
