@@ -1,9 +1,10 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { ImageIcon, ChevronLeft, ChevronRight, X, Trash2, Plus, FolderInput, FolderPlus, FolderKanban, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { ImageIcon, ChevronLeft, ChevronRight, X, FolderKanban, GripVertical, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { RoleGuard } from '../RoleGuard';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 
 const ZOOM_LEVELS = [
   { cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10', label: 'XS' },
@@ -326,28 +327,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <RoleGuard role="MEMBER">
                           <ItemActionMenu
-                            groups={[
-                              {
-                                actions: [
-                                  ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(img.id) }] : []),
-                                  ...(onUpdateStatus && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(img.id, doneStatusId) }] : []),
-                                  ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(img.id) }] : []),
-                                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(img.id) }] : []),
-                                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(img.id) }] : []),
-                                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(img.id) }] : []),
-                                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(img.id) }] : []),
-                                ],
-                              },
-                              {
-                                actions: [
-                                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(img.id) }] : []),
-                                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(img.id) }] : []),
-                                ],
-                              },
-                              {
-                                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(img.id), variant: 'danger' as const }],
-                              },
-                            ].filter(g => g.actions.length > 0)}
+                            groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
                             triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
                           />
                         </RoleGuard>

@@ -1,10 +1,11 @@
 import { useMemo, useCallback } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { FileText, Download, FolderKanban, Trash2, Plus, FolderInput, FolderPlus, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil } from 'lucide-react';
+import { FileText, Download, FolderKanban, GripVertical } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { RoleGuard } from '../RoleGuard';
 import { getTypeIcon } from '../../constants/ui';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 
 function getFileIcon(url: string) {
   return getTypeIcon('DOCUMENT', url);
@@ -182,28 +183,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                           <RoleGuard role="MEMBER">
                             <ItemActionMenu
-                              groups={[
-                                {
-                                  actions: [
-                                    ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(doc.id) }] : []),
-                                    ...(onUpdateStatus && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(doc.id, doneStatusId) }] : []),
-                                    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(doc.id) }] : []),
-                                    ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(doc.id) }] : []),
-                                    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(doc.id) }] : []),
-                                    ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(doc.id) }] : []),
-                                    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(doc.id) }] : []),
-                                  ],
-                                },
-                                {
-                                  actions: [
-                                    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(doc.id) }] : []),
-                                    ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(doc.id) }] : []),
-                                  ],
-                                },
-                                {
-                                  actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(doc.id), variant: 'danger' as const }],
-                                },
-                              ].filter(g => g.actions.length > 0)}
+                              groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
                             />
                           </RoleGuard>
                         </div>

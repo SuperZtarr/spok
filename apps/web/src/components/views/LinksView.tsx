@@ -1,10 +1,11 @@
 import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { ExternalLink, FolderKanban, Trash2, Plus, FolderInput, FolderPlus, Copy, UserPlus, Merge, ArrowDownToLine, CheckSquare, GripVertical, Pencil } from 'lucide-react';
+import { ExternalLink, FolderKanban, GripVertical } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { RoleGuard } from '../RoleGuard';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -72,28 +73,7 @@ function LinkTag({ item, onEdit, actions, canEdit, referentiels }: {
         <div className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
           <RoleGuard role="MEMBER">
             <ItemActionMenu
-              groups={[
-                {
-                  actions: [
-                    ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) }] : []),
-                    ...(actions.onUpdateStatus && !isDone ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => actions.onUpdateStatus!(item.id, doneStatusId) }] : []),
-                    ...(actions.onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => actions.onAddChild!(item.id) }] : []),
-                    ...(actions.onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => actions.onSelfAssign!(item.id) }] : []),
-                    ...(actions.onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => actions.onMerge!(item.id) }] : []),
-                    ...(actions.onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => actions.onAbsorbChildren!(item.id) }] : []),
-                    ...(actions.onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => actions.onDuplicateToSpace!(item.id) }] : []),
-                  ],
-                },
-                {
-                  actions: [
-                    ...(actions.onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => actions.onMoveToSpace!(item.id) }] : []),
-                    ...(actions.onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => actions.onConvertToSpace!(item.id) }] : []),
-                  ],
-                },
-                {
-                  actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => actions.onDelete!(item.id), variant: 'danger' as const }],
-                },
-              ].filter(g => g.actions.length > 0)}
+              groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
             />
           </RoleGuard>
         </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { MessageSquare, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2, UserPlus, FolderInput, FolderPlus, Copy, Merge as MergeIcon, ArrowDownToLine } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 
@@ -235,29 +236,7 @@ export function ThreadView({
             {canEdit && (
               <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <ItemActionMenu
-                  groups={[
-                    {
-                      actions: [
-                        { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(node.id) },
-                        ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(node.id) }] : []),
-                        ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(node.id) }] : []),
-                        ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: MergeIcon, onClick: () => onMerge(node.id) }] : []),
-                        ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(node.id) }] : []),
-                        ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(node.id) }] : []),
-                      ],
-                    },
-                    {
-                      actions: [
-                        ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(node.id) }] : []),
-                        ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(node.id) }] : []),
-                      ],
-                    },
-                    {
-                      actions: [
-                        ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(node.id), variant: 'danger' as const }] : []),
-                      ],
-                    },
-                  ]}
+                  groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren })}
                 />
               </div>
             )}

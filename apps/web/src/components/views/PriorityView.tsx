@@ -18,7 +18,7 @@ import { PRIORITIES, getPriorityConfig, getTypeIcon, getTypeTextColor } from '..
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { Trash2, Plus, Copy, FolderInput, FolderPlus, UserPlus, Merge, ArrowDownToLine, Pencil } from 'lucide-react';
+import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 
 // ---------------------------------------------------------------------------
 // Column definitions
@@ -137,27 +137,7 @@ function PriorityCard({
       {canEdit && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
-            groups={[
-              {
-                actions: [
-                  { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                  { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                  ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                  ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                  ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                  ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                ],
-              },
-              {
-                actions: [
-                  ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                  ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                ],
-              },
-              {
-                actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-              },
-            ].filter(g => g.actions.length > 0)}
+            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren })}
           />
         </div>
       )}
