@@ -61,15 +61,6 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     order: 6,
     visible: true,
   },
-  {
-    id: 'scheduled',
-    label: 'Planifié',
-    color: 'bg-sky-100 text-sky-700',
-    borderColor: 'border-sky-300 bg-sky-50',
-    order: 7,
-    visible: true,
-    deferredByDate: true,
-  },
 ];
 
 // =============================================================================

@@ -12,7 +12,6 @@ import {
   useReactFlow,
   ReactFlowProvider,
   Connection,
-  useNodesInitialized,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
@@ -36,7 +35,6 @@ import {
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
 import { calculateLayout, buildPortalNodesAndEdges, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
-import { useSpacePreferences } from '@/hooks/useSpacePreferences';
 
 export interface MindMapViewHandle {
   expandAll: () => void;
@@ -117,24 +115,11 @@ function MindMapViewInner({
   const [showPortalDialog, setShowPortalDialog] = useState(false);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView, getIntersectingNodes, getNodes } = useReactFlow();
-  const nodesInitialized = useNodesInitialized();
 
-  // Recalculer les edges une fois que ReactFlow a mesuré les nœuds
-  useEffect(() => {
-    if (!nodesInitialized) return;
-    setEdges(currentEdges => {
-      const posMap = new Map(getNodes().map(n => [n.id, n.position]));
-      return recalculateEdgeHandles(currentEdges, posMap);
-    });
-    setTimeout(() => fitView({ padding: 0.1 }), 50);
-  }, [nodesInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // localStorage keys (positions remain local; collapsed/pinned/portals go server-side)
+  // localStorage keys
+  const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
   const positionsStorageKey = spaceId ? `mindmap-positions-v2-${spaceId}` : null;
-
-  // Server-side preferences (collapsed, pinned, portals)
-  const { preferences, isPrefsLoaded, savePreferences } = useSpacePreferences(spaceId);
-  const prefsLoadedRef = useRef(false);
+  const pinnedStorageKey = spaceId ? `mindmap-pinned-${spaceId}` : null;
 
   // Saved node positions
   const savedPositions = useRef<Record<string, { x: number; y: number }>>({});
@@ -151,44 +136,26 @@ function MindMapViewInner({
     } catch { savedPositions.current = {}; }
   }, [positionsStorageKey]);
 
-  // Initialize collapsed/pinned/portals from server preferences (once, when query succeeds)
+  // Load pinned IDs from localStorage
   useEffect(() => {
-    if (prefsLoadedRef.current) return;
-    if (!isPrefsLoaded) return;
-    prefsLoadedRef.current = true;
-
-    const mm = preferences.mindmap;
-    if (!mm) return;
-
-    if (mm.collapsedIds && mm.collapsedIds.length > 0) {
-      setCollapsedIds(new Set(mm.collapsedIds));
-    }
-    if (mm.pinnedIds && mm.pinnedIds.length > 0) {
-      pinnedIds.current = new Set(mm.pinnedIds);
-    }
-    if (mm.portals && mm.portals.length > 0) {
-      setPortals(mm.portals as PortalState[]);
-    }
-  }, [isPrefsLoaded, preferences]);
+    if (!pinnedStorageKey) return;
+    try {
+      const stored = localStorage.getItem(pinnedStorageKey);
+      if (stored) {
+        pinnedIds.current = new Set(JSON.parse(stored));
+      }
+    } catch { /* ignore */ }
+  }, [pinnedStorageKey]);
 
   const savePositions = useCallback(() => {
     if (!positionsStorageKey) return;
     localStorage.setItem(positionsStorageKey, JSON.stringify(savedPositions.current));
   }, [positionsStorageKey]);
 
-  // Portals state (declared here so savePinned can reference it)
-  const [portals, setPortals] = useState<PortalState[]>([]);
-  const [legendOpen, setLegendOpen] = useState(false);
-
   const savePinned = useCallback(() => {
-    savePreferences({
-      mindmap: {
-        collapsedIds: [...collapsedIds],
-        pinnedIds: [...pinnedIds.current],
-        portals,
-      },
-    });
-  }, [savePreferences, collapsedIds, portals]);
+    if (!pinnedStorageKey) return;
+    localStorage.setItem(pinnedStorageKey, JSON.stringify([...pinnedIds.current]));
+  }, [pinnedStorageKey]);
 
   const togglePin = useCallback((id: string) => {
     if (pinnedIds.current.has(id)) {
@@ -204,6 +171,29 @@ function MindMapViewInner({
       return { ...n, data: { ...n.data, isPinned } };
     }));
   }, [savePinned]);
+
+  // Portals state
+  const [portals, setPortals] = useState<PortalState[]>([]);
+  const [portalsLoaded, setPortalsLoaded] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  // Load portals from localStorage when spaceId is available
+  useEffect(() => {
+    if (!portalsStorageKey) return;
+    try {
+      const saved = localStorage.getItem(portalsStorageKey);
+      if (saved) {
+        setPortals(JSON.parse(saved));
+      }
+    } catch { /* ignore */ }
+    setPortalsLoaded(true);
+  }, [portalsStorageKey]);
+
+  // Save portals to localStorage when they change
+  useEffect(() => {
+    if (!portalsStorageKey || !portalsLoaded) return;
+    localStorage.setItem(portalsStorageKey, JSON.stringify(portals));
+  }, [portals, portalsStorageKey, portalsLoaded]);
 
   // Filter available spaces (same community, not current space)
   const availableSpaces = useMemo(() => {
@@ -235,18 +225,6 @@ function MindMapViewInner({
   const removePortal = useCallback((portalId: string) => {
     setPortals(prev => prev.filter(p => p.id !== portalId));
   }, []);
-
-  // Persist portals when they change (skip until prefs have loaded from server)
-  useEffect(() => {
-    if (!prefsLoadedRef.current) return;
-    savePreferences({
-      mindmap: {
-        collapsedIds: [...collapsedIds],
-        pinnedIds: [...pinnedIds.current],
-        portals,
-      },
-    });
-  }, [portals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasPortalSupport = availableSpaces.length > 0;
 
@@ -305,18 +283,6 @@ function MindMapViewInner({
       return next;
     });
   }, []);
-
-  // Persist collapsed state when it changes (skip until prefs have loaded from server)
-  useEffect(() => {
-    if (!prefsLoadedRef.current) return;
-    savePreferences({
-      mindmap: {
-        collapsedIds: [...collapsedIds],
-        pinnedIds: [...pinnedIds.current],
-        portals,
-      },
-    });
-  }, [collapsedIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setNodesRef = useRef<React.Dispatch<React.SetStateAction<Node[]>>>(() => {});
   const reorganizeRef = useRef<(id: string) => void>(() => {});

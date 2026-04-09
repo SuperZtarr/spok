@@ -32,7 +32,6 @@ export interface PendingStatusPropagation {
   itemId: string;
   itemTitle: string;
   status: string;
-  previousStatus: string | null;
   childCount: number;
 }
 
@@ -247,7 +246,6 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
           itemId: id,
           itemTitle: item?.title || 'cet élément',
           status: data.status,
-          previousStatus: item?.status ?? null,
           childCount,
         });
       }
@@ -320,18 +318,6 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [pendingStatusPropagation, resolveItemSpaceId, updateItemMutation]);
 
-  const cancelStatusPropagation = useCallback(() => {
-    if (pendingStatusPropagation) {
-      const itemSpaceId = resolveItemSpaceId(pendingStatusPropagation.itemId);
-      updateItemMutation.mutate({
-        id: pendingStatusPropagation.itemId,
-        itemSpaceId,
-        data: { status: pendingStatusPropagation.previousStatus ?? undefined },
-      });
-      setPendingStatusPropagation(null);
-    }
-  }, [pendingStatusPropagation, resolveItemSpaceId, updateItemMutation]);
-
   // --- Merge ---
 
   const handleMerge = useCallback((id: string) => {
@@ -393,7 +379,6 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     pendingStatusPropagation,
     setPendingStatusPropagation,
     confirmStatusPropagation,
-    cancelStatusPropagation,
     // Merge
     handleMerge,
     mergingItemId,

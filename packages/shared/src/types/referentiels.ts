@@ -12,12 +12,6 @@ export interface StatusConfig {
   borderColor: string;  // ex: "border-gray-300 bg-gray-50"
   order: number;
   visible: boolean;
-  /**
-   * Quand true, les items avec ce statut sont masqués des vues actives
-   * si leur startDate est à plus de 30 jours dans le futur.
-   * Ils redeviennent visibles normalement quand la date se rapproche.
-   */
-  deferredByDate?: boolean;
 }
 
 /**

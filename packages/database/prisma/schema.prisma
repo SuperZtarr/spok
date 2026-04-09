@@ -226,12 +226,11 @@ enum CommunityRole {
 
 // Appartenance à un espace
 model SpaceMembership {
-  id          String   @id @default(cuid())
-  userId      String
-  spaceId     String
-  role        Role
-  joinedAt    DateTime @default(now())
-  preferences Json?    // Préférences UI par vue (mindmap: collapsed, pinned, portals)
+  id       String   @id @default(cuid())
+  userId   String
+  spaceId  String
+  role     Role
+  joinedAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
