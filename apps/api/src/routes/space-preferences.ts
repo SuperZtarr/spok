@@ -52,7 +52,7 @@ export const spacePreferencesRoutes: FastifyPluginAsync = async (fastify) => {
 
       await fastify.prisma.spaceMembership.update({
         where: { userId_spaceId: { userId, spaceId } },
-        data: { preferences: updated },
+        data: { preferences: updated as Parameters<typeof fastify.prisma.spaceMembership.update>[0]['data']['preferences'] },
       });
 
       return updated;
