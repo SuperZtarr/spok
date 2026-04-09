@@ -9,6 +9,7 @@ import {
   Clock,
   HelpCircle,
   FolderKanban,
+  CheckSquare,
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';

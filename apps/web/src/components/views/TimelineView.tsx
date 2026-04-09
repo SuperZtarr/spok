@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Copy, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import { useQueryClient } from '@tanstack/react-query';
