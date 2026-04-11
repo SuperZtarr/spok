@@ -271,6 +271,8 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
       StarterKit.configure({
         heading: { levels: [2, 3] },
         codeBlock: false, // replaced by CodeBlockLowlight
+        link: false, // added explicitly below with custom config
+        underline: false, // added explicitly below
       }),
       Underline,
       Link.configure({

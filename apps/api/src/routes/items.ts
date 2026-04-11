@@ -550,6 +550,74 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Split item description by headings into child items
+  fastify.post<{ Params: { spaceId: string; id: string } }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    if (!membership) return reply.notFound('Space not found');
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') return reply.forbidden('Insufficient permissions');
+
+    const item = await fastify.prisma.item.findFirst({
+      where: { id: request.params.id, spaceId: request.params.spaceId },
+    });
+    if (!item) return reply.notFound('Item not found');
+    if (!item.description) return reply.badRequest('Item has no description');
+
+    // Parse HTML: split on H1/H2/H3
+    const html = item.description;
+    const headingRegex = /<h([1-3])[^>]*>([\s\S]*?)<\/h[1-3]>/gi;
+    const matches: { index: number; end: number; title: string }[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = headingRegex.exec(html)) !== null) {
+      const title = match[2].replace(/<[^>]+>/g, '').trim();
+      matches.push({ index: match.index, end: match.index + match[0].length, title });
+    }
+
+    if (matches.length === 0) return reply.badRequest('No headings found in description');
+
+    // Content before first heading stays in parent
+    const preContent = html.slice(0, matches[0].index).trim();
+
+    // Sections: one child per heading
+    const sections = matches.map((m, i) => ({
+      title: m.title,
+      description: html.slice(m.end, i + 1 < matches.length ? matches[i + 1].index : html.length).trim(),
+    }));
+
+    // Get max position among existing children
+    const siblings = await fastify.prisma.item.findMany({
+      where: { parentId: item.id, spaceId: item.spaceId },
+      select: { position: true },
+      orderBy: { position: 'desc' },
+    });
+    let nextPosition = siblings.length > 0 ? (siblings[0].position ?? 0) + 1 : 0;
+
+    // Create children
+    const children = await Promise.all(
+      sections.map((section) => {
+        const pos = nextPosition++;
+        return fastify.prisma.item.create({
+          data: {
+            title: section.title || 'Sans titre',
+            description: section.description || null,
+            type: 'NOTE',
+            spaceId: item.spaceId,
+            parentId: item.id,
+            position: pos,
+            status: item.status,
+          },
+        });
+      })
+    );
+
+    // Update parent description (keep only pre-heading content)
+    await fastify.prisma.item.update({
+      where: { id: item.id },
+      data: { description: preContent || null },
+    });
+
+    return { children, preContent };
+  });
+
   // Delete item
   fastify.delete<{ Params: { spaceId: string; id: string }; Querystring: { deleteChildren?: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);

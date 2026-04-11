@@ -3,7 +3,7 @@ import type { MenuItemConfig } from '../types/menuItem.js';
 export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   // ── Section: global (Global) ──
   { id: '', key: 'home', label: 'Accueil', icon: 'Home', section: 'global', sectionLabel: 'Global', sectionOrder: 0, route: '/', viewMode: null, order: 0, visible: true, access: 'public' },
-  { id: '', key: 'communities', label: 'Globals', icon: 'Users', section: 'global', sectionLabel: 'Global', sectionOrder: 0, route: '/communities', viewMode: null, order: 1, visible: true, access: 'public' },
+  { id: '', key: 'communities', label: 'Communautés', icon: 'Users', section: 'global', sectionLabel: 'Global', sectionOrder: 0, route: '/communities', viewMode: null, order: 1, visible: true, access: 'public' },
   { id: '', key: 'spaces', label: 'Espaces', icon: 'FolderKanban', section: 'global', sectionLabel: 'Global', sectionOrder: 0, route: '/spaces', viewMode: null, order: 2, visible: true, access: 'public' },
   { id: '', key: 'global-sunburst', label: 'Sunburst', icon: 'CircleDot', section: 'global', sectionLabel: 'Global', sectionOrder: 0, route: '/sunburst', viewMode: null, order: 3, visible: true, access: 'public' },
   { id: '', key: 'global-mindmap', label: 'Carte mentale', icon: 'GitBranch', section: 'global', sectionLabel: 'Global', sectionOrder: 0, route: '/mindmap', viewMode: null, order: 4, visible: true, access: 'user' },

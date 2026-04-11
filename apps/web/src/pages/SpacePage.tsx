@@ -554,6 +554,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -572,6 +573,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
               highlightType={activeTypeFilter}
@@ -592,6 +594,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
               searchMatchIds={searchMatchIds}
@@ -611,6 +614,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -630,6 +634,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -649,6 +654,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -696,6 +702,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -726,6 +733,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               onReorder={actions.handleReorder}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
@@ -881,6 +889,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -899,6 +908,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -917,6 +927,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -935,6 +946,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -954,6 +966,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -973,6 +986,7 @@ export function SpacePage() {
               onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -1013,6 +1027,7 @@ export function SpacePage() {
                       onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       onMove={actions.handleMove}
@@ -1063,6 +1078,7 @@ export function SpacePage() {
                           onSelfAssign={handleSelfAssign}
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
                           spaceId={group.spaceId}
                           isOver={overId === item.id}
                           onMove={actions.handleMove}

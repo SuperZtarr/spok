@@ -946,6 +946,11 @@ export const itemsApi = {
       method: 'POST',
     }),
 
+  splitByHeadings: (spaceId: string, itemId: string) =>
+    fetchApi<{ children: Item[]; preContent: string }>(`/spaces/${spaceId}/items/${itemId}/split`, {
+      method: 'POST',
+    }),
+
   // Contributions
   listContributions: (spaceId: string, itemId: string) =>
     fetchApi<ContributionWithAuthor[]>(`/spaces/${spaceId}/items/${itemId}/contributions`),

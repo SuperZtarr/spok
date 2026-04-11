@@ -1,4 +1,4 @@
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2 } from 'lucide-react';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 
 export interface ItemMenuCallbacks {
@@ -12,6 +12,7 @@ export interface ItemMenuCallbacks {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
 }
 
 export interface ItemMenuOptions {
@@ -40,6 +41,7 @@ export function buildItemMenuGroups(
     onSelfAssign,
     onMerge,
     onAbsorbChildren,
+    onSplitDescription,
   } = callbacks;
   const { statusAction, extraChildren = [], extraOrganise = [], extraSections = [] } = options;
 
@@ -59,6 +61,7 @@ export function buildItemMenuGroups(
 
   // Groupe 3 : organisation / déplacement
   const group3: ItemAction[] = [
+    ...(onSplitDescription ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(itemId) }] : []),
     ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(itemId) }] : []),
     ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer vers...', icon: Copy, onClick: () => onDuplicateToSpace(itemId) }] : []),
     ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(itemId) }] : []),

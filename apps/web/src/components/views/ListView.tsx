@@ -36,6 +36,7 @@ interface ListViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -98,7 +99,8 @@ function ImageThumbnail({ url }: { url: string }) {
 type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 'contributions';
 type SortDir = 'asc' | 'desc';
 
-export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, referentiels, canEdit = true }: ListViewProps) {
+export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit = true }: ListViewProps) {
+  const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -372,6 +374,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                           onSelfAssign,
                           onMerge,
                           onAbsorbChildren,
+                          onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
                         }, {
                           statusAction: item.status && !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
                           extraSections: [{

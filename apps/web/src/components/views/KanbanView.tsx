@@ -55,6 +55,7 @@ interface KanbanViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -73,6 +74,7 @@ interface KanbanColumnProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
   nextStatus?: string;
@@ -94,6 +96,7 @@ interface KanbanCardProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
   nextStatus?: string;
@@ -106,7 +109,8 @@ interface KanbanCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, isFirstCard }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, isFirstCard }: KanbanCardProps) {
+  const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -209,6 +213,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
               onSelfAssign,
               onMerge,
               onAbsorbChildren,
+              onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
             }, {
               statusAction: nextStatus !== undefined ? { label: nextStatusLabel || 'Suivant', statusId: nextStatus! } : null,
               extraSections: [{
@@ -227,7 +232,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, isOver, nextStatus, nextStatusLabel, canEdit, referentiels, isFirstColumn }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isOver, nextStatus, nextStatusLabel, canEdit, referentiels, isFirstColumn }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -276,6 +281,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             onSelfAssign={onSelfAssign}
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
+            onSplitDescription={onSplitDescription}
             nextStatus={nextStatus}
             nextStatusLabel={nextStatusLabel}
             canEdit={canEdit}

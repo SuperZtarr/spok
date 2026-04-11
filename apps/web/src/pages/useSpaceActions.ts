@@ -351,6 +351,19 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     absorbChildrenMutation.mutate({ id, itemSpaceId });
   }, [resolveItemSpaceId, absorbChildrenMutation]);
 
+  const splitMutation = useMutation({
+    mutationFn: ({ id, itemSpaceId }: { id: string; itemSpaceId: string }) =>
+      itemsApi.splitByHeadings(itemSpaceId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  const handleSplitDescription = useCallback((id: string) => {
+    const itemSpaceId = resolveItemSpaceId(id);
+    splitMutation.mutate({ id, itemSpaceId });
+  }, [resolveItemSpaceId, splitMutation]);
+
   const reorderMutation = useMutation({
     mutationFn: ({ targetSpaceId, groups }: { targetSpaceId: string; groups: { parentId: string | null; itemIds: string[] }[] }) =>
       itemsApi.reorder(targetSpaceId, groups),
@@ -399,6 +412,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     mergingItemId,
     setMergingItemId,
     handleAbsorbChildren,
+    // Split
+    handleSplitDescription,
     // Reorder
     handleReorder,
   };
