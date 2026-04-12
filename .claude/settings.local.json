@@ -91,7 +91,32 @@
       "Bash(git checkout:*)",
       "Bash(npx sharp-cli:*)",
       "WebSearch",
-      "Bash(cd C:/_dev/spok && rm apps/web/src/components/views/SequenceView.tsx apps/web/src/components/views/sequence-utils.ts apps/web/src/components/views/sequence-chains.ts apps/web/src/components/views/SequenceSVG.tsx)"
+      "Bash(cd C:/_dev/spok && rm apps/web/src/components/views/SequenceView.tsx apps/web/src/components/views/sequence-utils.ts apps/web/src/components/views/sequence-chains.ts apps/web/src/components/views/SequenceSVG.tsx)",
+      "Bash(git -C \"C:/_dev/spok\" worktree list)",
+      "Bash(git -C \"C:/_dev/spok\" status)",
+      "Bash(git -C \"C:/_dev/spok\" diff --stat)",
+      "Bash(git -C \"C:/_dev/spok\" log origin/master..HEAD --oneline)",
+      "Bash(git -C \"C:/_dev/spok\" push origin master)",
+      "Bash(git -C \"C:/_dev/spok\" show e30f753 --stat)",
+      "Bash(git -C C:/_dev/spok log --oneline origin/master..HEAD -- apps/api/scripts/__TRACKED_VAR__)",
+      "Bash(git -C \"C:/_dev/spok\" status --short)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" status)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" diff --stat)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" diff)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" add .claude/settings.local.json .claude/skills/spok-api/SKILL.md .claude/skills/spok-deploy/SKILL.md .claude/skills/spok-doc/SKILL.md .claude/skills/spok-start/SKILL.md)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" log --oneline -5)",
+      "Bash(git -C C:/_dev/spok/.claude/worktrees/agitated-feistel commit -m ':*)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" push origin claude/agitated-feistel)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" log --oneline origin/master..HEAD)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" rebase origin/master)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" status --short)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" diff .claude/settings.local.json)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" add .claude/settings.local.json)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" commit --amend --no-edit)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" show 3fa9f0c --stat)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" rebase --onto origin/master 3fa9f0c)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" stash)",
+      "Bash(git -C \"C:/_dev/spok/.claude/worktrees/agitated-feistel\" stash pop)"
     ]
   }
 }
