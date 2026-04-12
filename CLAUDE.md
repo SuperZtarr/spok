@@ -168,6 +168,11 @@ Deploye sur Railway :
 - Apres commit, attendre que l'utilisateur teste en local
 - Pusher **uniquement** quand l'utilisateur dit "commit et push"
 
+### Worktrees (INTERDIT)
+- Ne JAMAIS utiliser `isolation: "worktree"` dans l'outil Agent — cela crée des worktrees qui s'accumulent
+- Si au démarrage le working directory est un worktree (`.claude/worktrees/...`), travailler quand même dans `C:\_dev\spok` avec des chemins absolus
+- Nettoyer les worktrees existants : `git worktree list` puis `git worktree remove --force <path>` + `git branch -D <branch>`
+
 ### Documentation technique
 - Specs fonctionnelles/techniques : `docs/specs/` (mecanismes, comportements, decisions)
 - A relire avant de modifier un domaine fonctionnel existant

@@ -15,6 +15,9 @@
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
+### Documentation
+- [ ] Revoir l'organisation de la doc fonctionnelle dans SPOK (espace Produit SPOK) — structure actuelle à améliorer
+
 ### IA / Résumés
 - [ ] Résumé de conversations avec identification des consensus (style Reddit TL;DR)
   - Backend : `POST /:id/summarize` → appel Claude API (Haiku), crée une contribution SUMMARY
