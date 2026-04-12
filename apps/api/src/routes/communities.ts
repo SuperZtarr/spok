@@ -34,6 +34,12 @@ const inviteSchema = z.object({
   message: z.string().optional(),
 });
 
+async function isAdminModeActive(prisma: PrismaClient, userId: string, isAdminMode: boolean): Promise<boolean> {
+  if (!isAdminMode) return false;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+  return user?.globalRole === 'ADMIN';
+}
+
 export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Register referentiels sub-routes
   await fastify.register(async function (optInstance) {
@@ -175,8 +181,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       }));
 
     // Admin: all remaining communities (not member, not public non-member, not invited)
+    // Only when admin mode is explicitly activated (X-Admin-Mode header)
     let adminMapped: typeof publicMapped = [];
-    if (currentUser?.globalRole === 'ADMIN') {
+    if (currentUser?.globalRole === 'ADMIN' && request.isAdminMode) {
       const excludeIds = [...Array.from(myIds), ...publicCommunities.map(c => c.id), ...Array.from(invitedIds)];
       const otherCommunities = await fastify.prisma.community.findMany({
         where: { id: { notIn: excludeIds } },
@@ -285,13 +292,22 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!community || community.visibility === 'PRIVATE') {
+    if (!community) {
+      return reply.notFound('Community not found or access denied');
+    }
+
+    // Admin mode: full access to any community regardless of visibility
+    const currentUser = request.user?.userId
+      ? await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } })
+      : null;
+
+    if (community.visibility === 'PRIVATE' && !(currentUser?.globalRole === 'ADMIN' && request.isAdminMode)) {
       return reply.notFound('Community not found or access denied');
     }
 
     return {
       ...community,
-      role: null,
+      role: (currentUser?.globalRole === 'ADMIN' && request.isAdminMode) ? 'ADMIN_VIEW' : null,
       memberCount: community._count.memberships,
       spaceCount: community._count.spaces,
     };
@@ -302,6 +318,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
+      const adminBypass = await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode);
+
       const membership = await fastify.prisma.communityMembership.findUnique({
         where: {
           userId_communityId: {
@@ -311,11 +329,11 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (!membership) {
+      if (!membership && !adminBypass) {
         return reply.notFound('Community not found');
       }
 
-      if (membership.role !== 'OWNER') {
+      if (!adminBypass && membership?.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -347,6 +365,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete preview — list spaces and items that will be affected
   fastify.get<{ Params: { id: string } }>('/:id/delete-preview', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const adminBypass = await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode);
+
     const membership = await fastify.prisma.communityMembership.findUnique({
       where: {
         userId_communityId: {
@@ -356,7 +376,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!membership || membership.role !== 'OWNER') {
+    if (!adminBypass && (!membership || membership.role !== 'OWNER')) {
       return reply.forbidden('Only the owner can delete a community');
     }
 
@@ -647,7 +667,11 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!membership) {
+    // Admin mode: bypass membership check
+    const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
+    const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
+
+    if (!membership && !isAdminBypass) {
       return reply.notFound('Community not found');
     }
 

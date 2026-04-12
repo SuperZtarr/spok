@@ -562,9 +562,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!item) return reply.notFound('Item not found');
     if (!item.description) return reply.badRequest('Item has no description');
 
-    // Parse HTML: split on H1/H2/H3
+    // Parse HTML: split on H2/H3 (seuls niveaux disponibles dans l'éditeur)
     const html = item.description;
-    const headingRegex = /<h([1-3])[^>]*>([\s\S]*?)<\/h[1-3]>/gi;
+    const headingRegex = /<h([2-3])[^>]*>([\s\S]*?)<\/h[2-3]>/gi;
     const matches: { index: number; end: number; title: string }[] = [];
     let match: RegExpExecArray | null;
     while ((match = headingRegex.exec(html)) !== null) {
@@ -572,7 +572,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       matches.push({ index: match.index, end: match.index + match[0].length, title });
     }
 
-    if (matches.length === 0) return reply.badRequest('No headings found in description');
+    if (matches.length === 0) return reply.badRequest('No H2/H3 headings found in description');
 
     // Content before first heading stays in parent
     const preContent = html.slice(0, matches[0].index).trim();
@@ -604,7 +604,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             parentId: item.id,
             position: pos,
             status: item.status,
-          },
+            createdById: request.user.userId,
+          } as any,
         });
       })
     );

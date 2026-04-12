@@ -210,6 +210,12 @@ async function fetchApi<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Send admin mode header when the toggle is active
+  const { user } = useAuthStore.getState();
+  if (user?.globalRole === 'ADMIN' && localStorage.getItem('spok-admin-mode') === 'true') {
+    headers['X-Admin-Mode'] = 'true';
+  }
+
   let response: Response;
 
   try {

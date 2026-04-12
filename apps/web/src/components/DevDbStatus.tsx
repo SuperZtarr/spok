@@ -25,6 +25,7 @@ export function AdminModeToggle() {
     setAdminModeEnabled(newValue);
     localStorage.setItem(ADMIN_MODE_KEY, String(newValue));
     window.dispatchEvent(new CustomEvent('spok:adminmode', { detail: newValue }));
+    window.location.reload();
   };
 
   const user = useAuthStore((state) => state.user);
@@ -115,11 +116,9 @@ export function DevModeToggle() {
     window.dispatchEvent(new CustomEvent('spok:devmode', { detail: newValue }));
   };
 
-  const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.globalRole === 'ADMIN';
+  const adminMode = useAdminMode();
 
-  // Show toggle in dev environment or for admin users in prod
-  if (!isAdmin && import.meta.env.VITE_DEV_MODE !== 'true') return null;
+  if (!adminMode) return null;
 
   return (
     <button
@@ -143,26 +142,11 @@ export function DevDbStatus() {
     return localStorage.getItem(DEV_MODE_KEY) === 'true';
   });
 
-  // Listen for localStorage changes
   useEffect(() => {
-    const handleStorage = () => {
-      setDevModeEnabled(localStorage.getItem(DEV_MODE_KEY) === 'true');
-    };
-    window.addEventListener('storage', handleStorage);
-
-    // Also check periodically for same-tab updates
-    const interval = setInterval(() => {
-      const current = localStorage.getItem(DEV_MODE_KEY) === 'true';
-      if (current !== devModeEnabled) {
-        setDevModeEnabled(current);
-      }
-    }, 500);
-
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      clearInterval(interval);
-    };
-  }, [devModeEnabled]);
+    const handler = (e: Event) => setDevModeEnabled((e as CustomEvent).detail);
+    window.addEventListener('spok:devmode', handler);
+    return () => window.removeEventListener('spok:devmode', handler);
+  }, []);
 
   const canShowDevMode = import.meta.env.VITE_DEV_MODE === 'true';
 

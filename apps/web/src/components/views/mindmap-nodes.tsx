@@ -5,7 +5,7 @@ import type { SpaceWithRole } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { ChevronRight, ChevronDown, FolderOpen, RotateCcw, ExternalLink, X, Pin, PinOff } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
 
 function ImageThumbnail({ url }: { url: string }) {
@@ -86,6 +86,7 @@ export interface MindMapNodeProps {
     onSelfAssign?: (id: string) => void;
     onMerge?: (id: string) => void;
     onAbsorbChildren?: (id: string) => void;
+    onSplitDescription?: (id: string) => void;
     doneStatusId: string;
     isRoot: boolean;
     hasChildren: boolean;
@@ -105,7 +106,7 @@ export interface MindMapNodeProps {
 }
 
 export function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
+  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type, item.url);
   const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
 
@@ -193,6 +194,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
               onSelfAssign,
               onMerge: canEdit ? onMerge : undefined,
               onAbsorbChildren: canEdit ? onAbsorbChildren : undefined,
+              onSplitDescription: canEdit && hasHeadings(item.description) ? onSplitDescription : undefined,
             }, {
               statusAction: canEdit && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
               extraChildren: [

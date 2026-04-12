@@ -1,6 +1,8 @@
 import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 
+export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
+
 export interface ItemMenuCallbacks {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;

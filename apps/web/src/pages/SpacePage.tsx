@@ -80,6 +80,7 @@ import { TreeItem, RootDropZone } from './space-tree-view';
 import { useSpaceActions } from './useSpaceActions';
 import { SpaceToolbar } from './SpaceToolbar';
 import { useAuthStore } from '../stores/auth';
+import { recordSpaceVisit } from '../hooks/useRecentSpaces';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -112,6 +113,10 @@ export function SpacePage() {
   useEffect(() => {
     return () => clearSelection();
   }, [spaceId, clearSelection]);
+
+  useEffect(() => {
+    if (spaceId) recordSpaceVisit(spaceId);
+  }, [spaceId]);
 
   // --- Queries ---
   const { data: space } = useQuery({

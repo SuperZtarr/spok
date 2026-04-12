@@ -5,7 +5,7 @@ import { ExternalLink, FolderKanban, GripVertical } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { RoleGuard } from '../RoleGuard';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -73,7 +73,7 @@ function LinkTag({ item, onEdit, actions, canEdit, referentiels }: {
         <div className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
           <RoleGuard role="MEMBER">
             <ItemActionMenu
-              groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+              groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
             />
           </RoleGuard>
         </div>
@@ -116,6 +116,7 @@ interface LinkActions {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
 }
 
 interface LinkGroup {
@@ -142,6 +143,7 @@ interface LinksViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
@@ -149,7 +151,7 @@ interface LinksViewProps {
   currentSpaceId?: string;
 }
 
-export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
+export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const links = useMemo(() => {
     if (!items) return [];
@@ -177,7 +179,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
     return result;
   }, [links, items]);
 
-  const actions: LinkActions = { onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren };
+  const actions: LinkActions = { onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription };
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;

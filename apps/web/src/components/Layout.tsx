@@ -7,7 +7,7 @@ import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi } from '../lib/api';
 
-import { DevModeToggle, AdminModeToggle, DevDbStatus } from './DevDbStatus';
+import { DevModeToggle, AdminModeToggle, DevDbStatus, useAdminMode } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
@@ -60,6 +60,7 @@ function CommunitySection({
   expandedSpaceIds: Set<string>; onToggleSpace: (id: string) => void;
   mySpacesEmpty: boolean; favoriteIds: Set<string>; onToggleFavorite: (id: string) => void;
 }) {
+  const adminMode = useAdminMode();
   return (
     <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-1.5 border-b border-border/50">
       <div
@@ -90,7 +91,7 @@ function CommunitySection({
         {!isExpanded && spaceCount > 0 && (
           <span className="text-[10px] text-muted-foreground/40 flex-shrink-0">{spaceCount}</span>
         )}
-        {community.role === 'OWNER' && (
+        {(community.role === 'OWNER' || community.role === 'ADMIN_VIEW' || adminMode) && (
           <RoleGuard role="OWNER">
             <Link
               to={`/communities/${community.id}/settings`}

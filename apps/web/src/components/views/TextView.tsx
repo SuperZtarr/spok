@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -40,6 +40,7 @@ interface TextViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   highlightType?: string;
@@ -93,7 +94,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
+export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -199,6 +200,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               onSelfAssign={onSelfAssign}
               onMerge={onMerge}
               onAbsorbChildren={onAbsorbChildren}
+              onSplitDescription={onSplitDescription}
               canEdit={canEdit}
               doneStatusId={doneStatusId}
               statusLabels={statusLabels}
@@ -279,6 +281,7 @@ function TextItem({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   canEdit,
   doneStatusId,
   statusLabels,
@@ -300,6 +303,7 @@ function TextItem({
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   canEdit?: boolean;
   doneStatusId: string;
   statusLabels: Record<string, string>;
@@ -366,6 +370,7 @@ function TextItem({
                 onSelfAssign,
                 onMerge,
                 onAbsorbChildren,
+                onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
               }, {
                 statusAction: onUpdateStatus && item.status && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
               })}

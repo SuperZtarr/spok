@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MessageSquare, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 
@@ -23,6 +23,7 @@ interface ThreadViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   searchMatchIds?: Set<string>;
@@ -99,6 +100,7 @@ export function ThreadView({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   referentiels,
   canEdit,
   searchMatchIds,
@@ -236,7 +238,7 @@ export function ThreadView({
             {canEdit && (
               <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <ItemActionMenu
-                  groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren })}
+                  groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined })}
                 />
               </div>
             )}

@@ -4,6 +4,7 @@ import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, Layou
 import { communitiesApi, spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { SpaceCard } from '../ui/SpaceCard';
+import { getRecentSpaceIds } from '../../hooks/useRecentSpaces';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -258,9 +259,13 @@ export function HomeView() {
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {allSpaces.slice(0, 8).map(space => (
-                <SpaceCard key={space.id} space={space} />
-              ))}
+              {(() => {
+                const recentIds = getRecentSpaceIds();
+                const spaceMap = new Map(allSpaces.map(s => [s.id, s]));
+                const recent = recentIds.map(id => spaceMap.get(id)).filter(Boolean) as typeof allSpaces;
+                const displayed = recent.length > 0 ? recent.slice(0, 8) : allSpaces.slice(0, 8);
+                return displayed.map(space => <SpaceCard key={space.id} space={space} />);
+              })()}
             </div>
           </section>
         )}

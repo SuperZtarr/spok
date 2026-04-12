@@ -122,7 +122,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      if (!communityMembership) {
+      // Admin mode: bypass community membership check
+      const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
+      const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
+
+      if (!communityMembership && !isAdminBypass) {
         return [];
       }
 
@@ -251,7 +255,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       communityId = parentSpace.communityId || undefined;
     }
 
-    // Verify user is member of the community if specified
+    // Verify user is member of the community if specified (bypass for admin mode)
     if (communityId) {
       const communityMembership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -263,7 +267,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (!communityMembership) {
-        return reply.forbidden('You are not a member of this community');
+        const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
+        const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
+        if (!isAdminBypass) {
+          return reply.forbidden('You are not a member of this community');
+        }
       }
     }
 

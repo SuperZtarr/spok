@@ -15,6 +15,7 @@ import {
   Merge,
   ArrowDownToLine,
   Pencil,
+  Scissors,
 } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { itemsApi } from '../lib/api';
@@ -58,6 +59,7 @@ export interface TreeItemProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
@@ -95,6 +97,7 @@ export function TreeItem({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   spaceId,
   isOver,
   onMove,
@@ -246,6 +249,7 @@ export function TreeItem({
                     { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
                     ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
+                    ...(onSplitDescription && item.description && /<h[2-3][^>]*>/i.test(item.description) ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(item.id) }] : []),
                     ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
                     ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
                   ],
@@ -326,6 +330,7 @@ export function ItemChildren({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   onMove,
   globalOverId,
   globalDropMode,
@@ -356,6 +361,7 @@ export function ItemChildren({
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -402,6 +408,7 @@ export function ItemChildren({
           onSelfAssign={onSelfAssign}
           onMerge={onMerge}
           onAbsorbChildren={onAbsorbChildren}
+          onSplitDescription={onSplitDescription}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           onMove={onMove}

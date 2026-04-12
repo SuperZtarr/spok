@@ -18,7 +18,7 @@ import { PRIORITIES, getPriorityConfig, getTypeIcon, getTypeTextColor } from '..
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
 // ---------------------------------------------------------------------------
 // Column definitions
@@ -60,6 +60,7 @@ function PriorityCard({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   isDragging,
   canEdit = true,
   referentiels,
@@ -75,6 +76,7 @@ function PriorityCard({
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
@@ -137,7 +139,7 @@ function PriorityCard({
       {canEdit && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
-            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren })}
+            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined })}
           />
         </div>
       )}
@@ -162,6 +164,7 @@ function PriorityColumn({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   canEdit,
   referentiels,
   draggedItemId,
@@ -180,6 +183,7 @@ function PriorityColumn({
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   canEdit?: boolean;
   referentiels?: SpaceReferentiels;
   draggedItemId: string | null;
@@ -220,6 +224,7 @@ function PriorityColumn({
             onSelfAssign={onSelfAssign}
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
+            onSplitDescription={onSplitDescription}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
             referentiels={referentiels}
@@ -257,6 +262,7 @@ interface PriorityViewProps {
   onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -275,6 +281,7 @@ export function PriorityView({
   onSelfAssign,
   onMerge,
   onAbsorbChildren,
+  onSplitDescription,
   onConvertToSpace,
   referentiels,
   canEdit = true,
@@ -378,6 +385,7 @@ export function PriorityView({
               onSelfAssign={onSelfAssign}
               onMerge={onMerge}
               onAbsorbChildren={onAbsorbChildren}
+              onSplitDescription={onSplitDescription}
               canEdit={canEdit}
               referentiels={referentiels}
               draggedItemId={draggedItemId}

@@ -1001,6 +1001,36 @@ export function ItemEditModal({
                 </div>
               </div>
 
+              {/* Priorité */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Priorité</label>
+                <div className="flex flex-wrap gap-2">
+                  {canEdit ? (
+                    <>
+                      <button type="button" onClick={() => setPriority(null)}
+                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
+                        Aucune
+                      </button>
+                      {PRIORITIES.map((p) => (
+                        <button key={p.value} type="button" onClick={() => setPriority(p.value)}
+                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm` : 'opacity-60 hover:opacity-100'}`}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    (() => {
+                      const config = PRIORITIES.find(p => p.value === priority);
+                      return config ? (
+                        <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>{config.label}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Non définie</span>
+                      );
+                    })()
+                  )}
+                </div>
+              </div>
+
               {/* Dates */}
               <div className="space-y-4" data-tour="item-dates">
                 <div className="space-y-2">
@@ -1169,6 +1199,12 @@ export function ItemEditModal({
           {/* === RIGHT COLUMN === */}
           <div className="space-y-6" data-tour="item-details">
 
+              {/* ID de l'item */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">ID :</span>
+                <span className="text-xs text-muted-foreground font-mono select-all">{item.id}</span>
+              </div>
+
               {/* Parent (hidden in viewer mode — breadcrumb is enough) */}
               {canEdit && (
               <div className="space-y-2">
@@ -1183,36 +1219,6 @@ export function ItemEditModal({
                   <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
               </div>
               )}
-
-              {/* Priorité */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Priorité</label>
-                <div className="flex flex-wrap gap-2">
-                  {canEdit ? (
-                    <>
-                      <button type="button" onClick={() => setPriority(null)}
-                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
-                        Aucune
-                      </button>
-                      {PRIORITIES.map((p) => (
-                        <button key={p.value} type="button" onClick={() => setPriority(p.value)}
-                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm` : 'opacity-60 hover:opacity-100'}`}>
-                          {p.label}
-                        </button>
-                      ))}
-                    </>
-                  ) : (
-                    (() => {
-                      const config = PRIORITIES.find(p => p.value === priority);
-                      return config ? (
-                        <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>{config.label}</span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Non définie</span>
-                      );
-                    })()
-                  )}
-                </div>
-              </div>
 
               {/* Assigné à */}
               {spaceMembers && spaceMembers.length > 0 && (

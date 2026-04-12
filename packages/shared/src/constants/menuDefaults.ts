@@ -52,7 +52,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'ego', label: 'Réseau ego', icon: 'Focus', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 5, route: null, viewMode: 'ego', order: 9, visible: true, access: 'user' },
 
   // ── Section: admin (Administration) ──
-  { id: '', key: 'admin-communities', label: 'Globals', icon: 'Building2', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/communities', viewMode: null, order: 0, visible: true, access: 'admin' },
+  { id: '', key: 'admin-communities', label: 'Communautés', icon: 'Building2', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/communities', viewMode: null, order: 0, visible: true, access: 'admin' },
   { id: '', key: 'admin-spaces', label: 'Espaces', icon: 'FolderKanban', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/spaces', viewMode: null, order: 1, visible: true, access: 'admin' },
   { id: '', key: 'admin-users', label: 'Utilisateurs', icon: 'Users', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/users', viewMode: null, order: 2, visible: true, access: 'admin' },
   { id: '', key: 'admin-stats', label: 'Statistiques', icon: 'BarChart3', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/stats', viewMode: null, order: 3, visible: true, access: 'admin' },

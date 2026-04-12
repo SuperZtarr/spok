@@ -9,6 +9,7 @@ import { useViewModeStore } from '../stores/viewMode';
 import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
 import { SpaceCard } from '../components/ui/SpaceCard';
+import { useAdminMode } from '../components/DevDbStatus';
 // Types used implicitly via API responses
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -75,7 +76,8 @@ export function CommunityPage() {
     enabled: !!communityId,
   });
 
-  const isAdminOrOwner = community?.role === 'OWNER';
+  const adminMode = useAdminMode();
+  const isAdminOrOwner = community?.role === 'OWNER' || community?.role === 'ADMIN_VIEW' || adminMode;
 
   // Sort members: OWNER first, then MEMBER
   const roleOrder: Record<string, number> = { OWNER: 0, MEMBER: 1 };

@@ -19,6 +19,7 @@ import { CommunityDeleteConfirmModal } from '../components/CommunityDeleteConfir
 import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
 import { RoleGuard } from '../components/RoleGuard';
+import { useAdminMode } from '../components/DevDbStatus';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
@@ -291,7 +292,8 @@ export function CommunitySettingsPage() {
   ) || [];
 
   // Check permissions
-  const canEdit = community?.role === 'OWNER';
+  const adminMode = useAdminMode();
+  const canEdit = community?.role === 'OWNER' || community?.role === 'ADMIN_VIEW' || adminMode;
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
