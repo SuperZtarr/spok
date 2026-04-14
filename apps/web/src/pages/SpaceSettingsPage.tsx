@@ -234,6 +234,7 @@ export function SpaceSettingsPage() {
 
   // Space info state
   const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [editCommunityId, setEditCommunityId] = useState<string>('');
   const [editParentId, setEditParentId] = useState<string>('');
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
@@ -244,6 +245,7 @@ export function SpaceSettingsPage() {
   useEffect(() => {
     if (space && !editName) {
       setEditName(space.name);
+      setEditDescription(space.description || '');
       setEditCommunityId(space.communityId || '');
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
@@ -254,8 +256,9 @@ export function SpaceSettingsPage() {
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
 
-    const updates: { name?: string; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string } = {};
+    const updates: { name?: string; description?: string | null; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string } = {};
     if (editName !== space.name) updates.name = editName;
+    if (editDescription !== (space.description || '')) updates.description = editDescription || null;
     const newCommunityId = editCommunityId || null;
     if (newCommunityId !== space.communityId) updates.communityId = newCommunityId;
     const newParentId = editParentId || null;
@@ -271,6 +274,7 @@ export function SpaceSettingsPage() {
 
   const hasSpaceInfoChanges = space && (
     editName !== space.name ||
+    editDescription !== (space.description || '') ||
     (editCommunityId || null) !== space.communityId ||
     (editParentId || null) !== (space.parentId || null) ||
     (editDefaultRole || null) !== (space.defaultRole || null) ||
@@ -418,6 +422,16 @@ export function SpaceSettingsPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Nom de l'espace"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Décrivez le contenu et l'objectif de cet espace..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>

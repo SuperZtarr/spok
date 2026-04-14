@@ -109,7 +109,7 @@ async function main() {
   // Memberships communauté : admin=OWNER, alice=ADMIN, demo/bob/charlie=MEMBER
   const communityMembers: { userId: string; role: CommunityRole }[] = [
     { userId: admin.id, role: CommunityRole.OWNER },
-    { userId: alice.id, role: CommunityRole.ADMIN },
+    { userId: alice.id, role: CommunityRole.MEMBER },
     { userId: demo.id, role: CommunityRole.MEMBER },
     { userId: bob.id, role: CommunityRole.MEMBER },
     { userId: charlie.id, role: CommunityRole.MEMBER },
@@ -188,21 +188,21 @@ async function main() {
   const spaceMembers: { userId: string; spaceId: string; role: Role }[] = [
     // Développement Produit : tous membres
     { userId: admin.id, spaceId: spaceDev.id, role: Role.OWNER },
-    { userId: alice.id, spaceId: spaceDev.id, role: Role.ADMIN },
+    { userId: alice.id, spaceId: spaceDev.id, role: Role.MEMBER },
     { userId: demo.id, spaceId: spaceDev.id, role: Role.MEMBER },
     { userId: bob.id, spaceId: spaceDev.id, role: Role.MEMBER },
-    { userId: charlie.id, spaceId: spaceDev.id, role: Role.VIEWER },
+    { userId: charlie.id, spaceId: spaceDev.id, role: Role.MEMBER },
     // Backend : admin + alice + bob
     { userId: admin.id, spaceId: spaceBackend.id, role: Role.OWNER },
-    { userId: alice.id, spaceId: spaceBackend.id, role: Role.ADMIN },
+    { userId: alice.id, spaceId: spaceBackend.id, role: Role.MEMBER },
     { userId: bob.id, spaceId: spaceBackend.id, role: Role.MEMBER },
     // Frontend : admin + alice + demo
     { userId: admin.id, spaceId: spaceFrontend.id, role: Role.OWNER },
-    { userId: alice.id, spaceId: spaceFrontend.id, role: Role.ADMIN },
+    { userId: alice.id, spaceId: spaceFrontend.id, role: Role.MEMBER },
     { userId: demo.id, spaceId: spaceFrontend.id, role: Role.MEMBER },
     // Organisation : tous
     { userId: admin.id, spaceId: spaceOrga.id, role: Role.OWNER },
-    { userId: alice.id, spaceId: spaceOrga.id, role: Role.ADMIN },
+    { userId: alice.id, spaceId: spaceOrga.id, role: Role.MEMBER },
     { userId: demo.id, spaceId: spaceOrga.id, role: Role.MEMBER },
     { userId: bob.id, spaceId: spaceOrga.id, role: Role.MEMBER },
     { userId: charlie.id, spaceId: spaceOrga.id, role: Role.MEMBER },

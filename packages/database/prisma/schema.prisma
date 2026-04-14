@@ -75,6 +75,7 @@ model User {
 model Space {
   id          String    @id @default(cuid())
   name        String
+  description String?
   type        SpaceType
   communityId String?
   avatarUrl   String?

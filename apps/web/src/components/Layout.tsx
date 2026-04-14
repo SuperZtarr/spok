@@ -958,7 +958,10 @@ export function Layout() {
               </button>
             )}
             <div className="min-w-0">
-              <h2 className="text-sm md:text-base font-semibold text-foreground truncate">{getPageTitle()}</h2>
+              <h2
+                className="text-sm md:text-base font-semibold text-foreground truncate"
+                title={currentSpace?.description || undefined}
+              >{getPageTitle()}</h2>
               {currentSpace && (
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   {currentSpace.community && (

@@ -5,6 +5,7 @@ export type SpaceVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 export interface Space {
   id: string;
   name: string;
+  description?: string | null;
   type: SpaceType;
   communityId?: string | null;
   community?: { id: string; name: string; avatarUrl?: string | null } | null;
@@ -37,6 +38,7 @@ export interface SpaceWithRole extends Space {
 
 export interface CreateSpaceInput {
   name: string;
+  description?: string;
   type: SpaceType;
   communityId?: string;
   parentId?: string;
@@ -45,6 +47,7 @@ export interface CreateSpaceInput {
 
 export interface UpdateSpaceInput {
   name?: string;
+  description?: string | null;
   parentId?: string | null;
   defaultRole?: Role | null;
   visibility?: SpaceVisibility;

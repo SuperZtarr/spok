@@ -91,7 +91,11 @@
       "Bash(git checkout:*)",
       "Bash(npx sharp-cli:*)",
       "WebSearch",
-      "Bash(cd C:/_dev/spok && rm apps/web/src/components/views/SequenceView.tsx apps/web/src/components/views/sequence-utils.ts apps/web/src/components/views/sequence-chains.ts apps/web/src/components/views/SequenceSVG.tsx)"
+      "Bash(cd C:/_dev/spok && rm apps/web/src/components/views/SequenceView.tsx apps/web/src/components/views/sequence-utils.ts apps/web/src/components/views/sequence-chains.ts apps/web/src/components/views/SequenceSVG.tsx)",
+      "Bash(git -C \"C:/_dev/spok\" worktree list:*)",
+      "Bash(git -C \"C:/_dev/spok\" worktree list)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate"
     ]
   }
 }

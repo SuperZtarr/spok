@@ -17,6 +17,7 @@ const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif
 
 const createSpaceSchema = z.object({
   name: z.string().min(1),
+  description: z.string().optional(),
   type: z.enum(['PERSONAL', 'GROUP']),
   communityId: z.string().optional(),
   parentId: z.string().optional(),
@@ -25,6 +26,7 @@ const createSpaceSchema = z.object({
 
 const updateSpaceSchema = z.object({
   name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
   communityId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   defaultRole: z.enum(['MEMBER']).nullable().optional(),
@@ -278,6 +280,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     const space = await fastify.prisma.space.create({
       data: {
         name: body.name,
+        description: body.description,
         type: body.type,
         communityId,
         parentId: body.parentId,
@@ -559,6 +562,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const updateData: Record<string, unknown> = {};
       if (body.name !== undefined) updateData.name = body.name;
+      if (body.description !== undefined) updateData.description = body.description;
       if (body.parentId !== undefined) updateData.parentId = body.parentId;
       if (communityIdOverride !== undefined) updateData.communityId = communityIdOverride;
       if (body.defaultRole !== undefined) updateData.defaultRole = body.defaultRole;

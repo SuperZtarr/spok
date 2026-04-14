@@ -17,6 +17,23 @@
 
 ### Documentation
 - [ ] Revoir l'organisation de la doc fonctionnelle dans SPOK (espace Produit SPOK) — structure actuelle à améliorer
+- [ ] Mettre à jour spok-doc skill avec descriptions fonctionnelles des espaces + lien vers Organisation cible
+
+### Modales
+- [ ] Les tableaux ne sont pas éditables ? (modale édition item) — à investiguer
+- [ ] Modale édition item : champ "parent" → permettre de changer d'espace et de communauté
+
+### Evolutions (backlog récupéré depuis Projet SPOK)
+- [ ] Filtres à mettre partout
+- [ ] Ajouter une vue pour les éléments modifiés récemment
+- [ ] Formulaire d'items peu adapté aux mobiles
+- [ ] Dans le menu Types, ajouter une vue Todo
+- [ ] Organigramme à revoir
+- [ ] Recherche dans la vue
+- [ ] Réduction de données
+- [ ] Identification d'élément
+- [ ] Notifications : suivi de lecture / marqué comme non lue
+- [ ] Notifications : impliquerait d'ajouter un suivi des vues par utilisateur
 
 ### IA / Résumés
 - [ ] Résumé de conversations avec identification des consensus (style Reddit TL;DR)

@@ -24,6 +24,16 @@ Pour les opérations non couvertes par le MCP (PATCH, DELETE, imports en masse, 
 
 **Toujours écrire dans un fichier** (`scripts/tmp_spok.py`), jamais inline en bash — les apostrophes du français cassent le quoting shell.
 
+**Règle critique — lire puis agir dans le même script** : ne jamais analyser des IDs dans le contexte Claude pour les utiliser ensuite. Toujours écrire un script qui récupère les données via API, effectue la logique de sélection, puis applique les modifications — tout en une seule passe. Cela évite de brûler des tokens en raisonnement intermédiaire et garantit des IDs exacts.
+
+```python
+# Bon exemple : récupère les items, filtre par titre, PATCH en une passe
+items = api(token, 'GET', f'/spaces/{space_id}/items?pageSize=200')['data']
+for item in items:
+    if 'typecheck' in item['title'].lower():
+        api(token, 'PATCH', f'/spaces/{space_id}/items/{item["id"]}', {'status': 'done'})
+```
+
 ```python
 import subprocess, json
 
