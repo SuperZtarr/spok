@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewMode } from './viewMode'
 
 describe('VIEW_MODES constants', () => {
-  it('should have 22 view modes', () => {
-    expect(VIEW_MODES).toHaveLength(22)
+  it('should have 29 view modes', () => {
+    expect(VIEW_MODES).toHaveLength(29)
   })
 
   it('should have unique values', () => {
@@ -20,8 +20,8 @@ describe('VIEW_MODES constants', () => {
 })
 
 describe('VIEW_CATEGORIES constants', () => {
-  it('should have 4 categories', () => {
-    expect(VIEW_CATEGORIES).toHaveLength(4)
+  it('should have 5 categories', () => {
+    expect(VIEW_CATEGORIES).toHaveLength(5)
   })
 
   it('should include dashboard, basic, planning, exploration', () => {

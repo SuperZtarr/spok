@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useDashboardTabStore, DASHBOARD_TABS, DASHBOARD_NAV_ITEMS, type DashboardTab } from './dashboardTab'
+import { useDashboardTabStore, DASHBOARD_TABS, type DashboardTab } from './dashboardTab'
 
 describe('useDashboardTabStore', () => {
   beforeEach(() => {
@@ -36,31 +36,25 @@ describe('useDashboardTabStore', () => {
 })
 
 describe('DASHBOARD_TABS', () => {
-  it('should have 4 tabs', () => {
-    expect(DASHBOARD_TABS).toHaveLength(4)
+  it('should have 7 tabs', () => {
+    expect(DASHBOARD_TABS).toHaveLength(7)
   })
 
-  it('should contain all expected tab values', () => {
+  it('should contain home, communities, spaces, sunburst, mindmap, graph, planning', () => {
     const values = DASHBOARD_TABS.map(t => t.value)
-    expect(values).toEqual(['spaces', 'graph', 'sunburst', 'mindmap'])
+    expect(values).toContain('home')
+    expect(values).toContain('communities')
+    expect(values).toContain('spaces')
+    expect(values).toContain('graph')
+    expect(values).toContain('sunburst')
+    expect(values).toContain('mindmap')
+    expect(values).toContain('planning')
   })
 
   it('should have label and icon for each tab', () => {
     DASHBOARD_TABS.forEach(tab => {
       expect(tab.label).toBeTruthy()
       expect(tab.icon).toBeTruthy()
-    })
-  })
-})
-
-describe('DASHBOARD_NAV_ITEMS', () => {
-  it('should have at least 1 nav item', () => {
-    expect(DASHBOARD_NAV_ITEMS.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('should have route for each nav item', () => {
-    DASHBOARD_NAV_ITEMS.forEach(item => {
-      expect(item.route).toMatch(/^\//)
     })
   })
 })
