@@ -8,6 +8,92 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
 
+function FaviconImg({ src, domain, fallbackColor }: { src: string; domain: string; fallbackColor: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    const initial = domain.replace(/^www\./, '')[0]?.toUpperCase() ?? '?';
+    return (
+      <span
+        className="w-4 h-4 rounded-sm flex items-center justify-center text-[9px] font-bold leading-none"
+        style={{ backgroundColor: `${fallbackColor}33`, color: fallbackColor }}
+      >
+        {initial}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className="w-4 h-4 rounded-sm object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function ItemIllustration({ item, textColor }: { item: TreeItem; textColor: string }) {
+  const url = item.url;
+  if (!url) return null;
+
+  // Image : type IMAGE/DIAGRAM ou extension image
+  if (item.type === 'IMAGE' || item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)) {
+    return <ImageThumbnail url={url} />;
+  }
+
+  // Lien : favicon du site
+  if (item.type === 'LINK') {
+    let domain = '';
+    try { domain = new URL(url).hostname; } catch { /* url invalide */ }
+    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32` : '';
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="flex-shrink-0 nodrag nopan"
+        title={url}
+      >
+        {faviconUrl ? (
+          <FaviconImg src={faviconUrl} domain={domain} fallbackColor={textColor} />
+        ) : (
+          <ExternalLink className="w-4 h-4" style={{ color: textColor }} />
+        )}
+      </a>
+    );
+  }
+
+  // Réunion : date de la réunion
+  if (item.type === 'MEETING' && item.startDate) {
+    const d = new Date(item.startDate);
+    const label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    return (
+      <span className="flex-shrink-0 text-xs font-medium px-1 py-0.5 rounded" style={{ backgroundColor: `${textColor}22`, color: textColor }}>
+        {label}
+      </span>
+    );
+  }
+
+  // Document : icône du type de fichier (PDF, Word, Excel…) avec lien vers le doc
+  if (item.type === 'DOCUMENT') {
+    const DocIcon = getTypeIcon(item.type, url);
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="flex-shrink-0 p-0.5 hover:bg-black/10 rounded nodrag nopan"
+        title={url}
+      >
+        <DocIcon className="w-3.5 h-3.5" style={{ color: textColor }} />
+      </a>
+    );
+  }
+
+  return null;
+}
+
 function ImageThumbnail({ url }: { url: string }) {
   const [hover, setHover] = useState(false);
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -108,7 +194,6 @@ export interface MindMapNodeProps {
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type, item.url);
-  const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
 
   return (
     <div
@@ -129,14 +214,14 @@ export function MindMapNode({ data }: MindMapNodeProps) {
       <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="right-source" />
 
       <div className="flex items-center gap-2">
-        {/* Collapse/Expand button for nodes with children */}
+        {/* 1. Collapse/Expand button — shows child count badge when collapsed */}
         {hasChildren ? (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleCollapse(item.id);
             }}
-            className="p-0.5 hover:bg-black/10 rounded flex-shrink-0 nodrag nopan"
+            className="flex items-center gap-1 px-1 py-0.5 hover:bg-black/10 rounded flex-shrink-0 nodrag nopan"
             title={isCollapsed ? 'Déplier' : 'Replier'}
           >
             {isCollapsed ? (
@@ -144,44 +229,41 @@ export function MindMapNode({ data }: MindMapNodeProps) {
             ) : (
               <ChevronDown className="w-4 h-4" style={{ color: textColor }} />
             )}
+            {isCollapsed && childCount > 0 && (
+              <span className="px-1 py-0 text-xs font-semibold rounded-full" style={{ backgroundColor: `${textColor}33`, color: textColor }}>
+                {childCount}
+              </span>
+            )}
           </button>
         ) : null}
 
+        {/* 2. Type icon */}
         <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
 
+        {/* 3. Pin button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(item.id);
+          }}
+          className={`p-0.5 rounded flex-shrink-0 transition-opacity nodrag nopan ${isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          title={isPinned ? 'Désépingler (autoriser le repositionnement)' : 'Épingler (fixer la position)'}
+        >
+          {isPinned ? (
+            <Pin className="w-3.5 h-3.5" style={{ color: textColor }} />
+          ) : (
+            <PinOff className="w-3.5 h-3.5 opacity-50" style={{ color: textColor }} />
+          )}
+        </button>
+
+        {/* 4. Title */}
         <span className="text-sm font-medium line-clamp-2 break-words" title={item.title}>{item.title}</span>
 
+        {/* 5. Illustration */}
+        <ItemIllustration item={item} textColor={textColor} />
 
-        {hasImage && (
-          <ImageThumbnail url={item.url!} />
-        )}
-
-        {/* Badge showing child count when collapsed */}
-        {isCollapsed && childCount > 0 && (
-          <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-600 text-white rounded-full">
-            {childCount}
-          </span>
-        )}
-
-        {/* Pin + Action menu */}
-        <div className="flex items-center gap-0.5 ml-auto flex-shrink-0 nodrag nopan">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePin(item.id);
-            }}
-            className={`p-0.5 rounded transition-opacity ${isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-            title={isPinned ? 'Désépingler (autoriser le repositionnement)' : 'Épingler (fixer la position)'}
-          >
-            {isPinned ? (
-              <Pin className="w-3.5 h-3.5" style={{ color: textColor }} />
-            ) : (
-              <PinOff className="w-3.5 h-3.5 opacity-50" style={{ color: textColor }} />
-            )}
-          </button>
-
-          {/* Action menu inside the node */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* 6. Action menu */}
+        <div className="ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity nodrag nopan">
           <ItemActionMenu
             groups={buildItemMenuGroups(item.id, {
               onEdit: canEdit ? onEdit : undefined,
@@ -207,7 +289,6 @@ export function MindMapNode({ data }: MindMapNodeProps) {
             triggerClassName="p-0.5 rounded hover:bg-black/10 transition-colors"
             side="right"
           />
-          </div>
         </div>
       </div>
     </div>
