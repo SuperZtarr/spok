@@ -24,7 +24,7 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
-## EN COURS — 2026-04-14
+## EN COURS — 2026-04-15
 
 - Nettoyage espaces doc : doublons Modèle de données annulés (102 items), Modales todos passés en cours
 - Espaces restructurés : Pages publiques (cmnxnu81f01h8n856xt1fj4bo), Pages utilisateur (cmnxohuia01mln856b8bu9luo) créés
@@ -38,6 +38,9 @@
 - Fix seed : Role.ADMIN et Role.VIEWER n'existent pas dans l'enum → remplacés par Role.MEMBER
 - Commit & push → prod Railway
 - Prochaine étape : mettre à jour spok-doc skill avec descriptions fonctionnelles des espaces
+- Feat : vignettes MindMap réorganisées + illustrations par type (favicon, date réunion, doc, image) — 5bdf57d
+- Chore : cleanup 7 scripts tmp API, docs/technical ajoutés, MCP client + launch scripts, assets pub (favicon/logo), skills spok-rebuild + spok-tnr — c7343a5
+- Deploy prod → push origin/master
 
 ## EN COURS — 2026-04-13
 
