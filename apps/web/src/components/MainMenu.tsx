@@ -5,7 +5,7 @@ import {
   List, GitBranch, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck, Calendar,
   Network, FileText, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Check,
-  ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image, Bug,
+  ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image, Bug, CheckSquare,
   Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 } from 'lucide-react';
 import { useViewModeStore } from '../stores/viewMode';
@@ -21,7 +21,7 @@ const ICONS: Record<string, typeof List> = {
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home,
 };
 const EXTRA_ICONS: Record<string, typeof List> = {
-  Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image, Bug,
+  Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image, Bug, CheckSquare,
   Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
 };
 const getIcon = (name: string) => ICONS[name] || EXTRA_ICONS[name] || List;
@@ -204,7 +204,7 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
   );
 
   return (
-    <nav className="ml-auto flex items-stretch h-full overflow-x-auto [&::-webkit-scrollbar]:hidden">
+    <nav className="ml-auto flex items-stretch h-full overflow-x-auto [&::-webkit-scrollbar]:hidden scroll-smooth" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%)' }}>
       {/* Toutes les sections dans l'ordre sectionOrder */}
       {allSections.map(s => renderSectionTrigger(s))}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft } from 'lucide-react';
+import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -286,6 +286,17 @@ export function Layout() {
       else next.add(id);
       localStorage.setItem('spok-expanded-communities', JSON.stringify([...next]));
       return next;
+    });
+  }, []);
+
+  // Sidebar collapsed state (desktop only, persisted)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('spok-sidebar-collapsed') === 'true';
+  });
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      localStorage.setItem('spok-sidebar-collapsed', String(!prev));
+      return !prev;
     });
   }, []);
 
@@ -915,15 +926,17 @@ export function Layout() {
         />
       )}
 
-      {/* Sidebar - desktop: static resizable, mobile: slide-over (hidden on auth pages) */}
+      {/* Sidebar - desktop: static resizable + collapsible, mobile: slide-over (hidden on auth pages) */}
       {!isAuthPage && <aside
         className={`
           bg-white dark:bg-background border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
-          transition-transform duration-200 md:transition-none md:translate-x-0
+          transition-transform duration-200 md:transition-[width] md:duration-200
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0
+          ${sidebarCollapsed ? 'md:w-0 md:overflow-hidden md:border-r-0' : ''}
         `}
-        style={{ width: sidebarWidth }}
+        style={sidebarCollapsed ? undefined : { width: sidebarWidth }}
       >
         {/* Resize handle (desktop only) */}
         <div
@@ -947,7 +960,7 @@ export function Layout() {
         <header className="border-b border-border bg-card flex items-stretch flex-shrink-0 h-12">
           {/* Left: hamburger + title + badges */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 flex-shrink-0">
-            {/* Hamburger menu (mobile, hidden on auth pages) */}
+            {/* Hamburger menu (mobile) */}
             {!isAuthPage && (
               <button
                 className="p-1 rounded-md hover:bg-accent md:hidden flex-shrink-0"
@@ -955,6 +968,16 @@ export function Layout() {
                 title="Ouvrir le menu"
               >
                 <Menu className="w-5 h-5" />
+              </button>
+            )}
+            {/* Sidebar toggle (desktop) */}
+            {!isAuthPage && (
+              <button
+                className="p-1 rounded-md hover:bg-accent hidden md:flex flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={toggleSidebarCollapsed}
+                title={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'}
+              >
+                {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
               </button>
             )}
             <div className="min-w-0">
@@ -987,8 +1010,8 @@ export function Layout() {
             </div>
           </div>
 
-          {/* Menu principal — prend tout l'espace disponible, plein hauteur */}
-          <div className="flex-1 flex items-stretch min-w-0 overflow-hidden">
+          {/* Menu principal — masqué sur mobile (navigation via sidebar), visible md+ */}
+          <div className="hidden md:flex flex-1 items-stretch min-w-0 overflow-hidden">
             <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} currentCommunityId={currentCommunityId} currentCommunityName={currentCommunity?.name || null} />
           </div>
 
