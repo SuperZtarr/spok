@@ -589,7 +589,7 @@ export function Layout() {
   const visitorSidebarContent = (
     <>
       <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></Link>
+        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain py-2" /></Link>
       </div>
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {communityGroups.map(({ community, spaceTree }) => (
@@ -630,7 +630,7 @@ export function Layout() {
     <>
       {/* Logo always visible */}
       <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain -my-[18%]" /></a>
+        <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain py-2" /></a>
       </div>
 
       {/* Community header when in immersive mode */}
