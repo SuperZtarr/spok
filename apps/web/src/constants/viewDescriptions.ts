@@ -245,6 +245,14 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Memes fonctionnalites que la vue Liste (tri, actions, statut)',
     ],
   },
+  todo: {
+    title: 'Todo',
+    description: 'Liste des tâches en cours de l\'espace (hors terminées et annulées).',
+    tips: [
+      'Affiche uniquement les items de type TASK non terminés',
+      'Mêmes fonctionnalités que la vue Liste (tri, actions, statut)',
+    ],
+  },
   documents: {
     title: 'Documents',
     description: 'Liste des documents attaches a l\'espace avec apercu du type de fichier.',
