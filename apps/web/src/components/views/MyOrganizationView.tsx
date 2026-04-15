@@ -30,7 +30,6 @@ import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
 import { ItemEditModal } from '../ItemEditModal';
 import { Badge } from '../ui/Badge';
 import { DeadlinesView } from './DeadlinesView';
-import { GlobalTasksPage } from '../../pages/GlobalTasksPage';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -313,7 +312,7 @@ export function MyOrganizationView() {
 
   // --- Priorities (P1 + P2, non terminés) ---
   const rawPriorityTasks = useMemo(() =>
-    allTasks.filter(t => t.priority && t.priority >= 3)
+    allTasks.filter(t => t.priority && t.priority >= 1)
       .sort((a, b) => (b.priority || 0) - (a.priority || 0)),
     [allTasks]
   );
@@ -708,30 +707,26 @@ export function MyOrganizationView() {
         </div>
       </div>
 
-      {/* Progression par espace */}
-      {spaceProgress.length > 0 && (
+      {/* Progression par espace + Échéances */}
+      <div className="grid grid-cols-2 gap-4 items-start">
         <div className="bg-card border rounded-lg border-green-200 dark:border-green-900">
           <div className="flex items-center gap-2 px-4 py-3 border-b">
             <CheckCircle2 className="w-4 h-4 text-green-500" />
             <h3 className="text-sm font-semibold">Progression par espace</h3>
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{spaceProgress.length}</span>
+            {spaceProgress.length > 0 && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{spaceProgress.length}</span>
+            )}
           </div>
           <div className="p-2 max-h-[300px] overflow-y-auto">
-            {spaceProgress.map(s => (
-              <SpaceProgressBar key={s.name} name={s.name} done={s.done} total={s.total} />
-            ))}
+            {spaceProgress.length > 0
+              ? spaceProgress.map(s => <SpaceProgressBar key={s.name} name={s.name} done={s.done} total={s.total} />)
+              : <p className="text-sm text-muted-foreground text-center py-4">Aucun espace</p>
+            }
           </div>
         </div>
-      )}
-
-      {/* Échéances */}
-      <div className="bg-card border rounded-lg p-4">
-        <DeadlinesView embedded />
-      </div>
-
-      {/* Toutes les tâches */}
-      <div className="bg-card border rounded-lg p-4">
-        <GlobalTasksPage externalFilters={filters} />
+        <div className="bg-card border rounded-lg p-4">
+          <DeadlinesView embedded />
+        </div>
       </div>
 
       {/* Edit modal */}
