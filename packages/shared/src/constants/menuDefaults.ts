@@ -16,28 +16,28 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'profile', label: 'Profil', icon: 'User', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: null, viewMode: null, order: 2, visible: true, access: 'user' },
 
   // ── Section: basic (Basique) ──
-  { id: '', key: 'list', label: 'Liste', icon: 'List', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'list', order: 0, visible: true, access: 'public' },
-  { id: '', key: 'tree', label: 'Arborescence', icon: 'GitBranch', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'tree', order: 1, visible: true, access: 'public' },
-  { id: '', key: 'text', label: 'Texte', icon: 'FileText', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'text', order: 2, visible: true, access: 'public' },
-  { id: '', key: 'types', label: 'Types', icon: 'LayoutGrid', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'types', order: 3, visible: true, access: 'user' },
-  { id: '', key: 'members', label: 'Membres', icon: 'Users', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'members', order: 4, visible: true, access: 'user' },
   { id: '', key: 'thread', label: 'Discussions', icon: 'MessageSquare', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'thread', order: 5, visible: true, access: 'user' },
+  { id: '', key: 'list', label: 'Liste', icon: 'List', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'list', order: 0, visible: true, access: 'public' },
+  { id: '', key: 'text', label: 'Texte', icon: 'FileText', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'text', order: 2, visible: true, access: 'public' },
+  { id: '', key: 'tree', label: 'Arborescence', icon: 'GitBranch', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'tree', order: 1, visible: true, access: 'public' },
+  { id: '', key: 'members', label: 'Membres', icon: 'Users', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'members', order: 4, visible: true, access: 'user' },
   { id: '', key: 'crossTable', label: 'Tableau croisé', icon: 'Table2', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'crossTable', order: 6, visible: true, access: 'user' },
 
   // ── Section: itemTypes (Types) ──
+  { id: '', key: 'types', label: 'Types', icon: 'LayoutGrid', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'types', order: 3, visible: true, access: 'user' },
   { id: '', key: 'links', label: 'Liens', icon: 'ExternalLink', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 3, route: null, viewMode: 'links', order: 0, visible: true, access: 'public' },
   { id: '', key: 'images', label: 'Images', icon: 'Image', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 3, route: null, viewMode: 'images', order: 1, visible: true, access: 'public' },
   { id: '', key: 'documents', label: 'Documents', icon: 'FileText', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 3, route: null, viewMode: 'documents', order: 2, visible: true, access: 'user' },
   { id: '', key: 'bugs', label: 'Bugs', icon: 'Bug', section: 'itemTypes', sectionLabel: 'Types', sectionOrder: 3, route: null, viewMode: 'bugs', order: 3, visible: true, access: 'user' },
 
   // ── Section: planning (Planification) ──
-  { id: '', key: 'kanban', label: 'Kanban', icon: 'Columns3', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'kanban', order: 0, visible: true, access: 'user' },
-  { id: '', key: 'planning', label: 'Planning', icon: 'CalendarCheck', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'planning', order: 1, visible: true, access: 'user' },
   { id: '', key: 'timeline', label: 'Gantt', icon: 'GanttChart', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'timeline', order: 2, visible: true, access: 'public' },
+  { id: '', key: 'kanban', label: 'Kanban', icon: 'Columns3', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'kanban', order: 0, visible: true, access: 'user' },
   { id: '', key: 'calendar', label: 'Calendrier', icon: 'Calendar', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'calendar', order: 3, visible: true, access: 'public' },
-  { id: '', key: 'burndown', label: 'Burndown', icon: 'TrendingDown', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'burndown', order: 4, visible: true, access: 'user' },
-  { id: '', key: 'cfd', label: 'Flux cumulatif', icon: 'Layers', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'cfd', order: 5, visible: true, access: 'user' },
-  { id: '', key: 'priority', label: 'Priorités', icon: 'Flame', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'priority', order: 6, visible: true, access: 'user' },
+   { id: '', key: 'planning', label: 'Planning', icon: 'CalendarCheck', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'planning', order: 1, visible: true, access: 'user' },
+   { id: '', key: 'burndown', label: 'Burndown', icon: 'TrendingDown', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'burndown', order: 4, visible: true, access: 'user' },
+   { id: '', key: 'cfd', label: 'Flux cumulatif', icon: 'Layers', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'cfd', order: 5, visible: true, access: 'user' },
+   { id: '', key: 'priority', label: 'Priorités', icon: 'Flame', section: 'planning', sectionLabel: 'Planification', sectionOrder: 4, route: null, viewMode: 'priority', order: 6, visible: true, access: 'user' },
 
   // ── Section: exploration (Exploration) ──
   { id: '', key: 'mindmap', label: 'Carte mentale', icon: 'Share2', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 5, route: null, viewMode: 'mindmap', order: 0, visible: true, access: 'public' },

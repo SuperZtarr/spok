@@ -1,3 +1,20 @@
+// Charger .env local si les vars ne sont pas déjà set (indépendant du shell)
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { join, dirname } from 'path';
+try {
+  const __dir = dirname(fileURLToPath(import.meta.url));
+  const envContent = readFileSync(join(__dir, '../.env'), 'utf8');
+  for (const line of envContent.split('\n')) {
+    const eq = line.indexOf('=');
+    if (eq > 0) {
+      const key = line.slice(0, eq).trim();
+      const val = line.slice(eq + 1).trim();
+      if (key) process.env[key] = val;
+    }
+  }
+} catch { /* .env optionnel */ }
+
 const API_URL = process.env.SPOK_API_URL ?? 'http://localhost:3001';
 const EMAIL = process.env.SPOK_EMAIL ?? '';
 const PASSWORD = process.env.SPOK_PASSWORD ?? '';
@@ -29,6 +46,7 @@ async function req(path: string, options: RequestInit = {}, retry = true): Promi
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      'X-Admin-Mode': 'true',
       ...options.headers,
     },
   });
