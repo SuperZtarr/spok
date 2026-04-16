@@ -24,6 +24,10 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
+## EN COURS — 2026-04-16
+
+- Fix cache logo : déplacé public/logo.png → src/assets/logo.png (import Vite hashé), 7 composants mis à jour
+
 ## EN COURS — 2026-04-15
 
 - Nettoyage espaces doc : doublons Modèle de données annulés (102 items), Modales todos passés en cours

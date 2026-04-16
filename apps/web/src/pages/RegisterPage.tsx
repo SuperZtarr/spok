@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logoUrl from '../assets/logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi, ApiError } from '../lib/api';
@@ -64,7 +65,7 @@ export function RegisterPage() {
     <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/logo.png" alt="SPOK" className="h-12 w-auto mx-auto mb-2" />
+          <img src={logoUrl} alt="SPOK" className="h-12 w-auto mx-auto mb-2" />
           <CardDescription>
             {localStorage.getItem('spok_pending_invitation_token')
               ? 'Créez votre compte pour accepter votre invitation'

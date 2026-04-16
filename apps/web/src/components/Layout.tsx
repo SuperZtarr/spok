@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import logoUrl from '../assets/logo.png';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
@@ -589,7 +590,7 @@ export function Layout() {
   const visitorSidebarContent = (
     <>
       <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <Link to="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain py-2" /></Link>
+        <Link to="/" className="block"><img src={logoUrl} alt="SPOK" className="w-full h-auto object-contain py-2" /></Link>
       </div>
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {communityGroups.map(({ community, spaceTree }) => (
@@ -630,7 +631,7 @@ export function Layout() {
     <>
       {/* Logo always visible */}
       <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
-        <a href="/" className="block"><img src="/logo.png" alt="SPOK" className="w-full h-auto object-contain py-2" /></a>
+        <a href="/" className="block"><img src={logoUrl} alt="SPOK" className="w-full h-auto object-contain py-2" /></a>
       </div>
 
       {/* Community header when in immersive mode */}
