@@ -27,6 +27,7 @@
 ## EN COURS — 2026-04-16
 
 - Fix cache logo : déplacé public/logo.png → src/assets/logo.png (import Vite hashé), 7 composants mis à jour
+- MindMap : vignettes élargies max-w 200→260px, RADIAL_STEP 350→420, positionsStorageKey v2→v3
 
 ## EN COURS — 2026-04-15
 

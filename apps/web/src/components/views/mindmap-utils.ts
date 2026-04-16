@@ -9,7 +9,7 @@ export interface TreeItem extends ItemWithRelations {
 }
 
 // Layout constants
-export const RADIAL_STEP = 350;
+export const RADIAL_STEP = 420;
 
 // Data structure for d3 hierarchy
 export interface LayoutDatum {

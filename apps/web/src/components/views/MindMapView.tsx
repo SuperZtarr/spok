@@ -120,7 +120,7 @@ function MindMapViewInner({
 
   // localStorage keys
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
-  const positionsStorageKey = spaceId ? `mindmap-positions-v2-${spaceId}` : null;
+  const positionsStorageKey = spaceId ? `mindmap-positions-v3-${spaceId}` : null;
   const pinnedStorageKey = spaceId ? `mindmap-pinned-${spaceId}` : null;
 
   // Saved node positions
