@@ -37,6 +37,7 @@ export const DEFAULT_VIEW_CONFIG: ViewConfigItem[] = [
   { id: 'documents', label: 'Documents', icon: 'FileText', category: 'itemTypes', order: 25, visible: true, access: 'user' },
   { id: 'bugs', label: 'Bugs', icon: 'Bug', category: 'itemTypes', order: 26, visible: true, access: 'user' },
   { id: 'todo', label: 'Todo', icon: 'CheckSquare', category: 'itemTypes', order: 27, visible: true, access: 'user' },
+  { id: 'recent', label: 'Récents', icon: 'Clock', category: 'basic', order: 28, visible: true, access: 'user' },
 ];
 
 export const DEFAULT_GLOBAL_PAGE_GROUPS: GlobalPageGroupConfig[] = [

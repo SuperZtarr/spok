@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'bugs' | 'thread' | 'overview' | 'todo';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'bugs' | 'thread' | 'overview' | 'todo' | 'recent';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 
@@ -45,6 +45,7 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
   { value: 'bugs', label: 'Bugs', icon: 'Bug', category: 'itemTypes' },
   { value: 'todo', label: 'Todo', icon: 'CheckSquare', category: 'itemTypes' },
   { value: 'thread', label: 'Discussions', icon: 'MessageSquare', category: 'basic' },
+  { value: 'recent', label: 'Récents', icon: 'Clock', category: 'basic' },
 ];
 
 interface ViewModeState {

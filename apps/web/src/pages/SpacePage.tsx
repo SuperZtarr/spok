@@ -68,6 +68,7 @@ import { DocumentsView } from '../components/views/DocumentsView';
 import { BugsView } from '../components/views/BugsView';
 import { TodoView } from '../components/views/TodoView';
 import { OverviewView } from '../components/views/OverviewView';
+import { RecentChangesView } from '../components/views/RecentChangesView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { StatusPropagationModal } from '../components/StatusPropagationModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
@@ -586,6 +587,26 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
+            />
+          ) : viewMode === 'recent' ? (
+            <RecentChangesView
+              items={filterBySearch(itemsData?.data)}
+              spaceId={spaceId}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
+              onEdit={setEditingItemId}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
+              referentiels={referentiels}
+              canEdit={canEdit}
             />
           ) : viewMode === 'thread' ? (
             <ThreadView

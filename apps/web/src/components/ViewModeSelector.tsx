@@ -4,7 +4,7 @@ import {
   List, GitBranch, Columns3, Share2, LayoutGrid,
   GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Table2, Grid3x3, Focus, Check,
   ChevronDown, FolderKanban, CheckSquare, LayoutDashboard, ClipboardList, Flame, Gauge, Home,
-  Eye, Users, ExternalLink, Image, Bug,
+  Eye, Users, ExternalLink, Image, Bug, Clock,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useViewModeStore, type ViewCategory } from '../stores/viewMode';
@@ -62,6 +62,7 @@ const ICONS: Record<string, typeof List> = {
   ExternalLink,
   Image,
   Bug,
+  Clock,
 };
 
 export function ViewModeSelector() {
@@ -75,6 +76,7 @@ export function ViewModeSelector() {
   // Map config to VIEW_MODES-compatible format, filtered by allowedViews for VIEWER role
   const allViewModes = configViews.map(v => ({ value: v.id as any, label: v.label, icon: v.icon, category: v.category }));
   const VIEW_MODES = allowedViews ? allViewModes.filter(v => allowedViews.includes(v.value)) : allViewModes;
+
   const allCategories = configCategories.map(c => ({ value: c.id, label: c.label }));
   const VIEW_CATEGORIES = allowedViews
     ? allCategories.filter(c => c.value === 'dashboard' || VIEW_MODES.some(v => v.category === c.value))

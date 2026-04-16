@@ -281,6 +281,15 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'Appuyez sur Echap pour fermer',
     ],
   },
+  recent: {
+    title: 'Modifications récentes',
+    description: 'Éléments ajoutés ou modifiés depuis votre dernière visite.',
+    tips: [
+      'Les nouveaux éléments apparaissent en vert',
+      'Les éléments modifiés apparaissent en bleu',
+      'La date de visite est mise à jour à chaque ouverture',
+    ],
+  },
 };
 
 import type { DashboardTab } from '../stores/dashboardTab';

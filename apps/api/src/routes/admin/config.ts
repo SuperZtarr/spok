@@ -33,8 +33,17 @@ export const adminConfigRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await fastify.prisma.appConfig.findUnique({ where: { key: VIEW_CONFIG_KEY } });
     const categories = await fastify.prisma.appConfig.findUnique({ where: { key: VIEW_CATEGORIES_KEY } });
 
+    const storedViews = config?.value as unknown as ViewConfigItem[] | undefined;
+    // Merge: add any default views missing from stored config (new views added after initial setup)
+    const views = storedViews
+      ? [
+          ...storedViews,
+          ...DEFAULT_VIEW_CONFIG.filter(d => !storedViews.some(s => s.id === d.id)),
+        ]
+      : DEFAULT_VIEW_CONFIG;
+
     return {
-      views: (config?.value as unknown as ViewConfigItem[]) || DEFAULT_VIEW_CONFIG,
+      views,
       categories: (categories?.value as unknown as ViewCategoryConfig[]) || DEFAULT_VIEW_CATEGORIES,
     };
   });
@@ -149,8 +158,16 @@ export const publicConfigRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await fastify.prisma.appConfig.findUnique({ where: { key: VIEW_CONFIG_KEY } });
     const categories = await fastify.prisma.appConfig.findUnique({ where: { key: VIEW_CATEGORIES_KEY } });
 
+    const storedViews = config?.value as unknown as ViewConfigItem[] | undefined;
+    const views = storedViews
+      ? [
+          ...storedViews,
+          ...DEFAULT_VIEW_CONFIG.filter(d => !storedViews.some(s => s.id === d.id)),
+        ]
+      : DEFAULT_VIEW_CONFIG;
+
     return {
-      views: (config?.value as unknown as ViewConfigItem[]) || DEFAULT_VIEW_CONFIG,
+      views,
       categories: (categories?.value as unknown as ViewCategoryConfig[]) || DEFAULT_VIEW_CATEGORIES,
     };
   });
