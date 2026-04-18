@@ -24,6 +24,15 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
+## EN COURS — 2026-04-18
+
+- Root cause cache dev identifié : SW (service worker) prod interceptait Vite en dev → fix main.tsx (prod only) + Cache-Control no-store
+- MainMenu.tsx : 4 boutons catégories (Basique/Types/Planif/Explor) → 1 bouton "Espaces" avec dropdown multi-colonnes + lien Présentation
+- menuDefaults.ts : ajout vue "Récents" (key: recent, section: basic, viewMode: recent)
+- dev-start.ps1 : nettoyage dist/sw.js + node_modules/.vite au démarrage
+- spok-menu skill : refactorisée pour refléter la vraie archi (MainMenu, pas ViewModeSelector)
+- Commit 7f7a778 — À tester en local (connecté + ouverture dropdown Espaces)
+
 ## EN COURS — 2026-04-16
 
 - Fix cache logo : déplacé public/logo.png → src/assets/logo.png (import Vite hashé), 7 composants mis à jour
