@@ -88,7 +88,7 @@ export function ViewModeSelector() {
   const globalGroupLabel = globalPageGroups.find(g => g.id === 'global')?.label || 'Vues globales';
   const myActivitiesGroupLabel = globalPageGroups.find(g => g.id === 'myActivities')?.label || 'Mes activités';
 
-  type MenuCategory = ViewCategory | 'myActivities';
+  type MenuCategory = ViewCategory | 'myActivities' | 'espaces';
 
   // Dropdown states
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -126,7 +126,8 @@ export function ViewModeSelector() {
   }, [computeDropdownPos]);
 
   const updateCategoryDropdownPos = useCallback((cat: MenuCategory) => {
-    setCategoryDropdownPos(computeDropdownPos(categoryButtonRefs.current.get(cat) || null, 200));
+    const width = cat === 'espaces' ? 640 : 200;
+    setCategoryDropdownPos(computeDropdownPos(categoryButtonRefs.current.get(cat) || null, width));
   }, [computeDropdownPos]);
 
   // --- Close all dropdowns helper ---
@@ -401,9 +402,62 @@ export function ViewModeSelector() {
     </>
   );
 
+  // --- Espaces multi-column dropdown ---
+  const renderEspacesDropdownContent = () => {
+    const spaceId = location.pathname.match(/\/spaces\/([^/]+)/)?.[1];
+    return (
+      <div className="p-3">
+        {spaceId && (
+          <>
+            <button
+              onClick={() => { navigate(`/spaces/${spaceId}`); closeAll(); }}
+              className="w-full flex items-center gap-2.5 px-2 py-1.5 text-sm transition-colors rounded-md text-foreground/80 hover:bg-accent hover:text-foreground"
+            >
+              <FolderKanban className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <span>Présentation</span>
+            </button>
+            <div className="h-px bg-border my-2" />
+          </>
+        )}
+        <div className="flex gap-1">
+          {spaceCategories.map((cat) => {
+            const catModes = VIEW_MODES.filter(v => v.category === cat.value);
+            return (
+              <div key={cat.value} className="min-w-[140px]">
+                <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{cat.label}</div>
+                {catModes.map(viewMode => {
+                  const Icon = ICONS[viewMode.icon];
+                  const isActive = mode === viewMode.value;
+                  return (
+                    <button
+                      key={viewMode.value}
+                      onClick={() => { setMode(viewMode.value); closeAll(); }}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-2 py-1.5 text-sm transition-colors rounded-md',
+                        isActive ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                      )}
+                    >
+                      <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                      <span className="flex-1 text-left">{viewMode.label}</span>
+                      {isActive ? <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : hasUnseenViewTour(viewMode.value) && <UnseenDot />}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   // --- Category dropdown content (for md level) ---
   const renderCategoryDropdownContent = () => {
     if (!openCategory) return null;
+
+    if (openCategory === 'espaces') {
+      return renderEspacesDropdownContent();
+    }
 
     if (openCategory === 'dashboard') {
       return renderDashboardDropdownContent();
@@ -463,31 +517,26 @@ export function ViewModeSelector() {
       {/* Separator */}
       <li><div className="w-px h-5 bg-border mx-0.5" /></li>
 
-      {/* Space view categories */}
-      {spaceCategories.map((cat) => {
-        const isActive = isCategoryActive(cat.value);
-        const isOpen = openCategory === cat.value;
-        return (
-          <li key={cat.value} className="relative">
-            <button
-              ref={(el) => { if (el) categoryButtonRefs.current.set(cat.value, el); }}
-              onClick={() => handleCategoryClick(cat.value)}
-              onMouseEnter={() => handleCategoryMouseEnter(cat.value)}
-              className={cn(
-                'flex items-center gap-1 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
-                isOpen
-                  ? 'text-foreground border-primary'
-                  : isActive
-                    ? 'text-foreground/90 border-primary/50'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
-              )}
-            >
-              {cat.label}
-              <ChevronDown className={cn('w-3 h-3 transition-transform duration-150', isOpen && 'rotate-180')} />
-            </button>
-          </li>
-        );
-      })}
+      {/* Single Espaces button */}
+      <li className="relative">
+        <button
+          ref={(el) => { if (el) categoryButtonRefs.current.set('espaces', el); }}
+          onClick={() => handleCategoryClick('espaces')}
+          onMouseEnter={() => handleCategoryMouseEnter('espaces')}
+          className={cn(
+            'flex items-center gap-1 px-2 py-2 text-sm transition-colors whitespace-nowrap border-b-2',
+            openCategory === 'espaces'
+              ? 'text-foreground border-primary'
+              : spaceCategories.some(c => isCategoryActive(c.value))
+                ? 'text-foreground/90 border-primary/50'
+                : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
+          )}
+        >
+          <FolderKanban className="w-4 h-4 flex-shrink-0" />
+          <span>Espaces</span>
+          <ChevronDown className={cn('w-3 h-3 transition-transform duration-150', openCategory === 'espaces' && 'rotate-180')} />
+        </button>
+      </li>
 
       {/* Separator */}
       <li><div className="w-px h-5 bg-border mx-0.5" /></li>
@@ -554,7 +603,10 @@ export function ViewModeSelector() {
       {openCategory && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-50 border border-border bg-card rounded-md shadow-md py-1 w-[200px]"
+          className={cn(
+            'fixed z-50 border border-border bg-card rounded-md shadow-md',
+            openCategory === 'espaces' ? 'w-auto' : 'w-[200px] py-1'
+          )}
           style={{ top: categoryDropdownPos.top + 2, left: categoryDropdownPos.left }}
         >
           {renderCategoryDropdownContent()}

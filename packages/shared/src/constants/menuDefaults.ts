@@ -22,6 +22,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'tree', label: 'Arborescence', icon: 'GitBranch', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'tree', order: 1, visible: true, access: 'public' },
   { id: '', key: 'members', label: 'Membres', icon: 'Users', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'members', order: 4, visible: true, access: 'user' },
   { id: '', key: 'crossTable', label: 'Tableau croisé', icon: 'Table2', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'crossTable', order: 6, visible: true, access: 'user' },
+  { id: '', key: 'recent', label: 'Récents', icon: 'Clock', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'recent', order: 7, visible: true, access: 'user' },
 
   // ── Section: itemTypes (Types) ──
   { id: '', key: 'types', label: 'Types', icon: 'LayoutGrid', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'types', order: 3, visible: true, access: 'user' },

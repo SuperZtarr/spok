@@ -42,17 +42,30 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "  PostgreSQL pret sur localhost:25432" -ForegroundColor Green
 
-Write-Host "[4/4] Liberation des ports 3000/3001 (si occupes par SPOK)..." -ForegroundColor Cyan
+Write-Host "[4/5] Nettoyage cache dev (dist/sw.js, node_modules/.vite)..." -ForegroundColor Cyan
+$swPath = Join-Path $projectRoot "apps/web/dist/sw.js"
+if (Test-Path $swPath) {
+    Remove-Item $swPath -Force
+    Write-Host "  dist/sw.js supprime (evite service worker en dev)" -ForegroundColor Yellow
+}
+$viteCachePath = Join-Path $projectRoot "node_modules/.vite"
+if (Test-Path $viteCachePath) {
+    Remove-Item $viteCachePath -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "  node_modules/.vite supprime" -ForegroundColor Yellow
+}
+Write-Host "  OK" -ForegroundColor Green
+
+Write-Host "[5/5] Liberation des ports 3000/3001 (si occupes par SPOK)..." -ForegroundColor Cyan
 $freed = 0
 foreach ($port in @(3000, 3001)) {
     $connections = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
     if ($connections) {
         $pids = $connections | Select-Object -ExpandProperty OwningProcess -Unique
-        foreach ($pid in $pids) {
-            $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+        foreach ($procId in $pids) {
+            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
             if ($proc -and $proc.ProcessName -eq "node") {
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-                Write-Host "  Port ${port}: PID $pid (node) arrete" -ForegroundColor Yellow
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                Write-Host "  Port ${port}: PID $procId (node) arrete" -ForegroundColor Yellow
                 $freed++
             }
         }

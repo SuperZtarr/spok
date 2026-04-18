@@ -19,13 +19,16 @@ export default defineConfig({
   server: {
     host: true, // Accepte les connexions de tous les hosts (0.0.0.0)
     port: 3000,
-    strictPort: true, // Ne pas chercher un autre port si 3000 est occupé
+    strictPort: true, // Ne pas chercher un autre port si occupé
     proxy: {
       '/api': {
         target: apiProxyTarget,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+    },
+    headers: {
+      'Cache-Control': 'no-store',
     },
     watch: {
       // Polling nécessaire pour les volumes Docker sur Windows

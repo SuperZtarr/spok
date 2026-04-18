@@ -6,7 +6,7 @@ import {
   Network, FileText, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Check,
   ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image, Bug, CheckSquare,
-  Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
+  Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings, Clock,
 } from 'lucide-react';
 import { useViewModeStore } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
@@ -18,7 +18,7 @@ import type { MenuItemConfig } from '@spok/shared';
 const ICONS: Record<string, typeof List> = {
   List, GitBranch, FileText, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck,
   Calendar, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
-  Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home,
+  Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Clock,
 };
 const EXTRA_ICONS: Record<string, typeof List> = {
   Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image, Bug, CheckSquare,
@@ -142,7 +142,7 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
     const btn = sectionButtonRefs.current.get(sectionId);
     if (btn) {
       const rect = btn.getBoundingClientRect();
-      const menuWidth = 220;
+      const menuWidth = sectionId === '__espaces__' ? 600 : 220;
       let left = rect.left;
       if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
       setDropdownPos({ top: rect.bottom, left });
@@ -156,6 +156,36 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
 
   const sectionHasActive = (s: RenderSection) => s.items.some(i => i.active);
   const currentSection = allSections.find(s => s.id === openSection);
+
+  // Dropdown multi-colonnes pour le bouton Espaces
+  const renderEspacesDropdownContent = () => {
+    const spaceId = location.pathname.match(/\/spaces\/([^/]+)/)?.[1];
+    const espaceSections = allSections.filter(s => SPACE_SECTION_IDS.includes(s.id));
+    return (
+      <div className="p-3">
+        {spaceId && (
+          <>
+            <button
+              onClick={() => { navigate(`/spaces/${spaceId}`); closeAll(); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span>Présentation</span>
+            </button>
+            <div className="h-px bg-border my-2" />
+          </>
+        )}
+        <div className="flex gap-1">
+          {espaceSections.map(section => (
+            <div key={section.id} className="min-w-[130px]">
+              <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</div>
+              {section.items.map(item => renderDropdownItem(item))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // Item dans un dropdown
   const renderDropdownItem = (item: RenderItem) => {
@@ -203,19 +233,52 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
     </button>
   );
 
+  const spaceRenderSections = allSections.filter(s => SPACE_SECTION_IDS.includes(s.id));
+  const nonSpaceBeforeSections = allSections.filter(s => !SPACE_SECTION_IDS.includes(s.id) && !['admin', 'misc'].includes(s.id));
+  const nonSpaceAfterSections = allSections.filter(s => ['admin', 'misc'].includes(s.id));
+  const espacesHasActive = spaceRenderSections.some(s => sectionHasActive(s));
+
   return (
     <nav className="ml-auto flex items-stretch h-full overflow-x-auto [&::-webkit-scrollbar]:hidden scroll-smooth" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%)' }}>
-      {/* Toutes les sections dans l'ordre sectionOrder */}
-      {allSections.map(s => renderSectionTrigger(s))}
+      {isInSpace ? (
+        <>
+          {nonSpaceBeforeSections.map(s => renderSectionTrigger(s))}
+          {spaceRenderSections.length > 0 && (
+            <button
+              ref={el => { if (el) sectionButtonRefs.current.set('__espaces__', el); }}
+              onClick={() => openSectionDropdown('__espaces__')}
+              onMouseEnter={() => handleSectionMouseEnter('__espaces__')}
+              className={cn(
+                'self-stretch flex items-center gap-1 px-4 text-sm whitespace-nowrap transition-colors',
+                openSection === '__espaces__' || espacesHasActive
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-foreground/70 hover:bg-muted hover:text-foreground'
+              )}
+            >
+              Espaces
+              <ChevronDown className={cn('w-3 h-3 transition-transform', openSection === '__espaces__' && 'rotate-180')} />
+            </button>
+          )}
+          {nonSpaceAfterSections.map(s => renderSectionTrigger(s))}
+        </>
+      ) : (
+        allSections.map(s => renderSectionTrigger(s))
+      )}
 
       {/* Dropdown portal */}
-      {openSection && currentSection && createPortal(
+      {openSection && (currentSection || openSection === '__espaces__') && createPortal(
         <div
           ref={portalRef}
-          className="fixed z-[9999] w-56 max-h-[70vh] overflow-y-auto bg-card border border-border shadow-xl py-1"
+          className={cn(
+            'fixed z-[9999] max-h-[70vh] overflow-y-auto bg-card border border-border shadow-xl',
+            openSection === '__espaces__' ? '' : 'w-56 py-1'
+          )}
           style={{ top: dropdownPos.top, left: dropdownPos.left }}
         >
-          {currentSection.items.map(item => renderDropdownItem(item))}
+          {openSection === '__espaces__'
+            ? renderEspacesDropdownContent()
+            : currentSection!.items.map(item => renderDropdownItem(item))
+          }
         </div>,
         document.body
       )}
