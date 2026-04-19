@@ -30,6 +30,7 @@ interface RenderItem {
   id: string;
   label: string;
   icon: string;
+  viewMode?: string | null;
   active?: boolean;
   onClick: () => void;
 }
@@ -51,7 +52,7 @@ interface MainMenuProps {
 export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { mode, setMode } = useViewModeStore();
+  const { mode, setMode, allowedViews } = useViewModeStore();
   const { sections: menuSections } = useMenuItems();
   const { logout, refreshToken } = useAuthStore();
 
@@ -131,6 +132,7 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
           id: item.key,
           label: item.label,
           icon: item.icon,
+          viewMode: item.viewMode,
           active: isItemActive(item),
           onClick: () => handleItemClick(item),
         })),
@@ -176,12 +178,18 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
           </>
         )}
         <div className="flex gap-1">
-          {espaceSections.map(section => (
-            <div key={section.id} className="min-w-[130px]">
-              <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</div>
-              {section.items.map(item => renderDropdownItem(item))}
-            </div>
-          ))}
+          {espaceSections.map(section => {
+            const visibleItems = allowedViews
+              ? section.items.filter(item => !item.viewMode || allowedViews.includes(item.viewMode as any))
+              : section.items;
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={section.id} className="min-w-[130px]">
+                <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</div>
+                {visibleItems.map(item => renderDropdownItem(item))}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
