@@ -63,6 +63,7 @@ function PriorityCard({
   onSplitDescription,
   isDragging,
   canEdit = true,
+  canEditItem,
   referentiels,
   spaceName,
 }: {
@@ -79,6 +80,7 @@ function PriorityCard({
   onSplitDescription?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
   spaceName?: string;
 }) {
@@ -136,7 +138,7 @@ function PriorityCard({
         </div>
       </div>
 
-      {canEdit && (
+      {(canEditItem ? canEditItem(item) : canEdit) && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined })}
@@ -166,6 +168,7 @@ function PriorityColumn({
   onAbsorbChildren,
   onSplitDescription,
   canEdit,
+  canEditItem,
   referentiels,
   draggedItemId,
   portalSpaceNames,
@@ -185,6 +188,7 @@ function PriorityColumn({
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
   draggedItemId: string | null;
   portalSpaceNames?: Map<string, string>;
@@ -227,6 +231,7 @@ function PriorityColumn({
             onSplitDescription={onSplitDescription}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
+            canEditItem={canEditItem}
             referentiels={referentiels}
             spaceName={portalSpaceNames && currentSpaceId && (item as any).spaceId !== currentSpaceId ? portalSpaceNames.get((item as any).spaceId) : undefined}
           />
@@ -266,6 +271,7 @@ interface PriorityViewProps {
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 export function PriorityView({
@@ -285,6 +291,7 @@ export function PriorityView({
   onConvertToSpace,
   referentiels,
   canEdit = true,
+  canEditItem,
 }: PriorityViewProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -387,6 +394,7 @@ export function PriorityView({
               onAbsorbChildren={onAbsorbChildren}
               onSplitDescription={onSplitDescription}
               canEdit={canEdit}
+              canEditItem={canEditItem}
               referentiels={referentiels}
               draggedItemId={draggedItemId}
               portalSpaceNames={hasPortals ? portalSpaceNames : undefined}

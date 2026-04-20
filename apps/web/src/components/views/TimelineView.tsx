@@ -46,9 +46,10 @@ interface TimelineViewProps {
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
@@ -720,7 +721,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                         <span className="truncate max-w-[60px]">{portalSpaceName}</span>
                       </Link>
                     )}
-                    {canEdit && !isPortal && (
+                    {(canEditItem ? canEditItem(item) : canEdit) && !isPortal && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <ItemActionMenu
                           groups={buildItemMenuGroups(item.id, {

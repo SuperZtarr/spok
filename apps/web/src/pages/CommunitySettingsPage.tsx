@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play, AlertTriangle, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play, AlertTriangle, ArrowRightLeft, Search, Users, FileText, User } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
@@ -10,6 +10,8 @@ import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { usePasteUpload } from '../hooks/usePasteUpload';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { communitiesApi, spacesApi } from '../lib/api';
+import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
+import type { SpaceWithRole } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -103,11 +105,22 @@ function CommunitySettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; 
   );
 }
 
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays}j`;
+  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} sem.`;
+  if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+  return date.toLocaleDateString('fr-FR');
+}
+
 function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: string | null) => void }) {
   const [isDragOver, setIsDragOver] = useState(false);
-
   return (
-    <div
+    <tr
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('application/spok-space-id')) {
           e.preventDefault();
@@ -122,28 +135,35 @@ function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: strin
         const draggedId = e.dataTransfer.getData('application/spok-space-id');
         if (draggedId) onMove(draggedId, null);
       }}
-      className={`flex items-center justify-center p-2 rounded-lg border border-dashed transition-colors text-xs text-muted-foreground ${
-        isDragOver ? 'border-primary bg-primary/5 text-primary' : 'border-transparent'
-      }`}
     >
-      {isDragOver ? 'Déposer ici pour mettre à la racine' : ''}
-    </div>
+      <td colSpan={7} className={`px-4 py-1 text-center text-xs transition-colors ${isDragOver ? 'text-primary bg-primary/5' : 'text-transparent select-none'}`}>
+        {isDragOver ? 'Déposer ici pour mettre à la racine' : '.'}
+      </td>
+    </tr>
   );
 }
 
-function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMove: (spaceId: string, newParentId: string | null) => void }) {
+function SpaceTableRow({ node, level, onMove, onDelete, canEdit }: {
+  node: any;
+  level: number;
+  onMove: (spaceId: string, newParentId: string | null) => void;
+  onDelete: (space: SpaceWithRole) => void;
+  canEdit: boolean;
+}) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <>
-      <Link
-        to={`/spaces/${node.id}`}
-        draggable
+      <tr
+        draggable={canEdit}
         onDragStart={(e) => {
+          if (!canEdit) return;
           e.dataTransfer.setData('application/spok-space-id', node.id);
           e.dataTransfer.effectAllowed = 'move';
         }}
         onDragOver={(e) => {
+          if (!canEdit) return;
           if (e.dataTransfer.types.includes('application/spok-space-id')) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
@@ -157,25 +177,68 @@ function SpaceTreeNode({ node, level, onMove }: { node: any; level: number; onMo
           const draggedId = e.dataTransfer.getData('application/spok-space-id');
           if (draggedId && draggedId !== node.id) onMove(draggedId, node.id);
         }}
-        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${isDragOver ? 'border-primary bg-primary/5 ring-2 ring-primary' : 'border-border hover:bg-accent/50'}`}
-        style={{ marginLeft: `${level * 24}px` }}
+        className={`cursor-pointer transition-colors ${isDragOver ? 'bg-primary/5 ring-2 ring-inset ring-primary' : 'hover:bg-muted/50'}`}
+        onClick={() => navigate(`/spaces/${node.id}`)}
       >
-        <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />
-        {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
-        {node.avatarUrl ? (
-          <img src={node.avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover" />
-        ) : (
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FolderOpen className="w-4 h-4 text-primary" />
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 20}px` }}>
+            {canEdit && <GripVertical className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />}
+            {node.avatarUrl ? (
+              <img src={node.avatarUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+            ) : (
+              <FolderOpen className="w-4 h-4 text-primary/60 flex-shrink-0" />
+            )}
+            <span className="text-sm font-medium truncate max-w-[220px]">{node.name}</span>
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{node.name}</p>
-          <p className="text-xs text-muted-foreground">{node.itemCount || 0} élément{(node.itemCount || 0) > 1 ? 's' : ''}</p>
-        </div>
-      </Link>
+        </td>
+        <td className="px-4 py-3">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+            node.type === 'GROUP'
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+          }`}>
+            {node.type === 'GROUP' ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
+            {node.type === 'GROUP' ? 'Groupe' : 'Perso'}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-sm text-muted-foreground">
+          {node.owner ? (
+            <span className="truncate max-w-[120px] block">{node.owner.name}</span>
+          ) : (
+            <span className="text-muted-foreground/40">—</span>
+          )}
+        </td>
+        <td className="px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+            <Users className="w-3.5 h-3.5" />
+            {node.memberCount ?? '—'}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+            <FileText className="w-3.5 h-3.5" />
+            {node.itemCount ?? '—'}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(node.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
+          {formatRelativeDate(node.createdAt)}
+        </td>
+        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onDelete(node); }}
+              className="h-7 w-7 p-0"
+              title="Supprimer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            </Button>
+          )}
+        </td>
+      </tr>
       {node.children?.map((child: any) => (
-        <SpaceTreeNode key={child.id} node={child} level={level + 1} onMove={onMove} />
+        <SpaceTableRow key={child.id} node={child} level={level + 1} onMove={onMove} onDelete={onDelete} canEdit={canEdit} />
       ))}
     </>
   );
@@ -194,6 +257,8 @@ export function CommunitySettingsPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
+  const [spaceSearch, setSpaceSearch] = useState('');
+  const [spaceToDelete, setSpaceToDelete] = useState<SpaceWithRole | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
@@ -254,6 +319,10 @@ export function CommunitySettingsPage() {
 
   // Spaces in this community
   const communitySpaces = allSpaces?.filter(s => s.communityId === communityId) || [];
+
+  const filteredSpaces = spaceSearch
+    ? communitySpaces.filter(s => s.name.toLowerCase().includes(spaceSearch.toLowerCase()))
+    : communitySpaces;
 
   // Build space tree
   const spaceTree = useMemo(() => {
@@ -317,6 +386,18 @@ export function CommunitySettingsPage() {
     },
   });
 
+
+  // Delete space
+  const deleteSpaceMutation = useMutation({
+    mutationFn: ({ id, deleteChildren }: { id: string; deleteChildren: boolean }) =>
+      spacesApi.delete(id, deleteChildren),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
+      setSpaceToDelete(null);
+    },
+  });
 
   // Create new space in this community
   const createSpaceMutation = useMutation({
@@ -739,27 +820,21 @@ export function CommunitySettingsPage() {
 
         {/* === SPACES TAB === */}
         {activeTab === 'spaces' && (
-          <div className="bg-card border rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-card border rounded-lg overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <FolderKanban className="w-5 h-5" />
                 Espaces ({communitySpaces.length})
               </h2>
               {canEdit && (
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => { setShowCreateSpace(!showCreateSpace); setShowAddSpace(false); }}
-                  >
+                  <Button size="sm" onClick={() => { setShowCreateSpace(!showCreateSpace); setShowAddSpace(false); }}>
                     <Plus className="w-4 h-4 mr-1" />
                     Créer un espace
                   </Button>
                   {availableSpaces.length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { setShowAddSpace(!showAddSpace); setShowCreateSpace(false); }}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => { setShowAddSpace(!showAddSpace); setShowCreateSpace(false); }}>
                       Rattacher un espace existant
                     </Button>
                   )}
@@ -769,96 +844,122 @@ export function CommunitySettingsPage() {
 
             {/* Create space form */}
             {showCreateSpace && (
-              <div className="p-4 bg-muted rounded-lg mb-4 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Créer un nouvel espace dans cette communauté :
-                </p>
+              <div className="px-6 py-4 bg-muted/50 border-b space-y-3">
+                <p className="text-sm text-muted-foreground">Créer un nouvel espace dans cette communauté :</p>
                 <Input
                   value={newSpaceName}
                   onChange={(e) => setNewSpaceName(e.target.value)}
                   placeholder="Nom de l'espace"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newSpaceName.trim()) {
-                      createSpaceMutation.mutate(newSpaceName.trim());
-                    }
-                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && newSpaceName.trim()) createSpaceMutation.mutate(newSpaceName.trim()); }}
                   autoFocus
                 />
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => createSpaceMutation.mutate(newSpaceName.trim())}
-                    disabled={!newSpaceName.trim() || createSpaceMutation.isPending}
-                  >
+                  <Button size="sm" onClick={() => createSpaceMutation.mutate(newSpaceName.trim())} disabled={!newSpaceName.trim() || createSpaceMutation.isPending}>
                     {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => { setShowCreateSpace(false); setNewSpaceName(''); }}
-                  >
-                    Annuler
-                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setShowCreateSpace(false); setNewSpaceName(''); }}>Annuler</Button>
                 </div>
               </div>
             )}
 
             {/* Add space form */}
             {showAddSpace && (
-              <div className="p-4 bg-muted rounded-lg mb-4 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Sélectionnez un espace de groupe à rattacher à cette communauté :
-                </p>
+              <div className="px-6 py-4 bg-muted/50 border-b space-y-3">
+                <p className="text-sm text-muted-foreground">Sélectionnez un espace de groupe à rattacher à cette communauté :</p>
                 <Select
                   value={selectedSpaceId}
                   onChange={(e) => setSelectedSpaceId(e.target.value)}
-                  options={[
-                    { value: '', label: 'Choisir un espace...' },
-                    ...availableSpaces.map(s => ({ value: s.id, label: s.name })),
-                  ]}
+                  options={[{ value: '', label: 'Choisir un espace...' }, ...availableSpaces.map(s => ({ value: s.id, label: s.name }))]}
                 />
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleAddSpace}
-                    disabled={!selectedSpaceId || addSpaceMutation.isPending}
-                  >
+                  <Button size="sm" onClick={handleAddSpace} disabled={!selectedSpaceId || addSpaceMutation.isPending}>
                     {addSpaceMutation.isPending ? 'Ajout...' : 'Ajouter'}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddSpace(false);
-                      setSelectedSpaceId('');
-                    }}
-                  >
-                    Annuler
-                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setShowAddSpace(false); setSelectedSpaceId(''); }}>Annuler</Button>
                 </div>
               </div>
             )}
 
-            {/* Space tree */}
-            {spaceTree.length > 0 ? (
-              <div className="space-y-1">
-                {canEdit && <RootDropZone onMove={handleMoveSpace} />}
-                {spaceTree.map(node => (
-                  <SpaceTreeNode key={node.id} node={node} level={0} onMove={handleMoveSpace} />
-                ))}
+            {/* Search bar */}
+            <div className="px-4 py-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={spaceSearch}
+                  onChange={(e) => setSpaceSearch(e.target.value)}
+                  placeholder="Rechercher par nom..."
+                  className="pl-10"
+                />
+                {spaceSearch && (
+                  <button onClick={() => setSpaceSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Aucun espace rattaché à cette communauté.
-              </p>
-            )}
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Espace</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Propriétaire</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Membres</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Items</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Créé</th>
+                    <th className="w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {communitySpaces.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        Aucun espace rattaché à cette communauté.
+                      </td>
+                    </tr>
+                  ) : spaceSearch ? (
+                    filteredSpaces.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                          Aucun espace trouvé pour &laquo;&nbsp;{spaceSearch}&nbsp;&raquo;.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSpaces.map(space => (
+                        <SpaceTableRow key={space.id} node={{ ...space, children: [] }} level={0} onMove={handleMoveSpace} onDelete={setSpaceToDelete} canEdit={canEdit} />
+                      ))
+                    )
+                  ) : (
+                    <>
+                      {canEdit && <RootDropZone onMove={handleMoveSpace} />}
+                      {spaceTree.map(node => (
+                        <SpaceTableRow key={node.id} node={node} level={0} onMove={handleMoveSpace} onDelete={setSpaceToDelete} canEdit={canEdit} />
+                      ))}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {canEdit && availableSpaces.length === 0 && communitySpaces.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-3">
+              <p className="text-xs text-muted-foreground px-4 py-2 border-t">
                 Tous vos espaces de groupe sont déjà rattachés à une communauté.
               </p>
             )}
           </div>
+        )}
+
+        {spaceToDelete && (
+          <SpaceDeleteConfirmModal
+            isOpen={!!spaceToDelete}
+            onClose={() => setSpaceToDelete(null)}
+            onConfirm={(deleteChildren) => deleteSpaceMutation.mutate({ id: spaceToDelete.id, deleteChildren })}
+            spaceId={spaceToDelete.id}
+            spaceName={spaceToDelete.name}
+            isPending={deleteSpaceMutation.isPending}
+          />
         )}
 
         {/* === MEMBERS TAB === */}

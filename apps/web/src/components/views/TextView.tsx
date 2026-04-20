@@ -43,6 +43,7 @@ interface TextViewProps {
   onSplitDescription?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   highlightType?: string;
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
@@ -94,7 +95,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
+export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -202,6 +203,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               onAbsorbChildren={onAbsorbChildren}
               onSplitDescription={onSplitDescription}
               canEdit={canEdit}
+              canEditItem={canEditItem}
               doneStatusId={doneStatusId}
               statusLabels={statusLabels}
               statusColors={statusColors}
@@ -283,6 +285,7 @@ function TextItem({
   onAbsorbChildren,
   onSplitDescription,
   canEdit,
+  canEditItem,
   doneStatusId,
   statusLabels,
   statusColors,
@@ -305,6 +308,7 @@ function TextItem({
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   doneStatusId: string;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
@@ -356,7 +360,7 @@ function TextItem({
             {contributions.length}
           </span>
         )}
-        {canEdit && (onDelete || onAddChild) && (
+        {(canEditItem ? canEditItem(item) : canEdit) && (onDelete || onAddChild) && (
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             <ItemActionMenu
               groups={buildItemMenuGroups(item.id, {

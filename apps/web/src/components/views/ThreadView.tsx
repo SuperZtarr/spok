@@ -26,6 +26,7 @@ interface ThreadViewProps {
   onSplitDescription?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   searchMatchIds?: Set<string>;
 }
 
@@ -103,6 +104,7 @@ export function ThreadView({
   onSplitDescription,
   referentiels,
   canEdit,
+  canEditItem,
   searchMatchIds,
 }: ThreadViewProps) {
   const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
@@ -235,7 +237,7 @@ export function ThreadView({
             </div>
 
             {/* Actions */}
-            {canEdit && (
+            {(canEditItem ? canEditItem(node) : canEdit) && (
               <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <ItemActionMenu
                   groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined })}

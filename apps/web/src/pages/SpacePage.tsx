@@ -129,6 +129,12 @@ export function SpacePage() {
 
   const canEdit = !!user && !!space?.role && space.role !== 'VIEWER';
 
+  const canEditItem = useCallback((item: { createdById?: string }) => {
+    if (!canEdit) return false;
+    if (space?.role === 'OWNER') return true;
+    return item.createdById === user?.id;
+  }, [canEdit, space?.role, user?.id]);
+
   // Restrict views for VIEWER role
   useEffect(() => {
     setAllowedViews(canEdit ? null : VIEWER_ALLOWED_VIEWS);
@@ -564,6 +570,7 @@ export function SpacePage() {
               onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'text' ? (
             <TextView
@@ -583,6 +590,7 @@ export function SpacePage() {
               onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
@@ -624,6 +632,7 @@ export function SpacePage() {
               onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
               searchMatchIds={searchMatchIds}
             />
           ) : viewMode === 'kanban' ? (
@@ -645,6 +654,7 @@ export function SpacePage() {
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'types' ? (
             <TypesView
@@ -665,6 +675,7 @@ export function SpacePage() {
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'planning' ? (
             <PlanningView
@@ -688,6 +699,7 @@ export function SpacePage() {
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'calendar' ? (
             <CalendarView
@@ -736,6 +748,7 @@ export function SpacePage() {
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'mindmap' ? (
             <MindMapView
@@ -767,6 +780,7 @@ export function SpacePage() {
               onUpdateRelation={actions.handleUpdateRelation}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'graph' ? (
             <GraphView
@@ -919,6 +933,7 @@ export function SpacePage() {
               onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'priority' ? (
             <PriorityView
@@ -938,6 +953,7 @@ export function SpacePage() {
               onSplitDescription={actions.handleSplitDescription}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'todo' ? (
             <TodoView
@@ -996,6 +1012,7 @@ export function SpacePage() {
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'links' ? (
             <LinksView
@@ -1016,6 +1033,7 @@ export function SpacePage() {
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : viewMode === 'images' ? (
             <ImagesView
@@ -1036,6 +1054,7 @@ export function SpacePage() {
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
             />
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">

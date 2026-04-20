@@ -59,6 +59,7 @@ interface KanbanViewProps {
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 interface KanbanColumnProps {
@@ -80,6 +81,7 @@ interface KanbanColumnProps {
   nextStatus?: string;
   nextStatusLabel?: string;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
   isFirstColumn?: boolean;
 }
@@ -102,6 +104,7 @@ interface KanbanCardProps {
   nextStatus?: string;
   nextStatusLabel?: string;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
   isFirstCard?: boolean;
 }
@@ -109,7 +112,7 @@ interface KanbanCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isDragging, nextStatus, nextStatusLabel, canEdit = true, referentiels, isFirstCard }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isDragging, nextStatus, nextStatusLabel, canEdit = true, canEditItem, referentiels, isFirstCard }: KanbanCardProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -198,7 +201,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       </div>
 
       {/* Action menu */}
-      {canEdit && (
+      {(canEditItem ? canEditItem(item) : canEdit) && (
         <RoleGuard role="MEMBER">
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
@@ -232,7 +235,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isOver, nextStatus, nextStatusLabel, canEdit, referentiels, isFirstColumn }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isOver, nextStatus, nextStatusLabel, canEdit, canEditItem, referentiels, isFirstColumn }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -285,6 +288,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             nextStatus={nextStatus}
             nextStatusLabel={nextStatusLabel}
             canEdit={canEdit}
+            canEditItem={canEditItem}
             referentiels={referentiels}
             isFirstCard={isFirstColumn && cardIdx === 0}
           />
@@ -338,7 +342,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMoveItemToSpace, referentiels, canEdit = true }: KanbanViewProps) {
+export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -522,6 +526,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                         nextStatus={nextStatusMap[status.id]?.id}
                         nextStatusLabel={nextStatusMap[status.id]?.label}
                         canEdit={canEdit}
+                        canEditItem={canEditItem}
                         referentiels={referentiels}
                         isFirstColumn={idx === 0 && statusIdx === 0}
                       />

@@ -160,6 +160,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
                 name: true,
               },
             },
+            memberships: {
+              where: { role: 'OWNER' },
+              include: { user: { select: { id: true, name: true } } },
+              take: 1,
+            },
           },
         },
       },
@@ -172,6 +177,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       memberCount: m.space._count.memberships,
       itemCount: m.space._count.items,
       isMember: true,
+      owner: (m.space as any).memberships?.[0]?.user || null,
     }));
 
     // 2. Get community spaces the user can see but hasn't joined
@@ -205,6 +211,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           parent: {
             select: { id: true, name: true },
           },
+          memberships: {
+            where: { role: 'OWNER' },
+            include: { user: { select: { id: true, name: true } } },
+            take: 1,
+          },
         },
         orderBy: { name: 'asc' },
       });
@@ -215,6 +226,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
+        owner: (s as any).memberships?.[0]?.user || null,
       }));
 
       return [...memberSpaces, ...nonMemberSpaces];

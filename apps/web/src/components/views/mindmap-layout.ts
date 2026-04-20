@@ -72,6 +72,7 @@ export interface MindMapLayoutOptions {
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   pinnedIdsSet?: Set<string>;
   currentSpaceId?: string;
   portalSpaceNames?: Map<string, string>;
@@ -89,7 +90,7 @@ export function calculateLayout(
   options: MindMapLayoutOptions,
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number; arcStart: number } {
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onTogglePin } = callbacks;
-  const { hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
+  const { hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
 
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -274,7 +275,7 @@ export function calculateLayout(
         isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
         isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
         isDropTarget: false,
-        canEdit: canEdit !== false,
+        canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
         isPinned: pinnedIdsSet?.has(item.id) || false,
         onTogglePin: onTogglePin || (() => {}),
         isPortal: !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
@@ -376,7 +377,7 @@ export function buildPortalNodesAndEdges(
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
   const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions } = ctx;
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onTogglePin } = callbacks;
-  const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, pinnedIdsSet } = options;
+  const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet } = options;
 
   const portalPosMap = new Map(positionedNodes.map(n => [n.id, n.position]));
   const portalNodes: Node[] = [];
@@ -540,7 +541,7 @@ export function buildPortalNodesAndEdges(
           isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
           isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
           isDropTarget: false,
-          canEdit: canEdit !== false,
+          canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
           isPinned: pinnedIdsSet?.has(item.id) || false,
           onTogglePin: onTogglePin || (() => {}),
           isPortal: true,

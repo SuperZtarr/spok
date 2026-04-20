@@ -58,6 +58,7 @@ interface MembersKanbanViewProps {
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 const MIN_BOARD_HEIGHT = 200;
@@ -81,6 +82,7 @@ function MemberKanbanCard({
   onSplitDescription,
   isDragging,
   canEdit = true,
+  canEditItem,
   referentiels,
 }: {
   item: Item;
@@ -96,6 +98,7 @@ function MemberKanbanCard({
   onSplitDescription?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
 }) {
   const Icon = getTypeIcon(item.type, item.url);
@@ -155,7 +158,7 @@ function MemberKanbanCard({
         </div>
       </div>
 
-      {canEdit && (
+      {(canEditItem ? canEditItem(item) : canEdit) && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined })}
@@ -185,6 +188,7 @@ function MemberColumnComponent({
   onAbsorbChildren,
   onSplitDescription,
   canEdit,
+  canEditItem,
   referentiels,
   draggedItemId,
 }: {
@@ -202,6 +206,7 @@ function MemberColumnComponent({
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
   draggedItemId: string | null;
 }) {
@@ -252,6 +257,7 @@ function MemberColumnComponent({
             onSplitDescription={onSplitDescription}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
+            canEditItem={canEditItem}
             referentiels={referentiels}
           />
         ))}
@@ -323,6 +329,7 @@ export function MembersKanbanView({
   onConvertToSpace,
   referentiels,
   canEdit = true,
+  canEditItem,
 }: MembersKanbanViewProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -510,6 +517,7 @@ export function MembersKanbanView({
                       onAbsorbChildren={onAbsorbChildren}
                       onSplitDescription={onSplitDescription}
                       canEdit={canEdit}
+                      canEditItem={canEditItem}
                       referentiels={referentiels}
                       draggedItemId={draggedItemId}
                     />

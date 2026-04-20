@@ -68,11 +68,12 @@ interface DocumentsViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   portalGroups?: PortalGroup[];
   currentSpaceId?: string;
 }
 
-export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: DocumentsViewProps) {
+export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: DocumentsViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const documents = useMemo(() => {
     if (!items) return [];
@@ -180,7 +181,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                       >
                         <Download className="w-4 h-4 text-muted-foreground" />
                       </a>
-                      {canEdit && onDelete && (
+                      {(canEditItem ? canEditItem(doc) : canEdit) && onDelete && (
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                           <RoleGuard role="MEMBER">
                             <ItemActionMenu

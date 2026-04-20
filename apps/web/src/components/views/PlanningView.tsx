@@ -144,6 +144,7 @@ interface PlanningViewProps {
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 interface PlanningItemProps {
@@ -168,9 +169,10 @@ interface PlanningItemProps {
   isSearchMatch?: boolean;
   highlightColor?: { border: string; bg: string };
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true }: PlanningItemProps) {
+function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true, canEditItem }: PlanningItemProps) {
   const Icon = getTypeIcon(item.type, item.url);
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -250,7 +252,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
 
       {/* Action menu */}
       <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-        {canEdit && !isPortal && (
+        {(canEditItem ? canEditItem(item) : canEdit) && !isPortal && (
           <ItemActionMenu
             groups={buildItemMenuGroups(item.id, {
               onEdit,
@@ -296,9 +298,10 @@ interface PeriodSectionProps {
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit }: PeriodSectionProps) {
+function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit, canEditItem }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -337,6 +340,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
             isSearchMatch={!!(searchMatchIds && searchMatchIds.has(item.id))}
             highlightColor={highlightColor}
             canEdit={canEdit}
+            canEditItem={canEditItem}
           />
         ))}
       </div>
@@ -344,7 +348,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
   );
 }
 
-export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true }: PlanningViewProps) {
+export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -434,6 +438,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
           highlightColor={highlightColor}
           searchMatchIds={searchMatchIds}
           canEdit={canEdit}
+          canEditItem={canEditItem}
         />
       ))}
     </div>

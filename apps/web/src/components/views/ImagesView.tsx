@@ -22,6 +22,7 @@ interface ImageItem {
   description: string | null;
   status: string | null;
   parentId: string | null;
+  createdById?: string;
 }
 
 interface ImageGroup {
@@ -134,11 +135,12 @@ interface ImagesViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   portalGroups?: PortalGroup[];
   currentSpaceId?: string;
 }
 
-export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
+export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(2); // default M
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -166,6 +168,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
         description: item.description || null,
         status: item.status || null,
         parentId: item.parentId || null,
+        createdById: item.createdById,
       }));
   }, [items]);
 
@@ -324,7 +327,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                       </div>
                     </button>
 
-                    {canEdit && onDelete && (
+                    {(canEditItem ? canEditItem(img) : canEdit) && onDelete && (
                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <RoleGuard role="MEMBER">
                           <ItemActionMenu

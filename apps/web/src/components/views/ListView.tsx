@@ -40,6 +40,7 @@ interface ListViewProps {
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 // Format date for display
@@ -99,7 +100,7 @@ function ImageThumbnail({ url }: { url: string }) {
 type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 'contributions';
 type SortDir = 'asc' | 'desc';
 
-export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit = true }: ListViewProps) {
+export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit = true, canEditItem }: ListViewProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -360,7 +361,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                   </span>
 
                   <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {canEdit && !isPortal && (
+                    {(canEditItem ? canEditItem(item) : canEdit) && !isPortal && (
                       <RoleGuard role="MEMBER">
                       <ItemActionMenu
                         groups={buildItemMenuGroups(item.id, {

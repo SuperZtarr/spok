@@ -45,6 +45,7 @@ interface TypesViewProps {
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 interface TypeColumnConfig {
@@ -72,6 +73,7 @@ interface TypeColumnProps {
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 interface TypeCardProps {
@@ -90,12 +92,13 @@ interface TypeCardProps {
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isDragging, statusLabels, statusColors, canEdit = true }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isDragging, statusLabels, statusColors, canEdit = true, canEditItem }: TypeCardProps) {
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -169,7 +172,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       </div>
 
       {/* Action menu */}
-      {canEdit && (
+      {(canEditItem ? canEditItem(item) : canEdit) && (
         <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
             groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined })}
@@ -180,7 +183,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   );
 }
 
-function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isOver, statusLabels, statusColors, canEdit }: TypeColumnProps) {
+function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, isOver, statusLabels, statusColors, canEdit, canEditItem }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -230,6 +233,7 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
             statusLabels={statusLabels}
             statusColors={statusColors}
             canEdit={canEdit}
+            canEditItem={canEditItem}
           />
         ))}
 
@@ -281,7 +285,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMoveItemToSpace, referentiels, canEdit = true }: TypesViewProps) {
+export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -472,6 +476,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
                         statusLabels={statusLabels}
                         statusColors={statusColors}
                         canEdit={canEdit}
+                        canEditItem={canEditItem}
                       />
                     );
                   })}

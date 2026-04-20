@@ -15,11 +15,12 @@ interface UrlMeta {
   favicon: string | null;
 }
 
-function LinkTag({ item, onEdit, actions, canEdit, referentiels }: {
+function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: {
   item: Item;
   onEdit?: (id: string) => void;
   actions: LinkActions;
   canEdit: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: any;
 }) {
   const { data: meta } = useQuery<UrlMeta>({
@@ -69,7 +70,7 @@ function LinkTag({ item, onEdit, actions, canEdit, referentiels }: {
         <span className="truncate max-w-[250px]">{displayTitle}</span>
       </a>
 
-      {canEdit && actions.onDelete && (
+      {(canEditItem ? canEditItem(item) : canEdit) && actions.onDelete && (
         <div className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
           <RoleGuard role="MEMBER">
             <ItemActionMenu
@@ -147,11 +148,12 @@ interface LinksViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
   portalGroups?: PortalGroup[];
   currentSpaceId?: string;
 }
 
-export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
+export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const links = useMemo(() => {
     if (!items) return [];
@@ -224,7 +226,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
             <div className="flex flex-wrap gap-2">
               {group.links.map(link => (
                 <DraggableLink key={link.id} id={link.id} canDrag={canEdit && !!onMove}>
-                  <LinkTag item={link} onEdit={onEdit} actions={actions} canEdit={canEdit} referentiels={referentiels} />
+                  <LinkTag item={link} onEdit={onEdit} actions={actions} canEdit={canEdit} canEditItem={canEditItem} referentiels={referentiels} />
                 </DraggableLink>
               ))}
             </div>

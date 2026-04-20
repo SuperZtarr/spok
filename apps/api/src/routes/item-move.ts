@@ -40,6 +40,10 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Item not found');
     }
 
+    if (membership.role === 'MEMBER' && item.createdById !== request.user.userId) {
+      return reply.forbidden('Members can only move their own items');
+    }
+
     const body = moveItemSchema.parse(request.body);
     const newParentId = body.parentId === undefined ? item.parentId : body.parentId;
     const newPosition = body.position;
@@ -195,6 +199,13 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (items.length === 0) {
       return reply.notFound('No items found to move');
+    }
+
+    if (membership.role === 'MEMBER') {
+      const unauthorizedItems = items.filter(i => i.createdById !== request.user.userId);
+      if (unauthorizedItems.length > 0) {
+        return reply.forbidden('Members can only move their own items');
+      }
     }
 
     // Collect all item IDs to move (including children if requested)

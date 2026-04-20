@@ -393,6 +393,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Item not found');
       }
 
+      if (membership.role === 'MEMBER' && existingItem.createdById !== request.user.userId) {
+        return reply.forbidden('Members can only edit their own items');
+      }
+
       const body = updateItemSchema.parse(request.body);
       const { tagIds, updatedAt: clientUpdatedAt, propagateToChildren, ...updateData } = body;
 
@@ -642,6 +646,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!item) {
       return reply.notFound('Item not found');
+    }
+
+    if (membership.role === 'MEMBER' && item.createdById !== request.user.userId) {
+      return reply.forbidden('Members can only delete their own items');
     }
 
     const deleteChildren = request.query.deleteChildren === 'true';

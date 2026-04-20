@@ -24,6 +24,18 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
+## EN COURS — 2026-04-21
+
+- Permissions items par ownership : OWNER peut éditer/supprimer tous les items, MEMBER uniquement les siens
+  - API : items.ts PATCH+DELETE, item-move.ts move+bulk-move → check `createdById !== userId` pour MEMBER
+  - Frontend : `canEditItem` function dans SpacePage, propagée à 13 vues (ListView, KanbanView, TimelineView, PlanningView, TextView, TypesView, ThreadView, PriorityView, MembersKanbanView, LinksView, ImagesView, DocumentsView, MindMapView/mindmap-layout)
+- CommunitySettingsPage onglet Espaces : colonne Propriétaire ajoutée (API spaces.ts + type SpaceWithRole + frontend)
+
+## EN COURS — 2026-04-19
+
+- CommunitySettingsPage onglet Espaces : remplacé drag-drop cards par table admin-style (search, colonnes Nom/Type/Membres/Items/Créé/Supprimer, hiérarchie via indentation, drag-drop conservé, SpaceDeleteConfirmModal ajouté)
+- Colonnes supprimées vs admin : Communauté (inutile dans les settings), Parent (géré par la hiérarchie)
+
 ## EN COURS — 2026-04-18
 
 - Root cause cache dev identifié : SW (service worker) prod interceptait Vite en dev → fix main.tsx (prod only) + Cache-Control no-store

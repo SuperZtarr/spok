@@ -34,6 +34,7 @@ export interface SpaceWithRole extends Space {
   itemCount?: number;
   isMember?: boolean;
   parent?: { id: string; name: string } | null;
+  owner?: { id: string; name: string } | null;
 }
 
 export interface CreateSpaceInput {

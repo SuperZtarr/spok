@@ -71,6 +71,7 @@ interface MindMapViewProps {
   onReorder?: (spaceId: string, groups: { parentId: string | null; itemIds: string[] }[]) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
 // Inner component that uses useReactFlow
@@ -101,6 +102,7 @@ function MindMapViewInner({
   onReorder,
   referentiels,
   canEdit,
+  canEditItem,
   innerRef,
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
   // Track previous items to detect content-only vs structural changes
@@ -311,11 +313,11 @@ function MindMapViewInner({
   }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, togglePin]);
 
   const layoutOptions: MindMapLayoutOptions = useMemo(() => ({
-    hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit,
+    hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem,
     pinnedIdsSet: pinnedIds.current,
     currentSpaceId: spaceId,
     portalSpaceNames,
-  }), [hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, spaceId, portalSpaceNames]);
+  }), [hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, spaceId, portalSpaceNames]);
 
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
@@ -1207,7 +1209,7 @@ function MindMapViewInner({
 export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(function MindMapView({
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
-  onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit,
+  onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
 }, ref) {
   return (
     <div className="h-full w-full">
@@ -1219,7 +1221,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           onMove={onMove} onMoveToSpace={onMoveToSpace} onMoveToSpaceDirect={onMoveToSpaceDirect} onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onMerge={onMerge} onAbsorbChildren={onAbsorbChildren} onSplitDescription={onSplitDescription} onReorder={onReorder} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
-          referentiels={referentiels} canEdit={canEdit}
+          referentiels={referentiels} canEdit={canEdit} canEditItem={canEditItem}
           innerRef={ref}
         />
       </ReactFlowProvider>
