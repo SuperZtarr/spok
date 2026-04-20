@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent, ReactRenderer, type Editor } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
@@ -32,6 +33,8 @@ import {
   Code,
   Minus,
   Quote,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { MentionList, type MentionItem, type MentionListRef } from './MentionList';
 import { spacesApi } from '../../lib/api';
@@ -425,6 +428,72 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
 
   return (
     <div className="rounded-md border border-input shadow-sm overflow-hidden">
+      {/* Table bubble menu */}
+      {editable && (
+        <BubbleMenu
+          editor={editor}
+          shouldShow={({ editor: e }: { editor: Editor }) => e.isActive('table')}
+          appendTo={() => document.body}
+        >
+          <div className="flex items-center gap-0.5 px-1.5 py-1 rounded-md border border-border bg-popover shadow-md text-xs">
+            {/* Row operations */}
+            <button
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+              title="Ajouter une ligne au-dessus"
+            >
+              <Plus size={12} />↑
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+              title="Ajouter une ligne en-dessous"
+            >
+              <Plus size={12} />↓
+            </button>
+            <button
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
+              title="Supprimer la ligne"
+            >
+              <Trash2 size={12} />↕
+            </button>
+            <div className="w-px h-4 bg-border mx-0.5" />
+            {/* Column operations */}
+            <button
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+              title="Ajouter une colonne à gauche"
+            >
+              <Plus size={12} />←
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+              title="Ajouter une colonne à droite"
+            >
+              <Plus size={12} />→
+            </button>
+            <button
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
+              title="Supprimer la colonne"
+            >
+              <Trash2 size={12} />↔
+            </button>
+            <div className="w-px h-4 bg-border mx-0.5" />
+            {/* Delete table */}
+            <button
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
+              title="Supprimer le tableau"
+            >
+              <Trash2 size={12} /><TableIcon size={12} />
+            </button>
+          </div>
+        </BubbleMenu>
+      )}
+
       {/* Toolbar */}
       {editable && (
         <div className="flex items-center gap-0.5 px-2 py-1.5 bg-muted/30 border-b border-input flex-wrap">
