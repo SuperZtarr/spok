@@ -63,7 +63,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const internalFilters = useGlobalTaskFilters();
+  const internalFilters = useGlobalTaskFilters({ defaultAssignedToMe: true });
   const filters = externalFilters || internalFilters;
   const embedded = !!externalFilters;
 

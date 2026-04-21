@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell, RotateCcw } from 'lucide-react';
-import { communitiesApi, userApi } from '../lib/api';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell, RotateCcw, LogOut } from 'lucide-react';
+import { authApi, communitiesApi, userApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { usePasteUpload } from '../hooks/usePasteUpload';
 import type { AuthUser, NotificationType, NotificationChannel } from '@spok/shared';
@@ -26,7 +27,15 @@ const COMMUNITY_ROLE_LABELS: Record<string, string> = {
 
 export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
   const { theme, setTheme } = useThemeStore();
-  const { updateUser, updateTokens } = useAuthStore();
+  const { updateUser, updateTokens, logout, refreshToken } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
+    logout();
+    onClose();
+    navigate('/');
+  };
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameValue, setNameValue] = useState(user?.name || '');
@@ -387,6 +396,17 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
           ) : (
             <p className="text-sm text-muted-foreground">Aucune communauté</p>
           )}
+        </div>
+
+        {/* Déconnexion */}
+        <div className="pt-4 border-t border-border">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 w-full rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Déconnexion
+          </button>
         </div>
       </div>
     </Modal>
