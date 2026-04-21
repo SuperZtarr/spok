@@ -17,6 +17,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       dueDateTo?: string;
       noDueDate?: string;
       assignedToMe?: string;
+      myTasks?: string;
       sortBy?: string;
       sortDir?: string;
       page?: string;
@@ -33,6 +34,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       dueDateTo,
       noDueDate,
       assignedToMe,
+      myTasks,
       sortBy = 'createdAt',
       sortDir = 'desc',
       page: pageStr = '1',
@@ -162,26 +164,33 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       where.assignedToId = request.user.userId;
     }
 
+    // My tasks filter — items created by OR assigned to the current user
+    if (myTasks === 'true') {
+      if (!where.AND) where.AND = [];
+      (where.AND as unknown[]).push({
+        OR: [
+          { createdById: request.user.userId },
+          { assignedToId: request.user.userId },
+        ],
+      });
+    }
+
     // Text search
     if (search) {
-      // If we already have an OR (from status filter), we need AND to combine
+      const searchOr = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+      // If we already have an OR (from status filter), convert to AND to combine
       if (where.OR) {
-        const statusOr = where.OR;
+        const statusOr = where.OR as Record<string, unknown>[];
         delete where.OR;
-        where.AND = [
-          { OR: statusOr as Record<string, unknown>[] },
-          {
-            OR: [
-              { title: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          },
-        ];
+        if (!where.AND) where.AND = [];
+        (where.AND as unknown[]).push({ OR: statusOr }, { OR: searchOr });
+      } else if (where.AND) {
+        (where.AND as unknown[]).push({ OR: searchOr });
       } else {
-        where.OR = [
-          { title: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ];
+        where.OR = searchOr;
       }
     }
 

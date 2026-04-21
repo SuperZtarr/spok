@@ -11,6 +11,7 @@ export interface GlobalTaskFilterState {
   selectedSpaces: string[];
   selectedDueDates: string[];
   assignedToMe: boolean;
+  myTasks: boolean;
   sortBy: GlobalTaskFilters['sortBy'];
   sortDir: 'asc' | 'desc';
   page: number;
@@ -23,6 +24,7 @@ export interface GlobalTaskFilterState {
   setSelectedSpaces: React.Dispatch<React.SetStateAction<string[]>>;
   setSelectedDueDates: React.Dispatch<React.SetStateAction<string[]>>;
   setAssignedToMe: React.Dispatch<React.SetStateAction<boolean>>;
+  setMyTasks: React.Dispatch<React.SetStateAction<boolean>>;
   setSortBy: React.Dispatch<React.SetStateAction<GlobalTaskFilters['sortBy']>>;
   setSortDir: React.Dispatch<React.SetStateAction<'asc' | 'desc'>>;
   setPage: React.Dispatch<React.SetStateAction<number>>;
@@ -39,6 +41,7 @@ export function useGlobalTaskFilters(options?: {
   defaultSortBy?: GlobalTaskFilters['sortBy'];
   defaultSortDir?: 'asc' | 'desc';
   defaultAssignedToMe?: boolean;
+  defaultMyTasks?: boolean;
   pageSize?: number;
 }): GlobalTaskFilterState {
   const {
@@ -46,6 +49,7 @@ export function useGlobalTaskFilters(options?: {
     defaultSortBy = 'dueDate',
     defaultSortDir = 'asc',
     defaultAssignedToMe = false,
+    defaultMyTasks = false,
     pageSize = 30,
   } = options || {};
 
@@ -58,6 +62,7 @@ export function useGlobalTaskFilters(options?: {
   const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
   const [selectedDueDates, setSelectedDueDates] = useState<string[]>([]);
   const [assignedToMe, setAssignedToMe] = useState(defaultAssignedToMe);
+  const [myTasks, setMyTasks] = useState(defaultMyTasks);
   const [sortBy, setSortBy] = useState<GlobalTaskFilters['sortBy']>(defaultSortBy);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultSortDir);
   const [page, setPage] = useState(1);
@@ -143,6 +148,7 @@ export function useGlobalTaskFilters(options?: {
     selectedSpaces.length > 0 ||
     selectedDueDates.length > 0 ||
     assignedToMe ||
+    myTasks ||
     debouncedSearch.length > 0;
 
   const clearAllFilters = useCallback(() => {
@@ -153,10 +159,11 @@ export function useGlobalTaskFilters(options?: {
     setSelectedSpaces([]);
     setSelectedDueDates([]);
     setAssignedToMe(defaultAssignedToMe);
+    setMyTasks(defaultMyTasks);
     setSearch('');
     setDebouncedSearch('');
     setPage(1);
-  }, [defaultTypes, defaultAssignedToMe]);
+  }, [defaultTypes, defaultAssignedToMe, defaultMyTasks]);
 
   const activeFilterCount =
     (isTypeFiltered ? selectedTypes.length : 0) +
@@ -165,7 +172,8 @@ export function useGlobalTaskFilters(options?: {
     selectedCommunities.length +
     selectedDueDates.length +
     selectedSpaces.length +
-    (assignedToMe ? 1 : 0);
+    (assignedToMe ? 1 : 0) +
+    (myTasks ? 1 : 0);
 
   const typeParam = selectedTypes.join(',') || undefined;
   const statusParam = selectedStatuses.join(',') || undefined;
@@ -180,6 +188,7 @@ export function useGlobalTaskFilters(options?: {
     spaceId: spaceParam,
     ...dueDateParams,
     assignedToMe: assignedToMe || undefined,
+    myTasks: myTasks || undefined,
     sortBy,
     sortDir,
     page,
@@ -190,8 +199,8 @@ export function useGlobalTaskFilters(options?: {
     search, debouncedSearch, selectedTypes, selectedStatuses, selectedPriorities,
     selectedCommunities, selectedSpaces, selectedDueDates, assignedToMe, sortBy, sortDir, page,
     setSearch, setSelectedTypes, setSelectedStatuses, setSelectedPriorities,
-    setSelectedCommunities, setSelectedSpaces, setSelectedDueDates, setAssignedToMe, setSortBy, setSortDir,
-    setPage, toggleSort, clearAllFilters,
+    setSelectedCommunities, setSelectedSpaces, setSelectedDueDates, setAssignedToMe, setMyTasks, setSortBy, setSortDir,
+    myTasks, setPage, toggleSort, clearAllFilters,
     hasAnyFilter, activeFilterCount, queryParams,
   };
 }
