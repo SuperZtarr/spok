@@ -268,17 +268,17 @@ export function MyOrganizationView() {
   const today = startOfDay(now);
   const todayEnd = endOfDay(now);
 
-  // Fetch all non-done items using filter params (only assigned to me)
+  // Fetch all non-done items using filter params (created by or assigned to me)
   const { data: allData } = useQuery({
     queryKey: ['my-organization', filters.queryParams],
     queryFn: () => userTasksApi.list({
       ...filters.queryParams,
       status: filters.queryParams.status || 'none,todo,in_progress,to_validate,late',
-      assignedToMe: true,
+      myTasks: true,
     }),
   });
 
-  // Fetch done items for KPIs (only assigned to me)
+  // Fetch done items for KPIs (created by or assigned to me)
   const weekStart = getMonday(addDays(today, weekOffset * 7));
   const { data: doneData } = useQuery({
     queryKey: ['my-organization-done', localDateKey(weekStart)],
@@ -286,7 +286,7 @@ export function MyOrganizationView() {
       type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'done',
       pageSize: 2000,
-      assignedToMe: true,
+      myTasks: true,
     }),
   });
 
