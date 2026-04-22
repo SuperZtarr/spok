@@ -129,7 +129,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       ]);
 
       const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
-      isPublicCommunity = !!(community?.isPublic && community?.visibility !== 'PRIVATE');
+      isPublicCommunity = !!(community?.isPublic || community?.visibility !== 'PRIVATE');
       hasCommunityMembership = !!communityMembership;
 
       if (!communityMembership && !isAdminBypass && !isPublicCommunity) {
