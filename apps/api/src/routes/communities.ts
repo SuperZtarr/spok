@@ -301,7 +301,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       ? await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } })
       : null;
 
-    if (community.visibility === 'PRIVATE' && !(currentUser?.globalRole === 'ADMIN' && request.isAdminMode)) {
+    // Block access if community is private and not public (check both fields for backward compat)
+    const isAccessible = community.isPublic || community.visibility !== 'PRIVATE';
+    if (!isAccessible && !(currentUser?.globalRole === 'ADMIN' && request.isAdminMode)) {
       return reply.notFound('Community not found or access denied');
     }
 

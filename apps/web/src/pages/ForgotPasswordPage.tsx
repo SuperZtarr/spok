@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '../lib/api';
 import { Button } from '../components/ui/Button';
@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const [email, setEmail] = useState((location.state as any)?.email || '');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 

@@ -37,13 +37,20 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: z.infer<typeof registerSchema> }>('/register', async (request, reply) => {
     const body = registerSchema.parse(request.body);
 
-    // Check if user exists
-    const existingUser = await fastify.prisma.user.findUnique({
+    // Check if email already used
+    const existingEmail = await fastify.prisma.user.findUnique({
       where: { email: body.email },
     });
-
-    if (existingUser) {
+    if (existingEmail) {
       return reply.conflict('Cet email est déjà utilisé');
+    }
+
+    // Check if name already taken
+    const existingName = await fastify.prisma.user.findFirst({
+      where: { name: { equals: body.name, mode: 'insensitive' } },
+    });
+    if (existingName) {
+      return reply.conflict('Ce pseudo est déjà utilisé');
     }
 
     // Create user
@@ -353,7 +360,22 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       data: { used: true },
     });
 
-    return { success: true, message: 'Mot de passe mis à jour avec succès' };
+    // Generate tokens to auto-login the user
+    const tokens = await generateTokens(fastify, resetToken.user.id, resetToken.user.email);
+
+    return {
+      success: true,
+      message: 'Mot de passe mis à jour avec succès',
+      tokens,
+      user: {
+        id: resetToken.user.id,
+        email: resetToken.user.email,
+        name: resetToken.user.name,
+        globalRole: resetToken.user.globalRole,
+        emailVerified: resetToken.user.emailVerified,
+        avatarUrl: resetToken.user.avatarUrl,
+      },
+    };
   });
 
   // Verify email

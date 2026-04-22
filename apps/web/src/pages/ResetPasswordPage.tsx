@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '../lib/api';
+import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
@@ -11,6 +12,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const setAuth = useAuthStore((s) => s.setAuth);
   const token = searchParams.get('token');
 
   const [password, setPassword] = useState('');
@@ -31,9 +33,14 @@ export function ResetPasswordPage() {
       }
       return response.json();
     },
-    onSuccess: () => {
-      setSuccess(true);
-      setTimeout(() => navigate('/login'), 3000);
+    onSuccess: (data) => {
+      if (data.tokens && data.user) {
+        setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
+        navigate('/');
+      } else {
+        setSuccess(true);
+        setTimeout(() => navigate('/login'), 3000);
+      }
     },
     onError: (err) => {
       if (err instanceof ApiError) {

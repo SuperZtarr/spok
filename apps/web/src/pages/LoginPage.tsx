@@ -101,9 +101,13 @@ export function LoginPage() {
                 <label htmlFor="password" className="text-sm font-medium">
                   Mot de passe
                 </label>
-                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password', { state: { email } })}
+                  className="text-xs text-primary hover:underline"
+                >
                   Mot de passe oublié ?
-                </Link>
+                </button>
               </div>
               <Input
                 id="password"

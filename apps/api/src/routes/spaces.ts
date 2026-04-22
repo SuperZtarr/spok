@@ -111,24 +111,28 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Build filter based on communityId parameter
     let spaceFilter: { communityId?: string | null } = {};
+    let isPublicCommunity = false;
+    let hasCommunityMembership = false;
 
     if (communityId === 'none') {
       spaceFilter = { communityId: null };
     } else if (communityId) {
-      const communityMembership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId,
-          },
-        },
-      });
+      const [communityMembership, community, currentUser] = await Promise.all([
+        fastify.prisma.communityMembership.findUnique({
+          where: { userId_communityId: { userId: request.user.userId, communityId } },
+        }),
+        fastify.prisma.community.findUnique({
+          where: { id: communityId },
+          select: { isPublic: true, visibility: true },
+        }),
+        fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } }),
+      ]);
 
-      // Admin mode: bypass community membership check
-      const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
       const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
+      isPublicCommunity = !!(community?.isPublic && community?.visibility !== 'PRIVATE');
+      hasCommunityMembership = !!communityMembership;
 
-      if (!communityMembership && !isAdminBypass) {
+      if (!communityMembership && !isAdminBypass && !isPublicCommunity) {
         return [];
       }
 
@@ -189,11 +193,16 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     const communityIds = userCommunities.map(c => c.communityId);
     const memberSpaceIds = new Set(memberSpaces.map(s => s.id));
 
-    if (communityIds.length > 0) {
+    // If a specific public community is requested but user is not a member, include it anyway
+    const effectiveCommunityIds = communityId && communityId !== 'none' && isPublicCommunity && !hasCommunityMembership
+      ? [communityId]
+      : communityIds;
+
+    if (effectiveCommunityIds.length > 0) {
       const communitySpaceFilter: Record<string, unknown> = {
         communityId: communityId && communityId !== 'none'
           ? communityId
-          : { in: communityIds },
+          : { in: effectiveCommunityIds },
         type: 'GROUP',
         id: { notIn: Array.from(memberSpaceIds) },
         OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
