@@ -24,15 +24,22 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
+## EN COURS — 2026-04-22
+
+- RichTextEditor : BubbleMenu tableaux (ajouter/supprimer lignes+colonnes, supprimer tableau) + CSS column-resize-handle (TipTap v3 @floating-ui)
+- Bouton déconnexion déplacé : retiré du menu header (MainMenu), ajouté en bas de la modale profil (UserProfileModal)
+- GlobalTasksPage + MyOrganizationView : filtre myTasks (créé par OU assigné à moi) activé par défaut
+- API user-tasks.ts : ajout filtre myTasks (OR createdById/assignedToId), updatedAfter, updatedAt dans validSortBy
+- HomeView : section communautés avec badge d'activité récente (items modifiés les 7 derniers jours par communauté)
+  - Illustration communauté : fallback avatarUrl || coverUrl (fix)
+  - Confirmé fonctionnel visuellement
+
 ## EN COURS — 2026-04-21
 
 - Permissions items par ownership : OWNER peut éditer/supprimer tous les items, MEMBER uniquement les siens
   - API : items.ts PATCH+DELETE, item-move.ts move+bulk-move → check `createdById !== userId` pour MEMBER
   - Frontend : `canEditItem` function dans SpacePage, propagée à 13 vues (ListView, KanbanView, TimelineView, PlanningView, TextView, TypesView, ThreadView, PriorityView, MembersKanbanView, LinksView, ImagesView, DocumentsView, MindMapView/mindmap-layout)
 - CommunitySettingsPage onglet Espaces : colonne Propriétaire ajoutée (API spaces.ts + type SpaceWithRole + frontend)
-- RichTextEditor : BubbleMenu tableaux (ajouter/supprimer lignes+colonnes, supprimer tableau) + CSS column-resize-handle (TipTap v3 @floating-ui)
-- Bouton déconnexion déplacé : retiré du menu header (MainMenu), ajouté en bas de la modale profil (UserProfileModal)
-- GlobalTasksPage : assignedToMe activé par défaut (option defaultAssignedToMe dans useGlobalTaskFilters)
 
 ## EN COURS — 2026-04-19
 

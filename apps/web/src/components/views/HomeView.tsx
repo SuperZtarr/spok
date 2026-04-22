@@ -190,7 +190,7 @@ export function HomeView() {
 
   return (
     <div className="p-4 md:p-6 flex-1 overflow-auto">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         {/* Welcome */}
         <div className="mb-8 text-center" data-tour="home-welcome">
           <img src={logoUrl} alt="SPOK" className="h-80 w-auto mx-auto mb-4" />
@@ -277,27 +277,34 @@ export function HomeView() {
                     <Link
                       key={c.id}
                       to={`/communities/${c.id}`}
-                      className="flex items-center gap-3 border border-border rounded-xl p-3 hover:border-primary/40 hover:shadow-md transition-all bg-card"
+                      className="flex flex-col border border-border rounded-xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all bg-card"
                     >
-                      {c.avatarUrl ? (
-                        <img src={c.avatarUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      {/* Bandeau */}
+                      {c.coverUrl ? (
+                        <img src={c.coverUrl} alt="" className="w-full h-20 object-cover" />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Users className="w-5 h-5 text-primary" />
+                        <div className="w-full h-20 bg-primary/10 flex items-center justify-center">
+                          <Users className="w-7 h-7 text-primary/40" />
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{c.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {c.memberCount ?? 0} membre{(c.memberCount ?? 0) > 1 ? 's' : ''} · {c.spaceCount ?? 0} espace{(c.spaceCount ?? 0) > 1 ? 's' : ''}
-                        </p>
+                      {/* Infos */}
+                      <div className="flex items-center gap-2 p-3">
+                        {c.avatarUrl && (
+                          <img src={c.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 -mt-5 ring-2 ring-card" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{c.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {c.memberCount ?? 0} membre{(c.memberCount ?? 0) > 1 ? 's' : ''} · {c.spaceCount ?? 0} espace{(c.spaceCount ?? 0) > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        {count > 0 && (
+                          <span className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
+                            <Clock className="w-3 h-3" />
+                            {count > 99 ? '99+' : count}
+                          </span>
+                        )}
                       </div>
-                      {count > 0 && (
-                        <span className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
-                          <Clock className="w-3 h-3" />
-                          {count > 99 ? '99+' : count}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
