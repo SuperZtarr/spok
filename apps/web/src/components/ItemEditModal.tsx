@@ -936,105 +936,122 @@ export function ItemEditModal({
               {/* Type */}
               <div className="space-y-2" data-tour="item-type-selector">
                 <label className="text-sm font-medium">Type</label>
-                <div className="flex flex-wrap gap-2">
-                  {canEdit ? (
-                    (() => {
-                      const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                      return Object.entries(typeLabels)
-                        .filter(([, config]) => config.visible)
-                        .sort(([, a], [, b]) => a.order - b.order)
-                        .map(([key, config]) => {
-                          const Icon = TYPE_ICONS[key];
-                          const isSelected = type === key;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => setType(key as ItemType)}
-                              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${
-                                isSelected
-                                  ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current`
-                                  : 'opacity-60 hover:opacity-100'
-                              }`}
-                            >
-                              {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
-                              {config.labelShort}
-                            </button>
-                          );
-                        });
-                    })()
-                  ) : (
-                    <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeConfig?.color || 'border-border'} ${typeConfig?.bgHover || ''} font-semibold`}>
-                      {TypeIcon && <TypeIcon className="w-3.5 h-3.5" />}
-                      {typeConfig?.labelShort || TYPE_LABELS[type] || type}
-                    </span>
-                  )}
-                </div>
+                {canEdit ? (
+                  <>
+                    {/* Mobile: select */}
+                    <div className="sm:hidden">
+                      <Select
+                        value={type}
+                        onChange={(e) => setType(e.target.value as ItemType)}
+                        options={(Object.entries(referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels))
+                          .filter(([, c]) => c.visible)
+                          .sort(([, a], [, b]) => a.order - b.order)
+                          .map(([key, c]) => ({ value: key, label: c.labelShort }))}
+                      />
+                    </div>
+                    {/* Desktop: buttons */}
+                    <div className="hidden sm:flex flex-wrap gap-2">
+                      {(() => {
+                        const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                        return Object.entries(typeLabels)
+                          .filter(([, config]) => config.visible)
+                          .sort(([, a], [, b]) => a.order - b.order)
+                          .map(([key, config]) => {
+                            const Icon = TYPE_ICONS[key];
+                            const isSelected = type === key;
+                            return (
+                              <button key={key} type="button" onClick={() => setType(key as ItemType)}
+                                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${isSelected ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current` : 'opacity-60 hover:opacity-100'}`}>
+                                {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                                {config.labelShort}
+                              </button>
+                            );
+                          });
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <span className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 ${typeConfig?.color || 'border-border'} ${typeConfig?.bgHover || ''} font-semibold`}>
+                    {TypeIcon && <TypeIcon className="w-3.5 h-3.5" />}
+                    {typeConfig?.labelShort || TYPE_LABELS[type] || type}
+                  </span>
+                )}
               </div>
 
               {/* Statut */}
               <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
-                <div className="flex flex-wrap gap-2">
-                  {canEdit ? (
-                    (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
-                      const isSelected = (s.id === 'undefined' && !status) || s.id === status;
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => {
-                            const newStatus = s.id === 'undefined' ? '' : s.id;
-                            setStatus(newStatus);
-                            if (newStatus === '') {
-                              setStartDate('');
-                              setEndDate('');
-                            } else {
-                              let currentEndDate = endDate;
-                              if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) {
-                                currentEndDate = toDatetimeLocal(new Date());
-                                setEndDate(currentEndDate);
+                {canEdit ? (
+                  <>
+                    {/* Mobile: select */}
+                    <div className="sm:hidden">
+                      <Select
+                        value={status || 'undefined'}
+                        onChange={(e) => {
+                          const newStatus = e.target.value === 'undefined' ? '' : e.target.value;
+                          setStatus(newStatus);
+                          if (newStatus === '') { setStartDate(''); setEndDate(''); }
+                          else {
+                            let currentEndDate = endDate;
+                            if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) { currentEndDate = toDatetimeLocal(new Date()); setEndDate(currentEndDate); }
+                            if (!startDate) { const now = new Date(); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(now)); }
+                          }
+                        }}
+                        options={(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => ({ value: s.id, label: s.label }))}
+                      />
+                    </div>
+                    {/* Desktop: buttons */}
+                    <div className="hidden sm:flex flex-wrap gap-2">
+                      {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
+                        const isSelected = (s.id === 'undefined' && !status) || s.id === status;
+                        return (
+                          <button key={s.id} type="button"
+                            onClick={() => {
+                              const newStatus = s.id === 'undefined' ? '' : s.id;
+                              setStatus(newStatus);
+                              if (newStatus === '') { setStartDate(''); setEndDate(''); }
+                              else {
+                                let currentEndDate = endDate;
+                                if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) { currentEndDate = toDatetimeLocal(new Date()); setEndDate(currentEndDate); }
+                                if (!startDate) { const now = new Date(); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(now)); }
                               }
-                              if (!startDate) {
-                                const now = new Date();
-                                if (currentEndDate && fromDatetimeLocal(currentEndDate) < now) {
-                                  setStartDate(currentEndDate);
-                                } else {
-                                  setStartDate(toDatetimeLocal(now));
-                                }
-                              }
-                            }
-                          }}
-                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${
-                            isSelected
-                              ? `${s.borderColor} font-semibold shadow-sm`
-                              : `${s.borderColor} opacity-60 hover:opacity-100`
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    (() => {
-                      const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-                      const selected = statuses.find((s) => (s.id === 'undefined' && !status) || s.id === status);
-                      return selected ? (
-                        <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>{selected.label}</span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Non défini</span>
-                      );
-                    })()
-                  )}
-                </div>
+                            }}
+                            className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${isSelected ? `${s.borderColor} font-semibold shadow-sm` : `${s.borderColor} opacity-60 hover:opacity-100`}`}>
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  (() => {
+                    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+                    const selected = statuses.find((s) => (s.id === 'undefined' && !status) || s.id === status);
+                    return selected ? (
+                      <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${selected.borderColor} font-semibold`}>{selected.label}</span>
+                    ) : <span className="text-sm text-muted-foreground">Non défini</span>;
+                  })()
+                )}
               </div>
 
               {/* Priorité */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
-                <div className="flex flex-wrap gap-2">
-                  {canEdit ? (
-                    <>
+                {canEdit ? (
+                  <>
+                    {/* Mobile: select */}
+                    <div className="sm:hidden">
+                      <Select
+                        value={priority === null ? '' : String(priority)}
+                        onChange={(e) => setPriority(e.target.value === '' ? null : Number(e.target.value))}
+                        options={[
+                          { value: '', label: 'Aucune' },
+                          ...PRIORITIES.map((p) => ({ value: String(p.value), label: `${p.icon} ${p.label}` })),
+                        ]}
+                      />
+                    </div>
+                    {/* Desktop: buttons */}
+                    <div className="hidden sm:flex flex-wrap gap-2">
                       <button type="button" onClick={() => setPriority(null)}
                         className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
                         Aucune
@@ -1045,18 +1062,16 @@ export function ItemEditModal({
                           {p.label}
                         </button>
                       ))}
-                    </>
-                  ) : (
-                    (() => {
-                      const config = PRIORITIES.find(p => p.value === priority);
-                      return config ? (
-                        <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>{config.label}</span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Non définie</span>
-                      );
-                    })()
-                  )}
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  (() => {
+                    const config = PRIORITIES.find(p => p.value === priority);
+                    return config ? (
+                      <span className={`px-3 py-1.5 text-sm rounded-md border-2 ${config.color} ${config.bgColor} font-semibold`}>{config.label}</span>
+                    ) : <span className="text-sm text-muted-foreground">Non définie</span>;
+                  })()
+                )}
               </div>
 
               {/* Dates */}
@@ -1074,7 +1089,7 @@ export function ItemEditModal({
                   {canEdit ? (
                     <div className="space-y-2">
                       {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="hidden sm:flex flex-wrap gap-1.5">
                           {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
                             const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
                             return (
@@ -1098,7 +1113,7 @@ export function ItemEditModal({
                   {canEdit ? (
                     <div className="space-y-2">
                       {startDate && type !== 'PERIOD' && (
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="hidden sm:flex flex-wrap gap-1.5">
                           {DUE_DATE_DURATIONS.map((d) => {
                             const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
                             const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
