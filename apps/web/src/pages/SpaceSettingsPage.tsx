@@ -304,7 +304,11 @@ export function SpaceSettingsPage() {
     };
     findDescendants(spaceId);
 
-    const eligible = allSpaces.filter(s => s.type === 'GROUP' && !excludeIds.has(s.id));
+    const eligible = allSpaces.filter(s =>
+      s.type === 'GROUP' &&
+      !excludeIds.has(s.id) &&
+      (!editCommunityId || s.communityId === editCommunityId)
+    );
     const groups = groupSpacesByCommunity(eligible).map(g => ({
       label: g.label,
       options: g.spaces.map(s => ({ value: s.id, label: s.name })),
@@ -314,7 +318,7 @@ export function SpaceSettingsPage() {
       parentSpaceBaseOptions: [{ value: '', label: 'Aucun (espace racine)' }],
       parentSpaceGroups: groups,
     };
-  }, [allSpaces, spaceId]);
+  }, [allSpaces, spaceId, editCommunityId]);
 
   // Check permissions
   const canEdit = space?.role === 'OWNER';
