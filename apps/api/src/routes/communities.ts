@@ -728,6 +728,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     const users = await fastify.prisma.user.findMany({
       where: {
         id: { notIn: memberIds },
+        disabledAt: null,
       },
       select: {
         id: true,
