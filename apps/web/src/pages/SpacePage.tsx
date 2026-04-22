@@ -475,10 +475,17 @@ export function SpacePage() {
   }, [filter, createItemMutation]);
 
   // Déclencher la création si ?newItem=true (venant du bouton header)
+  const newItemHandledRef = useRef(false);
   useEffect(() => {
-    if (searchParams.get('newItem') === 'true' && !createItemMutation.isPending) {
+    if (searchParams.get('newItem') === 'true' && !newItemHandledRef.current) {
+      newItemHandledRef.current = true;
       setSearchParams(prev => { prev.delete('newItem'); return prev; }, { replace: true });
-      handleNewItem();
+      setTimeout(() => {
+        createItemMutation.mutate(
+          { type: 'NOTE', title: '', status: 'todo' },
+          { onSuccess: (created: any) => { setEditingItemId(created.id); } }
+        );
+      }, 100);
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 

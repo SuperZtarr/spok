@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, User, Menu, X, ChevronRight, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -244,7 +244,7 @@ export function Layout() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
-  const { spaceViews } = useMenuItems();
+  const { spaceViews, sections: menuSections } = useMenuItems();
   const { clearIncludeChildren } = useSpaceStore();
   const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -657,6 +657,25 @@ export function Layout() {
         </div>
       )}
 
+      {/* Navigation globale — visible uniquement sur mobile (md: le menu header prend le relais) */}
+      <div className="md:hidden border-b border-border/50 px-3 py-2 flex-shrink-0">
+        {menuSections
+          .filter(s => !['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id))
+          .map(s => s.items.filter(item => item.key !== 'logout' && item.key !== 'profile'))
+          .flat()
+          .filter(item => item.route || item.viewMode)
+          .map(item => (
+            <button
+              key={item.key}
+              onClick={() => { navigate(item.route || '/'); setSidebarOpen(false); }}
+              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm hover:bg-accent/50 transition-colors text-foreground/80"
+            >
+              <span>{item.label}</span>
+            </button>
+          ))
+        }
+      </div>
+
       {/* Navigation - scrollable */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {currentCommunity && currentCommunityGroup ? (
@@ -918,7 +937,7 @@ export function Layout() {
   const isAuthPage = noSidebarRoutes.includes(location.pathname) || (!user && location.pathname === '/');
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden relative">
       {/* Mobile overlay */}
       {sidebarOpen && !isAuthPage && (
         <div
@@ -955,6 +974,22 @@ export function Layout() {
         {sidebarContent}
       </aside>}
 
+      {/* Sidebar toggle — bouton centré sur le bord droit de la sidebar (desktop only) */}
+      {!isAuthPage && (
+        <button
+          onClick={toggleSidebarCollapsed}
+          title={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'}
+          className="hidden md:flex fixed z-[60] items-center justify-center w-6 h-10 bg-gray-400 text-white rounded-md shadow-sm hover:bg-gray-500 transition-all duration-200"
+          style={{
+            left: sidebarCollapsed ? 4 : sidebarWidth - 12,
+            top: '50vh',
+            transform: 'translateY(-50%)',
+          }}
+        >
+          {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+        </button>
+      )}
+
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
@@ -969,16 +1004,6 @@ export function Layout() {
                 title="Ouvrir le menu"
               >
                 <Menu className="w-5 h-5" />
-              </button>
-            )}
-            {/* Sidebar toggle (desktop) */}
-            {!isAuthPage && (
-              <button
-                className="p-1 rounded-md hover:bg-accent hidden md:flex flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={toggleSidebarCollapsed}
-                title={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'}
-              >
-                {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
               </button>
             )}
             <div className="min-w-0">
@@ -1012,7 +1037,7 @@ export function Layout() {
           </div>
 
           {/* Menu principal — masqué sur mobile (navigation via sidebar), visible md+ */}
-          <div className="hidden md:flex flex-1 items-stretch min-w-0 overflow-hidden">
+          <div className="hidden md:flex flex-1 items-stretch min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
             <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} currentCommunityId={currentCommunityId} currentCommunityName={currentCommunity?.name || null} />
           </div>
 
@@ -1020,7 +1045,10 @@ export function Layout() {
           <div className="flex items-center gap-2 flex-shrink-0 px-4 md:px-5">
             {user && !currentSpaceId && mySpaces.length > 0 && (
               <button
-                onClick={() => navigate(`/spaces/${mySpaces[0].id}/content?newItem=true`)}
+                onClick={() => {
+                  useViewModeStore.getState().setMode('list');
+                  navigate(`/spaces/${mySpaces[0].id}?newItem=true`);
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                 title="Ajouter un item dans mon espace personnel"
               >
