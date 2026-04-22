@@ -419,7 +419,7 @@ export interface GlobalTaskFilters {
   noDueDate?: boolean;
   assignedToMe?: boolean;
   myTasks?: boolean;
-  sortBy?: 'dueDate' | 'status' | 'spaceName' | 'createdAt' | 'priority' | 'title';
+  sortBy?: 'dueDate' | 'status' | 'spaceName' | 'createdAt' | 'updatedAt' | 'priority' | 'title';
   sortDir?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;

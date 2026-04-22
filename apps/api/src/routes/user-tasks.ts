@@ -195,7 +195,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // 3. Sort
-    const validSortBy = ['dueDate', 'status', 'spaceName', 'createdAt', 'priority', 'title'];
+    const validSortBy = ['dueDate', 'status', 'spaceName', 'createdAt', 'updatedAt', 'priority', 'title'];
     const validSortDir = ['asc', 'desc'];
     const safeSortBy = validSortBy.includes(sortBy) ? sortBy : 'createdAt';
     const safeSortDir = validSortDir.includes(sortDir) ? sortDir : 'desc';

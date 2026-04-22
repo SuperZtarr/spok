@@ -1,11 +1,60 @@
+import { useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star } from 'lucide-react';
-import { communitiesApi, spacesApi } from '../../lib/api';
+import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock, Pencil } from 'lucide-react';
+import { communitiesApi, spacesApi, userTasksApi, type GlobalTask } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { SpaceCard } from '../ui/SpaceCard';
 import { getRecentSpaceIds } from '../../hooks/useRecentSpaces';
+
+const HOME_VISIT_KEY = 'spok-home-last-visit';
+const ALL_TYPES = 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM';
+
+const TYPE_COLORS: Record<string, string> = {
+  TASK: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  NOTE: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  PROJECT: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  MEETING: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  BUG: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  DOCUMENT: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+  PERIOD: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+  LINK: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+  IMAGE: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
+};
+const TYPE_LABELS: Record<string, string> = {
+  TASK: 'Tâche', NOTE: 'Note', PROJECT: 'Projet', MEETING: 'Réunion',
+  BUG: 'Bug', DOCUMENT: 'Doc', PERIOD: 'Période', LINK: 'Lien', IMAGE: 'Image', DIAGRAM: 'Diag',
+};
+
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const min = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (min < 2) return 'à l\'instant';
+  if (min < 60) return `il y a ${min} min`;
+  if (h < 24) return `il y a ${h}h`;
+  if (d === 1) return 'hier';
+  if (d < 7) return `il y a ${d} j`;
+  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function RecentItemRow({ item, onClick }: { item: GlobalTask; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/60 transition-colors text-left group"
+    >
+      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded ${TYPE_COLORS[item.type] || 'bg-muted text-muted-foreground'}`}>
+        {TYPE_LABELS[item.type] || item.type}
+      </span>
+      <span className="flex-1 text-sm truncate">{item.title}</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded truncate max-w-[120px]">{item.spaceName}</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">{formatRelativeTime(item.updatedAt)}</span>
+    </button>
+  );
+}
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -127,6 +176,15 @@ const SHORTCUTS = [
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
+  const navigate = useNavigate();
+
+  // Capture last home visit for new/modified split
+  const lastVisitRef = useRef<Date | null>(null);
+  useEffect(() => {
+    const stored = localStorage.getItem(HOME_VISIT_KEY);
+    lastVisitRef.current = stored ? new Date(stored) : null;
+    localStorage.setItem(HOME_VISIT_KEY, new Date().toISOString());
+  }, []);
 
   const { data: communities, isLoading: loadingCommunities } = useQuery({
     queryKey: ['communities', user?.id || 'public'],
@@ -144,6 +202,25 @@ export function HomeView() {
     queryFn: () => spacesApi.getFavorites(),
     enabled: !!user,
   });
+
+  const { data: recentData } = useQuery({
+    queryKey: ['home-recent-items'],
+    queryFn: () => userTasksApi.list({ type: ALL_TYPES, sortBy: 'updatedAt', sortDir: 'desc', pageSize: 20 }),
+    enabled: !!user,
+  });
+
+  const { newItems, modifiedItems, lastVisit } = useMemo(() => {
+    const items = recentData?.data || [];
+    const lastVisit = lastVisitRef.current;
+    if (!lastVisit) return { newItems: [], modifiedItems: items.slice(0, 20), lastVisit: null };
+    const newItems: GlobalTask[] = [];
+    const modifiedItems: GlobalTask[] = [];
+    for (const item of items) {
+      if (new Date(item.createdAt) > lastVisit) newItems.push(item);
+      else if (new Date(item.updatedAt) > lastVisit) modifiedItems.push(item);
+    }
+    return { newItems, modifiedItems, lastVisit };
+  }, [recentData]);
 
   const favoriteSpaces = (favoriteIds || [])
     .map(id => (allSpaces || []).find(s => s.id === id))
@@ -230,6 +307,49 @@ export function HomeView() {
             </Link>
           ))}
         </div>
+
+        {/* Recent modifications */}
+        {(newItems.length > 0 || modifiedItems.length > 0) && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Modifications récentes
+              </h2>
+              {lastVisit && (
+                <span className="text-xs text-muted-foreground/60 font-normal">
+                  — depuis {formatRelativeTime(lastVisit.toISOString())}
+                </span>
+              )}
+            </div>
+            <div className="border border-border rounded-xl bg-card divide-y divide-border overflow-hidden">
+              {newItems.length > 0 && (
+                <div className="p-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1 mb-1">
+                    <Plus className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-400">Nouveaux ({newItems.length})</span>
+                  </div>
+                  {newItems.map(item => (
+                    <RecentItemRow key={item.id} item={item} onClick={() => navigate(`/spaces/${item.spaceId}/content`)} />
+                  ))}
+                </div>
+              )}
+              {modifiedItems.length > 0 && (
+                <div className="p-2">
+                  {lastVisit && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 mb-1">
+                      <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Modifiés ({modifiedItems.length})</span>
+                    </div>
+                  )}
+                  {modifiedItems.map(item => (
+                    <RecentItemRow key={item.id} item={item} onClick={() => navigate(`/spaces/${item.spaceId}/content`)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Favorite spaces */}
         {favoriteSpaces.length > 0 && (
