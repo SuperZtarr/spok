@@ -39,7 +39,7 @@ const SITE_TREE: SiteNode[] = [
         description: 'Visiteur : communautes publiques. Connecte : les siennes + publiques non-rejointes' },
       { label: 'Page communaute', path: '/communities/:id', component: 'CommunityPage', auth: 'public', note: 'Si communaute publique',
         description: 'Detail d\'une communaute : description, espaces, membres' },
-      { label: 'Presentation espace', path: '/spaces/:id', component: 'SpaceOverviewPage', auth: 'public', note: 'Si espace non PRIVATE',
+      { label: 'Presentation espace', path: '/spaces/:id/overview', component: 'SpaceOverviewPage', auth: 'public', note: 'Si espace non PRIVATE',
         description: 'Apercu d\'un espace : statistiques, membres, vues disponibles' },
       { label: 'Recherche', path: '/search', component: 'SearchPage', auth: 'public',
         description: 'Recherche avancee multi-types (communautes, espaces, items, contributions, utilisateurs)' },
@@ -50,7 +50,7 @@ const SITE_TREE: SiteNode[] = [
     description: 'Pages accessibles apres connexion',
     children: [
       { label: 'Accueil', path: '/', component: 'HomePage > HomeView', auth: 'authenticated',
-        description: 'Communautes en cartes (cover, avatar, compteurs), espaces personnels et de groupe, assistant de demarrage pour les nouveaux' },
+        description: 'Communautes en cartes (bandeau cover, badge activite recente), espaces favoris et recents avec badge activite, assistant de demarrage pour les nouveaux' },
       { label: 'Communautes', path: '/communities', component: 'CommunitiesListPage', auth: 'authenticated',
         description: 'Grille de communautes avec cover, avatar, role, compteurs, communautes publiques a rejoindre, creation de communaute' },
       { label: 'Espaces', path: '/spaces', component: 'SpacesListPage', auth: 'authenticated', note: 'Redirige vers /communities si pas de communaute selectionnee',
@@ -64,7 +64,9 @@ const SITE_TREE: SiteNode[] = [
       { label: 'Carte mentale globale', path: '/mindmap', component: 'MindMapPage', auth: 'authenticated',
         description: 'Arbre interactif de toute l\'organisation' },
       { label: 'Taches globales', path: '/tasks', component: 'GlobalTasksPage', auth: 'authenticated',
-        description: 'Toutes les taches de l\'utilisateur, tous espaces confondus, filtrage par statut/type/priorite' },
+        description: 'Taches creees par ou assignees a l\'utilisateur, tous espaces confondus, filtrage par statut/type/priorite/espace' },
+      { label: 'Liens globaux', path: '/links', component: 'GlobalLinksPage', auth: 'authenticated',
+        description: 'Tous les items de type LINK accessibles par l\'utilisateur' },
     ],
   },
   {
@@ -81,10 +83,10 @@ const SITE_TREE: SiteNode[] = [
     label: 'Espaces', auth: 'authenticated',
     description: 'Espaces de travail',
     children: [
-      { label: 'Presentation', path: '/spaces/:id', component: 'SpaceOverviewPage', auth: 'authenticated',
-        description: 'Apercu de l\'espace : stats, membres, vues disponibles' },
+      { label: 'Presentation', path: '/spaces/:id/overview', component: 'SpaceOverviewPage', auth: 'authenticated',
+        description: 'Apercu de l\'espace : stats, membres, vues disponibles. Accessible depuis la page d\'accueil et le menu principal' },
       {
-        label: 'Contenu', path: '/spaces/:id/', component: 'SpacePage', auth: 'authenticated',
+        label: 'Contenu', path: '/spaces/:id', component: 'SpacePage', auth: 'authenticated',
         description: 'Espace de travail avec 23 vues disponibles',
         children: [
           { label: 'Liste', component: 'ListView', description: 'Tableau triable, edition inline, drag & drop' },

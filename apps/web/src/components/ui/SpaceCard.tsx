@@ -6,12 +6,13 @@ interface SpaceCardProps {
   space: SpaceWithRole;
   onClick?: () => void;
   activityCount?: number;
+  to?: string;
 }
 
-export function SpaceCard({ space, onClick, activityCount }: SpaceCardProps) {
+export function SpaceCard({ space, onClick, activityCount, to }: SpaceCardProps) {
   return (
     <Link
-      to={`/spaces/${space.id}`}
+      to={to ?? `/spaces/${space.id}`}
       onClick={onClick}
       className="block rounded-lg border border-border hover:border-primary/30 hover:shadow-md transition-all overflow-hidden"
     >

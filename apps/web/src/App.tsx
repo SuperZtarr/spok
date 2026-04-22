@@ -9,6 +9,7 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { InvitationPage } from './pages/InvitationPage';
 // DashboardPage now accessed via SpacesListPage
 import { SpacePage } from './pages/SpacePage';
+import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
 import { useParams } from 'react-router-dom';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
@@ -179,6 +180,7 @@ export default function App() {
         <Route path="contact" element={<ContactPage />} />
         <Route path="bookmarks" element={<BookmarksPage />} />
         <Route path="spaces/:spaceId" element={<SpacePage />} />
+        <Route path="spaces/:spaceId/overview" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpaceContentRedirect />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />

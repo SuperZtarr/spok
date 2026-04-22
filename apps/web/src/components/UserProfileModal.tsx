@@ -227,6 +227,13 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             )}
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-2 px-4 py-2 w-full rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Déconnexion
+        </button>
 
         {error && (
           <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{error}</div>
@@ -398,16 +405,6 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
           )}
         </div>
 
-        {/* Déconnexion */}
-        <div className="pt-4 border-t border-border">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 w-full rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Déconnexion
-          </button>
-        </div>
       </div>
     </Modal>
   );

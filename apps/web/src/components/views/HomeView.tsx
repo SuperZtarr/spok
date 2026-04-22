@@ -324,7 +324,7 @@ export function HomeView() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {favoriteSpaces.map(space => (
-                <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} />
+                <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} to={`/spaces/${space.id}/overview`} />
               ))}
             </div>
           </section>
@@ -348,7 +348,7 @@ export function HomeView() {
                 const spaceMap = new Map(allSpaces.map(s => [s.id, s]));
                 const recent = recentIds.map(id => spaceMap.get(id)).filter(Boolean) as typeof allSpaces;
                 const displayed = recent.length > 0 ? recent.slice(0, 8) : allSpaces.slice(0, 8);
-                return displayed.map(space => <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} />);
+                return displayed.map(space => <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} to={`/spaces/${space.id}/overview`} />);
               })()}
             </div>
           </section>

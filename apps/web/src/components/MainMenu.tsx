@@ -94,6 +94,9 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
       onOpenProfile();
     } else if (item.viewMode) {
       setMode(item.viewMode as any);
+      // If on overview page, navigate to content
+      const spaceMatch = location.pathname.match(/\/spaces\/([^/]+)\/overview/);
+      if (spaceMatch) navigate(`/spaces/${spaceMatch[1]}`);
     } else if (item.route) {
       navigate(item.route);
     }
@@ -168,7 +171,7 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
         {spaceId && (
           <>
             <button
-              onClick={() => { navigate(`/spaces/${spaceId}`); closeAll(); }}
+              onClick={() => { navigate(`/spaces/${spaceId}/overview`); closeAll(); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
             >
               <FolderKanban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
