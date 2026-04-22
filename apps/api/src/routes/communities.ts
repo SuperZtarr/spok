@@ -660,20 +660,23 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get community members
   fastify.get<{ Params: { id: string } }>('/:id/members', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-    });
+    const [membership, community, currentUser] = await Promise.all([
+      fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
+      }),
+      fastify.prisma.community.findUnique({
+        where: { id: request.params.id },
+        select: { isPublic: true, visibility: true },
+      }),
+      fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } }),
+    ]);
 
-    // Admin mode: bypass membership check
-    const currentUser = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
+    if (!community) return reply.notFound('Community not found');
+
     const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
+    const isPublicCommunity = community.isPublic || community.visibility !== 'PRIVATE';
 
-    if (!membership && !isAdminBypass) {
+    if (!membership && !isAdminBypass && !isPublicCommunity) {
       return reply.notFound('Community not found');
     }
 
