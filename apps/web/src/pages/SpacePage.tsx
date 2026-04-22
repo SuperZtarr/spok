@@ -1211,6 +1211,11 @@ export function SpacePage() {
         communityName={space?.community?.name}
         onNavigate={setEditingItemId}
         onDelete={actions.handleDelete}
+        onConvertToSpace={actions.handleConvertToSpace}
+        onSelfAssign={handleSelfAssign}
+        onMerge={actions.handleMerge}
+        onAbsorbChildren={actions.handleAbsorbChildren}
+        onSplitDescription={actions.handleSplitDescription}
       />
 
       {/* Selection action bar */}

@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, UserPlus, FolderPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -32,6 +32,9 @@ import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
+import { MoveToSpaceModal } from './MoveToSpaceModal';
+import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
+import { hasHeadings } from '../lib/itemMenuGroups';
 
 function ItemHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
   const [open, setOpen] = useState(false);
@@ -127,6 +130,11 @@ interface ItemEditModalProps {
   communityName?: string;
   onNavigate?: (itemId: string) => void;
   onDelete?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
 }
 
 export function ItemEditModal({
@@ -142,6 +150,11 @@ export function ItemEditModal({
   communityName,
   onNavigate,
   onDelete,
+  onConvertToSpace,
+  onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
+  onSplitDescription,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', ITEM_MODAL_TOUR);
@@ -184,6 +197,10 @@ export function ItemEditModal({
   // Confirm delete state
   const [pendingDeleteRelationId, setPendingDeleteRelationId] = useState<string | null>(null);
   const [pendingDeleteContributionId, setPendingDeleteContributionId] = useState<string | null>(null);
+
+  // Internal move/duplicate modals
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
@@ -241,45 +258,58 @@ export function ItemEditModal({
     queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
   }, [itemId, isBookmarked, queryClient]);
 
-  // Reset form when item changes
+  // Tracks which itemId has already been loaded into the form.
+  // Prevents re-initialising the form when the same item is refetched
+  // (e.g. after a comment is added) while still re-initialising when a
+  // different item is opened.
+  const initializedItemIdRef = useRef<string | null>(null);
+
+  // Reset the tracker whenever the requested item changes
   useEffect(() => {
-    if (item) {
-      setTitle(item.title);
-      setDescription(item.description || '');
-      setUrl(item.url || '');
-      setParentId(item.parentId || '');
-      setStatus(item.status || '');
-      setPriority(item.priority ?? null);
-      setAssignedToId(item.assignedToId || '');
-      setType(item.type);
-      setDiagramXml((item.content as Record<string, unknown>)?.xml as string || '');
-      // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
-      if (item.dueDate) {
-        const date = new Date(item.dueDate);
-        const formatted = date.toISOString().slice(0, 16);
-        setDueDate(formatted);
-      } else {
-        setDueDate('');
-      }
-      if (item.startDate) {
-        const date = new Date(item.startDate);
-        const formatted = date.toISOString().slice(0, 16);
-        setStartDate(formatted);
-      } else {
-        setStartDate('');
-      }
-      if (item.endDate) {
-        const date = new Date(item.endDate);
-        const formatted = date.toISOString().slice(0, 16);
-        setEndDate(formatted);
-      } else {
-        setEndDate('');
-      }
-      const tagIds = item.tags?.map((t: Tag) => t.id) || [];
-      setSelectedTagIds(tagIds);
-      setOriginalTagIds(tagIds);
+    initializedItemIdRef.current = null;
+  }, [itemId]);
+
+  // Populate the form once the correct item data has arrived
+  useEffect(() => {
+    if (!item) return;
+    if (initializedItemIdRef.current === item.id) return; // already initialised for this item
+    initializedItemIdRef.current = item.id;
+
+    setTitle(item.title);
+    setDescription(item.description || '');
+    setUrl(item.url || '');
+    setParentId(item.parentId || '');
+    setStatus(item.status || '');
+    setPriority(item.priority ?? null);
+    setAssignedToId(item.assignedToId || '');
+    setType(item.type);
+    setDiagramXml((item.content as Record<string, unknown>)?.xml as string || '');
+    // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+    if (item.dueDate) {
+      const date = new Date(item.dueDate);
+      const formatted = date.toISOString().slice(0, 16);
+      setDueDate(formatted);
+    } else {
+      setDueDate('');
     }
-  }, [itemId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (item.startDate) {
+      const date = new Date(item.startDate);
+      const formatted = date.toISOString().slice(0, 16);
+      setStartDate(formatted);
+    } else {
+      setStartDate('');
+    }
+    if (item.endDate) {
+      const date = new Date(item.endDate);
+      const formatted = date.toISOString().slice(0, 16);
+      setEndDate(formatted);
+    } else {
+      setEndDate('');
+    }
+    const tagIds = item.tags?.map((t: Tag) => t.id) || [];
+    setSelectedTagIds(tagIds);
+    setOriginalTagIds(tagIds);
+  }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateMutation = useMutation({
     mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
@@ -1461,8 +1491,51 @@ export function ItemEditModal({
                 )}
               </>
             )}
+            {/* Contextual actions */}
+            {item && canEdit && itemId && (
+              <div className="flex items-center gap-1 ml-auto">
+                {onSelfAssign && (
+                  <Button type="button" variant="ghost" size="sm" title="M'assigner"
+                    onClick={() => { onSelfAssign(itemId); onClose(); }}>
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                )}
+                {onAbsorbChildren && (
+                  <Button type="button" variant="ghost" size="sm" title="Absorber les enfants"
+                    onClick={() => { onAbsorbChildren(itemId); onClose(); }}>
+                    <ArrowDownToLine className="w-4 h-4" />
+                  </Button>
+                )}
+                {onSplitDescription && hasHeadings(item.description) && (
+                  <Button type="button" variant="ghost" size="sm" title="Éclater en sous-items"
+                    onClick={() => { onSplitDescription(itemId); onClose(); }}>
+                    <Scissors className="w-4 h-4" />
+                  </Button>
+                )}
+                {onMerge && (
+                  <Button type="button" variant="ghost" size="sm" title="Fusionner avec..."
+                    onClick={() => { onMerge(itemId); onClose(); }}>
+                    <Merge className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button type="button" variant="ghost" size="sm" title="Dupliquer vers un espace"
+                  onClick={() => setShowDuplicateModal(true)}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+                <Button type="button" variant="ghost" size="sm" title="Déplacer vers un espace"
+                  onClick={() => setShowMoveModal(true)}>
+                  <FolderInput className="w-4 h-4" />
+                </Button>
+                {onConvertToSpace && (
+                  <Button type="button" variant="ghost" size="sm" title="Convertir en espace"
+                    onClick={() => { onConvertToSpace(itemId); onClose(); }}>
+                    <FolderPlus className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            )}
             {canEdit && onDelete && itemId && (
-              <Button type="button" variant="destructive" className="ml-auto" onClick={() => { onDelete(itemId); onClose(); }}>
+              <Button type="button" variant="destructive" onClick={() => { onDelete(itemId); onClose(); }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             )}
@@ -1523,6 +1596,23 @@ export function ItemEditModal({
         confirmLabel="Supprimer"
         isPending={deleteContributionMutation.isPending}
       />
+      {/* Move / Duplicate modals */}
+      {itemId && (
+        <MoveToSpaceModal
+          isOpen={showMoveModal}
+          onClose={() => setShowMoveModal(false)}
+          currentSpaceId={spaceId}
+          itemIds={[itemId]}
+        />
+      )}
+      {itemId && (
+        <DuplicateToSpaceModal
+          isOpen={showDuplicateModal}
+          onClose={() => setShowDuplicateModal(false)}
+          currentSpaceId={spaceId}
+          itemIds={[itemId]}
+        />
+      )}
     </Modal>
     <UnsavedChangesGuard hasChanges={hasChanges} onConfirmLeave={onClose} />
     {ConfirmDialog}

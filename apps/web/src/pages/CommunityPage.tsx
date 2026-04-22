@@ -1,8 +1,8 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, FolderOpen, Settings, Globe, Lock, Crown, User } from 'lucide-react';
-import { communitiesApi, spacesApi } from '../lib/api';
+import { communitiesApi, spacesApi, userTasksApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useViewModeStore } from '../stores/viewMode';
@@ -17,14 +17,14 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
 };
 
-function SpaceTreeNode({ node, depth = 0 }: { node: any; depth?: number }) {
+function SpaceTreeNode({ node, depth = 0, activityBySpace }: { node: any; depth?: number; activityBySpace: Map<string, number> }) {
   const hasChildren = node.children?.length > 0;
   const indent = depth > 0 ? `${depth * 2.5}rem` : undefined;
   if (!hasChildren) {
     return (
       <div className="col-span-full" style={{ paddingLeft: indent }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
+          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} activityCount={activityBySpace.get(node.id)} />
         </div>
       </div>
     );
@@ -33,23 +33,26 @@ function SpaceTreeNode({ node, depth = 0 }: { node: any; depth?: number }) {
     <div className="col-span-full">
       <div style={{ paddingLeft: indent }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} />
+          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} activityCount={activityBySpace.get(node.id)} />
         </div>
       </div>
       <div className="mt-2">
         {node.children.map((child: any) => (
-          <SpaceTreeNode key={child.id} node={child} depth={depth + 1} />
+          <SpaceTreeNode key={child.id} node={child} depth={depth + 1} activityBySpace={activityBySpace} />
         ))}
       </div>
     </div>
   );
 }
 
+const ALL_TYPES = 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM';
+
 export function CommunityPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const { setCurrentCommunity } = useCommunityStore();
+  const updatedAfter = useRef(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
@@ -76,6 +79,12 @@ export function CommunityPage() {
     enabled: !!communityId,
   });
 
+  const { data: recentData } = useQuery({
+    queryKey: ['community-recent-items', communityId, updatedAfter.current],
+    queryFn: () => userTasksApi.list({ type: ALL_TYPES, updatedAfter: updatedAfter.current, pageSize: 2000 }),
+    enabled: !!user && !!communityId,
+  });
+
   const adminMode = useAdminMode();
   const isAdminOrOwner = community?.role === 'OWNER' || community?.role === 'ADMIN_VIEW' || adminMode;
 
@@ -84,6 +93,18 @@ export function CommunityPage() {
   const sortedMembers = [...(members || [])].sort((a, b) =>
     (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
   );
+
+  // Count recent activity per spaceId (filtered to this community's spaces)
+  const activityBySpace = useMemo(() => {
+    const communitySpaceIds = new Set((spaces || []).map(s => s.id));
+    const bySpace = new Map<string, number>();
+    for (const item of (recentData?.data || [])) {
+      if (communitySpaceIds.has(item.spaceId)) {
+        bySpace.set(item.spaceId, (bySpace.get(item.spaceId) || 0) + 1);
+      }
+    }
+    return bySpace;
+  }, [recentData, spaces]);
 
   // Build space tree from flat list
   const spaceTree = useMemo(() => {
@@ -162,7 +183,7 @@ export function CommunityPage() {
             {spaceTree.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {spaceTree.map(node => (
-                  <SpaceTreeNode key={node.id} node={node} />
+                  <SpaceTreeNode key={node.id} node={node} activityBySpace={activityBySpace} />
                 ))}
               </div>
             ) : (
