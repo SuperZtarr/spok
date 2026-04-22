@@ -1,60 +1,14 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock, Pencil } from 'lucide-react';
-import { communitiesApi, spacesApi, userTasksApi, type GlobalTask } from '../../lib/api';
+import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock } from 'lucide-react';
+import { communitiesApi, spacesApi, userTasksApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { SpaceCard } from '../ui/SpaceCard';
 import { getRecentSpaceIds } from '../../hooks/useRecentSpaces';
 
-const HOME_VISIT_KEY = 'spok-home-last-visit';
 const ALL_TYPES = 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM';
-
-const TYPE_COLORS: Record<string, string> = {
-  TASK: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  NOTE: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  PROJECT: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  MEETING: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-  BUG: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  DOCUMENT: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
-  PERIOD: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
-  LINK: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-  IMAGE: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
-};
-const TYPE_LABELS: Record<string, string> = {
-  TASK: 'Tâche', NOTE: 'Note', PROJECT: 'Projet', MEETING: 'Réunion',
-  BUG: 'Bug', DOCUMENT: 'Doc', PERIOD: 'Période', LINK: 'Lien', IMAGE: 'Image', DIAGRAM: 'Diag',
-};
-
-function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const min = Math.floor(diff / 60000);
-  const h = Math.floor(diff / 3600000);
-  const d = Math.floor(diff / 86400000);
-  if (min < 2) return 'à l\'instant';
-  if (min < 60) return `il y a ${min} min`;
-  if (h < 24) return `il y a ${h}h`;
-  if (d === 1) return 'hier';
-  if (d < 7) return `il y a ${d} j`;
-  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
-function RecentItemRow({ item, onClick }: { item: GlobalTask; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/60 transition-colors text-left group"
-    >
-      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded ${TYPE_COLORS[item.type] || 'bg-muted text-muted-foreground'}`}>
-        {TYPE_LABELS[item.type] || item.type}
-      </span>
-      <span className="flex-1 text-sm truncate">{item.title}</span>
-      <span className="shrink-0 text-[11px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded truncate max-w-[120px]">{item.spaceName}</span>
-      <span className="shrink-0 text-[11px] text-muted-foreground">{formatRelativeTime(item.updatedAt)}</span>
-    </button>
-  );
-}
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -176,15 +130,8 @@ const SHORTCUTS = [
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
-  const navigate = useNavigate();
-
-  // Capture last home visit for new/modified split
-  const lastVisitRef = useRef<Date | null>(null);
-  useEffect(() => {
-    const stored = localStorage.getItem(HOME_VISIT_KEY);
-    lastVisitRef.current = stored ? new Date(stored) : null;
-    localStorage.setItem(HOME_VISIT_KEY, new Date().toISOString());
-  }, []);
+  // 7 days ago for recent activity window
+  const updatedAfter = useRef(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   const { data: communities, isLoading: loadingCommunities } = useQuery({
     queryKey: ['communities', user?.id || 'public'],
@@ -204,23 +151,24 @@ export function HomeView() {
   });
 
   const { data: recentData } = useQuery({
-    queryKey: ['home-recent-items'],
-    queryFn: () => userTasksApi.list({ type: ALL_TYPES, sortBy: 'updatedAt', sortDir: 'desc', pageSize: 20 }),
+    queryKey: ['home-recent-items', updatedAfter.current],
+    queryFn: () => userTasksApi.list({ type: ALL_TYPES, updatedAfter: updatedAfter.current, pageSize: 2000 }),
     enabled: !!user,
   });
 
-  const { newItems, modifiedItems, lastVisit } = useMemo(() => {
-    const items = recentData?.data || [];
-    const lastVisit = lastVisitRef.current;
-    if (!lastVisit) return { newItems: [], modifiedItems: items.slice(0, 20), lastVisit: null };
-    const newItems: GlobalTask[] = [];
-    const modifiedItems: GlobalTask[] = [];
-    for (const item of items) {
-      if (new Date(item.createdAt) > lastVisit) newItems.push(item);
-      else if (new Date(item.updatedAt) > lastVisit) modifiedItems.push(item);
+  // Count recent activity per communityId via spaceId mapping
+  const activityByCommunity = useMemo(() => {
+    const spaceToComm = new Map<string, string>();
+    for (const s of (allSpaces || [])) {
+      if (s.communityId) spaceToComm.set(s.id, s.communityId);
     }
-    return { newItems, modifiedItems, lastVisit };
-  }, [recentData]);
+    const counts = new Map<string, number>();
+    for (const item of (recentData?.data || [])) {
+      const commId = spaceToComm.get(item.spaceId);
+      if (commId) counts.set(commId, (counts.get(commId) || 0) + 1);
+    }
+    return counts;
+  }, [recentData, allSpaces]);
 
   const favoriteSpaces = (favoriteIds || [])
     .map(id => (allSpaces || []).find(s => s.id === id))
@@ -308,45 +256,51 @@ export function HomeView() {
           ))}
         </div>
 
-        {/* Recent modifications */}
-        {(newItems.length > 0 || modifiedItems.length > 0) && (
+        {/* Communities with recent activity */}
+        {(communities || []).filter(c => c.role && c.role !== 'INVITED' && c.role !== 'ADMIN_VIEW').length > 0 && (
           <section className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Modifications récentes
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Communautés
               </h2>
-              {lastVisit && (
-                <span className="text-xs text-muted-foreground/60 font-normal">
-                  — depuis {formatRelativeTime(lastVisit.toISOString())}
-                </span>
-              )}
+              <Link to="/communities" className="text-xs text-primary hover:underline flex items-center gap-1">
+                Voir tout <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-            <div className="border border-border rounded-xl bg-card divide-y divide-border overflow-hidden">
-              {newItems.length > 0 && (
-                <div className="p-2">
-                  <div className="flex items-center gap-1.5 px-3 py-1 mb-1">
-                    <Plus className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-semibold text-green-700 dark:text-green-400">Nouveaux ({newItems.length})</span>
-                  </div>
-                  {newItems.map(item => (
-                    <RecentItemRow key={item.id} item={item} onClick={() => navigate(`/spaces/${item.spaceId}/content`)} />
-                  ))}
-                </div>
-              )}
-              {modifiedItems.length > 0 && (
-                <div className="p-2">
-                  {lastVisit && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 mb-1">
-                      <Pencil className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Modifiés ({modifiedItems.length})</span>
-                    </div>
-                  )}
-                  {modifiedItems.map(item => (
-                    <RecentItemRow key={item.id} item={item} onClick={() => navigate(`/spaces/${item.spaceId}/content`)} />
-                  ))}
-                </div>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {(communities || [])
+                .filter(c => c.role && c.role !== 'INVITED' && c.role !== 'ADMIN_VIEW')
+                .map(c => {
+                  const count = activityByCommunity.get(c.id) || 0;
+                  return (
+                    <Link
+                      key={c.id}
+                      to={`/communities/${c.id}`}
+                      className="flex items-center gap-3 border border-border rounded-xl p-3 hover:border-primary/40 hover:shadow-md transition-all bg-card"
+                    >
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{c.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {c.memberCount ?? 0} membre{(c.memberCount ?? 0) > 1 ? 's' : ''} · {c.spaceCount ?? 0} espace{(c.spaceCount ?? 0) > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      {count > 0 && (
+                        <span className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
+                          <Clock className="w-3 h-3" />
+                          {count > 99 ? '99+' : count}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
             </div>
           </section>
         )}

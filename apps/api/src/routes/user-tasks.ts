@@ -18,6 +18,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       noDueDate?: string;
       assignedToMe?: string;
       myTasks?: string;
+      updatedAfter?: string;
       sortBy?: string;
       sortDir?: string;
       page?: string;
@@ -35,6 +36,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       noDueDate,
       assignedToMe,
       myTasks,
+      updatedAfter,
       sortBy = 'createdAt',
       sortDir = 'desc',
       page: pageStr = '1',
@@ -162,6 +164,14 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     // Assigned to me filter
     if (assignedToMe === 'true') {
       where.assignedToId = request.user.userId;
+    }
+
+    // Updated after filter
+    if (updatedAfter) {
+      const afterDate = new Date(updatedAfter);
+      if (!isNaN(afterDate.getTime())) {
+        where.updatedAt = { gte: afterDate };
+      }
     }
 
     // My tasks filter — items created by OR assigned to the current user
