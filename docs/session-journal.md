@@ -24,6 +24,18 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
+## EN COURS — 2026-04-22 (suite)
+
+- Fix accès communautés publiques pour non-membres (isPublic ignoré dans 3 endpoints) :
+  - communities GET /:id : isPublic || visibility !== PRIVATE
+  - communities GET /:id/members : même logique
+  - spaces GET / : même logique (bug && → || en plus)
+  - items checkSpaceAccess : même logique
+- R2 CORS : corrigé dans Cloudflare (pointait vers localhost:3000)
+- Auth flows : pre-fill email login→forgot-password, auto-login après reset-password
+- Inscription : contrôle pseudo déjà utilisé (insensible casse)
+- SpaceOverviewPage : route /spaces/:id/overview enregistrée, liens depuis HomeView + MainMenu
+
 ## EN COURS — 2026-04-22
 
 - RichTextEditor : BubbleMenu tableaux (ajouter/supprimer lignes+colonnes, supprimer tableau) + CSS column-resize-handle (TipTap v3 @floating-ui)

@@ -143,7 +143,7 @@ export function SpaceOverviewPage() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6">
+      <div className="w-full px-4 sm:px-6">
         {/* Header with cover */}
         <div className="relative mt-4">
           {space?.coverUrl ? (
@@ -193,112 +193,121 @@ export function SpaceOverviewPage() {
           </div>
         </div>
 
-        {/* Info cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-          <div className="p-4 rounded-lg border border-border">
-            <p className="text-2xl font-bold">{space?.itemCount || 0}</p>
-            <p className="text-xs text-muted-foreground">Éléments</p>
-          </div>
-          <div className="p-4 rounded-lg border border-border">
-            <p className="text-2xl font-bold">{members?.length || 0}</p>
-            <p className="text-xs text-muted-foreground">Membres</p>
-          </div>
-          <div className="p-4 rounded-lg border border-border">
-            <p className="text-2xl font-bold">{childSpaces?.length || 0}</p>
-            <p className="text-xs text-muted-foreground">Sous-espaces</p>
-          </div>
-        </div>
+        {/* Two-column layout: main content + right sidebar */}
+        <div className="flex gap-6 mb-8">
 
-        {/* Views grid */}
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-            <LayoutGrid className="w-4 h-4" />
-            Vues disponibles
-          </h2>
-          {spaceViewSections.map(section => {
-            const views = section.items;
-            if (views.length === 0) return null;
-            return (
-              <div key={section.id} className="mb-4">
-                <h3 className="text-xs font-medium text-muted-foreground mb-2">{section.label}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {views.map(view => {
-                    const Icon = VIEW_ICONS[view.icon] || List;
-                    return (
-                      <button
-                        key={view.key}
-                        onClick={() => {
-                          useViewModeStore.getState().setMode(view.viewMode as ViewMode);
-                          navigate(`/spaces/${spaceId}`);
-                        }}
-                        className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 hover:border-primary/30 transition-colors text-left"
-                      >
-                        <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">{view.label}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[(view.viewMode || '') as ViewMode] || ''}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Child spaces section */}
-        {spaceTree.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-              <FolderOpen className="w-4 h-4" />
-              Sous-espaces ({childSpaces?.length || 0})
-            </h2>
-            <div className="space-y-1">
-              {spaceTree.map(node => (
-                <ChildSpaceNode key={node.id} node={node} level={0} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Members section (authenticated only) */}
-        {user && <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Membres ({sortedMembers.length})
-          </h2>
-          {sortedMembers.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {sortedMembers.map(member => {
-                const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
-                const RoleIcon = config.icon;
+          {/* Left: views + child spaces */}
+          <div className="flex-1 min-w-0">
+            {/* Views grid */}
+            <div className="mb-8">
+              <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                Vues disponibles
+              </h2>
+              {spaceViewSections.map(section => {
+                const views = section.items;
+                if (views.length === 0) return null;
                 return (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                      {member.name?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {member.name}
-                        {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <RoleIcon className={`w-3 h-3 ${config.color}`} />
-                        <span className="text-xs text-muted-foreground">{config.label}</span>
-                      </div>
+                  <div key={section.id} className="mb-4">
+                    <h3 className="text-xs font-medium text-muted-foreground mb-2">{section.label}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {views.map(view => {
+                        const Icon = VIEW_ICONS[view.icon] || List;
+                        return (
+                          <button
+                            key={view.key}
+                            onClick={() => {
+                              useViewModeStore.getState().setMode(view.viewMode as ViewMode);
+                              navigate(`/spaces/${spaceId}`);
+                            }}
+                            className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 hover:border-primary/30 transition-colors text-left w-52"
+                          >
+                            <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{view.label}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[(view.viewMode || '') as ViewMode] || ''}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Aucun membre direct dans cet espace.</p>
-          )}
-        </div>}
+
+            {/* Child spaces */}
+            {spaceTree.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  Sous-espaces ({childSpaces?.length || 0})
+                </h2>
+                <div className="space-y-1">
+                  {spaceTree.map(node => (
+                    <ChildSpaceNode key={node.id} node={node} level={0} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right sidebar: stats + members */}
+          <div className="w-56 flex-shrink-0">
+            {/* Stats */}
+            <div className="flex flex-col gap-2 mb-6">
+              <div className="p-3 rounded-lg border border-border">
+                <p className="text-2xl font-bold">{space?.itemCount || 0}</p>
+                <p className="text-xs text-muted-foreground">Éléments</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border">
+                <p className="text-2xl font-bold">{members?.length || 0}</p>
+                <p className="text-xs text-muted-foreground">Membres</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border">
+                <p className="text-2xl font-bold">{childSpaces?.length || 0}</p>
+                <p className="text-xs text-muted-foreground">Sous-espaces</p>
+              </div>
+            </div>
+
+            {/* Members */}
+            {user && (
+              <div>
+                <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Membres
+                </h2>
+                {sortedMembers.length > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    {sortedMembers.map(member => {
+                      const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
+                      const RoleIcon = config.icon;
+                      return (
+                        <div key={member.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium flex-shrink-0">
+                            {member.name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {member.name}
+                              {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
+                            </p>
+                            <div className="flex items-center gap-1">
+                              <RoleIcon className={`w-3 h-3 ${config.color}`} />
+                              <span className="text-xs text-muted-foreground">{config.label}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucun membre direct.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       </div>
     </div>

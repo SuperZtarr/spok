@@ -151,56 +151,61 @@ export function CommunityPage() {
           </div>
         </div>
 
-        {/* Spaces section */}
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-            <FolderOpen className="w-4 h-4" />
-            Espaces ({spaces?.length || 0})
-          </h2>
-          {spaceTree.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {spaceTree.map(node => (
-                <SpaceTreeNode key={node.id} node={node} />
-              ))}
+        {/* Main content: spaces + members side by side */}
+        <div className="flex gap-6 mb-8">
+          {/* Spaces column */}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+              <FolderOpen className="w-4 h-4" />
+              Espaces ({spaces?.length || 0})
+            </h2>
+            {spaceTree.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {spaceTree.map(node => (
+                  <SpaceTreeNode key={node.id} node={node} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucun espace dans cette communauté.</p>
+            )}
+          </div>
+
+          {/* Members column (authenticated only) */}
+          {user && (
+            <div className="w-64 flex-shrink-0">
+              <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Membres ({sortedMembers.length})
+              </h2>
+              <div className="flex flex-col gap-1">
+                {sortedMembers.map(member => {
+                  const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
+                  const RoleIcon = config.icon;
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium flex-shrink-0">
+                        {member.name?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {member.name}
+                          {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <RoleIcon className={`w-3 h-3 ${config.color}`} />
+                          <span className="text-xs text-muted-foreground">{config.label}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Aucun espace dans cette communauté.</p>
           )}
         </div>
-
-        {/* Members section (authenticated only) */}
-        {user && <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Membres ({sortedMembers.length})
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-            {sortedMembers.map(member => {
-              const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
-              const RoleIcon = config.icon;
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border"
-                >
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                    {member.name?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {member.name}
-                      {member.userId === user?.id && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <RoleIcon className={`w-3 h-3 ${config.color}`} />
-                      <span className="text-xs text-muted-foreground">{config.label}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>}
       </div>
       </div>
     </div>

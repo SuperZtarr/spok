@@ -604,16 +604,28 @@ export function CommunitySettingsPage() {
                   </div>
                   {community?.role === 'OWNER' && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">Visibilité</label>
-                      <Select
-                        value={editVisibility}
-                        onChange={(e) => setEditVisibility(e.target.value)}
-                        options={[
-                          { value: 'OPEN', label: 'Ouverte — visible par tous, tout le monde peut rejoindre et contribuer' },
-                          { value: 'READONLY', label: 'Lecture seule — visible par tous, seuls les membres peuvent contribuer' },
-                          { value: 'PRIVATE', label: 'Privée — visible uniquement par les membres' },
-                        ]}
-                      />
+                      <label className="block text-sm font-medium mb-2">Visibilité</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: 'OPEN', label: 'Ouverte', description: 'Visible par tous, tout le monde peut rejoindre et contribuer' },
+                          { value: 'READONLY', label: 'Lecture seule', description: 'Visible par tous, seuls les membres peuvent contribuer' },
+                          { value: 'PRIVATE', label: 'Privée', description: 'Visible uniquement par les membres' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setEditVisibility(opt.value)}
+                            className={`text-left p-3 rounded-lg border-2 transition-colors ${
+                              editVisibility === opt.value
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-muted-foreground/50'
+                            }`}
+                          >
+                            <div className="font-medium text-sm">{opt.label}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{opt.description}</div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">

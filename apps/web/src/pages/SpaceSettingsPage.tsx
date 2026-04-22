@@ -485,16 +485,28 @@ export function SpaceSettingsPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Visibilité</label>
-                <Select
-                  value={editVisibility}
-                  onChange={(e) => setEditVisibility(e.target.value)}
-                  options={[
-                    { value: 'OPEN', label: 'Ouvert — tous les membres de la communauté peuvent voir et modifier' },
-                    { value: 'READONLY', label: 'Lecture seule — les membres de la communauté peuvent voir, seuls les membres de l\'espace peuvent modifier' },
-                    { value: 'PRIVATE', label: 'Privé — seuls les membres de l\'espace ont accès' },
-                  ]}
-                />
+                <label className="block text-sm font-medium mb-2">Visibilité</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'OPEN', label: 'Ouvert', description: 'Tous les membres de la communauté peuvent voir et modifier' },
+                    { value: 'READONLY', label: 'Lecture seule', description: 'Les membres de la communauté peuvent voir, seuls les membres de l\'espace peuvent modifier' },
+                    { value: 'PRIVATE', label: 'Privé', description: 'Seuls les membres de l\'espace ont accès' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setEditVisibility(opt.value)}
+                      className={`text-left p-3 rounded-lg border-2 transition-colors ${
+                        editVisibility === opt.value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-muted-foreground/50'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{opt.label}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{opt.description}</div>
+                    </button>
+                  ))}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Contrôle l'accès des membres de la communauté qui ne sont pas explicitement membres de cet espace
                 </p>
