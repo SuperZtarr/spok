@@ -1105,6 +1105,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         where: {
           communityId: space.communityId,
           userId: { notIn: memberIds },
+          user: { disabledAt: null },
         },
         include: {
           user: { select: { id: true, email: true, name: true } },
@@ -1118,7 +1119,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       }));
     } else {
       users = await fastify.prisma.user.findMany({
-        where: { id: { notIn: memberIds } },
+        where: { id: { notIn: memberIds }, disabledAt: null },
         select: { id: true, email: true, name: true },
         orderBy: { name: 'asc' },
       });
