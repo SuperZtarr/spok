@@ -279,7 +279,7 @@ export function ItemEditModal({
       setSelectedTagIds(tagIds);
       setOriginalTagIds(tagIds);
     }
-  }, [item]);
+  }, [itemId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateMutation = useMutation({
     mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
@@ -789,7 +789,7 @@ export function ItemEditModal({
                     itemId={item.id}
                     summary={(item as any).reactionSummary || []}
                     onReacted={() => canInteract && setShowContributionField(true)}
-                    label="Réagissez à l'article"
+                    label="Réagissez ou Contribuez à l'article"
                   />
                 )}
 
@@ -850,7 +850,7 @@ export function ItemEditModal({
                                   itemId={item.id}
                                   contributionId={contribution.id}
                                   summary={(contribution as any).reactionSummary || []}
-                                  label="Réagissez au commentaire"
+                                  label="Réagissez ou Contribuez au commentaire"
                                   onReacted={() => { if (canInteract) { setReplyToContributionId(contribution.id); setShowContributionField(true); setNewContribution(''); }}}
                                 />
                                 {canInteract && (contribution.authorId === user?.id) && (
