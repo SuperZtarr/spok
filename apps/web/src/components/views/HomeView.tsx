@@ -156,18 +156,20 @@ export function HomeView() {
     enabled: !!user,
   });
 
-  // Count recent activity per communityId via spaceId mapping
-  const activityByCommunity = useMemo(() => {
+  // Count recent activity per spaceId and communityId
+  const { activityBySpace, activityByCommunity } = useMemo(() => {
     const spaceToComm = new Map<string, string>();
     for (const s of (allSpaces || [])) {
       if (s.communityId) spaceToComm.set(s.id, s.communityId);
     }
-    const counts = new Map<string, number>();
+    const bySpace = new Map<string, number>();
+    const byComm = new Map<string, number>();
     for (const item of (recentData?.data || [])) {
+      bySpace.set(item.spaceId, (bySpace.get(item.spaceId) || 0) + 1);
       const commId = spaceToComm.get(item.spaceId);
-      if (commId) counts.set(commId, (counts.get(commId) || 0) + 1);
+      if (commId) byComm.set(commId, (byComm.get(commId) || 0) + 1);
     }
-    return counts;
+    return { activityBySpace: bySpace, activityByCommunity: byComm };
   }, [recentData, allSpaces]);
 
   const favoriteSpaces = (favoriteIds || [])
@@ -299,7 +301,7 @@ export function HomeView() {
                           </p>
                         </div>
                         {count > 0 && (
-                          <span className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
+                          <span className="animate-pulse shrink-0 flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-orange-500 text-white shadow-sm">
                             <Clock className="w-3 h-3" />
                             {count > 99 ? '99+' : count}
                           </span>
@@ -322,7 +324,7 @@ export function HomeView() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {favoriteSpaces.map(space => (
-                <SpaceCard key={space.id} space={space} />
+                <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} />
               ))}
             </div>
           </section>
@@ -346,7 +348,7 @@ export function HomeView() {
                 const spaceMap = new Map(allSpaces.map(s => [s.id, s]));
                 const recent = recentIds.map(id => spaceMap.get(id)).filter(Boolean) as typeof allSpaces;
                 const displayed = recent.length > 0 ? recent.slice(0, 8) : allSpaces.slice(0, 8);
-                return displayed.map(space => <SpaceCard key={space.id} space={space} />);
+                return displayed.map(space => <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} />);
               })()}
             </div>
           </section>

@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
-import { FolderOpen } from 'lucide-react';
+import { Clock, FolderOpen } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';
 
 interface SpaceCardProps {
   space: SpaceWithRole;
   onClick?: () => void;
+  activityCount?: number;
 }
 
-export function SpaceCard({ space, onClick }: SpaceCardProps) {
+export function SpaceCard({ space, onClick, activityCount }: SpaceCardProps) {
   return (
     <Link
       to={`/spaces/${space.id}`}
@@ -46,6 +47,12 @@ export function SpaceCard({ space, onClick }: SpaceCardProps) {
             {(space as any).itemCount || 0} element{((space as any).itemCount || 0) > 1 ? 's' : ''}
           </p>
         </div>
+        {activityCount != null && activityCount > 0 && (
+          <span className="animate-pulse shrink-0 flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-orange-500 text-white shadow-sm">
+            <Clock className="w-3 h-3" />
+            {activityCount > 99 ? '99+' : activityCount}
+          </span>
+        )}
       </div>
     </Link>
   );
