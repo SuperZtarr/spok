@@ -99,7 +99,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
   // 2. Community membership or public community → access depends on effective visibility
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
-    select: { communityId: true, community: { select: { visibility: true } } },
+    select: { communityId: true, community: { select: { visibility: true, isPublic: true } } },
   });
   if (space?.communityId) {
     const visibility = await getEffectiveVisibility(prisma, spaceId);
@@ -121,9 +121,9 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       }
     }
 
-    // Community with OPEN or READONLY visibility: allow anonymous access
-    const communityVisibility = space.community?.visibility || 'PRIVATE';
-    if (communityVisibility !== 'PRIVATE') {
+    // Public community (isPublic=true or visibility != PRIVATE): allow access
+    const communityIsPublic = space.community?.isPublic || space.community?.visibility !== 'PRIVATE';
+    if (communityIsPublic) {
       return { userId: userId || '', spaceId, role: implicitRole, id: '', joinedAt: new Date() };
     }
   }
