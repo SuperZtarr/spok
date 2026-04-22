@@ -7,8 +7,8 @@
 - [x] Avatar sur cover : fallback top-right de la cover quand pas d'avatar (2026-03-22)
 - [x] Revoir les listes d'espaces : SpaceCard uniforme, grilles partout, SpacesListPage filtree — fce8e91 (2026-03-21)
 - [x] Transferer des fonctions admin vers la gestion directe : mode admin toggle, onglet Danger communaute/espace, desactivation compte (2026-03-22)
-- [ ] Images avatar/cover non affichées en prod pour les non-propriétaires d'espace/communauté — code synchro, comportement différent R2 vs base64 local, à investiguer côté prod
-- [ ] Interface lecture seule VIEWER : 4 vues (list/kanban/gantt/mindmap), badge "Lecture seule", drag desactive — code pret, a tester
+- [x] Images avatar/cover non affichées en prod pour les non-propriétaires d'espace/communauté — résolu 2026-04-21
+- [x] Interface lecture seule VIEWER : 4 vues (list/kanban/gantt/mindmap), badge "Lecture seule", drag desactive — testé 2026-04-22
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
@@ -20,8 +20,8 @@
 - [ ] Mettre à jour spok-doc skill avec descriptions fonctionnelles des espaces + lien vers Organisation cible
 
 ### Modales
-- [ ] Les tableaux ne sont pas éditables ? (modale édition item) — à investiguer
-- [ ] Modale édition item : champ "parent" → permettre de changer d'espace et de communauté
+- [x] Les tableaux ne sont pas éditables ? (modale édition item) — ajout/suppression lignes et colonnes via toolbar contextuelle — résolu 2026-04-22
+- [x] Modale édition item : champ "parent" → permettre de changer d'espace et de communauté — boutons déplacer/dupliquer/convertir dans le footer de la modale — a440cea (2026-04-22)
 
 ### Evolutions (backlog récupéré depuis Projet SPOK)
 - [ ] Filtres à mettre partout

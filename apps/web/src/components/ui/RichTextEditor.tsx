@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useEditor, EditorContent, ReactRenderer, type Editor } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/react/menus';
+import { useEditor, EditorContent, ReactRenderer, useEditorState, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
@@ -426,73 +425,13 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
 
   const iconSize = 16;
 
+  const { isInTable } = useEditorState({
+    editor,
+    selector: (ctx) => ({ isInTable: ctx.editor?.isActive('table') ?? false }),
+  });
+
   return (
     <div className="rounded-md border border-input shadow-sm overflow-hidden">
-      {/* Table bubble menu */}
-      {editable && (
-        <BubbleMenu
-          editor={editor}
-          shouldShow={({ editor: e }: { editor: Editor }) => e.isActive('table')}
-          appendTo={() => document.body}
-        >
-          <div className="flex items-center gap-0.5 px-1.5 py-1 rounded-md border border-border bg-popover shadow-md text-xs">
-            {/* Row operations */}
-            <button
-              onClick={() => editor.chain().focus().addRowBefore().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-              title="Ajouter une ligne au-dessus"
-            >
-              <Plus size={12} />↑
-            </button>
-            <button
-              onClick={() => editor.chain().focus().addRowAfter().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-              title="Ajouter une ligne en-dessous"
-            >
-              <Plus size={12} />↓
-            </button>
-            <button
-              onClick={() => editor.chain().focus().deleteRow().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
-              title="Supprimer la ligne"
-            >
-              <Trash2 size={12} />↕
-            </button>
-            <div className="w-px h-4 bg-border mx-0.5" />
-            {/* Column operations */}
-            <button
-              onClick={() => editor.chain().focus().addColumnBefore().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-              title="Ajouter une colonne à gauche"
-            >
-              <Plus size={12} />←
-            </button>
-            <button
-              onClick={() => editor.chain().focus().addColumnAfter().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-              title="Ajouter une colonne à droite"
-            >
-              <Plus size={12} />→
-            </button>
-            <button
-              onClick={() => editor.chain().focus().deleteColumn().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
-              title="Supprimer la colonne"
-            >
-              <Trash2 size={12} />↔
-            </button>
-            <div className="w-px h-4 bg-border mx-0.5" />
-            {/* Delete table */}
-            <button
-              onClick={() => editor.chain().focus().deleteTable().run()}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
-              title="Supprimer le tableau"
-            >
-              <Trash2 size={12} /><TableIcon size={12} />
-            </button>
-          </div>
-        </BubbleMenu>
-      )}
 
       {/* Toolbar */}
       {editable && (
@@ -576,10 +515,38 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
         <ToolbarButton
           onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
           title="Inserer un tableau"
-          disabled={editor.isActive('table')}
+          disabled={isInTable}
         >
           <TableIcon size={iconSize} />
         </ToolbarButton>
+
+        {/* Table operations — visible only when cursor is inside a table */}
+        {isInTable && (<>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarButton onClick={() => editor.chain().focus().addRowBefore().run()} title="Ajouter une ligne au-dessus">
+            <span className="text-[11px] font-bold leading-none">+↑</span>
+          </ToolbarButton>
+          <ToolbarButton onClick={() => editor.chain().focus().addRowAfter().run()} title="Ajouter une ligne en-dessous">
+            <span className="text-[11px] font-bold leading-none">+↓</span>
+          </ToolbarButton>
+          <ToolbarButton onClick={() => editor.chain().focus().deleteRow().run()} title="Supprimer la ligne">
+            <span className="text-[11px] font-bold leading-none">−↕</span>
+          </ToolbarButton>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarButton onClick={() => editor.chain().focus().addColumnBefore().run()} title="Ajouter une colonne à gauche">
+            <span className="text-[11px] font-bold leading-none">+←</span>
+          </ToolbarButton>
+          <ToolbarButton onClick={() => editor.chain().focus().addColumnAfter().run()} title="Ajouter une colonne à droite">
+            <span className="text-[11px] font-bold leading-none">+→</span>
+          </ToolbarButton>
+          <ToolbarButton onClick={() => editor.chain().focus().deleteColumn().run()} title="Supprimer la colonne">
+            <span className="text-[11px] font-bold leading-none">−↔</span>
+          </ToolbarButton>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarButton onClick={() => editor.chain().focus().deleteTable().run()} title="Supprimer le tableau">
+            <Trash2 size={iconSize} />
+          </ToolbarButton>
+        </>)}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           isActive={editor.isActive('codeBlock')}
