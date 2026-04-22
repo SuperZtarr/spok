@@ -2,7 +2,15 @@ import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
-import { getTypeIcon } from '../../constants/ui';
+import { getTypeIcon, getPriorityConfig } from '../../constants/ui';
+
+// Border thickness + color based on priority (higher priority = thicker)
+function getPriorityBorder(priority: number | null | undefined): string {
+  const cfg = getPriorityConfig(priority);
+  if (!cfg) return 'border-2 border-gray-300';
+  const thickness = cfg.value === 4 ? 'border-4' : cfg.value === 3 ? 'border-[3px]' : cfg.value === 2 ? 'border-2' : 'border';
+  return `${thickness} ${cfg.color}`;
+}
 import { ChevronRight, ChevronDown, FolderOpen, RotateCcw, ExternalLink, X, Pin, PinOff } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
@@ -198,7 +206,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
   return (
     <div
       className={`px-3 py-2 rounded-lg shadow-md min-w-[90px] max-w-[260px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
-        isPortal ? 'border-2 border-dashed border-primary/40' : isRoot ? 'border-primary border-3' : 'border-2 border-gray-300'
+        isPortal ? 'border-2 border-dashed border-primary/40' : isRoot ? 'border-primary border-3' : getPriorityBorder(item.priority)
       } ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 scale-110 z-10' : ''} ${isSearchMatch ? 'ring-4 ring-yellow-400 ring-offset-2 scale-110 z-10 shadow-lg' : ''} ${isDimmed ? 'opacity-30' : ''} ${isDropTarget ? 'ring-4 ring-blue-500 ring-offset-2 scale-110 shadow-xl border-blue-500' : ''}`}
       style={{ backgroundColor: hexColor, color: textColor }}
     >
