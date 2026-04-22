@@ -26,6 +26,7 @@ export interface AuthUser {
   globalRole: GlobalRole;
   themePreference: ThemePreference;
   avatarUrl?: string;
+  lastLoginAt?: string; // ISO — date de la connexion précédente (avant la mise à jour courante)
 }
 
 export interface UpdatePreferencesInput {

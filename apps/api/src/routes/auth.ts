@@ -151,7 +151,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Update last login timestamp
+    // Save previous login date before overwriting it
+    const previousLoginAt = user.lastLoginAt;
     await fastify.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
     const tokens = await generateTokens(fastify, user.id, user.email);
@@ -164,6 +165,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       globalRole: user.globalRole,
       themePreference: user.themePreference as AuthUser['themePreference'],
       avatarUrl: user.avatarUrl ?? undefined,
+      lastLoginAt: previousLoginAt?.toISOString(),
     };
 
     // Create email verification notification if not verified and none exists
@@ -240,6 +242,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         themePreference: true,
         avatarUrl: true,
         createdAt: true,
+        lastLoginAt: true,
       },
     });
 

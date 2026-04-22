@@ -130,8 +130,8 @@ const SHORTCUTS = [
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
-  // 7 days ago for recent activity window
-  const updatedAfter = useRef(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+  // Depuis la dernière connexion (fallback : 7 jours)
+  const updatedAfter = useRef(user?.lastLoginAt ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   const { data: communities, isLoading: loadingCommunities } = useQuery({
     queryKey: ['communities', user?.id || 'public'],

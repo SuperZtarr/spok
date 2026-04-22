@@ -52,7 +52,8 @@ export function CommunityPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const { setCurrentCommunity } = useCommunityStore();
-  const updatedAfter = useRef(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+  // Depuis la dernière connexion (fallback : 7 jours)
+  const updatedAfter = useRef(user?.lastLoginAt ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
