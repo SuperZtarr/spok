@@ -1212,7 +1212,6 @@ export function SpacePage() {
         onNavigate={setEditingItemId}
         onDelete={actions.handleDelete}
         onConvertToSpace={actions.handleConvertToSpace}
-        onSelfAssign={handleSelfAssign}
         onMerge={actions.handleMerge}
         onAbsorbChildren={actions.handleAbsorbChildren}
         onSplitDescription={actions.handleSplitDescription}

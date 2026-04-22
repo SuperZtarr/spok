@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, UserPlus, FolderPlus } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -131,7 +131,6 @@ interface ItemEditModalProps {
   onNavigate?: (itemId: string) => void;
   onDelete?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
-  onSelfAssign?: (id: string) => void;
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
@@ -151,7 +150,6 @@ export function ItemEditModal({
   onNavigate,
   onDelete,
   onConvertToSpace,
-  onSelfAssign,
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
@@ -1494,12 +1492,6 @@ export function ItemEditModal({
             {/* Contextual actions */}
             {item && canEdit && itemId && (
               <div className="flex items-center gap-1 ml-auto">
-                {onSelfAssign && (
-                  <Button type="button" variant="ghost" size="sm" title="M'assigner"
-                    onClick={() => { onSelfAssign(itemId); onClose(); }}>
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
-                )}
                 {onAbsorbChildren && (
                   <Button type="button" variant="ghost" size="sm" title="Absorber les enfants"
                     onClick={() => { onAbsorbChildren(itemId); onClose(); }}>
