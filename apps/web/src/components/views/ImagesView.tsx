@@ -132,6 +132,7 @@ interface ImagesViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
@@ -140,7 +141,7 @@ interface ImagesViewProps {
   currentSpaceId?: string;
 }
 
-export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
+export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(2); // default M
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -331,7 +332,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <RoleGuard role="MEMBER">
                           <ItemActionMenu
-                            groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+                            groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpenInNewTab }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
                             triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
                           />
                         </RoleGuard>

@@ -1,4 +1,4 @@
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors } from 'lucide-react';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 
 export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
@@ -15,6 +15,7 @@ export interface ItemMenuCallbacks {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
 }
 
 export interface ItemMenuOptions {
@@ -44,12 +45,14 @@ export function buildItemMenuGroups(
     onMerge,
     onAbsorbChildren,
     onSplitDescription,
+    onOpenInNewTab,
   } = callbacks;
   const { statusAction, extraChildren = [], extraOrganise = [], extraSections = [] } = options;
 
   // Groupe 1 : actions sur l'item lui-même
   const group1: ItemAction[] = [
     ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(itemId) }] : []),
+    ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
     ...(onUpdateStatus && statusAction ? [{ id: 'status', label: statusAction.label, icon: CheckSquare, onClick: () => onUpdateStatus(itemId, statusAction.statusId) }] : []),
   ];

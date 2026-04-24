@@ -137,6 +137,7 @@ interface PlanningViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   highlightType?: ItemType;
@@ -160,6 +161,7 @@ interface PlanningItemProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   typeLabels?: Record<string, { labelShort: string }>;
@@ -172,7 +174,7 @@ interface PlanningItemProps {
   canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true, canEditItem }: PlanningItemProps) {
+function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true, canEditItem }: PlanningItemProps) {
   const Icon = getTypeIcon(item.type, item.url);
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
@@ -266,6 +268,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
               onMerge,
               onAbsorbChildren,
               onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
+              onOpenInNewTab,
             }, {
               statusAction: item.status && item.status !== 'done' ? { label: 'Marquer terminé', statusId: 'done' } : null,
             })}
@@ -290,6 +293,7 @@ interface PeriodSectionProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   referentiels?: SpaceReferentiels;
@@ -301,7 +305,7 @@ interface PeriodSectionProps {
   canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit, canEditItem }: PeriodSectionProps) {
+function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, statuses, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit, canEditItem }: PeriodSectionProps) {
   if (items.length === 0) return null;
 
   const IconComponent = config.icon;
@@ -333,6 +337,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
             onSplitDescription={onSplitDescription}
+            onOpenInNewTab={onOpenInNewTab}
             statuses={statuses}
             referentiels={referentiels}
             isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
@@ -348,7 +353,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
   );
 }
 
-export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: PlanningViewProps) {
+export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -431,6 +436,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
           onMerge={onMerge}
           onAbsorbChildren={onAbsorbChildren}
           onSplitDescription={onSplitDescription}
+          onOpenInNewTab={onOpenInNewTab}
           statuses={statuses}
           referentiels={referentiels}
           highlightType={highlightType}

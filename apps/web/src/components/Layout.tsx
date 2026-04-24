@@ -85,7 +85,7 @@ function CommunitySection({
               <Building2 className={`w-3 h-3 ${isActive ? 'text-primary' : 'text-foreground/50'}`} />
             </div>
           )}
-          <span className={`text-base font-bold truncate transition-colors ${isActive ? 'text-primary' : 'text-black group-hover:text-foreground'}`}>
+          <span className={`text-base font-bold truncate transition-colors ${isActive ? 'text-primary' : 'text-foreground'}`}>
             {community.name}
           </span>
         </Link>
@@ -685,7 +685,7 @@ export function Layout() {
               <div className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center px-2 mb-1">
                   <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-                  <span className="text-base font-bold text-black">Favoris</span>
+                  <span className="text-base font-bold text-foreground">Favoris</span>
                 </div>
                 {communityFavoriteSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
@@ -719,7 +719,7 @@ export function Layout() {
             {/* Community spaces tree */}
             <div className="pt-1.5">
               <div className="flex items-center justify-between px-2 mb-1">
-                <span className="text-base font-bold text-black">Espaces</span>
+                <span className="text-base font-bold text-foreground">Espaces</span>
               </div>
               {currentCommunityGroup.spaceTree.length > 0 ? (
                 currentCommunityGroup.spaceTree.map((node) => (
@@ -747,7 +747,7 @@ export function Layout() {
               <div id="sidebar-favorites" className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center px-2 mb-1">
                   <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-                  <span className="text-base font-bold text-black">Favoris</span>
+                  <span className="text-base font-bold text-foreground">Favoris</span>
                 </div>
                 {favoriteSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
@@ -783,7 +783,7 @@ export function Layout() {
               <div id="sidebar-recents" className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center px-2 mb-1">
                   <Clock className="w-3 h-3 text-muted-foreground/60 mr-1.5 flex-shrink-0" />
-                  <span className="text-base font-bold text-black">Récents</span>
+                  <span className="text-base font-bold text-foreground">Récents</span>
                 </div>
                 {recentSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
@@ -818,7 +818,7 @@ export function Layout() {
             {user && mySpaces.length > 0 && (
               <div className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center justify-between px-2 mb-1">
-                  <span className="text-base font-bold text-black">Mes espaces</span>
+                  <span className="text-base font-bold text-foreground">Mes espaces</span>
                 </div>
                 {mySpaces.map((space, i) => (
                   <Link
@@ -870,7 +870,7 @@ export function Layout() {
             {independentSpaces.length > 0 && (
               <div className="pt-1.5">
                 <div className="flex items-center justify-between px-2 mb-1">
-                  <span className="text-base font-bold text-black">Autres espaces</span>
+                  <span className="text-base font-bold text-foreground">Autres espaces</span>
                 </div>
                 {independentSpaces.map((node) => (
                   <SpaceTreeItem
@@ -979,7 +979,7 @@ export function Layout() {
         <button
           onClick={toggleSidebarCollapsed}
           title={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'}
-          className="hidden md:flex fixed z-[60] items-center justify-center w-6 h-10 bg-gray-400 text-white rounded-md shadow-sm hover:bg-gray-500 transition-all duration-200"
+          className="hidden md:flex fixed z-30 items-center justify-center w-6 h-10 bg-gray-400 text-white rounded-md shadow-sm hover:bg-gray-500 transition-all duration-200"
           style={{
             left: sidebarCollapsed ? 4 : sidebarWidth - 12,
             top: '50vh',

@@ -61,6 +61,7 @@ function PriorityCard({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpenInNewTab,
   isDragging,
   canEdit = true,
   canEditItem,
@@ -78,6 +79,7 @@ function PriorityCard({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
@@ -141,7 +143,7 @@ function PriorityCard({
       {(canEditItem ? canEditItem(item) : canEdit) && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <ItemActionMenu
-            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined })}
+            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab })}
           />
         </div>
       )}
@@ -167,6 +169,7 @@ function PriorityColumn({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpenInNewTab,
   canEdit,
   canEditItem,
   referentiels,
@@ -187,6 +190,7 @@ function PriorityColumn({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
@@ -229,6 +233,7 @@ function PriorityColumn({
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
             onSplitDescription={onSplitDescription}
+            onOpenInNewTab={onOpenInNewTab}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
             canEditItem={canEditItem}
@@ -268,6 +273,7 @@ interface PriorityViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
@@ -288,6 +294,7 @@ export function PriorityView({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpenInNewTab,
   onConvertToSpace,
   referentiels,
   canEdit = true,
@@ -393,6 +400,7 @@ export function PriorityView({
               onMerge={onMerge}
               onAbsorbChildren={onAbsorbChildren}
               onSplitDescription={onSplitDescription}
+              onOpenInNewTab={onOpenInNewTab}
               canEdit={canEdit}
               canEditItem={canEditItem}
               referentiels={referentiels}

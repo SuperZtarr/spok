@@ -41,6 +41,7 @@ interface TextViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
@@ -95,7 +96,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
   return result;
 }
 
-export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
+export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -202,6 +203,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               onMerge={onMerge}
               onAbsorbChildren={onAbsorbChildren}
               onSplitDescription={onSplitDescription}
+              onOpenInNewTab={onOpenInNewTab}
               canEdit={canEdit}
               canEditItem={canEditItem}
               doneStatusId={doneStatusId}
@@ -284,6 +286,7 @@ function TextItem({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpenInNewTab,
   canEdit,
   canEditItem,
   doneStatusId,
@@ -307,6 +310,7 @@ function TextItem({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   doneStatusId: string;
@@ -375,6 +379,7 @@ function TextItem({
                 onMerge,
                 onAbsorbChildren,
                 onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
+                onOpenInNewTab,
               }, {
                 statusAction: onUpdateStatus && item.status && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
               })}

@@ -25,6 +25,7 @@ interface RecentChangesViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
 }

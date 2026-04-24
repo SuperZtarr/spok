@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -145,12 +145,16 @@ function DevPageName() {
 
 export default function App() {
   const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const handleLogout = () => logout();
+    const handleLogout = () => {
+      logout();
+      navigate('/login', { replace: true });
+    };
     window.addEventListener('auth:logout', handleLogout);
     return () => window.removeEventListener('auth:logout', handleLogout);
-  }, [logout]);
+  }, [logout, navigate]);
 
   return (
     <>

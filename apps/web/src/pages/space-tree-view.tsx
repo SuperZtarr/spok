@@ -60,6 +60,7 @@ export interface TreeItemProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
@@ -98,6 +99,7 @@ export function TreeItem({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpenInNewTab,
   spaceId,
   isOver,
   onMove,
@@ -245,6 +247,7 @@ export function TreeItem({
                 {
                   actions: [
                     { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
+                    ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(item.id) }] : []),
                     ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
                     { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
                     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
@@ -331,6 +334,7 @@ export function ItemChildren({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpenInNewTab,
   onMove,
   globalOverId,
   globalDropMode,
@@ -362,6 +366,7 @@ export function ItemChildren({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
@@ -409,6 +414,7 @@ export function ItemChildren({
           onMerge={onMerge}
           onAbsorbChildren={onAbsorbChildren}
           onSplitDescription={onSplitDescription}
+          onOpenInNewTab={onOpenInNewTab}
           spaceId={spaceId}
           isOver={globalOverId === item.id}
           onMove={onMove}

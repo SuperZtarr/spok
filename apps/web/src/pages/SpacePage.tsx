@@ -489,6 +489,17 @@ export function SpacePage() {
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Ouvrir la modale si ?item=:itemId (venant d'un lien "ouvrir dans un nouvel onglet")
+  const itemParamHandledRef = useRef(false);
+  useEffect(() => {
+    const itemParam = searchParams.get('item');
+    if (itemParam && !itemParamHandledRef.current) {
+      itemParamHandledRef.current = true;
+      setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
+      setEditingItemId(itemParam);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Render ---
   // Overview mode — full page, no toolbar
   if (viewMode === 'overview') {
@@ -575,6 +586,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
@@ -595,6 +607,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
@@ -620,6 +633,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -637,6 +651,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
@@ -658,6 +673,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -679,6 +695,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -700,6 +717,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -749,6 +767,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -781,6 +800,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               onReorder={actions.handleReorder}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
@@ -938,6 +958,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
@@ -958,6 +979,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
@@ -978,6 +1000,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -997,6 +1020,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
             />
@@ -1016,6 +1040,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -1037,6 +1062,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -1058,6 +1084,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
@@ -1100,6 +1127,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
                       spaceId={spaceId!}
                       isOver={overId === item.id}
                       onMove={actions.handleMove}
@@ -1151,6 +1179,7 @@ export function SpacePage() {
               onMerge={actions.handleMerge}
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
+              onOpenInNewTab={actions.handleOpenInNewTab}
                           spaceId={group.spaceId}
                           isOver={overId === item.id}
                           onMove={actions.handleMove}

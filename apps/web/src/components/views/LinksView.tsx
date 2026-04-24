@@ -74,7 +74,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
         <div className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
           <RoleGuard role="MEMBER">
             <ItemActionMenu
-              groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+              groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined, onOpenInNewTab: actions.onOpenInNewTab }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
             />
           </RoleGuard>
         </div>
@@ -118,6 +118,7 @@ interface LinkActions {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
 }
 
 interface LinkGroup {
@@ -145,6 +146,7 @@ interface LinksViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onMove?: (id: string, parentId: string | null, position: number) => void;
   referentiels?: any;
   canEdit?: boolean;
@@ -153,7 +155,7 @@ interface LinksViewProps {
   currentSpaceId?: string;
 }
 
-export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
+export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: LinksViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const links = useMemo(() => {
     if (!items) return [];
@@ -181,7 +183,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
     return result;
   }, [links, items]);
 
-  const actions: LinkActions = { onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription };
+  const actions: LinkActions = { onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab };
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;

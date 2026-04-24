@@ -161,6 +161,11 @@ Deploye sur Railway :
 
 > Procedures operationnelles (demarrage, commit, push, donnees, ports, redemarrage) : voir `memory/procedures.md`
 
+### API de production (INTERDIT)
+- Ne JAMAIS appeler `api.spok.space` directement (curl, fetch, ou tout autre outil)
+- Ne JAMAIS modifier des données en production sans demande explicite
+- Si besoin de mettre à jour des données SPOK prod : dire à l'utilisateur de le faire lui-même
+
 ### Workflow Git (OBLIGATOIRE)
 - Travailler directement dans `C:\_dev\spok` sur master (pas de worktree)
 - Les conversations sont séparées par thème mais partagent la même base de code

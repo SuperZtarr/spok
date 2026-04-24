@@ -208,11 +208,6 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [convertingItem, resolveItemSpaceId, convertToSpaceMutation]);
 
-  const getItemUpdatedAt = useCallback((id: string): string | undefined => {
-    const found = allItems.find((i) => i.id === id);
-    return found?.updatedAt;
-  }, [allItems]);
-
   const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
     const updates = { ...data };
@@ -236,7 +231,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       }
     }
 
-    updateItemMutation.mutate({ id, itemSpaceId, data: { ...updates, updatedAt: getItemUpdatedAt(id) } });
+    updateItemMutation.mutate({ id, itemSpaceId, data: updates });
 
     // If status changed on an item with children, propose propagation
     if (data.status !== undefined) {
@@ -364,6 +359,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     splitMutation.mutate({ id, itemSpaceId });
   }, [resolveItemSpaceId, splitMutation]);
 
+  const handleOpenInNewTab = useCallback((id: string) => {
+    const itemSpaceId = resolveItemSpaceId(id);
+    window.open(`/spaces/${itemSpaceId}/content?item=${id}`, '_blank');
+  }, [resolveItemSpaceId]);
+
   const reorderMutation = useMutation({
     mutationFn: ({ targetSpaceId, groups }: { targetSpaceId: string; groups: { parentId: string | null; itemIds: string[] }[] }) =>
       itemsApi.reorder(targetSpaceId, groups),
@@ -414,6 +414,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     handleAbsorbChildren,
     // Split
     handleSplitDescription,
+    // Open in new tab
+    handleOpenInNewTab,
     // Reorder
     handleReorder,
   };
