@@ -247,7 +247,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
         });
       }
     }
-  }, [resolveItemSpaceId, updateItemMutation, getItemUpdatedAt, allItems]);
+  }, [resolveItemSpaceId, updateItemMutation, allItems]);
 
   const handleMove = useCallback((id: string, parentId: string | null, position: number) => {
     const itemSpaceId = resolveItemSpaceId(id);

@@ -201,6 +201,10 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
   }, [referentiels]);
 
+  const gridColsClass = hasPortals
+    ? 'grid-cols-[auto_1fr_6rem_auto] sm:grid-cols-[auto_1fr_5rem_6rem_auto] md:grid-cols-[auto_1fr_5rem_6rem_4rem_5rem_auto] lg:grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto] xl:grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]'
+    : 'grid-cols-[auto_1fr_6rem_auto] sm:grid-cols-[auto_1fr_5rem_6rem_auto] md:grid-cols-[auto_1fr_5rem_6rem_4rem_5rem_auto] lg:grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]';
+
   return (
     <div className="flex flex-col h-full">
       {/* Items list */}
@@ -213,20 +217,20 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
       ) : (
         <>
           {/* Header — fixed outside scroll */}
-          <div data-tour="list-headers" className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
+          <div data-tour="list-headers" className={`grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre
               {sortField === 'title' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
             {hasPortals && (
-              <span className="text-left truncate">Espace</span>
+              <span className="hidden xl:block text-left truncate">Espace</span>
             )}
-            <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left truncate" onClick={() => toggleSort('parent')}>
+            <button className="hidden lg:flex items-center gap-1 hover:text-foreground transition-colors text-left truncate" onClick={() => toggleSort('parent')}>
               Parent
               {sortField === 'parent' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
-            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('type')}>
+            <button className="hidden sm:flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('type')}>
               Type
               {sortField === 'type' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
@@ -234,11 +238,11 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               Statut
               {sortField === 'status' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
-            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('priority')}>
+            <button className="hidden md:flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('priority')}>
               Prio
               {sortField === 'priority' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
-            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('date')}>
+            <button className="hidden md:flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('date')}>
               Info
               {sortField === 'date' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
@@ -262,7 +266,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                 <div
                   key={item.id}
                   {...(index === 0 ? { 'data-tour': 'list-row' } : {})}
-                  className={`grid ${hasPortals ? 'grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]' : 'grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]'} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
+                  className={`grid ${gridColsClass} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
                   <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -285,7 +289,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                   </div>
 
                   {hasPortals && (
-                    <span className="truncate text-xs">
+                    <span className="hidden xl:block truncate text-xs">
                       {isPortal && portalSpaceName ? (
                         <Link
                           to={`/spaces/${item.spaceId}`}
@@ -300,11 +304,11 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     </span>
                   )}
 
-                  <span className="truncate text-xs text-muted-foreground" title={item.parentId ? parentNames[item.parentId] || '' : ''}>
+                  <span className="hidden lg:block truncate text-xs text-muted-foreground" title={item.parentId ? parentNames[item.parentId] || '' : ''}>
                     {item.parentId ? parentNames[item.parentId] || '' : ''}
                   </span>
 
-                  <span className="flex justify-center">
+                  <span className="hidden sm:flex justify-center">
                     <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>
                       {typeLabel}
                     </Badge>
@@ -319,7 +323,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     </Badge>
                   </span>
 
-                  <span className="flex justify-center">
+                  <span className="hidden md:flex justify-center">
                     {(() => {
                       const pConfig = getPriorityConfig(item.priority);
                       return pConfig ? (
@@ -332,7 +336,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     })()}
                   </span>
 
-                  <span className="flex items-center justify-center gap-1.5">
+                  <span className="hidden md:flex items-center justify-center gap-1.5">
                     {item.type === 'MEETING' && item.startDate && (
                       <span className="text-xs text-muted-foreground" title={formatDate(item.startDate) || ''}>
                         <Calendar className="w-3 h-3" />

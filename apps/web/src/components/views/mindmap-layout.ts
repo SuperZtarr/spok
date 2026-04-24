@@ -378,7 +378,7 @@ export function buildPortalNodesAndEdges(
   relationEdges: Edge[],
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
   const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions } = ctx;
-  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onTogglePin } = callbacks;
+  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab: _onOpenInNewTab, onTogglePin } = callbacks;
   const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet } = options;
 
   const portalPosMap = new Map(positionedNodes.map(n => [n.id, n.position]));

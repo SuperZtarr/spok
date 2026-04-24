@@ -804,6 +804,7 @@ export function ItemEditModal({
                   onChange={setDescription}
                   editable={canEdit}
                   spaceId={spaceId}
+                  minHeight={240}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
               </div>
@@ -961,7 +962,7 @@ export function ItemEditModal({
                             const isSelected = type === key;
                             return (
                               <button key={key} type="button" onClick={() => setType(key as ItemType)}
-                                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${isSelected ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current` : 'opacity-60 hover:opacity-100'}`}>
+                                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${isSelected ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current text-gray-900` : 'opacity-60 hover:opacity-100'}`}>
                                 {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
                                 {config.labelShort}
                               </button>
@@ -1016,7 +1017,7 @@ export function ItemEditModal({
                                 if (!startDate) { const now = new Date(); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(now)); }
                               }
                             }}
-                            className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${isSelected ? `${s.borderColor} font-semibold shadow-sm` : `${s.borderColor} opacity-60 hover:opacity-100`}`}>
+                            className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${isSelected ? `${s.borderColor} font-semibold shadow-sm` : `${s.borderColor} opacity-60 hover:opacity-100`}`}>
                             {s.label}
                           </button>
                         );
@@ -1053,12 +1054,12 @@ export function ItemEditModal({
                     {/* Desktop: buttons */}
                     <div className="hidden sm:flex flex-wrap gap-2">
                       <button type="button" onClick={() => setPriority(null)}
-                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
+                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
                         Aucune
                       </button>
                       {PRIORITIES.map((p) => (
                         <button key={p.value} type="button" onClick={() => setPriority(p.value)}
-                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm` : 'opacity-60 hover:opacity-100'}`}>
+                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm` : 'opacity-60 hover:opacity-100'}`}>
                           {p.label}
                         </button>
                       ))}

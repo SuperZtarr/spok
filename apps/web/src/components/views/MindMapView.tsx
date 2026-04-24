@@ -990,7 +990,8 @@ function MindMapViewInner({
           style: { stroke: '#94a3b8', strokeWidth: 2 },
         }}
       >
-        <Background color="#e2e8f0" gap={20} />
+        <Background color="#e2e8f0" gap={20} className="dark:hidden" />
+        <Background color="#334155" gap={20} className="hidden dark:block" />
         <Controls className="hidden sm:flex" position="bottom-right" data-tour="mindmap-controls" />
         <MiniMap
           className="hidden md:block"

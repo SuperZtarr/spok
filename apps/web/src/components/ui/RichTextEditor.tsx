@@ -32,7 +32,6 @@ import {
   Code,
   Minus,
   Quote,
-  Plus,
   Trash2,
 } from 'lucide-react';
 import { MentionList, type MentionItem, type MentionListRef } from './MentionList';
