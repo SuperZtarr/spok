@@ -22,6 +22,9 @@ psql "$DATABASE_URL" -c "ALTER TABLE items ADD COLUMN IF NOT EXISTS \"startDate\
 echo "Adding endDate column if not exists..."
 psql "$DATABASE_URL" -c "ALTER TABLE items ADD COLUMN IF NOT EXISTS \"endDate\" TIMESTAMP(3);" || echo "endDate already exists or error"
 
+echo "Adding defaultView column to spaces if not exists..."
+psql "$DATABASE_URL" -c "ALTER TABLE spaces ADD COLUMN IF NOT EXISTS \"defaultView\" TEXT;" || echo "defaultView already exists or error"
+
 # Step 4: Now we can run prisma db push
 echo "=== Running Prisma db push ==="
 ./packages/database/node_modules/.bin/prisma db push \
