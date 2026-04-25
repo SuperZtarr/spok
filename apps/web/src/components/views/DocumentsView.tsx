@@ -3,7 +3,6 @@ import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEn
 import { FileText, Download, FolderKanban, GripVertical } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { RoleGuard } from '../RoleGuard';
 import { getTypeIcon } from '../../constants/ui';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
@@ -182,15 +181,11 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                       >
                         <Download className="w-4 h-4 text-muted-foreground" />
                       </a>
-                      {(canEditItem ? canEditItem(doc) : canEdit) && onDelete && (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                          <RoleGuard role="MEMBER">
-                            <ItemActionMenu
-                              groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(doc.description) ? onSplitDescription : undefined, onOpenInNewTab }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
-                            />
-                          </RoleGuard>
-                        </div>
-                      )}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                        <ItemActionMenu
+                          groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(doc.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(doc) : canEdit, statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+                        />
+                      </div>
                     </div>
                   </div>
                   </DraggableDoc>

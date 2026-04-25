@@ -88,7 +88,7 @@ export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { mode: viewMode, setMode, setAllowedViews } = useViewModeStore();
+  const { mode: viewMode, setMode, setAllowedViews, allowedViews } = useViewModeStore();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
   const { user } = useAuthStore();
 
@@ -534,6 +534,8 @@ export function SpacePage() {
           searchMatchCount={searchMatchIds?.size}
           referentiels={referentiels}
           viewMode={viewMode}
+          onSetMode={setMode}
+          allowedViews={allowedViews}
           isExpanded={viewMode === 'mindmap' ? mindmapExpanded : hasExpandedItems}
           onToggleExpand={handleToggleExpand}
           onResetLayout={handleResetLayout}

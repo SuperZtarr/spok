@@ -239,13 +239,11 @@ export function ThreadView({
             </div>
 
             {/* Actions */}
-            {(canEditItem ? canEditItem(node) : canEdit) && (
-              <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
-                <ItemActionMenu
-                  groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined, onOpenInNewTab })}
-                />
-              </div>
-            )}
+            <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+              <ItemActionMenu
+                groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(node) : canEdit })}
+              />
+            </div>
           </div>
 
           {/* Expanded: description + contributions */}

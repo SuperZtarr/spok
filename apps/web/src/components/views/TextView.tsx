@@ -364,28 +364,27 @@ function TextItem({
             {contributions.length}
           </span>
         )}
-        {(canEditItem ? canEditItem(item) : canEdit) && (onDelete || onAddChild) && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            <ItemActionMenu
-              groups={buildItemMenuGroups(item.id, {
-                onEdit,
-                onDelete,
-                onUpdateStatus,
-                onAddChild,
-                onMoveToSpace,
-                onDuplicateToSpace,
-                onConvertToSpace,
-                onSelfAssign,
-                onMerge,
-                onAbsorbChildren,
-                onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
-                onOpenInNewTab,
-              }, {
-                statusAction: onUpdateStatus && item.status && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
-              })}
-            />
-          </div>
-        )}
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <ItemActionMenu
+            groups={buildItemMenuGroups(item.id, {
+              onEdit,
+              onDelete,
+              onUpdateStatus,
+              onAddChild,
+              onMoveToSpace,
+              onDuplicateToSpace,
+              onConvertToSpace,
+              onSelfAssign,
+              onMerge,
+              onAbsorbChildren,
+              onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
+              onOpenInNewTab,
+            }, {
+              canEdit: canEditItem ? canEditItem(item) : canEdit,
+              statusAction: onUpdateStatus && item.status && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+            })}
+          />
+        </div>
       </div>
 
       {/* Description & Contributions */}

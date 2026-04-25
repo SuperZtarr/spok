@@ -23,15 +23,15 @@ function timeAgo(date: string | Date): string {
 
 function CommunityBanner({ community }: { community: { id: string; name: string; avatarUrl?: string | null; coverUrl?: string | null } }) {
   return (
-    <div className="relative rounded-xl overflow-hidden border border-border bg-card">
+    <div className="relative rounded-xl border border-border bg-card">
       {community.coverUrl ? (
-        <div className="aspect-[3/1] overflow-hidden">
+        <div className="h-28 overflow-hidden rounded-t-xl">
           <img src={community.coverUrl} alt="" className="w-full h-full object-cover" />
         </div>
       ) : (
-        <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
+        <div className="h-28 bg-gradient-to-r from-primary/20 to-primary/5 rounded-t-xl" />
       )}
-      <div className="absolute -bottom-4 left-4">
+      <div className="absolute left-4" style={{ top: 'calc(7rem - 1.5rem)' }}>
         {community.avatarUrl ? (
           <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
         ) : community.coverUrl ? (

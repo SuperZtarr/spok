@@ -12,6 +12,36 @@ import {
   History,
   ListChecks,
   Plus,
+  List,
+  GitBranch,
+  Columns3,
+  FileText,
+  CalendarCheck,
+  GanttChart,
+  Calendar,
+  LayoutGrid,
+  Share2,
+  Network,
+  CircleDot,
+  Waypoints,
+  Circle,
+  Orbit,
+  SquareStack,
+  Disc,
+  TrendingDown,
+  Layers,
+  Users,
+  Flame,
+  Table2,
+  Grid3x3,
+  Focus,
+  ExternalLink,
+  Image,
+  Bug,
+  CheckSquare,
+  MessageSquare,
+  Clock,
+  type LucideIcon,
 } from 'lucide-react';
 import type { ItemType } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -20,7 +50,15 @@ import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import { ViewHelpButton } from '../components/ViewHelpButton';
 import { SpaceExportButton } from '../components/SpaceExportButton';
 import type { ViewMode } from '../stores/viewMode';
+import { useMenuItems } from '../hooks/useMenuItems';
 import type { Item } from '@spok/shared';
+
+const VIEW_ICON_MAP: Record<string, LucideIcon> = {
+  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
+  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
+  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
+};
 
 export interface SpaceToolbarProps {
   // Filters
@@ -40,6 +78,8 @@ export interface SpaceToolbarProps {
   referentiels?: any;
   // View mode
   viewMode: ViewMode;
+  onSetMode: (mode: ViewMode) => void;
+  allowedViews: ViewMode[] | null;
   // Expand/Collapse
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -76,6 +116,8 @@ export function SpaceToolbar({
   searchMatchCount,
   referentiels,
   viewMode,
+  onSetMode,
+  allowedViews,
   isExpanded,
   onToggleExpand,
   onResetLayout,
@@ -92,6 +134,7 @@ export function SpaceToolbar({
   onStartTour,
   pulseHelp,
 }: SpaceToolbarProps) {
+  const { spaceViews } = useMenuItems();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
@@ -353,6 +396,55 @@ export function SpaceToolbar({
           )}
         </div>
       </div>
+
+      {/* View mode buttons row — filtered by admin menu config + role */}
+      {(() => {
+        const filteredViews = spaceViews.filter(
+          (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
+        );
+        // Group by section, preserving order
+        const sectionMap = new Map<string, { sectionOrder: number; views: typeof filteredViews }>();
+        for (const v of filteredViews) {
+          if (!sectionMap.has(v.section)) {
+            sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
+          }
+          sectionMap.get(v.section)!.views.push(v);
+        }
+        const sections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
+        if (sections.length === 0) return null;
+        return (
+          <div className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
+            {sections.map((section, idx) => (
+              <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
+                  {section.views[0]?.sectionLabel}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  {section.views.map((v) => {
+                    const Icon = VIEW_ICON_MAP[v.icon];
+                    const isActive = viewMode === v.viewMode;
+                    return (
+                      <button
+                        key={v.key}
+                        onClick={() => onSetMode(v.viewMode as ViewMode)}
+                        title={v.label}
+                        className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`}
+                      >
+                        {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                        <span className="hidden sm:inline">{v.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -140,13 +140,11 @@ function PriorityCard({
         </div>
       </div>
 
-      {(canEditItem ? canEditItem(item) : canEdit) && (
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ItemActionMenu
-            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab })}
-          />
-        </div>
-      )}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ItemActionMenu
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
+        />
+      </div>
     </div>
   );
 }

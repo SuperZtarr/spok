@@ -10,7 +10,6 @@ import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
-import { RoleGuard } from '../RoleGuard';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -366,8 +365,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                   </span>
 
                   <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {(canEditItem ? canEditItem(item) : canEdit) && !isPortal && (
-                      <RoleGuard role="MEMBER">
+                    {!isPortal && (
                       <ItemActionMenu
                         groups={buildItemMenuGroups(item.id, {
                           onEdit,
@@ -383,6 +381,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                           onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
                           onOpenInNewTab,
                         }, {
+                          canEdit: canEditItem ? canEditItem(item) : canEdit,
                           statusAction: item.status && !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
                           extraSections: [{
                             label: 'Exporter',
@@ -393,7 +392,6 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                           }],
                         })}
                       />
-                      </RoleGuard>
                     )}
                   </span>
                 </div>

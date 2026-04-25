@@ -175,13 +175,11 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       </div>
 
       {/* Action menu */}
-      {(canEditItem ? canEditItem(item) : canEdit) && (
-        <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ItemActionMenu
-            groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab })}
-          />
-        </div>
-      )}
+      <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ItemActionMenu
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
+        />
+      </div>
     </div>
   );
 }

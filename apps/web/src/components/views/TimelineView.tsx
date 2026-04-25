@@ -722,7 +722,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                         <span className="truncate max-w-[60px]">{portalSpaceName}</span>
                       </Link>
                     )}
-                    {(canEditItem ? canEditItem(item) : canEdit) && !isPortal && (
+                    {!isPortal && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <ItemActionMenu
                           groups={buildItemMenuGroups(item.id, {
@@ -739,6 +739,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                             onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
                             onOpenInNewTab,
                           }, {
+                            canEdit: canEditItem ? canEditItem(item) : canEdit,
                             statusAction: item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
                           })}
                         />

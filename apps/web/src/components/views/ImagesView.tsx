@@ -3,7 +3,6 @@ import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEn
 import { ImageIcon, ChevronLeft, ChevronRight, X, FolderKanban, GripVertical, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { RoleGuard } from '../RoleGuard';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
 const ZOOM_LEVELS = [
@@ -328,16 +327,12 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                       </div>
                     </button>
 
-                    {(canEditItem ? canEditItem(img) : canEdit) && onDelete && (
-                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <RoleGuard role="MEMBER">
-                          <ItemActionMenu
-                            groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpenInNewTab }, { statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
-                            triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
-                          />
-                        </RoleGuard>
-                      </div>
-                    )}
+                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ItemActionMenu
+                        groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(img) : canEdit, statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+                        triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
+                      />
+                    </div>
                   </div>
                   </DraggableImage>
                 );

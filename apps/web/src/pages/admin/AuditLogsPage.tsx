@@ -252,6 +252,7 @@ export function AuditLogsPage() {
                 <th className="px-4 py-3 text-left font-medium">Utilisateur</th>
                 <th className="px-4 py-3 text-left font-medium">Action</th>
                 <th className="px-4 py-3 text-left font-medium">Entite</th>
+                <th className="px-4 py-3 text-left font-medium">ID / Titre</th>
                 <th className="px-4 py-3 text-left font-medium">Espace</th>
                 <th className="px-4 py-3 text-left font-medium">Batch</th>
                 <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -271,6 +272,18 @@ export function AuditLogsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-2">{log.entity}</td>
+                      <td className="px-4 py-2 max-w-[200px]">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono text-xs text-muted-foreground truncate" title={log.entityId}>
+                            {log.entityId.slice(0, 12)}…
+                          </span>
+                          {(() => {
+                            const changes = log.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null;
+                            const title = changes?.before?.title || changes?.after?.title;
+                            return title ? <span className="text-xs truncate" title={String(title)}>{String(title)}</span> : null;
+                          })()}
+                        </div>
+                      </td>
                       <td className="px-4 py-2 text-muted-foreground">{log.space?.name || '-'}</td>
                       <td className="px-4 py-2">
                         {log.batchId && (
@@ -360,6 +373,18 @@ export function AuditLogsPage() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-1.5 w-28">{log.entity}</td>
+                                  <td className="px-4 py-1.5 max-w-[180px]">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-mono text-xs text-muted-foreground truncate" title={log.entityId}>
+                                        {log.entityId.slice(0, 12)}…
+                                      </span>
+                                      {(() => {
+                                        const changes = log.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null;
+                                        const title = changes?.before?.title || changes?.after?.title;
+                                        return title ? <span className="text-xs truncate" title={String(title)}>{String(title)}</span> : null;
+                                      })()}
+                                    </div>
+                                  </td>
                                   <td className="px-4 py-1.5 text-muted-foreground">{log.space?.name || '-'}</td>
                                   <td className="px-4 py-1.5 w-20"></td>
                                   <td className="px-4 py-1.5 text-right w-32">

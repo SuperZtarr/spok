@@ -254,7 +254,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
 
       {/* Action menu */}
       <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
-        {(canEditItem ? canEditItem(item) : canEdit) && !isPortal && (
+        {!isPortal && (
           <ItemActionMenu
             groups={buildItemMenuGroups(item.id, {
               onEdit,
@@ -270,6 +270,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
               onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpenInNewTab,
             }, {
+              canEdit: canEditItem ? canEditItem(item) : canEdit,
               statusAction: item.status && item.status !== 'done' ? { label: 'Marquer terminé', statusId: 'done' } : null,
             })}
           />

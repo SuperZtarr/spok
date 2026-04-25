@@ -71,7 +71,8 @@ function HomeRoute() {
 // Redirect /spaces/:id/content → /spaces/:id
 function SpaceContentRedirect() {
   const { spaceId } = useParams();
-  return <Navigate to={`/spaces/${spaceId}`} replace />;
+  const { search } = useLocation();
+  return <Navigate to={`/spaces/${spaceId}${search}`} replace />;
 }
 
 const PAGE_NAMES: [RegExp, string][] = [

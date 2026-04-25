@@ -204,37 +204,34 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       </div>
 
       {/* Action menu */}
-      {(canEditItem ? canEditItem(item) : canEdit) && (
-        <RoleGuard role="MEMBER">
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ItemActionMenu
-            groups={buildItemMenuGroups(item.id, {
-              onEdit,
-              onDelete,
-              onUpdateStatus,
-              onAddChild,
-              onMoveToSpace,
-              onDuplicateToSpace,
-              onConvertToSpace,
-              onSelfAssign,
-              onMerge,
-              onAbsorbChildren,
-              onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
-              onOpenInNewTab,
-            }, {
-              statusAction: nextStatus !== undefined ? { label: nextStatusLabel || 'Suivant', statusId: nextStatus! } : null,
-              extraSections: [{
-                label: 'Exporter',
-                actions: [
-                  { id: 'print', label: 'Imprimer', icon: Printer, onClick: () => { printItem({ item: item as any }); } },
-                  { id: 'pdf', label: 'Export PDF', icon: FileDown, onClick: () => { exportItemPDF({ item: item as any }); } },
-                ],
-              }],
-            })}
-          />
-        </div>
-        </RoleGuard>
-      )}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ItemActionMenu
+          groups={buildItemMenuGroups(item.id, {
+            onEdit,
+            onDelete,
+            onUpdateStatus,
+            onAddChild,
+            onMoveToSpace,
+            onDuplicateToSpace,
+            onConvertToSpace,
+            onSelfAssign,
+            onMerge,
+            onAbsorbChildren,
+            onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
+            onOpenInNewTab,
+          }, {
+            canEdit: canEditItem ? canEditItem(item) : canEdit,
+            statusAction: nextStatus !== undefined ? { label: nextStatusLabel || 'Suivant', statusId: nextStatus! } : null,
+            extraSections: [{
+              label: 'Exporter',
+              actions: [
+                { id: 'print', label: 'Imprimer', icon: Printer, onClick: () => { printItem({ item: item as any }); } },
+                { id: 'pdf', label: 'Export PDF', icon: FileDown, onClick: () => { exportItemPDF({ item: item as any }); } },
+              ],
+            }],
+          })}
+        />
+      </div>
     </div>
   );
 }

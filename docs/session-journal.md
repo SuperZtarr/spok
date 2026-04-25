@@ -24,6 +24,17 @@
 - Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
 - NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
 
+## EN COURS — 2026-04-25
+
+- Vue par défaut par espace : champ defaultView sur Space (Prisma + API + type shared + SpaceSettingsPage dropdown + SpacePage apply on entry) — ef8e463
+- ListView responsive : grid par breakpoints, titre toujours visible — 9c81421
+- MindMap dark mode : background dots adaptatif — 9c81421
+- Admin audit logs : colonne entityId + titre (changes.before/after.title)
+- Menu contextuel : option canEdit dans buildItemMenuGroups, gates write callbacks, VIEWER/MEMBER voient edit+openInNewTab seulement
+- SpaceContentRedirect : useLocation().search préservé dans Navigate
+- Toolbar espace : ligne de boutons de vues par section (useMenuItems().spaceViews), filtrés par allowedViews VIEWER, labels de section
+- SpaceBreadcrumb supprimé de SpacePage (composant créé mais non utilisé)
+
 ## EN COURS — 2026-04-24
 
 - MindMap dark mode : background dots adaptatif (hidden dark:block avec couleur slate-700)

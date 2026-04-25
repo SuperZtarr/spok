@@ -10,6 +10,13 @@
 - [x] Images avatar/cover non affichées en prod pour les non-propriétaires d'espace/communauté — résolu 2026-04-21
 - [x] Interface lecture seule VIEWER : 4 vues (list/kanban/gantt/mindmap), badge "Lecture seule", drag desactive — testé 2026-04-22
 - [x] Bugs UX : sidebar toggle z-index, dark mode textes noirs, favicon 404, logout redirect, recherche responsive, 409 inline update, ouvrir item dans nouvel onglet — 2026-04-24
+- [x] Vue par défaut par espace (champ defaultView, settings dropdown, apply on entry) — 2026-04-25
+- [x] ListView responsive : grid par breakpoints, titre toujours visible — 2026-04-25
+- [x] MindMap dark mode : background dots adaptatif — 2026-04-25
+- [x] Admin audit logs : afficher entityId + titre de l'item supprimé/restauré — 2026-04-25
+- [x] Menu contextuel : permissions canEdit (MEMBER voit edit/ouvrir, pas delete/move) — 2026-04-25
+- [x] SpaceContentRedirect : préserver les query params (?item=) — 2026-04-25
+- [x] Toolbar espace : sélecteur de vues (boutons par section, filtrés par config admin menu) — 2026-04-25
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
