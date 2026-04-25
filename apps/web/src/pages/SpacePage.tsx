@@ -135,6 +135,13 @@ export function SpacePage() {
     return item.createdById === user?.id;
   }, [canEdit, space?.role, user?.id]);
 
+  // Apply space defaultView each time we enter a new space
+  useEffect(() => {
+    if (space?.id !== spaceId || !space?.defaultView) return;
+    setMode(space.defaultView as Parameters<typeof setMode>[0]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [space?.id, space?.defaultView]); // triggers when the correct space data loads
+
   // Restrict views for VIEWER role
   useEffect(() => {
     setAllowedViews(canEdit ? null : VIEWER_ALLOWED_VIEWS);

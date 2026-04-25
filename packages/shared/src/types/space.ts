@@ -16,6 +16,7 @@ export interface Space {
   coverZoom?: number;
   defaultRole?: Role | null;
   visibility?: SpaceVisibility;
+  defaultView?: string | null;
   createdAt: string;
   updatedAt: string;
 }

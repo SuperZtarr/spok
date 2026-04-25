@@ -20,6 +20,7 @@ import { Select } from '../components/ui/Select';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
 import { OrgChartView } from '../components/views/OrgChartView';
 import type { Role } from '@spok/shared';
+import { VIEW_MODES } from '../stores/viewMode';
 
 const SPACE_SETTINGS_TOUR: TourStep[] = [
   {
@@ -239,6 +240,7 @@ export function SpaceSettingsPage() {
   const [editParentId, setEditParentId] = useState<string>('');
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
   const [editVisibility, setEditVisibility] = useState<string>('OPEN');
+  const [editDefaultView, setEditDefaultView] = useState<string>('thread');
 
 
   // Initialize space info state
@@ -250,13 +252,14 @@ export function SpaceSettingsPage() {
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
       setEditVisibility(space.visibility || 'OPEN');
+      setEditDefaultView(space.defaultView || 'thread');
     }
   }, [space, editName]);
 
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
 
-    const updates: { name?: string; description?: string | null; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string } = {};
+    const updates: { name?: string; description?: string | null; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string; defaultView?: string | null } = {};
     if (editName !== space.name) updates.name = editName;
     if (editDescription !== (space.description || '')) updates.description = editDescription || null;
     const newCommunityId = editCommunityId || null;
@@ -266,6 +269,7 @@ export function SpaceSettingsPage() {
     const newDefaultRole = (editDefaultRole || null) as Role | null;
     if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
     if (editVisibility !== (space.visibility || 'OPEN')) updates.visibility = editVisibility;
+    if (editDefaultView !== (space.defaultView || 'thread')) updates.defaultView = editDefaultView;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -278,7 +282,8 @@ export function SpaceSettingsPage() {
     (editCommunityId || null) !== space.communityId ||
     (editParentId || null) !== (space.parentId || null) ||
     (editDefaultRole || null) !== (space.defaultRole || null) ||
-    editVisibility !== (space.visibility || 'OPEN')
+    editVisibility !== (space.visibility || 'OPEN') ||
+    editDefaultView !== (space.defaultView || 'thread')
   );
 
   useCtrlS(!!hasSpaceInfoChanges && !updateSpaceMutation.isPending, handleSaveSpaceInfo);
@@ -509,6 +514,17 @@ export function SpaceSettingsPage() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Contrôle l'accès des membres de la communauté qui ne sont pas explicitement membres de cet espace
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Vue par défaut</label>
+                <Select
+                  value={editDefaultView}
+                  onChange={(e) => setEditDefaultView(e.target.value)}
+                  options={VIEW_MODES.map((v) => ({ value: v.value, label: v.label }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Vue affichée à l'ouverture de l'espace
                 </p>
               </div>
               <Button
