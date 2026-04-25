@@ -119,6 +119,31 @@ async function buildApp() {
     logger: envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] ?? true,
   });
 
+  // Surveillance des temps de réponse et volumes de données
+  const SLOW_THRESHOLD_MS = 1000;   // log si > 1s
+  const HEAVY_THRESHOLD_KB = 500;   // log si > 500 Ko
+
+  app.addHook('onResponse', (request, reply, done) => {
+    const ms = Math.round(reply.elapsedTime);
+    const bytes = Number(reply.getHeader('content-length') ?? 0);
+    const kb = Math.round(bytes / 1024);
+    const url = request.url.split('?')[0]; // sans query string
+    const method = request.method;
+    const status = reply.statusCode;
+
+    const isSlow = ms > SLOW_THRESHOLD_MS;
+    const isHeavy = kb > HEAVY_THRESHOLD_KB;
+
+    if (isSlow || isHeavy) {
+      const tags: string[] = [];
+      if (isSlow) tags.push(`SLOW ${ms}ms`);
+      if (isHeavy) tags.push(`HEAVY ${kb}Ko`);
+      app.log.warn(`[PERF] ${method} ${url} → ${status} | ${tags.join(' | ')}`);
+    }
+
+    done();
+  });
+
   // Gestionnaire d'erreurs global
   app.setErrorHandler((error, request, reply) => {
     app.log.error(error);
