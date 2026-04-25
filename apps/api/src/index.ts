@@ -23,6 +23,7 @@ import { adminAuditLogsRoutes } from './routes/admin/auditLogs.js';
 import { adminConfigRoutes, publicConfigRoutes } from './routes/admin/config.js';
 import { adminMenuRoutes, publicMenuRoutes } from './routes/admin/menu.js';
 import { adminBackupRoutes } from './routes/admin/backup.js';
+import { adminPerfRoutes } from './routes/admin/perf.js';
 import { contactRoutes } from './routes/contact.js';
 import { searchRoutes } from './routes/search.js';
 import { userRoutes } from './routes/user.js';
@@ -122,12 +123,29 @@ async function buildApp() {
   // Surveillance des temps de réponse et volumes de données
   const SLOW_THRESHOLD_MS = 1000;   // log si > 1s
   const HEAVY_THRESHOLD_KB = 500;   // log si > 500 Ko
+  const PERF_BUFFER_SIZE = 500;     // dernières entrées conservées
+
+  interface PerfEntry {
+    timestamp: string;
+    method: string;
+    url: string;
+    status: number;
+    ms: number;
+    kb: number;
+    slow: boolean;
+    heavy: boolean;
+  }
+
+  const perfBuffer: PerfEntry[] = [];
+
+  // Expose le buffer sur l'instance pour que les routes admin y accèdent
+  (app as any).perfBuffer = perfBuffer;
 
   app.addHook('onResponse', (request, reply, done) => {
     const ms = Math.round(reply.elapsedTime);
     const bytes = Number(reply.getHeader('content-length') ?? 0);
     const kb = Math.round(bytes / 1024);
-    const url = request.url.split('?')[0]; // sans query string
+    const url = request.url.split('?')[0];
     const method = request.method;
     const status = reply.statusCode;
 
@@ -135,11 +153,12 @@ async function buildApp() {
     const isHeavy = kb > HEAVY_THRESHOLD_KB;
 
     if (isSlow || isHeavy) {
-      const tags: string[] = [];
-      if (isSlow) tags.push(`SLOW ${ms}ms`);
-      if (isHeavy) tags.push(`HEAVY ${kb}Ko`);
-      app.log.warn(`[PERF] ${method} ${url} → ${status} | ${tags.join(' | ')}`);
+      app.log.warn(`[PERF] ${method} ${url} → ${status} | ${isSlow ? `SLOW ${ms}ms` : ''} ${isHeavy ? `HEAVY ${kb}Ko` : ''}`.trim());
     }
+
+    // Toujours enregistrer dans le buffer (pour l'admin)
+    if (perfBuffer.length >= PERF_BUFFER_SIZE) perfBuffer.shift();
+    perfBuffer.push({ timestamp: new Date().toISOString(), method, url, status, ms, kb, slow: isSlow, heavy: isHeavy });
 
     done();
   });
@@ -250,6 +269,7 @@ async function buildApp() {
   await app.register(publicConfigRoutes, { prefix: '/config' });
   await app.register(adminMenuRoutes, { prefix: '/admin/menu' });
   await app.register(adminBackupRoutes, { prefix: '/admin/backup-log' });
+  await app.register(adminPerfRoutes, { prefix: '/admin/perf' });
   await app.register(publicMenuRoutes, { prefix: '/menu' });
   await app.register(contactRoutes, { prefix: '/contact' });
   await app.register(searchRoutes, { prefix: '/search' });

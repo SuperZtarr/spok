@@ -31,6 +31,7 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
+import { PerfPage } from './pages/admin/PerfPage';
 import { ContactPage } from './pages/ContactPage';
 import { BookmarksPage } from './pages/BookmarksPage';
 import { SitemapPage } from './pages/SitemapPage';
@@ -204,6 +205,7 @@ export default function App() {
         <Route path="admin/views" element={<AdminRoute><ViewsConfigPage /></AdminRoute>} />
         <Route path="admin/menu" element={<AdminRoute><MenuConfigPage /></AdminRoute>} />
         <Route path="admin/api-doc" element={<AdminRoute><ApiDocPage /></AdminRoute>} />
+        <Route path="admin/perf" element={<AdminRoute><PerfPage /></AdminRoute>} />
       </Route>
     </Routes>
   </>

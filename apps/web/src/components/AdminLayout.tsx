@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History, Eye, LogOut, Shield, Search, Map as MapIcon } from 'lucide-react';
+import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History, Eye, LogOut, Shield, Search, Map as MapIcon, Activity } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { GlobalSearch } from './GlobalSearch';
@@ -118,6 +118,14 @@ export function AdminLayout() {
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" /> Diagnostics
+              </Link>
+              <Link
+                to="/admin/perf"
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  isActive('/admin/perf') ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                }`}
+              >
+                <Activity className="w-4 h-4" /> Performances
               </Link>
             </div>
 

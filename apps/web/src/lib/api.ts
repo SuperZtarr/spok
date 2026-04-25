@@ -1797,6 +1797,50 @@ export const adminMenuApi = {
   reset: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu/reset', { method: 'POST' }),
 };
 
+export interface PerfEntry {
+  timestamp: string;
+  method: string;
+  url: string;
+  status: number;
+  ms: number;
+  kb: number;
+  slow: boolean;
+  heavy: boolean;
+}
+
+export interface PerfStats {
+  totalRequests: number;
+  slowCount: number;
+  heavyCount: number;
+  avgMs: number;
+}
+
+export interface PerfTopEntry {
+  endpoint: string;
+  count: number;
+  avgMs: number;
+  avgKb: number;
+  slowCount: number;
+  heavyCount: number;
+}
+
+export interface PerfData {
+  stats: PerfStats;
+  topSlow: PerfTopEntry[];
+  entries: PerfEntry[];
+}
+
+export const adminPerfApi = {
+  get: (params?: { slow?: boolean; heavy?: boolean; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.slow) qs.set('slow', 'true');
+    if (params?.heavy) qs.set('heavy', 'true');
+    if (params?.limit) qs.set('limit', String(params.limit));
+    return fetchApi<PerfData>(`/admin/perf${qs.toString() ? '?' + qs : ''}`);
+  },
+  clear: () => fetchApi<{ ok: boolean }>('/admin/perf', { method: 'DELETE' }),
+};
+
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {
   return error instanceof ApiError && error.statusCode === 409 && (error.details as any)?.code === 'CONFLICT_DETECTED';
 }
