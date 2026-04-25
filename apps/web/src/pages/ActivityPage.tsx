@@ -90,6 +90,7 @@ export function ActivityPage() {
     queryKey: ['activity'],
     queryFn: () => activityApi.feed(),
     refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const markViewed = useMutation({

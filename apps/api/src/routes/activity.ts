@@ -22,17 +22,30 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
 
     if (communityIds.length === 0) return { groups: [], total: 0 };
 
+    // Only look at items updated in the last 60 days
+    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+
     // All items in those community spaces, with views and contributions
     const items = await app.prisma.item.findMany({
       where: {
         space: { communityId: { in: communityIds } },
+        updatedAt: { gte: since },
         // Created or last-updated by someone else
         OR: [
           { updatedById: { not: userId } },
           { updatedById: null, createdById: { not: userId } },
         ],
       },
-      include: {
+      orderBy: { updatedAt: 'desc' },
+      take: 2000,
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        status: true,
+        spaceId: true,
+        updatedAt: true,
+        createdAt: true,
         space: {
           select: {
             id: true,
@@ -43,9 +56,7 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
             community: { select: { id: true, name: true, avatarUrl: true, coverUrl: true } },
           },
         },
-        createdBy: { select: { id: true, name: true, avatarUrl: true } },
         updatedBy: { select: { id: true, name: true, avatarUrl: true } },
-        tags: { include: { tag: true } },
         views: { where: { userId }, select: { viewedAt: true } },
         contributions: {
           where: { authorId: { not: userId } },
