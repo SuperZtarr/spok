@@ -67,6 +67,8 @@ model User {
   receivedCommunityEmails    CommunityEmailRecipient[]
   favoriteSpaces             SpaceFavorite[]
   bookmarkedItems            ItemBookmark[]
+  updatedItems               Item[]  @relation("ItemUpdatedBy")
+  itemViews                  ItemView[]
 
   @@map("users")
 }
@@ -212,6 +214,7 @@ model CommunityMembership {
   role        CommunityRole
   joinedAt    DateTime      @default(now())
   order       Int           @default(0)
+  muted       Boolean       @default(false)
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
@@ -303,6 +306,8 @@ model Item {
   space       Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   createdById  String
   createdBy    User   @relation("ItemCreatedBy", fields: [createdById], references: [id])
+  updatedById  String?
+  updatedBy    User?  @relation("ItemUpdatedBy", fields: [updatedById], references: [id])
   assignedToId String?
   assignedTo   User?  @relation("ItemAssignedTo", fields: [assignedToId], references: [id])
 
@@ -319,6 +324,7 @@ model Item {
   contributions Contribution[]
   reactions     Reaction[]
   bookmarkedBy  ItemBookmark[]
+  views         ItemView[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -510,6 +516,20 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+// Suivi de lecture des items (pour le feed d'activité)
+model ItemView {
+  userId   String
+  itemId   String
+  viewedAt DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([userId, itemId])
+  @@index([userId])
+  @@map("item_views")
 }
 
 // Réactions qualitatives sur items et contributions

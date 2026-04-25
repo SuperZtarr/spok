@@ -11,6 +11,7 @@
 - [x] Interface lecture seule VIEWER : 4 vues (list/kanban/gantt/mindmap), badge "Lecture seule", drag desactive — testé 2026-04-22
 - [x] Bugs UX : sidebar toggle z-index, dark mode textes noirs, favicon 404, logout redirect, recherche responsive, 409 inline update, ouvrir item dans nouvel onglet — 2026-04-24
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
+- [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)

@@ -480,6 +480,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.params.id },
         data: {
           ...updateData,
+          updatedById: request.user.userId,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
           startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : undefined,
           endDate: updateData.endDate === null ? null : updateData.endDate ? new Date(updateData.endDate) : (autoEndDate || undefined),

@@ -6,8 +6,10 @@ import {
   Network, FileText, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Check,
   ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image, Bug, CheckSquare,
-  Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings, Clock,
+  Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings, Clock, Activity,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { activityApi } from '../lib/api';
 import { useViewModeStore } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useAuthStore } from '../stores/auth';
@@ -18,7 +20,7 @@ import type { MenuItemConfig } from '@spok/shared';
 const ICONS: Record<string, typeof List> = {
   List, GitBranch, FileText, Columns3, Share2, LayoutGrid, GanttChart, CalendarCheck,
   Calendar, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
-  Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Clock,
+  Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Clock, Activity,
 };
 const EXTRA_ICONS: Record<string, typeof List> = {
   Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image, Bug, CheckSquare,
@@ -57,6 +59,14 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
   const { logout, refreshToken } = useAuthStore();
 
   const isInSpace = /^\/spaces\/[^/]+(\/|$)/.test(location.pathname);
+
+  const { data: activityData } = useQuery({
+    queryKey: ['activity'],
+    queryFn: () => activityApi.feed(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const activityCount = activityData?.total ?? 0;
 
   const [openSection, setOpenSection] = useState<string | null>(null);
   const sectionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -218,6 +228,11 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
       >
         <Icon className={cn('w-4 h-4 flex-shrink-0', item.active ? 'text-primary' : 'text-muted-foreground')} />
         <span className="flex-1 text-left">{item.label}</span>
+        {item.id === 'activity' && activityCount > 0 && (
+          <span className="bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 leading-none min-w-[1.25rem] text-center">
+            {activityCount > 99 ? '99+' : activityCount}
+          </span>
+        )}
         {item.active && <Check className="w-3 h-3 text-primary" />}
       </button>
     );

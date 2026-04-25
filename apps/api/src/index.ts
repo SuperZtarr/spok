@@ -29,6 +29,7 @@ import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
 import { graphRoutes } from './routes/graph.js';
 import { notificationsRoutes } from './routes/notifications.js';
+import { activityRoutes } from './routes/activity.js';
 import { urlMetaRoutes } from './routes/url-meta.js';
 import { spacePreferencesRoutes } from './routes/space-preferences.js';
 
@@ -231,6 +232,7 @@ async function buildApp() {
   await app.register(userTasksRoutes, { prefix: '/user' });
   await app.register(graphRoutes);
   await app.register(notificationsRoutes, { prefix: '/notifications' });
+  await app.register(activityRoutes, { prefix: '/activity' });
   await app.register(urlMetaRoutes);
 
   // Health check

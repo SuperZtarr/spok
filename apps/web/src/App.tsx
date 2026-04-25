@@ -17,6 +17,7 @@ import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GlobalTasksPage } from './pages/GlobalTasksPage';
 import { GlobalLinksPage } from './pages/GlobalLinksPage';
+import { ActivityPage } from './pages/ActivityPage';
 import { Layout } from './components/Layout';
 // AdminLayout removed — admin pages now inside main Layout
 import { AdminRoute } from './components/AdminRoute';
@@ -179,6 +180,7 @@ export default function App() {
         <Route path="sunburst" element={<SunburstPage />} />
         <Route path="mindmap" element={<MindMapPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
+        <Route path="activity" element={<ActivityPage />} />
         <Route path="links" element={<GlobalLinksPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />

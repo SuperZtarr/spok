@@ -13,7 +13,8 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   // ── Section: personal (Personnel) ──
   { id: '', key: 'dashboard', label: 'Tableau de bord', icon: 'LayoutDashboard', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/dashboard', viewMode: null, order: 0, visible: true, access: 'user' },
   { id: '', key: 'tasks', label: 'Tâches', icon: 'ClipboardList', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/tasks', viewMode: null, order: 1, visible: true, access: 'user' },
-  { id: '', key: 'profile', label: 'Profil', icon: 'User', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: null, viewMode: null, order: 2, visible: true, access: 'user' },
+  { id: '', key: 'activity', label: 'Activité', icon: 'Activity', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/activity', viewMode: null, order: 2, visible: true, access: 'user' },
+  { id: '', key: 'profile', label: 'Profil', icon: 'User', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: null, viewMode: null, order: 3, visible: true, access: 'user' },
 
   // ── Section: basic (Basique) ──
   { id: '', key: 'thread', label: 'Discussions', icon: 'MessageSquare', section: 'basic', sectionLabel: 'Basique', sectionOrder: 2, route: null, viewMode: 'thread', order: 5, visible: true, access: 'user' },

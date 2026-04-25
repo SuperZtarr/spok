@@ -26,6 +26,13 @@
 
 ## EN COURS — 2026-04-24
 
+- MindMap dark mode : background dots adaptatif (hidden dark:block avec couleur slate-700)
+- ListView responsive : grid par breakpoints, titre toujours visible, colonnes masquées progressivement
+- TS warnings corrigés : Plus inutilisé, getItemUpdatedAt manquant, onOpenInNewTab non utilisé
+- Commit 9c81421 pushé → prod Railway
+
+## EN COURS — 2026-04-24 (précédent)
+
 - Bugs UX corrigés : sidebar toggle z-index (z-[60]→z-30), dark mode textes noirs sidebar (text-black→text-foreground), favicon MindMap (Google→DuckDuckGo), logout redirect vers /login, recherche responsive (w-20 sm:w-28 md:w-40 lg:w-56), 409 sur inline update (suppression updatedAt), ouvrir item dans nouvel onglet (menu contextuel + ?item= param)
 - CLAUDE.md : ajout règle interdiction appel API prod
 

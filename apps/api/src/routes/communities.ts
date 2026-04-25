@@ -143,6 +143,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       ...m.community,
       role: m.role,
       order: m.order,
+      muted: m.muted,
       memberCount: m.community._count.memberships,
       spaceCount: m.community._count.spaces,
     }));
@@ -1006,6 +1007,33 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         role: updated.role,
         joinedAt: updated.joinedAt,
       };
+    }
+  );
+
+  // Toggle mute on own membership
+  fastify.patch<{ Params: { id: string }; Body: { muted: boolean } }>(
+    '/:id/mute',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: {
+          userId_communityId: {
+            userId: request.user.userId,
+            communityId: request.params.id,
+          },
+        },
+      });
+
+      if (!membership) {
+        return reply.notFound('Community membership not found');
+      }
+
+      const updated = await fastify.prisma.communityMembership.update({
+        where: { id: membership.id },
+        data: { muted: request.body.muted },
+      });
+
+      return { muted: updated.muted };
     }
   );
 

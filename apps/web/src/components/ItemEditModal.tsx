@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { itemsApi, spacesApi, bookmarksApi, isConflictError } from '../lib/api';
+import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { ConfirmModal } from './ConfirmModal';
@@ -261,6 +261,13 @@ export function ItemEditModal({
   // (e.g. after a comment is added) while still re-initialising when a
   // different item is opened.
   const initializedItemIdRef = useRef<string | null>(null);
+
+  // Mark item as viewed when opening (fire-and-forget for activity feed)
+  useEffect(() => {
+    if (isOpen && itemId) {
+      activityApi.markViewed(itemId).catch(() => {});
+    }
+  }, [isOpen, itemId]);
 
   // Reset the tracker whenever the requested item changes
   useEffect(() => {

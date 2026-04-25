@@ -806,6 +806,12 @@ export const communitiesApi = {
       method: 'POST',
       body: JSON.stringify({ recipientIds }),
     }),
+
+  setMuted: (id: string, muted: boolean) =>
+    fetchApi<{ muted: boolean }>(`/communities/${id}/mute`, {
+      method: 'PATCH',
+      body: JSON.stringify({ muted }),
+    }),
 };
 
 // Items
@@ -1729,6 +1735,36 @@ export const invitationsApi = {
     fetchApi<{ success: boolean }>(`/invitations/${id}`, {
       method: 'DELETE',
     }),
+};
+
+export interface ActivityItem {
+  id: string;
+  title: string;
+  type: string;
+  status: string | null;
+  priority: number | null;
+  updatedAt: string;
+  activityAt: string;
+  spaceId: string;
+  updatedBy: { id: string; name: string; avatarUrl: string | null } | null;
+  createdBy: { id: string; name: string; avatarUrl: string | null };
+  tags: { tag: { id: string; name: string; color: string | null } }[];
+}
+
+export interface ActivityGroup {
+  community: { id: string; name: string };
+  spaces: Array<{
+    space: { id: string; name: string };
+    items: ActivityItem[];
+  }>;
+}
+
+export const activityApi = {
+  feed: () =>
+    fetchApi<{ groups: ActivityGroup[]; total: number }>('/activity'),
+
+  markViewed: (itemId: string) =>
+    fetchApi<void>(`/activity/items/${itemId}/view`, { method: 'POST' }),
 };
 
 // Public config API (no auth needed) — legacy, kept for backward compat
