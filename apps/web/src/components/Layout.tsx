@@ -630,8 +630,24 @@ export function Layout() {
   const sidebarContent = user ? (
     <>
       {/* Logo always visible */}
-      <div id="sidebar-logo" className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
+      <div id="sidebar-logo" className="px-1 border-border flex-shrink-0 overflow-hidden">
         <a href="/" className="block"><img src={logoUrl} alt="SPOK" className="w-full h-auto object-contain py-2" /></a>
+      </div>
+
+      {/* Guide de démarrage — sous le logo */}
+      <div className="px-2 pb-2 border-b border-border flex-shrink-0">
+        <button
+          id="sidebar-help-button-top"
+          onClick={() => startTour()}
+          className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md transition-colors ${
+            pulseHelp
+              ? 'text-primary-foreground bg-primary animate-pulse'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+          }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          Guide de démarrage
+        </button>
       </div>
 
       {/* Community header when in immersive mode */}
@@ -910,18 +926,6 @@ export function Layout() {
             </div>
           </button>
         )}
-        <button
-          id="sidebar-help-button"
-          onClick={() => startTour()}
-          className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md transition-colors ${
-            pulseHelp
-              ? 'text-primary-foreground bg-primary animate-pulse'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-          }`}
-        >
-          <HelpCircle className="w-4 h-4" />
-          Guide de démarrage
-        </button>
         <span className="text-[10px] text-muted-foreground/50 px-3">
           MEP {new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </span>
