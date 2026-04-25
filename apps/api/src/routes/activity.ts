@@ -79,8 +79,8 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
 
     // Group by community > space
     const communityMap = new Map<string, {
-      community: { id: string; name: string };
-      spaces: Map<string, { space: { id: string; name: string }; items: typeof unseenItems }>;
+      community: { id: string; name: string; avatarUrl: string | null; coverUrl: string | null };
+      spaces: Map<string, { space: { id: string; name: string; avatarUrl: string | null; coverUrl: string | null }; items: typeof unseenItems }>;
     }>();
 
     for (const item of unseenItems) {

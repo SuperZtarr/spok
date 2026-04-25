@@ -1,14 +1,12 @@
-import { useRef, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderKanban, FolderOpen, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock } from 'lucide-react';
-import { communitiesApi, spacesApi, userTasksApi } from '../../lib/api';
+import { Users, FolderKanban, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock, Activity } from 'lucide-react';
+import { communitiesApi, spacesApi, activityApi } from '../../lib/api';
+import { TYPE_LABELS } from '../../constants/ui';
 import { useAuthStore } from '../../stores/auth';
 import { SpaceCard } from '../ui/SpaceCard';
-import { getRecentSpaceIds } from '../../hooks/useRecentSpaces';
-
-const ALL_TYPES = 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -130,8 +128,6 @@ const SHORTCUTS = [
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
-  // Depuis la dernière connexion (fallback : 7 jours)
-  const updatedAfter = useRef(user?.lastLoginAt ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   const { data: communities, isLoading: loadingCommunities } = useQuery({
     queryKey: ['communities', user?.id || 'public'],
@@ -150,27 +146,25 @@ export function HomeView() {
     enabled: !!user,
   });
 
-  const { data: recentData } = useQuery({
-    queryKey: ['home-recent-items', updatedAfter.current],
-    queryFn: () => userTasksApi.list({ type: ALL_TYPES, updatedAfter: updatedAfter.current, pageSize: 2000 }),
-    enabled: !!user,
+  const { data: activityData } = useQuery({
+    queryKey: ['activity'],
+    queryFn: () => activityApi.feed(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
-  // Count recent activity per spaceId and communityId
+  // Badges branchés sur le feed d'activité (items modifiés par d'autres, non vus)
   const { activityBySpace, activityByCommunity } = useMemo(() => {
-    const spaceToComm = new Map<string, string>();
-    for (const s of (allSpaces || [])) {
-      if (s.communityId) spaceToComm.set(s.id, s.communityId);
-    }
     const bySpace = new Map<string, number>();
     const byComm = new Map<string, number>();
-    for (const item of (recentData?.data || [])) {
-      bySpace.set(item.spaceId, (bySpace.get(item.spaceId) || 0) + 1);
-      const commId = spaceToComm.get(item.spaceId);
-      if (commId) byComm.set(commId, (byComm.get(commId) || 0) + 1);
+    for (const group of (activityData?.groups ?? [])) {
+      for (const spaceGroup of group.spaces) {
+        bySpace.set(spaceGroup.space.id, spaceGroup.items.length);
+        byComm.set(group.community.id, (byComm.get(group.community.id) || 0) + spaceGroup.items.length);
+      }
     }
     return { activityBySpace: bySpace, activityByCommunity: byComm };
-  }, [recentData, allSpaces]);
+  }, [activityData]);
 
   const favoriteSpaces = (favoriteIds || [])
     .map(id => (allSpaces || []).find(s => s.id === id))
@@ -258,6 +252,59 @@ export function HomeView() {
           ))}
         </div>
 
+        {/* Activity summary */}
+        {(() => {
+          const total = activityData?.total ?? 0;
+          if (total === 0) return null;
+          const previewItems = (activityData?.groups ?? []).flatMap((g: any) =>
+            g.spaces.flatMap((s: any) =>
+              s.items.map((item: any) => ({ ...item, spaceName: s.space.name, communityName: g.community.name }))
+            )
+          ).slice(0, 5);
+          return (
+            <section className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-primary" />
+                  Activité récente
+                  <span className="bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5 font-medium leading-none">
+                    {total > 99 ? '99+' : total}
+                  </span>
+                </h2>
+                <Link to="/activity" className="text-xs text-primary hover:underline flex items-center gap-1">
+                  Voir tout <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="border border-border rounded-xl overflow-hidden bg-card divide-y divide-border">
+                {previewItems.map((item: any) => {
+                  const diff = Date.now() - new Date(item.activityAt).getTime();
+                  const minutes = Math.floor(diff / 60000);
+                  const timeLabel = minutes < 1 ? 'à l\'instant' : minutes < 60 ? `${minutes}min` : minutes < 1440 ? `${Math.floor(minutes / 60)}h` : `${Math.floor(minutes / 1440)}j`;
+                  return (
+                    <Link
+                      key={item.id}
+                      to="/activity"
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors"
+                    >
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono uppercase tracking-wide leading-none flex-shrink-0">
+                        {TYPE_LABELS[item.type as keyof typeof TYPE_LABELS] ?? item.type}
+                      </span>
+                      <p className="flex-1 text-sm font-medium truncate">{item.title}</p>
+                      <span className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">{item.spaceName}</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">{timeLabel}</span>
+                    </Link>
+                  );
+                })}
+                {total > 5 && (
+                  <Link to="/activity" className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs text-primary hover:bg-muted/40 transition-colors">
+                    + {total - 5} autre{total - 5 > 1 ? 's' : ''} <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+
         {/* Communities with recent activity */}
         {(communities || []).filter(c => c.role && c.role !== 'INVITED' && c.role !== 'ADMIN_VIEW').length > 0 && (
           <section className="mb-8">
@@ -330,29 +377,6 @@ export function HomeView() {
           </section>
         )}
 
-        {/* Recent spaces — quick access to last visited */}
-        {allSpaces && allSpaces.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <FolderOpen className="w-4 h-4" />
-                Espaces récents
-              </h2>
-              <Link to="/spaces" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Voir tout <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {(() => {
-                const recentIds = getRecentSpaceIds();
-                const spaceMap = new Map(allSpaces.map(s => [s.id, s]));
-                const recent = recentIds.map(id => spaceMap.get(id)).filter(Boolean) as typeof allSpaces;
-                const displayed = recent.length > 0 ? recent.slice(0, 8) : allSpaces.slice(0, 8);
-                return displayed.map(space => <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} to={`/spaces/${space.id}/overview`} />);
-              })()}
-            </div>
-          </section>
-        )}
       </div>
     </div>
   );

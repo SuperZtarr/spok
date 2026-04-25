@@ -1,8 +1,8 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, FolderOpen, Settings, Globe, Lock, Crown, User } from 'lucide-react';
-import { communitiesApi, spacesApi, userTasksApi } from '../lib/api';
+import { communitiesApi, spacesApi, activityApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { useViewModeStore } from '../stores/viewMode';
@@ -45,15 +45,11 @@ function SpaceTreeNode({ node, depth = 0, activityBySpace }: { node: any; depth?
   );
 }
 
-const ALL_TYPES = 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM';
-
 export function CommunityPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const { setCurrentCommunity } = useCommunityStore();
-  // Depuis la dernière connexion (fallback : 7 jours)
-  const updatedAfter = useRef(user?.lastLoginAt ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   const { data: community } = useQuery({
     queryKey: ['community', communityId],
@@ -80,10 +76,12 @@ export function CommunityPage() {
     enabled: !!communityId,
   });
 
-  const { data: recentData } = useQuery({
-    queryKey: ['community-recent-items', communityId, updatedAfter.current],
-    queryFn: () => userTasksApi.list({ type: ALL_TYPES, updatedAfter: updatedAfter.current, pageSize: 2000 }),
-    enabled: !!user && !!communityId,
+  const { data: activityData } = useQuery({
+    queryKey: ['activity'],
+    queryFn: () => activityApi.feed(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    enabled: !!user,
   });
 
   const adminMode = useAdminMode();
@@ -95,17 +93,16 @@ export function CommunityPage() {
     (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
   );
 
-  // Count recent activity per spaceId (filtered to this community's spaces)
   const activityBySpace = useMemo(() => {
-    const communitySpaceIds = new Set((spaces || []).map(s => s.id));
     const bySpace = new Map<string, number>();
-    for (const item of (recentData?.data || [])) {
-      if (communitySpaceIds.has(item.spaceId)) {
-        bySpace.set(item.spaceId, (bySpace.get(item.spaceId) || 0) + 1);
+    const group = (activityData?.groups ?? []).find((g: any) => g.community.id === communityId);
+    if (group) {
+      for (const spaceGroup of group.spaces) {
+        bySpace.set(spaceGroup.space.id, spaceGroup.items.length);
       }
     }
     return bySpace;
-  }, [recentData, spaces]);
+  }, [activityData, communityId]);
 
   // Build space tree from flat list
   const spaceTree = useMemo(() => {
