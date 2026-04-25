@@ -83,12 +83,14 @@ import { useSpaceActions } from './useSpaceActions';
 import { SpaceToolbar } from './SpaceToolbar';
 import { useAuthStore } from '../stores/auth';
 import { recordSpaceVisit } from '../hooks/useRecentSpaces';
+import { useMenuItems } from '../hooks/useMenuItems';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { mode: viewMode, setMode, setAllowedViews, allowedViews } = useViewModeStore();
+  const { spaceViews } = useMenuItems();
   const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
   const { user } = useAuthStore();
 
@@ -536,6 +538,7 @@ export function SpacePage() {
           viewMode={viewMode}
           onSetMode={setMode}
           allowedViews={allowedViews}
+          spaceViews={spaceViews}
           isExpanded={viewMode === 'mindmap' ? mindmapExpanded : hasExpandedItems}
           onToggleExpand={handleToggleExpand}
           onResetLayout={handleResetLayout}

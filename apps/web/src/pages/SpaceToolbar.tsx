@@ -50,8 +50,7 @@ import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import { ViewHelpButton } from '../components/ViewHelpButton';
 import { SpaceExportButton } from '../components/SpaceExportButton';
 import type { ViewMode } from '../stores/viewMode';
-import { useMenuItems } from '../hooks/useMenuItems';
-import type { Item } from '@spok/shared';
+import type { MenuItemConfig, Item } from '@spok/shared';
 
 const VIEW_ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
@@ -80,6 +79,7 @@ export interface SpaceToolbarProps {
   viewMode: ViewMode;
   onSetMode: (mode: ViewMode) => void;
   allowedViews: ViewMode[] | null;
+  spaceViews: MenuItemConfig[];
   // Expand/Collapse
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -118,6 +118,7 @@ export function SpaceToolbar({
   viewMode,
   onSetMode,
   allowedViews,
+  spaceViews,
   isExpanded,
   onToggleExpand,
   onResetLayout,
@@ -134,7 +135,6 @@ export function SpaceToolbar({
   onStartTour,
   pulseHelp,
 }: SpaceToolbarProps) {
-  const { spaceViews } = useMenuItems();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
