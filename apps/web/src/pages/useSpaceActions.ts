@@ -336,8 +336,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const absorbChildrenMutation = useMutation({
     mutationFn: ({ id, itemSpaceId }: { id: string; itemSpaceId: string }) =>
       itemsApi.absorbChildren(itemSpaceId, id),
-    onSuccess: () => {
+    onSuccess: (_, { id, itemSpaceId }) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      // Invalider aussi l'item lui-même pour que l'ouverture dans la modale
+      // reflète immédiatement la description compilée
+      queryClient.invalidateQueries({ queryKey: ['item', itemSpaceId, id] });
     },
   });
 
