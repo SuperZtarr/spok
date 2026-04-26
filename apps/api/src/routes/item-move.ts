@@ -40,9 +40,7 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Item not found');
     }
 
-    if (membership.role === 'MEMBER' && item.createdById !== request.user.userId) {
-      return reply.forbidden('Members can only move their own items');
-    }
+    // Members can reorganize any item (move = structural operation, not content edit)
 
     const body = moveItemSchema.parse(request.body);
     const newParentId = body.parentId === undefined ? item.parentId : body.parentId;
