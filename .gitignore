@@ -63,3 +63,7 @@ apps/api/scripts/compare-*.ts
 apps/api/scripts/reimport-*.ts
 apps/api/scripts/update-*.ts
 .claude/settings.local.json
+
+# Fichiers de contexte/config (contiennent des credentials)
+docs/spok-project-context.txt
+docs/CONFIG.md

@@ -1,186 +1,110 @@
 ---
 name: spok-doc
-description: Gérer la documentation fonctionnelle dans l'application SPOK (espace Produit SPOK). Utiliser quand on veut créer, mettre à jour ou enrichir la documentation des interfaces dans SPOK. Déclencher systématiquement quand on documente une page, une section ou un composant de SPOK.
+description: Hub central de documentation SPOK. Invoquer pour documenter, consulter ou compléter toute documentation sur SPOK — interfaces, infra, consignes Claude. Point d'entrée unique vers toute la doc.
 ---
 
-# spok-doc — Documentation fonctionnelle dans SPOK
+# spok-doc — Hub de documentation SPOK
 
-Ce skill est la **source de vérité** pour la documentation SPOK. Lire en entier avant toute action.
+Ce skill remplit trois rôles :
+1. **Consulter** — orienter vers la bonne documentation existante
+2. **Documenter** — conventions et format pour créer un item de doc
+3. **Compléter** — séquence pour ajouter ce qui manque
 
-## Règles absolues
-
-1. Lire les IDs ci-dessous AVANT toute action
-2. Ne jamais recréer un espace qui existe déjà
-3. Si un item est introuvable, chercher avec `mcp__spok__search_items` avant de créer
-4. Si la structure change, mettre ce skill à jour immédiatement
-
-## Outils MCP disponibles
-
-| Opération | Outil MCP |
-|-----------|-----------|
-| Lister les espaces | `mcp__spok__list_spaces` |
-| Lire un espace + ses items | `mcp__spok__get_space` |
-| Chercher un item existant | `mcp__spok__search_items` |
-| Créer un item | `mcp__spok__create_item` |
+Lire en entier avant toute action.
 
 ---
 
-## Espaces de documentation (prod)
+## Plan de la documentation
 
 Communauté : **Mes Projets Claude** `cmlnwrtg80001mjpp4dc1fnxq`
 
-```
-Projet SPOK (cmmtjoiih00gdf03n9hscbkeq)
-├── Produit - SPOK (cmnq9c16300045yz277osg7wc)  ← conteneur
-│   ├── Contexte             (cmnq9c6st00105yz2eoky7uvt)
-│   ├── Structure            (cmnq9c5jr000s5yz2vthye9ws)
-│   ├── Pages publiques      (cmnxnu81f01h8n856xt1fj4bo)
-│   ├── Pages utilisateur    (cmnxohuia01mln856b8bu9luo)
-│   ├── Communautés          (cmnq9c2fa00085yz2u2961kvx)
-│   │   └── Espaces              (cmnq9c31s000c5yz2co7rpg8m)
-│   │   │   └── Items            (cmnssg2zf00dnx6kktkjmqfq4)
-│   ├── Administration       (cmnq9c3oa000g5yz26hkk5adh)
-│   ├── Modales & Overlays   (cmmts8ab200ajwbfkewwrj2b6)
-│   ├── Modèle de données    (cmnq9c4x8000o5yz2xrlcel81)
-│   └── Autres fonctionnalités (cmnq9c4aq000k5yz2w1n6e70d)
-└── Système                  (cmmthmtr7000mf03nkqrv7a3z)
+### Fonctionnement structurel
 
-CLAUDE Documentations        (cmmtsblm400gmwbfky28czun6)  ← hors Produit SPOK
-```
-
-### Table de référence rapide
+> Infra, architecture technique, MCP, modèle de données
 
 | Espace | ID | Contenu |
 |--------|----|---------|
-| Produit - SPOK | `cmnq9c16300045yz277osg7wc` | Conteneur racine |
-| Contexte | `cmnq9c6st00105yz2eoky7uvt` | Vision, objectifs, utilisateurs cibles |
-| Structure | `cmnq9c5jr000s5yz2vthye9ws` | Header, Sidebar, Zone principale, Sécurité |
-| Modales & Overlays | `cmmts8ab200ajwbfkewwrj2b6` | Toutes les fenêtres et panneaux modaux |
-| Pages publiques | `cmnxnu81f01h8n856xt1fj4bo` | Landing, Login, Register, Forgot password... |
-| Pages utilisateur | `cmnxohuia01mln856b8bu9luo` | Accueil, Recherche, Dashboard, Graphe... |
-| Communautés | `cmnq9c2fa00085yz2u2961kvx` | CommunityPage, Settings, Membres |
-| Espaces | `cmnq9c31s000c5yz2co7rpg8m` | SpacePage, vues, SpaceOverview, Settings, History |
-| Items | `cmnssg2zf00dnx6kktkjmqfq4` | Items et leurs comportements |
-| Administration | `cmnq9c3oa000g5yz26hkk5adh` | Toutes les pages /admin/* |
-| Modèle de données | `cmnq9c4x8000o5yz2xrlcel81` | 1 item par table Prisma |
+| Système | `cmmthmtr7000mf03nkqrv7a3z` | Hébergement Railway, Docker, domaine, env vars, ports |
+| Modèle de données | `cmnq9c4x8000o5yz2xrlcel81` | 1 item par table Prisma (fonctionnelles + techniques) |
 | Autres fonctionnalités | `cmnq9c4aq000k5yz2w1n6e70d` | Templates, AppConfig, Permissions & accès |
-| Système | `cmmthmtr7000mf03nkqrv7a3z` | Hébergement, infra prod/dev, config technique |
-| CLAUDE Documentations | `cmmtsblm400gmwbfky28czun6` | Skills, consignes, mémoire Claude |
+| Contexte | `cmnq9c6st00105yz2eoky7uvt` | Vision, objectifs, problème résolu, utilisateurs cibles |
+
+### Interfaces
+
+> Composants visuels, pages, vues, modales
+
+| Espace | ID | Contenu |
+|--------|----|---------|
+| Structure | `cmnq9c5jr000s5yz2vthye9ws` | Header, Sidebar, Zone principale, Sécurité & Accès |
+| Modales & Overlays | `cmmts8ab200ajwbfkewwrj2b6` | Modale d'édition, création espace/communauté, autres modales |
+| Pages publiques | `cmnxnu81f01h8n856xt1fj4bo` | Landing, Auth (login/register/reset), Invitation, Sitemap |
+| Pages utilisateur | `cmnxohuia01mln856b8bu9luo` | Accueil, Dashboard, Recherche, Graphe, Sunburst, MindMap, Tâches |
+| Communautés | `cmnq9c2fa00085yz2u2961kvx` | CommunityPage, CommunitiesListPage, Settings |
+| Espaces | `cmnq9c31s000c5yz2co7rpg8m` | SpacePage (vues), SpaceOverview, Settings, History, Toolbar |
+| Items | `cmnssg2zf00dnx6kktkjmqfq4` | Items et leurs comportements |
+| Administration | `cmnq9c3oa000g5yz26hkk5adh` | Pages /admin/* (Users, Spaces, Communities, Stats, AuditLogs…) |
+
+### Consignes & configuration Claude
+
+| Espace | ID | Contenu |
+|--------|----|---------|
+| Claude — Global | `cmofn4cma003bu1pvwzxj4hs1` | Consignes universelles, skills et plugins tous projets |
+| Claude — SPOK | `cmofml3lf0022u1pvkbdb5xlm` | Consignes et skills spécifiques SPOK |
+| CLAUDE Documentations | `cmmtsblm400gmwbfky28czun6` | Compte et abonnements Claude |
 
 ---
 
-## Détail des espaces
+## Comment consulter
 
-### Contexte `cmnq9c6st00105yz2eoky7uvt`
-| ID | Item |
-|----|------|
-| `cmnq9cbib002u5yz2zvz6uslm` | Objectifs (4 sous-items) |
-| `cmnq9cb96002q5yz2bqkzo1r7` | Vision |
-| `cmnq9cbdq002s5yz291lftyg8` | Problème résolu |
-| `cmnq9cbmu002w5yz2vxrbjwh2` | Utilisateurs cibles |
+**Question sur l'infra ou le déploiement ?** → Système
+**Question sur la base de données ?** → Modèle de données
+**Question sur un composant visuel (header, sidebar) ?** → Structure
+**Question sur une page (login, accueil, admin) ?** → Pages publiques / Pages utilisateur / Administration
+**Question sur les espaces ou les vues ?** → Espaces
+**Question sur les modales ?** → Modales & Overlays
+**Question sur les consignes ou comportements de Claude ?** → Claude — SPOK ou Claude — Global
 
-### Structure `cmnq9c5jr000s5yz2vthye9ws`
-| ID | Item | Statut | Enfants |
-|----|------|--------|---------|
-| `cmnq9ctvy00ao5yz2ugz3dicd` | En-tête [Header] | `in_progress` | Logo, Recherche globale, Sélecteur de vue, Titre de page, Favoris, Récents, Mes espaces, Communautés, Menu utilisateur, Sidebar, Notifications, Bouton Nouvel item |
-| `cmnq9c9zj00265yz2875z82fl` | Zone principale [Main] | `done` | Barre de filtres, Sélecteur de vue, Actions contextuelles, Actions globales, Zone de rendu |
-| `cmnq9c7tx00185yz2sfznl4x3` | Barre latérale [Sidebar] | `done` | Pied de sidebar |
-| `cmnq9ccfd00365yz2w5pke7oj` | Sécurité & Accès | `done` | Rôles plateforme, Rôles espace, Rôles communauté, Auth JWT |
-| `cmnq9caqx002i5yz2rgtajio9` | Documentation | `todo` | Doc fonctionnelle, Doc technique, Spécifications |
-
-### Modales & Overlays `cmmts8ab200ajwbfkewwrj2b6`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmmti1lkp006kf03nzbdq9acw` | Modale d'édition d'item | 19 sous-items (champs, onglets, actions) |
-| `cmmtjtwrd00srf03n6d810van` | Espaces | 11 sous-items |
-| `cmmtjtv6b00snf03ne6mtot7d` | Communautés | 10 sous-items |
-| `cmmti1yez007gf03n2trd658b` | Autres modales | 15 sous-items |
-| `cmmtiyxlp00b3f03nmog78n1f` | Détails utilisateur | 5 sous-items |
-| `cmmtiyx5f00avf03n3lp982rd` | Création d'espace | 5 sous-items |
-| `cmmtiyxdm00azf03n0rmow5w1` | Création de communauté | 1 sous-item |
-
-### Pages publiques `cmnxnu81f01h8n856xt1fj4bo`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnxpqf1g01q0n856blbgriei` | Authentification | Connexion, Inscription, Mot de passe oublié, Réinitialisation, Vérification email (5) |
-| `cmnxpqf8y01q4n8567es0rbho` | Accès par lien | Invitation (1) |
-| `cmnxpqfle01q8n85655c4744j` | Découverte | Landing, Plan du site (2) |
-
-### Pages utilisateur `cmnxohuia01mln856b8bu9luo`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnxpvfye01qzn856runief9k` | Navigation globale | Accueil, Liste des espaces, Tableau de bord, Recherche (4) |
-| `cmnxpvgcg01r3n856nl0qya0o` | Visualisations globales | Graphe, Sunburst, Carte mentale, Tâches (4) |
-
-### Communautés `cmnq9c2fa00085yz2u2961kvx`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnq9cvjn00be5yz2dsu07f8t` | Pages | CommunityPage, CommunitiesListPage, Settings… (6) |
-| `cmnq9cfpv004m5yz20n3meqfg` | Paramètres communauté [CommunitySettingsPage] | 3 sous-items |
-| `cmnq9c87k001e5yz28d635i0m` | Liste des communautés [CommunitiesListPage] | — |
-| `cmnq9c830001c5yz29upq89c8` | Page communauté [CommunityPage] | — |
-
-### Espaces `cmnq9c31s000c5yz2co7rpg8m`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnq9c8gp001i5yz2jioyartd` | Contenu espace [SpacePage] | Liste, Kanban, Timeline, MindMap, Sequence, Graphe, Sunburst, Bubble… (8) |
-| `cmnq9cw6h00bo5yz2dtf4wlu0` | Vues | 6 sous-items (types de vues) |
-| `cmnq9ctre00am5yz236zts7mm` | Barre d'outils espace | Filtres, Recherche locale, Actions (3) |
-| `cmnq9c8l9001k5yz2t1kcpkkd` | Paramètres espace [SpaceSettingsPage] | 3 sous-items |
-| `cmnq9c8c3001g5yz2a0mza14i` | Aperçu espace [SpaceOverviewPage] | — |
-| `cmnq9cg84004u5yz2qt0svazx` | Historique espace [SpaceHistoryPage] | — |
-
-### Administration `cmnq9c3oa000g5yz26hkk5adh`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnq9cwot00bw5yz29wqonx18` | Menu Administration | Users, Spaces, Communities, Stats, AuditLogs, Anomalies, Menu, Views, Référentiels (9) |
-
-### Modèle de données `cmnq9c4x8000o5yz2xrlcel81`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnq9chmk005e5yz2ss5q7l1c` | Les tables fonctionnelles | Item, Espace, Communauté, Utilisateur, SpaceMembership, CommunityMembership, ItemRelation, Tags, ItemTag, Reaction, Contributions, ItemBookmark, Invitation, Notification, SpaceFavorite (15) |
-| `cmnq9chdh005c5yz2560eetsp` | Les tables techniques | AuditLog, SpaceModule, CommunityEmail, CommunityEmailRecipient, RefreshToken, PasswordResetToken, EmailVerificationToken, AppConfig, MenuItem (11) |
-
-### Système `cmmthmtr7000mf03nkqrv7a3z`
-| ID | Item | Enfants |
-|----|------|---------|
-| `cmnufclwh01snx6kko2m73lax` | PROD | Railway, Docker, domaine, env vars (5) |
-| `cmnufcg9301shx6kkws6xwkwh` | DEV | Docker local, ports (1) |
+Séquence :
+1. Identifier la branche (structurel / interfaces / consignes)
+2. `mcp__spok__get_space` sur l'espace concerné
+3. Si non trouvé : `mcp__spok__search_items` avec des mots-clés
 
 ---
 
-## CLAUDE Documentations `cmmtsblm400gmwbfky28czun6`
+## Comment documenter
 
-| Item | ID |
-|------|----|
-| SPOK START | `cmnx6vwif00abn856zflscr5x` |
-| SPOK DOC | `cmnx6z61k00ann856dy48deae` |
-| SPOK API | `cmnx6zd1q00atn856jbk7dc8r` |
-| DEPLOY | `cmnx6yxin00ahn856gmhmidzq` |
-| SPOK TNR | `cmnx6zkne00azn8565gjrheyj` |
-| SPOK REBUILD | `cmnxc3m6l00gjn856gqbyw6yh` |
-| Fichiers de consignes | *(sous-items : CLAUDE.md, Skills, Memory, docs/)* |
+### Principe fondamental
 
----
-
-## Conventions
+La documentation est la **spec convenue** : ce que Thomas et Claude ont décidé ensemble. Ni description du code tel qu'il est, ni vision idéale — la référence de ce qui a été acté.
 
 ### Statuts
+
 | Statut | Signification |
 |--------|--------------|
-| `done` | Composant documenté, existe tel que décrit dans le code |
-| `to_validate` | Évolution déployée, en attente de validation |
-| `in_progress` | En cours de documentation |
-| `todo` | Bug, évolution ou question identifiée |
-| `cancelled` | Obsolète / doublon |
+| *(aucun)* | Idée envisagée — pas encore spécifiée ni décidée |
+| `todo` | Spécifié — décidé, pas encore implémenté |
+| `in_progress` | Partiellement implémenté |
+| `to_validate` | Rédigé par Claude — Thomas doit confirmer |
+| `done` | Spec validée par Thomas — c'est la référence |
+| `cancelled` | Abandonné / doublon |
+
+**Règle** : Claude rédige → Thomas valide (`to_validate` → `done`). Jamais d'auto-validation.
+
+### Types d'items enfants sur un composant
+
+- `BUG` → anomalie identifiée
+- `TASK` → évolution planifiée, décidée (statut `todo`)
+- `NOTE` → idée envisagée, pas encore décidée (statut vide)
 
 ### Format des items
-- Titre : `Nom fonctionnel [NomTechnique]` — toujours le nom fonctionnel en premier, le nom technique entre crochets
-- Ex : `Barre latérale [Sidebar]`, `Accueil [HomePage]`, `Modale d'édition d'item [ItemEditModal]`
-- 1 item parent = 1 page ou composant identifiable
-- Items enfants = bugs, évolutions, questions rattachés au composant
 
-### Corps d'un item de documentation
+- Titre : `Nom fonctionnel [NomTechnique]`
+- Ex : `Barre latérale [Sidebar]`, `Modale d'édition d'item [ItemEditModal]`
+- 1 item parent = 1 page ou composant identifiable
+- Items enfants = bugs, évolutions, idées rattachés au composant
+
+### Corps d'un item
+
 ```
 ## Rôle
 Ce que fait ce composant, pourquoi il existe.
@@ -199,9 +123,154 @@ Conditions d'affichage, états, variantes.
 - Raccourci : action
 ```
 
-### Séquence pour documenter un composant
-1. Chercher avec `mcp__spok__search_items` — ne pas créer si ça existe déjà
-2. Identifier le bon espace dans la table ci-dessus
-3. Créer avec `mcp__spok__create_item` (spaceId, parentId si sous-composant)
-4. Renseigner : titre, description, statut
-5. Mettre ce skill à jour si la structure change
+---
+
+## Comment compléter
+
+1. `mcp__spok__search_items` — vérifier que ça n'existe pas déjà
+2. Identifier le bon espace dans le plan ci-dessus
+3. `mcp__spok__create_item` (spaceId, parentId si sous-composant, statut `to_validate`)
+4. Mettre ce skill à jour si la structure change
+
+### Outils MCP disponibles
+
+| Opération | Outil |
+|-----------|-------|
+| Lister les espaces | `mcp__spok__list_spaces` |
+| Lire un espace + ses items | `mcp__spok__get_space` |
+| Chercher un item | `mcp__spok__search_items` |
+| Créer un item | `mcp__spok__create_item` |
+
+---
+
+## Détail des espaces
+
+### Structure `cmnq9c5jr000s5yz2vthye9ws`
+| ID | Item | Statut |
+|----|------|--------|
+| `cmnq9ctvy00ao5yz2ugz3dicd` | En-tête [Header] | `in_progress` |
+| `cmnq9c9zj00265yz2875z82fl` | Zone principale [Main] | `done` |
+| `cmnq9c7tx00185yz2sfznl4x3` | Barre latérale [Sidebar] | `done` |
+| `cmnq9ccfd00365yz2w5pke7oj` | Sécurité & Accès | `done` |
+
+### Modales & Overlays `cmmts8ab200ajwbfkewwrj2b6`
+| ID | Item |
+|----|------|
+| `cmmti1lkp006kf03nzbdq9acw` | Modale d'édition d'item |
+| `cmmtjtwrd00srf03n6d810van` | Espaces |
+| `cmmtjtv6b00snf03ne6mtot7d` | Communautés |
+| `cmmti1yez007gf03n2trd658b` | Autres modales |
+| `cmmtiyxlp00b3f03nmog78n1f` | Détails utilisateur |
+| `cmmtiyx5f00avf03n3lp982rd` | Création d'espace |
+| `cmmtiyxdm00azf03n0rmow5w1` | Création de communauté |
+
+### Pages publiques `cmnxnu81f01h8n856xt1fj4bo`
+| ID | Item |
+|----|------|
+| `cmnxpqf1g01q0n856blbgriei` | Authentification (5 sous-items) |
+| `cmnxpqf8y01q4n8567es0rbho` | Accès par lien — Invitation |
+| `cmnxpqfle01q8n85655c4744j` | Découverte — Landing, Sitemap |
+
+### Pages utilisateur `cmnxohuia01mln856b8bu9luo`
+| ID | Item |
+|----|------|
+| `cmnxpvfye01qzn856runief9k` | Navigation globale (Accueil, Espaces, Dashboard, Recherche) |
+| `cmnxpvgcg01r3n856nl0qya0o` | Visualisations globales (Graphe, Sunburst, MindMap, Tâches) |
+
+### Communautés `cmnq9c2fa00085yz2u2961kvx`
+| ID | Item |
+|----|------|
+| `cmnq9c830001c5yz29upq89c8` | Page communauté [CommunityPage] |
+| `cmnq9c87k001e5yz28d635i0m` | Liste des communautés [CommunitiesListPage] |
+| `cmnq9cfpv004m5yz20n3meqfg` | Paramètres communauté [CommunitySettingsPage] |
+
+### Espaces `cmnq9c31s000c5yz2co7rpg8m`
+| ID | Item |
+|----|------|
+| `cmnq9c8gp001i5yz2jioyartd` | Contenu espace [SpacePage] |
+| `cmnq9cw6h00bo5yz2dtf4wlu0` | Vues |
+| `cmnq9ctre00am5yz236zts7mm` | Barre d'outils espace |
+| `cmnq9c8l9001k5yz2t1kcpkkd` | Paramètres espace [SpaceSettingsPage] |
+| `cmnq9c8c3001g5yz2a0mza14i` | Aperçu espace [SpaceOverviewPage] |
+| `cmnq9cg84004u5yz2qt0svazx` | Historique espace [SpaceHistoryPage] |
+
+### Administration `cmnq9c3oa000g5yz26hkk5adh`
+| ID | Item |
+|----|------|
+| `cmnq9cwot00bw5yz29wqonx18` | Menu Administration (9 pages) |
+
+### Modèle de données `cmnq9c4x8000o5yz2xrlcel81`
+| ID | Item |
+|----|------|
+| `cmnq9chmk005e5yz2ss5q7l1c` | Tables fonctionnelles (15) |
+| `cmnq9chdh005c5yz2560eetsp` | Tables techniques (11) |
+
+### Système `cmmthmtr7000mf03nkqrv7a3z`
+| ID | Item |
+|----|------|
+| `cmnufclwh01snx6kko2m73lax` | PROD (Railway, Docker, domaine, env vars) |
+| `cmnufcg9301shx6kkws6xwkwh` | DEV (Docker local, ports) |
+
+### Contexte `cmnq9c6st00105yz2eoky7uvt`
+| ID | Item |
+|----|------|
+| `cmnq9cb96002q5yz2bqkzo1r7` | Vision |
+| `cmnq9cbdq002s5yz291lftyg8` | Problème résolu |
+| `cmnq9cbmu002w5yz2vxrbjwh2` | Utilisateurs cibles |
+| `cmnq9cbib002u5yz2zvz6uslm` | Objectifs |
+
+---
+
+## Lexique des routes
+
+### Publiques (sans auth)
+| Route | Composant |
+|-------|-----------|
+| `/` (non connecté) | `LandingPage` |
+| `/login` | `LoginPage` |
+| `/register` | `RegisterPage` |
+| `/forgot-password` | `ForgotPasswordPage` |
+| `/reset-password` | `ResetPasswordPage` |
+| `/verify-email` | `VerifyEmailPage` |
+| `/invitation` | `InvitationPage` |
+| `/sitemap` | `SitemapPage` |
+
+### Utilisateur connecté
+| Route | Composant |
+|-------|-----------|
+| `/` | `HomePage` → `HomeView` |
+| `/communities` | `CommunitiesListPage` |
+| `/spaces` | `SpacesListPage` |
+| `/dashboard` | `DashboardViewPage` |
+| `/graph` | `GraphPage` |
+| `/sunburst` | `SunburstPage` |
+| `/mindmap` | `MindMapPage` |
+| `/tasks` | `GlobalTasksPage` |
+| `/search` | `SearchPage` |
+
+### Espaces
+| Route | Composant |
+|-------|-----------|
+| `/spaces/:id` | `SpaceOverviewPage` |
+| `/spaces/:id/content` | `SpacePage` (vues) |
+| `/spaces/:id/settings` | `SpaceSettingsPage` |
+| `/spaces/:id/history` | `SpaceHistoryPage` |
+
+### Communautés
+| Route | Composant |
+|-------|-----------|
+| `/communities/:id` | `CommunityPage` |
+| `/communities/:id/settings` | `CommunitySettingsPage` |
+
+### Administration
+| Route | Composant |
+|-------|-----------|
+| `/admin/users` | `UsersPage` |
+| `/admin/spaces` | `SpacesPage` |
+| `/admin/communities` | `CommunitiesPage` |
+| `/admin/stats` | `StatsPage` |
+| `/admin/audit-logs` | `AuditLogsPage` |
+| `/admin/anomalies` | `AnomaliesPage` |
+| `/admin/menu` | `MenuConfigPage` |
+| `/admin/views` | `ViewsConfigPage` |
+| `/admin/referentiels` | `ReferentielsPage` |

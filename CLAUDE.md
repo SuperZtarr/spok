@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## Instructions pour Claude
+
+### Interdictions absolues
+- Ne JAMAIS modifier des données en production sans demande explicite
+- Ne JAMAIS commiter ou pusher sans demande explicite de l'utilisateur
+- Ne JAMAIS appeler `api.spok.space` directement (curl, fetch, ou tout autre outil)
+- Ne JAMAIS utiliser `isolation: "worktree"` dans l'outil Agent
+- Ne JAMAIS faire `git add -A` (risque d'inclure .env, credentials, binaires)
+
+### Workflow Git
+- Travailler directement dans `C:\_dev\spok` sur master — pas de worktree
+- Les conversations sont séparées par thème mais partagent la même base de code
+- "commit et push" = commit + `git push origin master` = déploiement Railway prod
+- Tout enchaîner sans pause ni question intermédiaire
+
+### Zones fragiles
+- **MindMap** : edges recalculés via `onInit`, portails placement fixe — ne pas modifier sans vérifier les edges
+- **MainMenu** : Bootstrap plein hauteur, pas de hamburger, jamais de logique `layoutMode` avec mesure de largeur
+- **Sidebar** : style Notion/Linear — ne pas réintroduire de sidebar compacte non demandée
+- **Auth/Token** : logique refresh proactive — ne pas simplifier sans comprendre pourquoi
+
+### Documentation
+- **La doc SPOK est la spec** — avant de toucher du code ou de qualifier un comportement (bug vs attendu), consulter d'abord la doc via la skill `spok-doc`
+- La doc décrit l'intention décidée, pas l'implémentation actuelle — si le code diverge de la doc, c'est le code qui a tort
+- `docs/session-journal.md` : écrire après chaque action significative, garder la section EN COURS courte
+- `docs/TODO.md` : mettre à jour après chaque commit (date + hash)
+
+---
+
 ## Project Overview
 
 SPOK is a modular multi-user application for structuring, linking, evaluating, and planning. It's a TypeScript monorepo using pnpm workspaces.
@@ -103,81 +134,3 @@ Deploye sur Railway :
 - **PostgreSQL** : service Railway
 - Push sur `origin/master` declenche le deploiement automatique
 
-## Lexique des pages
-
-### Publiques (sans auth)
-| Route | Composant | Description |
-|---|---|---|
-| `/` (non connecte) | `LandingPage` | Page d'atterrissage, hero, communautes publiques, showcase vues |
-| `/login` | `LoginPage` | Connexion (rendu dans Layout sans sidebar) |
-| `/register` | `RegisterPage` | Inscription (rendu dans Layout sans sidebar) |
-| `/forgot-password` | `ForgotPasswordPage` | Mot de passe oublie (rendu dans Layout sans sidebar) |
-| `/reset-password` | `ResetPasswordPage` | Reinitialisation mot de passe |
-| `/verify-email` | `VerifyEmailPage` | Verification email |
-| `/invitation` | `InvitationPage` | Acceptation d'invitation |
-| `/sitemap` | `SitemapPage` | Plan du site |
-
-### Utilisateur connecte (Layout avec sidebar)
-| Route | Composant | Description |
-|---|---|---|
-| `/` | `HomePage` → `HomeView` | Page d'accueil, communautes et espaces de l'utilisateur |
-| `/communities` | `CommunitiesListPage` | Liste des communautes |
-| `/spaces` | `SpacesListPage` | Liste des espaces |
-| `/dashboard` | `DashboardViewPage` | Tableau de bord |
-| `/graph` | `GraphPage` | Graphe global |
-| `/sunburst` | `SunburstPage` | Sunburst global |
-| `/mindmap` | `MindMapPage` | Carte mentale globale |
-| `/tasks` | `GlobalTasksPage` | Taches globales (protege) |
-| `/search` | `SearchPage` | Recherche avancee |
-
-### Espaces
-| Route | Composant | Description |
-|---|---|---|
-| `/spaces/:id` | `SpaceOverviewPage` | Apercu d'un espace (stats, membres, vues dispo) |
-| `/spaces/:id/content` | `SpacePage` | Contenu d'un espace (23 vues : list, kanban, gantt, mindmap...) |
-| `/spaces/:id/settings` | `SpaceSettingsPage` | Parametres de l'espace (protege) |
-| `/spaces/:id/history` | `SpaceHistoryPage` | Historique / audit log (protege) |
-
-### Communautes
-| Route | Composant | Description |
-|---|---|---|
-| `/communities/:id` | `CommunityPage` | Page d'une communaute |
-| `/communities/:id/settings` | `CommunitySettingsPage` | Parametres communaute (protege) |
-
-### Administration (admin uniquement)
-| Route | Composant | Description |
-|---|---|---|
-| `/admin/users` | `UsersPage` | Gestion utilisateurs |
-| `/admin/spaces` | `SpacesPage` | Gestion espaces |
-| `/admin/communities` | `CommunitiesPage` | Gestion communautes |
-| `/admin/stats` | `StatsPage` | Statistiques |
-| `/admin/audit-logs` | `AuditLogsPage` | Logs d'audit |
-| `/admin/anomalies` | `AnomaliesPage` | Diagnostics |
-| `/admin/menu` | `MenuConfigPage` | Configuration des menus (table MenuItem) |
-| `/admin/views` | `ViewsConfigPage` | Configuration des vues (legacy) |
-| `/admin/referentiels` | `ReferentielsPage` | Referentiels (statuts, types, priorites) |
-
-## Instructions pour Claude
-
-> Procedures operationnelles (demarrage, commit, push, donnees, ports, redemarrage) : voir `memory/procedures.md`
-
-### API de production (INTERDIT)
-- Ne JAMAIS appeler `api.spok.space` directement (curl, fetch, ou tout autre outil)
-- Ne JAMAIS modifier des données en production sans demande explicite
-- Si besoin de mettre à jour des données SPOK prod : dire à l'utilisateur de le faire lui-même
-
-### Workflow Git (OBLIGATOIRE)
-- Travailler directement dans `C:\_dev\spok` sur master (pas de worktree)
-- Les conversations sont séparées par thème mais partagent la même base de code
-- **JAMAIS** pusher sans accord explicite de l'utilisateur
-- Apres commit, attendre que l'utilisateur teste en local
-- Pusher **uniquement** quand l'utilisateur dit "commit et push"
-
-### Worktrees (INTERDIT)
-- Ne JAMAIS utiliser `isolation: "worktree"` dans l'outil Agent — cela crée des worktrees qui s'accumulent
-- Si au démarrage le working directory est un worktree (`.claude/worktrees/...`), travailler quand même dans `C:\_dev\spok` avec des chemins absolus
-- Nettoyer les worktrees existants : `git worktree list` puis `git worktree remove --force <path>` + `git branch -D <branch>`
-
-### Documentation technique
-- Specs fonctionnelles/techniques : `docs/specs/` (mecanismes, comportements, decisions)
-- A relire avant de modifier un domaine fonctionnel existant
