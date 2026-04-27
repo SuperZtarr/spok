@@ -1,12 +1,35 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter } from 'lucide-react';
+import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter, Copy, Check } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { AuditRestoreDialog } from '../../components/AuditRestoreDialog';
+
+function CopyId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(id).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [id]);
+  return (
+    <button
+      onClick={copy}
+      className="flex items-center gap-1 group hover:text-foreground text-muted-foreground transition-colors"
+      title={id}
+    >
+      <span className="font-mono text-xs">{id}</span>
+      {copied
+        ? <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
+        : <Copy className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      }
+    </button>
+  );
+}
 
 const ENTITY_OPTIONS = [
   { value: '', label: 'Toutes' },
@@ -272,15 +295,13 @@ export function AuditLogsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-2">{log.entity}</td>
-                      <td className="px-4 py-2 max-w-[200px]">
+                      <td className="px-4 py-2">
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-xs text-muted-foreground truncate" title={log.entityId}>
-                            {log.entityId.slice(0, 12)}…
-                          </span>
+                          <CopyId id={log.entityId} />
                           {(() => {
                             const changes = log.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null;
                             const title = changes?.before?.title || changes?.after?.title;
-                            return title ? <span className="text-xs truncate" title={String(title)}>{String(title)}</span> : null;
+                            return title ? <span className="text-xs text-muted-foreground truncate" title={String(title)}>{String(title)}</span> : null;
                           })()}
                         </div>
                       </td>
@@ -373,15 +394,13 @@ export function AuditLogsPage() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-1.5 w-28">{log.entity}</td>
-                                  <td className="px-4 py-1.5 max-w-[180px]">
+                                  <td className="px-4 py-1.5">
                                     <div className="flex flex-col gap-0.5">
-                                      <span className="font-mono text-xs text-muted-foreground truncate" title={log.entityId}>
-                                        {log.entityId.slice(0, 12)}…
-                                      </span>
+                                      <CopyId id={log.entityId} />
                                       {(() => {
                                         const changes = log.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null;
                                         const title = changes?.before?.title || changes?.after?.title;
-                                        return title ? <span className="text-xs truncate" title={String(title)}>{String(title)}</span> : null;
+                                        return title ? <span className="text-xs text-muted-foreground truncate" title={String(title)}>{String(title)}</span> : null;
                                       })()}
                                     </div>
                                   </td>
