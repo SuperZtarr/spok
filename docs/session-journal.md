@@ -2,27 +2,37 @@
 
 ## Accords permanents
 
-> Procedures operationnelles (demarrage, commit, push, donnees) : voir `memory/procedures.md`
+> Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-### Workflow Git
-- Ne JAMAIS merger dans master ni pusher sans accord explicite de l'utilisateur
-- Commiter sur la branche worktree (`claude/*`)
-- Tester en local avant merge
-- Merger et pusher uniquement quand l'utilisateur dit "merge et push"
+## EN COURS — 2026-04-26
 
-### Communication
-- Etre direct et factuel
-- Instruction claire = executer, pas demander confirmation
-- Ne pas proposer d'implementation non demandee
+### Documentation interfaces (session en cours)
+- Espace Structure : 25 items documentés (Sidebar×7, Header×6, Zone principale×6, Sécurité & Accès×4 + 1 BUG inchangé)
+- Espace Administration : nettoyage (14 annulés, 6 remontés à la racine) + 11 pages documentées + ViewsConfigPage, ApiDocPage, PerfPage créés
+- Espace Modales & Overlays : 23 NOTEs vides annulés, CommunityDetailModal + SpaceDetailModal réécrits, StatusPropagationModal créé, 73 items passés à to_validate
+- docs/technical/ : 6 fichiers supprimés (items-system, menu-system, auth-permissions, notifications, spaces-communities, views-system) + dossier supprimé
+- CommunitySettingsPage : onglet Tags dédié (déplacé depuis Général)
+- MCP extractText : fix récursif (bullet lists) + parsing JSON string — rebuild MCP
+- CLAUDE.md global : ajout règle "une seule question à la fois"
+- Espace Communautés : CommunityPage + sous-items, CommunitiesListPage + sous-items, CommunitySettingsPage + 7 onglets, ConfirmModal, CommunityDeleteConfirmModal
+- Espace Espaces : SpaceOverviewPage + 5 sous-items, SpacePage + 6 sous-items, SpaceSettingsPage + 4 onglets, SpaceHistoryPage, Barre d'outils [SpaceToolbar] + 2 sous-items, Vues (5 sections + 30 items vue), item "Pages" + 6 sous-items annulés (doublons vides)
+- Espace Items : Item [Item] + 3 sous-items, ItemEditModal + 5 sous-items (+ 28 sous-sous-items), ItemActionMenu + 15 actions, MergeItemModal
+- Espace Pages publiques : 8 pages documentées (Login, Register, ForgotPassword, ResetPassword, VerifyEmail, Invitation, Landing, Sitemap)
+- Espace Pages utilisateur : 8 pages documentées (Accueil, Recherche, Dashboard, SpacesList, Graphe, Tâches, Sunburst, MindMap)
 
-### Anti-tunnel
-- 1 etape = 1 tour, presenter le plan avant de coder
-- Si erreur : s'arreter, expliquer, attendre les instructions
-
-### Documentation
-- Specs techniques : `docs/specs/` (pour Claude, mecanismes et comportements)
-- Doc fonctionnelle SPOK : a definir (cartographie par role/navigabilite)
-- NE PAS creer d'items DOCUMENT dans SPOK apres chaque commit (ancien accord retire)
+### Organisation documentation (session précédente)
+- Objectif : doc SPOK = spec d'intention, consultée avant de coder (règle ajoutée dans CLAUDE.md)
+- CONFIG.md désindexé de git (credentials) — 4f4f428
+- CLAUDE.md + spok-doc skill restructurés — 9357e8b
+- Template item de spec défini (Intention / Décisions de design / Comportements attendus / Contraintes / Fichiers)
+- docs/technical/ et docs/specs/ : contenu différent, à évaluer puis migrer dans SPOK avant suppression
+- Descriptions mises à jour sur 3 espaces prod (Projet SPOK, Produit SPOK, Contexte)
+- 101 NOTEs supprimées de "Projet SPOK" (IMAGEs conservées), 13 items supprimés de "Produit SPOK"
+- Restructuration hiérarchie doc : création "Fonctionnement structurel" + "Interfaces" sous Projet SPOK
+- 12 espaces déplacés dans les bons groupes parents
+- "Produit - SPOK" supprimé (vide, sans usage)
+- MCP get_space : limite par défaut 50 → 200
+- skill spok-doc mise à jour (IDs parents, hiérarchie)
 
 ## EN COURS — 2026-04-25
 

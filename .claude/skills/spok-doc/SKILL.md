@@ -14,13 +14,33 @@ Lire en entier avant toute action.
 
 ---
 
+## Quand invoquer ce skill
+
+**Avant de coder** (obligatoire) :
+- Toute demande d'implémentation, modification ou correction sur un composant SPOK
+- Toute question sur un comportement ("est-ce un bug ou c'est voulu ?")
+- Avant de lire le code source — la doc prime sur le code
+
+**Séquence obligatoire avant de toucher du code :**
+1. `mcp__spok__search_items` avec le nom du composant/page concerné
+2. Lire l'item trouvé — c'est la spec d'intention
+3. Si item absent → signaler à l'utilisateur avant de coder
+4. Coder en respectant la spec
+5. Si le code existant diverge de la doc → signaler la divergence, ne pas la suivre silencieusement
+
+**Après avoir codé** :
+- Si le comportement d'un composant documenté a changé → mettre à jour l'item SPOK (status `to_validate`)
+
+---
+
 ## Plan de la documentation
 
 Communauté : **Mes Projets Claude** `cmlnwrtg80001mjpp4dc1fnxq`
+Espace racine SPOK : **Projet SPOK** `cmmtjoiih00gdf03n9hscbkeq`
 
-### Fonctionnement structurel
+### Fonctionnement structurel `ca7233dde179a173fe3b7695f`
 
-> Infra, architecture technique, MCP, modèle de données
+> Infra, architecture technique, MCP, modèle de données — sous Projet SPOK
 
 | Espace | ID | Contenu |
 |--------|----|---------|
@@ -29,9 +49,9 @@ Communauté : **Mes Projets Claude** `cmlnwrtg80001mjpp4dc1fnxq`
 | Autres fonctionnalités | `cmnq9c4aq000k5yz2w1n6e70d` | Templates, AppConfig, Permissions & accès |
 | Contexte | `cmnq9c6st00105yz2eoky7uvt` | Vision, objectifs, problème résolu, utilisateurs cibles |
 
-### Interfaces
+### Interfaces `cb1c8e0c8fcc5009c1583d990`
 
-> Composants visuels, pages, vues, modales
+> Composants visuels, pages, vues, modales — sous Projet SPOK
 
 | Espace | ID | Contenu |
 |--------|----|---------|
@@ -45,6 +65,8 @@ Communauté : **Mes Projets Claude** `cmlnwrtg80001mjpp4dc1fnxq`
 | Administration | `cmnq9c3oa000g5yz26hkk5adh` | Pages /admin/* (Users, Spaces, Communities, Stats, AuditLogs…) |
 
 ### Consignes & configuration Claude
+
+> Sous l'espace CLAUDE `cmmtsblm400gmwbfky28czun6` (niveau communauté)
 
 | Espace | ID | Contenu |
 |--------|----|---------|
@@ -146,21 +168,21 @@ Conditions d'affichage, états, variantes.
 ## Détail des espaces
 
 ### Structure `cmnq9c5jr000s5yz2vthye9ws`
-| ID | Item | Statut |
-|----|------|--------|
-| `cmnq9ctvy00ao5yz2ugz3dicd` | En-tête [Header] | `in_progress` |
-| `cmnq9c9zj00265yz2875z82fl` | Zone principale [Main] | `done` |
-| `cmnq9c7tx00185yz2sfznl4x3` | Barre latérale [Sidebar] | `done` |
-| `cmnq9ccfd00365yz2w5pke7oj` | Sécurité & Accès | `done` |
+| ID | Item |
+|----|------|
+| `cmnq9ctvy00ao5yz2ugz3dicd` | En-tête [Header] |
+| `cmnq9c9zj00265yz2875z82fl` | Zone principale [Main] |
+| `cmnq9c7tx00185yz2sfznl4x3` | Barre latérale [Sidebar] |
+| `cmnq9ccfd00365yz2w5pke7oj` | Sécurité & Accès |
 
 ### Modales & Overlays `cmmts8ab200ajwbfkewwrj2b6`
 | ID | Item |
 |----|------|
-| `cmmti1lkp006kf03nzbdq9acw` | Modale d'édition d'item |
-| `cmmtjtwrd00srf03n6d810van` | Espaces |
-| `cmmtjtv6b00snf03ne6mtot7d` | Communautés |
+| `cmmti1lkp006kf03nzbdq9acw` | Modale d'édition d'item [ItemEditModal] |
+| `cmmtjtwrd00srf03n6d810van` | Détail espace (admin) [SpaceDetailModal] |
+| `cmmtjtv6b00snf03ne6mtot7d` | Détail communauté (admin) [CommunityDetailModal] |
 | `cmmti1yez007gf03n2trd658b` | Autres modales |
-| `cmmtiyxlp00b3f03nmog78n1f` | Détails utilisateur |
+| `cmmtiyxlp00b3f03nmog78n1f` | Détails utilisateur [UserDetailModal] |
 | `cmmtiyx5f00avf03n3lp982rd` | Création d'espace |
 | `cmmtiyxdm00azf03n0rmow5w1` | Création de communauté |
 
@@ -197,7 +219,14 @@ Conditions d'affichage, états, variantes.
 ### Administration `cmnq9c3oa000g5yz26hkk5adh`
 | ID | Item |
 |----|------|
-| `cmnq9cwot00bw5yz29wqonx18` | Menu Administration (9 pages) |
+| `cmnq9c8pu001m5yz2ubtshw1m` | Gestion utilisateurs [UsersPage] |
+| `cmnq9cd26003g5yz2xu95powk` | Gestion des espaces [SpacesPage] |
+| `cmnq9cd6q003i5yz2f7btm0nr` | Gestion des communautés [CommunitiesPage] |
+| `cmnq9c8ug001o5yz28naev90e` | Statistiques [StatsPage] |
+| `cmnq9c8z1001q5yz28s6mjoy6` | Journaux d'audit [AuditLogsPage] |
+| `cmnq9cdb8003k5yz22ngl0570` | Diagnostics [AnomaliesPage] |
+| `cmnq9c93l001s5yz2dpx2fguy` | Configuration des menus [MenuConfigPage] |
+| `cmnq9c985001u5yz2vhjzllrf` | Référentiels [ReferentielsPage] |
 
 ### Modèle de données `cmnq9c4x8000o5yz2xrlcel81`
 | ID | Item |
@@ -218,6 +247,10 @@ Conditions d'affichage, états, variantes.
 | `cmnq9cbdq002s5yz291lftyg8` | Problème résolu |
 | `cmnq9cbmu002w5yz2vxrbjwh2` | Utilisateurs cibles |
 | `cmnq9cbib002u5yz2zvz6uslm` | Objectifs |
+| `cmnq9cbvv002y5yz2508md8cv` | Centraliser sans rigidité |
+| `cmnq9cc0g00305yz2a20e7rdq` | Plusieurs lectures du même contenu |
+| `cmnq9cc5000325yz2flyn9qdj` | Liens plutôt que silos |
+| `cmnq9ccau00345yz2ji5lge7n` | Simple à prendre en main, puissant à l'usage |
 
 ---
 
@@ -274,3 +307,5 @@ Conditions d'affichage, états, variantes.
 | `/admin/menu` | `MenuConfigPage` |
 | `/admin/views` | `ViewsConfigPage` |
 | `/admin/referentiels` | `ReferentielsPage` |
+| `/admin/api-doc` | `ApiDocPage` |
+| `/admin/perf` | `PerfPage` |

@@ -158,7 +158,37 @@
       "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & echo ok\")",
       "Bash(cmd /c \"for /f \\\\\"tokens=5\\\\\" %a in \\('netstat -ano ^| findstr :3099 ^| findstr LISTENING'\\) do taskkill /F /PID %a\")",
       "Bash(cmd /c \"netstat -ano | findstr :3099 | findstr LISTENING\")",
-      "mcp__Claude_in_Chrome__read_page"
+      "mcp__Claude_in_Chrome__read_page",
+      "PowerShell(dir \"C:\\\\_dev\\\\spok\" -Recurse -Filter \"package.json\" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match \"tiptap.react\" } | Select-Object -First 3 FullName)",
+      "Bash(Get-Content \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C---dev-spok\\\\6eb67292-c971-4b18-a0b2-f6dd47b3f79a\\\\tasks\\\\bnw31nmf9.output\" -Wait)",
+      "Bash(Select-String --line-buffered \"ready|Local:|VITE|error|Error|failed\")",
+      "mcp__Claude_in_Chrome__resize_window",
+      "Bash(npx --prefix apps/web tsc --noEmit)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway\" npx prisma db execute --stdin)",
+      "PowerShell(Stop-Process -Id 23104 -Force)",
+      "PowerShell(Stop-Process -Id 3464 -Force)",
+      "Bash(pnpm db:migrate)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(python -c \"import json; json.load\\(open\\('C:/_dev/spok/.claude/settings.local.json'\\)\\); print\\('JSON OK'\\)\")",
+      "Bash(python scripts/tmp_spok.py)",
+      "Bash(pnpm --filter @spok/mcp build)",
+      "Bash(python apps/api/scripts/tmp_rename.py)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& 'C:/_dev/spok/scripts/session-start-hook.ps1'",
+            "shell": "powershell",
+            "timeout": 20,
+            "statusMessage": "Démarrage SPOK..."
+          }
+        ]
+      }
     ]
   }
 }

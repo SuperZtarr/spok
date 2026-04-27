@@ -10,6 +10,9 @@ import {
   CheckCircle2,
   Loader2,
   Target,
+  GanttChart,
+  User,
+  CalendarClock,
 } from 'lucide-react';
 import { userTasksApi, spacesApi } from '../../lib/api';
 import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
@@ -17,7 +20,7 @@ import type { GlobalTask } from '../../lib/api';
 import { getPriorityConfig, TYPE_ICONS } from '../../constants/ui';
 import { ItemEditModal } from '../ItemEditModal';
 import { Badge } from '../ui/Badge';
-import { GanttChart } from 'lucide-react';
+import { useAuthStore } from '../../stores/auth';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -386,6 +389,7 @@ function MiniGantt({ tasks, onEdit }: { tasks: GlobalTask[]; onEdit: (id: string
 export function DashboardCockpitView() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const { user } = useAuthStore();
 
   const now = new Date();
   const today = startOfDay(now);
@@ -474,6 +478,24 @@ export function DashboardCockpitView() {
   const toValidateTasks = useMemo(() =>
     allTasks.filter(t => t.status === 'to_validate'),
     [allTasks]
+  );
+
+  const assignedToMe = useMemo(() =>
+    allTasks
+      .filter(t => t.assignedToId === user?.id && !DONE_STATUSES.includes(t.status || ''))
+      .sort((a, b) => {
+        const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        return aDate - bDate;
+      }),
+    [allTasks, user?.id]
+  );
+
+  const withDueDate = useMemo(() =>
+    allTasks
+      .filter(t => t.dueDate && new Date(t.dueDate) >= today && !DONE_STATUSES.includes(t.status || ''))
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
+    [allTasks, today]
   );
 
   // Done this week
@@ -614,6 +636,12 @@ export function DashboardCockpitView() {
           icon={Target}
         />
         <KpiBadge
+          label="assignés à moi"
+          count={assignedToMe.length}
+          color={assignedToMe.length > 0 ? 'border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800' : 'border-border text-muted-foreground'}
+          icon={User}
+        />
+        <KpiBadge
           label="terminés cette semaine"
           count={doneThisWeekCount}
           color={doneThisWeekCount > 0 ? 'border-green-300 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 dark:border-green-800' : 'border-border text-muted-foreground'}
@@ -675,6 +703,34 @@ export function DashboardCockpitView() {
           >
             <div className="space-y-0.5">
               {inProgressTasks.map(t => (
+                <CompactTaskRow key={t.id} task={t} onEdit={setEditingItemId} />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Assigné à moi"
+            icon={<User className="w-4 h-4 text-sky-500" />}
+            count={assignedToMe.length}
+            emptyMessage="Aucun élément assigné"
+            className="max-h-[25%]"
+          >
+            <div className="space-y-0.5">
+              {assignedToMe.map(t => (
+                <CompactTaskRow key={t.id} task={t} onEdit={setEditingItemId} />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Avec une échéance"
+            icon={<CalendarClock className="w-4 h-4 text-amber-500" />}
+            count={withDueDate.length}
+            emptyMessage="Aucune échéance à venir"
+            className="max-h-[25%]"
+          >
+            <div className="space-y-0.5">
+              {withDueDate.map(t => (
                 <CompactTaskRow key={t.id} task={t} onEdit={setEditingItemId} />
               ))}
             </div>

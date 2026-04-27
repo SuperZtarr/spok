@@ -259,7 +259,7 @@ export function CommunitySettingsPage() {
   const [newSpaceName, setNewSpaceName] = useState('');
   const [spaceSearch, setSpaceSearch] = useState('');
   const [spaceToDelete, setSpaceToDelete] = useState<SpaceWithRole | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'tags' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', COMMUNITY_SETTINGS_TOUR);
@@ -556,6 +556,7 @@ export function CommunitySettingsPage() {
             { id: 'general', label: 'Général' },
             ...(canEdit ? [{ id: 'images' as const, label: 'Images' }] : []),
             ...(canEdit ? [{ id: 'referentiels' as const, label: 'Référentiels' }] : []),
+            ...(canEdit ? [{ id: 'tags' as const, label: 'Tags' }] : []),
             { id: 'spaces', label: `Espaces (${communitySpaces.length})` },
             { id: 'members', label: `Membres (${community.memberCount || 0})` },
             ...(canEdit ? [{ id: 'emails' as const, label: 'Emails' }] : []),
@@ -665,12 +666,6 @@ export function CommunitySettingsPage() {
               )}
             </div>
 
-            {/* Community Tags */}
-            {community.role === 'OWNER' && (
-              <RoleGuard role="OWNER">
-                <CommunityTagsSection communityId={communityId!} />
-              </RoleGuard>
-            )}
           </>
         )}
 
@@ -828,6 +823,13 @@ export function CommunitySettingsPage() {
               isPending={resetRefMutation.isPending}
             />
           </div>
+        )}
+
+        {/* === TAGS TAB === */}
+        {activeTab === 'tags' && canEdit && (
+          <RoleGuard role="OWNER">
+            <CommunityTagsSection communityId={communityId!} />
+          </RoleGuard>
         )}
 
         {/* === SPACES TAB === */}

@@ -25,9 +25,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Sidebar** : style Notion/Linear — ne pas réintroduire de sidebar compacte non demandée
 - **Auth/Token** : logique refresh proactive — ne pas simplifier sans comprendre pourquoi
 
-### Documentation
-- **La doc SPOK est la spec** — avant de toucher du code ou de qualifier un comportement (bug vs attendu), consulter d'abord la doc via la skill `spok-doc`
-- La doc décrit l'intention décidée, pas l'implémentation actuelle — si le code diverge de la doc, c'est le code qui a tort
+### Documentation — règles obligatoires
+
+**Consulter avant de coder**
+- Avant toute modification de code sur un composant, page ou comportement : lire l'item de doc correspondant dans SPOK via `mcp__spok__search_items` ou `mcp__spok__get_space`
+- Si l'item n'existe pas → le signaler à l'utilisateur avant de coder
+- La doc décrit l'intention décidée, pas l'implémentation actuelle — si le code diverge de la doc, c'est le code qui a tort, pas la doc
+- Ne jamais déduire le comportement attendu depuis le code seul
+
+**Signaler les divergences**
+- Si le code implémenté ne correspond pas à la doc : le signaler explicitement, ne pas suivre le code silencieusement
+
+**Mettre à jour après avoir codé**
+- Après toute modification qui change un comportement documenté : mettre à jour l'item SPOK correspondant (status `to_validate`, description mise à jour)
+- Granularité : mettre à jour au niveau du composant parent, pas nécessairement chaque sous-item
+
+**Journalisation**
 - `docs/session-journal.md` : écrire après chaque action significative, garder la section EN COURS courte
 - `docs/TODO.md` : mettre à jour après chaque commit (date + hash)
 

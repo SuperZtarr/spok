@@ -24,9 +24,6 @@
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 
-### Documentation
-- [ ] Revoir l'organisation de la doc fonctionnelle dans SPOK (espace Produit SPOK) — structure actuelle à améliorer
-- [ ] Mettre à jour spok-doc skill avec descriptions fonctionnelles des espaces + lien vers Organisation cible
 
 ### Modales
 - [x] Les tableaux ne sont pas éditables ? (modale édition item) — ajout/suppression lignes et colonnes via toolbar contextuelle — résolu 2026-04-22
@@ -54,7 +51,13 @@
 ### Intégrations externes
 - [ ] Connexion calendrier messagerie (Outlook/Hotmail, Gmail) : pousser des RDV (items MEETING) et récupérer les événements via Microsoft Graph API / Google Calendar API
 
+### MCP SPOK
+- [ ] MCP : ajouter create_space et create_community (actuellement limité aux items)
+
 ## Idées (à explorer)
+
+### Monitoring (priorité basse)
+- [ ] Sentry — error tracking + performance monitoring (traces API, temps de rendu React) — tier gratuit suffisant, ~30min à mettre en place (Fastify + React)
 
 ### Libs à intégrer (priorité haute)
 - [ ] cmdk — palette de commandes (Ctrl+K) : navigation rapide, recherche, actions

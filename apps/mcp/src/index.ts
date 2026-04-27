@@ -44,7 +44,7 @@ server.tool(
   'Retourne le détail d\'un espace SPOK et ses items (titre, type, statut, description).',
   {
     spaceId: z.string().describe('ID de l\'espace'),
-    limit: z.number().optional().default(50).describe('Nombre max d\'items à retourner (défaut 50)'),
+    limit: z.number().optional().default(200).describe('Nombre max d\'items à retourner (défaut 200)'),
   },
   async ({ spaceId, limit }) => {
     const [space, itemsRes] = await Promise.all([
@@ -159,14 +159,16 @@ server.tool(
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function extractText(description: any): string {
-  if (!description || typeof description !== 'object') return '';
-  const content = description.content ?? [];
-  return content
-    .flatMap((node: any) => node.content ?? [])
-    .filter((n: any) => n.type === 'text')
-    .map((n: any) => n.text)
-    .join(' ')
-    .trim();
+  if (!description) return '';
+  if (typeof description === 'string') {
+    try { description = JSON.parse(description); } catch { return description; }
+  }
+  if (typeof description !== 'object') return '';
+  function collectText(node: any): string {
+    if (node.type === 'text') return node.text ?? '';
+    return (node.content ?? []).map(collectText).join(' ');
+  }
+  return (description.content ?? []).map(collectText).join(' ').replace(/\s+/g, ' ').trim();
 }
 
 function textToTiptap(text: string) {
