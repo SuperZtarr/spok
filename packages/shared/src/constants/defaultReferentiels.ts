@@ -22,11 +22,20 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     visible: true,
   },
   {
+    id: 'scheduled',
+    label: 'Planifié',
+    color: 'bg-blue-100 text-blue-800',
+    borderColor: 'border-blue-300 bg-blue-50',
+    order: 2,
+    visible: true,
+    deferredByDate: true,
+  },
+  {
     id: 'in_progress',
     label: 'En cours',
     color: 'bg-orange-100 text-orange-800',
     borderColor: 'border-orange-300 bg-orange-50',
-    order: 2,
+    order: 3,
     visible: true,
   },
   {
@@ -34,7 +43,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     label: 'En retard',
     color: 'bg-yellow-100 text-yellow-800',
     borderColor: 'border-yellow-300 bg-yellow-50',
-    order: 3,
+    order: 4,
     visible: true,
   },
   {
@@ -42,7 +51,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     label: 'À valider',
     color: 'bg-purple-100 text-purple-800',
     borderColor: 'border-purple-300 bg-purple-50',
-    order: 4,
+    order: 5,
     visible: true,
   },
   {
@@ -50,7 +59,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     label: 'Terminé',
     color: 'bg-green-100 text-green-800',
     borderColor: 'border-green-300 bg-green-50',
-    order: 5,
+    order: 6,
     visible: true,
   },
   {
@@ -58,17 +67,8 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     label: 'Annulé',
     color: 'bg-gray-100 text-gray-800',
     borderColor: 'border-gray-300 bg-gray-50',
-    order: 6,
-    visible: true,
-  },
-  {
-    id: 'scheduled',
-    label: 'Planifié',
-    color: 'bg-blue-100 text-blue-800',
-    borderColor: 'border-blue-300 bg-blue-50',
     order: 7,
     visible: true,
-    deferredByDate: true,
   },
 ];
 
