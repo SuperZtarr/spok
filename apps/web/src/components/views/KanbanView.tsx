@@ -137,7 +137,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       {...(isFirstCard ? { 'data-tour': 'kanban-card' } : {})}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
-      }`}
+      } ${item.priority === 4 ? 'animate-urgent-blink ring-1 ring-red-400/60' : ''}`}
       onClick={() => onEdit(item.id)}
     >
       <div className="flex items-start gap-2">

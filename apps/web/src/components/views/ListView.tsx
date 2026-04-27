@@ -260,12 +260,13 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
               const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
               const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
+              const isUrgent = item.priority === 4;
 
               return (
                 <div
                   key={item.id}
                   {...(index === 0 ? { 'data-tour': 'list-row' } : {})}
-                  className={`grid ${gridColsClass} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''}`}
+                  className={`grid ${gridColsClass} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''} ${isUrgent ? 'animate-urgent-blink' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
                   <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />

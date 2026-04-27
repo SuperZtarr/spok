@@ -40,6 +40,15 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        'urgent-blink': {
+          '0%, 100%': { backgroundColor: 'transparent' },
+          '50%': { backgroundColor: 'rgb(254 226 226 / 0.6)' }, // red-100/60
+        },
+      },
+      animation: {
+        'urgent-blink': 'urgent-blink 1.2s ease-in-out infinite',
+      },
     },
   },
   plugins: [require('@tailwindcss/typography')],

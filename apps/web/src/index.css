@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .dark .animate-urgent-blink {
+    animation-name: urgent-blink-dark;
+  }
+}
+
+@keyframes urgent-blink-dark {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgb(127 29 29 / 0.25); } /* red-900/25 */
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
