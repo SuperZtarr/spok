@@ -16,8 +16,8 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   {
     id: 'todo',
     label: 'À faire',
-    color: 'bg-red-100 text-red-800',
-    borderColor: 'border-red-300 bg-red-50',
+    color: 'bg-yellow-100 text-yellow-800',
+    borderColor: 'border-yellow-300 bg-yellow-50',
     order: 1,
     visible: true,
   },
@@ -41,8 +41,8 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   {
     id: 'late',
     label: 'En retard',
-    color: 'bg-yellow-100 text-yellow-800',
-    borderColor: 'border-yellow-300 bg-yellow-50',
+    color: 'bg-red-100 text-red-800',
+    borderColor: 'border-red-300 bg-red-50',
     order: 4,
     visible: true,
   },

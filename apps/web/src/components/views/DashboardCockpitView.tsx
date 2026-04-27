@@ -172,9 +172,9 @@ function Panel({ title, icon, count, children, variant = 'default', emptyMessage
 
 const STATUS_BAR_COLORS: Record<string, string> = {
   undefined: '#6366f1', // indigo
-  todo: '#ef4444',      // red
+  todo: '#eab308',      // yellow
   in_progress: '#f97316', // orange
-  late: '#eab308',      // yellow
+  late: '#ef4444',      // red
   to_validate: '#a855f7', // purple
   done: '#22c55e',      // green
   cancelled: '#9ca3af', // gray
@@ -251,7 +251,7 @@ function SpaceProgressBar({ name, done, total }: { name: string; done: number; t
 
 const GANTT_STATUS_COLORS: Record<string, string> = {
   undefined: 'bg-indigo-500',
-  todo: 'bg-red-500',
+  todo: 'bg-yellow-500',
   in_progress: 'bg-orange-500',
   late: 'bg-yellow-500',
   to_validate: 'bg-violet-500',
