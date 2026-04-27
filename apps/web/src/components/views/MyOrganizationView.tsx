@@ -99,8 +99,8 @@ function KpiBadge({ label, count, color, icon: Icon }: {
 // ---------------------------------------------------------------------------
 
 const STATUS_BAR_COLORS: Record<string, string> = {
-  undefined: '#94a3b8', todo: '#eab308', in_progress: '#f97316', late: '#ef4444',
-  to_validate: '#a855f7', done: '#22c55e', cancelled: '#9ca3af',
+  undefined: '#6366f1', todo: '#ef4444', in_progress: '#f97316', late: '#eab308',
+  to_validate: '#a855f7', done: '#22c55e', cancelled: '#9ca3af', scheduled: '#3b82f6',
 };
 
 const TYPE_BAR_COLORS: Record<string, string> = {

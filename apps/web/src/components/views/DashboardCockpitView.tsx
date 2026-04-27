@@ -171,13 +171,14 @@ function Panel({ title, icon, count, children, variant = 'default', emptyMessage
 // ---------------------------------------------------------------------------
 
 const STATUS_BAR_COLORS: Record<string, string> = {
-  undefined: '#94a3b8', // slate
-  todo: '#eab308',      // yellow
+  undefined: '#6366f1', // indigo
+  todo: '#ef4444',      // red
   in_progress: '#f97316', // orange
-  late: '#ef4444',      // red
+  late: '#eab308',      // yellow
   to_validate: '#a855f7', // purple
   done: '#22c55e',      // green
   cancelled: '#9ca3af', // gray
+  scheduled: '#3b82f6', // blue
 };
 
 const TYPE_BAR_COLORS: Record<string, string> = {
@@ -249,12 +250,14 @@ function SpaceProgressBar({ name, done, total }: { name: string; done: number; t
 // ---------------------------------------------------------------------------
 
 const GANTT_STATUS_COLORS: Record<string, string> = {
-  undefined: 'bg-slate-400',
-  todo: 'bg-yellow-500',
+  undefined: 'bg-indigo-500',
+  todo: 'bg-red-500',
   in_progress: 'bg-orange-500',
+  late: 'bg-yellow-500',
   to_validate: 'bg-violet-500',
   done: 'bg-green-500',
   cancelled: 'bg-gray-400',
+  scheduled: 'bg-blue-500',
 };
 
 function MiniGantt({ tasks, onEdit }: { tasks: GlobalTask[]; onEdit: (id: string) => void }) {
