@@ -427,7 +427,7 @@ export function SpacePage() {
 
   const handleAddChild = (parentId: string) => {
     createItemMutation.mutate(
-      { type: 'NOTE', title: '', status: 'todo', parentId },
+      { type: 'NOTE', title: '', status: '', parentId },
       { onSuccess: (created: any) => {
         setEditingItemId(created.id);
         setExpandedItems((prev) => new Set([...prev, parentId]));
@@ -477,7 +477,7 @@ export function SpacePage() {
   const handleNewItem = useCallback(() => {
     const type = filter === 'ALL' ? 'NOTE' : filter;
     createItemMutation.mutate(
-      { type, title: '', status: 'todo' },
+      { type, title: '', status: '' },
       { onSuccess: (created: any) => { setEditingItemId(created.id); } },
     );
   }, [filter, createItemMutation]);
@@ -490,7 +490,7 @@ export function SpacePage() {
       setSearchParams(prev => { prev.delete('newItem'); return prev; }, { replace: true });
       setTimeout(() => {
         createItemMutation.mutate(
-          { type: 'NOTE', title: '', status: 'todo' },
+          { type: 'NOTE', title: '', status: '' },
           { onSuccess: (created: any) => { setEditingItemId(created.id); } }
         );
       }, 100);
