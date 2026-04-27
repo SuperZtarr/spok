@@ -65,8 +65,8 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   {
     id: 'cancelled',
     label: 'Annulé',
-    color: 'bg-gray-100 text-gray-800',
-    borderColor: 'border-gray-300 bg-gray-50',
+    color: 'bg-pink-100 text-pink-800',
+    borderColor: 'border-pink-300 bg-pink-50',
     order: 7,
     visible: true,
   },
@@ -187,7 +187,9 @@ export function buildStatusColorMap(
   statuses.forEach((s) => {
     map[s.id] = s.color;
   });
-  if (!map['none'] && map['undefined']) {
+  // Alias '' and 'none' → 'undefined' so items with empty/null status show as "Non défini"
+  if (map['undefined']) {
+    map[''] = map['undefined'];
     map['none'] = map['undefined'];
   }
   return map;
@@ -200,6 +202,10 @@ export function buildStatusLabelMap(
   statuses.forEach((s) => {
     map[s.id] = s.label;
   });
+  // Alias '' → 'undefined' so items with empty status show label "Non défini"
+  if (map['undefined']) {
+    map[''] = map['undefined'];
+  }
   return map;
 }
 

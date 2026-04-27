@@ -177,7 +177,7 @@ const STATUS_BAR_COLORS: Record<string, string> = {
   late: '#ef4444',      // red
   to_validate: '#a855f7', // purple
   done: '#22c55e',      // green
-  cancelled: '#9ca3af', // gray
+  cancelled: '#ec4899', // pink
   scheduled: '#3b82f6', // blue
 };
 
@@ -256,7 +256,7 @@ const GANTT_STATUS_COLORS: Record<string, string> = {
   late: 'bg-yellow-500',
   to_validate: 'bg-violet-500',
   done: 'bg-green-500',
-  cancelled: 'bg-gray-400',
+  cancelled: 'bg-pink-400',
   scheduled: 'bg-blue-500',
 };
 
