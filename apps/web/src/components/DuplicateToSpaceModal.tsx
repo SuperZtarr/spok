@@ -171,7 +171,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
         )}
 
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose}>
             Annuler
           </Button>
           <Button

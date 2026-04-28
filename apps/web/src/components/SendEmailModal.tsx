@@ -169,7 +169,7 @@ export function SendEmailModal({ isOpen, onClose, members, target }: SendEmailMo
 
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={handleClose}>Annuler</Button>
+          <Button variant="bordered" onClick={handleClose}>Annuler</Button>
           <Button
             onClick={handleSend}
             disabled={!subject.trim() || !html.trim() || selectedIds.size === 0 || sendMutation.isPending}

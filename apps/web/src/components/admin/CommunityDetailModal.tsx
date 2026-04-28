@@ -269,7 +269,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="bordered" onClick={onClose}>
               Annuler
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>

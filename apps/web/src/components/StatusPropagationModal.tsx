@@ -35,10 +35,10 @@ export function StatusPropagationModal({
           <Button variant="default" onClick={onPropagate} className="w-full justify-center">
             Propager aux {childCount} descendant{childCount > 1 ? 's' : ''}
           </Button>
-          <Button variant="outline" onClick={onKeepOnly} className="w-full justify-center">
+          <Button variant="bordered" onClick={onKeepOnly} className="w-full justify-center">
             Cet élément uniquement
           </Button>
-          <Button variant="ghost" onClick={onCancel} className="w-full justify-center text-muted-foreground">
+          <Button variant="bordered" onClick={onCancel} className="w-full justify-center text-muted-foreground">
             Annuler le changement de statut
           </Button>
         </div>

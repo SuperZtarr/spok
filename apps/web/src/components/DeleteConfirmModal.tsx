@@ -232,7 +232,7 @@ export function DeleteConfirmModal({
 
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose}>
             Annuler
           </Button>
           <Button variant="destructive" onClick={() => onConfirm({ deleteChildren })}>

@@ -336,11 +336,11 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
 
           {/* Actions */}
           <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => { setStep('pick'); setTargetItem(null); }}>
+            <Button variant="bordered" onClick={() => { setStep('pick'); setTargetItem(null); }}>
               ← Changer de cible
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="bordered" onClick={onClose}>
                 Annuler
               </Button>
               <Button onClick={handleConfirm} disabled={mergeMutation.isPending}>

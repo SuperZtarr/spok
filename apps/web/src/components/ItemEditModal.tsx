@@ -841,7 +841,7 @@ export function ItemEditModal({
                       <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
                         {createContributionMutation.isPending ? 'Ajout...' : 'Ajouter'}
                       </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => { setShowContributionField(false); setNewContribution(''); }}>
+                      <Button type="button" size="sm" variant="bordered" onClick={() => { setShowContributionField(false); setNewContribution(''); }}>
                         Annuler
                       </Button>
                     </div>
@@ -875,7 +875,7 @@ export function ItemEditModal({
                                 mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
                               <div className="flex gap-2">
                                 <Button type="button" size="sm" onClick={handleSaveContribution} disabled={updateContributionMutation.isPending}>Enregistrer</Button>
-                                <Button type="button" size="sm" variant="outline" onClick={() => { setEditingContributionId(null); setEditingContributionContent(''); }}><X className="w-4 h-4" /></Button>
+                                <Button type="button" size="sm" variant="bordered" onClick={() => { setEditingContributionId(null); setEditingContributionContent(''); }}><X className="w-4 h-4" /></Button>
                               </div>
                             </div>
                           ) : (
@@ -917,7 +917,7 @@ export function ItemEditModal({
                                 <Button type="button" size="sm" onClick={handleAddContribution} disabled={isContributionEmpty(newContribution) || createContributionMutation.isPending}>
                                   {createContributionMutation.isPending ? 'Ajout...' : 'Répondre'}
                                 </Button>
-                                <Button type="button" size="sm" variant="outline" onClick={() => { setReplyToContributionId(null); setShowContributionField(false); setNewContribution(''); }}>
+                                <Button type="button" size="sm" variant="bordered" onClick={() => { setReplyToContributionId(null); setShowContributionField(false); setNewContribution(''); }}>
                                   Annuler
                                 </Button>
                               </div>
@@ -1337,7 +1337,7 @@ export function ItemEditModal({
                       <Button type="button" size="sm" onClick={handleAddRelation} disabled={!newRelationTargetId || createRelationMutation.isPending}>
                         {createRelationMutation.isPending ? 'Ajout...' : 'Ajouter'}
                       </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => { setShowAddRelation(false); setNewRelationTargetId(''); setNewRelationLabel(''); }}>
+                      <Button type="button" size="sm" variant="bordered" onClick={() => { setShowAddRelation(false); setNewRelationTargetId(''); setNewRelationLabel(''); }}>
                         Annuler
                       </Button>
                     </div>
@@ -1361,7 +1361,7 @@ export function ItemEditModal({
                               <Button type="button" size="sm" onClick={() => updateRelationMutation.mutate({ relationId: relation.id, data: { type: editRelationType, label: editRelationLabel.trim() || null } })} disabled={updateRelationMutation.isPending}>
                                 {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
                               </Button>
-                              <Button type="button" size="sm" variant="outline" onClick={() => setEditingRelationId(null)}>Annuler</Button>
+                              <Button type="button" size="sm" variant="bordered" onClick={() => setEditingRelationId(null)}>Annuler</Button>
                             </div>
                           </div>
                         ) : (
@@ -1479,7 +1479,7 @@ export function ItemEditModal({
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             )}
-            <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
+            <Button type="button" variant="bordered" onClick={() => guardClose(onClose)}>
               {canEdit ? 'Fermer' : 'Fermer'}
             </Button>
             {item && (

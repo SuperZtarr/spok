@@ -131,7 +131,7 @@ export function CommunityDeleteConfirmModal({
         ) : null}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
+          <Button variant="bordered" onClick={onClose} disabled={isPending}>
             Annuler
           </Button>
           <Button
