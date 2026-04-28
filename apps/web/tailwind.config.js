@@ -45,9 +45,14 @@ export default {
           '0%, 100%': { backgroundColor: 'transparent' },
           '50%': { backgroundColor: 'rgb(254 226 226 / 0.6)' }, // red-100/60
         },
+        'unseen-blink': {
+          '0%, 100%': { backgroundColor: 'transparent' },
+          '50%': { backgroundColor: 'rgb(219 234 254 / 0.6)' }, // blue-100/60
+        },
       },
       animation: {
         'urgent-blink': 'urgent-blink 1.2s ease-in-out infinite',
+        'unseen-blink': 'unseen-blink 2s ease-in-out infinite',
       },
     },
   },

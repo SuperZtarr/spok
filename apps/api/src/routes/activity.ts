@@ -50,6 +50,7 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
           select: {
             id: true,
             name: true,
+            parentId: true,
             communityId: true,
             avatarUrl: true,
             coverUrl: true,
@@ -88,10 +89,10 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
 
     const total = unseenItems.length;
 
-    // Group by community > space
+    // Group by community > space (flat)
     const communityMap = new Map<string, {
       community: { id: string; name: string; avatarUrl: string | null; coverUrl: string | null };
-      spaces: Map<string, { space: { id: string; name: string; avatarUrl: string | null; coverUrl: string | null }; items: typeof unseenItems }>;
+      spaces: Map<string, { space: { id: string; name: string; parentId: string | null; avatarUrl: string | null; coverUrl: string | null }; items: typeof unseenItems }>;
     }>();
 
     for (const item of unseenItems) {
@@ -109,6 +110,7 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
           space: {
             id: item.space.id,
             name: item.space.name,
+            parentId: item.space.parentId ?? null,
             avatarUrl: item.space.avatarUrl ?? null,
             coverUrl: item.space.coverUrl ?? null,
           },
@@ -118,13 +120,29 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
       communityEntry.spaces.get(spaceId)!.items.push(item);
     }
 
-    const groups = [...communityMap.values()].map(({ community, spaces }) => ({
-      community,
-      spaces: [...spaces.values()].map(({ space, items: spaceItems }) => ({
-        space,
-        items: spaceItems.map(({ views, contributions, unseen, ...item }) => item),
-      })),
-    }));
+    // Restructure: nest child spaces under their parent (one level)
+    const groups = [...communityMap.values()].map(({ community, spaces }) => {
+      const spaceEntries = [...spaces.values()];
+      const spaceIds = new Set(spaces.keys());
+
+      const rootSpaces = spaceEntries.filter(
+        (s) => !s.space.parentId || !spaceIds.has(s.space.parentId),
+      );
+
+      return {
+        community,
+        spaces: rootSpaces.map(({ space, items: spaceItems }) => ({
+          space,
+          items: spaceItems.map(({ views, contributions, unseen, ...item }) => item),
+          children: spaceEntries
+            .filter((s) => s.space.parentId === space.id)
+            .map(({ space: childSpace, items: childItems }) => ({
+              space: childSpace,
+              items: childItems.map(({ views, contributions, unseen, ...item }) => item),
+            })),
+        })),
+      };
+    });
 
     return { groups, total };
   });

@@ -1,18 +1,10 @@
 import { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
-import { Users, Globe, Lock, Crown, User, Eye, FolderOpen, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, LogOut, Mail, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Globe, Lock, Crown, User, Eye, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, Mail, ShieldCheck } from 'lucide-react';
 import { communitiesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
-import { RoleGuard } from '../RoleGuard';
-
-const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
-  OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
-  MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
-  VIEWER: { label: 'Visiteur', icon: Eye, color: 'text-muted-foreground' },
-  INVITED: { label: 'Invitation', icon: Mail, color: 'text-orange-500' },
-  ADMIN_VIEW: { label: 'Admin', icon: ShieldCheck, color: 'text-purple-500' },
-};
+import { CommunityCard } from '../ui/CommunityCard';
 
 type CreateStep = 'awareness' | 'form';
 
@@ -82,10 +74,17 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
     },
   });
 
-  // Public communities the user hasn't joined yet (or all public for visitors)
+  const muteMutation = useMutation({
+    mutationFn: ({ id, muted }: { id: string; muted: boolean }) =>
+      communitiesApi.setMuted(id, muted),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+    },
+  });
+
   const joinableCommunities = useMemo(() => {
     if (!publicCommunities) return [];
-    if (!communities) return publicCommunities; // visitor: show all public
+    if (!communities) return publicCommunities;
     const myIds = new Set(communities.map(c => c.id));
     return publicCommunities.filter(c => !myIds.has(c.id));
   }, [publicCommunities, communities]);
@@ -111,92 +110,15 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
   };
 
   if (isLoading) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">Chargement...</div>
-    );
+    return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   }
 
-  // Group communities by role
-  const ownerCommunities = (communities || []).filter(c => c.role === 'OWNER');
-  const memberCommunities = (communities || []).filter(c => c.role === 'MEMBER');
-  const viewerCommunities = (communities || []).filter(c => c.role === 'VIEWER');
-  const invitedCommunities = (communities || []).filter(c => c.role === 'INVITED');
-  const publicNonMember = (communities || []).filter(c => c.role === null);
+  const ownerCommunities    = (communities || []).filter(c => c.role === 'OWNER');
+  const memberCommunities   = (communities || []).filter(c => c.role === 'MEMBER');
+  const viewerCommunities   = (communities || []).filter(c => c.role === 'VIEWER');
+  const invitedCommunities  = (communities || []).filter(c => c.role === 'INVITED');
+  const publicNonMember     = (communities || []).filter(c => c.role === null);
   const adminViewCommunities = (communities || []).filter(c => c.role === 'ADMIN_VIEW');
-
-  const renderCommunityCard = (community: any) => {
-    const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
-    const RoleIcon = config.icon;
-    return (
-      <Link
-        key={community.id}
-        to={`/communities/${community.id}`}
-        className="group relative border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
-      >
-        <div className="relative">
-          {community.coverUrl ? (
-            <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
-          ) : (
-            <div className="aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/5" />
-          )}
-          <div className="absolute -bottom-4 left-4">
-            {community.avatarUrl ? (
-              <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
-            ) : community.coverUrl ? (
-              <img src={community.coverUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" style={{ objectPosition: 'top right' }} />
-            ) : (
-              <div className="w-12 h-12 rounded-xl border-4 border-background bg-primary/10 flex items-center justify-center shadow">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-            )}
-          </div>
-        </div>
-        {community.pendingPublic && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium">
-            <Clock className="w-3 h-3" />
-            Publication en attente
-          </div>
-        )}
-        <div className="pt-8 px-4 pb-4">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold truncate">{community.name}</h3>
-            {community.isPublic ? (
-              <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-            ) : (
-              <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-            )}
-          </div>
-          {community.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>
-          )}
-          <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{community.memberCount || 0} membre{(community.memberCount || 0) > 1 ? 's' : ''}</span>
-            <span className="flex items-center gap-1"><FolderOpen className="w-3.5 h-3.5" />{community.spaceCount || 0} espace{(community.spaceCount || 0) > 1 ? 's' : ''}</span>
-            <span className="flex items-center gap-1 ml-auto"><RoleIcon className={`w-3.5 h-3.5 ${config.color}`} />{config.label}</span>
-          </div>
-          {community.role === 'MEMBER' && (
-            <RoleGuard role="MEMBER">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (confirm(`Quitter la communauté "${community.name}" ?`)) {
-                    leaveMutation.mutate(community.id);
-                  }
-                }}
-                className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                disabled={leaveMutation.isPending}
-              >
-                <LogOut className="w-3 h-3" />
-                Quitter
-              </button>
-            </RoleGuard>
-          )}
-        </div>
-      </Link>
-    );
-  };
 
   const renderJoinableCard = (community: any) => (
     <div
@@ -205,7 +127,9 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
     >
       <div className="relative">
         {community.coverUrl ? (
-          <div className="aspect-[3/1] overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
+          <div className="aspect-[3/1] overflow-hidden">
+            <img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${community.coverPositionX ?? 50}% ${community.coverPosition ?? 50}%`, transform: `scale(${(community.coverZoom ?? 100) / 100})`, transformOrigin: `${community.coverPositionX ?? 50}% ${community.coverPosition ?? 50}%` }} />
+          </div>
         ) : (
           <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
         )}
@@ -231,7 +155,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
         )}
         <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{community.memberCount} membre{community.memberCount > 1 ? 's' : ''}</span>
-          <span className="flex items-center gap-1"><FolderOpen className="w-3.5 h-3.5" />{community.spaceCount} espace{community.spaceCount > 1 ? 's' : ''}</span>
         </div>
         <button
           type="button"
@@ -248,12 +171,12 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
 
   type SectionDef = { title: string; icon: typeof Crown; iconColor: string; items: any[]; renderCard: (c: any) => React.ReactNode };
   const sections: SectionDef[] = [
-    { title: 'Propriétaire', icon: Crown, iconColor: 'text-amber-500', items: ownerCommunities, renderCard: renderCommunityCard },
-    { title: 'Membre', icon: User, iconColor: 'text-foreground', items: memberCommunities, renderCard: renderCommunityCard },
-    { title: 'Visiteur', icon: Eye, iconColor: 'text-muted-foreground', items: viewerCommunities, renderCard: renderCommunityCard },
-    { title: 'Invitations en attente', icon: Mail, iconColor: 'text-orange-500', items: invitedCommunities, renderCard: renderCommunityCard },
-    { title: 'Communautés publiques', icon: Globe, iconColor: 'text-green-500', items: [...publicNonMember, ...joinableCommunities.filter(jc => !publicNonMember.some(p => p.id === jc.id))], renderCard: (c) => c.role === null ? renderCommunityCard(c) : renderJoinableCard(c) },
-    { title: 'Autres communautés', icon: ShieldCheck, iconColor: 'text-purple-500', items: adminViewCommunities, renderCard: renderCommunityCard },
+    { title: 'Propriétaire',        icon: Crown,       iconColor: 'text-amber-500',          items: ownerCommunities,    renderCard: (c) => <CommunityCard key={c.id} community={c} onMute={(muted) => muteMutation.mutate({ id: c.id, muted })} isMutePending={muteMutation.isPending} /> },
+    { title: 'Membre',              icon: User,        iconColor: 'text-foreground',          items: memberCommunities,   renderCard: (c) => <CommunityCard key={c.id} community={c} onMute={(muted) => muteMutation.mutate({ id: c.id, muted })} isMutePending={muteMutation.isPending} onLeave={() => { if (confirm(`Quitter la communauté "${c.name}" ?`)) leaveMutation.mutate(c.id); }} isLeavePending={leaveMutation.isPending} /> },
+    { title: 'Visiteur',            icon: Eye,         iconColor: 'text-muted-foreground',    items: viewerCommunities,   renderCard: (c) => <CommunityCard key={c.id} community={c} onMute={(muted) => muteMutation.mutate({ id: c.id, muted })} isMutePending={muteMutation.isPending} /> },
+    { title: 'Invitations en attente', icon: Mail,     iconColor: 'text-orange-500',          items: invitedCommunities,  renderCard: (c) => <CommunityCard key={c.id} community={c} /> },
+    { title: 'Communautés publiques',  icon: Globe,    iconColor: 'text-green-500',           items: [...publicNonMember, ...joinableCommunities.filter(jc => !publicNonMember.some((p: any) => p.id === jc.id))], renderCard: (c) => c.role === null ? <CommunityCard key={c.id} community={c} /> : renderJoinableCard(c) },
+    { title: 'Autres communautés',  icon: ShieldCheck, iconColor: 'text-purple-500',          items: adminViewCommunities, renderCard: (c) => <CommunityCard key={c.id} community={c} /> },
   ];
 
   return (
@@ -286,14 +209,10 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
         </div>
       )}
 
-      {/* Create community modal */}
+      {/* Modale de création */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeCreate}>
-          <div
-            className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="text-lg font-semibold">
                 {step === 'awareness' ? 'Créer une communauté' : 'Informations'}
@@ -305,16 +224,11 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
 
             {step === 'awareness' ? (
               <div className="px-6 py-5 space-y-5">
-                {/* Warning */}
                 <div className="flex gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                   <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm space-y-2">
-                    <p className="font-medium text-amber-800 dark:text-amber-200">
-                      Créer une communauté est un engagement
-                    </p>
-                    <p className="text-amber-700 dark:text-amber-300">
-                      Une communauté regroupe des personnes autour d'un sujet commun. En tant que créateur, vous en serez le propriétaire et devrez :
-                    </p>
+                    <p className="font-medium text-amber-800 dark:text-amber-200">Créer une communauté est un engagement</p>
+                    <p className="text-amber-700 dark:text-amber-300">Une communauté regroupe des personnes autour d'un sujet commun. En tant que créateur, vous en serez le propriétaire et devrez :</p>
                     <ul className="list-disc pl-4 text-amber-700 dark:text-amber-300 space-y-1">
                       <li>Rédiger une description claire de son objet</li>
                       <li>Inviter et accueillir les membres</li>
@@ -324,11 +238,8 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                   </div>
                 </div>
 
-                {/* Check existing communities */}
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">
-                    Vérifiez d'abord qu'elle n'existe pas déjà :
-                  </p>
+                  <p className="text-sm font-medium">Vérifiez d'abord qu'elle n'existe pas déjà :</p>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
@@ -345,9 +256,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                         <div key={c.id} className="flex items-center justify-between px-3 py-2 text-sm">
                           <div className="min-w-0">
                             <span className="font-medium truncate block">{c.name}</span>
-                            {c.description && (
-                              <span className="text-xs text-muted-foreground truncate block">{c.description}</span>
-                            )}
+                            {c.description && <span className="text-xs text-muted-foreground truncate block">{c.description}</span>}
                           </div>
                           <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                             {c.memberCount} membre{c.memberCount > 1 ? 's' : ''}
@@ -360,7 +269,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                   ) : null}
                 </div>
 
-                {/* Continue button */}
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={() => { if (searchExisting.trim() && !newName) setNewName(searchExisting.trim()); setStep('form'); }}
@@ -373,7 +281,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
               </div>
             ) : (
               <form onSubmit={handleCreate} className="px-6 py-5 space-y-4">
-                {/* Name */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Nom <span className="text-destructive">*</span></label>
                   <input
@@ -386,7 +293,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                   />
                 </div>
 
-                {/* Description */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Description <span className="text-destructive">*</span></label>
                   <textarea
@@ -399,75 +305,36 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                   />
                 </div>
 
-                {/* Visibility */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Visibilité</label>
                   <div className="space-y-2">
                     <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 cursor-pointer transition-colors">
-                      <input
-                        type="radio"
-                        name="visibility"
-                        checked={!wantPublic}
-                        onChange={() => setWantPublic(false)}
-                        className="mt-0.5 accent-primary"
-                      />
+                      <input type="radio" name="visibility" checked={!wantPublic} onChange={() => setWantPublic(false)} className="mt-0.5 accent-primary" />
                       <div>
-                        <div className="flex items-center gap-1.5 text-sm font-medium">
-                          <Lock className="w-3.5 h-3.5" />
-                          Privée
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Accessible uniquement sur invitation. Vous pourrez la rendre publique plus tard.
-                        </p>
+                        <div className="flex items-center gap-1.5 text-sm font-medium"><Lock className="w-3.5 h-3.5" />Privée</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Accessible uniquement sur invitation. Vous pourrez la rendre publique plus tard.</p>
                       </div>
                     </label>
                     <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 cursor-pointer transition-colors">
-                      <input
-                        type="radio"
-                        name="visibility"
-                        checked={wantPublic}
-                        onChange={() => setWantPublic(true)}
-                        className="mt-0.5 accent-primary"
-                      />
+                      <input type="radio" name="visibility" checked={wantPublic} onChange={() => setWantPublic(true)} className="mt-0.5 accent-primary" />
                       <div>
-                        <div className="flex items-center gap-1.5 text-sm font-medium">
-                          <Globe className="w-3.5 h-3.5" />
-                          Publique
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Visible par tous, n'importe qui peut la rejoindre.
-                        </p>
+                        <div className="flex items-center gap-1.5 text-sm font-medium"><Globe className="w-3.5 h-3.5" />Publique</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Visible par tous, n'importe qui peut la rejoindre.</p>
                       </div>
                     </label>
                   </div>
                   {wantPublic && (
                     <div className="flex gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
                       <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <p>
-                        La communauté sera créée en <strong>privé</strong> et une demande de publication sera envoyée à un administrateur pour validation.
-                        Vous pourrez commencer à l'organiser immédiatement.
-                      </p>
+                      <p>La communauté sera créée en <strong>privé</strong> et une demande de publication sera envoyée à un administrateur pour validation. Vous pourrez commencer à l'organiser immédiatement.</p>
                     </div>
                   )}
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep('awareness')}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    Retour
-                  </button>
+                  <button type="button" onClick={() => setStep('awareness')} className="text-sm text-muted-foreground hover:text-foreground">Retour</button>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={closeCreate}
-                      className="px-3 py-2 text-sm border border-border rounded-md hover:bg-accent"
-                    >
-                      Annuler
-                    </button>
+                    <button type="button" onClick={closeCreate} className="px-3 py-2 text-sm border border-border rounded-md hover:bg-accent">Annuler</button>
                     <button
                       type="submit"
                       disabled={!newName.trim() || !newDescription.trim() || createMutation.isPending}

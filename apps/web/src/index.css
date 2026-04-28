@@ -6,11 +6,19 @@
   .dark .animate-urgent-blink {
     animation-name: urgent-blink-dark;
   }
+  .dark .animate-unseen-blink {
+    animation-name: unseen-blink-dark;
+  }
 }
 
 @keyframes urgent-blink-dark {
   0%, 100% { background-color: transparent; }
   50% { background-color: rgb(127 29 29 / 0.25); } /* red-900/25 */
+}
+
+@keyframes unseen-blink-dark {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgb(30 58 138 / 0.25); } /* blue-900/25 */
 }
 
 @layer base {

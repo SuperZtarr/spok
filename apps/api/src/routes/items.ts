@@ -181,6 +181,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         where.title = { contains: search, mode: 'insensitive' };
       }
 
+      const userId = request.user?.userId ?? null;
+
       const prismaInclude: any = {
         tags: { include: { tag: true } },
         children: { select: { id: true } },
@@ -193,6 +195,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           include: { fromItem: { select: { id: true, title: true, type: true } } },
         },
       };
+
+      if (userId) {
+        prismaInclude.views = {
+          where: { userId },
+          select: { viewedAt: true },
+          take: 1,
+        };
+      }
 
       if (includeContributions) {
         prismaInclude.contributions = {
@@ -215,13 +225,21 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       ]);
 
       return {
-        data: items.map((item: any) => ({
-          ...item,
-          tags: item.tags.map((t: any) => t.tag),
-          childCount: item._count.children,
-          contributionCount: item._count.contributions,
-          ...(includeContributions && item.contributions ? { contributions: item.contributions } : {}),
-        })),
+        data: items.map((item: any) => {
+          const viewedAt = item.views?.[0]?.viewedAt ?? null;
+          const isUnseen = userId
+            ? !viewedAt || new Date(item.updatedAt) > new Date(viewedAt)
+            : false;
+          const { views, ...rest } = item;
+          return {
+            ...rest,
+            tags: item.tags.map((t: any) => t.tag),
+            childCount: item._count.children,
+            contributionCount: item._count.contributions,
+            isUnseen,
+            ...(includeContributions && item.contributions ? { contributions: item.contributions } : {}),
+          };
+        }),
         total,
         page,
         pageSize,

@@ -4,9 +4,19 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-04-26
+## EN COURS — 2026-04-28
 
-### Documentation interfaces (session en cours)
+### Composants cards + items non lus (2026-04-28)
+- Statuts : Non défini=indigo, Annulé=rose, fix lookup '' → 'undefined' dans buildStatusColorMap/LabelMap
+- Button : variant `bordered` (border-gray-400 + bg-secondary)
+- CommunityCard.tsx + CommunityBanner : composants réutilisables extraits de CommunityListView
+- ItemCard.tsx : composant réutilisable extrait de ActivityPage
+- ActivityPage : utilise CommunityCard + SpaceCard + ItemCard, hiérarchie communauté > espaces > sous-espaces > items
+- API activity : sous-espaces nestés (parentId), grouping community > espace racine > children
+- API items : champ isUnseen calculé depuis ItemView (updatedAt vs viewedAt)
+- isUnseen : animation unseen-blink bleue dans ListView, KanbanView, MindMap, TimelineView (urgent rouge prime)
+
+### Documentation interfaces (session précédente)
 - Espace Structure : 25 items documentés (Sidebar×7, Header×6, Zone principale×6, Sécurité & Accès×4 + 1 BUG inchangé)
 - Espace Administration : nettoyage (14 annulés, 6 remontés à la racine) + 11 pages documentées + ViewsConfigPage, ApiDocPage, PerfPage créés
 - Espace Modales & Overlays : 23 NOTEs vides annulés, CommunityDetailModal + SpaceDetailModal réécrits, StatusPropagationModal créé, 73 items passés à to_validate

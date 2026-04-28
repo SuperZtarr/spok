@@ -28,10 +28,12 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
    ```
    (Lance PostgreSQL Docker + API port 3001 + Web port 3000)
 
-3. **Ouvrir le navigateur et activer le preview** :
-   - Utiliser `mcp__Claude_in_Chrome__tabs_context_mcp` avec `createIfEmpty: true` pour obtenir un tab ID
-   - Utiliser `mcp__Claude_in_Chrome__navigate` pour naviguer vers `http://localhost:3000` dans cet onglet
-   - Cela ouvre SPOK dans Chrome ET donne à Claude la visibilité sur l'interface
+3. **Ouvrir le navigateur** :
+   - Ouvrir Chrome sur `http://localhost:3000` via PowerShell (le MCP Chrome bloque la navigation vers localhost) :
+     ```powershell
+     Start-Process "chrome.exe" "http://localhost:3000"
+     ```
+   - Ensuite utiliser `mcp__Claude_in_Chrome__tabs_context_mcp` pour obtenir le tab ID et interagir avec la page
 
 4. **Lire le contexte de session**
    - `docs/session-journal.md` — section EN COURS
