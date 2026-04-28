@@ -784,7 +784,7 @@ export function CommunitySettingsPage() {
             )}
 
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowResetConfirm(true)} disabled={resetRefMutation.isPending}>
+              <Button variant="bordered" onClick={() => setShowResetConfirm(true)} disabled={resetRefMutation.isPending}>
                 <RotateCw className="w-4 h-4 mr-2" />
                 Réinitialiser
               </Button>
@@ -848,7 +848,7 @@ export function CommunitySettingsPage() {
                     Créer un espace
                   </Button>
                   {availableSpaces.length > 0 && (
-                    <Button size="sm" variant="outline" onClick={() => { setShowAddSpace(!showAddSpace); setShowCreateSpace(false); }}>
+                    <Button size="sm" variant="bordered" onClick={() => { setShowAddSpace(!showAddSpace); setShowCreateSpace(false); }}>
                       Rattacher un espace existant
                     </Button>
                   )}
@@ -871,7 +871,7 @@ export function CommunitySettingsPage() {
                   <Button size="sm" onClick={() => createSpaceMutation.mutate(newSpaceName.trim())} disabled={!newSpaceName.trim() || createSpaceMutation.isPending}>
                     {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setShowCreateSpace(false); setNewSpaceName(''); }}>Annuler</Button>
+                  <Button size="sm" variant="bordered" onClick={() => { setShowCreateSpace(false); setNewSpaceName(''); }}>Annuler</Button>
                 </div>
               </div>
             )}
@@ -889,7 +889,7 @@ export function CommunitySettingsPage() {
                   <Button size="sm" onClick={handleAddSpace} disabled={!selectedSpaceId || addSpaceMutation.isPending}>
                     {addSpaceMutation.isPending ? 'Ajout...' : 'Ajouter'}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setShowAddSpace(false); setSelectedSpaceId(''); }}>Annuler</Button>
+                  <Button size="sm" variant="bordered" onClick={() => { setShowAddSpace(false); setSelectedSpaceId(''); }}>Annuler</Button>
                 </div>
               </div>
             )}
@@ -1020,7 +1020,7 @@ export function CommunitySettingsPage() {
                   />
                 </div>
                 <Button
-                  variant="outline"
+                  variant="bordered"
                   onClick={() => {
                     if (transferTargetId && confirm('Êtes-vous sûr de vouloir transférer la propriété ? Cette action est irréversible.')) {
                       transferOwnershipMutation.mutate(transferTargetId);
@@ -1054,7 +1054,7 @@ export function CommunitySettingsPage() {
                 La suppression est irréversible. Tous les membres perdront leur accès. Les espaces peuvent être conservés ou supprimés.
               </p>
               <Button
-                variant="outline"
+                variant="bordered"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={() => setShowDeleteModal(true)}
                 disabled={deleteCommunityMutation.isPending}
@@ -1389,7 +1389,7 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
                           </p>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="bordered"
                             onClick={() => {
                               resendMutation.mutate({
                                 emailId: email.id,

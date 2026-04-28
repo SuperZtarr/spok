@@ -241,7 +241,7 @@ export function SpaceDetailModal({ spaceId, onClose }: SpaceDetailModalProps) {
               <h3 className="font-medium">Membres ({space.members.length})</h3>
               <Button
                 size="sm"
-                variant="outline"
+                variant="bordered"
                 onClick={() => setShowAddMember(!showAddMember)}
               >
                 <UserPlus className="w-4 h-4 mr-1" />

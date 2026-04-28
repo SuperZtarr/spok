@@ -1354,7 +1354,7 @@ export function SpacePage() {
                 Déplacer avec les {actions.pendingCrossSpaceMove.childCount} descendant{actions.pendingCrossSpaceMove.childCount > 1 ? 's' : ''}
               </Button>
               <Button
-                variant="outline"
+                variant="bordered"
                 className="w-full"
                 onClick={() => {
                   const m = actions.pendingCrossSpaceMove!;

@@ -114,7 +114,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDeleteWarning(null)}>
+              <Button variant="bordered" onClick={() => setDeleteWarning(null)}>
                 Annuler
               </Button>
               <Button variant="destructive" onClick={() => confirmDelete(deleteWarning.id)}>
@@ -140,7 +140,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="bordered"
               onClick={() => {
                 setShowAddForm(false);
                 setNewStatusLabel('');

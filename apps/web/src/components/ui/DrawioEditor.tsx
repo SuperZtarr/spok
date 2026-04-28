@@ -143,7 +143,7 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
       {editable && (
         <Button
           type="button"
-          variant="outline"
+          variant="bordered"
           size="sm"
           onClick={() => { initialXmlRef.current = xml; setIsEditing(true); }}
         >

@@ -26,7 +26,7 @@ export function ReferentielsPage() {
             )}
           </div>
           <Button
-            variant="outline"
+            variant="bordered"
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}

@@ -152,10 +152,10 @@ export function AuditRestoreDialog({
 
         {/* Quick actions */}
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={selectAll}>
+          <Button variant="bordered" size="sm" onClick={selectAll}>
             Tout sélectionner
           </Button>
-          <Button variant="outline" size="sm" onClick={selectNone}>
+          <Button variant="bordered" size="sm" onClick={selectNone}>
             Tout désélectionner
           </Button>
         </div>
@@ -206,7 +206,7 @@ export function AuditRestoreDialog({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end pt-2 border-t border-border">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose}>
             Annuler
           </Button>
           <Button

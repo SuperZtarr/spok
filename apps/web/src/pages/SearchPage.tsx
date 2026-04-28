@@ -431,11 +431,11 @@ export function SearchPage() {
             <div className="flex items-center justify-between pt-2">
               <p className="text-sm text-muted-foreground">Page {pageParam} sur {totalPages}</p>
               <div className="flex items-center gap-1">
-                <Button variant="outline" size="sm" onClick={() => setPage(Math.max(1, pageParam - 1))} disabled={pageParam === 1} className="h-8 w-8 p-0">
+                <Button variant="bordered" size="sm" onClick={() => setPage(Math.max(1, pageParam - 1))} disabled={pageParam === 1} className="h-8 w-8 p-0">
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm px-3">{pageParam} / {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setPage(Math.min(totalPages, pageParam + 1))} disabled={pageParam >= totalPages} className="h-8 w-8 p-0">
+                <Button variant="bordered" size="sm" onClick={() => setPage(Math.min(totalPages, pageParam + 1))} disabled={pageParam >= totalPages} className="h-8 w-8 p-0">
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>

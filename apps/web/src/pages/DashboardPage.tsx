@@ -264,7 +264,7 @@ function SpaceCard({ space, onJoin, onLeave, onDelete, canDelete, onAddChildSpac
           <RoleGuard role="MEMBER">
             <Button
               size="sm"
-              variant="outline"
+              variant="bordered"
               className="mt-3 w-full"
               onClick={(e) => {
                 e.preventDefault();
@@ -559,7 +559,7 @@ export function DashboardPage() {
             </Button>
           )}
           {tab === 'mindmap' && (
-            <Button size="sm" variant="outline" onClick={() => mindmapResetRef.current?.()}>
+            <Button size="sm" variant="bordered" onClick={() => mindmapResetRef.current?.()}>
               <RotateCcw className="w-4 h-4 mr-1" />
               Réorganiser
             </Button>
@@ -704,7 +704,7 @@ export function DashboardPage() {
                   <Button type="submit" disabled={createSpaceMutation.isPending}>
                     {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
                   </Button>
-                  <Button type="button" variant="outline" onClick={closeNewSpaceForm}>
+                  <Button type="button" variant="bordered" onClick={closeNewSpaceForm}>
                     Annuler
                   </Button>
                 </div>

@@ -115,10 +115,10 @@ function CategoryDetail({ categoryKey }: { categoryKey: string }) {
             Page {data.pagination.page} / {data.pagination.totalPages} ({data.pagination.total} elements)
           </span>
           <div className="flex gap-1">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-7 w-7 p-0">
+            <Button variant="bordered" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-7 w-7 p-0">
               <ChevronLeft className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="outline" size="sm" disabled={page >= data.pagination.totalPages} onClick={() => setPage(p => p + 1)} className="h-7 w-7 p-0">
+            <Button variant="bordered" size="sm" disabled={page >= data.pagination.totalPages} onClick={() => setPage(p => p + 1)} className="h-7 w-7 p-0">
               <ChevronRight className="w-3.5 h-3.5" />
             </Button>
           </div>
@@ -161,7 +161,7 @@ function AnomaliesTab() {
             </p>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+        <Button variant="bordered" size="sm" onClick={() => refetch()} disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
           Actualiser
         </Button>
@@ -266,7 +266,7 @@ function TestsTab() {
             </p>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={handleRun} disabled={isFetching}>
+        <Button variant="bordered" size="sm" onClick={handleRun} disabled={isFetching}>
           {isFetching ? <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" /> : <Play className="w-4 h-4 mr-1.5" />}
           {isFetching ? 'Execution...' : 'Lancer les tests'}
         </Button>

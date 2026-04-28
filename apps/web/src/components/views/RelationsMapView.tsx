@@ -232,7 +232,7 @@ export function RelationsMapView({
 
       {/* Fit button */}
       <div className="absolute top-3 right-3 z-10">
-        <Button variant="outline" size="sm" onClick={handleFit} title="Recentrer">
+        <Button variant="bordered" size="sm" onClick={handleFit} title="Recentrer">
           <Maximize2 className="w-4 h-4" />
         </Button>
       </div>

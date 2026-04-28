@@ -492,13 +492,13 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       {/* Toolbar */}
       <div className="flex items-center justify-between p-3 border-b bg-muted/30 gap-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToPrevious} title="Précédent">
+          <Button variant="bordered" size="sm" onClick={goToPrevious} title="Précédent">
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={goToToday} title="Centrer sur la date du jour">
+          <Button variant="bordered" size="sm" onClick={goToToday} title="Centrer sur la date du jour">
             Aujourd'hui
           </Button>
-          <Button variant="outline" size="sm" onClick={goToNext} title="Suivant">
+          <Button variant="bordered" size="sm" onClick={goToNext} title="Suivant">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -515,7 +515,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           {/* Chronological reorder */}
           {canEdit && spaceId && (
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               onClick={handleChronoReorder}
               disabled={reordering}

@@ -688,7 +688,7 @@ export function SpaceSettingsPage() {
                     />
                   </div>
                   <Button
-                    variant="outline"
+                    variant="bordered"
                     onClick={() => {
                       if (transferTargetId && confirm('Êtes-vous sûr de vouloir transférer la propriété ? Cette action est irréversible.')) {
                         transferOwnershipMutation.mutate(transferTargetId);
@@ -723,7 +723,7 @@ export function SpaceSettingsPage() {
                 La suppression est irréversible. Tous les éléments, relations et contributions seront définitivement perdus.
               </p>
               <Button
-                variant="outline"
+                variant="bordered"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={() => setShowDeleteModal(true)}
                 disabled={deleteSpaceMutation.isPending}

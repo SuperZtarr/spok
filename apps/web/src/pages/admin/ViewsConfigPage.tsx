@@ -218,7 +218,7 @@ export function ViewsConfigPage() {
             <p className="text-sm text-muted-foreground mt-0.5">Libelles, ordre, categories et droits d'acces</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => resetMutation.mutate()} disabled={resetMutation.isPending}>
+            <Button variant="bordered" onClick={() => resetMutation.mutate()} disabled={resetMutation.isPending}>
               <RotateCcw className="w-4 h-4 mr-1" />
               Reinitialiser
             </Button>

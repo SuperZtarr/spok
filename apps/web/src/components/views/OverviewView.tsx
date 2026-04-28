@@ -159,7 +159,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
             <div className="flex gap-2 pb-1">
               {isAdminOrOwner && (
                 <RoleGuard role="OWNER">
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
+                  <Button variant="bordered" size="sm" onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
                     <Settings className="w-4 h-4" />
                   </Button>
                 </RoleGuard>

@@ -274,7 +274,7 @@ export function InvitationPage() {
           {/* Actions */}
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="bordered"
               className="flex-1"
               onClick={() => declineMutation.mutate()}
               disabled={isLoading}

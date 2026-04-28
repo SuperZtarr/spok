@@ -347,7 +347,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
               </h3>
               <Button
                 size="sm"
-                variant="outline"
+                variant="bordered"
                 onClick={() => setShowAddMember(!showAddMember)}
               >
                 <UserPlus className="w-4 h-4 mr-1" />
@@ -439,7 +439,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
               {availableSpaces.length > 0 && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="bordered"
                   onClick={() => setShowAddSpace(!showAddSpace)}
                 >
                   <Plus className="w-4 h-4 mr-1" />
@@ -466,7 +466,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="bordered"
                     onClick={() => {
                       setShowAddSpace(false);
                       setSelectedSpaceId('');

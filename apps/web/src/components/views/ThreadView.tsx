@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { MessageSquare, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronRight, Clock, ExternalLink } from 'lucide-react';
+import { Button } from '../ui/Button';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
@@ -270,12 +271,15 @@ export function ThreadView({
               )}
 
               {/* Open in edit modal */}
-              <button
+              <Button
+                variant="bordered"
+                size="sm"
                 onClick={() => onEdit(node.id)}
-                className="mt-3 text-xs text-primary hover:text-primary/80 transition-colors"
+                className="mt-3"
               >
-                Ouvrir la fiche complète →
-              </button>
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                Ouvrir la fiche complète
+              </Button>
             </div>
           )}
         </div>

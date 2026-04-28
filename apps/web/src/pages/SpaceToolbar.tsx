@@ -360,7 +360,7 @@ export function SpaceToolbar({
           <>
             <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               onClick={onToggleExpand}
               title={isExpanded ? 'Tout réduire' : 'Tout étendre'}
@@ -385,7 +385,7 @@ export function SpaceToolbar({
           <>
             <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               onClick={onResetLayout}
               title="Réorganiser les éléments"
@@ -396,7 +396,7 @@ export function SpaceToolbar({
             </Button>
             {onFitAll && (
               <Button
-                variant="outline"
+                variant="bordered"
                 size="sm"
                 onClick={onFitAll}
                 title="Tout voir"

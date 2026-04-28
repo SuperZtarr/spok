@@ -204,7 +204,7 @@ export function CommunitiesPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
+            <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
               <Download className="w-4 h-4 mr-1.5" />
               CSV
             </Button>
@@ -419,7 +419,7 @@ export function CommunitiesPage() {
               </p>
               <div className="flex items-center gap-1">
                 <Button
-                  variant="outline"
+                  variant="bordered"
                   size="sm"
                   onClick={() => setPage(1)}
                   disabled={page === 1}
@@ -429,7 +429,7 @@ export function CommunitiesPage() {
                   <ChevronLeft className="w-4 h-4 -ml-2.5" />
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="bordered"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -439,7 +439,7 @@ export function CommunitiesPage() {
                 </Button>
                 <span className="text-sm px-3">{page} / {totalPages}</span>
                 <Button
-                  variant="outline"
+                  variant="bordered"
                   size="sm"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
@@ -448,7 +448,7 @@ export function CommunitiesPage() {
                   <ChevronRight className="w-4 h-4" />
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="bordered"
                   size="sm"
                   onClick={() => setPage(totalPages)}
                   disabled={page === totalPages}

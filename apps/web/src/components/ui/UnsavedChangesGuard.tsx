@@ -61,7 +61,7 @@ export function useUnsavedGuard(hasChanges: boolean) {
           Vous avez des modifications non enregistrees. Voulez-vous quitter sans sauvegarder ?
         </p>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={cancel}>
+          <Button variant="bordered" size="sm" onClick={cancel}>
             Rester
           </Button>
           <Button variant="destructive" size="sm" onClick={confirm}>

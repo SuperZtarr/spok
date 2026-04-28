@@ -191,7 +191,7 @@ export function AuditLogsPage() {
               <p className="text-sm text-muted-foreground">Maintenance</p>
             </div>
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               className="mt-2"
               onClick={() => setShowPurgeModal(true)}
@@ -369,7 +369,7 @@ export function AuditLogsPage() {
                           </div>
                           <div className="ml-auto">
                             <Button
-                              variant="outline"
+                              variant="bordered"
                               size="sm"
                               onClick={(e) => { e.stopPropagation(); batchRestoreMutation.mutate(batchId); }}
                               disabled={batchRestoreMutation.isPending}
@@ -450,7 +450,7 @@ export function AuditLogsPage() {
           </p>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
@@ -458,7 +458,7 @@ export function AuditLogsPage() {
               Precedent
             </Button>
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
               disabled={page >= data.totalPages}

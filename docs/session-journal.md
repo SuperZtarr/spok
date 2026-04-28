@@ -6,12 +6,20 @@
 
 ## EN COURS — 2026-04-28
 
+### Menu contextuel — à reprendre
+- Ordre voulu : 1. Ouvrir 2. Ouvrir dans un nouvel onglet 3. Modifier 4. Supprimer 5. Ajouter un enfant
+- Groupe suivant (ordre à définir) : Déplacer, Dupliquer, Absorber, Éclater, Fusionner, Convertir en espace, M'assigner, Marquer terminé
+- Implémenté : labels 1-3 dans itemMenuGroups.ts, reste à faire : callback onOpen (navigate onglet actuel), restructuration groupes, propagation dans vues + SpacePage
+
 ### Contributions non lues + viewedAt (2026-04-28)
-- API items : isUnseen boolean → viewedAt (string|null), exposé seulement si updatedByOther+recent
+- API items : isUnseen boolean → viewedAt (string|null), exposé seulement si updatedByOther+recent — ac493b3
+- Fix : viewedAt omis (undefined) si non pertinent → évite clignotement de tous les items — ac493b3
 - API item-contributions POST : touch item.updatedAt+updatedById au moment de créer une contribution
 - shared type Item : isUnseen → viewedAt
-- ListView, KanbanView, MindMap, TimelineView : isUnseen calculé depuis viewedAt
+- ListView, KanbanView, MindMap, TimelineView : isUnseen calculé depuis viewedAt (urgent rouge prime sur bleu)
 - ItemEditModal : snapshot viewedAt avant ouverture (ref), contributions nouvelles surlignées en bleu + badge "Nouveau"
+- Boutons modales : variant outline → bordered sur tous les Annuler/Fermer (13 modales) — ac493b3
+- Doc SPOK mise à jour : En-tête, Vues, SpacePage, ItemEditModal (to_validate)
 
 ### PWA icône écran d'accueil (2026-04-28)
 - icon-512.png régénéré depuis icon-192.png (hub design)

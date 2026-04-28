@@ -347,7 +347,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
           </span>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               disabled={filters.page <= 1}
               onClick={() => filters.setPage((p) => Math.max(1, p - 1))}
@@ -355,7 +355,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button
-              variant="outline"
+              variant="bordered"
               size="sm"
               disabled={filters.page >= totalPages}
               onClick={() => filters.setPage((p) => Math.min(totalPages, p + 1))}

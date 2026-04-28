@@ -49,7 +49,7 @@ export function MindMapPage() {
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-end px-4 py-2">
-        <Button size="sm" variant="outline" onClick={() => resetRef.current?.()}>
+        <Button size="sm" variant="bordered" onClick={() => resetRef.current?.()}>
           <RotateCcw className="w-4 h-4 mr-1" />
           Reorganiser
         </Button>

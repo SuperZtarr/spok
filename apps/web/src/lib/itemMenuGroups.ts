@@ -54,7 +54,7 @@ export function buildItemMenuGroups(
 
   // Groupe 1 : actions toujours visibles + actions d'écriture si canEdit
   const group1: ItemAction[] = [
-    ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(itemId) }] : []),
+    ...(onEdit ? [{ id: 'edit', label: 'Ouvrir', icon: Pencil, onClick: () => onEdit(itemId) }] : []),
     ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
     ...(canEdit && onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
     ...(canEdit && onUpdateStatus && statusAction ? [{ id: 'status', label: statusAction.label, icon: CheckSquare, onClick: () => onUpdateStatus(itemId, statusAction.statusId) }] : []),

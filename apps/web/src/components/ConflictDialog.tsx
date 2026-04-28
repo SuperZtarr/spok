@@ -94,10 +94,10 @@ export function ConflictDialog({
         </div>
 
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => setAll('server')}>
+          <Button variant="bordered" size="sm" onClick={() => setAll('server')}>
             Tout garder du serveur
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setAll('mine')}>
+          <Button variant="bordered" size="sm" onClick={() => setAll('mine')}>
             Tout garder les miennes
           </Button>
         </div>
@@ -151,7 +151,7 @@ export function ConflictDialog({
         </div>
 
         <div className="flex gap-2 justify-end pt-2 border-t border-border">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose}>
             Annuler
           </Button>
           <Button onClick={handleApply}>

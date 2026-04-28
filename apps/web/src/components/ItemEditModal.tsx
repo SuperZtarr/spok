@@ -1312,7 +1312,7 @@ export function ItemEditModal({
                     Dépendances
                   </h2>
                   {canEdit && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => setShowAddRelation(!showAddRelation)}>
+                    <Button type="button" variant="bordered" size="sm" onClick={() => setShowAddRelation(!showAddRelation)}>
                       <Plus className="w-4 h-4 mr-1" /> Ajouter
                     </Button>
                   )}

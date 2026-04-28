@@ -223,7 +223,7 @@ export function SpaceExportButton({ items, spaceName, viewContainerRef }: SpaceE
 
   return (
     <div className="relative" ref={ref}>
-      <Button variant="outline" size="sm" onClick={() => setOpen(!open)} title="Exporter">
+      <Button variant="bordered" size="sm" onClick={() => setOpen(!open)} title="Exporter">
         <Download className="w-4 h-4 mr-1" />
         Exporter
       </Button>

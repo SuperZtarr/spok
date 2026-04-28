@@ -157,7 +157,7 @@ export function SpacesPage() {
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
+          <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
             <Download className="w-4 h-4 mr-1.5" />
             CSV
           </Button>
@@ -330,17 +330,17 @@ export function SpacesPage() {
                 Page {page} sur {totalPages}
               </p>
               <div className="flex items-center gap-1">
-                <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page === 1} className="h-8 w-8 p-0">
+                <Button variant="bordered" size="sm" onClick={() => setPage(1)} disabled={page === 1} className="h-8 w-8 p-0">
                   <ChevronLeft className="w-4 h-4" /><ChevronLeft className="w-4 h-4 -ml-2.5" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 w-8 p-0">
+                <Button variant="bordered" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 w-8 p-0">
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm px-3">{page} / {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 w-8 p-0">
+                <Button variant="bordered" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 w-8 p-0">
                   <ChevronRight className="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page === totalPages} className="h-8 w-8 p-0">
+                <Button variant="bordered" size="sm" onClick={() => setPage(totalPages)} disabled={page === totalPages} className="h-8 w-8 p-0">
                   <ChevronRight className="w-4 h-4" /><ChevronRight className="w-4 h-4 -ml-2.5" />
                 </Button>
               </div>

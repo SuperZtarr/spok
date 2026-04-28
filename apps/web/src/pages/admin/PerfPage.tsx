@@ -56,10 +56,10 @@ export function PerfPage() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'perf'] })}>
+          <Button variant="bordered" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'perf'] })}>
             <RefreshCw className="w-4 h-4 mr-1" /> Actualiser
           </Button>
-          <Button variant="outline" size="sm" onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending}>
+          <Button variant="bordered" size="sm" onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending}>
             <Trash2 className="w-4 h-4 mr-1" /> Vider
           </Button>
         </div>

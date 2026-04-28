@@ -357,7 +357,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               {availableCommunities.length > 0 && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="bordered"
                   onClick={() => setShowAddCommunity(!showAddCommunity)}
                 >
                   <Plus className="w-4 h-4 mr-1" />
@@ -392,7 +392,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="bordered"
                     onClick={() => {
                       setShowAddCommunity(false);
                       setSelectedCommunityId('');
@@ -443,7 +443,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               {availableSpaces.length > 0 && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="bordered"
                   onClick={() => setShowAddSpace(!showAddSpace)}
                 >
                   <Plus className="w-4 h-4 mr-1" />
@@ -479,7 +479,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="bordered"
                     onClick={() => {
                       setShowAddSpace(false);
                       setSelectedSpaceId('');

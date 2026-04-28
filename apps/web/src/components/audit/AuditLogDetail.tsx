@@ -210,7 +210,7 @@ export function AuditLogDetail({
 
         {/* Footer */}
         <div className="flex justify-end gap-2 p-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose}>
             Fermer
           </Button>
           {canRestore(log.action) && (

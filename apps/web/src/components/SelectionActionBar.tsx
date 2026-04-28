@@ -30,7 +30,7 @@ export function SelectionActionBar({
 
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          variant="bordered"
           size="sm"
           onClick={onMoveToSpace}
           title="Déplacer vers un autre espace"
@@ -40,7 +40,7 @@ export function SelectionActionBar({
         </Button>
 
         <Button
-          variant="outline"
+          variant="bordered"
           size="sm"
           onClick={onDuplicateToSpace}
           title="Dupliquer vers un espace"
@@ -51,7 +51,7 @@ export function SelectionActionBar({
 
         {onBulkStatusChange && (
           <Button
-            variant="outline"
+            variant="bordered"
             size="sm"
             onClick={() => onBulkStatusChange('done')}
             title="Marquer comme terminé"
@@ -63,7 +63,7 @@ export function SelectionActionBar({
 
         {onBulkDelete && (
           <Button
-            variant="outline"
+            variant="bordered"
             size="sm"
             onClick={onBulkDelete}
             className="text-destructive hover:text-destructive"
