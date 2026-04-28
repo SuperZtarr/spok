@@ -224,10 +224,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.prisma.item.count({ where }),
       ]);
 
+      const since60days = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+
       return {
         data: items.map((item: any) => {
           const viewedAt = item.views?.[0]?.viewedAt ?? null;
-          const isUnseen = userId
+          const updatedByOther = item.updatedById && item.updatedById !== userId;
+          const recentUpdate = new Date(item.updatedAt) >= since60days;
+          const isUnseen = userId && updatedByOther && recentUpdate
             ? !viewedAt || new Date(item.updatedAt) > new Date(viewedAt)
             : false;
           const { views, ...rest } = item;
