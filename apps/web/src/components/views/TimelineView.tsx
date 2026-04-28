@@ -776,7 +776,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           relationDrag && relationDragTargetIdx === itemIndex && item.id !== relationDrag.fromItemId
                             ? 'ring-2 ring-green-500 shadow-xl'
                             : ''
-                        } ${(item as any).isUnseen ? 'animate-unseen-blink' : ''}`}
+                        } ${(() => { const v = (item as any).viewedAt; return (v === null || (v && new Date(item.updatedAt) > new Date(v))) ? 'animate-unseen-blink' : ''; })()}`}
                         style={{
                           left: barStyle.left + 1,
                           width: barStyle.width,

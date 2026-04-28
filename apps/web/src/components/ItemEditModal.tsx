@@ -262,12 +262,15 @@ export function ItemEditModal({
   // different item is opened.
   const initializedItemIdRef = useRef<string | null>(null);
 
-  // Mark item as viewed when opening (fire-and-forget for activity feed)
+  // Capture viewedAt from the list snapshot BEFORE marking as viewed
+  const viewedAtRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     if (isOpen && itemId) {
+      const fromList = allItems.find(i => i.id === itemId);
+      viewedAtRef.current = (fromList as any)?.viewedAt ?? null;
       activityApi.markViewed(itemId).catch(() => {});
     }
-  }, [isOpen, itemId]);
+  }, [isOpen, itemId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset the tracker whenever the requested item changes
   useEffect(() => {
@@ -860,8 +863,11 @@ export function ItemEditModal({
                   const renderContribution = (contribution: typeof allContribs[number], depth: number) => {
                     const children = childrenMap.get(contribution.id) || [];
                     const isReplying = replyToContributionId === contribution.id;
+                    const vAt = viewedAtRef.current;
+                    const isNewContrib = vAt === null
+                      || (vAt && new Date(contribution.createdAt) > new Date(vAt));
                     return (
-                      <div key={contribution.id} className={depth > 0 ? 'ml-6 border-l-2 border-border pl-3' : ''}>
+                      <div key={contribution.id} className={`${depth > 0 ? 'ml-6 border-l-2 border-border pl-3' : ''} ${isNewContrib ? 'bg-blue-50/60 dark:bg-blue-950/20 rounded-md px-2 -mx-2' : ''}`}>
                         <div className="py-2">
                           {editingContributionId === contribution.id ? (
                             <div className="space-y-2">
@@ -881,6 +887,9 @@ export function ItemEditModal({
                                 <span className="font-medium">{contribution.author.name}</span>
                                 <span>·</span>
                                 <span>{new Date(contribution.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                {isNewContrib && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Nouveau</span>
+                                )}
                                 <ReactionBar
                                   spaceId={spaceId}
                                   itemId={item.id}

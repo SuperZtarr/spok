@@ -90,6 +90,12 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Touch item.updatedAt so it appears as unseen for other members
+    await fastify.prisma.item.update({
+      where: { id: request.params.id },
+      data: { updatedAt: new Date(), updatedById: request.user.userId },
+    });
+
     // Audit log
     await createAuditLog(fastify.prisma, {
       action: 'CREATE',

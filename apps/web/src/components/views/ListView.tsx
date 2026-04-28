@@ -261,7 +261,8 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
               const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
               const isUrgent = item.priority === 4;
-              const isUnseen = (item as any).isUnseen === true;
+              const _viewedAt = (item as any).viewedAt;
+              const isUnseen = _viewedAt === null || (_viewedAt && new Date(item.updatedAt) > new Date(_viewedAt));
 
               return (
                 <div

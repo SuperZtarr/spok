@@ -6,6 +6,13 @@
 
 ## EN COURS — 2026-04-28
 
+### Contributions non lues + viewedAt (2026-04-28)
+- API items : isUnseen boolean → viewedAt (string|null), exposé seulement si updatedByOther+recent
+- API item-contributions POST : touch item.updatedAt+updatedById au moment de créer une contribution
+- shared type Item : isUnseen → viewedAt
+- ListView, KanbanView, MindMap, TimelineView : isUnseen calculé depuis viewedAt
+- ItemEditModal : snapshot viewedAt avant ouverture (ref), contributions nouvelles surlignées en bleu + badge "Nouveau"
+
 ### PWA icône écran d'accueil (2026-04-28)
 - icon-512.png régénéré depuis icon-192.png (hub design)
 - sw.js : CACHE_NAME spok-v1 → spok-v2 (force invalidation cache sur téléphone)

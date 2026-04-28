@@ -231,16 +231,17 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           const viewedAt = item.views?.[0]?.viewedAt ?? null;
           const updatedByOther = item.updatedById && item.updatedById !== userId;
           const recentUpdate = new Date(item.updatedAt) >= since60days;
-          const isUnseen = userId && updatedByOther && recentUpdate
-            ? !viewedAt || new Date(item.updatedAt) > new Date(viewedAt)
-            : false;
+          // Expose viewedAt only when item was updated by someone else recently
+          const exposedViewedAt = userId && updatedByOther && recentUpdate
+            ? (viewedAt ? viewedAt.toISOString() : null)
+            : null;
           const { views, ...rest } = item;
           return {
             ...rest,
             tags: item.tags.map((t: any) => t.tag),
             childCount: item._count.children,
             contributionCount: item._count.contributions,
-            isUnseen,
+            viewedAt: exposedViewedAt,
             ...(includeContributions && item.contributions ? { contributions: item.contributions } : {}),
           };
         }),

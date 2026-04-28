@@ -23,7 +23,7 @@ export interface Item {
   assignedToId?: string | null;
   parentId?: string | null;
   tags?: Tag[];
-  isUnseen?: boolean;
+  viewedAt?: string | null;
 }
 
 export interface MoveItemInput {
