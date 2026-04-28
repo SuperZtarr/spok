@@ -6,6 +6,22 @@
 
 ## EN COURS — 2026-04-28
 
+### PWA icône écran d'accueil (2026-04-28)
+- icon-512.png régénéré depuis icon-192.png (hub design)
+- sw.js : CACHE_NAME spok-v1 → spok-v2 (force invalidation cache sur téléphone)
+
+### Navigation espaces → defaultView (2026-04-28)
+- SpacePage useEffect : suppression garde `!space.defaultView` → toujours appliquer la vue (fallback 'list')
+- CommunityPage : suppression `onClick={() => setMode('overview')}` sur SpaceCards (écrasait le defaultView)
+- HomeView : SpaceCard `to` changé de `/spaces/:id/overview` → `/spaces/:id` (applique defaultView via SpacePage)
+
+### Refonte header — GlobalNavBar (2026-04-28)
+- Header 2 lignes : ligne 1 (h-12) titre + recherche + notifs + bouton profil ; ligne 2 barre de nav globale
+- GlobalNavBar.tsx : boutons groupés par section (Global / Personnel / Administration) — même style visuel que SpaceToolbar
+- MainMenu.tsx : retiré du Layout (conservé dans le projet mais non utilisé)
+- Sections exclues : basic/itemTypes/planning/exploration (restent dans SpaceToolbar) + misc (logout/search/profile gérés ailleurs)
+- Badge activité sur le bouton Activité ; admin en rouge uniquement si adminMode actif
+
 ### Composants cards + items non lus (2026-04-28)
 - Statuts : Non défini=indigo, Annulé=rose, fix lookup '' → 'undefined' dans buildStatusColorMap/LabelMap
 - Button : variant `bordered` (border-gray-400 + bg-secondary)

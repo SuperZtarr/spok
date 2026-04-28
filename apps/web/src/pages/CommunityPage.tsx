@@ -5,7 +5,6 @@ import { Users, FolderOpen, Settings, Globe, Lock, Crown, User } from 'lucide-re
 import { communitiesApi, spacesApi, activityApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
-import { useViewModeStore } from '../stores/viewMode';
 import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
 import { SpaceCard } from '../components/ui/SpaceCard';
@@ -24,7 +23,7 @@ function SpaceTreeNode({ node, depth = 0, activityBySpace }: { node: any; depth?
     return (
       <div className="col-span-full" style={{ paddingLeft: indent }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} activityCount={activityBySpace.get(node.id)} />
+          <SpaceCard space={node} onClick={undefined} activityCount={activityBySpace.get(node.id)} />
         </div>
       </div>
     );
@@ -33,7 +32,7 @@ function SpaceTreeNode({ node, depth = 0, activityBySpace }: { node: any; depth?
     <div className="col-span-full">
       <div style={{ paddingLeft: indent }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <SpaceCard space={node} onClick={() => useViewModeStore.getState().setMode('overview')} activityCount={activityBySpace.get(node.id)} />
+          <SpaceCard space={node} onClick={undefined} activityCount={activityBySpace.get(node.id)} />
         </div>
       </div>
       <div className="mt-2">

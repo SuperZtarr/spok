@@ -93,7 +93,7 @@ export function LandingPage() {
     <div className="flex-1 overflow-auto bg-background text-foreground">
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-4 -mt-4 text-center">
-        <img src={logoUrl} alt="SPOK" className="mx-auto -mb-16 h-72 w-auto sm:h-96" />
+        <img src={logoUrl} alt="SPOK" className="mx-auto -mb-16 max-h-72 w-auto max-w-full sm:max-h-96" />
         <h1 className="text-5xl font-bold tracking-tight sm:text-6xl leading-none">
           SPOK
         </h1>

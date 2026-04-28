@@ -137,10 +137,10 @@ export function SpacePage() {
     return item.createdById === user?.id;
   }, [canEdit, space?.role, user?.id]);
 
-  // Apply space defaultView each time we enter a new space
+  // Apply space defaultView each time we enter a new space (fallback: 'list')
   useEffect(() => {
-    if (!space || space.id !== spaceId || !space.defaultView) return;
-    setMode(space.defaultView as Parameters<typeof setMode>[0]);
+    if (!space || space.id !== spaceId) return;
+    setMode((space.defaultView as Parameters<typeof setMode>[0]) || 'list');
   }, [spaceId, space?.id, space?.defaultView, setMode]);
 
   // Restrict views for VIEWER role

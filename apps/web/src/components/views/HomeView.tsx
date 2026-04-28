@@ -371,7 +371,7 @@ export function HomeView() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {favoriteSpaces.map(space => (
-                <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} to={`/spaces/${space.id}/overview`} />
+                <SpaceCard key={space.id} space={space} activityCount={activityBySpace.get(space.id)} to={`/spaces/${space.id}`} />
               ))}
             </div>
           </section>

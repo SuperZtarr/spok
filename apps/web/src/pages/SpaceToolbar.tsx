@@ -167,6 +167,55 @@ export function SpaceToolbar({
 
   return (
     <div className="flex flex-col gap-2 mb-3 z-20 bg-background pb-2 flex-shrink-0 relative">
+
+      {/* View mode buttons row — filtered by admin menu config + role */}
+      {(() => {
+        const filteredViews = spaceViews.filter(
+          (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
+        );
+        const sectionMap = new Map<string, { sectionOrder: number; views: typeof filteredViews }>();
+        for (const v of filteredViews) {
+          if (!sectionMap.has(v.section)) {
+            sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
+          }
+          sectionMap.get(v.section)!.views.push(v);
+        }
+        const sections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
+        if (sections.length === 0) return null;
+        return (
+          <div className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
+            {sections.map((section, idx) => (
+              <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
+                  {section.views[0]?.sectionLabel}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  {section.views.map((v) => {
+                    const Icon = VIEW_ICON_MAP[v.icon];
+                    const isActive = viewMode === v.viewMode;
+                    return (
+                      <button
+                        key={v.key}
+                        onClick={() => onSetMode(v.viewMode as ViewMode)}
+                        title={v.label}
+                        className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`}
+                      >
+                        {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                        <span className="hidden sm:inline">{v.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       <div className="flex gap-1.5 flex-wrap items-center pb-1">
         {/* Mode indicator */}
         {isHighlightMode ? (
@@ -397,54 +446,6 @@ export function SpaceToolbar({
         </div>
       </div>
 
-      {/* View mode buttons row — filtered by admin menu config + role */}
-      {(() => {
-        const filteredViews = spaceViews.filter(
-          (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
-        );
-        // Group by section, preserving order
-        const sectionMap = new Map<string, { sectionOrder: number; views: typeof filteredViews }>();
-        for (const v of filteredViews) {
-          if (!sectionMap.has(v.section)) {
-            sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
-          }
-          sectionMap.get(v.section)!.views.push(v);
-        }
-        const sections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
-        if (sections.length === 0) return null;
-        return (
-          <div className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
-            {sections.map((section, idx) => (
-              <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
-                  {section.views[0]?.sectionLabel}
-                </span>
-                <div className="flex items-center gap-0.5">
-                  {section.views.map((v) => {
-                    const Icon = VIEW_ICON_MAP[v.icon];
-                    const isActive = viewMode === v.viewMode;
-                    return (
-                      <button
-                        key={v.key}
-                        onClick={() => onSetMode(v.viewMode as ViewMode)}
-                        title={v.label}
-                        className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-                          isActive
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                        }`}
-                      >
-                        {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
-                        <span className="hidden sm:inline">{v.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
     </div>
   );
 }

@@ -12,11 +12,10 @@ import { DevModeToggle, AdminModeToggle, DevDbStatus, useAdminMode } from './Dev
 import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
-// ViewModeSelector replaced by MainMenu
 import { UserProfileModal } from './UserProfileModal';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
-import { MainMenu } from './MainMenu';
+import { GlobalNavBar } from './GlobalNavBar';
 import { useViewModeStore } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
@@ -997,7 +996,9 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="border-b border-border bg-card flex items-stretch flex-shrink-0 h-12">
+        <header className="border-b border-border bg-card flex flex-col flex-shrink-0">
+          {/* Row 1: title + right controls */}
+          <div className="flex items-stretch h-12">
           {/* Left: hamburger + title + badges */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 flex-shrink-0">
             {/* Hamburger menu (mobile) */}
@@ -1040,12 +1041,10 @@ export function Layout() {
             </div>
           </div>
 
-          {/* Menu principal — masqué sur mobile (navigation via sidebar), visible md+ */}
-          <div className="hidden md:flex flex-1 items-stretch min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-            <MainMenu onOpenProfile={() => setIsProfileOpen(true)} currentSpaceName={currentSpace?.name || null} currentCommunityId={currentCommunityId} currentCommunityName={currentCommunity?.name || null} />
-          </div>
+          {/* Spacer */}
+          <div className="flex-1 min-w-0" />
 
-          {/* Right: Quick add + Recherche + Notifications */}
+          {/* Right: Quick add + Recherche + Notifications + Profil */}
           <div className="flex items-center gap-2 flex-shrink-0 px-4 md:px-5">
             {user && !currentSpaceId && mySpaces.length > 0 && (
               <button
@@ -1062,7 +1061,22 @@ export function Layout() {
             )}
             <div id="header-global-search" className="hidden sm:block"><GlobalSearch /></div>
             {user ? (
-              <NotificationBell />
+              <>
+                <NotificationBell />
+                <button
+                  onClick={() => setIsProfileOpen(true)}
+                  title="Profil"
+                  className="flex items-center justify-center w-8 h-8 rounded-full hover:ring-2 hover:ring-primary/40 transition-all flex-shrink-0"
+                >
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-muted border border-border flex items-center justify-center">
+                      <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                  )}
+                </button>
+              </>
             ) : (
               <div className="flex items-center gap-3">
                 <Link to="/login" className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors">Connexion</Link>
@@ -1070,6 +1084,10 @@ export function Layout() {
               </div>
             )}
           </div>
+          </div>{/* end row 1 */}
+
+          {/* Row 2: Global navigation bar */}
+          {!isAuthPage && <GlobalNavBar />}
         </header>
 
         {/* Page content */}
