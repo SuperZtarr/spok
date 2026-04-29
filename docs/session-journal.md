@@ -4,12 +4,17 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-04-28
+## EN COURS — 2026-04-29
 
-### Menu contextuel — à reprendre
-- Ordre voulu : 1. Ouvrir 2. Ouvrir dans un nouvel onglet 3. Modifier 4. Supprimer 5. Ajouter un enfant
-- Groupe suivant (ordre à définir) : Déplacer, Dupliquer, Absorber, Éclater, Fusionner, Convertir en espace, M'assigner, Marquer terminé
-- Implémenté : labels 1-3 dans itemMenuGroups.ts, reste à faire : callback onOpen (navigate onglet actuel), restructuration groupes, propagation dans vues + SpacePage
+### Menu contextuel — terminé (c6af110)
+- 5 groupes : Ouvrir (Ouvrir / Ouvrir dans un nouvel onglet) / Modifier (Modifier, Absorber, Éclater, Fusionner) / [sep] M'assigner, Marquer terminé, Déplacer / Ajouter (Ajouter un enfant, Dupliquer) / Autres (Convertir en espace, Supprimer)
+- onOpen (navigate onglet actuel) propagé dans 17 vues + SpacePage + space-tree-view
+- space-tree-view migré vers buildItemMenuGroups
+
+### Vignette utilisateur + toggles admin/dev (9c271cc 2026-04-29)
+- Header : icône user → vignette nom+avatar
+- Sidebar footer : suppression vignette
+- UserProfileModal : AdminModeToggle + DevModeToggle + DevDbStatus déplacés
 
 ### Contributions non lues + viewedAt (2026-04-28)
 - API items : isUnseen boolean → viewedAt (string|null), exposé seulement si updatedByOther+recent — ac493b3

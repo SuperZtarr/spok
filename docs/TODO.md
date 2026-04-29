@@ -17,7 +17,7 @@
 - [x] Menu contextuel : permissions canEdit (MEMBER voit edit/ouvrir, pas delete/move) — 2026-04-25
 - [x] SpaceContentRedirect : préserver les query params (?item=) — 2026-04-25
 - [x] Toolbar espace : sélecteur de vues (boutons par section, filtrés par config admin menu) — 2026-04-25
-- [ ] Menu contextuel : revoir ordre et libellés — 1.Ouvrir 2.Ouvrir dans un nouvel onglet 3.Modifier 4.Supprimer 5.Ajouter un enfant ; groupe suivant : Déplacer, Dupliquer, Absorber, Éclater, Fusionner, Convertir en espace, M'assigner, Marquer terminé
+- [x] Menu contextuel : revoir ordre et libellés — 5 groupes, onOpen navigate onglet actuel — c6af110 (2026-04-29)
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
@@ -53,7 +53,7 @@
 - [ ] Connexion calendrier messagerie (Outlook/Hotmail, Gmail) : pousser des RDV (items MEETING) et récupérer les événements via Microsoft Graph API / Google Calendar API
 
 ### MCP SPOK
-- [ ] MCP : ajouter create_space et create_community (actuellement limité aux items)
+- [x] MCP : CRUD complet items, espaces, communautés (15 outils) — 65800d7 (2026-04-29)
 
 ## Idées (à explorer)
 

@@ -649,28 +649,6 @@ export function Layout() {
         </button>
       </div>
 
-      {/* Community header when in immersive mode */}
-      {currentCommunity && (
-        <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground mb-1.5 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Toutes les communautés</span>
-          </button>
-          <Link to={`/communities/${currentCommunity.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            {currentCommunity.avatarUrl ? (
-              <img src={currentCommunity.avatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-4 h-4 text-primary" />
-              </div>
-            )}
-            <span className="text-sm font-semibold truncate">{currentCommunity.name}</span>
-          </Link>
-        </div>
-      )}
 
       {/* Navigation globale — visible uniquement sur mobile (md: le menu header prend le relais) */}
       <div className="md:hidden border-b border-border/50 px-3 py-2 flex-shrink-0">
@@ -733,9 +711,23 @@ export function Layout() {
 
             {/* Community spaces tree */}
             <div className="pt-1.5">
-              <div className="flex items-center justify-between px-2 mb-1">
-                <span className="text-base font-bold text-foreground">Espaces</span>
-              </div>
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground mb-1.5 transition-colors px-2"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Toutes les communautés</span>
+              </button>
+              <Link to={`/communities/${currentCommunity.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity px-2 mb-2">
+                {currentCommunity.avatarUrl ? (
+                  <img src={currentCommunity.avatarUrl} alt="" className="w-6 h-6 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                )}
+                <span className="text-base font-bold text-foreground truncate">{currentCommunity.name}</span>
+              </Link>
               {currentCommunityGroup.spaceTree.length > 0 ? (
                 currentCommunityGroup.spaceTree.map((node) => (
                   <SpaceTreeItem
