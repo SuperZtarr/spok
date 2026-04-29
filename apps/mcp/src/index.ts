@@ -156,6 +156,253 @@ server.tool(
   }
 );
 
+// ─── list_items ───────────────────────────────────────────────────────────────
+
+server.tool(
+  'list_items',
+  'Liste les items d\'un espace SPOK avec filtres optionnels.',
+  {
+    spaceId: z.string().describe('ID de l\'espace'),
+    type: z.string().optional().describe('Filtrer par type (NOTE, TASK, PROJECT…)'),
+    status: z.string().optional().describe('Filtrer par statut (todo, in_progress, done…)'),
+    parentId: z.string().optional().describe('Filtrer par parent (null = racine)'),
+    pageSize: z.number().optional().default(100).describe('Nombre max de résultats (défaut 100)'),
+    page: z.number().optional().default(1).describe('Page (défaut 1)'),
+  },
+  async ({ spaceId, type, status, parentId, pageSize, page }) => {
+    const params = new URLSearchParams({ pageSize: String(pageSize), page: String(page) });
+    if (type) params.set('type', type);
+    if (status) params.set('status', status);
+    if (parentId) params.set('parentId', parentId);
+
+    const data = await api.get(`/spaces/${spaceId}/items?${params}`);
+    const items = data.data ?? data.items ?? data ?? [];
+
+    const lines = items.map((item: any) =>
+      `[${item.id}] [${item.type}] ${item.title}${item.status ? ` | ${item.status}` : ''}${item.parentId ? ` | parent: ${item.parentId}` : ''}`
+    );
+
+    return {
+      content: [{ type: 'text', text: lines.length > 0 ? `${lines.length} item(s) :\n\n${lines.join('\n')}` : 'Aucun item.' }],
+    };
+  }
+);
+
+// ─── update_item ──────────────────────────────────────────────────────────────
+
+server.tool(
+  'update_item',
+  'Met à jour un item SPOK (titre, description, statut, priorité, type, dates, url, parentId).',
+  {
+    spaceId: z.string().describe('ID de l\'espace'),
+    itemId: z.string().describe('ID de l\'item'),
+    title: z.string().optional().describe('Nouveau titre'),
+    description: z.string().optional().describe('Nouvelle description (texte brut)'),
+    status: z.string().optional().describe('Nouveau statut'),
+    priority: z.number().int().min(1).max(4).optional().describe('Priorité 1-4'),
+    type: z.string().optional().describe('Nouveau type'),
+    dueDate: z.string().optional().describe('Date d\'échéance ISO 8601'),
+    startDate: z.string().optional().describe('Date de début ISO 8601'),
+    endDate: z.string().optional().describe('Date de fin ISO 8601'),
+    url: z.string().optional().describe('URL associée'),
+    parentId: z.string().nullable().optional().describe('Nouveau parent (null = racine)'),
+  },
+  async ({ spaceId, itemId, description, ...fields }) => {
+    const body: Record<string, unknown> = { ...fields };
+    if (description !== undefined) body.description = textToTiptap(description);
+
+    const item = await api.patch(`/spaces/${spaceId}/items/${itemId}`, body);
+
+    return {
+      content: [{ type: 'text', text: `Item mis à jour : [${item.id}] ${item.title}` }],
+    };
+  }
+);
+
+// ─── delete_item ──────────────────────────────────────────────────────────────
+
+server.tool(
+  'delete_item',
+  'Supprime un item SPOK.',
+  {
+    spaceId: z.string().describe('ID de l\'espace'),
+    itemId: z.string().describe('ID de l\'item'),
+    deleteChildren: z.boolean().optional().default(false).describe('Supprimer aussi les enfants (défaut false)'),
+  },
+  async ({ spaceId, itemId, deleteChildren }) => {
+    const qs = deleteChildren ? '?deleteChildren=true' : '';
+    await api.delete(`/spaces/${spaceId}/items/${itemId}${qs}`);
+    return {
+      content: [{ type: 'text', text: `Item ${itemId} supprimé.` }],
+    };
+  }
+);
+
+// ─── create_space ─────────────────────────────────────────────────────────────
+
+server.tool(
+  'create_space',
+  'Crée un espace SPOK dans une communauté.',
+  {
+    name: z.string().describe('Nom de l\'espace'),
+    communityId: z.string().describe('ID de la communauté parente'),
+    parentId: z.string().optional().describe('ID de l\'espace parent (pour sous-espace)'),
+    description: z.string().optional().describe('Description de l\'espace'),
+    visibility: z.enum(['PRIVATE', 'OPEN', 'READONLY']).optional().default('PRIVATE').describe('Visibilité'),
+  },
+  async ({ name, communityId, parentId, description, visibility }) => {
+    const body: Record<string, unknown> = { name, communityId, visibility };
+    if (parentId) body.parentId = parentId;
+    if (description) body.description = description;
+
+    const space = await api.post('/spaces', body);
+    return {
+      content: [{ type: 'text', text: `Espace créé : [${space.id}] ${space.name}` }],
+    };
+  }
+);
+
+// ─── update_space ─────────────────────────────────────────────────────────────
+
+server.tool(
+  'update_space',
+  'Met à jour un espace SPOK (nom, description, visibilité).',
+  {
+    spaceId: z.string().describe('ID de l\'espace'),
+    name: z.string().optional().describe('Nouveau nom'),
+    description: z.string().optional().describe('Nouvelle description'),
+    visibility: z.enum(['PRIVATE', 'OPEN', 'READONLY']).optional().describe('Nouvelle visibilité'),
+  },
+  async ({ spaceId, ...fields }) => {
+    const space = await api.patch(`/spaces/${spaceId}`, fields);
+    return {
+      content: [{ type: 'text', text: `Espace mis à jour : [${space.id}] ${space.name}` }],
+    };
+  }
+);
+
+// ─── delete_space ─────────────────────────────────────────────────────────────
+
+server.tool(
+  'delete_space',
+  'Supprime un espace SPOK.',
+  {
+    spaceId: z.string().describe('ID de l\'espace'),
+  },
+  async ({ spaceId }) => {
+    await api.delete(`/spaces/${spaceId}`);
+    return {
+      content: [{ type: 'text', text: `Espace ${spaceId} supprimé.` }],
+    };
+  }
+);
+
+// ─── list_communities ─────────────────────────────────────────────────────────
+
+server.tool(
+  'list_communities',
+  'Liste les communautés SPOK accessibles.',
+  {},
+  async () => {
+    const data = await api.get('/communities');
+    const communities = Array.isArray(data) ? data : (data.communities ?? data.data ?? []);
+
+    const lines = communities.map((c: any) =>
+      `[${c.id}] ${c.name}${c.description ? ` — ${c.description}` : ''}${c.isPublic ? ' (publique)' : ''}`
+    );
+
+    return {
+      content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucune communauté.' }],
+    };
+  }
+);
+
+// ─── get_community ────────────────────────────────────────────────────────────
+
+server.tool(
+  'get_community',
+  'Retourne le détail d\'une communauté SPOK et ses espaces.',
+  {
+    communityId: z.string().describe('ID de la communauté'),
+  },
+  async ({ communityId }) => {
+    const [community, spacesData] = await Promise.all([
+      api.get(`/communities/${communityId}`),
+      api.get(`/spaces?communityId=${communityId}`),
+    ]);
+
+    const spaces = Array.isArray(spacesData) ? spacesData : (spacesData.spaces ?? spacesData.data ?? []);
+
+    const lines = [
+      `# ${community.name}`,
+      community.description ? `Description : ${community.description}` : null,
+      `Visibilité : ${community.isPublic ? 'Publique' : 'Privée'}`,
+      `Espaces (${spaces.length}) :`,
+      ...spaces.map((s: any) => `  [${s.id}] ${s.name}${s.parentId ? ` (parent: ${s.parentId})` : ''}`),
+    ].filter(Boolean);
+
+    return {
+      content: [{ type: 'text', text: lines.join('\n') }],
+    };
+  }
+);
+
+// ─── create_community ─────────────────────────────────────────────────────────
+
+server.tool(
+  'create_community',
+  'Crée une communauté SPOK.',
+  {
+    name: z.string().describe('Nom de la communauté'),
+    description: z.string().optional().describe('Description'),
+    isPublic: z.boolean().optional().default(false).describe('Communauté publique (défaut false)'),
+  },
+  async ({ name, description, isPublic }) => {
+    const body: Record<string, unknown> = { name, isPublic };
+    if (description) body.description = description;
+
+    const community = await api.post('/communities', body);
+    return {
+      content: [{ type: 'text', text: `Communauté créée : [${community.id}] ${community.name}` }],
+    };
+  }
+);
+
+// ─── update_community ─────────────────────────────────────────────────────────
+
+server.tool(
+  'update_community',
+  'Met à jour une communauté SPOK (nom, description, visibilité).',
+  {
+    communityId: z.string().describe('ID de la communauté'),
+    name: z.string().optional().describe('Nouveau nom'),
+    description: z.string().optional().describe('Nouvelle description'),
+    isPublic: z.boolean().optional().describe('Rendre publique ou privée'),
+  },
+  async ({ communityId, ...fields }) => {
+    const community = await api.patch(`/communities/${communityId}`, fields);
+    return {
+      content: [{ type: 'text', text: `Communauté mise à jour : [${community.id}] ${community.name}` }],
+    };
+  }
+);
+
+// ─── delete_community ─────────────────────────────────────────────────────────
+
+server.tool(
+  'delete_community',
+  'Supprime une communauté SPOK.',
+  {
+    communityId: z.string().describe('ID de la communauté'),
+  },
+  async ({ communityId }) => {
+    await api.delete(`/communities/${communityId}`);
+    return {
+      content: [{ type: 'text', text: `Communauté ${communityId} supprimée.` }],
+    };
+  }
+);
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function extractText(description: any): string {
