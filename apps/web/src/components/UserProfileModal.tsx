@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth';
 import { usePasteUpload } from '../hooks/usePasteUpload';
 import type { AuthUser, NotificationType, NotificationChannel } from '@spok/shared';
 import { useThemeStore } from '../stores/theme';
+import { AdminModeToggle, DevModeToggle, DevDbStatus } from './DevDbStatus';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -378,6 +379,13 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               Réinitialiser tous les tutoriels
             </button>
           </div>
+        </div>
+
+        {/* Mode admin / dev */}
+        <div className="pt-4 border-t border-border space-y-2">
+          <AdminModeToggle />
+          <DevModeToggle />
+          <DevDbStatus />
         </div>
 
         {/* Communautés */}
