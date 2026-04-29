@@ -173,7 +173,7 @@ Conditions d'affichage, états, variantes.
 | `cmnq9ctvy00ao5yz2ugz3dicd` | En-tête [Header] |
 | `cmnq9c9zj00265yz2875z82fl` | Zone principale [Main] |
 | `cmnq9c7tx00185yz2sfznl4x3` | Barre latérale [Sidebar] |
-| `cmnq9ccfd00365yz2w5pke7oj` | Sécurité & Accès |
+| `cmnq9ccfd00365yz2w5pke7oj` | Sécurité & Accès (item parent, spaceId=cmnq9c5jr000s5yz2vthye9ws) |
 
 ### Modales & Overlays `cmmts8ab200ajwbfkewwrj2b6`
 | ID | Item |
