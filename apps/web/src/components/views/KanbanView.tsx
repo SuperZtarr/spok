@@ -56,6 +56,7 @@ interface KanbanViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
   referentiels?: SpaceReferentiels;
@@ -77,6 +78,7 @@ interface KanbanColumnProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
@@ -101,6 +103,7 @@ interface KanbanCardProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
@@ -115,7 +118,7 @@ interface KanbanCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, isDragging, nextStatus, nextStatusLabel, canEdit = true, canEditItem, referentiels, isFirstCard }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, nextStatus, nextStatusLabel, canEdit = true, canEditItem, referentiels, isFirstCard }: KanbanCardProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -218,6 +221,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             onMerge,
             onAbsorbChildren,
             onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
+            onOpen,
             onOpenInNewTab,
           }, {
             canEdit: canEditItem ? canEditItem(item) : canEdit,
@@ -236,7 +240,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, isOver, nextStatus, nextStatusLabel, canEdit, canEditItem, referentiels, isFirstColumn }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, nextStatus, nextStatusLabel, canEdit, canEditItem, referentiels, isFirstColumn }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -286,6 +290,8 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
             onSplitDescription={onSplitDescription}
+            onOpen={onOpen}
+
             onOpenInNewTab={onOpenInNewTab}
             nextStatus={nextStatus}
             nextStatusLabel={nextStatusLabel}
@@ -344,7 +350,8 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: KanbanViewProps) {
+export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
+            onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -525,6 +532,8 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                         onMerge={onMerge}
                         onAbsorbChildren={onAbsorbChildren}
                         onSplitDescription={onSplitDescription}
+                        onOpen={onOpen}
+
                         onOpenInNewTab={onOpenInNewTab}
                         isOver={overId === droppableId}
                         nextStatus={nextStatusMap[status.id]?.id}

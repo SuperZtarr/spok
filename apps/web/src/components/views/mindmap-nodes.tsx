@@ -183,7 +183,8 @@ export interface MindMapNodeProps {
     onMerge?: (id: string) => void;
     onAbsorbChildren?: (id: string) => void;
     onSplitDescription?: (id: string) => void;
-    onOpenInNewTab?: (id: string) => void;
+    onOpen?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
     doneStatusId: string;
     isRoot: boolean;
     hasChildren: boolean;
@@ -203,7 +204,7 @@ export interface MindMapNodeProps {
 }
 
 export function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
+  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type, item.url);
 
   return (
@@ -288,7 +289,8 @@ export function MindMapNode({ data }: MindMapNodeProps) {
               onMerge: canEdit ? onMerge : undefined,
               onAbsorbChildren: canEdit ? onAbsorbChildren : undefined,
               onSplitDescription: canEdit && hasHeadings(item.description) ? onSplitDescription : undefined,
-              onOpenInNewTab,
+              onOpen,
+            onOpenInNewTab,
             }, {
               statusAction: canEdit && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
               extraChildren: [

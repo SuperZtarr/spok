@@ -39,6 +39,7 @@ interface TimelineViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   spaceId?: string;
   referentiels?: SpaceReferentiels;
@@ -50,7 +51,7 @@ interface TimelineViewProps {
   canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
@@ -737,7 +738,8 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                             onMerge,
                             onAbsorbChildren,
                             onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
-                            onOpenInNewTab,
+                            onOpen,
+            onOpenInNewTab,
                           }, {
                             canEdit: canEditItem ? canEditItem(item) : canEdit,
                             statusAction: item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,

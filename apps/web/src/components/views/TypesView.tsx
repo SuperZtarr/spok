@@ -41,6 +41,7 @@ interface TypesViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   onMoveItemToSpace?: (itemId: string, sourceSpaceId: string, targetSpaceId: string, updates?: { status?: string; type?: ItemType }) => void;
@@ -69,6 +70,7 @@ interface TypeColumnProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
@@ -89,6 +91,7 @@ interface TypeCardProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
@@ -101,7 +104,7 @@ interface TypeCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, isDragging, statusLabels, statusColors, canEdit = true, canEditItem }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusLabels, statusColors, canEdit = true, canEditItem }: TypeCardProps) {
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -177,14 +180,15 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       {/* Action menu */}
       <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <ItemActionMenu
-          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpen,
+            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
         />
       </div>
     </div>
   );
 }
 
-function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, isOver, statusLabels, statusColors, canEdit, canEditItem }: TypeColumnProps) {
+function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, statusLabels, statusColors, canEdit, canEditItem }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -231,6 +235,8 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
             onSplitDescription={onSplitDescription}
+            onOpen={onOpen}
+
             onOpenInNewTab={onOpenInNewTab}
             statusLabels={statusLabels}
             statusColors={statusColors}
@@ -287,7 +293,8 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: TypesViewProps) {
+export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
+            onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -474,6 +481,8 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
                         onMerge={onMerge}
                         onAbsorbChildren={onAbsorbChildren}
                         onSplitDescription={onSplitDescription}
+                        onOpen={onOpen}
+
                         onOpenInNewTab={onOpenInNewTab}
                         isOver={overId === droppableId}
                         statusLabels={statusLabels}

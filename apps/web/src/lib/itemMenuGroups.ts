@@ -1,9 +1,11 @@
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink } from 'lucide-react';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 
 export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
 
 export interface ItemMenuCallbacks {
+  onOpen?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateStatus?: (id: string, status: string) => void;
@@ -15,7 +17,6 @@ export interface ItemMenuCallbacks {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
-  onOpenInNewTab?: (id: string) => void;
 }
 
 export interface ItemMenuOptions {
@@ -37,6 +38,8 @@ export function buildItemMenuGroups(
   options: ItemMenuOptions = {},
 ): ItemActionGroup[] {
   const {
+    onOpen,
+    onOpenInNewTab,
     onEdit,
     onDelete,
     onUpdateStatus,
@@ -48,40 +51,50 @@ export function buildItemMenuGroups(
     onMerge,
     onAbsorbChildren,
     onSplitDescription,
-    onOpenInNewTab,
   } = callbacks;
   const { statusAction, extraChildren = [], extraOrganise = [], extraSections = [], canEdit = true } = options;
 
-  // Groupe 1 : actions toujours visibles + actions d'écriture si canEdit
+  // Groupe 1 — Ouvrir (toujours visible)
   const group1: ItemAction[] = [
-    ...(onEdit ? [{ id: 'edit', label: 'Ouvrir', icon: Pencil, onClick: () => onEdit(itemId) }] : []),
+    ...(onOpen ? [{ id: 'open', label: 'Ouvrir', icon: Eye, onClick: () => onOpen(itemId) }] : []),
     ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
-    ...(canEdit && onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
-    ...(canEdit && onUpdateStatus && statusAction ? [{ id: 'status', label: statusAction.label, icon: CheckSquare, onClick: () => onUpdateStatus(itemId, statusAction.statusId) }] : []),
   ];
 
-  // Groupe 2 : enfants (write-only)
+  // Groupe 2 — Modifier (write) : Modifier, Absorber, Éclater, Fusionner
   const group2: ItemAction[] = canEdit ? [
-    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(itemId) }] : []),
+    ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(itemId) }] : []),
     ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(itemId) }] : []),
+    ...(onSplitDescription ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(itemId) }] : []),
+    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(itemId) }] : []),
+  ] : [];
+
+  // Groupe 3 — (séparateur) M'assigner, Marquer terminé, Déplacer
+  const group3: ItemAction[] = canEdit ? [
+    ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
+    ...(onUpdateStatus && statusAction ? [{ id: 'status', label: statusAction.label, icon: CheckSquare, onClick: () => onUpdateStatus(itemId, statusAction.statusId) }] : []),
+    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(itemId) }] : []),
+    ...extraOrganise,
+  ] : [];
+
+  // Groupe 4 — Ajouter : Ajouter un enfant, Dupliquer
+  const group4: ItemAction[] = canEdit ? [
+    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(itemId) }] : []),
+    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer vers...', icon: Copy, onClick: () => onDuplicateToSpace(itemId) }] : []),
     ...extraChildren,
   ] : [];
 
-  // Groupe 3 : organisation / déplacement (write-only)
-  const group3: ItemAction[] = canEdit ? [
-    ...(onSplitDescription ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(itemId) }] : []),
-    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(itemId) }] : []),
-    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer vers...', icon: Copy, onClick: () => onDuplicateToSpace(itemId) }] : []),
-    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(itemId) }] : []),
+  // Groupe 5 — Autres : Convertir en espace, Supprimer
+  const group5: ItemAction[] = canEdit ? [
     ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(itemId) }] : []),
-    ...extraOrganise,
+    ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(itemId), variant: 'danger' as const }] : []),
   ] : [];
 
   return [
     ...(group1.length > 0 ? [{ actions: group1 }] : []),
     ...(group2.length > 0 ? [{ actions: group2 }] : []),
     ...(group3.length > 0 ? [{ actions: group3 }] : []),
+    ...(group4.length > 0 ? [{ actions: group4 }] : []),
+    ...(group5.length > 0 ? [{ actions: group5 }] : []),
     ...extraSections.filter((s) => s.actions.length > 0),
-    ...(canEdit && onDelete ? [{ actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(itemId), variant: 'danger' as const }] }] : []),
   ];
 }

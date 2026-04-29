@@ -1,26 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import {
-  Plus,
-  CheckSquare,
   ChevronRight,
   ChevronDown,
-  Trash2,
   GripVertical,
   ExternalLink,
-  FolderInput,
-  Copy,
-  FolderPlus,
-  UserPlus,
-  Merge,
-  ArrowDownToLine,
-  Pencil,
-  Scissors,
 } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { itemsApi } from '../lib/api';
 import { Badge } from '../components/ui/Badge';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
+import { buildItemMenuGroups } from '../lib/itemMenuGroups';
 import { useSelectionStore } from '../stores/selection';
 import { getTypeIcon } from '../constants/ui';
 
@@ -60,6 +50,7 @@ export interface TreeItemProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   spaceId: string;
   isOver: boolean;
@@ -99,6 +90,7 @@ export function TreeItem({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpen,
   onOpenInNewTab,
   spaceId,
   isOver,
@@ -243,30 +235,24 @@ export function TreeItem({
         {canEdit !== false && (
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
             <ItemActionMenu
-              groups={[
-                {
-                  actions: [
-                    { id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(item.id) },
-                    ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(item.id) }] : []),
-                    ...(item.status && item.status !== 'done' ? [{ id: 'done', label: 'Marquer terminé', icon: CheckSquare, onClick: () => onUpdateStatus(item.id, 'done') }] : []),
-                    { id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(item.id) },
-                    ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(item.id) }] : []),
-                    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(item.id) }] : []),
-                    ...(onSplitDescription && item.description && /<h[2-3][^>]*>/i.test(item.description) ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(item.id) }] : []),
-                    ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(item.id) }] : []),
-                    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer', icon: Copy, onClick: () => onDuplicateToSpace(item.id) }] : []),
-                  ],
-                },
-                {
-                  actions: [
-                    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(item.id) }] : []),
-                    ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(item.id) }] : []),
-                  ],
-                },
-                {
-                  actions: [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(item.id), variant: 'danger' as const }],
-                },
-              ].filter(g => g.actions.length > 0)}
+              groups={buildItemMenuGroups(item.id, {
+                onOpen,
+                onOpenInNewTab,
+                onEdit,
+                onDelete,
+                onUpdateStatus,
+                onAddChild,
+                onAbsorbChildren,
+                onSplitDescription: onSplitDescription && item.description && /<h[2-3][^>]*>/i.test(item.description) ? onSplitDescription : undefined,
+                onMerge,
+                onSelfAssign,
+                onMoveToSpace,
+                onDuplicateToSpace,
+                onConvertToSpace,
+              }, {
+                statusAction: item.status && item.status !== 'done' ? { label: 'Marquer terminé', statusId: 'done' } : null,
+                canEdit: canEdit ?? true,
+              })}
             />
           </div>
         )}
@@ -296,6 +282,8 @@ export function TreeItem({
           onSelfAssign={onSelfAssign}
           onMerge={onMerge}
           onAbsorbChildren={onAbsorbChildren}
+          onOpen={onOpen}
+          onOpenInNewTab={onOpenInNewTab}
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
@@ -334,6 +322,7 @@ export function ItemChildren({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  onOpen,
   onOpenInNewTab,
   onMove,
   globalOverId,
@@ -366,6 +355,7 @@ export function ItemChildren({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
@@ -414,6 +404,7 @@ export function ItemChildren({
           onMerge={onMerge}
           onAbsorbChildren={onAbsorbChildren}
           onSplitDescription={onSplitDescription}
+          onOpen={onOpen}
           onOpenInNewTab={onOpenInNewTab}
           spaceId={spaceId}
           isOver={globalOverId === item.id}

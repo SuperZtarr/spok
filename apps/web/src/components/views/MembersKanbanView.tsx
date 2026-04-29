@@ -55,6 +55,7 @@ interface MembersKanbanViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
@@ -81,7 +82,7 @@ function MemberKanbanCard({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
-  onOpenInNewTab,
+  onOpen, onOpenInNewTab,
   isDragging,
   canEdit = true,
   canEditItem,
@@ -98,6 +99,7 @@ function MemberKanbanCard({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   isDragging?: boolean;
   canEdit?: boolean;
@@ -163,7 +165,8 @@ function MemberKanbanCard({
 
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <ItemActionMenu
-          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpen,
+            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
         />
       </div>
     </div>
@@ -188,7 +191,8 @@ function MemberColumnComponent({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
-  onOpenInNewTab,
+  onOpen,
+            onOpenInNewTab,
   canEdit,
   canEditItem,
   referentiels,
@@ -207,6 +211,7 @@ function MemberColumnComponent({
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
@@ -258,6 +263,8 @@ function MemberColumnComponent({
             onMerge={onMerge}
             onAbsorbChildren={onAbsorbChildren}
             onSplitDescription={onSplitDescription}
+            onOpen={onOpen}
+
             onOpenInNewTab={onOpenInNewTab}
             isDragging={item.id === draggedItemId}
             canEdit={canEdit}
@@ -330,7 +337,8 @@ export function MembersKanbanView({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
-  onOpenInNewTab,
+  onOpen,
+            onOpenInNewTab,
   onConvertToSpace,
   referentiels,
   canEdit = true,
@@ -521,6 +529,8 @@ export function MembersKanbanView({
                       onMerge={onMerge}
                       onAbsorbChildren={onAbsorbChildren}
                       onSplitDescription={onSplitDescription}
+                      onOpen={onOpen}
+
                       onOpenInNewTab={onOpenInNewTab}
                       canEdit={canEdit}
                       canEditItem={canEditItem}

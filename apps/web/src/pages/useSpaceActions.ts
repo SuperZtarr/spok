@@ -362,6 +362,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     splitMutation.mutate({ id, itemSpaceId });
   }, [resolveItemSpaceId, splitMutation]);
 
+  const handleOpen = useCallback((id: string) => {
+    const itemSpaceId = resolveItemSpaceId(id);
+    navigate(`/spaces/${itemSpaceId}/content?item=${id}`);
+  }, [resolveItemSpaceId, navigate]);
+
   const handleOpenInNewTab = useCallback((id: string) => {
     const itemSpaceId = resolveItemSpaceId(id);
     window.open(`/spaces/${itemSpaceId}/content?item=${id}`, '_blank');
@@ -417,7 +422,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     handleAbsorbChildren,
     // Split
     handleSplitDescription,
-    // Open in new tab
+    // Open
+    handleOpen,
     handleOpenInNewTab,
     // Reorder
     handleReorder,

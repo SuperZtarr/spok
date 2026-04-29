@@ -36,6 +36,7 @@ interface ListViewProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
@@ -100,7 +101,8 @@ function ImageThumbnail({ url }: { url: string }) {
 type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 'contributions';
 type SortDir = 'asc' | 'desc';
 
-export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, referentiels, canEdit = true, canEditItem }: ListViewProps) {
+export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
+            onOpenInNewTab, referentiels, canEdit = true, canEditItem }: ListViewProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -382,7 +384,8 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                           onMerge,
                           onAbsorbChildren,
                           onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
-                          onOpenInNewTab,
+                          onOpen,
+            onOpenInNewTab,
                         }, {
                           canEdit: canEditItem ? canEditItem(item) : canEdit,
                           statusAction: item.status && !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
