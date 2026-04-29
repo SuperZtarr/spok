@@ -186,7 +186,7 @@ export function SpaceToolbar({
           <div className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
             {sections.map((section, idx) => (
               <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
+                <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
                   {section.views[0]?.sectionLabel}
                 </span>
                 <div className="flex items-center gap-0.5">

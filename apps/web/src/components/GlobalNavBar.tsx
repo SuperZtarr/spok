@@ -47,7 +47,7 @@ export function GlobalNavBar() {
   };
 
   return (
-    <div className="flex items-start gap-3 overflow-x-auto scrollbar-none px-4 py-1.5 border-t border-border/50">
+    <div className="hidden md:flex items-start gap-3 overflow-x-auto scrollbar-none px-4 py-1.5 border-t border-border/50">
       {navSections.map(section => {
         const items = section.items.filter(item => !EXCLUDED_KEYS.has(item.key));
         if (items.length === 0) return null;
