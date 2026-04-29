@@ -403,6 +403,441 @@ server.tool(
   }
 );
 
+// ─── list_users ───────────────────────────────────────────────────────────────
+
+server.tool(
+  'list_users',
+  'Liste les utilisateurs SPOK.',
+  {
+    page: z.number().optional().default(1),
+    pageSize: z.number().optional().default(50),
+    search: z.string().optional().describe('Recherche par nom ou email'),
+  },
+  async ({ page, pageSize, search }) => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (search) params.set('search', search);
+    const data = await api.get(`/admin/users?${params}`);
+    const users = data.data ?? data.users ?? data ?? [];
+    const lines = users.map((u: any) =>
+      `[${u.id}] ${u.name} <${u.email}> | rôle: ${u.globalRole ?? 'USER'}${u.isActive === false ? ' | DÉSACTIVÉ' : ''}`
+    );
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucun utilisateur.' }] };
+  }
+);
+
+// ─── get_user ─────────────────────────────────────────────────────────────────
+
+server.tool(
+  'get_user',
+  'Retourne le détail d\'un utilisateur SPOK.',
+  { userId: z.string() },
+  async ({ userId }) => {
+    const u = await api.get(`/admin/users/${userId}`);
+    const lines = [
+      `[${u.id}] ${u.name} <${u.email}>`,
+      `Rôle global : ${u.globalRole ?? 'USER'}`,
+      `Actif : ${u.isActive !== false ? 'oui' : 'non'}`,
+      u.createdAt ? `Créé : ${u.createdAt}` : null,
+    ].filter(Boolean);
+    return { content: [{ type: 'text', text: lines.join('\n') }] };
+  }
+);
+
+// ─── update_user ──────────────────────────────────────────────────────────────
+
+server.tool(
+  'update_user',
+  'Met à jour un utilisateur (nom, email, rôle global, statut actif).',
+  {
+    userId: z.string(),
+    name: z.string().optional(),
+    email: z.string().optional(),
+    globalRole: z.enum(['USER', 'ADMIN']).optional(),
+    isActive: z.boolean().optional(),
+  },
+  async ({ userId, ...fields }) => {
+    const u = await api.patch(`/admin/users/${userId}`, fields);
+    return { content: [{ type: 'text', text: `Utilisateur mis à jour : [${u.id}] ${u.name}` }] };
+  }
+);
+
+// ─── delete_user ──────────────────────────────────────────────────────────────
+
+server.tool(
+  'delete_user',
+  'Supprime (désactive) un utilisateur SPOK.',
+  { userId: z.string() },
+  async ({ userId }) => {
+    await api.delete(`/admin/users/${userId}`);
+    return { content: [{ type: 'text', text: `Utilisateur ${userId} supprimé.` }] };
+  }
+);
+
+// ─── list_contributions ───────────────────────────────────────────────────────
+
+server.tool(
+  'list_contributions',
+  'Liste les contributions (commentaires) d\'un item.',
+  {
+    spaceId: z.string(),
+    itemId: z.string(),
+  },
+  async ({ spaceId, itemId }) => {
+    const data = await api.get(`/spaces/${spaceId}/items/${itemId}/contributions`);
+    const contributions = data.data ?? data ?? [];
+    const lines = contributions.map((c: any) =>
+      `[${c.id}] ${c.author?.name ?? '?'} (${c.createdAt?.slice(0, 10) ?? ''}) : ${extractText(c.content).slice(0, 120)}`
+    );
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucune contribution.' }] };
+  }
+);
+
+// ─── get_contribution ─────────────────────────────────────────────────────────
+
+server.tool(
+  'get_contribution',
+  'Retourne le détail d\'une contribution.',
+  { spaceId: z.string(), itemId: z.string(), contributionId: z.string() },
+  async ({ spaceId, itemId, contributionId }) => {
+    const data = await api.get(`/spaces/${spaceId}/items/${itemId}/contributions`);
+    const contributions = data.data ?? data ?? [];
+    const c = contributions.find((x: any) => x.id === contributionId);
+    if (!c) return { content: [{ type: 'text', text: 'Contribution non trouvée.' }] };
+    return { content: [{ type: 'text', text: `[${c.id}] ${c.author?.name ?? '?'}\n${extractText(c.content)}` }] };
+  }
+);
+
+// ─── create_contribution ──────────────────────────────────────────────────────
+
+server.tool(
+  'create_contribution',
+  'Ajoute une contribution (commentaire) à un item.',
+  {
+    spaceId: z.string(),
+    itemId: z.string(),
+    content: z.string().describe('Texte de la contribution'),
+  },
+  async ({ spaceId, itemId, content }) => {
+    const c = await api.post(`/spaces/${spaceId}/items/${itemId}/contributions`, {
+      content: textToTiptap(content),
+    });
+    return { content: [{ type: 'text', text: `Contribution créée : [${c.id}]` }] };
+  }
+);
+
+// ─── update_contribution ──────────────────────────────────────────────────────
+
+server.tool(
+  'update_contribution',
+  'Met à jour le contenu d\'une contribution.',
+  {
+    spaceId: z.string(),
+    itemId: z.string(),
+    contributionId: z.string(),
+    content: z.string(),
+  },
+  async ({ spaceId, itemId, contributionId, content }) => {
+    const c = await api.patch(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`, {
+      content: textToTiptap(content),
+    });
+    return { content: [{ type: 'text', text: `Contribution mise à jour : [${c.id}]` }] };
+  }
+);
+
+// ─── delete_contribution ──────────────────────────────────────────────────────
+
+server.tool(
+  'delete_contribution',
+  'Supprime une contribution.',
+  { spaceId: z.string(), itemId: z.string(), contributionId: z.string() },
+  async ({ spaceId, itemId, contributionId }) => {
+    await api.delete(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`);
+    return { content: [{ type: 'text', text: `Contribution ${contributionId} supprimée.` }] };
+  }
+);
+
+// ─── list_tags ────────────────────────────────────────────────────────────────
+
+server.tool(
+  'list_tags',
+  'Liste les tags SPOK.',
+  { communityId: z.string().optional().describe('Filtrer par communauté') },
+  async ({ communityId }) => {
+    const qs = communityId ? `?communityId=${communityId}` : '';
+    const data = await api.get(`/tags${qs}`);
+    const tags = Array.isArray(data) ? data : (data.data ?? []);
+    const lines = tags.map((t: any) => `[${t.id}] ${t.name}${t.color ? ` (${t.color})` : ''}`);
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucun tag.' }] };
+  }
+);
+
+// ─── get_tag ──────────────────────────────────────────────────────────────────
+
+server.tool(
+  'get_tag',
+  'Retourne le détail d\'un tag.',
+  { tagId: z.string() },
+  async ({ tagId }) => {
+    const t = await api.get(`/tags/${tagId}`);
+    return { content: [{ type: 'text', text: `[${t.id}] ${t.name}${t.color ? ` | couleur: ${t.color}` : ''}` }] };
+  }
+);
+
+// ─── create_tag ───────────────────────────────────────────────────────────────
+
+server.tool(
+  'create_tag',
+  'Crée un tag SPOK.',
+  {
+    name: z.string(),
+    color: z.string().optional().describe('Couleur hex ou nom'),
+    communityId: z.string().optional(),
+  },
+  async (body) => {
+    const t = await api.post('/tags', body);
+    return { content: [{ type: 'text', text: `Tag créé : [${t.id}] ${t.name}` }] };
+  }
+);
+
+// ─── update_tag ───────────────────────────────────────────────────────────────
+
+server.tool(
+  'update_tag',
+  'Met à jour un tag (nom, couleur).',
+  { tagId: z.string(), name: z.string().optional(), color: z.string().optional() },
+  async ({ tagId, ...fields }) => {
+    const t = await api.patch(`/tags/${tagId}`, fields);
+    return { content: [{ type: 'text', text: `Tag mis à jour : [${t.id}] ${t.name}` }] };
+  }
+);
+
+// ─── delete_tag ───────────────────────────────────────────────────────────────
+
+server.tool(
+  'delete_tag',
+  'Supprime un tag.',
+  { tagId: z.string() },
+  async ({ tagId }) => {
+    await api.delete(`/tags/${tagId}`);
+    return { content: [{ type: 'text', text: `Tag ${tagId} supprimé.` }] };
+  }
+);
+
+// ─── list_space_members ───────────────────────────────────────────────────────
+
+server.tool(
+  'list_space_members',
+  'Liste les membres d\'un espace.',
+  { spaceId: z.string() },
+  async ({ spaceId }) => {
+    const data = await api.get(`/spaces/${spaceId}/members`);
+    const members = Array.isArray(data) ? data : (data.data ?? []);
+    const lines = members.map((m: any) =>
+      `[${m.userId ?? m.user?.id}] ${m.user?.name ?? '?'} <${m.user?.email ?? '?'}> | ${m.role}`
+    );
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucun membre.' }] };
+  }
+);
+
+// ─── add_space_member ─────────────────────────────────────────────────────────
+
+server.tool(
+  'add_space_member',
+  'Ajoute un membre à un espace.',
+  {
+    spaceId: z.string(),
+    userId: z.string(),
+    role: z.enum(['OWNER', 'MEMBER', 'VIEWER']).default('MEMBER'),
+  },
+  async ({ spaceId, userId, role }) => {
+    const m = await api.post(`/spaces/${spaceId}/members`, { userId, role });
+    return { content: [{ type: 'text', text: `Membre ajouté : ${userId} (${role})` }] };
+  }
+);
+
+// ─── update_space_member ──────────────────────────────────────────────────────
+
+server.tool(
+  'update_space_member',
+  'Met à jour le rôle d\'un membre dans un espace.',
+  {
+    spaceId: z.string(),
+    userId: z.string(),
+    role: z.enum(['OWNER', 'MEMBER', 'VIEWER']),
+  },
+  async ({ spaceId, userId, role }) => {
+    await api.patch(`/spaces/${spaceId}/members/${userId}`, { role });
+    return { content: [{ type: 'text', text: `Rôle mis à jour : ${userId} → ${role}` }] };
+  }
+);
+
+// ─── remove_space_member ──────────────────────────────────────────────────────
+
+server.tool(
+  'remove_space_member',
+  'Retire un membre d\'un espace.',
+  { spaceId: z.string(), userId: z.string() },
+  async ({ spaceId, userId }) => {
+    await api.delete(`/spaces/${spaceId}/members/${userId}`);
+    return { content: [{ type: 'text', text: `Membre ${userId} retiré de l\'espace ${spaceId}.` }] };
+  }
+);
+
+// ─── list_community_members ───────────────────────────────────────────────────
+
+server.tool(
+  'list_community_members',
+  'Liste les membres d\'une communauté.',
+  { communityId: z.string() },
+  async ({ communityId }) => {
+    const data = await api.get(`/communities/${communityId}/members`);
+    const members = Array.isArray(data) ? data : (data.data ?? []);
+    const lines = members.map((m: any) =>
+      `[${m.userId ?? m.user?.id}] ${m.user?.name ?? '?'} <${m.user?.email ?? '?'}> | ${m.role}`
+    );
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucun membre.' }] };
+  }
+);
+
+// ─── add_community_member ─────────────────────────────────────────────────────
+
+server.tool(
+  'add_community_member',
+  'Ajoute un membre à une communauté.',
+  {
+    communityId: z.string(),
+    userId: z.string(),
+    role: z.enum(['OWNER', 'MEMBER']).default('MEMBER'),
+  },
+  async ({ communityId, userId, role }) => {
+    await api.post(`/communities/${communityId}/members`, { userId, role });
+    return { content: [{ type: 'text', text: `Membre ajouté : ${userId} (${role})` }] };
+  }
+);
+
+// ─── remove_community_member ──────────────────────────────────────────────────
+
+server.tool(
+  'remove_community_member',
+  'Retire un membre d\'une communauté.',
+  { communityId: z.string(), userId: z.string() },
+  async ({ communityId, userId }) => {
+    await api.delete(`/communities/${communityId}/members/${userId}`);
+    return { content: [{ type: 'text', text: `Membre ${userId} retiré de la communauté ${communityId}.` }] };
+  }
+);
+
+// ─── list_notifications ───────────────────────────────────────────────────────
+
+server.tool(
+  'list_notifications',
+  'Liste les notifications de l\'utilisateur connecté.',
+  { unreadOnly: z.boolean().optional().default(false) },
+  async ({ unreadOnly }) => {
+    const qs = unreadOnly ? '?unreadOnly=true' : '';
+    const data = await api.get(`/notifications${qs}`);
+    const notifs = Array.isArray(data) ? data : (data.data ?? []);
+    const lines = notifs.map((n: any) =>
+      `[${n.id}] ${n.read ? '✓' : '●'} ${n.type} — ${n.message ?? ''} (${n.createdAt?.slice(0, 10) ?? ''})`
+    );
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucune notification.' }] };
+  }
+);
+
+// ─── mark_notification_read ───────────────────────────────────────────────────
+
+server.tool(
+  'mark_notification_read',
+  'Marque une notification comme lue (ou toutes si notificationId omis).',
+  { notificationId: z.string().optional().describe('ID de la notification, ou omis pour tout marquer lu') },
+  async ({ notificationId }) => {
+    if (notificationId) {
+      await api.patch(`/notifications/${notificationId}`, { read: true });
+      return { content: [{ type: 'text', text: `Notification ${notificationId} marquée lue.` }] };
+    }
+    await api.patch('/notifications/read-all', {});
+    return { content: [{ type: 'text', text: 'Toutes les notifications marquées lues.' }] };
+  }
+);
+
+// ─── delete_notification ──────────────────────────────────────────────────────
+
+server.tool(
+  'delete_notification',
+  'Supprime une notification.',
+  { notificationId: z.string() },
+  async ({ notificationId }) => {
+    await api.delete(`/notifications/${notificationId}`);
+    return { content: [{ type: 'text', text: `Notification ${notificationId} supprimée.` }] };
+  }
+);
+
+// ─── list_relations ───────────────────────────────────────────────────────────
+
+server.tool(
+  'list_relations',
+  'Liste les relations d\'un item.',
+  { spaceId: z.string(), itemId: z.string() },
+  async ({ spaceId, itemId }) => {
+    const data = await api.get(`/spaces/${spaceId}/items/${itemId}/relations`);
+    const relations = Array.isArray(data) ? data : (data.data ?? []);
+    const lines = relations.map((r: any) =>
+      `[${r.id}] ${r.type}${r.label ? ` (${r.label})` : ''} → [${r.toItemId ?? r.toItem?.id}] ${r.toItem?.title ?? ''}`
+    );
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucune relation.' }] };
+  }
+);
+
+// ─── create_relation ──────────────────────────────────────────────────────────
+
+server.tool(
+  'create_relation',
+  'Crée une relation entre deux items.',
+  {
+    spaceId: z.string(),
+    itemId: z.string().describe('Item source'),
+    toItemId: z.string().describe('Item cible'),
+    type: z.string().describe('Type de relation (ex: RELATED, BLOCKS, DEPENDS_ON)'),
+    label: z.string().optional(),
+  },
+  async ({ spaceId, itemId, toItemId, type, label }) => {
+    const body: Record<string, unknown> = { toItemId, type };
+    if (label) body.label = label;
+    const r = await api.post(`/spaces/${spaceId}/items/${itemId}/relations`, body);
+    return { content: [{ type: 'text', text: `Relation créée : [${r.id}] ${type}` }] };
+  }
+);
+
+// ─── update_relation ──────────────────────────────────────────────────────────
+
+server.tool(
+  'update_relation',
+  'Met à jour le type ou le label d\'une relation.',
+  {
+    spaceId: z.string(),
+    itemId: z.string(),
+    relationId: z.string(),
+    type: z.string().optional(),
+    label: z.string().nullable().optional(),
+  },
+  async ({ spaceId, itemId, relationId, ...fields }) => {
+    const r = await api.patch(`/spaces/${spaceId}/items/${itemId}/relations/${relationId}`, fields);
+    return { content: [{ type: 'text', text: `Relation mise à jour : [${r.id}]` }] };
+  }
+);
+
+// ─── delete_relation ──────────────────────────────────────────────────────────
+
+server.tool(
+  'delete_relation',
+  'Supprime une relation entre items.',
+  { spaceId: z.string(), itemId: z.string(), relationId: z.string() },
+  async ({ spaceId, itemId, relationId }) => {
+    await api.delete(`/spaces/${spaceId}/items/${itemId}/relations/${relationId}`);
+    return { content: [{ type: 'text', text: `Relation ${relationId} supprimée.` }] };
+  }
+);
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function extractText(description: any): string {
