@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown } from 'lucide-react';
+import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels } from '@spok/shared';
@@ -106,6 +106,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [openInfoId, setOpenInfoId] = useState<string | null>(null);
 
   // Portal support
   const hasPortals = !!(portalGroups && portalGroups.length > 0);
@@ -203,8 +204,8 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
   }, [referentiels]);
 
   const gridColsClass = hasPortals
-    ? 'grid-cols-[auto_1fr_6rem_auto] sm:grid-cols-[auto_1fr_5rem_6rem_auto] md:grid-cols-[auto_1fr_5rem_6rem_4rem_5rem_auto] lg:grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto] xl:grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]'
-    : 'grid-cols-[auto_1fr_6rem_auto] sm:grid-cols-[auto_1fr_5rem_6rem_auto] md:grid-cols-[auto_1fr_5rem_6rem_4rem_5rem_auto] lg:grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]';
+    ? 'grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_5rem_6rem_auto] md:grid-cols-[auto_1fr_5rem_6rem_4rem_5rem_auto] lg:grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto] xl:grid-cols-[auto_1fr_6rem_8rem_5rem_6rem_4rem_5rem_auto]'
+    : 'grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_5rem_6rem_auto] md:grid-cols-[auto_1fr_5rem_6rem_4rem_5rem_auto] lg:grid-cols-[auto_1fr_8rem_5rem_6rem_4rem_5rem_auto]';
 
   return (
     <div className="flex flex-col h-full">
@@ -235,7 +236,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               Type
               {sortField === 'type' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
-            <button className="flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('status')}>
+            <button className="hidden sm:flex items-center justify-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort('status')}>
               Statut
               {sortField === 'status' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
@@ -247,7 +248,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               Info
               {sortField === 'date' && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
             </button>
-            <span className="w-20" />
+            <span className="w-8 sm:w-20" />
           </div>
 
           {/* Rows — scrollable */}
@@ -265,11 +266,11 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               const isUrgent = item.priority === 4;
               const _viewedAt = (item as any).viewedAt;
               const isUnseen = _viewedAt === null || (_viewedAt && new Date(item.updatedAt) > new Date(_viewedAt));
+              const infoOpen = openInfoId === item.id;
 
               return (
+                <div key={item.id} {...(index === 0 ? { 'data-tour': 'list-row' } : {})}>
                 <div
-                  key={item.id}
-                  {...(index === 0 ? { 'data-tour': 'list-row' } : {})}
                   className={`grid ${gridColsClass} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''} ${isUrgent ? 'animate-urgent-blink' : isUnseen ? 'animate-unseen-blink' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
@@ -290,6 +291,13 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                         )}
                       </div>
                     )}
+                    <button
+                      className={`sm:hidden flex-shrink-0 p-0.5 rounded transition-colors ${infoOpen ? 'text-primary' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+                      onClick={(e) => { e.stopPropagation(); setOpenInfoId(infoOpen ? null : item.id); }}
+                      title="Détails"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
                   {hasPortals && (
@@ -318,7 +326,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     </Badge>
                   </span>
 
-                  <span className="flex justify-center">
+                  <span className="hidden sm:flex justify-center">
                     <Badge
                       className={`text-xs ${statusColor}`}
                       variant="secondary"
@@ -369,7 +377,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     )}
                   </span>
 
-                  <span className="flex items-center justify-end w-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="flex items-center justify-end w-8 sm:w-20 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     {!isPortal && (
                       <ItemActionMenu
                         groups={buildItemMenuGroups(item.id, {
@@ -400,6 +408,26 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                       />
                     )}
                   </span>
+                </div>
+                {infoOpen && (
+                  <div className="sm:hidden px-4 pb-2.5 pt-1 bg-accent/30 flex flex-wrap gap-x-4 gap-y-1.5 text-xs" onClick={(e) => e.stopPropagation()}>
+                    <span className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Type</span>
+                      <Badge variant="outline" className={`text-xs border ${getTypeColor(item.type, referentiels?.typeLabels).color}`}>{typeLabel}</Badge>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Statut</span>
+                      <Badge className={`text-xs ${statusColor}`} variant="secondary">{statusLabel}</Badge>
+                    </span>
+                    {item.priority != null && (() => { const pc = getPriorityConfig(item.priority); return pc ? <span className={`flex items-center gap-1`}><span className="text-muted-foreground">Prio</span><span className={`font-medium ${pc.textColor}`}>{pc.label}</span></span> : null; })()}
+                    {item.parentId && parentNames[item.parentId] && (
+                      <span className="flex items-center gap-1"><span className="text-muted-foreground">Parent</span><span className="truncate max-w-[12rem]">{parentNames[item.parentId]}</span></span>
+                    )}
+                    {item.startDate && <span className="flex items-center gap-1"><span className="text-muted-foreground">Début</span>{formatDate(item.startDate)}</span>}
+                    {item.endDate && <span className="flex items-center gap-1"><span className="text-muted-foreground">Fin</span>{formatDate(item.endDate)}</span>}
+                    {item.dueDate && <span className="flex items-center gap-1"><span className="text-muted-foreground">Échéance</span>{formatDate(item.dueDate)}</span>}
+                  </div>
+                )}
                 </div>
               );
             })}

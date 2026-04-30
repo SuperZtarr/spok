@@ -224,8 +224,8 @@ export function SpaceExportButton({ items, spaceName, viewContainerRef }: SpaceE
   return (
     <div className="relative" ref={ref}>
       <Button variant="bordered" size="sm" onClick={() => setOpen(!open)} title="Exporter">
-        <Download className="w-4 h-4 mr-1" />
-        Exporter
+        <Download className="w-4 h-4 sm:mr-1" />
+        <span className="hidden sm:inline">Exporter</span>
       </Button>
       {open && (
         <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">

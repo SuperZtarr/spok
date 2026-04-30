@@ -189,7 +189,7 @@ export function HomeView() {
       <div className="max-w-screen-2xl mx-auto">
         {/* Welcome */}
         <div className="mb-8 text-center" data-tour="home-welcome">
-          <img src={logoUrl} alt="SPOK" className="h-80 w-auto mx-auto mb-4" />
+          <img src={logoUrl} alt="SPOK" className="h-24 sm:h-48 md:h-80 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Bonjour {firstName}</h1>
           <p className="text-muted-foreground mt-1">
             {totalCommunities} communauté{totalCommunities > 1 ? 's' : ''}
@@ -238,16 +238,16 @@ export function HomeView() {
         })()}
 
         {/* Shortcuts */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-3 gap-3 mb-8">
           {SHORTCUTS.map(({ to, icon: Icon, label, description }) => (
             <Link
               key={to}
               to={to}
-              className="flex flex-col items-center gap-2 p-4 border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all bg-card text-center"
+              className="flex flex-col items-center gap-2 p-3 md:p-4 border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all bg-card text-center"
             >
               <Icon className="w-6 h-6 text-primary" />
               <span className="font-medium text-sm">{label}</span>
-              <span className="text-[11px] text-muted-foreground leading-tight">{description}</span>
+              <span className="text-[11px] text-muted-foreground leading-tight hidden sm:block">{description}</span>
             </Link>
           ))}
         </div>

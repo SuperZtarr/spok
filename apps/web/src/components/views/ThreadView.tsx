@@ -200,13 +200,13 @@ export function ThreadView({
             {/* Title + author */}
             <div className="flex-1 min-w-0">
               <p className={`text-sm truncate ${depth === 0 ? 'font-medium' : 'font-normal'}`}>{node.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {node.createdBy?.name || 'Inconnu'}
+              <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                <span className="text-xs text-muted-foreground flex-shrink-0 truncate max-w-[8rem]">{node.createdBy?.name || 'Inconnu'}</span>
                 {statusObj && (
                   <>
-                    <span className="mx-1">·</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">·</span>
                     <span
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                      className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
                       style={{ backgroundColor: statusObj.color + '20', color: statusObj.color }}
                     >
                       {statusObj.label}
@@ -214,22 +214,21 @@ export function ThreadView({
                   </>
                 )}
                 {hasChildren && (
-                  <>
-                    <span className="mx-1">·</span>
-                    <span className="text-[10px]">{node.children.length} sous-élément{node.children.length > 1 ? 's' : ''}</span>
-                  </>
+                  <span className="hidden sm:inline text-xs text-muted-foreground flex-shrink-0">
+                    · {node.children.length} sous-élément{node.children.length > 1 ? 's' : ''}
+                  </span>
                 )}
-              </p>
+              </div>
             </div>
 
             {/* Contribution count */}
-            <div className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" title={`${contribCount} contribution${contribCount > 1 ? 's' : ''}`}>
+            <div className="hidden sm:flex flex-shrink-0 items-center gap-1 text-xs text-muted-foreground" title={`${contribCount} contribution${contribCount > 1 ? 's' : ''}`}>
               <MessageSquare className="w-3.5 h-3.5" />
               <span className="tabular-nums">{contribCount}</span>
             </div>
 
             {/* Last activity */}
-            <div className="flex-shrink-0 text-right min-w-[80px]">
+            <div className="hidden sm:block flex-shrink-0 text-right min-w-[80px]">
               <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                 <Clock className="w-3 h-3" />
                 {formatRelativeDate(lastActivity.date)}

@@ -170,7 +170,7 @@ export function CommunityPage() {
         </div>
 
         {/* Main content: spaces + members side by side */}
-        <div className="flex gap-6 mb-8">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-8">
           {/* Spaces column */}
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
@@ -190,7 +190,7 @@ export function CommunityPage() {
 
           {/* Members column (authenticated only) */}
           {user && (
-            <div className="w-64 flex-shrink-0">
+            <div className="w-full md:w-64 md:flex-shrink-0">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Membres ({sortedMembers.length})

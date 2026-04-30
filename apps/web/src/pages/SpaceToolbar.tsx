@@ -11,6 +11,7 @@ import {
   Settings,
   History,
   ListChecks,
+  SlidersHorizontal,
   Plus,
   List,
   GitBranch,
@@ -51,6 +52,13 @@ import { ViewHelpButton } from '../components/ViewHelpButton';
 import { SpaceExportButton } from '../components/SpaceExportButton';
 import type { ViewMode } from '../stores/viewMode';
 import type { MenuItemConfig, Item } from '@spok/shared';
+
+const MOBILE_HIDDEN_VIEWS = new Set([
+  'kanban', 'types', 'members',
+  'timeline', 'planning', 'graph', 'sunburst', 'relations',
+  'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
+  'crossTable', 'heatmap', 'ego',
+]);
 
 const VIEW_ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
@@ -137,6 +145,7 @@ export function SpaceToolbar({
 }: SpaceToolbarProps) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -202,7 +211,7 @@ export function SpaceToolbar({
                           isActive
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                        }`}
+                        } ${v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode) ? 'hidden sm:inline-flex' : ''}`}
                       >
                         {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
                         <span className="hidden sm:inline">{v.label}</span>
@@ -217,7 +226,8 @@ export function SpaceToolbar({
       })()}
 
       <div className="flex gap-1.5 flex-wrap items-center pb-1">
-        {/* Mode indicator */}
+        {/* Mode indicator + filters — always visible on sm+, toggle on mobile */}
+        <div className={`${showMobileFilters ? 'flex' : 'hidden'} sm:flex gap-1.5 items-center flex-wrap`}>
         {isHighlightMode ? (
           <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
             <span className="w-2 h-2 rounded-full bg-yellow-400" />
@@ -318,6 +328,7 @@ export function SpaceToolbar({
             );
           })()}
         </div>
+        </div>{/* end mobile filters wrapper */}
 
         {/* Search input */}
         <div className="relative flex-shrink-0" data-tour="toolbar-search">
@@ -410,6 +421,21 @@ export function SpaceToolbar({
         )}
 
         <div className="ml-auto flex gap-1 flex-shrink-0">
+          {/* Mobile filter toggle */}
+          <button
+            className={`sm:hidden relative inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors flex-shrink-0 ${
+              showMobileFilters
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-input bg-background text-muted-foreground hover:bg-accent'
+            }`}
+            onClick={() => setShowMobileFilters(v => !v)}
+            title="Filtres"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {(activeTypeFilter || activeStatusFilter) && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />
+            )}
+          </button>
           {exportItems && spaceName && (
             <SpaceExportButton items={exportItems} spaceName={spaceName} viewContainerRef={viewContainerRef} />
           )}
@@ -439,8 +465,8 @@ export function SpaceToolbar({
           )}
           {canEdit && (
             <Button size="sm" onClick={onNewItem} data-tour="toolbar-new-item">
-              <Plus className="w-4 h-4 mr-1" />
-              Nouveau
+              <Plus className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Nouveau</span>
             </Button>
           )}
         </div>

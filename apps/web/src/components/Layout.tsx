@@ -2,7 +2,14 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2, HelpCircle, Clock, Star, Plus, ArrowLeft } from 'lucide-react';
+import {
+  FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2,
+  HelpCircle, Clock, Star, Plus, ArrowLeft,
+  Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
+  Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
+  Map as MapIconLucide,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -20,6 +27,14 @@ import { useViewModeStore } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import type { SpaceWithRole } from '@spok/shared';
+
+const NAV_ICONS: Record<string, LucideIcon> = {
+  Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
+  LayoutDashboard, ClipboardList, Activity,
+  Building2, BarChart3, History, AlertTriangle, Settings, FileText,
+  MessageSquare, Search, MapIcon: MapIconLucide,
+};
+const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -651,21 +666,35 @@ export function Layout() {
 
 
       {/* Navigation globale — visible uniquement sur mobile (md: le menu header prend le relais) */}
-      <div className="md:hidden border-b border-border/50 px-3 py-2 flex-shrink-0">
+      <div className="md:hidden border-b border-border/50 px-2 py-2 flex-shrink-0">
         {menuSections
           .filter(s => !['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id))
-          .map(s => s.items.filter(item => item.key !== 'logout' && item.key !== 'profile'))
-          .flat()
-          .filter(item => item.route || item.viewMode)
-          .map(item => (
-            <button
-              key={item.key}
-              onClick={() => { navigate(item.route || '/'); setSidebarOpen(false); }}
-              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm hover:bg-accent/50 transition-colors text-foreground/80"
-            >
-              <span>{item.label}</span>
-            </button>
-          ))
+          .map(section => {
+            const items = section.items.filter(
+              item => item.key !== 'logout' && item.key !== 'profile' && (item.route || item.viewMode)
+            );
+            if (items.length === 0) return null;
+            return (
+              <div key={section.id} className="mb-1">
+                <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-2 py-1 block">
+                  {section.label}
+                </span>
+                {items.map(item => {
+                  const Icon = getNavIcon(item.icon);
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => { navigate(item.route || '/'); setSidebarOpen(false); }}
+                      className="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-md text-sm hover:bg-accent/50 transition-colors text-foreground/80"
+                    >
+                      {Icon && <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />}
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })
         }
       </div>
 
@@ -926,11 +955,12 @@ export function Layout() {
           bg-white dark:bg-background border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
           transition-transform duration-200 md:transition-[width] md:duration-200
+          w-[85vw] max-w-[320px]
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0
           ${sidebarCollapsed ? 'md:w-0 md:overflow-hidden md:border-r-0' : ''}
         `}
-        style={sidebarCollapsed ? undefined : { width: sidebarWidth }}
+        style={sidebarCollapsed ? undefined : (sidebarOpen ? undefined : { width: sidebarWidth })}
       >
         {/* Resize handle (desktop only) */}
         <div
