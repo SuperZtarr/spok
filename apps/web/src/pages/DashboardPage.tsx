@@ -21,7 +21,7 @@ import type { ItemActionGroup } from '../components/ui/ItemActionMenu';
 import { useDashboardTabStore } from '../stores/dashboardTab';
 import { CommunityListView } from '../components/views/CommunityListView';
 import type { CommunityListViewHandle } from '../components/views/CommunityListView';
-import { MyOrganizationView } from '../components/views/MyOrganizationView';
+import { MyDashboardView } from '../components/views/MyDashboardView';
 import { HomeView } from '../components/views/HomeView';
 import { DashboardToolbar } from '../components/DashboardToolbar';
 import { RoleGuard } from '../components/RoleGuard';
@@ -572,7 +572,7 @@ export function DashboardPage() {
         <CommunityListView ref={communityListRef} />
       ) : tab === 'dashboard' || tab === 'planning' ? (
         <div className="flex-1 min-h-0 flex flex-col">
-          <MyOrganizationView />
+          <MyDashboardView />
         </div>
       ) : tab === 'graph' ? (
         <div className="flex-1 min-h-0 flex flex-col">

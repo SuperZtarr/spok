@@ -1,5 +1,5 @@
 import { HelpCircle } from 'lucide-react';
-import { MyOrganizationView } from '../components/views/MyOrganizationView';
+import { MyDashboardView } from '../components/views/MyDashboardView';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { DASHBOARD_TOUR } from '../hooks/viewTours';
 
@@ -17,7 +17,7 @@ export function DashboardViewPage() {
           <HelpCircle className="w-4 h-4" />
         </button>
       </div>
-      <MyOrganizationView />
+      <MyDashboardView />
     </div>
   );
 }

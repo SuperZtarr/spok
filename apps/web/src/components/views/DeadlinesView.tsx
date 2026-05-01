@@ -210,7 +210,7 @@ export function DeadlinesView({ embedded }: { embedded?: boolean } = {}) {
                     <span className="text-sm font-medium truncate block">{task.title}</span>
                   </div>
                   <button
-                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-[140px] flex-shrink-0"
+                    className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-[140px] flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/spaces/${task.spaceId}`);
@@ -222,7 +222,7 @@ export function DeadlinesView({ embedded }: { embedded?: boolean } = {}) {
                   </button>
                   {task.status && (
                     <span
-                      className={`inline-block text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      className={`hidden sm:inline-block text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
                         STATUS_COLOR_MAP[task.status] || 'bg-gray-100 text-gray-600'
                       }`}
                     >
@@ -231,7 +231,7 @@ export function DeadlinesView({ embedded }: { embedded?: boolean } = {}) {
                   )}
                   {task.priority && (
                     <span
-                      className={`inline-block text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      className={`hidden sm:inline-block text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
                         PRIORITY_LABELS[task.priority]?.color || 'bg-gray-100 text-gray-600'
                       }`}
                     >

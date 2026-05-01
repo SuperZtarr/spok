@@ -410,7 +410,7 @@ export const VIEW_TOURS: Partial<Record<ViewMode, TourStep[]>> = {
   ],
 };
 
-// Tour for Dashboard (MyOrganizationView)
+// Tour for Dashboard (MyDashboardView)
 export const DASHBOARD_TOUR: TourStep[] = [
   {
     popover: {

@@ -230,7 +230,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 px-4 py-2 w-full rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Déconnexion
@@ -343,7 +343,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               <button
                 key={value}
                 onClick={() => setTheme(value)}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                   theme === value
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted hover:bg-accent'

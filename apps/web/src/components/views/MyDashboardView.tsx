@@ -244,10 +244,10 @@ function Section({ title, icon, count, children, variant = 'default' }: {
 }
 
 // ---------------------------------------------------------------------------
-// MyOrganizationView
+// MyDashboardView
 // ---------------------------------------------------------------------------
 
-export function MyOrganizationView() {
+export function MyDashboardView() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
@@ -498,61 +498,107 @@ export function MyOrganizationView() {
         <GlobalTaskFilterBar filters={filters} />
       </div>
 
-      {/* Priorités + En retard + Aujourd'hui */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-tour="org-priorities">
+      {/* Échéances + panneaux droite */}
+      <div className="flex flex-wrap gap-4 items-start" data-tour="org-priorities">
 
-        {/* Priorités */}
-        <div className="bg-card border rounded-lg p-4 space-y-2">
-          <Section
-            title="Priorités"
-            icon={<Flame className="w-4 h-4 text-orange-500" />}
-            count={priorityTasks.length}
-          >
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePriorityDragEnd}>
-              <SortableContext items={priorityTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-0.5 max-h-64 overflow-y-auto">
-                  {priorityTasks.map(t => <SortableTaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </Section>
-          {priorityTasks.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Aucune priorité haute</p>
-          )}
+        {/* Échéances */}
+        <div className="bg-card border rounded-lg p-4 max-w-4xl flex-1 min-w-[320px]">
+          <DeadlinesView embedded />
         </div>
 
-        {/* En retard */}
-        <div className="bg-card border rounded-lg p-4 space-y-2">
-          <Section
-            title="En retard"
-            icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
-            count={overdueTasks.length}
-            variant="danger"
-          >
-            <div className="space-y-0.5 max-h-64 overflow-y-auto">
-              {overdueTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
+        {/* Priorités + En retard + Aujourd'hui */}
+        <div className="flex flex-col gap-4 w-72 flex-shrink-0">
+
+          {/* Priorités */}
+          <div className="bg-card border rounded-lg p-4 space-y-2">
+            <Section
+              title="Priorités"
+              icon={<Flame className="w-4 h-4 text-orange-500" />}
+              count={priorityTasks.length}
+            >
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePriorityDragEnd}>
+                <SortableContext items={priorityTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                    {priorityTasks.map(t => <SortableTaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </Section>
+            {priorityTasks.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Aucune priorité haute</p>
+            )}
+          </div>
+
+          {/* En retard */}
+          <div className="bg-card border rounded-lg p-4 space-y-2">
+            <Section
+              title="En retard"
+              icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
+              count={overdueTasks.length}
+              variant="danger"
+            >
+              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                {overdueTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
+              </div>
+            </Section>
+            {overdueTasks.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Rien en retard</p>
+            )}
+          </div>
+
+          {/* Aujourd'hui */}
+          <div className="bg-card border rounded-lg p-4 space-y-2">
+            <Section
+              title="Aujourd'hui"
+              icon={<Clock className="w-4 h-4 text-blue-500" />}
+              count={todayTasks.length}
+            >
+              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                {todayTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
+              </div>
+            </Section>
+            {todayTasks.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Rien pour aujourd'hui</p>
+            )}
+          </div>
+
+        </div>
+
+        {/* Répartitions + Progression */}
+        <div className="flex flex-col gap-4 w-64 flex-shrink-0">
+          <div className="bg-card border rounded-lg">
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <Target className="w-4 h-4 text-violet-500" />
+              <h3 className="text-sm font-semibold">Par statut</h3>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{statusDistribution.total}</span>
             </div>
-          </Section>
-          {overdueTasks.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Rien en retard</p>
-          )}
+            <DistributionBar counts={statusDistribution.counts} total={statusDistribution.total} colorMap={STATUS_BAR_COLORS} />
+          </div>
+          <div className="bg-card border rounded-lg">
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <Flame className="w-4 h-4 text-blue-500" />
+              <h3 className="text-sm font-semibold">Par type</h3>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{typeDistribution.total}</span>
+            </div>
+            <DistributionBar counts={typeDistribution.counts} total={typeDistribution.total} colorMap={TYPE_BAR_COLORS} />
+          </div>
+          <div className="bg-card border rounded-lg border-green-200 dark:border-green-900">
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <h3 className="text-sm font-semibold">Progression</h3>
+              {spaceProgress.length > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{spaceProgress.length}</span>
+              )}
+            </div>
+            <div className="p-2 max-h-[300px] overflow-y-auto">
+              {spaceProgress.length > 0
+                ? spaceProgress.map(s => <SpaceProgressBar key={s.name} name={s.name} done={s.done} total={s.total} />)
+                : <p className="text-sm text-muted-foreground text-center py-4">Aucun espace</p>
+              }
+            </div>
+          </div>
         </div>
 
-        {/* Aujourd'hui */}
-        <div className="bg-card border rounded-lg p-4 space-y-2">
-          <Section
-            title="Aujourd'hui"
-            icon={<Clock className="w-4 h-4 text-blue-500" />}
-            count={todayTasks.length}
-          >
-            <div className="space-y-0.5 max-h-64 overflow-y-auto">
-              {todayTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
-            </div>
-          </Section>
-          {todayTasks.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Rien pour aujourd'hui</p>
-          )}
-        </div>
       </div>
 
       {/* Semaine */}
@@ -684,48 +730,6 @@ export function MyOrganizationView() {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Distributions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card border rounded-lg">
-          <div className="flex items-center gap-2 px-4 py-3 border-b">
-            <Target className="w-4 h-4 text-violet-500" />
-            <h3 className="text-sm font-semibold">Répartition par statut</h3>
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{statusDistribution.total}</span>
-          </div>
-          <DistributionBar counts={statusDistribution.counts} total={statusDistribution.total} colorMap={STATUS_BAR_COLORS} />
-        </div>
-        <div className="bg-card border rounded-lg">
-          <div className="flex items-center gap-2 px-4 py-3 border-b">
-            <Flame className="w-4 h-4 text-blue-500" />
-            <h3 className="text-sm font-semibold">Répartition par type</h3>
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{typeDistribution.total}</span>
-          </div>
-          <DistributionBar counts={typeDistribution.counts} total={typeDistribution.total} colorMap={TYPE_BAR_COLORS} />
-        </div>
-      </div>
-
-      {/* Progression par espace + Échéances */}
-      <div className="grid grid-cols-2 gap-4 items-start">
-        <div className="bg-card border rounded-lg border-green-200 dark:border-green-900">
-          <div className="flex items-center gap-2 px-4 py-3 border-b">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
-            <h3 className="text-sm font-semibold">Progression par espace</h3>
-            {spaceProgress.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{spaceProgress.length}</span>
-            )}
-          </div>
-          <div className="p-2 max-h-[300px] overflow-y-auto">
-            {spaceProgress.length > 0
-              ? spaceProgress.map(s => <SpaceProgressBar key={s.name} name={s.name} done={s.done} total={s.total} />)
-              : <p className="text-sm text-muted-foreground text-center py-4">Aucun espace</p>
-            }
-          </div>
-        </div>
-        <div className="bg-card border rounded-lg p-4">
-          <DeadlinesView embedded />
         </div>
       </div>
 
