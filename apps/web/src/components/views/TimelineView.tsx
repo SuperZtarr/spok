@@ -54,13 +54,9 @@ interface TimelineViewProps {
 export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
-  const [visibleStartDate, setVisibleStartDate] = useState<Date>(() => {
-    const today = new Date();
-    // Center today in the view at init
-    const offset = Math.floor(ZOOM_CONFIGS['month'].days / 2);
-    return startOfDay(addDays(today, -offset));
-  });
+  const [centerDate, setCenterDate] = useState<Date>(() => startOfDay(new Date()));
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [compactMode, setCompactMode] = useState(false);
@@ -88,6 +84,16 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
 
   const zoomConfig = ZOOM_CONFIGS[zoomLevel];
+  const LABEL_WIDTH = 288;
+  const visibleDays = containerWidth > LABEL_WIDTH
+    ? Math.max(7, Math.floor((containerWidth - LABEL_WIDTH) / zoomConfig.dayWidth))
+    : zoomConfig.days;
+
+  // visibleStartDate est calculé depuis centerDate — se recale automatiquement au resize
+  const visibleStartDate = useMemo(
+    () => startOfDay(addDays(centerDate, -Math.floor(visibleDays / 2))),
+    [centerDate, visibleDays]
+  );
 
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -115,11 +121,11 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   // Generate days array
   const days = useMemo(() => {
     const result: Date[] = [];
-    for (let i = 0; i < zoomConfig.days; i++) {
+    for (let i = 0; i < visibleDays; i++) {
       result.push(addDays(visibleStartDate, i));
     }
     return result;
-  }, [visibleStartDate, zoomConfig.days]);
+  }, [visibleStartDate, visibleDays]);
 
   // Group days by week
   const weeks = useMemo(() => {
@@ -161,21 +167,10 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
 
   const dayWidth = zoomConfig.dayWidth;
 
-  // Navigation
-  const goToPrevious = () => {
-    setVisibleStartDate(prev => addDays(prev, -zoomConfig.navStep));
-  };
-
-  const goToNext = () => {
-    setVisibleStartDate(prev => addDays(prev, zoomConfig.navStep));
-  };
-
-  const goToToday = () => {
-    const today = new Date();
-    // Center today in the view
-    const offset = Math.floor(zoomConfig.days / 2);
-    setVisibleStartDate(startOfDay(addDays(today, -offset)));
-  };
+  // Navigation — déplace centerDate, visibleStartDate se recalcule
+  const goToPrevious = () => setCenterDate(prev => addDays(prev, -zoomConfig.navStep));
+  const goToNext = () => setCenterDate(prev => addDays(prev, zoomConfig.navStep));
+  const goToToday = () => setCenterDate(startOfDay(new Date()));
 
   // Zoom controls
   const zoomIn = () => {
@@ -405,6 +400,17 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     }
   }, [relationDrag, handleRelationDragMove, handleRelationDragEnd]);
 
+  // Track container width via ResizeObserver — visibleStartDate se recale automatiquement
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(entries => {
+      setContainerWidth(entries[0].contentRect.width);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   // Compute hovered row index during relation drag
   const relationDragTargetIdx = relationDrag
     ? Math.floor(relationDrag.currentY / 40)
@@ -424,14 +430,14 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     const startOffset = differenceInDays(itemStart, visibleStartDate);
     const duration = differenceInDays(itemEnd, itemStart) + 1;
 
-    if (startOffset + duration < 0 || startOffset > zoomConfig.days) {
+    if (startOffset + duration < 0 || startOffset > visibleDays) {
       return null;
     }
 
     const left = Math.max(0, startOffset) * dayWidth;
     const adjustedDuration = Math.min(
       duration - Math.max(0, -startOffset),
-      zoomConfig.days - Math.max(0, startOffset)
+      visibleDays - Math.max(0, startOffset)
     );
     const width = Math.max(adjustedDuration * dayWidth - 2, Math.min(dayWidth, 20));
 
@@ -448,7 +454,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     return day === 0 || day === 6;
   };
 
-  const visibleEndDate = addDays(visibleStartDate, zoomConfig.days);
+  const visibleEndDate = addDays(visibleStartDate, visibleDays);
 
   const ROW_HEIGHT = 40;
 
@@ -579,8 +585,8 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       </div>
 
       {/* Timeline content */}
-      <div className="flex-1 overflow-auto" ref={containerRef}>
-        <div className="min-w-max">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden" ref={containerRef}>
+        <div>
           {/* Header */}
           <div className="sticky top-0 bg-background z-10 border-b">
             {/* Month row (for quarter/year zoom) */}
@@ -708,6 +714,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                     <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <span
                       className={`truncate text-sm flex-1 ${!hasDate ? 'text-muted-foreground' : ''}`}
+                      title={item.title}
                       onClick={() => onEdit(item.id)}
                     >
                       {item.title}
@@ -854,7 +861,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                       const dueDateObj = startOfDay(new Date(item.dueDate));
                       const dueOffset = differenceInDays(dueDateObj, visibleStartDate);
                       // Only render if visible
-                      if (dueOffset < -1 || dueOffset > zoomConfig.days + 1) return null;
+                      if (dueOffset < -1 || dueOffset > visibleDays + 1) return null;
                       const dueX = dueOffset * dayWidth + dayWidth / 2;
                       const barEnd = barStyle ? barStyle.left + 1 + barStyle.width : null;
                       return (
@@ -911,7 +918,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
             {dependencyArrows.length > 0 && (
               <svg
                 className="absolute top-0"
-                style={{ left: 288, width: zoomConfig.days * dayWidth, height: flatItems.length * ROW_HEIGHT, pointerEvents: 'none' }}
+                style={{ left: 288, width: visibleDays * dayWidth, height: flatItems.length * ROW_HEIGHT, pointerEvents: 'none' }}
               >
                 <defs>
                   <marker id="arrowhead-depends" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
@@ -989,7 +996,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
             {relationDrag && (
               <svg
                 className="absolute top-0 pointer-events-none z-20"
-                style={{ left: 288, width: zoomConfig.days * dayWidth, height: flatItems.length * ROW_HEIGHT }}
+                style={{ left: 288, width: visibleDays * dayWidth, height: flatItems.length * ROW_HEIGHT }}
               >
                 <line
                   x1={relationDrag.fromX}

@@ -102,6 +102,7 @@ export function SpacePage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const mindmapRef = useRef<MindMapViewHandle>(null);
   const viewContainerRef = useRef<HTMLDivElement>(null);
+  const viewReadyRef = useRef(false); // true once defaultView has been applied for current space
   const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -137,11 +138,36 @@ export function SpacePage() {
     return item.createdById === user?.id;
   }, [canEdit, space?.role, user?.id]);
 
-  // Apply space defaultView each time we enter a new space (fallback: 'list')
+  // Reset viewReady when navigating to a new space (must run before defaultView effect)
+  useEffect(() => {
+    viewReadyRef.current = false;
+  }, [spaceId]);
+
+  // Apply space defaultView — prefer URL ?view= param (restores view on refresh)
+  // Also syncs to URL immediately (handles case where viewMode doesn't change = effect 3 not triggered)
   useEffect(() => {
     if (!space || space.id !== spaceId) return;
-    setMode((space.defaultView as Parameters<typeof setMode>[0]) || 'list');
-  }, [spaceId, space?.id, space?.defaultView, setMode]);
+    const urlView = searchParams.get('view') as Parameters<typeof setMode>[0] | null;
+    const targetMode = urlView || (space.defaultView as Parameters<typeof setMode>[0]) || 'list';
+    setMode(targetMode);
+    viewReadyRef.current = true;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('view', targetMode);
+      return next;
+    }, { replace: true });
+  }, [spaceId, space?.id, space?.defaultView, setMode, setSearchParams]);
+  // Note: searchParams lu à l'exécution de l'effet, pas en dep (évite boucle)
+
+  // Sync viewMode → URL lors des changements de vue par l'utilisateur
+  useEffect(() => {
+    if (!spaceId || !viewMode || !viewReadyRef.current) return;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('view', viewMode);
+      return next;
+    }, { replace: true });
+  }, [viewMode, spaceId, setSearchParams]);
 
   // Restrict views for VIEWER role
   useEffect(() => {

@@ -4,7 +4,31 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-04-29
+## EN COURS — 2026-05-01
+
+### Gantt — timeline adaptive + centrage aujourd'hui + persistance vue
+- TimelineView : ResizeObserver → containerWidth, visibleDays = floor((w-288)/dayWidth)
+- centerDate (état) remplace visibleStartDate : visibleStartDate = centerDate - visibleDays/2 (useMemo)
+- Redimensionnement : visibleDays change → visibleStartDate recalculé, aujourd'hui reste centré
+- goToToday : setCenterDate(today) → recentre instantanément
+- overflow-x-hidden + suppression min-w-max : grille remplit l'espace, pas de scrollbar horizontal
+- Tooltip `title` sur les titres tronqués de la colonne gauche
+- SpacePage : ?view=X dans l'URL (replace) — persist la vue sur refresh
+  - viewReadyRef empêche le sync URL prématuré avant application du defaultView
+  - defaultView effect lit searchParams.get('view') en priorité sur space.defaultView
+
+## HISTORIQUE — 2026-04-30
+
+### Responsive mobile — livré (c3ba19f)
+- SpacePage : px-0 mobile, px-4 desktop
+- SpaceToolbar : toggle filtres mobile (SlidersHorizontal), vues complexes masquées (kanban, types, members, timeline, graph…), mindmap gardé
+- ListView : icône ℹ par ligne (statut, type, priorité, dates, parent), statut masqué de la grille mobile
+- ThreadView : lastActivity + contribCount masqués mobile, métadonnées non-wrappantes
+- ItemEditModal : header compact mobile
+- Layout : sidebar 85vw, nav mobile avec sections/icônes
+- HomeView, CommunityPage, SpaceExportButton, SpaceToolbar "Nouveau" : labels masqués mobile
+
+## HISTORIQUE — 2026-04-29
 
 ### Menu contextuel — terminé (c6af110)
 - 5 groupes : Ouvrir (Ouvrir / Ouvrir dans un nouvel onglet) / Modifier (Modifier, Absorber, Éclater, Fusionner) / [sep] M'assigner, Marquer terminé, Déplacer / Ajouter (Ajouter un enfant, Dupliquer) / Autres (Convertir en espace, Supprimer)
