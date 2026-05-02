@@ -31,7 +31,7 @@ import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ItemEditModal } from '../components/ItemEditModal';
-import { useViewModeStore, VIEWER_ALLOWED_VIEWS } from '../stores/viewMode';
+import { useViewModeStore, VIEWER_ALLOWED_VIEWS, type ViewMode } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
 import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
@@ -143,12 +143,12 @@ export function SpacePage() {
     viewReadyRef.current = false;
   }, [spaceId]);
 
-  // Apply space defaultView — prefer URL ?view= param (restores view on refresh)
-  // Also syncs to URL immediately (handles case where viewMode doesn't change = effect 3 not triggered)
+  // Apply space defaultView — priorité : URL ?view= > vue active en cours (sticky) > defaultView espace > list
+  // La vue active en cours (viewMode) persiste entre espaces : si l'utilisateur navigue en "images", tous les espaces suivants s'ouvrent en images
   useEffect(() => {
     if (!space || space.id !== spaceId) return;
     const urlView = searchParams.get('view') as Parameters<typeof setMode>[0] | null;
-    const targetMode = urlView || (space.defaultView as Parameters<typeof setMode>[0]) || 'list';
+    const targetMode = urlView || viewMode || (space.defaultView as Parameters<typeof setMode>[0]) || 'list';
     setMode(targetMode);
     viewReadyRef.current = true;
     setSearchParams(prev => {
@@ -579,6 +579,7 @@ export function SpacePage() {
           viewContainerRef={viewContainerRef}
           onStartTour={() => startViewTour(viewMode)}
           pulseHelp={pulseHelp}
+          defaultView={space?.defaultView as ViewMode | undefined}
         />
 
         {/* Deferred items banner */}

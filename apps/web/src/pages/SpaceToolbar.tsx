@@ -88,6 +88,7 @@ export interface SpaceToolbarProps {
   onSetMode: (mode: ViewMode) => void;
   allowedViews: ViewMode[] | null;
   spaceViews: MenuItemConfig[];
+  defaultView?: ViewMode;
   // Expand/Collapse
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -127,6 +128,7 @@ export function SpaceToolbar({
   onSetMode,
   allowedViews,
   spaceViews,
+  defaultView,
   isExpanded,
   onToggleExpand,
   onResetLayout,
@@ -202,12 +204,14 @@ export function SpaceToolbar({
                   {section.views.map((v) => {
                     const Icon = VIEW_ICON_MAP[v.icon];
                     const isActive = viewMode === v.viewMode;
+                    const isDefault = defaultView && v.viewMode === defaultView;
+                    const showPulse = isDefault && !isActive;
                     return (
                       <button
                         key={v.key}
                         onClick={() => onSetMode(v.viewMode as ViewMode)}
-                        title={v.label}
-                        className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                        title={isDefault ? `${v.label} (vue par défaut)` : v.label}
+                        className={`relative inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                           isActive
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -215,6 +219,9 @@ export function SpaceToolbar({
                       >
                         {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
                         <span className="hidden sm:inline">{v.label}</span>
+                        {showPulse && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        )}
                       </button>
                     );
                   })}

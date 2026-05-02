@@ -667,35 +667,27 @@ export function Layout() {
 
       {/* Navigation globale — visible uniquement sur mobile (md: le menu header prend le relais) */}
       <div className="md:hidden border-b border-border/50 px-2 py-2 flex-shrink-0">
-        {menuSections
-          .filter(s => !['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id))
-          .map(section => {
-            const items = section.items.filter(
+        <div className="grid grid-cols-4 gap-1">
+          {menuSections
+            .filter(s => !['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id))
+            .flatMap(section => section.items.filter(
               item => item.key !== 'logout' && item.key !== 'profile' && (item.route || item.viewMode)
-            );
-            if (items.length === 0) return null;
-            return (
-              <div key={section.id} className="mb-1">
-                <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-2 py-1 block">
-                  {section.label}
-                </span>
-                {items.map(item => {
-                  const Icon = getNavIcon(item.icon);
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => { navigate(item.route || '/'); setSidebarOpen(false); }}
-                      className="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-md text-sm hover:bg-accent/50 transition-colors text-foreground/80"
-                    >
-                      {Icon && <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />}
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })
-        }
+            ))
+            .map(item => {
+              const Icon = getNavIcon(item.icon);
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => { navigate(item.route || '/'); setSidebarOpen(false); }}
+                  className="flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-md text-[10px] hover:bg-accent/50 transition-colors text-foreground/70"
+                >
+                  {Icon && <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />}
+                  <span className="truncate w-full text-center leading-tight">{item.label}</span>
+                </button>
+              );
+            })
+          }
+        </div>
       </div>
 
       {/* Navigation - scrollable */}
