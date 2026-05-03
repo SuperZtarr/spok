@@ -103,6 +103,15 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       message: 'Un email de vérification a été envoyé. Pensez à vérifier vos courriers indésirables.',
     }).catch(() => {});
 
+    // Notify all admins of the new registration (fire-and-forget)
+    notifyAdmins(fastify.prisma, {
+      type: 'NEW_USER',
+      title: `Nouvelle inscription : ${user.name}`,
+      message: `${user.name} (${user.email}) vient de s'inscrire.`,
+      link: '/admin/users',
+      metadata: { userId: user.id, userName: user.name, userEmail: user.email },
+    }).catch(() => {});
+
     const response: AuthResponse = {
       user: authUser,
       tokens,
@@ -167,6 +176,17 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       avatarUrl: user.avatarUrl ?? undefined,
       lastLoginAt: previousLoginAt?.toISOString(),
     };
+
+    // Notify admins on first login (previousLoginAt === null means never logged in before)
+    if (previousLoginAt === null) {
+      notifyAdmins(fastify.prisma, {
+        type: 'NEW_USER',
+        title: `Première connexion : ${user.name}`,
+        message: `${user.name} (${user.email}) s'est connecté pour la première fois.`,
+        link: '/admin/users',
+        metadata: { userId: user.id, userName: user.name, userEmail: user.email },
+      }).catch(() => {});
+    }
 
     // Create email verification notification if not verified and none exists
     if (!user.emailVerified) {
@@ -447,6 +467,21 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     return { success: true, message: 'Email de vérification envoyé' };
   });
 };
+
+async function notifyAdmins(
+  prisma: any,
+  input: { type: string; title: string; message: string; link: string; metadata: Record<string, unknown> },
+): Promise<void> {
+  const admins = await prisma.user.findMany({
+    where: { globalRole: 'ADMIN' },
+    select: { id: true },
+  });
+  await Promise.all(
+    admins.map((admin: { id: string }) =>
+      createNotification(prisma, { userId: admin.id, ...input } as any),
+    ),
+  );
+}
 
 export async function sendVerificationEmail(
   fastify: any,

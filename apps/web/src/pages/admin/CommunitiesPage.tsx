@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -77,10 +78,11 @@ function SortableRow({ id, children }: { id: string; children: (props: { dragHan
 
 export function CommunitiesPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [modalCommunityId, setModalCommunityId] = useState<string | null | undefined>(undefined);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [communityToDelete, setCommunityToDelete] = useState<AdminCommunity | null>(null);
 
   useEffect(() => {
@@ -208,7 +210,7 @@ export function CommunitiesPage() {
               <Download className="w-4 h-4 mr-1.5" />
               CSV
             </Button>
-            <Button onClick={() => setModalCommunityId(null)}>
+            <Button onClick={() => setCreateModalOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" />
               Nouvelle communaute
             </Button>
@@ -313,7 +315,7 @@ export function CommunitiesPage() {
                                 <GripVertical className="w-4 h-4" />
                               </div>
                             </td>
-                            <td className="px-4 py-3 cursor-pointer" onClick={() => setModalCommunityId(community.id)}>
+                            <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/communities/${community.id}/settings`)}>
                               <div className="flex items-center gap-3">
                                 <CommunityAvatar community={community} />
                                 <div className="min-w-0">
@@ -463,10 +465,10 @@ export function CommunitiesPage() {
         </>
       )}
 
-      {modalCommunityId !== undefined && (
+      {createModalOpen && (
         <CommunityDetailModal
-          communityId={modalCommunityId}
-          onClose={() => setModalCommunityId(undefined)}
+          communityId={null}
+          onClose={() => setCreateModalOpen(false)}
         />
       )}
 

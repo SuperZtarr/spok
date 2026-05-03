@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Trash2, Users, FolderKanban, User, Building2, ArrowUp, ArrowDown, X, AlertTriangle, ChevronLeft, ChevronRight, Download, GitBranch, FileText } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { SpaceDetailModal } from '../../components/admin/SpaceDetailModal';
 import { SpaceDeleteConfirmModal } from '../../components/SpaceDeleteConfirmModal';
 import { useSort } from '../../hooks/useSort';
 
@@ -55,12 +54,12 @@ function formatRelativeDate(dateStr: string): string {
 
 export function SpacesPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const anomaly = searchParams.get('anomaly') || undefined;
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [spaceToDelete, setSpaceToDelete] = useState<AdminSpace | null>(null);
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'GROUP' | 'PERSONAL'>('ALL');
 
@@ -236,7 +235,7 @@ export function SpacesPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {sortedSpaces.map((space) => (
-                  <tr key={space.id} className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => setSelectedSpaceId(space.id)}>
+                  <tr key={space.id} className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => navigate(`/spaces/${space.id}/settings`)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <FolderKanban className={`w-4 h-4 flex-shrink-0 ${space.type === 'GROUP' ? 'text-green-500' : 'text-blue-500'}`} />
@@ -347,13 +346,6 @@ export function SpacesPage() {
             </div>
           )}
         </>
-      )}
-
-      {selectedSpaceId && (
-        <SpaceDetailModal
-          spaceId={selectedSpaceId}
-          onClose={() => setSelectedSpaceId(null)}
-        />
       )}
 
       {spaceToDelete && (

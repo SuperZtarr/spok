@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { UserDetailModal } from '../../components/admin/UserDetailModal';
+import { UserProfileModal } from '../../components/UserProfileModal';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useSort } from '../../hooks/useSort';
 import type { AdminUser } from '@spok/shared';
@@ -79,6 +80,7 @@ export function UsersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [modalUserId, setModalUserId] = useState<string | null | undefined>(undefined);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
 
@@ -179,7 +181,7 @@ export function UsersPage() {
   const UserRow = ({ user }: { user: AdminUser }) => (
     <tr
       className="hover:bg-muted/50 cursor-pointer transition-colors"
-      onClick={() => setModalUserId(user.id)}
+      onClick={() => setProfileUserId(user.id)}
     >
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -456,6 +458,15 @@ export function UsersPage() {
             </div>
           )}
         </div>
+      )}
+
+      {profileUserId && (
+        <UserProfileModal
+          isOpen={true}
+          onClose={() => setProfileUserId(null)}
+          user={null}
+          targetUserId={profileUserId}
+        />
       )}
 
       {modalUserId !== undefined && (

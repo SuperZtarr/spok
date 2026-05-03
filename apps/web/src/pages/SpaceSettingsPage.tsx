@@ -14,10 +14,12 @@ import { useSpace, useUpdateSpace, useDeleteSpace } from '../hooks/useSpaces';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { useAuthStore } from '../stores/auth';
+import { useAdminMode } from '../components/DevDbStatus';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { SpaceMembersManager } from '../components/settings/SpaceMembersManager';
+import { SpaceCard } from '../components/ui/SpaceCard';
 import { OrgChartView } from '../components/views/OrgChartView';
 import type { Role } from '@spok/shared';
 import { VIEW_MODES } from '../stores/viewMode';
@@ -147,6 +149,7 @@ export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const adminMode = useAdminMode();
 
   const { data: space, isLoading: spaceLoading } = useSpace(spaceId!);
   const updateSpaceMutation = useUpdateSpace(spaceId!);
@@ -326,11 +329,11 @@ export function SpaceSettingsPage() {
   }, [allSpaces, spaceId, editCommunityId]);
 
   // Check permissions
-  const canEdit = space?.role === 'OWNER';
+  const canEdit = space?.role === 'OWNER' || adminMode;
 
-  // Check delete permission: space OWNER or community OWNER
+  // Check delete permission: space OWNER or community OWNER or admin
   const communityRole = communities?.find(c => c.id === space?.communityId)?.role;
-  const canDelete = space?.role === 'OWNER' || communityRole === 'OWNER';
+  const canDelete = space?.role === 'OWNER' || communityRole === 'OWNER' || adminMode;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -637,6 +640,14 @@ export function SpaceSettingsPage() {
                   />
                 </div>
               )}
+            </div>
+
+            {/* Preview */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <label className="block text-sm font-medium mb-3">Aperçu de la carte</label>
+              <div className="max-w-[280px]">
+                {space && <SpaceCard space={space} />}
+              </div>
             </div>
           </div>
         )}

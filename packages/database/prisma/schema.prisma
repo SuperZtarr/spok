@@ -475,6 +475,7 @@ enum NotificationType {
   CONTRIBUTION
   MENTION
   EMAIL_VERIFICATION
+  NEW_USER
 }
 
 // Refresh tokens for JWT

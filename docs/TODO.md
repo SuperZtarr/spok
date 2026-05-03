@@ -18,6 +18,7 @@
 - [x] SpaceContentRedirect : préserver les query params (?item=) — 2026-04-25
 - [x] Toolbar espace : sélecteur de vues (boutons par section, filtrés par config admin menu) — 2026-04-25
 - [x] Menu contextuel : revoir ordre et libellés — 5 groupes, onOpen navigate onglet actuel — c6af110 (2026-04-29)
+- [x] Gantt : timeline adaptive (centerDate, ResizeObserver, aujourd'hui centré au resize), persistance vue ?view=X dans URL — c4f6dc9 (2026-05-01)
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)

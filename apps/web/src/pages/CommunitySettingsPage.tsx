@@ -17,6 +17,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
+import { CommunityCard } from '../components/ui/CommunityCard';
 import { CommunityDeleteConfirmModal } from '../components/CommunityDeleteConfirmModal';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
@@ -762,6 +763,14 @@ export function CommunitySettingsPage() {
                   />
                 </div>
               )}
+            </div>
+
+            {/* Preview */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <label className="block text-sm font-medium mb-3">Aperçu de la carte</label>
+              <div className="max-w-[320px]">
+                <CommunityCard community={community} />
+              </div>
             </div>
           </div></RoleGuard>
         )}
