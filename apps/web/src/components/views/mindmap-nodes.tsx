@@ -185,7 +185,7 @@ export interface MindMapNodeProps {
     onSplitDescription?: (id: string) => void;
     onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
-    doneStatusId: string;
+    statusOptions: Array<{ id: string; label: string }>;
     isRoot: boolean;
     hasChildren: boolean;
     isCollapsed: boolean;
@@ -204,7 +204,7 @@ export interface MindMapNodeProps {
 }
 
 export function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, doneStatusId, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
+  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, statusOptions, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type, item.url);
 
   return (
@@ -292,7 +292,8 @@ export function MindMapNode({ data }: MindMapNodeProps) {
               onOpen,
             onOpenInNewTab,
             }, {
-              statusAction: canEdit && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+              statusOptions: canEdit ? statusOptions : null,
+              currentStatusId: item.status || undefined,
               extraChildren: [
                 ...(hasPortalSupport && canEdit ? [{ id: 'add-portal', label: 'Ajouter un portail', icon: ExternalLink, onClick: () => onAddPortal(item.id) }] : []),
               ],

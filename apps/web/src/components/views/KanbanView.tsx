@@ -82,8 +82,7 @@ interface KanbanColumnProps {
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isOver: boolean;
-  nextStatus?: string;
-  nextStatusLabel?: string;
+  statusOptions?: Array<{ id: string; label: string }>;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
@@ -107,8 +106,7 @@ interface KanbanCardProps {
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   isDragging?: boolean;
-  nextStatus?: string;
-  nextStatusLabel?: string;
+  statusOptions?: Array<{ id: string; label: string }>;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
@@ -118,7 +116,7 @@ interface KanbanCardProps {
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, nextStatus, nextStatusLabel, canEdit = true, canEditItem, referentiels, isFirstCard }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusOptions, canEdit = true, canEditItem, referentiels, isFirstCard }: KanbanCardProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -225,7 +223,8 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             onOpenInNewTab,
           }, {
             canEdit: canEditItem ? canEditItem(item) : canEdit,
-            statusAction: nextStatus !== undefined ? { label: nextStatusLabel || 'Suivant', statusId: nextStatus! } : null,
+            statusOptions,
+            currentStatusId: item.status || undefined,
             extraSections: [{
               label: 'Exporter',
               actions: [
@@ -240,7 +239,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, nextStatus, nextStatusLabel, canEdit, canEditItem, referentiels, isFirstColumn }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, statusOptions, canEdit, canEditItem, referentiels, isFirstColumn }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -293,8 +292,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             onOpen={onOpen}
 
             onOpenInNewTab={onOpenInNewTab}
-            nextStatus={nextStatus}
-            nextStatusLabel={nextStatusLabel}
+            statusOptions={statusOptions}
             canEdit={canEdit}
             canEditItem={canEditItem}
             referentiels={referentiels}
@@ -369,17 +367,6 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     return statusList.filter((s) => s.visible).sort((a, b) => a.order - b.order);
   }, [referentiels]);
 
-  // Build next status map for quick actions
-  const nextStatusMap = useMemo(() => {
-    const map: Record<string, { id: string; label: string } | undefined> = {};
-    statuses.forEach((status, index) => {
-      if (index < statuses.length - 1) {
-        const next = statuses[index + 1];
-        map[status.id] = { id: next.id === 'undefined' ? '' : next.id, label: next.label };
-      }
-    });
-    return map;
-  }, [statuses]);
 
   // Build space sections: main space + portal spaces
   const spaceSections = useMemo(() => {
@@ -536,8 +523,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
 
                         onOpenInNewTab={onOpenInNewTab}
                         isOver={overId === droppableId}
-                        nextStatus={nextStatusMap[status.id]?.id}
-                        nextStatusLabel={nextStatusMap[status.id]?.label}
+                        statusOptions={statuses}
                         canEdit={canEdit}
                         canEditItem={canEditItem}
                         referentiels={referentiels}

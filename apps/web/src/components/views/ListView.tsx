@@ -194,13 +194,9 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     return { statusLabels: sLabels, statusColors: sColors, typeLabelsShort: tLabels };
   }, [referentiels]);
 
-  // Find the "done" status (or last visible status) for the complete button
-  const doneStatusId = useMemo(() => {
+  const statusOptions = useMemo(() => {
     const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-    const visibleStatuses = statuses.filter((s) => s.visible).sort((a, b) => a.order - b.order);
-    // Look for "done" status or use the last one
-    const doneStatus = visibleStatuses.find((s) => s.id === 'done');
-    return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
+    return statuses.filter(s => s.visible).sort((a, b) => a.order - b.order);
   }, [referentiels]);
 
   const gridColsClass = hasPortals
@@ -259,7 +255,6 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               const statusLabel = statusLabels[item.status || ''] || 'Non défini';
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;
-              const isDone = item.status === doneStatusId;
               const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
               const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
               const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
@@ -396,7 +391,8 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
             onOpenInNewTab,
                         }, {
                           canEdit: canEditItem ? canEditItem(item) : canEdit,
-                          statusAction: item.status && !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+                          statusOptions,
+                          currentStatusId: item.status || undefined,
                           extraSections: [{
                             label: 'Exporter',
                             actions: [

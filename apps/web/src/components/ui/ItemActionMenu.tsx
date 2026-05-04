@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, ChevronRight, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 export interface ItemAction {
@@ -9,6 +9,8 @@ export interface ItemAction {
   onClick: () => void;
   variant?: 'default' | 'danger';
   disabled?: boolean;
+  checked?: boolean;
+  submenu?: ItemAction[];
 }
 
 export interface ItemActionGroup {
@@ -29,24 +31,24 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  // Calculate dropdown position from trigger, flipping up if near bottom
+  const [openSubmenuId, setOpenSubmenuId] = useState<string | null>(null);
+  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const submenuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const dropdownWidth = 200;
-    const estimatedHeight = 250; // conservative estimate for menu height
+    const estimatedHeight = 250;
     const margin = 8;
 
     let top = rect.bottom + 4;
-    // Flip upward if dropdown would overflow viewport bottom
     if (top + estimatedHeight > window.innerHeight - margin) {
       top = rect.top - estimatedHeight - 4;
-      // If flipping up would go above viewport, clamp to top
       if (top < margin) top = margin;
     }
 
     let left = side === 'right' ? rect.left : rect.right - dropdownWidth;
-    // Clamp horizontal
     if (left + dropdownWidth > window.innerWidth - margin) {
       left = window.innerWidth - dropdownWidth - margin;
     }
@@ -77,37 +79,67 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
     }
   }, []);
 
-  // Cleanup timer on unmount
+  const openSubmenu = useCallback((id: string, rect: DOMRect) => {
+    if (submenuCloseTimerRef.current) {
+      clearTimeout(submenuCloseTimerRef.current);
+      submenuCloseTimerRef.current = null;
+    }
+    const menuWidth = 200;
+    const margin = 8;
+    let left = rect.right + 4;
+    if (left + menuWidth > window.innerWidth - margin) {
+      left = rect.left - menuWidth - 4;
+    }
+    setOpenSubmenuId(id);
+    setSubmenuPosition({ top: rect.top, left });
+  }, []);
+
+  const scheduleCloseSubmenu = useCallback(() => {
+    submenuCloseTimerRef.current = setTimeout(() => {
+      setOpenSubmenuId(null);
+    }, 150);
+  }, []);
+
+  const cancelCloseSubmenu = useCallback(() => {
+    if (submenuCloseTimerRef.current) {
+      clearTimeout(submenuCloseTimerRef.current);
+      submenuCloseTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (submenuCloseTimerRef.current) clearTimeout(submenuCloseTimerRef.current);
     };
   }, []);
 
-  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) setOpenSubmenuId(null);
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
+      if (event.key === 'Escape') setIsOpen(false);
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // Close on scroll (parent containers)
   useEffect(() => {
     if (!isOpen) return;
-    function handleScroll() {
-      setIsOpen(false);
-    }
+    function handleScroll() { setIsOpen(false); }
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
   }, [isOpen]);
 
   const filteredGroups = groups.filter(g => g.actions.length > 0);
   if (filteredGroups.length === 0) return null;
+
+  const activeSubmenu = openSubmenuId
+    ? filteredGroups.flatMap(g => g.actions).find(a => a.id === openSubmenuId)?.submenu
+    : null;
 
   return (
     <>
@@ -140,13 +172,26 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
               )}
               {group.actions.map((action) => {
                 const Icon = action.icon;
+                const hasSubmenu = !!action.submenu?.length;
                 return (
                   <button
                     key={action.id}
+                    onMouseEnter={(e) => {
+                      if (hasSubmenu) {
+                        openSubmenu(action.id, (e.currentTarget as HTMLElement).getBoundingClientRect());
+                      } else {
+                        scheduleCloseSubmenu();
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (hasSubmenu) scheduleCloseSubmenu();
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      action.onClick();
-                      setIsOpen(false);
+                      if (!hasSubmenu) {
+                        action.onClick();
+                        setIsOpen(false);
+                      }
                     }}
                     disabled={action.disabled}
                     className={`w-full px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${
@@ -156,12 +201,47 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
                     } ${action.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{action.label}</span>
+                    <span className="flex-1 text-left">{action.label}</span>
+                    {hasSubmenu && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
                   </button>
                 );
               })}
             </div>
           ))}
+        </div>,
+        document.body
+      )}
+
+      {isOpen && openSubmenuId && activeSubmenu && createPortal(
+        <div
+          onMouseEnter={cancelCloseSubmenu}
+          onMouseLeave={scheduleCloseSubmenu}
+          style={{ position: 'fixed', top: submenuPosition.top, left: submenuPosition.left, zIndex: 100000 }}
+          className="bg-white dark:bg-gray-900 border rounded-md shadow-lg py-1 min-w-[200px]"
+        >
+          {activeSubmenu.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  action.onClick();
+                  setIsOpen(false);
+                }}
+                disabled={action.disabled}
+                className={`w-full px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${
+                  action.variant === 'danger'
+                    ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-950'
+                    : 'text-foreground hover:bg-accent'
+                } ${action.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                <span className="flex-1 text-left">{action.label}</span>
+                {action.checked && <Check className="w-3 h-3 text-primary" />}
+              </button>
+            );
+          })}
         </div>,
         document.body
       )}

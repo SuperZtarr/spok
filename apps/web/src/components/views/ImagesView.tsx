@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { ImageIcon, ChevronLeft, ChevronRight, X, FolderKanban, GripVertical, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import type { Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
@@ -202,9 +203,10 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
   // Flat list for lightbox navigation
   const flatImages = useMemo(() => groups.flatMap(g => g.images), [groups]);
 
-  const doneStatusId = referentiels?.statusLabels
-    ? Object.entries(referentiels.statusLabels).find(([, v]: any) => v.label === 'Terminé')?.[0] || 'done'
-    : 'done';
+  const statusOptions = useMemo(() => {
+    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    return (statuses as Array<{ id: string; label: string; visible: boolean; order: number }>).filter(s => s.visible).sort((a, b) => a.order - b.order);
+  }, [referentiels]);
 
   const openLightbox = useCallback((index: number) => setLightboxIndex(index), []);
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
@@ -305,7 +307,6 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
           <div className="p-3">
             <div className={`grid ${gridCols} gap-3`}>
               {group.images.map((img) => {
-                const isDone = img.status === doneStatusId || img.status === 'done';
                 return (
                   <DraggableImage key={img.id} id={img.id} canDrag={canEdit && !!onMove}>
                   <div
@@ -332,7 +333,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ItemActionMenu
                         groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpen,
-            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(img) : canEdit, statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(img) : canEdit, statusOptions, currentStatusId: img.status || undefined })}
                         triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
                       />
                     </div>

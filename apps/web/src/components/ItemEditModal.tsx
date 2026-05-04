@@ -27,6 +27,7 @@ import { DrawioEditor } from './ui/DrawioEditor';
 import { ImageUploadZone } from './ui/ImageUploadZone';
 import { FileUploadZone } from './ui/FileUploadZone';
 import { DateTimeField } from './ui/DateTimeField';
+import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
@@ -466,6 +467,12 @@ export function ItemEditModal({
       }
     }
     setEndDate(newEnd);
+  }, [startDate]);
+
+  const handleTimeRangeChange = useCallback((st: string, et: string) => {
+    const datePart = startDate ? startDate.slice(0, 10) : toDatetimeLocal(new Date()).slice(0, 10);
+    setStartDate(`${datePart}T${st}`);
+    setEndDate(`${datePart}T${et}`);
   }, [startDate]);
 
   const handleAddRelation = () => {
@@ -1092,63 +1099,127 @@ export function ItemEditModal({
               </div>
 
               {/* Dates */}
-              <div className="space-y-4" data-tour="item-dates">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Début</label>
-                  {canEdit ? (
-                    <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={type === 'MEETING' || type === 'TASK'} />
-                  ) : (
-                    <p className="text-sm">{startDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate)) : <span className="text-muted-foreground">—</span>}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Fin</label>
-                  {canEdit ? (
-                    <div className="space-y-2">
-                      {(type === 'MEETING' || type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
-                        <div className="hidden sm:flex flex-wrap gap-1.5">
-                          {(type === 'MEETING' ? MEETING_DURATIONS : type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
-                            const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
-                            return (
-                              <button key={d.ms} type="button"
-                                onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
-                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                {d.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={type === 'MEETING' || type === 'TASK'} showPresets={type !== 'MEETING' && type !== 'PROJECT' && type !== 'TASK' && type !== 'PERIOD'} minDate={startDate} />
+              <div data-tour="item-dates">
+                {type === 'MEETING' && canEdit ? (
+                  /* MEETING : picker vertical + champs côte à côte */
+                  <div className="flex gap-3 items-start">
+                    {/* Plage horaire */}
+                    <div className="w-48 flex-shrink-0">
+                      <TimeRangePicker
+                        startTime={startDate ? startDate.slice(11, 16) : null}
+                        endTime={endDate ? endDate.slice(11, 16) : null}
+                        onChange={handleTimeRangeChange}
+                      />
                     </div>
-                  ) : (
-                    <p className="text-sm">{endDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate)) : <span className="text-muted-foreground">—</span>}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Échéance</label>
-                  {canEdit ? (
-                    <div className="space-y-2">
-                      {startDate && type !== 'PERIOD' && (
-                        <div className="hidden sm:flex flex-wrap gap-1.5">
-                          {DUE_DATE_DURATIONS.map((d) => {
-                            const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                            const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
-                            return (
-                              <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
-                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                {d.label}
-                              </button>
-                            );
-                          })}
+                    {/* Champs de date */}
+                    <div className="flex-1 min-w-0 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Début</label>
+                        <DateTimeField value={startDate} onChange={handleStartDateChange} showTime />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Fin</label>
+                        <div className="space-y-2">
+                          {startDate && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {MEETING_DURATIONS.map((d) => {
+                                const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                                return (
+                                  <button key={d.ms} type="button"
+                                    onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
+                                    className={`px-2 py-0.5 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                    {d.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <DateTimeField value={endDate} onChange={handleEndDateChange} showTime minDate={startDate} />
                         </div>
-                      )}
-                      <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Échéance</label>
+                        <div className="space-y-2">
+                          {startDate && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {DUE_DATE_DURATIONS.map((d) => {
+                                const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                                const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
+                                return (
+                                  <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
+                                    className={`px-2 py-0.5 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                    {d.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  /* Autres types : layout standard */
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Début</label>
+                      {canEdit ? (
+                        <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={type === 'TASK'} />
+                      ) : (
+                        <p className="text-sm">{startDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate)) : <span className="text-muted-foreground">—</span>}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Fin</label>
+                      {canEdit ? (
+                        <div className="space-y-2">
+                          {(type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
+                            <div className="hidden sm:flex flex-wrap gap-1.5">
+                              {(type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
+                                const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                                return (
+                                  <button key={d.ms} type="button"
+                                    onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
+                                    className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                    {d.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={type === 'TASK'} showPresets={type !== 'PROJECT' && type !== 'TASK' && type !== 'PERIOD'} minDate={startDate} />
+                        </div>
+                      ) : (
+                        <p className="text-sm">{endDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate)) : <span className="text-muted-foreground">—</span>}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Échéance</label>
+                      {canEdit ? (
+                        <div className="space-y-2">
+                          {startDate && type !== 'PERIOD' && (
+                            <div className="hidden sm:flex flex-wrap gap-1.5">
+                              {DUE_DATE_DURATIONS.map((d) => {
+                                const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                                const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
+                                return (
+                                  <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
+                                    className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                    {d.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
+                        </div>
+                      ) : (
+                        <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* URL */}
@@ -1473,7 +1544,7 @@ export function ItemEditModal({
           </div>
 
           {/* Footer — always visible */}
-          <div className="flex gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
             {canEdit && (
               <Button type="submit" disabled={!hasChanges || updateMutation.isPending} className={!hasChanges ? 'opacity-40' : ''}>
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
@@ -1523,7 +1594,7 @@ export function ItemEditModal({
             )}
             {/* Contextual actions */}
             {item && canEdit && itemId && (
-              <div className="flex items-center gap-1 ml-auto">
+              <div className="flex items-center gap-1 sm:ml-auto">
                 {onAbsorbChildren && (
                   <Button type="button" variant="ghost" size="sm" title="Absorber les enfants"
                     onClick={() => { onAbsorbChildren(itemId); onClose(); }}>

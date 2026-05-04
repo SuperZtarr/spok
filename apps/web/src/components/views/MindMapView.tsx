@@ -239,11 +239,7 @@ function MindMapViewInner({
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
 
-  const doneStatusId = useMemo(() => {
-    const visibleStatuses = statuses.filter((s) => s.visible).sort((a, b) => a.order - b.order);
-    const doneStatus = visibleStatuses.find((s) => s.id === 'done');
-    return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
-  }, [statuses]);
+  const statusOptions = useMemo(() => statuses.filter(s => s.visible).sort((a, b) => a.order - b.order), [statuses]);
 
   const portalSpaceNames = useMemo(() => {
     if (!communitySpaces?.length || !spaceId) return new Map<string, string>();
@@ -316,11 +312,11 @@ function MindMapViewInner({
   }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, togglePin]);
 
   const layoutOptions: MindMapLayoutOptions = useMemo(() => ({
-    hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem,
+    hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem,
     pinnedIdsSet: pinnedIds.current,
     currentSpaceId: spaceId,
     portalSpaceNames,
-  }), [hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, spaceId, portalSpaceNames]);
+  }), [hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, spaceId, portalSpaceNames]);
 
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);

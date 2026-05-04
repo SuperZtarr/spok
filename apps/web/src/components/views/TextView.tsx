@@ -113,11 +113,9 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     return { statusLabels: sLabels, statusColors: sColors };
   }, [referentiels]);
 
-  const doneStatusId = useMemo(() => {
+  const statusOptions = useMemo(() => {
     const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-    const visibleStatuses = statuses.filter((s) => s.visible).sort((a, b) => a.order - b.order);
-    const doneStatus = visibleStatuses.find((s) => s.id === 'done');
-    return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
+    return statuses.filter(s => s.visible).sort((a, b) => a.order - b.order);
   }, [referentiels]);
 
   // Separate items: main space vs portal spaces
@@ -210,7 +208,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               onOpenInNewTab={onOpenInNewTab}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              doneStatusId={doneStatusId}
+              statusOptions={statusOptions}
               statusLabels={statusLabels}
               statusColors={statusColors}
               referentiels={referentiels}
@@ -257,7 +255,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     onDuplicateToSpace={undefined}
                     onConvertToSpace={undefined}
                     canEdit={false}
-                    doneStatusId={doneStatusId}
+                    statusOptions={statusOptions}
                     statusLabels={statusLabels}
                     statusColors={statusColors}
                     referentiels={referentiels}
@@ -294,7 +292,7 @@ function TextItem({
             onOpenInNewTab,
   canEdit,
   canEditItem,
-  doneStatusId,
+  statusOptions,
   statusLabels,
   statusColors,
   referentiels,
@@ -319,7 +317,7 @@ function TextItem({
   onOpenInNewTab?: (id: string) => void;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  doneStatusId: string;
+  statusOptions: Array<{ id: string; label: string }>;
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
   referentiels?: SpaceReferentiels;
@@ -388,7 +386,8 @@ function TextItem({
             onOpenInNewTab,
             }, {
               canEdit: canEditItem ? canEditItem(item) : canEdit,
-              statusAction: onUpdateStatus && item.status && item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+              statusOptions,
+              currentStatusId: item.status || undefined,
             })}
           />
         </div>

@@ -4,7 +4,22 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-01
+## EN COURS — 2026-05-04
+
+### MEETING — TimeRangePicker (plage horaire draggable)
+- Nouveau composant `TimeRangePicker.tsx` : timeline 7h–22h, snap 15 min, 3 modes drag (start/end/move)
+- Intégré dans `ItemEditModal.tsx` section dates, uniquement pour `type === 'MEETING'`
+- `handleTimeRangeChange` : met à jour startDate/endDate en gardant la date, changeant l'heure
+- Synchronisation bidirectionnelle avec les DateTimeField existants
+
+### Menu contextuel — Modifier le statut avec sous-menu
+- `ItemActionMenu` : ajout `submenu?: ItemAction[]` + `checked?: boolean` + rendu sous-menu portal (z-index 100000)
+- `itemMenuGroups` : `statusAction` remplacé par `statusOptions + currentStatusId` → entrée "Modifier le statut" avec sous-menu listant tous les statuts visibles, statut courant coché
+- 12 vues mises à jour : ListView, TimelineView, KanbanView, PlanningView, TextView, ImagesView, DocumentsView, LinksView, MindMapView, mindmap-nodes, mindmap-layout, space-tree-view
+- KanbanView : suppression de la logique `nextStatusMap` / `nextStatus` / `nextStatusLabel`
+- ImagesView/DocumentsView : correction du calcul bugué de `doneStatusId` (utilisait `statusLabels` au lieu de `statuses`)
+
+## HISTORIQUE — 2026-05-01
 
 ### Gantt — timeline adaptive + centrage aujourd'hui + persistance vue
 - TimelineView : ResizeObserver → containerWidth, visibleDays = floor((w-288)/dayWidth)

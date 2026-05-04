@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { FileText, Download, FolderKanban, GripVertical } from 'lucide-react';
 import type { Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { getTypeIcon } from '../../constants/ui';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
@@ -103,9 +104,10 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
     return result;
   }, [documents, items]);
 
-  const doneStatusId = referentiels?.statusLabels
-    ? Object.entries(referentiels.statusLabels).find(([, v]: any) => v.label === 'Terminé')?.[0] || 'done'
-    : 'done';
+  const statusOptions = useMemo(() => {
+    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    return (statuses as Array<{ id: string; label: string; visible: boolean; order: number }>).filter(s => s.visible).sort((a, b) => a.order - b.order);
+  }, [referentiels]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -151,7 +153,6 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
               {group.docs.map(doc => {
                 const Icon = getFileIcon(doc.url!);
                 const ext = getFileExtension(doc.url!);
-                const isDone = doc.status === doneStatusId || doc.status === 'done';
                 return (
                   <DraggableDoc key={doc.id} id={doc.id} canDrag={canEdit && !!onMove}>
                   <div
@@ -186,7 +187,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         <ItemActionMenu
                           groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(doc.description) ? onSplitDescription : undefined, onOpen,
-            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(doc) : canEdit, statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(doc) : canEdit, statusOptions, currentStatusId: doc.status || undefined })}
                         />
                       </div>
                     </div>

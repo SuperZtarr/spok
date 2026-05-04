@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { ExternalLink, FolderKanban, GripVertical } from 'lucide-react';
 import type { Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
@@ -41,10 +42,10 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
   const tooltip = [meta?.description || item.description, item.url].filter(Boolean).join('\n');
   const faviconUrl = meta?.favicon;
 
-  const doneStatusId = referentiels?.statusLabels
-    ? Object.entries(referentiels.statusLabels).find(([, v]: any) => v.label === 'Terminé')?.[0] || 'done'
-    : 'done';
-  const isDone = item.status === doneStatusId || item.status === 'done';
+  const statusOptions = useMemo(() => {
+    const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    return statuses.filter((s: any) => s.visible).sort((a: any, b: any) => a.order - b.order);
+  }, [referentiels]);
 
   return (
     <div className="inline-flex items-center group/link relative">
@@ -71,7 +72,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
 
       <div className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
         <ItemActionMenu
-          groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined, onOpen: actions.onOpen, onOpenInNewTab: actions.onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit, statusAction: !isDone ? { label: 'Marquer terminé', statusId: doneStatusId } : null })}
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: actions.onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined, onOpen: actions.onOpen, onOpenInNewTab: actions.onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit, statusOptions, currentStatusId: item.status || undefined })}
         />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye } from 'lucide-react';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, Circle } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 
 export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
@@ -20,7 +20,8 @@ export interface ItemMenuCallbacks {
 }
 
 export interface ItemMenuOptions {
-  statusAction?: { label: string; statusId: string } | null;
+  statusOptions?: Array<{ id: string; label: string }> | null;
+  currentStatusId?: string;
   // Actions supplémentaires dans le groupe "enfants" (ex: portail MindMap)
   extraChildren?: ItemAction[];
   // Actions supplémentaires dans le groupe "organiser" (ex: réorganiser MindMap)
@@ -28,7 +29,6 @@ export interface ItemMenuOptions {
   // Sections supplémentaires (ex: Exporter dans ListView/Kanban)
   extraSections?: Array<{ label?: string; actions: ItemAction[] }>;
   // Permissions : false = masquer toutes les actions d'écriture (delete, move, merge...)
-  // true (défaut) = toutes les actions disponibles
   canEdit?: boolean;
 }
 
@@ -52,7 +52,7 @@ export function buildItemMenuGroups(
     onAbsorbChildren,
     onSplitDescription,
   } = callbacks;
-  const { statusAction, extraChildren = [], extraOrganise = [], extraSections = [], canEdit = true } = options;
+  const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], canEdit = true } = options;
 
   // Groupe 1 — Ouvrir (toujours visible)
   const group1: ItemAction[] = [
@@ -68,10 +68,22 @@ export function buildItemMenuGroups(
     ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(itemId) }] : []),
   ] : [];
 
-  // Groupe 3 — (séparateur) M'assigner, Marquer terminé, Déplacer
+  // Groupe 3 — (séparateur) M'assigner, Modifier le statut, Déplacer
   const group3: ItemAction[] = canEdit ? [
     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
-    ...(onUpdateStatus && statusAction ? [{ id: 'status', label: statusAction.label, icon: CheckSquare, onClick: () => onUpdateStatus(itemId, statusAction.statusId) }] : []),
+    ...(onUpdateStatus && statusOptions && statusOptions.length > 0 ? [{
+      id: 'status',
+      label: 'Modifier le statut',
+      icon: CheckSquare,
+      onClick: () => {},
+      submenu: statusOptions.map(s => ({
+        id: `status-${s.id}`,
+        label: s.label,
+        icon: Circle,
+        checked: s.id === currentStatusId,
+        onClick: () => onUpdateStatus(itemId, s.id),
+      })),
+    }] : []),
     ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(itemId) }] : []),
     ...extraOrganise,
   ] : [];

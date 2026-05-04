@@ -7,6 +7,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../lib/api';
 import { Badge } from '../components/ui/Badge';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
@@ -250,7 +251,8 @@ export function TreeItem({
                 onDuplicateToSpace,
                 onConvertToSpace,
               }, {
-                statusAction: item.status && item.status !== 'done' ? { label: 'Marquer terminé', statusId: 'done' } : null,
+                statusOptions: DEFAULT_REFERENTIELS.statuses.filter(s => s.visible).sort((a, b) => a.order - b.order),
+                currentStatusId: item.status || undefined,
                 canEdit: canEdit ?? true,
               })}
             />

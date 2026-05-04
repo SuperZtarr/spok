@@ -99,11 +99,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
 
-  const doneStatusId = useMemo(() => {
-    const visibleStatuses = statuses.filter((s) => s.visible).sort((a, b) => a.order - b.order);
-    const doneStatus = visibleStatuses.find((s) => s.id === 'done');
-    return doneStatus?.id || visibleStatuses[visibleStatuses.length - 1]?.id || 'done';
-  }, [statuses]);
+  const statusOptions = useMemo(() => statuses.filter(s => s.visible).sort((a, b) => a.order - b.order), [statuses]);
 
   // Map portal spaceId → spaceName for quick lookup
   const portalSpaceNames = useMemo(() => {
@@ -749,7 +745,8 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
             onOpenInNewTab,
                           }, {
                             canEdit: canEditItem ? canEditItem(item) : canEdit,
-                            statusAction: item.status !== doneStatusId ? { label: 'Marquer terminé', statusId: doneStatusId } : null,
+                            statusOptions,
+                            currentStatusId: item.status || undefined,
                           })}
                         />
                       </div>

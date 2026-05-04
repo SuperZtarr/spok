@@ -274,7 +274,8 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
             onOpenInNewTab,
             }, {
               canEdit: canEditItem ? canEditItem(item) : canEdit,
-              statusAction: item.status && item.status !== 'done' ? { label: 'Marquer terminé', statusId: 'done' } : null,
+              statusOptions: statuses,
+              currentStatusId: item.status || undefined,
             })}
           />
         )}

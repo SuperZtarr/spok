@@ -68,7 +68,7 @@ export interface MindMapCallbacks {
 
 export interface MindMapLayoutOptions {
   hasPortalSupport: boolean;
-  doneStatusId: string;
+  statusOptions: Array<{ id: string; label: string }>;
   highlightType?: string;
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
@@ -91,7 +91,7 @@ export function calculateLayout(
   options: MindMapLayoutOptions,
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number; arcStart: number } {
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onTogglePin } = callbacks;
-  const { hasPortalSupport, doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
+  const { hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
 
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -267,7 +267,7 @@ export function calculateLayout(
         onAbsorbChildren,
         onSplitDescription,
         onOpenInNewTab,
-        doneStatusId,
+        statusOptions,
         isRoot,
         hasChildren,
         isCollapsed,
@@ -379,7 +379,7 @@ export function buildPortalNodesAndEdges(
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
   const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions } = ctx;
   const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab: _onOpenInNewTab, onTogglePin } = callbacks;
-  const { doneStatusId, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet } = options;
+  const { statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet } = options;
 
   const portalPosMap = new Map(positionedNodes.map(n => [n.id, n.position]));
   const portalNodes: Node[] = [];
@@ -533,7 +533,7 @@ export function buildPortalNodesAndEdges(
           onMerge,
           onAbsorbChildren,
           onSplitDescription,
-          doneStatusId,
+          statusOptions,
           isRoot: depth === 0,
           hasChildren: item.children.length > 0,
           isCollapsed: collapsedIds.has(item.id),
