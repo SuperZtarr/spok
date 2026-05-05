@@ -4,7 +4,25 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-04
+## EN COURS — 2026-05-05
+
+### Chemin critique Gantt — design prêt, implémentation à faire
+- Spec : `docs/superpowers/specs/2026-05-05-critical-path-gantt-design.md`
+- Algo CPM dans `timeline-utils.ts` : `computeCriticalPath(items, relations)` → `Set<string>`
+- `blocks` (A→B) : A prédécesseur de B / `depends` (A→B) : B prédécesseur de A
+- Items sans dates + dépendances : durée 0 (jalons inclus)
+- Rendu : toggle toolbar + `ring-2 ring-red-500` sur barres critiques
+- Prochaine étape : invoquer writing-plans puis implémenter
+
+### Diagramme — auto-save XML (4b32983)
+- `ItemEditModal.tsx` : `autoSaveDiagramMutation` + debounce 2s sur `diagramXml`
+- Déclenché uniquement si `type === 'DIAGRAM'` et item existant
+- Invalide uniquement `['items', spaceId]` — pas de réinit du form
+
+### MCP fix (4b32983)
+- `apps/mcp/src/index.ts` : `body.description` → `body.content` lors d'update item
+
+## HISTORIQUE — 2026-05-04
 
 ### MEETING — TimeRangePicker (plage horaire draggable)
 - Nouveau composant `TimeRangePicker.tsx` : timeline 7h–22h, snap 15 min, 3 modes drag (start/end/move)
