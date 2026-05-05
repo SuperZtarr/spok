@@ -338,6 +338,28 @@ export function ItemEditModal({
     },
   });
 
+  const autoSaveDiagramMutation = useMutation({
+    mutationFn: (xml: string) =>
+      itemsApi.update(spaceId, itemId!, { content: { xml } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+    },
+  });
+
+  const autoSaveDiagramTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (type !== 'DIAGRAM' || !itemId) return;
+    const savedXml = (item?.content as Record<string, unknown>)?.xml as string || '';
+    if (diagramXml === savedXml) return;
+    if (autoSaveDiagramTimerRef.current) clearTimeout(autoSaveDiagramTimerRef.current);
+    autoSaveDiagramTimerRef.current = setTimeout(() => {
+      autoSaveDiagramMutation.mutate(diagramXml);
+    }, 2000);
+    return () => {
+      if (autoSaveDiagramTimerRef.current) clearTimeout(autoSaveDiagramTimerRef.current);
+    };
+  }, [diagramXml]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const createContributionMutation = useMutation({
     mutationFn: (data: { content: string; parentId?: string }) =>
       itemsApi.createContribution(spaceId, itemId!, data),

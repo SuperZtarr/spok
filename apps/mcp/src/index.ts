@@ -209,7 +209,7 @@ server.tool(
   },
   async ({ spaceId, itemId, description, ...fields }) => {
     const body: Record<string, unknown> = { ...fields };
-    if (description !== undefined) body.description = textToTiptap(description);
+    if (description !== undefined) body.content = textToTiptap(description);
 
     const item = await api.patch(`/spaces/${spaceId}/items/${itemId}`, body);
 
