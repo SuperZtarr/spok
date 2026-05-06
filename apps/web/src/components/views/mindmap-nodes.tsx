@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { Handle, Position } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
@@ -13,7 +13,8 @@ function getPriorityBorder(priority: number | null | undefined): string {
     : 'border-2';
   return `${thickness} ${color}`;
 }
-import { ChevronRight, ChevronDown, FolderOpen, RotateCcw, ExternalLink, X, Pin, PinOff } from 'lucide-react';
+import { ChevronRight, ChevronDown, FolderOpen, RotateCcw, ExternalLink, X, Pin, PinOff, GripVertical } from 'lucide-react';
+import { SidebarDropContext } from '../Layout';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
@@ -206,6 +207,7 @@ export interface MindMapNodeProps {
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, statusOptions, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type, item.url);
+  const { dropTargetId: _dt } = useContext(SidebarDropContext); void _dt; // abonnement context (déclenche re-render sur highlight sidebar)
 
   return (
     <div
@@ -224,6 +226,22 @@ export function MindMapNode({ data }: MindMapNodeProps) {
       <Handle type="source" position={Position.Bottom} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="bottom-source" />
       <Handle type="source" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="left-source" />
       <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="right-source" />
+
+      {/* Grip drag → sidebar (HTML5 natif, isolated from ReactFlow pointer events) */}
+      {canEdit && !isPortal && (
+        <span
+          draggable
+          className="nodrag nopan absolute -top-2 -right-2 opacity-0 group-hover:opacity-70 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 rounded bg-black/20"
+          title="Glisser vers un espace"
+          onPointerDown={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: (item as any).spaceId }));
+          }}
+        >
+          <GripVertical className="w-3 h-3" style={{ color: textColor }} />
+        </span>
+      )}
 
       <div className="flex items-center gap-2">
         {/* 1. Collapse/Expand button — shows child count badge when collapsed */}

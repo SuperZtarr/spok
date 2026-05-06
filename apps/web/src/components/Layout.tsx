@@ -144,14 +144,14 @@ function CommunitySection({
   );
 }
 
-// Context pour le drag & drop item → espace sidebar
-interface SidebarDropCtx {
+// Context exporté pour le drag & drop item → espace sidebar (utilisé par les vues)
+export interface SidebarDropCtx {
   dropTargetId: string | null;
   onDragOver: (spaceId: string, e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (spaceId: string, e: React.DragEvent) => void;
 }
-const SidebarDropContext = createContext<SidebarDropCtx>({
+export const SidebarDropContext = createContext<SidebarDropCtx>({
   dropTargetId: null,
   onDragOver: () => {},
   onDragLeave: () => {},
