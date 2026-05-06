@@ -64,7 +64,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card border rounded-lg shadow-xl w-full max-w-lg mx-4 p-6">
+      <div className="relative bg-card border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-8">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
@@ -111,7 +111,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="max-h-80 overflow-y-auto mb-4">
+            <div className="max-h-[50vh] overflow-y-auto mb-4">
               {spaceGroups.map((group) => (
                 <div key={group.communityId || '_personal'}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">
@@ -121,7 +121,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                     {group.spaces.map((space) => (
                       <label
                         key={space.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
                           selectedSpaceId === space.id
                             ? 'border-primary bg-primary/5'
                             : 'hover:bg-accent'
@@ -133,11 +133,11 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                           value={space.id}
                           checked={selectedSpaceId === space.id}
                           onChange={(e) => setSelectedSpaceId(e.target.value)}
-                          className="w-4 h-4"
+                          className="w-4 h-4 flex-shrink-0"
                         />
                         <div className="flex-1">
-                          <div className="font-medium">{space.name}</div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="font-medium text-base">{space.name}</div>
+                          <div className="text-sm text-muted-foreground mt-0.5">
                             {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'} • {space.role}
                           </div>
                         </div>
