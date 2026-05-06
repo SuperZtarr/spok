@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban, GitBranch } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 import { ConfirmModal } from '../ConfirmModal';
 import { getTypeIcon } from '../../constants/ui';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
-import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor } from './timeline-utils';
+import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 
 interface PortalGroup {
@@ -60,6 +60,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [compactMode, setCompactMode] = useState(false);
+  const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [pendingDeleteRelation, setPendingDeleteRelation] = useState<{ fromItemId: string; relationId: string; label: string } | null>(null);
 
@@ -113,6 +114,11 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const itemsWithDatesCount = useMemo(() => {
     return items.filter(item => item.startDate || item.dueDate).length;
   }, [items]);
+
+  const criticalPathIds = useMemo(() => {
+    if (!showCriticalPath || !relations || relations.length === 0) return new Set<string>();
+    return computeCriticalPath(items, relations);
+  }, [showCriticalPath, items, relations]);
 
   // Generate days array
   const days = useMemo(() => {
@@ -542,6 +548,17 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
             )}
           </Button>
 
+          {/* Chemin critique toggle */}
+          <Button
+            variant={showCriticalPath ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowCriticalPath(prev => !prev)}
+            title={showCriticalPath ? 'Masquer le chemin critique' : 'Afficher le chemin critique'}
+            className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
+          >
+            <GitBranch className="w-4 h-4" />
+          </Button>
+
           {/* Zoom controls */}
           <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
             <Button
@@ -782,6 +799,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           relationDrag && relationDragTargetIdx === itemIndex && item.id !== relationDrag.fromItemId
                             ? 'ring-2 ring-green-500 shadow-xl'
                             : ''
+                        } ${criticalPathIds.has(item.id) ? 'ring-2 ring-red-500' : ''
                         } ${(() => { const v = (item as any).viewedAt; return (v === null || (v && new Date(item.updatedAt) > new Date(v))) ? 'animate-unseen-blink' : ''; })()}`}
                         style={{
                           left: barStyle.left + 1,
