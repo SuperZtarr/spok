@@ -39,14 +39,10 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const dropdownWidth = 200;
-    const estimatedHeight = 250;
     const margin = 8;
 
+    // Position initiale : sous le trigger
     let top = rect.bottom + 4;
-    if (top + estimatedHeight > window.innerHeight - margin) {
-      top = rect.top - estimatedHeight - 4;
-      if (top < margin) top = margin;
-    }
 
     let left = side === 'right' ? rect.left : rect.right - dropdownWidth;
     if (left + dropdownWidth > window.innerWidth - margin) {
@@ -56,6 +52,18 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
 
     setPosition({ top, left });
   }, [side]);
+
+  // Après le rendu, mesurer la hauteur réelle et remonter si ça déborde
+  useEffect(() => {
+    if (!isOpen || !dropdownRef.current || !triggerRef.current) return;
+    const dropRect = dropdownRef.current.getBoundingClientRect();
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const margin = 8;
+    if (dropRect.bottom > window.innerHeight - margin) {
+      const newTop = triggerRect.top - dropRect.height - 4;
+      setPosition(prev => ({ ...prev, top: Math.max(margin, newTop) }));
+    }
+  }, [isOpen]);
 
   const openMenu = useCallback(() => {
     if (closeTimerRef.current) {
