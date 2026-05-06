@@ -4,15 +4,12 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-05
+## EN COURS — 2026-05-06
 
-### Chemin critique Gantt — design prêt, implémentation à faire
-- Spec : `docs/superpowers/specs/2026-05-05-critical-path-gantt-design.md`
-- Algo CPM dans `timeline-utils.ts` : `computeCriticalPath(items, relations)` → `Set<string>`
-- `blocks` (A→B) : A prédécesseur de B / `depends` (A→B) : B prédécesseur de A
-- Items sans dates + dépendances : durée 0 (jalons inclus)
-- Rendu : toggle toolbar + `ring-2 ring-red-500` sur barres critiques
-- Prochaine étape : invoquer writing-plans puis implémenter
+### Chemin critique Gantt — terminé (abe7f75)
+- Algo CPM (forward/backward pass, Kahn topo sort) dans `timeline-utils.ts`
+- Toggle GitBranch dans toolbar Gantt, barres critiques `ring-2 ring-red-500`
+- Fix build prod : `NEW_USER` manquant dans Records de `NotificationBell.tsx` et `UserProfileModal.tsx` (88a3d5d)
 
 ### Diagramme — auto-save XML (4b32983)
 - `ItemEditModal.tsx` : `autoSaveDiagramMutation` + debounce 2s sur `diagramXml`

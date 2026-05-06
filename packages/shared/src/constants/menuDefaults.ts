@@ -55,15 +55,15 @@ export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
   { id: '', key: 'ego', label: 'Réseau ego', icon: 'Focus', section: 'exploration', sectionLabel: 'Exploration', sectionOrder: 5, route: null, viewMode: 'ego', order: 9, visible: true, access: 'user' },
 
   // ── Section: admin (Administration) ──
-  { id: '', key: 'admin-communities', label: 'Communautés', icon: 'Building2', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/communities', viewMode: null, order: 0, visible: true, access: 'admin' },
-  { id: '', key: 'admin-spaces', label: 'Espaces', icon: 'FolderKanban', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/spaces', viewMode: null, order: 1, visible: true, access: 'admin' },
-  { id: '', key: 'admin-users', label: 'Utilisateurs', icon: 'Users', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/users', viewMode: null, order: 2, visible: true, access: 'admin' },
-  { id: '', key: 'admin-stats', label: 'Statistiques', icon: 'BarChart3', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/stats', viewMode: null, order: 3, visible: true, access: 'admin' },
-  { id: '', key: 'admin-audit', label: 'Audit', icon: 'History', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/audit-logs', viewMode: null, order: 4, visible: true, access: 'admin' },
-  { id: '', key: 'admin-anomalies', label: 'Diagnostics', icon: 'AlertTriangle', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/anomalies', viewMode: null, order: 5, visible: true, access: 'admin' },
-  { id: '', key: 'admin-menu', label: 'Menus', icon: 'Settings', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/menu', viewMode: null, order: 6, visible: true, access: 'admin' },
-  { id: '', key: 'admin-referentiels', label: 'Référentiels', icon: 'Settings', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/referentiels', viewMode: null, order: 7, visible: true, access: 'admin' },
-  { id: '', key: 'admin-api-doc', label: 'Documentation API', icon: 'FileText', section: 'admin', sectionLabel: 'Administration', sectionOrder: 6, route: '/admin/api-doc', viewMode: null, order: 8, visible: true, access: 'admin' },
+  { id: '', key: 'admin-communities', label: 'Communautés', icon: 'Building2', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/communities', viewMode: null, order: 0, visible: true, access: 'admin' },
+  { id: '', key: 'admin-spaces', label: 'Espaces', icon: 'FolderKanban', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/spaces', viewMode: null, order: 1, visible: true, access: 'admin' },
+  { id: '', key: 'admin-users', label: 'Utilisateurs', icon: 'Users', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/users', viewMode: null, order: 2, visible: true, access: 'admin' },
+  { id: '', key: 'admin-stats', label: 'Statistiques', icon: 'BarChart3', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/stats', viewMode: null, order: 3, visible: true, access: 'admin' },
+  { id: '', key: 'admin-audit', label: 'Audit', icon: 'History', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/audit-logs', viewMode: null, order: 4, visible: true, access: 'admin' },
+  { id: '', key: 'admin-anomalies', label: 'Diagnostics', icon: 'AlertTriangle', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/anomalies', viewMode: null, order: 5, visible: true, access: 'admin' },
+  { id: '', key: 'admin-menu', label: 'Menus', icon: 'Settings', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/menu', viewMode: null, order: 6, visible: true, access: 'admin' },
+  { id: '', key: 'admin-referentiels', label: 'Référentiels', icon: 'Settings', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/referentiels', viewMode: null, order: 7, visible: true, access: 'admin' },
+  { id: '', key: 'admin-api-doc', label: 'Documentation API', icon: 'FileText', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/api-doc', viewMode: null, order: 8, visible: true, access: 'admin' },
 
   // ── Section: misc (Divers) ──
   { id: '', key: 'search', label: 'Recherche', icon: 'Search', section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/search', viewMode: null, order: 0, visible: true, access: 'user' },

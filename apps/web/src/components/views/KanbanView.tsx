@@ -141,6 +141,21 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       } ${item.priority === 4 ? 'animate-urgent-blink ring-1 ring-red-400/60' : (() => { const v = (item as any).viewedAt; return (v === null || (v && new Date(item.updatedAt) > new Date(v))) ? 'animate-unseen-blink ring-1 ring-blue-400/60' : ''; })()}`}
       onClick={() => onEdit(item.id)}
     >
+      {canEdit && (
+        <span
+          draggable
+          className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 rounded bg-black/20 z-10"
+          title="Glisser vers un espace"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: item.spaceId }));
+          }}
+        >
+          <GripVertical className="w-3 h-3 text-white" />
+        </span>
+      )}
       <div className="flex items-start gap-2">
         {canEdit && (
           <RoleGuard role="MEMBER">

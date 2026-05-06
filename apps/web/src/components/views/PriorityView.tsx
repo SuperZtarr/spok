@@ -67,6 +67,7 @@ function PriorityCard({
   canEditItem,
   referentiels,
   spaceName,
+  currentSpaceId,
 }: {
   item: Item;
   onEdit: (id: string) => void;
@@ -86,6 +87,7 @@ function PriorityCard({
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
   spaceName?: string;
+  currentSpaceId?: string;
 }) {
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -106,6 +108,21 @@ function PriorityCard({
       }`}
       onClick={() => onEdit(item.id)}
     >
+      {canEdit && (
+        <span
+          draggable
+          className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 rounded bg-black/20 z-10"
+          title="Glisser vers un espace"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: item.spaceId || currentSpaceId }));
+          }}
+        >
+          <GripVertical className="w-3 h-3 text-white" />
+        </span>
+      )}
       <div className="flex items-start gap-2">
         {canEdit && (
           <div
@@ -243,6 +260,7 @@ function PriorityColumn({
             canEditItem={canEditItem}
             referentiels={referentiels}
             spaceName={portalSpaceNames && currentSpaceId && (item as any).spaceId !== currentSpaceId ? portalSpaceNames.get((item as any).spaceId) : undefined}
+            currentSpaceId={currentSpaceId}
           />
         ))}
         {items.length === 0 && (

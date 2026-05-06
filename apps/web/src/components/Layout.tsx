@@ -280,7 +280,9 @@ export function Layout() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
-  const { spaceViews, sections: menuSections } = useMenuItems();
+  const { spaceViews, sections: menuSections, visibleItems } = useMenuItems();
+  const adminMenuItems = visibleItems.filter(item => item.section === 'admin');
+  const adminMode = useAdminMode();
   const { clearIncludeChildren } = useSpaceStore();
   const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -529,6 +531,15 @@ export function Layout() {
     enabled: !!currentSpaceId,
   });
 
+  // Item ouvert dans la modale (?item=id dans l'URL)
+  const openItemId = new URLSearchParams(location.search).get('item');
+  const { data: openItem } = useQuery({
+    queryKey: ['item-header', currentSpaceId, openItemId],
+    queryFn: () => itemsApi.get(currentSpaceId!, openItemId!),
+    enabled: !!openItemId && !!currentSpaceId,
+    staleTime: 60_000,
+  });
+
   // Detect current community from URL only — not from cached space data
   const communityMatch = location.pathname.match(/\/communities\/([^/]+)/);
   const currentCommunityId = communityMatch?.[1] || (currentSpaceId ? currentSpace?.communityId : null) || null;
@@ -632,9 +643,14 @@ export function Layout() {
     let title = 'SPOK';
 
     if (currentSpace) {
-      title = fnLabel
-        ? `${currentSpace.name} — ${fnLabel}`
-        : `SPOK — ${currentSpace.name}`;
+      const communityPrefix = currentSpace.community?.name ? `${currentSpace.community.name} › ` : '';
+      if (openItem) {
+        title = `${communityPrefix}${currentSpace.name} › ${openItem.title}`;
+      } else if (fnLabel) {
+        title = `${communityPrefix}${currentSpace.name} — ${fnLabel}`;
+      } else {
+        title = `${communityPrefix}${currentSpace.name}`;
+      }
     } else if (path === '/') {
       title = fnLabel
         ? `SPOK - Single Point Of Knowledge - ${fnLabel}`
@@ -646,7 +662,7 @@ export function Layout() {
     }
 
     document.title = import.meta.env.DEV ? `[DEV] ${title}` : title;
-  }, [currentSpace, location.pathname, mode, tab]);
+  }, [currentSpace, openItem, location.pathname, mode, tab]);
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const handleToggleFavorite = useCallback(async (spaceId: string) => {
@@ -979,10 +995,41 @@ export function Layout() {
       </nav>
 
       {/* Footer sidebar */}
-      <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
-        <span className="text-[10px] text-muted-foreground/50 px-3">
-          MEP {new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-        </span>
+      <div className="border-t border-border flex-shrink-0">
+        {adminMode && adminMenuItems.length > 0 && (
+          <div className="px-2 py-2 border-b border-border/50">
+            <div className="flex items-center px-1 mb-1">
+              <Settings className="w-3 h-3 text-red-500 mr-1.5 flex-shrink-0" />
+              <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wider">Administration</span>
+            </div>
+            <div className="space-y-0.5">
+              {adminMenuItems.map(item => {
+                if (!item.route) return null;
+                const Icon = getNavIcon(item.icon);
+                const isActive = location.pathname === item.route || location.pathname.startsWith(item.route + '/');
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.route}
+                    className={`flex items-center gap-2 px-2 py-1 rounded-md text-xs transition-colors ${
+                      isActive
+                        ? 'bg-red-50 text-red-700 font-medium'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="px-4 py-2">
+          <span className="text-[10px] text-muted-foreground/50">
+            MEP {new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
       </div>
     </>
   ) : visitorSidebarContent;
@@ -1058,7 +1105,22 @@ export function Layout() {
         {/* Top header */}
         <header className="border-b border-border bg-card flex flex-col flex-shrink-0">
           {/* Row 1: title + right controls */}
-          <div className="flex items-stretch h-12">
+          <div
+            className="flex items-stretch h-12 relative isolate overflow-hidden"
+          >
+            {/* Cover image background */}
+            {currentSpace?.coverUrl && (
+              <div
+                className="absolute inset-0 -z-10 bg-cover"
+                style={{
+                  backgroundImage: `url(${currentSpace.coverUrl})`,
+                  backgroundPosition: `center ${currentSpace.coverPosition ?? 50}%`,
+                }}
+              />
+            )}
+            {currentSpace?.coverUrl && (
+              <div className="absolute inset-0 -z-10 bg-card/80 backdrop-blur-sm" />
+            )}
           {/* Left: hamburger + title + badges */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 flex-shrink-0">
             {/* Hamburger menu (mobile) */}
@@ -1070,6 +1132,31 @@ export function Layout() {
               >
                 <Menu className="w-5 h-5" />
               </button>
+            )}
+            {/* Vignettes communauté + espace (uniquement dans un espace) */}
+            {currentSpace && (
+              <>
+                {currentSpace.community && (
+                  <Link to={`/communities/${currentSpace.community.id}`} className="flex-shrink-0" title={currentSpace.community.name}>
+                    {currentSpace.community.avatarUrl ? (
+                      <img src={currentSpace.community.avatarUrl} alt={currentSpace.community.name} className="w-7 h-7 rounded object-cover ring-1 ring-border" />
+                    ) : (
+                      <div className="w-7 h-7 rounded bg-muted flex items-center justify-center ring-1 ring-border">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </Link>
+                )}
+                <Link to={`/spaces/${currentSpace.id}`} className="flex-shrink-0" title={currentSpace.name}>
+                  {currentSpace.avatarUrl ? (
+                    <img src={currentSpace.avatarUrl} alt={currentSpace.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-border" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center ring-1 ring-border">
+                      <FolderKanban className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </Link>
+              </>
             )}
             <div className="min-w-0">
               <h2

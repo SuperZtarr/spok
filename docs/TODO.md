@@ -22,7 +22,7 @@
 - [x] Menu contextuel : "Modifier le statut" avec sous-menu (tous les statuts visibles, statut courant coché) — b3b1a2e (2026-05-04)
 - [x] MEETING : TimeRangePicker vertical draggable (plage horaire journée) dans ItemEditModal — b3b1a2e (2026-05-04)
 - [x] ItemEditModal footer : responsive mobile (flex-wrap, sm:ml-auto) — b3b1a2e (2026-05-04)
-- [ ] Chemin critique Gantt : CPM dans timeline-utils + toggle toolbar + ring rouge (spec : docs/superpowers/specs/2026-05-05-critical-path-gantt-design.md)
+- [x] Chemin critique Gantt : CPM dans timeline-utils + toggle toolbar + ring rouge — abe7f75 (2026-05-06)
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)

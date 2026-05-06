@@ -262,7 +262,7 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
 
   const spaceRenderSections = allSections.filter(s => SPACE_SECTION_IDS.includes(s.id));
   const nonSpaceBeforeSections = allSections.filter(s => !SPACE_SECTION_IDS.includes(s.id) && !['admin', 'misc'].includes(s.id));
-  const nonSpaceAfterSections = allSections.filter(s => ['admin', 'misc'].includes(s.id));
+  const nonSpaceAfterSections = allSections.filter(s => s.id === 'misc');
   const espacesHasActive = spaceRenderSections.some(s => sectionHasActive(s));
 
   return (
@@ -289,7 +289,7 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
           {nonSpaceAfterSections.map(s => renderSectionTrigger(s))}
         </>
       ) : (
-        allSections.map(s => renderSectionTrigger(s))
+        allSections.filter(s => s.id !== 'admin').map(s => renderSectionTrigger(s))
       )}
 
       {/* Dropdown portal */}

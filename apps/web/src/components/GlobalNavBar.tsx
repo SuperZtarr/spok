@@ -38,7 +38,7 @@ export function GlobalNavBar() {
   });
   const activityCount = activityData?.total ?? 0;
 
-  const navSections = sections.filter(s => !SPACE_SECTIONS.has(s.id));
+  const navSections = sections.filter(s => !SPACE_SECTIONS.has(s.id) && s.id !== 'admin');
 
   const isActive = (item: MenuItemConfig): boolean => {
     if (!item.route) return false;

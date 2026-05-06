@@ -78,6 +78,7 @@ interface TypeColumnProps {
   statusColors: Record<string, string>;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  currentSpaceId?: string;
 }
 
 interface TypeCardProps {
@@ -99,12 +100,13 @@ interface TypeCardProps {
   statusColors: Record<string, string>;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  currentSpaceId?: string;
 }
 
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusLabels, statusColors, canEdit = true, canEditItem }: TypeCardProps) {
+function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusLabels, statusColors, canEdit = true, canEditItem, currentSpaceId }: TypeCardProps) {
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -124,11 +126,26 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
+      className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
       }`}
       onClick={() => onEdit(item.id)}
     >
+      {canEdit && (
+        <span
+          draggable
+          className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 rounded bg-black/20 z-10"
+          title="Glisser vers un espace"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: item.spaceId || currentSpaceId }));
+          }}
+        >
+          <GripVertical className="w-3 h-3 text-white" />
+        </span>
+      )}
       <div className="flex items-start gap-2">
         {canEdit && (
           <div
@@ -188,7 +205,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   );
 }
 
-function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, statusLabels, statusColors, canEdit, canEditItem }: TypeColumnProps) {
+function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, statusLabels, statusColors, canEdit, canEditItem, currentSpaceId }: TypeColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -242,6 +259,7 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
             statusColors={statusColors}
             canEdit={canEdit}
             canEditItem={canEditItem}
+            currentSpaceId={currentSpaceId}
           />
         ))}
 
@@ -489,6 +507,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
                         statusColors={statusColors}
                         canEdit={canEdit}
                         canEditItem={canEditItem}
+                        currentSpaceId={section.spaceId}
                       />
                     );
                   })}

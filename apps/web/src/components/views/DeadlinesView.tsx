@@ -193,8 +193,13 @@ export function DeadlinesView({ embedded }: { embedded?: boolean } = {}) {
               {group.tasks.map((task) => (
                 <div
                   key={task.id}
+                  draggable
                   className="flex items-center gap-3 px-6 py-2.5 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
                   onClick={() => setEditingTask({ itemId: task.id, spaceId: task.spaceId })}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: task.id, spaceId: task.spaceId }));
+                  }}
                 >
                   <div className="w-24 flex-shrink-0">
                     <span
