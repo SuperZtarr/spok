@@ -69,7 +69,7 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
   const scheduleClose = useCallback(() => {
     closeTimerRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 150);
+    }, 200);
   }, []);
 
   const cancelClose = useCallback(() => {
@@ -86,9 +86,9 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
     }
     const menuWidth = 200;
     const margin = 8;
-    let left = rect.right + 4;
+    let left = rect.right + 2;
     if (left + menuWidth > window.innerWidth - margin) {
-      left = rect.left - menuWidth - 4;
+      left = rect.left - menuWidth - 2;
     }
     setOpenSubmenuId(id);
     setSubmenuPosition({ top: rect.top, left });
@@ -97,7 +97,7 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
   const scheduleCloseSubmenu = useCallback(() => {
     submenuCloseTimerRef.current = setTimeout(() => {
       setOpenSubmenuId(null);
-    }, 150);
+    }, 200);
   }, []);
 
   const cancelCloseSubmenu = useCallback(() => {
@@ -214,7 +214,7 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
 
       {isOpen && openSubmenuId && activeSubmenu && createPortal(
         <div
-          onMouseEnter={cancelCloseSubmenu}
+          onMouseEnter={() => { cancelClose(); cancelCloseSubmenu(); }}
           onMouseLeave={scheduleCloseSubmenu}
           style={{ position: 'fixed', top: submenuPosition.top, left: submenuPosition.left, zIndex: 100000 }}
           className="bg-white dark:bg-gray-900 border rounded-md shadow-lg py-1 min-w-[200px]"
