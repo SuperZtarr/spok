@@ -64,7 +64,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-8">
+      <div className="relative bg-card border rounded-lg shadow-xl w-[75vw] max-w-none mx-4 p-8" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
@@ -111,7 +111,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="max-h-[50vh] overflow-y-auto mb-4">
+            <div className="flex-1 overflow-y-auto mb-4">
               {spaceGroups.map((group) => (
                 <div key={group.communityId || '_personal'}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">
