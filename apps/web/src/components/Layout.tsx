@@ -644,7 +644,7 @@ export function Layout() {
 
     if (currentSpace) {
       const communityPrefix = currentSpace.community?.name ? `${currentSpace.community.name} › ` : '';
-      if (openItem) {
+      if (openItemId && openItem) {
         title = `${communityPrefix}${currentSpace.name} › ${openItem.title}`;
       } else if (fnLabel) {
         title = `${communityPrefix}${currentSpace.name} — ${fnLabel}`;
@@ -662,7 +662,7 @@ export function Layout() {
     }
 
     document.title = import.meta.env.DEV ? `[DEV] ${title}` : title;
-  }, [currentSpace, openItem, location.pathname, mode, tab]);
+  }, [currentSpace, openItemId, openItem, location.pathname, mode, tab]);
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const handleToggleFavorite = useCallback(async (spaceId: string) => {
