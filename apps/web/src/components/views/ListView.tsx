@@ -264,7 +264,15 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               const infoOpen = openInfoId === item.id;
 
               return (
-                <div key={item.id} {...(index === 0 ? { 'data-tour': 'list-row' } : {})}>
+                <div
+                  key={item.id}
+                  {...(index === 0 ? { 'data-tour': 'list-row' } : {})}
+                  draggable={canEdit !== false}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: currentSpaceId }));
+                  }}
+                >
                 <div
                   className={`grid ${gridColsClass} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''} ${isUrgent ? 'animate-urgent-blink' : isUnseen ? 'animate-unseen-blink' : ''}`}
                   onClick={() => onEdit(item.id)}

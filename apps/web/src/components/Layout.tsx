@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2,
   HelpCircle, Clock, Star, Plus, ArrowLeft,
@@ -13,7 +13,7 @@ import {
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
-import { spacesApi, communitiesApi, authApi } from '../lib/api';
+import { spacesApi, communitiesApi, authApi, itemsApi } from '../lib/api';
 
 import { useAdminMode } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
@@ -144,6 +144,20 @@ function CommunitySection({
   );
 }
 
+// Context pour le drag & drop item → espace sidebar
+interface SidebarDropCtx {
+  dropTargetId: string | null;
+  onDragOver: (spaceId: string, e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (spaceId: string, e: React.DragEvent) => void;
+}
+const SidebarDropContext = createContext<SidebarDropCtx>({
+  dropTargetId: null,
+  onDragOver: () => {},
+  onDragLeave: () => {},
+  onDrop: () => {},
+});
+
 function SpaceTreeItem({
   node,
   level,
@@ -169,6 +183,9 @@ function SpaceTreeItem({
   const { includeChildrenSpaceIds, toggleIncludeChildren } = useSpaceStore();
   const isIncludeChildren = includeChildrenSpaceIds.has(node.id);
 
+  const { dropTargetId, onDragOver, onDragLeave, onDrop } = useContext(SidebarDropContext);
+  const isDropTarget = dropTargetId === node.id;
+
   return (
     <>
       <div
@@ -176,9 +193,14 @@ function SpaceTreeItem({
         className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-sm group ${
           currentSpaceId === node.id
             ? 'bg-primary/10 text-primary font-medium'
+            : isDropTarget
+            ? 'bg-primary/20 ring-2 ring-primary ring-inset'
             : 'hover:bg-accent/50'
         }`}
         style={{ paddingLeft: `${8 + level * 14}px` }}
+        onDragOver={(e) => onDragOver(node.id, e)}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop(node.id, e)}
       >
         {hasChildren ? (
           <button
@@ -394,6 +416,44 @@ export function Layout() {
 
   const queryClient = useQueryClient();
   const favoriteIdsRef = useRef(favoriteIds);
+
+  // Drag & drop item → espace sidebar
+  const [sidebarDropTargetId, setSidebarDropTargetId] = useState<string | null>(null);
+
+  const dragMoveMutation = useMutation({
+    mutationFn: ({ itemId, sourceSpaceId, targetSpaceId }: { itemId: string; sourceSpaceId: string; targetSpaceId: string }) =>
+      itemsApi.bulkMove(sourceSpaceId, { itemIds: [itemId], targetSpaceId, includeChildren: false }),
+    onSuccess: (_, { sourceSpaceId, targetSpaceId }) => {
+      queryClient.invalidateQueries({ queryKey: ['items', sourceSpaceId] });
+      queryClient.invalidateQueries({ queryKey: ['items', targetSpaceId] });
+    },
+  });
+
+  const handleSidebarDragOver = useCallback((spaceId: string, e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('application/x-spok-item')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setSidebarDropTargetId(spaceId);
+  }, []);
+
+  const handleSidebarDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setSidebarDropTargetId(null);
+    }
+  }, []);
+
+  const handleSidebarDrop = useCallback((spaceId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    setSidebarDropTargetId(null);
+    try {
+      const raw = e.dataTransfer.getData('application/x-spok-item');
+      if (!raw) return;
+      const { itemId, spaceId: sourceSpaceId } = JSON.parse(raw) as { itemId: string; spaceId: string };
+      if (itemId && sourceSpaceId && sourceSpaceId !== spaceId) {
+        dragMoveMutation.mutate({ itemId, sourceSpaceId, targetSpaceId: spaceId });
+      }
+    } catch {}
+  }, [dragMoveMutation]);
   favoriteIdsRef.current = favoriteIds;
 
 
@@ -967,7 +1027,14 @@ export function Layout() {
         >
           <X className="w-5 h-5" />
         </button>
-        {sidebarContent}
+        <SidebarDropContext.Provider value={{
+          dropTargetId: sidebarDropTargetId,
+          onDragOver: handleSidebarDragOver,
+          onDragLeave: handleSidebarDragLeave,
+          onDrop: handleSidebarDrop,
+        }}>
+          {sidebarContent}
+        </SidebarDropContext.Provider>
       </aside>}
 
       {/* Sidebar toggle — bouton centré sur le bord droit de la sidebar (desktop only) */}
