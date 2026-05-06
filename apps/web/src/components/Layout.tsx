@@ -947,7 +947,7 @@ export function Layout() {
           bg-white dark:bg-background border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
           transition-transform duration-200 md:transition-[width] md:duration-200
-          w-[85vw] max-w-[320px]
+          w-[85vw] max-w-[320px] md:max-w-none
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0
           ${sidebarCollapsed ? 'md:w-0 md:overflow-hidden md:border-r-0' : ''}
