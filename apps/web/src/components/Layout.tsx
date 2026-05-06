@@ -643,13 +643,13 @@ export function Layout() {
     let title = 'SPOK';
 
     if (currentSpace) {
-      const communityPrefix = currentSpace.community?.name ? `${currentSpace.community.name} › ` : '';
+      const communitySuffix = currentSpace.community?.name ? ` › ${currentSpace.community.name}` : '';
       if (openItemId && openItem) {
-        title = `${communityPrefix}${currentSpace.name} › ${openItem.title}`;
+        title = `${openItem.title} › ${currentSpace.name}${communitySuffix}`;
       } else if (fnLabel) {
-        title = `${communityPrefix}${currentSpace.name} — ${fnLabel}`;
+        title = `${currentSpace.name}${communitySuffix} — ${fnLabel}`;
       } else {
-        title = `${communityPrefix}${currentSpace.name}`;
+        title = `${currentSpace.name}${communitySuffix}`;
       }
     } else if (path === '/') {
       title = fnLabel
