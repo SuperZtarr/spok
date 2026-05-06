@@ -227,17 +227,11 @@ export function MindMapNode({ data }: MindMapNodeProps) {
       <Handle type="source" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="left-source" />
       <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="right-source" />
 
-      {/* Grip drag → sidebar (HTML5 natif, isolated from ReactFlow pointer events) */}
+      {/* Grip — indicateur visuel : glisser le nœud vers la sidebar pour changer d'espace */}
       {canEdit && !isPortal && (
         <span
-          draggable
-          className="nodrag nopan absolute -top-2 -right-2 opacity-0 group-hover:opacity-70 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 rounded bg-black/20"
-          title="Glisser vers un espace"
-          onPointerDown={(e) => e.stopPropagation()}
-          onDragStart={(e) => {
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: (item as any).spaceId }));
-          }}
+          className="nodrag nopan absolute -top-2 -right-2 opacity-0 group-hover:opacity-70 pointer-events-none p-0.5 rounded bg-black/20"
+          title="Glisser vers un espace de la sidebar"
         >
           <GripVertical className="w-3 h-3" style={{ color: textColor }} />
         </span>

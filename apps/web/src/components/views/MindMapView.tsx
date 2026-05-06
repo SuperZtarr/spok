@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import {
   ReactFlow,
   Node,
@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
+import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2 } from 'lucide-react';
 
@@ -111,6 +112,8 @@ function MindMapViewInner({
   // Track previous items to detect content-only vs structural changes
   const prevStructureRef = useRef<string>('');
   const prevDepsRef = useRef<string>('');
+  const prevItemIdsRef = useRef<Set<string>>(new Set());
+  const prevItemSigsRef = useRef<Map<string, string>>(new Map());
 
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
@@ -122,6 +125,17 @@ function MindMapViewInner({
   const [showPortalDialog, setShowPortalDialog] = useState(false);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView, getIntersectingNodes, getNodes } = useReactFlow();
+  const { setDropTargetId: setSidebarDropTargetId } = useContext(SidebarDropContext);
+
+  // Helper: trouve l'espace sidebar sous les coordonnées écran
+  const getSidebarSpaceAtPoint = useCallback((x: number, y: number): string | null => {
+    const els = document.elementsFromPoint(x, y);
+    for (const el of els) {
+      const spaceId = (el as HTMLElement).dataset?.sidebarSpaceId;
+      if (spaceId) return spaceId;
+    }
+    return null;
+  }, []);
 
   // localStorage keys
   const portalsStorageKey = spaceId ? `mindmap-portals-${spaceId}` : null;
@@ -496,6 +510,18 @@ function MindMapViewInner({
     prevStructureRef.current = structureSignature;
     prevDepsRef.current = depsSignature;
 
+    // Detect pure deletion (no additions, no reparenting of remaining items)
+    const newItemIds = new Set(items.map(i => i.id));
+    const newItemSigs = new Map(items.map(i => [i.id, `${i.parentId || ''}:${i.children?.length || 0}`]));
+    const prevItemIds = prevItemIdsRef.current;
+    const prevItemSigs = prevItemSigsRef.current;
+    const addedIds = [...newItemIds].filter(id => !prevItemIds.has(id));
+    const deletedIds = [...prevItemIds].filter(id => !newItemIds.has(id));
+    const changedIds = [...newItemIds].filter(id => prevItemIds.has(id) && newItemSigs.get(id) !== prevItemSigs.get(id));
+    const isPureDeletion = !isFirstRender && isStructuralChange && addedIds.length === 0 && changedIds.length === 0 && deletedIds.length > 0;
+    prevItemIdsRef.current = newItemIds;
+    prevItemSigsRef.current = newItemSigs;
+
     if (!isFirstRender && !isStructuralChange && !isDepsChange) {
       // Content-only change: patch node data in place, keep positions
       const itemMap = new Map(items.map(i => [i.id, i]));
@@ -520,6 +546,14 @@ function MindMapViewInner({
           },
         };
       }));
+      return;
+    }
+
+    if (isPureDeletion) {
+      // Suppression seule : retirer les nœuds et arêtes sans recalculer le layout
+      const deletedSet = new Set(deletedIds);
+      setNodes(nds => nds.filter(n => !deletedSet.has(n.id)));
+      setEdges(eds => eds.filter(e => !deletedSet.has(e.source) && !deletedSet.has(e.target)));
       return;
     }
 
@@ -696,7 +730,7 @@ function MindMapViewInner({
 
   // Handle node drag
   const onNodeDrag = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
+    (event: React.MouseEvent, draggedNode: Node) => {
       if (draggedNode.id === '__space__') return;
       if (dragDescendants.current && dragDescendants.current.offsets.size > 0) {
         const currentNodes = getNodes();
@@ -718,16 +752,42 @@ function MindMapViewInner({
         }
       }
       if (draggedNode.type === 'portal') return;
-      const intersecting = getIntersectingNodes(draggedNode);
-      const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
-      setDropTargetId(target?.id || null);
+
+      // Highlight sidebar space under cursor
+      const sidebarSpaceId = getSidebarSpaceAtPoint(event.clientX, event.clientY);
+      setSidebarDropTargetId(sidebarSpaceId);
+
+      if (!sidebarSpaceId) {
+        const intersecting = getIntersectingNodes(draggedNode);
+        const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
+        setDropTargetId(target?.id || null);
+      } else {
+        setDropTargetId(null);
+      }
     },
-    [getIntersectingNodes, getNodes, setNodes]
+    [getIntersectingNodes, getNodes, setNodes, getSidebarSpaceAtPoint, setSidebarDropTargetId]
   );
 
   // Handle node drop
   const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
+    (event: React.MouseEvent, draggedNode: Node) => {
+      setSidebarDropTargetId(null);
+
+      // Drop sur la sidebar → déplacer l'item vers cet espace
+      if (draggedNode.type === 'mindmap' && canEdit !== false) {
+        const targetSidebarSpaceId = getSidebarSpaceAtPoint(event.clientX, event.clientY);
+        if (targetSidebarSpaceId && spaceId && targetSidebarSpaceId !== spaceId) {
+          const draggedItem = items.find(i => i.id === draggedNode.id);
+          const sourceSpaceId = draggedItem?.spaceId || spaceId;
+          if (sourceSpaceId !== targetSidebarSpaceId) {
+            onMoveToSpaceDirect?.(draggedNode.id, sourceSpaceId, targetSidebarSpaceId);
+          }
+          dragDescendants.current = null;
+          setDropTargetId(null);
+          return;
+        }
+      }
+
       if (draggedNode.id === '__space__' || draggedNode.type === 'portal') {
         savedPositions.current[draggedNode.id] = draggedNode.position;
         const portalDescIds = dragDescendants.current?.ids;
@@ -846,7 +906,7 @@ function MindMapViewInner({
       dragDescendants.current = null;
       setDropTargetId(null);
     },
-    [getIntersectingNodes, onMove, onMoveToSpaceDirect, items, savePositions, setNodes, spaceId, portals, canEdit, onReorder]
+    [getIntersectingNodes, onMove, onMoveToSpaceDirect, items, savePositions, setNodes, spaceId, portals, canEdit, onReorder, getSidebarSpaceAtPoint, setSidebarDropTargetId]
   );
 
   // Reset layout function

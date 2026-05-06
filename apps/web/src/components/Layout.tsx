@@ -147,12 +147,14 @@ function CommunitySection({
 // Context exporté pour le drag & drop item → espace sidebar (utilisé par les vues)
 export interface SidebarDropCtx {
   dropTargetId: string | null;
+  setDropTargetId: (id: string | null) => void;
   onDragOver: (spaceId: string, e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (spaceId: string, e: React.DragEvent) => void;
 }
 export const SidebarDropContext = createContext<SidebarDropCtx>({
   dropTargetId: null,
+  setDropTargetId: () => {},
   onDragOver: () => {},
   onDragLeave: () => {},
   onDrop: () => {},
@@ -190,6 +192,7 @@ function SpaceTreeItem({
     <>
       <div
         id={htmlId}
+        data-sidebar-space-id={node.id}
         className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-sm group ${
           currentSpaceId === node.id
             ? 'bg-primary/10 text-primary font-medium'
@@ -1076,6 +1079,7 @@ export function Layout() {
         </button>
         <SidebarDropContext.Provider value={{
           dropTargetId: sidebarDropTargetId,
+          setDropTargetId: setSidebarDropTargetId,
           onDragOver: handleSidebarDragOver,
           onDragLeave: handleSidebarDragLeave,
           onDrop: handleSidebarDrop,
