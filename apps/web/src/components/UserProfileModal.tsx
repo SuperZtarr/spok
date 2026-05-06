@@ -681,6 +681,7 @@ const NOTIF_TYPE_LABELS: Record<NotificationType, string> = {
   CONTRIBUTION: 'Contributions',
   MENTION: 'Mentions',
   EMAIL_VERIFICATION: 'Vérification email',
+  NEW_USER: 'Nouveaux utilisateurs',
 };
 
 const CHANNEL_OPTIONS: { value: NotificationChannel; label: string }[] = [

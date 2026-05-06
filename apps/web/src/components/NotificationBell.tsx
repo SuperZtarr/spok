@@ -12,6 +12,7 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }
   CONTRIBUTION: { icon: MessageSquare, color: 'text-green-500' },
   MENTION: { icon: AtSign, color: 'text-purple-500' },
   EMAIL_VERIFICATION: { icon: Mail, color: 'text-amber-500' },
+  NEW_USER: { icon: UserPlus, color: 'text-teal-500' },
 };
 
 function timeAgo(dateStr: string): string {
