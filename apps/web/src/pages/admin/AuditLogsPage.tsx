@@ -68,7 +68,9 @@ export function AuditLogsPage() {
   const [batchFilter, setBatchFilter] = useState('');
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [showPurgeOverflowModal, setShowPurgeOverflowModal] = useState(false);
   const [purgeDays] = useState(90);
+  const OVERFLOW_THRESHOLD = 10_000;
   const [restoreUpdateLog, setRestoreUpdateLog] = useState<typeof logs[0] | null>(null);
 
   const pageSize = 50;
@@ -117,6 +119,14 @@ export function AuditLogsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] });
       setShowPurgeModal(false);
+    },
+  });
+
+  const purgeOverflowMutation = useMutation({
+    mutationFn: () => adminApi.auditLogs.purgeOverflow(OVERFLOW_THRESHOLD),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] });
+      setShowPurgeOverflowModal(false);
     },
   });
 
@@ -190,15 +200,27 @@ export function AuditLogsPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Maintenance</p>
             </div>
-            <Button
-              variant="bordered"
-              size="sm"
-              className="mt-2"
-              onClick={() => setShowPurgeModal(true)}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              Purger
-            </Button>
+            <div className="flex flex-col gap-1.5 mt-2">
+              <Button
+                variant="bordered"
+                size="sm"
+                onClick={() => setShowPurgeModal(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                Purger ({purgeDays}j)
+              </Button>
+              {stats && stats.totalCount > OVERFLOW_THRESHOLD && (
+                <Button
+                  variant="bordered"
+                  size="sm"
+                  className="border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                  onClick={() => setShowPurgeOverflowModal(true)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  Purger &gt; {OVERFLOW_THRESHOLD.toLocaleString()}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -494,6 +516,18 @@ export function AuditLogsPage() {
         warning="Cette action est irreversible. Les logs purges ne pourront plus etre utilises pour restaurer des donnees."
         confirmLabel="Purger"
         isPending={purgeMutation.isPending}
+      />
+
+      {/* Purge overflow modal */}
+      <ConfirmModal
+        isOpen={showPurgeOverflowModal}
+        onClose={() => setShowPurgeOverflowModal(false)}
+        onConfirm={() => purgeOverflowMutation.mutate()}
+        title="Purger l'excédent de logs"
+        message={`Supprimer les logs les plus anciens au-delà de ${OVERFLOW_THRESHOLD.toLocaleString('fr-FR')} entrées ? Les ${OVERFLOW_THRESHOLD.toLocaleString('fr-FR')} logs les plus récents seront conservés.`}
+        warning="Cette action est irréversible. Les logs supprimés ne pourront plus être utilisés pour restaurer des données."
+        confirmLabel="Purger l'excédent"
+        isPending={purgeOverflowMutation.isPending}
       />
     </div>
   );

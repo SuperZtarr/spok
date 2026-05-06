@@ -1599,6 +1599,11 @@ export const adminApi = {
       fetchApi<{ success: boolean; purged: number; olderThan: string }>(`/admin/audit-logs/purge?olderThanDays=${olderThanDays}`, {
         method: 'DELETE',
       }),
+
+    purgeOverflow: (keep = 10000) =>
+      fetchApi<{ success: boolean; purged: number; kept: number; cutoffDate?: string; message?: string }>(`/admin/audit-logs/purge-overflow?keep=${keep}`, {
+        method: 'DELETE',
+      }),
   },
 };
 

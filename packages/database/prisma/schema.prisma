@@ -476,6 +476,7 @@ enum NotificationType {
   MENTION
   EMAIL_VERIFICATION
   NEW_USER
+  AUDIT_ALERT
 }
 
 // Refresh tokens for JWT

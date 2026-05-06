@@ -95,7 +95,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /admin/audit-logs/stats - Audit log statistics
-  fastify.get('/stats', async () => {
+  fastify.get('/stats', async (request) => {
     const [
       totalCount,
       entityCounts,
@@ -139,6 +139,37 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Estimate storage size (rough: ~500 bytes per log)
     const estimatedSizeBytes = totalCount * 500;
+
+    // Alerte accumulation : si > 10 000 logs et pas de notif AUDIT_ALERT non lue pour cet admin
+    const AUDIT_ALERT_THRESHOLD = 10_000;
+    if (totalCount > AUDIT_ALERT_THRESHOLD) {
+      const existingAlert = await fastify.prisma.notification.findFirst({
+        where: {
+          userId: request.user.userId,
+          type: 'AUDIT_ALERT',
+          read: false,
+        },
+      });
+
+      if (!existingAlert) {
+        // Créer une notification pour tous les admins
+        const admins = await fastify.prisma.user.findMany({
+          where: { globalRole: 'ADMIN' },
+          select: { id: true },
+        });
+
+        await fastify.prisma.notification.createMany({
+          data: admins.map(admin => ({
+            userId: admin.id,
+            type: 'AUDIT_ALERT' as const,
+            title: 'Accumulation de logs d\'audit',
+            message: `${totalCount.toLocaleString('fr-FR')} logs enregistrés. Une purge est recommandée.`,
+            link: '/admin/audit',
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     return {
       totalCount,
@@ -711,6 +742,45 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
       batchId,
       summary: { restored, skipped, errors, total: results.length },
       details: results,
+    };
+  });
+
+  // DELETE /admin/audit-logs/purge-overflow - Purge logs beyond the threshold (keep the N most recent)
+  fastify.delete<{
+    Querystring: { keep?: string };
+  }>('/purge-overflow', async (request, reply) => {
+    const keep = parseInt((request.query as Record<string, string>).keep || '10000', 10);
+    if (isNaN(keep) || keep < 1) {
+      return reply.badRequest('keep must be a positive integer');
+    }
+
+    const totalCount = await fastify.prisma.auditLog.count();
+    if (totalCount <= keep) {
+      return { success: true, purged: 0, totalCount, message: `Moins de ${keep} logs, aucune purge nécessaire.` };
+    }
+
+    // Find the ID of the Nth most recent log (cutoff)
+    const cutoffLog = await fastify.prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: keep - 1,
+      take: 1,
+      select: { createdAt: true },
+    });
+
+    if (!cutoffLog.length) {
+      return { success: true, purged: 0, totalCount };
+    }
+
+    const cutoffDate = cutoffLog[0].createdAt;
+    const result = await fastify.prisma.auditLog.deleteMany({
+      where: { createdAt: { lt: cutoffDate } },
+    });
+
+    return {
+      success: true,
+      purged: result.count,
+      kept: keep,
+      cutoffDate: cutoffDate.toISOString(),
     };
   });
 

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database } from 'lucide-react';
 import { notificationsApi, invitationsApi, authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { Notification, NotificationType, Invitation } from '@spok/shared';
@@ -13,6 +13,7 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }
   MENTION: { icon: AtSign, color: 'text-purple-500' },
   EMAIL_VERIFICATION: { icon: Mail, color: 'text-amber-500' },
   NEW_USER: { icon: UserPlus, color: 'text-teal-500' },
+  AUDIT_ALERT: { icon: Database, color: 'text-orange-500' },
 };
 
 function timeAgo(dateStr: string): string {
