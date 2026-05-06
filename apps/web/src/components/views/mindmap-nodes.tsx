@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
 import { getTypeIcon, getPriorityConfig } from '../../constants/ui';
 
@@ -199,15 +199,19 @@ export interface MindMapNodeProps {
     canEdit: boolean;
     isPinned: boolean;
     onTogglePin: (id: string) => void;
+    onSavePosition?: (id: string, pos: { x: number; y: number }) => void;
     isPortal: boolean;
     portalSpaceName?: string;
   };
 }
 
 export function MindMapNode({ data }: MindMapNodeProps) {
-  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, statusOptions, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, isPortal, portalSpaceName: _portalSpaceName } = data;
+  const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, statusOptions, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, onSavePosition, isPortal, portalSpaceName: _portalSpaceName } = data;
   const Icon = getTypeIcon(item.type, item.url);
   const { dropTargetId: _dt } = useContext(SidebarDropContext); void _dt; // abonnement context (déclenche re-render sur highlight sidebar)
+  const { setNodes, screenToFlowPosition, getNode } = useReactFlow();
+  const dragStartRef = useRef<{ screenX: number; screenY: number; nodeX: number; nodeY: number } | null>(null);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <div
@@ -227,11 +231,54 @@ export function MindMapNode({ data }: MindMapNodeProps) {
       <Handle type="source" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="left-source" />
       <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-600 hover:!bg-purple-500 hover:!scale-150 transition-transform" id="right-source" />
 
-      {/* Grip — indicateur visuel : glisser le nœud vers la sidebar pour changer d'espace */}
+      {/* Grip — drag HTML5 : suit le curseur dans la mindmap + dépose sur un espace sidebar */}
       {canEdit && !isPortal && (
         <span
-          className="nodrag nopan absolute -top-2 -right-2 opacity-0 group-hover:opacity-70 pointer-events-none p-0.5 rounded bg-black/20"
-          title="Glisser vers un espace de la sidebar"
+          draggable
+          className="nodrag nopan absolute -top-2 -right-2 opacity-0 group-hover:opacity-70 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 rounded bg-black/20"
+          title="Glisser pour repositionner ou déposer sur un espace"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            // Image ghost invisible — le node se déplace lui-même
+            const ghost = document.createElement('div');
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, 0, 0);
+            requestAnimationFrame(() => document.body.removeChild(ghost));
+
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/x-spok-item', JSON.stringify({ itemId: item.id, spaceId: (item as any).spaceId }));
+
+            const node = getNode(item.id);
+            dragStartRef.current = {
+              screenX: e.clientX, screenY: e.clientY,
+              nodeX: node?.position.x ?? 0, nodeY: node?.position.y ?? 0,
+            };
+            lastPosRef.current = null;
+          }}
+          onDrag={(e) => {
+            if (!dragStartRef.current || (e.clientX === 0 && e.clientY === 0)) return;
+            const startFlow = screenToFlowPosition({ x: dragStartRef.current.screenX, y: dragStartRef.current.screenY });
+            const currFlow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+            const newPos = {
+              x: dragStartRef.current.nodeX + (currFlow.x - startFlow.x),
+              y: dragStartRef.current.nodeY + (currFlow.y - startFlow.y),
+            };
+            lastPosRef.current = newPos;
+            setNodes(nds => nds.map(n => n.id === item.id ? { ...n, position: newPos } : n));
+          }}
+          onDragEnd={(e) => {
+            const pos = lastPosRef.current;
+            dragStartRef.current = null;
+            lastPosRef.current = null;
+            if (!pos) return;
+            // Si lâché sur la sidebar → le drop HTML5 a déjà géré le déplacement, ne pas sauvegarder
+            const isOnSidebar = (e.clientX !== 0 || e.clientY !== 0) &&
+              document.elementsFromPoint(e.clientX, e.clientY).some(el => !!(el as HTMLElement).dataset?.sidebarSpaceId);
+            if (!isOnSidebar) {
+              onSavePosition?.(item.id, pos);
+            }
+          }}
         >
           <GripVertical className="w-3 h-3" style={{ color: textColor }} />
         </span>

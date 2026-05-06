@@ -302,6 +302,7 @@ function MindMapViewInner({
   }, []);
 
   const setNodesRef = useRef<React.Dispatch<React.SetStateAction<Node[]>>>(() => {});
+  const setEdgesRef = useRef<React.Dispatch<React.SetStateAction<Edge[]>>>(() => {});
   const reorganizeRef = useRef<(id: string) => void>(() => {});
   const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }>; startPos: { x: number; y: number } } | null>(null);
   const handleReorganizeChildren = useCallback((id: string) => reorganizeRef.current(id), []);
@@ -315,6 +316,18 @@ function MindMapViewInner({
     });
   }, []);
 
+  // Callback pour sauvegarder la position après un drag HTML5 depuis le grip
+  // Utilise des refs stables pour éviter la dépendance à setNodes/setEdges (déclarés plus bas)
+  const handleSavePosition = useCallback((id: string, pos: { x: number; y: number }) => {
+    savedPositions.current[id] = pos;
+    savePositions();
+    setNodesRef.current(currentNodes => {
+      const absPositions = getAbsolutePositions(currentNodes);
+      setEdgesRef.current(currentEdges => recalculateEdgeHandles(currentEdges, absPositions));
+      return currentNodes;
+    });
+  }, [savePositions]);
+
   // Build callbacks and options objects for layout functions
   const layoutCallbacks: MindMapCallbacks = useMemo(() => ({
     onEdit, onDelete, onUpdateStatus, onAddChild,
@@ -323,7 +336,8 @@ function MindMapViewInner({
     onReorganizeChildren: handleReorganizeChildren,
     onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab,
     onTogglePin: togglePin,
-  }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, togglePin]);
+    onSavePosition: handleSavePosition,
+  }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, togglePin, handleSavePosition]);
 
   const layoutOptions: MindMapLayoutOptions = useMemo(() => ({
     hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem,
@@ -343,6 +357,7 @@ function MindMapViewInner({
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   setNodesRef.current = setNodes;
+  setEdgesRef.current = setEdges;
 
   // Reorganize children implementation
   reorganizeRef.current = (parentId: string) => {

@@ -64,6 +64,7 @@ export interface MindMapCallbacks {
   onSplitDescription?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;
   onTogglePin?: (id: string) => void;
+  onSavePosition?: (id: string, pos: { x: number; y: number }) => void;
 }
 
 export interface MindMapLayoutOptions {
@@ -90,7 +91,7 @@ export function calculateLayout(
   callbacks: MindMapCallbacks,
   options: MindMapLayoutOptions,
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number; arcStart: number } {
-  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onTogglePin } = callbacks;
+  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onTogglePin, onSavePosition } = callbacks;
   const { hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
 
   const nodes: Node[] = [];
@@ -280,6 +281,7 @@ export function calculateLayout(
         canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
         isPinned: pinnedIdsSet?.has(item.id) || false,
         onTogglePin: onTogglePin || (() => {}),
+        onSavePosition,
         isPortal: !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
         portalSpaceName: (currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId) ? portalSpaceNames?.get(item.spaceId) : undefined,
       },
@@ -378,7 +380,7 @@ export function buildPortalNodesAndEdges(
   relationEdges: Edge[],
 ): { portalNodes: Node[]; portalEdges: Edge[]; portalRelationEdges: Edge[] } {
   const { positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces, portalSpaceNames, statuses, collapsedIds, items, callbacks, options, removePortal, savedPositions } = ctx;
-  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab: _onOpenInNewTab, onTogglePin } = callbacks;
+  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab: _onOpenInNewTab, onTogglePin, onSavePosition } = callbacks;
   const { statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet } = options;
 
   const portalPosMap = new Map(positionedNodes.map(n => [n.id, n.position]));
@@ -546,6 +548,7 @@ export function buildPortalNodesAndEdges(
           canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
           isPinned: pinnedIdsSet?.has(item.id) || false,
           onTogglePin: onTogglePin || (() => {}),
+          onSavePosition,
           isPortal: true,
           portalSpaceName: spaceName,
         },
