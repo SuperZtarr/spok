@@ -1,32 +1,12 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, FileText, FileSpreadsheet, FileImage, FileArchive, File as FileIcon, Download } from 'lucide-react';
 
-const ACCEPTED_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/msword',
-  'application/vnd.ms-excel',
-  'application/vnd.ms-powerpoint',
-  'text/plain',
-  'text/csv',
-  'text/markdown',
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'application/zip',
-  'application/x-zip-compressed',
-];
-
-// Also accept by extension (some browsers report wrong MIME)
-const ACCEPTED_EXTENSIONS = [
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.txt', '.csv', '.md',
-  '.jpg', '.jpeg', '.png', '.webp', '.gif',
-  '.zip',
-];
+const BLOCKED_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.com', '.scr', '.msi', '.dll',
+  '.sh', '.bash', '.zsh', '.ps1', '.psm1', '.psd1',
+  '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh',
+  '.jar', '.py', '.rb', '.pl', '.php',
+]);
 
 const MAX_SIZE = 25 * 1024 * 1024; // 25 Mo
 
@@ -74,12 +54,10 @@ export function FileUploadZone({
     (file: File) => {
       setError(null);
 
-      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-      const mimeOk = ACCEPTED_TYPES.includes(file.type);
-      const extOk = ACCEPTED_EXTENSIONS.includes(ext);
+      const ext = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '');
 
-      if (!mimeOk && !extOk) {
-        setError('Format non supporté. Utilisez PDF, Office, texte, images ou archives.');
+      if (BLOCKED_EXTENSIONS.has(ext)) {
+        setError('Ce type de fichier n\'est pas autorisé.');
         return;
       }
 
@@ -195,7 +173,7 @@ export function FileUploadZone({
                 Glissez un fichier, <span className="text-primary font-medium">cliquez pour sélectionner</span>
               </span>
               <p className="text-xs text-muted-foreground/70 mt-1">
-                PDF, Office, texte, images, archives — max 25 Mo
+                Tous formats acceptés — max 25 Mo
               </p>
             </div>
           </>
@@ -209,7 +187,7 @@ export function FileUploadZone({
       <input
         ref={inputRef}
         type="file"
-        accept={[...ACCEPTED_EXTENSIONS, ...ACCEPTED_TYPES].join(',')}
+        accept="*"
         onChange={handleFileSelect}
         className="hidden"
       />
