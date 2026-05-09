@@ -64,7 +64,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card border rounded-lg shadow-xl w-[75vw] max-w-none mx-4 p-8" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="relative bg-card border rounded-lg shadow-xl w-[75vw] max-w-none mx-4 p-4" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
@@ -117,13 +117,13 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">
                     {group.label}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="flex flex-wrap">
                     {group.spaces.map((space) => (
                       <label
                         key={space.id}
-                        className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer transition-colors w-auto max-w-xs ${
                           selectedSpaceId === space.id
-                            ? 'border-primary bg-primary/5'
+                            ? 'bg-primary/10 text-primary'
                             : 'hover:bg-accent'
                         }`}
                       >
@@ -133,14 +133,10 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                           value={space.id}
                           checked={selectedSpaceId === space.id}
                           onChange={(e) => setSelectedSpaceId(e.target.value)}
-                          className="w-4 h-4 flex-shrink-0"
+                          className="w-3.5 h-3.5 flex-shrink-0"
                         />
-                        <div className="flex-1">
-                          <div className="font-medium text-base">{space.name}</div>
-                          <div className="text-sm text-muted-foreground mt-0.5">
-                            {space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'} • {space.role}
-                          </div>
-                        </div>
+                        <span className="text-sm truncate">{space.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{space.type === 'PERSONAL' ? 'Personnel' : 'Groupe'}</span>
                       </label>
                     ))}
                   </div>
@@ -149,7 +145,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
             </div>
             )}
 
-            <label className="flex items-center gap-2 mb-6 text-sm">
+            <label className="flex items-center gap-2 mb-3 text-sm">
               <input
                 type="checkbox"
                 checked={includeChildren}

@@ -102,10 +102,10 @@ export function buildItemMenuGroups(
   ] : [];
 
   return [
+    ...(group4.length > 0 ? [{ actions: group4 }] : []),
     ...(group1.length > 0 ? [{ actions: group1 }] : []),
     ...(group2.length > 0 ? [{ actions: group2 }] : []),
     ...(group3.length > 0 ? [{ actions: group3 }] : []),
-    ...(group4.length > 0 ? [{ actions: group4 }] : []),
     ...(group5.length > 0 ? [{ actions: group5 }] : []),
     ...extraSections.filter((s) => s.actions.length > 0),
   ];
