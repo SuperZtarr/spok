@@ -38,7 +38,7 @@ Lire en entier avant toute action.
 Communauté : **Mes Projets Claude** `cmlnwrtg80001mjpp4dc1fnxq`
 Espace racine SPOK : **Projet SPOK** `cmmtjoiih00gdf03n9hscbkeq`
 
-### Fonctionnement structurel `ca7233dde179a173fe3b7695f`
+### Fonctionnement structurel
 
 > Infra, architecture technique, MCP, modèle de données — sous Projet SPOK
 
@@ -49,7 +49,7 @@ Espace racine SPOK : **Projet SPOK** `cmmtjoiih00gdf03n9hscbkeq`
 | Autres fonctionnalités | `cmnq9c4aq000k5yz2w1n6e70d` | Templates, AppConfig, Permissions & accès |
 | Contexte | `cmnq9c6st00105yz2eoky7uvt` | Vision, objectifs, problème résolu, utilisateurs cibles |
 
-### Interfaces `cb1c8e0c8fcc5009c1583d990`
+### Interfaces
 
 > Composants visuels, pages, vues, modales — sous Projet SPOK
 
@@ -128,21 +128,20 @@ La documentation est la **spec convenue** : ce que Thomas et Claude ont décidé
 ### Corps d'un item
 
 ```
-## Rôle
-Ce que fait ce composant, pourquoi il existe.
+## Intention
+Pourquoi ce composant existe, quel problème il résout.
 
-## Fichier(s)
-apps/web/src/...
+## Décisions de design
+Choix structurants et pourquoi — ce qui ne doit pas changer sans discussion.
 
-## Contenu
-Liste des éléments visuels ou fonctionnels présents.
+## Comportements attendus
+Ce que le système doit faire dans chaque cas — référence pour distinguer bug vs attendu.
 
-## Comportement
-Conditions d'affichage, états, variantes.
+## Contraintes
+Invariants, dépendances critiques, ce qu'on ne touche pas.
 
-## Interactions clés (si pertinent)
-- Clic : action
-- Raccourci : action
+## Fichiers
+apps/web/src/... ou apps/api/src/...
 ```
 
 ---

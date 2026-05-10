@@ -23,7 +23,7 @@ server.tool(
     const spaces = Array.isArray(data) ? data : (data.spaces ?? data.data ?? []);
 
     const lines = spaces.map((s: any) =>
-      `[${s.id}] ${s.name}${s.description ? ` — ${s.description}` : ''}${s.parentId ? ` (parent: ${s.parentId})` : ''}`
+      `[${s.id}] ${s.name}${s.description ? ` — ${s.description}` : ''} | visibilité: ${s.visibility ?? '?'}${s.communityId ? ` | communauté: ${s.communityId}` : ''}${s.parentId ? ` | parent: ${s.parentId}` : ''}`
     );
 
     return {
@@ -41,7 +41,7 @@ server.tool(
 
 server.tool(
   'get_space',
-  'Retourne le détail d\'un espace SPOK et ses items (titre, type, statut, description).',
+  'Retourne le détail d\'un espace SPOK et ses items.',
   {
     spaceId: z.string().describe('ID de l\'espace'),
     limit: z.number().optional().default(200).describe('Nombre max d\'items à retourner (défaut 200)'),
@@ -57,6 +57,9 @@ server.tool(
     const header = [
       `# ${space.name}`,
       space.description ? `Description : ${space.description}` : null,
+      `Visibilité : ${space.visibility ?? '?'}`,
+      space.communityId ? `Communauté : ${space.communityId}` : null,
+      space.parentId ? `Parent : ${space.parentId}` : null,
       `Items : ${items.length}`,
     ]
       .filter(Boolean)
@@ -65,10 +68,14 @@ server.tool(
     const itemLines = items.map((item: any) => {
       const parts = [`[${item.id}] [${item.type}] ${item.title}`];
       if (item.status) parts.push(`statut: ${item.status}`);
-      if (item.description) {
-        const text = extractText(item.description);
-        if (text) parts.push(`→ ${text.slice(0, 120)}${text.length > 120 ? '…' : ''}`);
-      }
+      if (item.priority) parts.push(`priorité: ${item.priority}`);
+      if (item.startDate) parts.push(`début: ${item.startDate.slice(0, 10)}`);
+      if (item.endDate) parts.push(`fin: ${item.endDate.slice(0, 10)}`);
+      if (item.dueDate) parts.push(`échéance: ${item.dueDate.slice(0, 10)}`);
+      if (item.url) parts.push(`url: ${item.url}`);
+      if (item.parentId) parts.push(`parent: ${item.parentId}`);
+      const text = extractText(item.content ?? item.description);
+      if (text) parts.push(`→ ${text.slice(0, 200)}${text.length > 200 ? '…' : ''}`);
       return parts.join(' | ');
     });
 
@@ -103,9 +110,19 @@ server.tool(
       };
     }
 
-    const lines = items.map((item: any) =>
-      `[${item.id}] [${item.type}] ${item.title}${item.space?.name ? ` (${item.space.name})` : ''}${item.status ? ` | ${item.status}` : ''}`
-    );
+    const lines = items.map((item: any) => {
+      const parts = [`[${item.id}] [${item.type}] ${item.title}`];
+      if (item.space?.name) parts.push(`espace: ${item.space.name}`);
+      if (item.status) parts.push(`statut: ${item.status}`);
+      if (item.priority) parts.push(`priorité: ${item.priority}`);
+      if (item.startDate) parts.push(`début: ${item.startDate.slice(0, 10)}`);
+      if (item.endDate) parts.push(`fin: ${item.endDate.slice(0, 10)}`);
+      if (item.dueDate) parts.push(`échéance: ${item.dueDate.slice(0, 10)}`);
+      if (item.url) parts.push(`url: ${item.url}`);
+      const text = extractText(item.content ?? item.description);
+      if (text) parts.push(`→ ${text.slice(0, 120)}${text.length > 120 ? '…' : ''}`);
+      return parts.join(' | ');
+    });
 
     return {
       content: [
@@ -132,16 +149,22 @@ server.tool(
     description: z.string().optional().describe('Description textuelle (optionnel)'),
     status: z.string().optional().describe('Statut (optionnel, ex: todo, in_progress, done)'),
     priority: z.number().int().min(1).max(4).optional().describe('Priorité 1-4 (optionnel)'),
-    parentId: z.string().optional().describe('ID de l\'item parent pour créer une hiérarchie (optionnel)'),
+    parentId: z.string().optional().describe('ID de l\'item parent (optionnel)'),
+    startDate: z.string().optional().describe('Date de début ISO 8601 (optionnel)'),
+    endDate: z.string().optional().describe('Date de fin ISO 8601 (optionnel)'),
     dueDate: z.string().optional().describe('Date d\'échéance ISO 8601 (optionnel)'),
+    url: z.string().optional().describe('URL associée (optionnel)'),
   },
-  async ({ spaceId, type, title, description, status, priority, parentId, dueDate }) => {
+  async ({ spaceId, type, title, description, status, priority, parentId, startDate, endDate, dueDate, url }) => {
     const body: Record<string, unknown> = { type, title };
     if (description) body.content = textToTiptap(description);
     if (status) body.status = status;
     if (priority) body.priority = priority;
     if (parentId) body.parentId = parentId;
+    if (startDate) body.startDate = startDate;
+    if (endDate) body.endDate = endDate;
     if (dueDate) body.dueDate = dueDate;
+    if (url) body.url = url;
 
     const item = await api.post(`/spaces/${spaceId}/items`, body);
 
@@ -178,12 +201,55 @@ server.tool(
     const data = await api.get(`/spaces/${spaceId}/items?${params}`);
     const items = data.data ?? data.items ?? data ?? [];
 
-    const lines = items.map((item: any) =>
-      `[${item.id}] [${item.type}] ${item.title}${item.status ? ` | ${item.status}` : ''}${item.parentId ? ` | parent: ${item.parentId}` : ''}`
-    );
+    const lines = items.map((item: any) => {
+      const parts = [`[${item.id}] [${item.type}] ${item.title}`];
+      if (item.status) parts.push(`statut: ${item.status}`);
+      if (item.priority) parts.push(`priorité: ${item.priority}`);
+      if (item.startDate) parts.push(`début: ${item.startDate.slice(0, 10)}`);
+      if (item.endDate) parts.push(`fin: ${item.endDate.slice(0, 10)}`);
+      if (item.dueDate) parts.push(`échéance: ${item.dueDate.slice(0, 10)}`);
+      if (item.url) parts.push(`url: ${item.url}`);
+      if (item.parentId) parts.push(`parent: ${item.parentId}`);
+      const text = extractText(item.content ?? item.description);
+      if (text) parts.push(`→ ${text.slice(0, 120)}${text.length > 120 ? '…' : ''}`);
+      return parts.join(' | ');
+    });
 
     return {
       content: [{ type: 'text', text: lines.length > 0 ? `${lines.length} item(s) :\n\n${lines.join('\n')}` : 'Aucun item.' }],
+    };
+  }
+);
+
+// ─── get_item ─────────────────────────────────────────────────────────────────
+
+server.tool(
+  'get_item',
+  'Retourne le détail complet d\'un item SPOK (tous les champs + contenu).',
+  {
+    spaceId: z.string().describe('ID de l\'espace'),
+    itemId: z.string().describe('ID de l\'item'),
+  },
+  async ({ spaceId, itemId }) => {
+    const item = await api.get(`/spaces/${spaceId}/items/${itemId}`);
+
+    const lines = [
+      `[${item.id}] [${item.type}] ${item.title}`,
+      item.status ? `Statut : ${item.status}` : null,
+      item.priority ? `Priorité : ${item.priority}` : null,
+      item.startDate ? `Début : ${item.startDate.slice(0, 10)}` : null,
+      item.endDate ? `Fin : ${item.endDate.slice(0, 10)}` : null,
+      item.dueDate ? `Échéance : ${item.dueDate.slice(0, 10)}` : null,
+      item.url ? `URL : ${item.url}` : null,
+      item.parentId ? `Parent : ${item.parentId}` : null,
+      item.spaceId ? `Espace : ${item.spaceId}` : null,
+    ].filter(Boolean);
+
+    const text = extractText(item.content ?? item.description);
+    if (text) lines.push(`\nContenu :\n${text}`);
+
+    return {
+      content: [{ type: 'text', text: lines.join('\n') }],
     };
   }
 );
@@ -338,7 +404,7 @@ server.tool(
       community.description ? `Description : ${community.description}` : null,
       `Visibilité : ${community.isPublic ? 'Publique' : 'Privée'}`,
       `Espaces (${spaces.length}) :`,
-      ...spaces.map((s: any) => `  [${s.id}] ${s.name}${s.parentId ? ` (parent: ${s.parentId})` : ''}`),
+      ...spaces.map((s: any) => `  [${s.id}] ${s.name} | visibilité: ${s.visibility ?? '?'}${s.parentId ? ` | parent: ${s.parentId}` : ''}`),
     ].filter(Boolean);
 
     return {
@@ -486,9 +552,9 @@ server.tool(
     const data = await api.get(`/spaces/${spaceId}/items/${itemId}/contributions`);
     const contributions = data.data ?? data ?? [];
     const lines = contributions.map((c: any) =>
-      `[${c.id}] ${c.author?.name ?? '?'} (${c.createdAt?.slice(0, 10) ?? ''}) : ${extractText(c.content).slice(0, 120)}`
+      `[${c.id}] ${c.author?.name ?? '?'} (${c.createdAt?.slice(0, 10) ?? ''}) :\n${extractText(c.content)}`
     );
-    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'Aucune contribution.' }] };
+    return { content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n\n') : 'Aucune contribution.' }] };
   }
 );
 
@@ -650,7 +716,7 @@ server.tool(
     role: z.enum(['OWNER', 'MEMBER', 'VIEWER']).default('MEMBER'),
   },
   async ({ spaceId, userId, role }) => {
-    const m = await api.post(`/spaces/${spaceId}/members`, { userId, role });
+    await api.post(`/spaces/${spaceId}/members`, { userId, role });
     return { content: [{ type: 'text', text: `Membre ajouté : ${userId} (${role})` }] };
   }
 );
