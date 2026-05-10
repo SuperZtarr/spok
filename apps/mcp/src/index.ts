@@ -924,7 +924,7 @@ function extractText(description: any): string {
     if (node.type === 'text') return node.text ?? '';
     return (node.content ?? []).map(collectText).join(' ');
   }
-  return (description.content ?? []).map(collectText).join(' ').replace(/\s+/g, ' ').trim();
+  return (description.content ?? []).map(collectText).join('\n').trim();
 }
 
 function textToHtml(text: string): string {
