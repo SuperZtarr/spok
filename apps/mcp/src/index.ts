@@ -157,7 +157,7 @@ server.tool(
   },
   async ({ spaceId, type, title, description, status, priority, parentId, startDate, endDate, dueDate, url }) => {
     const body: Record<string, unknown> = { type, title };
-    if (description) body.content = textToTiptap(description);
+    if (description) body.description = textToHtml(description);
     if (status) body.status = status;
     if (priority) body.priority = priority;
     if (parentId) body.parentId = parentId;
@@ -276,8 +276,7 @@ server.tool(
   async ({ spaceId, itemId, description, ...fields }) => {
     const body: Record<string, unknown> = { ...fields };
     if (description !== undefined) {
-      body.content = textToTiptap(description);
-      body.description = null;
+      body.description = textToHtml(description);
     }
 
     const item = await api.patch(`/spaces/${spaceId}/items/${itemId}`, body);
@@ -912,7 +911,13 @@ server.tool(
 function extractText(description: any): string {
   if (!description) return '';
   if (typeof description === 'string') {
-    try { description = JSON.parse(description); } catch { return description; }
+    let parsed: any;
+    try { parsed = JSON.parse(description); } catch { /* not JSON — treat as HTML */ }
+    if (parsed) {
+      description = parsed;
+    } else {
+      return description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
   }
   if (typeof description !== 'object') return '';
   function collectText(node: any): string {
@@ -920,6 +925,13 @@ function extractText(description: any): string {
     return (node.content ?? []).map(collectText).join(' ');
   }
   return (description.content ?? []).map(collectText).join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function textToHtml(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => (line.trim() === '' ? '<p></p>' : `<p>${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`))
+    .join('');
 }
 
 function textToTiptap(text: string) {
