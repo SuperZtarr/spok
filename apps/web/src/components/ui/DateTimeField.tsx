@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import {
   addDays, addWeeks, addMonths,
@@ -25,7 +26,9 @@ export function DateTimeField({
   disabled = false,
 }: DateTimeFieldProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const currentDate = value ? fromDatetimeLocal(value) : null;
   const today = new Date();
@@ -53,6 +56,14 @@ export function DateTimeField({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isCalendarOpen]);
+
+  const openCalendar = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCalendarPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setIsCalendarOpen(true);
+  }, []);
 
   // --- Helpers ---
 
@@ -158,9 +169,10 @@ export function DateTimeField({
       <div className="flex items-center gap-2">
         {/* Date button */}
         <button
+          ref={buttonRef}
           type="button"
           disabled={disabled}
-          onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+          onClick={() => isCalendarOpen ? setIsCalendarOpen(false) : openCalendar()}
           className={`flex items-center gap-2 h-9 px-3 text-sm rounded-md border border-input bg-transparent shadow-sm transition-colors hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed ${
             isCalendarOpen ? 'ring-1 ring-ring' : ''
           }`}
@@ -212,9 +224,12 @@ export function DateTimeField({
         )}
       </div>
 
-      {/* Calendar dropdown */}
-      {isCalendarOpen && (
-        <div className="absolute z-20 mt-1 p-3 bg-background border border-border rounded-lg shadow-lg w-[280px]">
+      {/* Calendar dropdown — portail pour échapper overflow/z-index de la modale */}
+      {isCalendarOpen && createPortal(
+        <div
+          style={{ top: calendarPos.top, left: calendarPos.left }}
+          className="fixed z-[9999] p-3 bg-background border border-border rounded-lg shadow-lg w-[280px]"
+        >
           {/* Header: month navigation */}
           <div className="flex items-center justify-between mb-2">
             <button
@@ -274,7 +289,8 @@ export function DateTimeField({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

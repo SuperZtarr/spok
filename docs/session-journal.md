@@ -4,7 +4,31 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-06
+## EN COURS — 2026-05-10
+
+### MCP : fix description items doc (b460cfc, a900086)
+- `create_item` / `update_item` : `body.description = textToHtml()` au lieu de `body.content = textToTiptap()`
+- Nouveau `textToHtml()` : texte brut → `<p>...</p>` avec échappement HTML
+- `extractText()` : gère HTML (strip tags) + join paragraphes avec `\n`
+- Script migration `fix-mcp-descriptions.ts` : 253 items prod corrigés (TipTap JSON → HTML propre)
+- Hooks PreToolUse : codage bloqué sans flag, git push bloqué sans flag
+- Skill spok-start révisée : ouverture Chrome via PowerShell avant plugin
+
+### Refonte tableau de bord (de8b44d)
+- Suppression `DashboardCockpitView` (code mort)
+- Renommage `MyOrganizationView` → `MyDashboardView`
+- Déplacement section Échéances avant Semaine
+- Layout horizontal : Échéances (flex-1, max-w-4xl) + Priorités/Retard/Aujourd'hui (w-72) + Répartitions/Progression (w-64)
+- `flex-wrap` + `min-w-[320px]` pour le responsive
+- `DeadlinesView` : colonnes espace/statut/priorité masquées sur mobile (`hidden sm:`)
+- `UserProfileModal` : boutons logout et thème sans largeur forcée
+
+### Navigation sticky entre espaces + indicateur vue par défaut (95c5dd4)
+- `SpacePage` : priorité vue = `?view=URL > viewMode store > space.defaultView > list`
+- `SpaceToolbar` : point pulsé (`animate-pulse`) sur bouton vue par défaut quand on n'y est pas
+- `Layout` : nav mobile compactée en grille 4 colonnes (icône + label, sans en-têtes de section)
+
+## HISTORIQUE — 2026-05-06
 
 ### Chemin critique Gantt — terminé (abe7f75)
 - Algo CPM (forward/backward pass, Kahn topo sort) dans `timeline-utils.ts`

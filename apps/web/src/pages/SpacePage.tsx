@@ -820,8 +820,8 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
+              onMove={actions.handleMove}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}

@@ -1,6 +1,12 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban, GitBranch } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, FolderKanban, GitBranch, GripVertical } from 'lucide-react';
+import {
+  DndContext, DragOverlay, pointerWithin,
+  useDraggable, useDroppable,
+  useSensors, useSensor, PointerSensor,
+  type DragStartEvent, type DragOverEvent, type DragEndEvent,
+} from '@dnd-kit/core';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import { useQueryClient } from '@tanstack/react-query';
@@ -47,11 +53,151 @@ interface TimelineViewProps {
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
+  onMove?: (id: string, parentId: string | null, position: number) => void;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
 }
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
+// Sub-component for the draggable/droppable left label — hooks can't be called inside .map()
+function GanttItemLabel({
+  item,
+  hasChildren,
+  isCollapsed,
+  isPortal,
+  portalSpaceName,
+  isOver,
+  dropPosition,
+  canEdit,
+  onMove,
+  onEdit,
+  onDelete,
+  onUpdateStatus,
+  onAddChild,
+  onMoveToSpace,
+  onDuplicateToSpace,
+  onConvertToSpace,
+  onSelfAssign,
+  onMerge,
+  onAbsorbChildren,
+  onSplitDescription,
+  onOpen,
+  onOpenInNewTab,
+  toggleCollapse,
+  statusOptions,
+  canEditItem,
+}: {
+  item: TreeItem;
+  hasChildren: boolean;
+  isCollapsed: boolean;
+  isPortal: boolean;
+  portalSpaceName?: string;
+  isOver: boolean;
+  dropPosition: 'before' | 'after' | 'nest';
+  canEdit?: boolean;
+  onMove?: (id: string, parentId: string | null, position: number) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onUpdateStatus: (id: string, status: string) => void;
+  onAddChild: (id: string) => void;
+  onMoveToSpace?: (id: string) => void;
+  onDuplicateToSpace?: (id: string) => void;
+  onConvertToSpace?: (id: string) => void;
+  onSelfAssign?: (id: string) => void;
+  onMerge?: (id: string) => void;
+  onAbsorbChildren?: (id: string) => void;
+  onSplitDescription?: (id: string) => void;
+  onOpen?: (id: string) => void;
+  onOpenInNewTab?: (id: string) => void;
+  toggleCollapse: (id: string) => void;
+  statusOptions: { id: string; label: string; visible: boolean; order: number }[];
+  canEditItem?: (item: { createdById?: string }) => boolean;
+}) {
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: item.id, disabled: !canEdit || !onMove });
+  const { setNodeRef: setDropRef } = useDroppable({ id: item.id, disabled: !onMove });
+  const Icon = getTypeIcon(item.type, item.url);
+
+  const nestHighlight = isOver && dropPosition === 'nest';
+
+  return (
+    <div ref={setDropRef} style={{ opacity: isDragging ? 0.4 : 1 }}>
+      {isOver && dropPosition === 'before' && (
+        <div className="relative h-0.5 mx-2" style={{ marginLeft: `${8 + item.depth * 20}px` }}>
+          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
+        </div>
+      )}
+      <div
+        className={`w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50 sticky left-0 z-10 bg-background ${nestHighlight ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-inset ring-blue-400' : ''}`}
+        style={{ paddingLeft: `${8 + item.depth * 20}px` }}
+      >
+        {canEdit && onMove && (
+          <button
+            ref={setDragRef}
+            {...attributes}
+            {...listeners}
+            className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            title="Glisser pour réorganiser"
+          >
+            <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+        )}
+        {hasChildren ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
+            className="p-0.5 hover:bg-muted rounded flex-shrink-0"
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+        ) : (
+          <span className="w-5 flex-shrink-0" />
+        )}
+        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <span
+          className={`truncate text-sm flex-1`}
+          onClick={() => onEdit(item.id)}
+        >
+          {item.title}
+        </span>
+        {isPortal && portalSpaceName && (
+          <Link
+            to={`/spaces/${item.spaceId}`}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FolderKanban className="w-3 h-3" />
+            <span className="truncate max-w-[60px]">{portalSpaceName}</span>
+          </Link>
+        )}
+        {!isPortal && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <ItemActionMenu
+              groups={buildItemMenuGroups(item.id, {
+                onEdit, onDelete, onUpdateStatus, onAddChild,
+                onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
+                onSelfAssign, onMerge, onAbsorbChildren,
+                onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
+                onOpen, onOpenInNewTab,
+              }, {
+                canEdit: canEditItem ? canEditItem(item) : canEdit ?? true,
+                statusOptions,
+                currentStatusId: item.status || undefined,
+              })}
+            />
+          </div>
+        )}
+      </div>
+      {isOver && dropPosition === 'after' && (
+        <div className="relative h-0.5 mx-2" style={{ marginLeft: `${8 + item.depth * 20}px` }}>
+          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -70,6 +216,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     type: 'start' | 'end';
     initialX: number;
     initialDate: Date;
+    lastDeltaDays: number;
   } | null>(null);
 
   // Drag state for creating relations
@@ -83,6 +230,14 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
 
   // Pending connection awaiting type selection
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+
+  // DnD state for left-panel reordering
+  const [ganttActiveId, setGanttActiveId] = useState<string | null>(null);
+  const [ganttOverId, setGanttOverId] = useState<string | null>(null);
+  const [ganttDropPosition, setGanttDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
+  const ganttPointerYRef = useRef(0);
+
+  const ganttSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const zoomConfig = ZOOM_CONFIGS[zoomLevel];
   const LABEL_WIDTH = 288;
@@ -110,6 +265,57 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
 
   const tree = useMemo(() => buildTree(items), [items]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
+
+  // Gantt left-panel DnD handlers — defined after flatItems
+  const handleGanttDragStart = useCallback((event: DragStartEvent) => {
+    setGanttActiveId(event.active.id as string);
+  }, []);
+
+  const handleGanttDragOver = useCallback((event: DragOverEvent) => {
+    const overId = event.over?.id as string | null;
+    setGanttOverId(overId);
+    if (!overId) { setGanttDropPosition('nest'); return; }
+    const el = document.querySelector(`[data-gantt-item-id="${overId}"]`) as HTMLElement | null;
+    const rect = el?.getBoundingClientRect();
+    if (!rect || rect.height === 0) { setGanttDropPosition('nest'); return; }
+    const ratio = (ganttPointerYRef.current - rect.top) / rect.height;
+    if (ratio < 0.33) setGanttDropPosition('before');
+    else if (ratio > 0.67) setGanttDropPosition('after');
+    else setGanttDropPosition('nest');
+  }, []);
+
+  const handleGanttDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    const pos = ganttDropPosition;
+    setGanttActiveId(null);
+    setGanttOverId(null);
+    setGanttDropPosition('nest');
+    if (!over || active.id === over.id || !onMove) return;
+    const overItem = flatItems.find(i => i.id === over.id);
+    if (!overItem) return;
+    if (pos === 'nest') {
+      onMove(active.id as string, over.id as string, 0);
+      setCollapsedIds(prev => { const s = new Set(prev); s.delete(over.id as string); return s; });
+    } else {
+      const siblings = flatItems.filter(i => i.parentId === overItem.parentId);
+      const overIndex = siblings.findIndex(i => i.id === over.id);
+      const targetPos = pos === 'after' ? overIndex + 1 : overIndex;
+      onMove(active.id as string, overItem.parentId ?? null, targetPos >= 0 ? targetPos : 0);
+    }
+  }, [ganttDropPosition, flatItems, onMove]);
+
+  const handleGanttDragCancel = useCallback(() => {
+    setGanttActiveId(null);
+    setGanttOverId(null);
+    setGanttDropPosition('nest');
+  }, []);
+
+  useEffect(() => {
+    if (!ganttActiveId) return;
+    const handler = (e: PointerEvent) => { ganttPointerYRef.current = e.clientY; };
+    window.addEventListener('pointermove', handler);
+    return () => window.removeEventListener('pointermove', handler);
+  }, [ganttActiveId]);
 
   const itemsWithDatesCount = useMemo(() => {
     return items.filter(item => item.startDate || item.dueDate).length;
@@ -250,6 +456,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       type,
       initialX: e.clientX,
       initialDate: currentDate,
+      lastDeltaDays: 0,
     });
   }, []);
 
@@ -260,44 +467,35 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     const deltaX = e.clientX - dragging.initialX;
     const deltaDays = Math.round(deltaX / dayWidth);
 
-    if (deltaDays !== 0) {
-      const newDate = addDays(dragging.initialDate, deltaDays);
-      const item = items.find(i => i.id === dragging.itemId);
-      if (!item) return;
+    if (deltaDays === dragging.lastDeltaDays) return;
 
-      const hasExistingDates = !!(item.startDate || item.endDate);
-      const today = startOfDay(new Date());
-      const currentStart = item.startDate ? new Date(item.startDate) : today;
-      const currentEnd = item.endDate ? new Date(item.endDate) : currentStart;
+    const newDate = addDays(dragging.initialDate, deltaDays);
+    const item = items.find(i => i.id === dragging.itemId);
+    if (!item) return;
 
-      if (dragging.type === 'start') {
-        // Don't allow start date to go past end date (only if item has existing dates)
-        if (!hasExistingDates || newDate <= currentEnd) {
-          onUpdateDates(
-            dragging.itemId,
-            newDate.toISOString(),
-            // Pour les éléments sans date, définir aussi la date de fin
-            item.endDate || (hasExistingDates ? null : newDate.toISOString())
-          );
-        }
-      } else {
-        // Don't allow end date to go before start date (only if item has existing dates)
-        if (!hasExistingDates || newDate >= currentStart) {
-          onUpdateDates(
-            dragging.itemId,
-            // Pour les éléments sans date, définir aussi la date de début
-            item.startDate || (hasExistingDates ? null : newDate.toISOString()),
-            newDate.toISOString()
-          );
-        }
+    const hasExistingDates = !!(item.startDate || item.endDate);
+    const today = startOfDay(new Date());
+    const currentStart = item.startDate ? new Date(item.startDate) : today;
+    const currentEnd = item.endDate ? new Date(item.endDate) : currentStart;
+
+    if (dragging.type === 'start') {
+      if (!hasExistingDates || newDate <= currentEnd) {
+        onUpdateDates(
+          dragging.itemId,
+          newDate.toISOString(),
+          item.endDate || (hasExistingDates ? null : newDate.toISOString())
+        );
+        setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
       }
-
-      // Update initial values for continuous dragging
-      setDragging(prev => prev ? {
-        ...prev,
-        initialX: e.clientX,
-        initialDate: newDate,
-      } : null);
+    } else {
+      if (!hasExistingDates || newDate >= currentStart) {
+        onUpdateDates(
+          dragging.itemId,
+          item.startDate || (hasExistingDates ? null : newDate.toISOString()),
+          newDate.toISOString()
+        );
+        setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
+      }
     }
   }, [dragging, dayWidth, items, onUpdateDates]);
 
@@ -679,13 +877,19 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
               <p className="text-sm">Créez des éléments pour les voir dans le planning</p>
             </div>
           ) : (<div className="relative" ref={timelineAreaRef}>
+            <DndContext
+              sensors={ganttSensors}
+              collisionDetection={pointerWithin}
+              onDragStart={handleGanttDragStart}
+              onDragOver={handleGanttDragOver}
+              onDragEnd={handleGanttDragEnd}
+              onDragCancel={handleGanttDragCancel}
+            >
             {flatItems.map((item, itemIndex) => {
               const barStyle = getBarStyle(item);
-              const Icon = getTypeIcon(item.type, item.url);
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);
-              const hasDate = !!(item.startDate || item.dueDate);
               const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
               const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
               const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
@@ -695,80 +899,41 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
               return (
                 <div
                   key={item.id}
+                  data-gantt-item-id={item.id}
                   className={`flex border-b hover:bg-muted/30 group h-10 relative ${
                     isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
                   } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'bg-muted/10' : ''}`}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Item label */}
-                  <div
-                    className="w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50 sticky left-0 z-10 bg-background"
-                    style={{ paddingLeft: `${8 + item.depth * 20}px` }}
-                  >
-                    {hasChildren ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCollapse(item.id);
-                        }}
-                        className="p-0.5 hover:bg-muted rounded"
-                        title={isCollapsed ? 'Développer' : 'Réduire'}
-                      >
-                        {isCollapsed ? (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="w-5" />
-                    )}
-                    <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span
-                      className={`truncate text-sm flex-1 ${!hasDate ? 'text-muted-foreground' : ''}`}
-                      title={item.title}
-                      onClick={() => onEdit(item.id)}
-                    >
-                      {item.title}
-                    </span>
-                    {isPortal && portalSpaceName && (
-                      <Link
-                        to={`/spaces/${item.spaceId}`}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                        title={`Espace : ${portalSpaceName}`}
-                      >
-                        <FolderKanban className="w-3 h-3" />
-                        <span className="truncate max-w-[60px]">{portalSpaceName}</span>
-                      </Link>
-                    )}
-                    {!isPortal && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <ItemActionMenu
-                          groups={buildItemMenuGroups(item.id, {
-                            onEdit,
-                            onDelete,
-                            onUpdateStatus,
-                            onAddChild,
-                            onMoveToSpace,
-                            onDuplicateToSpace,
-                            onConvertToSpace,
-                            onSelfAssign,
-                            onMerge,
-                            onAbsorbChildren,
-                            onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
-                            onOpen,
-            onOpenInNewTab,
-                          }, {
-                            canEdit: canEditItem ? canEditItem(item) : canEdit,
-                            statusOptions,
-                            currentStatusId: item.status || undefined,
-                          })}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  {/* Item label — extracted as component to allow useDraggable/useDroppable hooks */}
+                  <GanttItemLabel
+                    item={item}
+                    hasChildren={hasChildren}
+                    isCollapsed={isCollapsed}
+                    isPortal={isPortal}
+                    portalSpaceName={portalSpaceName}
+                    isOver={ganttOverId === item.id}
+                    dropPosition={ganttDropPosition}
+                    canEdit={canEdit}
+                    onMove={onMove}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onUpdateStatus={onUpdateStatus}
+                    onAddChild={onAddChild}
+                    onMoveToSpace={onMoveToSpace}
+                    onDuplicateToSpace={onDuplicateToSpace}
+                    onConvertToSpace={onConvertToSpace}
+                    onSelfAssign={onSelfAssign}
+                    onMerge={onMerge}
+                    onAbsorbChildren={onAbsorbChildren}
+                    onSplitDescription={onSplitDescription}
+                    onOpen={onOpen}
+                    onOpenInNewTab={onOpenInNewTab}
+                    toggleCollapse={toggleCollapse}
+                    statusOptions={statusOptions}
+                    canEditItem={canEditItem}
+                  />
 
                   {/* Timeline bar area */}
                   <div className="relative flex-1" style={{ minHeight: 40 }}>
@@ -1044,6 +1209,14 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                 )}
               </svg>
             )}
+            <DragOverlay dropAnimation={null}>
+              {ganttActiveId ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-card border-2 border-primary rounded-md shadow-xl max-w-xs text-sm font-medium">
+                  {flatItems.find(i => i.id === ganttActiveId)?.title ?? ganttActiveId}
+                </div>
+              ) : null}
+            </DragOverlay>
+            </DndContext>
           </div>)}
         </div>
       </div>

@@ -23,6 +23,9 @@
 - [x] MEETING : TimeRangePicker vertical draggable (plage horaire journée) dans ItemEditModal — b3b1a2e (2026-05-04)
 - [x] ItemEditModal footer : responsive mobile (flex-wrap, sm:ml-auto) — b3b1a2e (2026-05-04)
 - [x] Chemin critique Gantt : CPM dans timeline-utils + toggle toolbar + ring rouge — abe7f75 (2026-05-06)
+- [x] Tableau de bord : refonte layout (Échéances avant Semaine, colonnes horizontales, responsive) — de8b44d (2026-05-10)
+- [x] Navigation sticky entre espaces : vue active conservée lors du changement d'espace — 95c5dd4 (2026-05-10)
+- [x] SpaceToolbar : indicateur (point pulsé) sur la vue par défaut quand on n'y est pas — 95c5dd4 (2026-05-10)
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
@@ -59,6 +62,7 @@
 
 ### MCP SPOK
 - [x] MCP : CRUD complet items, espaces, communautés (15 outils) — 65800d7 (2026-04-29)
+- [x] MCP : get_item, champs complets list/search/get, fix description HTML, 253 items doc migrés — b460cfc, a900086 (2026-05-10)
 
 ## Idées (à explorer)
 
