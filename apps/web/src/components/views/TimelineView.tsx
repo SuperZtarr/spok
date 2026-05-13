@@ -219,6 +219,10 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     lastDeltaDays: number;
   } | null>(null);
 
+  // Preview local pendant le drag (aucun appel API) + confirmation après save
+  const [dragPreview, setDragPreview] = useState<{ itemId: string; startDate: string | null; endDate: string | null } | null>(null);
+  const [savedItemId, setSavedItemId] = useState<string | null>(null);
+
   // Drag state for creating relations
   const [relationDrag, setRelationDrag] = useState<{
     fromItemId: string;
@@ -460,9 +464,9 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     });
   }, []);
 
-  // Handle drag move
+  // Handle drag move — mise à jour visuelle locale uniquement, pas d'appel API
   const handleDragMove = useCallback((e: MouseEvent) => {
-    if (!dragging || !onUpdateDates) return;
+    if (!dragging) return;
 
     const deltaX = e.clientX - dragging.initialX;
     const deltaDays = Math.round(deltaX / dayWidth);
@@ -475,34 +479,46 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
 
     const hasExistingDates = !!(item.startDate || item.endDate);
     const today = startOfDay(new Date());
-    const currentStart = item.startDate ? new Date(item.startDate) : today;
-    const currentEnd = item.endDate ? new Date(item.endDate) : currentStart;
+    const currentStart = (dragPreview?.itemId === item.id && dragPreview.startDate)
+      ? new Date(dragPreview.startDate)
+      : item.startDate ? new Date(item.startDate) : today;
+    const currentEnd = (dragPreview?.itemId === item.id && dragPreview.endDate)
+      ? new Date(dragPreview.endDate)
+      : item.endDate ? new Date(item.endDate) : currentStart;
 
     if (dragging.type === 'start') {
       if (!hasExistingDates || newDate <= currentEnd) {
-        onUpdateDates(
-          dragging.itemId,
-          newDate.toISOString(),
-          item.endDate || (hasExistingDates ? null : newDate.toISOString())
-        );
+        setDragPreview({
+          itemId: dragging.itemId,
+          startDate: newDate.toISOString(),
+          endDate: dragPreview?.endDate ?? item.endDate ?? (hasExistingDates ? null : newDate.toISOString()),
+        });
         setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
       }
     } else {
       if (!hasExistingDates || newDate >= currentStart) {
-        onUpdateDates(
-          dragging.itemId,
-          item.startDate || (hasExistingDates ? null : newDate.toISOString()),
-          newDate.toISOString()
-        );
+        setDragPreview({
+          itemId: dragging.itemId,
+          startDate: dragPreview?.startDate ?? item.startDate ?? (hasExistingDates ? null : newDate.toISOString()),
+          endDate: newDate.toISOString(),
+        });
         setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
       }
     }
-  }, [dragging, dayWidth, items, onUpdateDates]);
+  }, [dragging, dragPreview, dayWidth, items]);
 
-  // Handle drag end
+  // Handle drag end — un seul appel API avec la position finale
   const handleDragEnd = useCallback(() => {
+    const preview = dragPreview;
     setDragging(null);
-  }, []);
+    setDragPreview(null);
+    if (preview && onUpdateDates) {
+      onUpdateDates(preview.itemId, preview.startDate, preview.endDate);
+      const itemId = preview.itemId;
+      setSavedItemId(itemId);
+      setTimeout(() => setSavedItemId(prev => prev === itemId ? null : prev), 1500);
+    }
+  }, [dragPreview, onUpdateDates]);
 
   // Effect for drag listeners
   useEffect(() => {
@@ -616,15 +632,17 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     ? Math.floor(relationDrag.currentY / 40)
     : -1;
 
-  const getBarStyle = (item: Item) => {
-    const itemStartDate = item.startDate || item.dueDate;
+  const getBarStyle = (item: Item, overrideStartDate?: string | null, overrideEndDate?: string | null) => {
+    const rawStart = overrideStartDate !== undefined ? overrideStartDate : item.startDate;
+    const rawEnd = overrideEndDate !== undefined ? overrideEndDate : item.endDate;
+    const itemStartDate = rawStart || item.dueDate;
     const hasDate = !!itemStartDate;
 
     // Si pas de date, utiliser aujourd'hui
     const today = startOfDay(new Date());
     const itemStart = hasDate ? startOfDay(new Date(itemStartDate)) : today;
     const itemEnd = hasDate
-      ? startOfDay(new Date(item.endDate || today))
+      ? startOfDay(new Date(rawEnd || today))
       : today;
 
     const startOffset = differenceInDays(itemStart, visibleStartDate);
@@ -886,7 +904,10 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
               onDragCancel={handleGanttDragCancel}
             >
             {flatItems.map((item, itemIndex) => {
-              const barStyle = getBarStyle(item);
+              const isPreview = dragPreview?.itemId === item.id;
+              const barStyle = isPreview
+                ? getBarStyle(item, dragPreview!.startDate, dragPreview!.endDate)
+                : getBarStyle(item);
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);
@@ -965,6 +986,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                             ? 'ring-2 ring-green-500 shadow-xl'
                             : ''
                         } ${criticalPathIds.has(item.id) ? 'ring-2 ring-red-500' : ''
+                        } ${savedItemId === item.id ? 'ring-2 ring-green-400 shadow-green-200' : ''
                         } ${(() => { const v = (item as any).viewedAt; return (v === null || (v && new Date(item.updatedAt) > new Date(v))) ? 'animate-unseen-blink' : ''; })()}`}
                         style={{
                           left: barStyle.left + 1,
