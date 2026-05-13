@@ -2,9 +2,12 @@ import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderKanban, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock, Activity } from 'lucide-react';
-import { communitiesApi, spacesApi, activityApi } from '../../lib/api';
+import { Users, FolderKanban, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock, Activity, AlertTriangle, CalendarDays, Bell } from 'lucide-react';
+import { communitiesApi, spacesApi, activityApi, userTasksApi, notificationsApi } from '../../lib/api';
+import type { GlobalTask } from '../../lib/api';
+import type { Notification } from '@spok/shared';
 import { TYPE_LABELS } from '../../constants/ui';
+import { TYPE_ICONS } from '../../constants/ui';
 import { useAuthStore } from '../../stores/auth';
 import { SpaceCard } from '../ui/SpaceCard';
 
@@ -120,6 +123,85 @@ function FirstTimeSetup({ userName }: { userName: string }) {
   );
 }
 
+const DONE_STATUSES = ['done', 'cancelled'];
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// ---------------------------------------------------------------------------
+// Compact preview card for dashboard sections
+// ---------------------------------------------------------------------------
+
+function DashboardPreviewCard({
+  title,
+  icon,
+  count,
+  items,
+  to,
+  variant = 'default',
+  renderItem,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  count: number;
+  items: { id: string }[];
+  to: string;
+  variant?: 'default' | 'danger';
+  renderItem: (item: any) => React.ReactNode;
+}) {
+  return (
+    <div className={`bg-card border rounded-xl overflow-hidden ${variant === 'danger' ? 'border-red-200 dark:border-red-900/50' : 'border-border'}`}>
+      <div className={`flex items-center justify-between px-3 py-2 border-b ${variant === 'danger' ? 'border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20' : 'border-border'}`}>
+        <div className="flex items-center gap-1.5">
+          {icon}
+          <span className={`text-xs font-semibold ${variant === 'danger' ? 'text-red-700 dark:text-red-400' : ''}`}>{title}</span>
+          {count > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${variant === 'danger' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-muted text-muted-foreground'}`}>
+              {count}
+            </span>
+          )}
+        </div>
+        <Link to={to} className="text-[10px] text-primary hover:underline flex items-center gap-0.5 flex-shrink-0">
+          Voir tout <ArrowRight className="w-2.5 h-2.5" />
+        </Link>
+      </div>
+      {count === 0
+        ? <p className="text-[11px] text-muted-foreground text-center py-4">—</p>
+        : <div className="divide-y divide-border">{items.slice(0, 5).map(item => renderItem(item))}</div>
+      }
+    </div>
+  );
+}
+
+function TaskPreviewRow({ task }: { task: GlobalTask }) {
+  const Icon = TYPE_ICONS[task.type as keyof typeof TYPE_ICONS] || TYPE_ICONS.NOTE;
+  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < startOfDay(new Date()) && !DONE_STATUSES.includes(task.status || ''));
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5">
+      <Icon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+      <span className="flex-1 min-w-0 truncate text-xs">{task.title}</span>
+      {task.dueDate && (
+        <span className={`text-[10px] flex-shrink-0 ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+          {new Date(task.dueDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function NotifPreviewRow({ notif }: { notif: Notification }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5">
+      <Bell className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+      <span className="flex-1 min-w-0 truncate text-xs">{notif.title}</span>
+      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+        {new Date(notif.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+      </span>
+    </div>
+  );
+}
+
 const SHORTCUTS = [
   { to: '/communities', icon: Users, label: 'Communautés', description: 'Voir toutes mes communautés et leurs espaces' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', description: 'Suivi des tâches et échéances' },
@@ -153,6 +235,20 @@ export function HomeView() {
     staleTime: 30_000,
   });
 
+  const { data: myTasksData } = useQuery({
+    queryKey: ['home-my-tasks'],
+    queryFn: () => userTasksApi.list({ status: 'none,todo,in_progress,to_validate,late', myTasks: true, pageSize: 200 }),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  const { data: notifData } = useQuery({
+    queryKey: ['home-notifications'],
+    queryFn: () => notificationsApi.list(20, 0),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
   // Badges branchés sur le feed d'activité (items modifiés par d'autres, non vus)
   const { activityBySpace, activityByCommunity } = useMemo(() => {
     const bySpace = new Map<string, number>();
@@ -169,6 +265,32 @@ export function HomeView() {
   const favoriteSpaces = (favoriteIds || [])
     .map(id => (allSpaces || []).find(s => s.id === id))
     .filter((s): s is NonNullable<typeof s> => !!s);
+
+  const allMyTasks = myTasksData?.data || [];
+  const today = startOfDay(new Date());
+  const in7Days = new Date(today); in7Days.setDate(in7Days.getDate() + 7);
+
+  const upcomingTasks = useMemo(() =>
+    allMyTasks.filter(t => t.dueDate && new Date(t.dueDate) >= today && new Date(t.dueDate) <= in7Days)
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
+    [allMyTasks]
+  );
+
+  const overdueTasks = useMemo(() =>
+    allMyTasks.filter(t => t.dueDate && new Date(t.dueDate) < today && !DONE_STATUSES.includes(t.status || ''))
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
+    [allMyTasks]
+  );
+
+  const todoTasks = useMemo(() =>
+    allMyTasks.filter(t => t.status === 'todo'),
+    [allMyTasks]
+  );
+
+  const unreadNotifs = useMemo(() =>
+    (notifData || []).filter(n => !n.read),
+    [notifData]
+  );
 
   const isLoading = loadingCommunities || loadingSpaces;
   const firstName = user?.name?.split(' ')[0] || '';
@@ -252,6 +374,45 @@ export function HomeView() {
           ))}
         </div>
 
+        {/* Dashboard preview sections */}
+        {!!user && (
+          <div className="grid grid-cols-4 gap-3 mb-8">
+            <DashboardPreviewCard
+              title="Échéances proches"
+              icon={<CalendarDays className="w-3.5 h-3.5 text-orange-500" />}
+              count={upcomingTasks.length}
+              items={upcomingTasks}
+              to="/dashboard"
+              renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
+            />
+            <DashboardPreviewCard
+              title="En retard"
+              icon={<AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+              count={overdueTasks.length}
+              items={overdueTasks}
+              to="/dashboard"
+              variant="danger"
+              renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
+            />
+            <DashboardPreviewCard
+              title="TODO assignés"
+              icon={<Clock className="w-3.5 h-3.5 text-blue-500" />}
+              count={todoTasks.length}
+              items={todoTasks}
+              to="/dashboard"
+              renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
+            />
+            <DashboardPreviewCard
+              title="Non lus"
+              icon={<Bell className="w-3.5 h-3.5 text-violet-500" />}
+              count={unreadNotifs.length}
+              items={unreadNotifs}
+              to="/notifications"
+              renderItem={(notif: Notification) => <NotifPreviewRow key={notif.id} notif={notif} />}
+            />
+          </div>
+        )}
+
         {/* Activity summary */}
         {(() => {
           const total = activityData?.total ?? 0;
@@ -263,43 +424,39 @@ export function HomeView() {
           ).slice(0, 5);
           return (
             <section className="mb-8">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-primary" />
-                  Activité récente
-                  <span className="bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5 font-medium leading-none">
-                    {total > 99 ? '99+' : total}
-                  </span>
-                </h2>
-                <Link to="/activity" className="text-xs text-primary hover:underline flex items-center gap-1">
-                  Voir tout <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="border border-border rounded-xl overflow-hidden bg-card divide-y divide-border">
-                {previewItems.map((item: any) => {
-                  const diff = Date.now() - new Date(item.activityAt).getTime();
-                  const minutes = Math.floor(diff / 60000);
-                  const timeLabel = minutes < 1 ? 'à l\'instant' : minutes < 60 ? `${minutes}min` : minutes < 1440 ? `${Math.floor(minutes / 60)}h` : `${Math.floor(minutes / 1440)}j`;
-                  return (
-                    <Link
-                      key={item.id}
-                      to="/activity"
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors"
-                    >
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono uppercase tracking-wide leading-none flex-shrink-0">
-                        {TYPE_LABELS[item.type as keyof typeof TYPE_LABELS] ?? item.type}
-                      </span>
-                      <p className="flex-1 text-sm font-medium truncate">{item.title}</p>
-                      <span className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">{item.spaceName}</span>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">{timeLabel}</span>
-                    </Link>
-                  );
-                })}
-                {total > 5 && (
-                  <Link to="/activity" className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs text-primary hover:bg-muted/40 transition-colors">
-                    + {total - 5} autre{total - 5 > 1 ? 's' : ''} <ArrowRight className="w-3 h-3" />
+              <div className="bg-card border border-border rounded-xl overflow-hidden w-fit max-w-full">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                  <div className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-semibold">Activité récente</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
+                      {total > 99 ? '99+' : total}
+                    </span>
+                  </div>
+                  <Link to="/activity" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+                    Voir tout <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
-                )}
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto">
+                  {previewItems.map((item: any) => {
+                    const diff = Date.now() - new Date(item.activityAt).getTime();
+                    const minutes = Math.floor(diff / 60000);
+                    const timeLabel = minutes < 1 ? 'à l\'instant' : minutes < 60 ? `${minutes}min` : minutes < 1440 ? `${Math.floor(minutes / 60)}h` : `${Math.floor(minutes / 1440)}j`;
+                    return (
+                      <Link
+                        key={item.id}
+                        to="/activity"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors flex-shrink-0 max-w-[200px]"
+                      >
+                        <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-mono uppercase tracking-wide leading-none flex-shrink-0">
+                          {TYPE_LABELS[item.type as keyof typeof TYPE_LABELS] ?? item.type}
+                        </span>
+                        <p className="text-xs font-medium truncate">{item.title}</p>
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0">{timeLabel}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             </section>
           );
