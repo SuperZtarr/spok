@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an admin page `/admin/duplicates` that groups items with the same normalized title, same URL (LINK type), or same filename (IMAGE/DOCUMENT type) across all spaces, and displays them as cards with their context menu.
+**Goal:** Add an admin page `/admin/duplicates` that groups items with the same normalized title, same URL (LINK type), or same filename (IMAGE/DOCUMENT type) across all spaces, and displays them as cards with a breadcrumb (Communauté > Espace > Grand-parent > Parent) and context actions.
 
-**Architecture:** Backend endpoint `GET /admin/duplicates` queries the `items` table with `$queryRawUnsafe` using `LOWER(TRIM(REGEXP_REPLACE(...)))` normalization. Frontend page shows collapsible groups of duplicate cards (type icon, title, space, community, context menu). Menu entry added to `DEFAULT_MENU_ITEMS`.
+**Architecture:** Backend endpoint `GET /admin/duplicates` uses `$queryRawUnsafe` with `LOWER(TRIM(REGEXP_REPLACE(...)))` normalization and two levels of parent JOINs for the breadcrumb. Frontend page shows grouped duplicate cards with tabs by reason. Menu entry added to `DEFAULT_MENU_ITEMS`.
 
 **Tech Stack:** Fastify + Prisma (`$queryRawUnsafe`), React + TanStack Query, Tailwind CSS, Lucide icons.
 
@@ -46,6 +46,15 @@ interface RawItem {
   spaceName: string;
   communityId: string | null;
   communityName: string | null;
+  parentId: string | null;
+  parentTitle: string | null;
+  grandparentId: string | null;
+  grandparentTitle: string | null;
+}
+
+interface Ancestor {
+  id: string;
+  title: string;
 }
 
 interface DuplicateItem {
@@ -60,6 +69,7 @@ interface DuplicateItem {
   spaceName: string;
   communityId: string | null;
   communityName: string | null;
+  ancestors: Ancestor[]; // [grandparent?, parent?] — nearest last
 }
 
 interface DuplicateGroup {
@@ -68,17 +78,29 @@ interface DuplicateGroup {
   items: DuplicateItem[];
 }
 
+// Two levels of parent JOINs for breadcrumb
 const ITEM_SELECT = `
   i.id, i.title, i.type, i.url, i.status, i.priority,
   i."createdAt"::text as "createdAt", i."spaceId",
   s.name as "spaceName", s."communityId",
-  c.name as "communityName"
+  c.name as "communityName",
+  p.id as "parentId", p.title as "parentTitle",
+  gp.id as "grandparentId", gp.title as "grandparentTitle"
 FROM items i
 JOIN spaces s ON s.id = i."spaceId"
 LEFT JOIN communities c ON c.id = s."communityId"
+LEFT JOIN items p ON p.id = i."parentId"
+LEFT JOIN items gp ON gp.id = p."parentId"
 `;
 
 function toItem(r: RawItem): DuplicateItem {
+  const ancestors: Ancestor[] = [];
+  if (r.grandparentId && r.grandparentTitle) {
+    ancestors.push({ id: r.grandparentId, title: r.grandparentTitle });
+  }
+  if (r.parentId && r.parentTitle) {
+    ancestors.push({ id: r.parentId, title: r.parentTitle });
+  }
   return {
     id: r.id,
     title: r.title,
@@ -91,6 +113,7 @@ function toItem(r: RawItem): DuplicateItem {
     spaceName: r.spaceName,
     communityId: r.communityId,
     communityName: r.communityName,
+    ancestors,
   };
 }
 
@@ -246,6 +269,7 @@ In `adminApi` object (after the `anomalies` section, around line 1524), add:
             spaceName: string;
             communityId: string | null;
             communityName: string | null;
+            ancestors: Array<{ id: string; title: string }>;
           }>;
         }>;
         total: number;
@@ -282,10 +306,7 @@ git -C "C:/_dev/spok" commit -m "feat(admin): endpoint GET /admin/duplicates + A
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import {
-  RefreshCw, Copy, ExternalLink, FileText, FolderKanban,
-  Link2, Image, File, AlertCircle
-} from 'lucide-react';
+import { RefreshCw, Copy, ExternalLink, FolderKanban, ChevronRight, AlertCircle } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { getTypeIcon } from '../../constants/ui';
@@ -293,12 +314,45 @@ import { getTypeIcon } from '../../constants/ui';
 type Reason = 'title' | 'url' | 'filename';
 
 const REASON_CONFIG: Record<Reason, { label: string; color: string; bg: string }> = {
-  title: { label: 'Titre', color: 'text-orange-700', bg: 'bg-orange-100 dark:bg-orange-900/30' },
-  url: { label: 'URL', color: 'text-blue-700', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-  filename: { label: 'Fichier', color: 'text-purple-700', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+  title:    { label: 'Titre',   color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
+  url:      { label: 'URL',     color: 'text-blue-700 dark:text-blue-400',     bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  filename: { label: 'Fichier', color: 'text-purple-700 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30' },
 };
 
 type FilterTab = 'all' | Reason;
+
+type DuplicateItem = {
+  id: string;
+  title: string;
+  type: string;
+  url: string | null;
+  status: string | null;
+  spaceId: string;
+  spaceName: string;
+  communityName: string | null;
+  ancestors: Array<{ id: string; title: string }>;
+};
+
+// Breadcrumb: Communauté > Espace > Grand-parent > Parent
+function Breadcrumb({ item }: { item: DuplicateItem }) {
+  const parts: string[] = [];
+  if (item.communityName) parts.push(item.communityName);
+  parts.push(item.spaceName);
+  for (const a of item.ancestors) parts.push(a.title);
+
+  return (
+    <div className="flex items-center gap-0.5 flex-wrap">
+      {parts.map((part, i) => (
+        <span key={i} className="flex items-center gap-0.5">
+          {i > 0 && <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/40 flex-shrink-0" />}
+          <span className={`text-[10px] truncate max-w-[80px] ${i === parts.length - 1 ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} title={part}>
+            {part}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function DuplicatesPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
@@ -310,13 +364,12 @@ export function DuplicatesPage() {
 
   const groups = data?.groups ?? [];
   const filtered = filter === 'all' ? groups : groups.filter((g) => g.reason === filter);
-
   const countByReason = (r: Reason) => groups.filter((g) => g.reason === r).length;
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
-    { key: 'all', label: 'Tous', count: groups.length },
-    { key: 'title', label: 'Titre', count: countByReason('title') },
-    { key: 'url', label: 'URL', count: countByReason('url') },
+    { key: 'all',      label: 'Tous',    count: groups.length },
+    { key: 'title',    label: 'Titre',   count: countByReason('title') },
+    { key: 'url',      label: 'URL',     count: countByReason('url') },
     { key: 'filename', label: 'Fichier', count: countByReason('filename') },
   ];
 
@@ -333,13 +386,7 @@ export function DuplicatesPage() {
             Items avec titre, URL ou nom de fichier identique sur tous les espaces
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-2"
-        >
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-2">
           <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           Actualiser
         </Button>
@@ -360,9 +407,7 @@ export function DuplicatesPage() {
             {tab.label}
             {tab.count > 0 && (
               <span className={`text-xs rounded-full px-1.5 py-0.5 font-mono ${
-                filter === tab.key
-                  ? 'bg-primary/10 text-primary'
-                  : 'bg-muted text-muted-foreground'
+                filter === tab.key ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
               }`}>
                 {tab.count}
               </span>
@@ -395,7 +440,7 @@ export function DuplicatesPage() {
               <div key={`${group.reason}-${idx}`} className="border border-border rounded-lg overflow-hidden">
                 {/* Group header */}
                 <div className="flex items-center gap-3 px-4 py-3 bg-muted/40 border-b border-border">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.bg} ${cfg.color}`}>
                     {cfg.label}
                   </span>
                   <span className="text-sm font-medium truncate flex-1" title={group.key}>
@@ -413,7 +458,7 @@ export function DuplicatesPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex-shrink-0 w-56 bg-card border border-border rounded-lg p-3 flex flex-col gap-2 hover:border-primary/50 transition-colors"
+                        className="flex-shrink-0 w-60 bg-card border border-border rounded-lg p-3 flex flex-col gap-2 hover:border-primary/50 transition-colors"
                       >
                         {/* Type + title */}
                         <div className="flex items-start gap-2">
@@ -425,23 +470,12 @@ export function DuplicatesPage() {
 
                         {/* Status */}
                         {item.status && (
-                          <span className="text-xs text-muted-foreground truncate">
-                            {item.status}
-                          </span>
+                          <span className="text-xs text-muted-foreground/80 truncate">{item.status}</span>
                         )}
 
-                        {/* Space + community */}
-                        <div className="flex flex-col gap-0.5 mt-auto pt-2 border-t border-border/50">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <FolderKanban className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{item.spaceName}</span>
-                          </div>
-                          {item.communityName && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground/70">
-                              <span className="w-3" />
-                              <span className="truncate">{item.communityName}</span>
-                            </div>
-                          )}
+                        {/* Breadcrumb: Communauté > Espace > ancêtres */}
+                        <div className="mt-auto pt-2 border-t border-border/50">
+                          <Breadcrumb item={item} />
                         </div>
 
                         {/* Actions */}
@@ -517,7 +551,10 @@ In the `// ── Section: admin ──` block, after the `admin-anomalies` entr
   { id: '', key: 'admin-duplicates', label: 'Doublons', icon: 'Copy', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/duplicates', viewMode: null, order: 6, visible: true, access: 'admin' },
 ```
 
-Bump the `order` of subsequent entries (`admin-menu`: 7, `admin-referentiels`: 8, `admin-api-doc`: 9).
+Bump the `order` of the three entries that follow:
+- `admin-menu`: 6 → 7
+- `admin-referentiels`: 7 → 8
+- `admin-api-doc`: 8 → 9
 
 - [ ] **Step 5: Rebuild shared package (menu constants change)**
 
