@@ -1,9 +1,9 @@
 // apps/web/src/pages/admin/DuplicatesPage.tsx
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Copy, ExternalLink, ChevronRight, AlertCircle } from 'lucide-react';
-import { adminApi } from '../../lib/api';
+import { RefreshCw, Copy, ExternalLink, ChevronRight, AlertCircle, Trash2, X } from 'lucide-react';
+import { adminApi, itemsApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { getTypeIcon } from '../../constants/ui';
 
@@ -41,7 +41,7 @@ function Breadcrumb({ item }: { item: DuplicateItem }) {
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-0.5">
           {i > 0 && <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/40 flex-shrink-0" />}
-          <span className={`text-[10px] truncate max-w-[80px] ${i === parts.length - 1 ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} title={part}>
+          <span className={`text-[10px] truncate max-w-[120px] ${i === parts.length - 1 ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} title={part}>
             {part}
           </span>
         </span>
@@ -52,13 +52,28 @@ function Breadcrumb({ item }: { item: DuplicateItem }) {
 
 export function DuplicatesPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['admin', 'duplicates'],
     queryFn: () => adminApi.duplicates.list(),
   });
 
-  const groups = data?.groups ?? [];
+  const deleteMutation = useMutation({
+    mutationFn: ({ spaceId, id }: { spaceId: string; id: string }) =>
+      itemsApi.delete(spaceId, id),
+    onSuccess: (_, { id }) => {
+      setDeletedIds((prev) => new Set(prev).add(id));
+      setConfirmId(null);
+    },
+  });
+
+  const rawGroups = data?.groups ?? [];
+  const groups = rawGroups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !deletedIds.has(i.id)) }))
+    .filter((g) => g.items.length > 1);
+
   const filtered = filter === 'all' ? groups : groups.filter((g) => g.reason === filter);
   const countByReason = (r: Reason) => groups.filter((g) => g.reason === r).length;
 
@@ -151,10 +166,12 @@ export function DuplicatesPage() {
                 <div className="flex gap-3 p-4 overflow-x-auto">
                   {group.items.map((item) => {
                     const Icon = getTypeIcon(item.type, item.url ?? undefined);
+                    const isConfirming = confirmId === item.id;
+                    const isDeleting = deleteMutation.isPending && confirmId === item.id;
                     return (
                       <div
                         key={item.id}
-                        className="flex-shrink-0 w-60 bg-card border border-border rounded-lg p-3 flex flex-col gap-2 hover:border-primary/50 transition-colors"
+                        className="flex-shrink-0 w-72 bg-card border border-border rounded-lg p-3 flex flex-col gap-2 hover:border-primary/50 transition-colors"
                       >
                         {/* Type + title */}
                         <div className="flex items-start gap-2">
@@ -190,6 +207,32 @@ export function DuplicatesPage() {
                           >
                             <ExternalLink className="w-3 h-3" />
                           </Link>
+                          {isConfirming ? (
+                            <>
+                              <button
+                                onClick={() => deleteMutation.mutate({ spaceId: item.spaceId, id: item.id })}
+                                disabled={isDeleting}
+                                className="flex-1 text-xs text-center px-2 py-1 rounded border border-destructive bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                              >
+                                {isDeleting ? '…' : 'Confirmer'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmId(null)}
+                                className="p-1 rounded border border-border hover:bg-accent transition-colors"
+                                title="Annuler"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmId(item.id)}
+                              className="p-1 rounded border border-border hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
