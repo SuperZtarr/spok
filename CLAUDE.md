@@ -5,6 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Instructions pour Claude
+Ne pas déployer, demander validation
+Ne pas coder, reflechir a la proposition d'une solution 
+Lorsqu'une solution est convenue, proposer un plan a valider avant de coder
 
 ### Interdictions absolues
 - Ne JAMAIS modifier des données en production sans demande explicite

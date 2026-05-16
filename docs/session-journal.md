@@ -4,7 +4,19 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-10
+## EN COURS — 2026-05-16
+
+### Vue Doublons admin (9e6828b, 7e44f08, 6eda6f2, aad0904)
+- `GET /admin/duplicates` : détection par titre normalisé (LOWER/TRIM/REGEXP), URL (LINK), nom de fichier (IMAGE/DOCUMENT)
+- Fil d'ariane : 2 niveaux de parents via LEFT JOIN (grandparent + parent)
+- `DuplicatesPage` : tabs Tous/Titre/URL/Fichier, groupes de cartes scrollables horizontalement, breadcrumb Communauté > Espace > ancêtres
+- Entrée menu admin "Doublons" avec icône Copy
+
+### Fix scrollbar vues à colonnes (bbeb926)
+- `SpacePage` view container : ajout `kanban`, `members`, `types`, `priority` dans la liste `overflow-hidden flex flex-col`
+- Sans ça, l'overflow horizontal remontait jusqu'au `overflow-hidden` de SpacePage et les colonnes de droite étaient coupées sans scrollbar
+
+## HISTORIQUE — 2026-05-10
 
 ### MCP : fix description items doc (b460cfc, a900086)
 - `create_item` / `update_item` : `body.description = textToHtml()` au lieu de `body.content = textToTiptap()`
