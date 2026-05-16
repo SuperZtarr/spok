@@ -82,29 +82,34 @@ export const publicMenuRoutes: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-// Sync helper — adds missing default items without touching existing ones
+// Sync helper — creates missing items and updates order/icon/section of existing ones
 async function syncDefaults(fastify: any) {
-  const existing = await fastify.prisma.menuItem.findMany({ select: { key: true } });
-  const existingKeys = new Set(existing.map((e: any) => e.key));
+  const existing = await fastify.prisma.menuItem.findMany({ select: { key: true, order: true, icon: true, sectionOrder: true } });
+  const existingMap = new Map(existing.map((e: any) => [e.key, e]));
 
-  const missing = DEFAULT_MENU_ITEMS.filter(item => !existingKeys.has(item.key));
-  if (missing.length === 0) return;
-
-  for (const item of missing) {
-    await fastify.prisma.menuItem.create({
-      data: {
-        key: item.key,
-        label: item.label,
-        icon: item.icon,
-        section: item.section,
-        sectionLabel: item.sectionLabel,
-        sectionOrder: item.sectionOrder,
-        route: item.route,
-        viewMode: item.viewMode,
-        order: item.order,
-        visible: item.visible,
-        access: item.access,
-      },
-    });
+  for (const item of DEFAULT_MENU_ITEMS) {
+    const current = existingMap.get(item.key);
+    if (!current) {
+      await fastify.prisma.menuItem.create({
+        data: {
+          key: item.key,
+          label: item.label,
+          icon: item.icon,
+          section: item.section,
+          sectionLabel: item.sectionLabel,
+          sectionOrder: item.sectionOrder,
+          route: item.route,
+          viewMode: item.viewMode,
+          order: item.order,
+          visible: item.visible,
+          access: item.access,
+        },
+      });
+    } else if (current.order !== item.order || current.icon !== item.icon || current.sectionOrder !== item.sectionOrder) {
+      await fastify.prisma.menuItem.update({
+        where: { key: item.key },
+        data: { order: item.order, icon: item.icon, sectionOrder: item.sectionOrder },
+      });
+    }
   }
 }
