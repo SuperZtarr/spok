@@ -130,7 +130,7 @@ export function DuplicatesPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {filtered.map((group, idx) => {
+          {filtered.map((group) => {
             const cfg = REASON_CONFIG[group.reason];
             return (
               <div key={`${group.reason}-${group.key}`} className="border border-border rounded-lg overflow-hidden">
