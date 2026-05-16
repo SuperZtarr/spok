@@ -6,7 +6,7 @@ import {
   Network, FileText, CircleDot, Waypoints, Circle, Orbit, SquareStack, TrendingDown,
   Layers, Disc, Table2, Grid3x3, Focus, Flame, Users, LayoutDashboard, Home, Check,
   ChevronDown, Search, User, Shield, LogOut, ExternalLink, Image, Bug, CheckSquare,
-  Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings, Clock, Activity,
+  Map as MapIconLucide, Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings, Clock, Activity, Copy,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { activityApi } from '../lib/api';
@@ -24,7 +24,7 @@ const ICONS: Record<string, typeof List> = {
 };
 const EXTRA_ICONS: Record<string, typeof List> = {
   Search, User, Shield, LogOut, MapIcon: MapIconLucide, ExternalLink, Image, Bug, CheckSquare,
-  Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings,
+  Building2, FolderKanban, BarChart3, History, AlertTriangle, Eye, Settings, Copy,
 };
 const getIcon = (name: string) => ICONS[name] || EXTRA_ICONS[name] || List;
 
