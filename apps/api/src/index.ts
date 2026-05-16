@@ -24,6 +24,7 @@ import { adminConfigRoutes, publicConfigRoutes } from './routes/admin/config.js'
 import { adminMenuRoutes, publicMenuRoutes } from './routes/admin/menu.js';
 import { adminBackupRoutes } from './routes/admin/backup.js';
 import { adminPerfRoutes } from './routes/admin/perf.js';
+import { adminDuplicatesRoutes } from './routes/admin/duplicates.js';
 import { contactRoutes } from './routes/contact.js';
 import { searchRoutes } from './routes/search.js';
 import { userRoutes } from './routes/user.js';
@@ -270,6 +271,7 @@ async function buildApp() {
   await app.register(adminMenuRoutes, { prefix: '/admin/menu' });
   await app.register(adminBackupRoutes, { prefix: '/admin/backup-log' });
   await app.register(adminPerfRoutes, { prefix: '/admin/perf' });
+  await app.register(adminDuplicatesRoutes, { prefix: '/admin/duplicates' });
   await app.register(publicMenuRoutes, { prefix: '/menu' });
   await app.register(contactRoutes, { prefix: '/contact' });
   await app.register(searchRoutes, { prefix: '/search' });

@@ -1523,6 +1523,31 @@ export const adminApi = {
     },
   },
 
+  duplicates: {
+    list: () =>
+      fetchApi<{
+        groups: Array<{
+          key: string;
+          reason: 'title' | 'url' | 'filename';
+          items: Array<{
+            id: string;
+            title: string;
+            type: string;
+            url: string | null;
+            status: string | null;
+            priority: number | null;
+            createdAt: string;
+            spaceId: string;
+            spaceName: string;
+            communityId: string | null;
+            communityName: string | null;
+            ancestors: Array<{ id: string; title: string }>;
+          }>;
+        }>;
+        total: number;
+      }>('/admin/duplicates'),
+  },
+
   auditLogs: {
     list: (params?: {
       entity?: string;
