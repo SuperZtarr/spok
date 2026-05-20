@@ -145,8 +145,6 @@ const SITE_TREE: SiteNode[] = [
         description: 'Historique complet, filtres, regroupement par batch, restauration, purge' },
       { label: 'Diagnostics', path: '/admin/anomalies', component: 'AnomaliesPage', auth: 'admin',
         description: 'Detection d\'anomalies par categorie, tests d\'integrite BD' },
-      { label: 'Menus', path: '/admin/menu', component: 'MenuConfigPage', auth: 'admin',
-        description: 'Configuration de tous les items de menu (table MenuItem) : libelles, ordre, sections, acces, visibilite' },
       { label: 'Vues (legacy)', path: '/admin/views', component: 'ViewsConfigPage', auth: 'admin',
         description: 'Configuration des vues et pages globales (ancien systeme appConfig)' },
       { label: 'Referentiels', path: '/admin/referentiels', component: 'ReferentielsPage', auth: 'admin',

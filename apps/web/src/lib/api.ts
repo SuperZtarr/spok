@@ -1820,12 +1820,6 @@ export const menuApi = {
   getAll: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/menu'),
 };
 
-export const adminMenuApi = {
-  getAll: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu'),
-  update: (overrides: import('@spok/shared').MenuOverride[]) =>
-    fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu', { method: 'PUT', body: JSON.stringify(overrides) }),
-  reset: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu/reset', { method: 'POST' }),
-};
 
 export interface PerfEntry {
   timestamp: string;

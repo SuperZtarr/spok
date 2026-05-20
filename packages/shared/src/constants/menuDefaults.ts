@@ -50,7 +50,6 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'admin-audit',       label: 'Audit',           icon: 'History',      section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/audit-logs',   viewMode: null, order: 4, visible: true, access: 'admin' },
   { id: '', key: 'admin-anomalies',   label: 'Diagnostics',     icon: 'AlertTriangle',section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/anomalies',    viewMode: null, order: 5, visible: true, access: 'admin' },
   { id: '', key: 'admin-duplicates',  label: 'Doublons',        icon: 'Copy',         section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/duplicates',   viewMode: null, order: 6, visible: true, access: 'admin' },
-  { id: '', key: 'admin-menu',        label: 'Menus',           icon: 'Settings',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/menu',         viewMode: null, order: 7, visible: true, access: 'admin' },
   { id: '', key: 'admin-referentiels',label: 'Référentiels',    icon: 'Settings',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/referentiels', viewMode: null, order: 8, visible: true, access: 'admin' },
   { id: '', key: 'admin-api-doc',     label: 'Documentation API',icon: 'FileText',    section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/api-doc',      viewMode: null, order: 9, visible: true, access: 'admin' },
 

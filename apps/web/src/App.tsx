@@ -30,7 +30,6 @@ import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
-import { MenuConfigPage } from './pages/admin/MenuConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { PerfPage } from './pages/admin/PerfPage';
 import { ContactPage } from './pages/ContactPage';
@@ -110,7 +109,6 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/admin\/stats$/, 'pages/admin/StatsPage.tsx'],
   [/^\/admin\/audit-logs$/, 'pages/admin/AuditLogsPage.tsx'],
   [/^\/admin\/views$/, 'pages/admin/ViewsConfigPage.tsx'],
-  [/^\/admin\/menu$/, 'pages/admin/MenuConfigPage.tsx'],
   [/^\/$/, 'pages/HomePage.tsx \u2192 views/HomeView.tsx'],
 ];
 
@@ -215,7 +213,6 @@ export default function App() {
         <Route path="admin/stats" element={<AdminRoute><StatsPage /></AdminRoute>} />
         <Route path="admin/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
         <Route path="admin/views" element={<AdminRoute><ViewsConfigPage /></AdminRoute>} />
-        <Route path="admin/menu" element={<AdminRoute><MenuConfigPage /></AdminRoute>} />
         <Route path="admin/api-doc" element={<AdminRoute><ApiDocPage /></AdminRoute>} />
         <Route path="admin/perf" element={<AdminRoute><PerfPage /></AdminRoute>} />
       </Route>

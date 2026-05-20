@@ -156,9 +156,6 @@ export function ApiDocPage() {
         <Row method="GET" path="/admin/stats" auth="admin" desc="Statistiques globales" />
         <Row method="GET" path="/admin/audit-logs" auth="admin" desc="Logs d'audit" />
         <Row method="GET" path="/admin/anomalies" auth="admin" desc="Diagnostics et anomalies" />
-        <Row method="GET" path="/admin/menu" auth="admin" desc="Configuration des menus" />
-        <Row method="PUT" path="/admin/menu" auth="admin" desc="Modifier les menus" />
-        <Row method="POST" path="/admin/menu/reset" auth="admin" desc="Reinitialiser les menus" />
         <Row method="GET" path="/admin/referentiels" auth="admin" desc="Referentiels globaux" />
         <Row method="GET" path="/admin/config/views" auth="admin" desc="Config vues (legacy)" />
         <Row method="GET" path="/admin/config/global-pages" auth="admin" desc="Config pages (legacy)" />
