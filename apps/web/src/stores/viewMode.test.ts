@@ -3,7 +3,7 @@ import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewMode } from './
 
 describe('VIEW_MODES constants', () => {
   it('should have 29 view modes', () => {
-    expect(VIEW_MODES).toHaveLength(29)
+    expect(VIEW_MODES).toHaveLength(31)
   })
 
   it('should have unique values', () => {

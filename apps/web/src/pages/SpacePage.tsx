@@ -67,6 +67,7 @@ import { LinksView } from '../components/views/LinksView';
 import { DocumentsView } from '../components/views/DocumentsView';
 import { BugsView } from '../components/views/BugsView';
 import { TodoView } from '../components/views/TodoView';
+import { PertView } from '../components/views/PertView';
 import { OverviewView } from '../components/views/OverviewView';
 import { RecentChangesView } from '../components/views/RecentChangesView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
@@ -213,7 +214,7 @@ export function SpacePage() {
   }, [spaceId, includeChildrenSpaceIds, communitySpaces]);
 
   // View mode categorization
-  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text';
+  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert';
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'bugs' || viewMode === 'todo';
   const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
@@ -554,8 +555,8 @@ export function SpacePage() {
   }
 
   return (
-    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' ? ' h-full' : ''}`}>
+    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -836,6 +837,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
+              canEdit={canEdit}
+              canEditItem={canEditItem}
+            />
+          ) : viewMode === 'pert' ? (
+            <PertView
+              items={filterBySearch(allItemsData?.data)}
+              relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
+              onEdit={setEditingItemId}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
+              onOpen={actions.handleOpen}
+              onOpenInNewTab={actions.handleOpenInNewTab}
+              referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
             />

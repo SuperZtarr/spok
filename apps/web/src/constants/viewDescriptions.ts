@@ -290,6 +290,15 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
       'La date de visite est mise à jour à chaque ouverture',
     ],
   },
+  pert: {
+    title: 'PERT',
+    description: 'Diagramme PERT affichant les dépendances entre tâches et le chemin critique.',
+    tips: [
+      'Les nœuds représentent les tâches, les flèches les dépendances',
+      'Le chemin critique est mis en évidence en rouge',
+      'Cliquez sur un nœud pour éditer la tâche',
+    ],
+  },
 };
 
 import type { DashboardTab } from '../stores/dashboardTab';
