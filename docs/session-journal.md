@@ -6,6 +6,13 @@
 
 ## EN COURS — 2026-05-20
 
+### Vue PERT + refactor VIEW_REGISTRY (c020256, 967716f) — poussé en prod
+- `packages/shared/src/constants/viewRegistry.ts` : source unique pour les 30 vues — plus besoin de toucher N fichiers pour ajouter une vue
+- `viewDefaults.ts` + `menuDefaults.ts` + `viewMode.ts` : régénérés depuis VIEW_REGISTRY
+- `apps/web/src/constants/viewIcons.ts` : map icônes centralisée (remplace ICONS dans ViewModeSelector et VIEW_ICON_MAP dans Layout)
+- `PertView.tsx` : création de liens par glisser-déposer (comme Gantt), handle SVG sur bord droit, détection target par containment rect
+- **MCP doc bloquée** : `mcp__spok__list_spaces` retourne vide, `get_space` retourne 404 — auth ztarr ne fonctionne plus (seules communautés publiques accessibles), doc SPOK à créer manuellement
+
 ### Restauration item après reconnexion (d4291a6)
 - `SpacePage` : sync bidirectionnelle `editingItemId ↔ ?item=` — param maintenu dans l'URL pendant toute l'ouverture de la modale
 - `App.tsx` : au moment du `auth:logout`, sauvegarde `window.location.href` dans `sessionStorage('spok_returnTo')`

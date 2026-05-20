@@ -7,7 +7,7 @@ import {
   HelpCircle, Clock, Star, Plus, ArrowLeft,
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide,
+  Map as MapIconLucide, Copy,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -33,7 +33,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Search, MapIcon: MapIconLucide,
+  MessageSquare, Search, MapIcon: MapIconLucide, Copy,
 };
 const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 

@@ -124,11 +124,11 @@ export function CommunityPage() {
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="w-full px-4 sm:px-6">
         {/* Header with cover */}
-        <div className="relative mt-4">
+        <div className="relative mt-4 max-w-5xl">
           {community?.coverUrl ? (
-            <div className="aspect-[5/1] rounded-xl overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
+            <div className="aspect-[5/1] max-h-40 rounded-xl overflow-hidden"><img src={community.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%`, transform: `scale(${((community as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(community as any).coverPositionX ?? 50}% ${(community as any).coverPosition ?? 50}%` }} /></div>
           ) : (
-            <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
+            <div className="aspect-[5/1] max-h-40 bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
           )}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16 rounded-b-xl" />
         </div>

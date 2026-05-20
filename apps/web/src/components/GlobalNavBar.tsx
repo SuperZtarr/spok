@@ -4,7 +4,7 @@ import {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Map as MapIconLucide,
+  MessageSquare, Map as MapIconLucide, Copy,
   type LucideIcon,
 } from 'lucide-react';
 import { activityApi } from '../lib/api';
@@ -15,7 +15,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, MapIcon: MapIconLucide,
+  MessageSquare, MapIcon: MapIconLucide, Copy,
 };
 
 const getIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;

@@ -27,6 +27,7 @@
 - [x] Navigation sticky entre espaces : vue active conservée lors du changement d'espace — 95c5dd4 (2026-05-10)
 - [x] SpaceToolbar : indicateur (point pulsé) sur la vue par défaut quand on n'y est pas — 95c5dd4 (2026-05-10)
 - [x] Restauration item après reconnexion : ?item= maintenu dans l'URL + returnTo sessionStorage après expiration token — (2026-05-20)
+- [x] Vue PERT : VIEW_REGISTRY source unique pour 30 vues + création liens drag-and-drop — c020256, 967716f (2026-05-20)
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)

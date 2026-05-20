@@ -147,9 +147,9 @@ export function SpaceOverviewPage() {
         {/* Header with cover */}
         <div className="relative mt-4">
           {space?.coverUrl ? (
-            <div className="aspect-[5/1] rounded-xl overflow-hidden"><img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%` }} /></div>
+            <div className="aspect-[5/1] max-h-40 max-w-5xl rounded-xl overflow-hidden"><img src={space.coverUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%`, transform: `scale(${((space as any).coverZoom ?? 100) / 100})`, transformOrigin: `${(space as any).coverPositionX ?? 50}% ${(space as any).coverPosition ?? 50}%` }} /></div>
           ) : (
-            <div className="aspect-[5/1] bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
+            <div className="aspect-[5/1] max-h-40 max-w-5xl bg-gradient-to-r from-primary/20 to-primary/5 rounded-xl" />
           )}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent h-16 rounded-b-xl" />
         </div>
