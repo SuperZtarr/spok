@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewMode } from './viewMode'
 
 describe('VIEW_MODES constants', () => {
-  it('should have 29 view modes', () => {
+  it('should have 31 view modes', () => {
     expect(VIEW_MODES).toHaveLength(31)
   })
 

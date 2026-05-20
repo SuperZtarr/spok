@@ -295,7 +295,7 @@ export const VIEW_DESCRIPTIONS: Record<ViewMode, ViewDescription> = {
     description: 'Diagramme PERT affichant les dépendances entre tâches et le chemin critique.',
     tips: [
       'Les nœuds représentent les tâches, les flèches les dépendances',
-      'Le chemin critique est mis en évidence en rouge',
+      'Le chemin critique est mis en évidence en orange',
       'Cliquez sur un nœud pour éditer la tâche',
     ],
   },
