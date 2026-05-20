@@ -154,6 +154,10 @@ export default function App() {
 
   useEffect(() => {
     const handleLogout = () => {
+      const current = window.location.pathname + window.location.search;
+      if (current !== '/login' && current !== '/register') {
+        sessionStorage.setItem('spok_returnTo', current);
+      }
       logout();
       navigate('/login', { replace: true });
     };

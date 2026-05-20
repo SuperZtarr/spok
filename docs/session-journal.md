@@ -4,13 +4,22 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-16
+## EN COURS — 2026-05-20
 
-### Vue Doublons admin (9e6828b, 7e44f08, 6eda6f2, aad0904)
+### Restauration item après reconnexion (non commité)
+- `SpacePage` : sync bidirectionnelle `editingItemId ↔ ?item=` — param maintenu dans l'URL pendant toute l'ouverture de la modale
+- `App.tsx` : au moment du `auth:logout`, sauvegarde `window.location.href` dans `sessionStorage('spok_returnTo')`
+- `LoginPage` : après connexion réussie, lit `spok_returnTo` dans sessionStorage et redirige là (puis efface)
+- Multi-onglets OK : sessionStorage est isolé par onglet
+
+## HISTORIQUE — 2026-05-16
+
+### Vue Doublons admin (9e6828b, 7e44f08, 6eda6f2, aad0904, 08cdeee)
 - `GET /admin/duplicates` : détection par titre normalisé (LOWER/TRIM/REGEXP), URL (LINK), nom de fichier (IMAGE/DOCUMENT)
 - Fil d'ariane : 2 niveaux de parents via LEFT JOIN (grandparent + parent)
 - `DuplicatesPage` : tabs Tous/Titre/URL/Fichier, groupes de cartes scrollables horizontalement, breadcrumb Communauté > Espace > ancêtres
 - Entrée menu admin "Doublons" avec icône Copy
+- Fix build : variable `idx` inutilisée supprimée (TS6133, bloquait le build prod)
 
 ### Fix scrollbar vues à colonnes (bbeb926)
 - `SpacePage` view container : ajout `kanban`, `members`, `types`, `priority` dans la liste `overflow-hidden flex flex-col`

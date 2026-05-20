@@ -523,16 +523,22 @@ export function SpacePage() {
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ouvrir la modale si ?item=:itemId (venant d'un lien "ouvrir dans un nouvel onglet")
-  const itemParamHandledRef = useRef(false);
+  // Sync ?item= URL param ↔ editingItemId (persistance modale + restauration après reconnexion)
   useEffect(() => {
     const itemParam = searchParams.get('item');
-    if (itemParam && !itemParamHandledRef.current) {
-      itemParamHandledRef.current = true;
-      setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
+    if (itemParam && itemParam !== editingItemId) {
       setEditingItemId(itemParam);
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const currentParam = searchParams.get('item');
+    if (editingItemId && currentParam !== editingItemId) {
+      setSearchParams(prev => { prev.set('item', editingItemId); return prev; }, { replace: true });
+    } else if (!editingItemId && currentParam) {
+      setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
+    }
+  }, [editingItemId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Render ---
   // Overview mode — full page, no toolbar

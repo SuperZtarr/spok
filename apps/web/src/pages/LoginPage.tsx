@@ -30,7 +30,13 @@ export function LoginPage() {
         localStorage.removeItem('spok_pending_invitation_token');
         navigate(`/invitation?token=${pendingToken}`);
       } else {
-        navigate('/');
+        const returnTo = sessionStorage.getItem('spok_returnTo');
+        if (returnTo) {
+          sessionStorage.removeItem('spok_returnTo');
+          navigate(returnTo);
+        } else {
+          navigate('/');
+        }
       }
     },
     onError: (err) => {
