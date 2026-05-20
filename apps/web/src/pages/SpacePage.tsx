@@ -523,22 +523,25 @@ export function SpacePage() {
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync ?item= URL param ↔ editingItemId (persistance modale + restauration après reconnexion)
+  // Ouvrir la modale si ?item=:itemId (lien "ouvrir dans un nouvel onglet" ou returnTo)
+  const itemParamHandledRef = useRef(false);
   useEffect(() => {
     const itemParam = searchParams.get('item');
-    if (itemParam && itemParam !== editingItemId) {
+    if (itemParam && !itemParamHandledRef.current) {
+      itemParamHandledRef.current = true;
+      setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
       setEditingItemId(itemParam);
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Persist current item in sessionStorage for reconnection (sans modifier l'URL)
   useEffect(() => {
-    const currentParam = searchParams.get('item');
-    if (editingItemId && currentParam !== editingItemId) {
-      setSearchParams(prev => { prev.set('item', editingItemId); return prev; }, { replace: true });
-    } else if (!editingItemId && currentParam) {
-      setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
+    if (editingItemId) {
+      sessionStorage.setItem('spok_current_item', editingItemId);
+    } else {
+      sessionStorage.removeItem('spok_current_item');
     }
-  }, [editingItemId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editingItemId]);
 
   // --- Render ---
   // Overview mode — full page, no toolbar

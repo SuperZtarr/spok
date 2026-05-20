@@ -154,10 +154,15 @@ export default function App() {
 
   useEffect(() => {
     const handleLogout = () => {
+      const currentItem = sessionStorage.getItem('spok_current_item');
       const current = window.location.pathname + window.location.search;
-      if (current !== '/login' && current !== '/register') {
-        sessionStorage.setItem('spok_returnTo', current);
+      if (current !== '/login' && !current.startsWith('/register')) {
+        const returnTo = currentItem
+          ? `${window.location.pathname}?item=${currentItem}`
+          : current;
+        sessionStorage.setItem('spok_returnTo', returnTo);
       }
+      sessionStorage.removeItem('spok_current_item');
       logout();
       navigate('/login', { replace: true });
     };

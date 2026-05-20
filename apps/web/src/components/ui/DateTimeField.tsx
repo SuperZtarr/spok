@@ -29,6 +29,7 @@ export function DateTimeField({
   const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   const currentDate = value ? fromDatetimeLocal(value) : null;
   const today = new Date();
@@ -49,7 +50,10 @@ export function DateTimeField({
   useEffect(() => {
     if (!isCalendarOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current && !containerRef.current.contains(e.target as Node) &&
+        calendarRef.current && !calendarRef.current.contains(e.target as Node)
+      ) {
         setIsCalendarOpen(false);
       }
     };
@@ -227,6 +231,7 @@ export function DateTimeField({
       {/* Calendar dropdown — portail pour échapper overflow/z-index de la modale */}
       {isCalendarOpen && createPortal(
         <div
+          ref={calendarRef}
           style={{ top: calendarPos.top, left: calendarPos.left }}
           className="fixed z-[9999] p-3 bg-background border border-border rounded-lg shadow-lg w-[280px]"
         >
