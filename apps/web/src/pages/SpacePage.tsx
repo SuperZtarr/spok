@@ -848,6 +848,7 @@ export function SpacePage() {
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              onCreateRelation={actions.handleCreateRelation}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
