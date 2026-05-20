@@ -16,25 +16,6 @@ model AppConfig {
   @@map("app_config")
 }
 
-// Menu unifié (vues d'espace + pages globales + admin + divers)
-model MenuItem {
-  id           String   @id @default(cuid())
-  key          String   @unique           // identifiant technique (ex: "list", "home", "admin-users")
-  label        String                     // texte affiché
-  icon         String                     // nom icône Lucide
-  section      String                     // groupe de menu (global, basic, planning, exploration, admin, misc)
-  sectionLabel String                     // label affiché pour la section
-  sectionOrder Int                        // tri des sections entre elles
-  route        String?                    // route si navigation (/communities, /admin/users)
-  viewMode     String?                    // viewMode si vue d'espace (list, kanban...)
-  order        Int                        // tri dans la section
-  visible      Boolean  @default(true)
-  access       String   @default("user")  // "public" | "user" | "admin"
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@map("menu_items")
-}
 
 // Utilisateur
 model User {

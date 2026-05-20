@@ -1,5 +1,11 @@
 export type MenuAccess = 'public' | 'user' | 'admin';
 
+export interface MenuOverride {
+  key: string;
+  visible: boolean;
+  access: MenuAccess;
+}
+
 export interface MenuItemConfig {
   id: string;
   key: string;

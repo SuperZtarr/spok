@@ -1,115 +1,61 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { DEFAULT_MENU_ITEMS } from '@spok/shared';
+import { MENU_REGISTRY } from '@spok/shared';
+import type { MenuOverride } from '@spok/shared';
 
-const menuItemSchema = z.object({
-  id: z.string().optional(),
+const OVERRIDES_KEY = 'menu_overrides';
+
+const overrideSchema = z.object({
   key: z.string().min(1),
-  label: z.string().min(1),
-  icon: z.string().min(1),
-  section: z.string().min(1),
-  sectionLabel: z.string().min(1),
-  sectionOrder: z.number().int().min(0),
-  route: z.string().nullable(),
-  viewMode: z.string().nullable(),
-  order: z.number().int().min(0),
   visible: z.boolean(),
   access: z.enum(['public', 'user', 'admin']),
 });
 
-// Admin routes (CRUD)
+function applyOverrides(overrides: MenuOverride[]) {
+  const map = new Map(overrides.map(o => [o.key, o]));
+  return MENU_REGISTRY.map(item => {
+    const o = map.get(item.key);
+    return o ? { ...item, visible: o.visible, access: o.access } : item;
+  });
+}
+
+async function getOverrides(fastify: any): Promise<MenuOverride[]> {
+  const row = await fastify.prisma.appConfig.findUnique({ where: { key: OVERRIDES_KEY } });
+  return (row?.value as MenuOverride[]) ?? [];
+}
+
+// Admin routes (auth required)
 export const adminMenuRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticateAdmin);
 
-  // GET /admin/menu — all menu items (auto-sync missing defaults)
   fastify.get('/', async () => {
-    await syncDefaults(fastify);
-    return fastify.prisma.menuItem.findMany({
-      orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
-    });
+    const overrides = await getOverrides(fastify);
+    return applyOverrides(overrides);
   });
 
-  // PUT /admin/menu — bulk update all menu items
   fastify.put<{ Body: unknown[] }>('/', async (request, reply) => {
-    const result = z.array(menuItemSchema).safeParse(request.body);
+    const result = z.array(overrideSchema).safeParse(request.body);
     if (!result.success) {
-      return reply.badRequest(`Invalid menu config: ${result.error.message}`);
+      return reply.badRequest(`Invalid menu overrides: ${result.error.message}`);
     }
-
-    // Delete all and re-insert (transactional)
-    await fastify.prisma.$transaction(async (tx) => {
-      await tx.menuItem.deleteMany();
-      for (const item of result.data) {
-        await tx.menuItem.create({
-          data: {
-            key: item.key,
-            label: item.label,
-            icon: item.icon,
-            section: item.section,
-            sectionLabel: item.sectionLabel,
-            sectionOrder: item.sectionOrder,
-            route: item.route,
-            viewMode: item.viewMode,
-            order: item.order,
-            visible: item.visible,
-            access: item.access,
-          },
-        });
-      }
+    await fastify.prisma.appConfig.upsert({
+      where: { key: OVERRIDES_KEY },
+      create: { key: OVERRIDES_KEY, value: result.data as any },
+      update: { value: result.data as any },
     });
-
-    return { success: true };
+    return applyOverrides(result.data);
   });
 
-  // POST /admin/menu/reset — reset to defaults
   fastify.post('/reset', async () => {
-    await fastify.prisma.menuItem.deleteMany();
-    await syncDefaults(fastify);
-    return fastify.prisma.menuItem.findMany({
-      orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
-    });
+    await fastify.prisma.appConfig.deleteMany({ where: { key: OVERRIDES_KEY } });
+    return MENU_REGISTRY;
   });
 };
 
 // Public route (no auth)
 export const publicMenuRoutes: FastifyPluginAsync = async (fastify) => {
-  // GET /menu — all visible menu items (auto-sync missing defaults)
   fastify.get('/', async () => {
-    await syncDefaults(fastify);
-    return fastify.prisma.menuItem.findMany({
-      orderBy: [{ sectionOrder: 'asc' }, { order: 'asc' }],
-    });
+    const overrides = await getOverrides(fastify);
+    return applyOverrides(overrides);
   });
 };
-
-// Sync helper — creates missing items and updates order/icon/section of existing ones
-async function syncDefaults(fastify: any) {
-  const existing = await fastify.prisma.menuItem.findMany({ select: { key: true, order: true, icon: true, sectionOrder: true } });
-  const existingMap = new Map(existing.map((e: any) => [e.key, e]));
-
-  for (const item of DEFAULT_MENU_ITEMS) {
-    const current = existingMap.get(item.key);
-    if (!current) {
-      await fastify.prisma.menuItem.create({
-        data: {
-          key: item.key,
-          label: item.label,
-          icon: item.icon,
-          section: item.section,
-          sectionLabel: item.sectionLabel,
-          sectionOrder: item.sectionOrder,
-          route: item.route,
-          viewMode: item.viewMode,
-          order: item.order,
-          visible: item.visible,
-          access: item.access,
-        },
-      });
-    } else if (current.order !== item.order || current.icon !== item.icon || current.sectionOrder !== item.sectionOrder) {
-      await fastify.prisma.menuItem.update({
-        where: { key: item.key },
-        data: { order: item.order, icon: item.icon, sectionOrder: item.sectionOrder },
-      });
-    }
-  }
-}

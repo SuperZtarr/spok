@@ -1822,8 +1822,8 @@ export const menuApi = {
 
 export const adminMenuApi = {
   getAll: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu'),
-  update: (items: import('@spok/shared').MenuItemConfig[]) =>
-    fetchApi<{ success: boolean }>('/admin/menu', { method: 'PUT', body: JSON.stringify(items) }),
+  update: (overrides: import('@spok/shared').MenuOverride[]) =>
+    fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu', { method: 'PUT', body: JSON.stringify(overrides) }),
   reset: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/admin/menu/reset', { method: 'POST' }),
 };
 

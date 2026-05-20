@@ -23,15 +23,15 @@ const VIEW_MENU_ITEMS: MenuItemConfig[] = VIEW_REGISTRY.map(v => ({
   access: v.access,
 }));
 
-export const DEFAULT_MENU_ITEMS: MenuItemConfig[] = [
+export const MENU_REGISTRY: MenuItemConfig[] = [
   // ── global ──
   { id: '', key: 'home',          label: 'Accueil',         icon: 'Home',          section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/',                    viewMode: null, order: 0, visible: true, access: 'public' },
   { id: '', key: 'communities',   label: 'Communautés',     icon: 'Users',         section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/communities',         viewMode: null, order: 1, visible: true, access: 'public' },
   { id: '', key: 'spaces',        label: 'Espaces',         icon: 'FolderKanban',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/spaces',              viewMode: null, order: 2, visible: true, access: 'public' },
   { id: '', key: 'global-sunburst',label: 'Sunburst',       icon: 'CircleDot',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/sunburst',            viewMode: null, order: 3, visible: true, access: 'public' },
-  { id: '', key: 'global-mindmap', label: 'Carte mentale',  icon: 'GitBranch',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/mindmap',             viewMode: null, order: 4, visible: true, access: 'user'   },
-  { id: '', key: 'global-graph',   label: 'Graphe global',  icon: 'Network',       section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/graph',               viewMode: null, order: 5, visible: true, access: 'user'   },
-  { id: '', key: 'global-links',   label: 'Liens',          icon: 'ExternalLink',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/links',               viewMode: null, order: 6, visible: true, access: 'user'   },
+  { id: '', key: 'global-mindmap', label: 'Carte mentale',  icon: 'GitBranch',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/mindmap',             viewMode: null, order: 4, visible: true, access: 'admin'   },
+  { id: '', key: 'global-graph',   label: 'Graphe global',  icon: 'Network',       section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/graph',               viewMode: null, order: 5, visible: true, access: 'admin'   },
+  { id: '', key: 'global-links',   label: 'Liens',          icon: 'ExternalLink',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/links',               viewMode: null, order: 6, visible: true, access: 'admin'   },
 
   // ── personal ──
   { id: '', key: 'dashboard', label: 'Tableau de bord', icon: 'LayoutDashboard', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/dashboard', viewMode: null, order: 0, visible: true, access: 'user' },

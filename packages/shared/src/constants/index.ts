@@ -41,3 +41,4 @@ export * from './spaceTemplates.js';
 export * from './viewRegistry.js';
 export * from './viewDefaults.js';
 export * from './menuDefaults.js';
+export type { MenuOverride } from '../types/menuItem.js';

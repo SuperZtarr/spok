@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { menuApi } from '../lib/api';
-import { DEFAULT_MENU_ITEMS } from '@spok/shared';
+import { MENU_REGISTRY } from '@spok/shared';
 import type { MenuItemConfig, MenuAccess, MenuSection } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 import { useAdminMode } from '../components/DevDbStatus';
@@ -13,10 +13,10 @@ export function useMenuItems() {
     queryKey: ['menu-items'],
     queryFn: menuApi.getAll,
     staleTime: 5 * 60 * 1000,
-    placeholderData: DEFAULT_MENU_ITEMS,
+    placeholderData: MENU_REGISTRY,
   });
 
-  const allItems = (data || DEFAULT_MENU_ITEMS) as MenuItemConfig[];
+  const allItems = (data || MENU_REGISTRY) as MenuItemConfig[];
 
   // Filter by access level — admin items only visible when admin mode is active
   const userAccess: MenuAccess = adminMode ? 'admin' : user ? 'user' : 'public';
