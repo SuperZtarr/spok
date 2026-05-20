@@ -6,7 +6,7 @@
 
 ## EN COURS — 2026-05-20
 
-### Restauration item après reconnexion (non commité)
+### Restauration item après reconnexion (d4291a6)
 - `SpacePage` : sync bidirectionnelle `editingItemId ↔ ?item=` — param maintenu dans l'URL pendant toute l'ouverture de la modale
 - `App.tsx` : au moment du `auth:logout`, sauvegarde `window.location.href` dans `sessionStorage('spok_returnTo')`
 - `LoginPage` : après connexion réussie, lit `spok_returnTo` dans sessionStorage et redirige là (puis efface)

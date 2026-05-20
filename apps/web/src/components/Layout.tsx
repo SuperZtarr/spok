@@ -8,6 +8,9 @@ import {
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
   Map as MapIconLucide,
+  List, Columns3, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2,
+  Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers,
+  Flame, Table2, Grid3x3, Focus, Image, Bug, CheckSquare,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -23,7 +26,7 @@ import { UserProfileModal } from './UserProfileModal';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { GlobalNavBar } from './GlobalNavBar';
-import { useViewModeStore } from '../stores/viewMode';
+import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import type { SpaceWithRole } from '@spok/shared';
@@ -35,6 +38,20 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   MessageSquare, Search, MapIcon: MapIconLucide,
 };
 const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
+
+const VIEW_ICON_MAP: Record<string, LucideIcon> = {
+  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
+  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
+  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
+};
+
+function SpaceIcon({ avatarUrl, defaultView }: { avatarUrl?: string | null; defaultView?: string | null }) {
+  if (avatarUrl) return <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />;
+  const mode = defaultView ? VIEW_MODES.find(v => v.value === defaultView) : null;
+  const Icon = (mode && VIEW_ICON_MAP[mode.icon]) || FolderKanban;
+  return <Icon className="w-4 h-4 flex-shrink-0" />;
+}
 
 interface SpaceTreeNode extends SpaceWithRole {
   children: SpaceTreeNode[];
@@ -224,14 +241,10 @@ function SpaceTreeItem({
           <span className="w-4 flex-shrink-0" />
         )}
         <Link
-          to={`/spaces/${node.id}`}
+          to={`/spaces/${node.id}${node.defaultView ? `?view=${node.defaultView}` : ''}`}
           className="flex items-center gap-2 flex-1 min-w-0"
         >
-          {node.avatarUrl ? (
-            <img src={node.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <FolderKanban className="w-4 h-4 flex-shrink-0" />
-          )}
+          <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} />
           <span className="truncate">{node.name}</span>
         </Link>
         {onToggleFavorite && (
@@ -859,18 +872,14 @@ export function Layout() {
                 {favoriteSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
-                      to={`/spaces/${space.id}`}
+                      to={`/spaces/${space.id}${space.defaultView ? `?view=${space.defaultView}` : ''}`}
                       className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
                           : 'hover:bg-accent/50'
                       }`}
                     >
-                      {space.avatarUrl ? (
-                        <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                      )}
+                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} />
                       <span className="truncate">{space.name}</span>
                     </Link>
                     <button
@@ -895,18 +904,14 @@ export function Layout() {
                 {recentSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
-                      to={`/spaces/${space.id}`}
+                      to={`/spaces/${space.id}${space.defaultView ? `?view=${space.defaultView}` : ''}`}
                       className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
                           : 'hover:bg-accent/50'
                       }`}
                     >
-                      {space.avatarUrl ? (
-                        <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                      )}
+                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} />
                       <span className="truncate">{space.name}</span>
                     </Link>
                     <button
@@ -931,18 +936,14 @@ export function Layout() {
                   <Link
                     key={space.id}
                     id={i === 0 ? 'sidebar-first-space' : undefined}
-                    to={`/spaces/${space.id}`}
+                    to={`/spaces/${space.id}${space.defaultView ? `?view=${space.defaultView}` : ''}`}
                     className={`flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                       currentSpaceId === space.id
                         ? 'bg-primary/10 text-primary font-medium'
                         : 'hover:bg-accent/50'
                     }`}
                   >
-                    {space.avatarUrl ? (
-                      <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                    ) : (
-                      <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                    )}
+                    <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} />
                     <span className="truncate">{space.name}</span>
                   </Link>
                 ))}

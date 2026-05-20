@@ -111,6 +111,7 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
         memberCount: space._count.memberships,
         itemCount: space._count.items,
         childCount: space._count.children,
+        defaultView: space.defaultView,
         owner: space.memberships[0]?.user || null,
       })),
       pagination: {

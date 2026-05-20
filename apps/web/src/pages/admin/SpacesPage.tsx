@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Trash2, Users, FolderKanban, User, Building2, ArrowUp, ArrowDown, X, AlertTriangle, ChevronLeft, ChevronRight, Download, GitBranch, FileText } from 'lucide-react';
+import { Search, Trash2, Users, FolderKanban, User, Building2, ArrowUp, ArrowDown, X, AlertTriangle, ChevronLeft, ChevronRight, Download, GitBranch, FileText, type LucideIcon, List, Columns3, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Flame, Table2, Grid3x3, Focus, ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock } from 'lucide-react';
+import { VIEW_MODES } from '../../stores/viewMode';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -25,10 +26,18 @@ interface AdminSpace {
   memberCount: number;
   itemCount: number;
   childCount?: number;
+  defaultView?: string | null;
   owner: { id: string; name: string; email: string } | null;
   community: { id: string; name: string } | null;
   parent: { id: string; name: string } | null;
 }
+
+const SPACE_VIEW_ICON_MAP: Record<string, LucideIcon> = {
+  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
+  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
+  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
+};
 
 const accessors: Record<string, (s: AdminSpace) => string | number> = {
   name: (s) => s.name?.toLowerCase() ?? '',
@@ -229,6 +238,7 @@ export function SpacesPage() {
                   <SortHeader label="Proprietaire" column="owner" />
                   <SortHeader label="Membres" column="members" className="text-center" />
                   <SortHeader label="Items" column="items" className="text-center" />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vue défaut</th>
                   <SortHeader label="Creation" column="createdAt" />
                   <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-12"></th>
                 </tr>
@@ -294,6 +304,19 @@ export function SpacesPage() {
                         {space.itemCount}
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {(() => {
+                        if (!space.defaultView) return <span className="text-muted-foreground/40">—</span>;
+                        const mode = VIEW_MODES.find(v => v.value === space.defaultView);
+                        const Icon = (mode && SPACE_VIEW_ICON_MAP[mode.icon]) || FolderKanban;
+                        return (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Icon className="w-3.5 h-3.5" />
+                            <span>{mode?.label ?? space.defaultView}</span>
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(space.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
                       {formatRelativeDate(space.createdAt)}
                     </td>
@@ -313,7 +336,7 @@ export function SpacesPage() {
                 ))}
                 {sortedSpaces.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       Aucun espace trouve
                     </td>
                   </tr>
