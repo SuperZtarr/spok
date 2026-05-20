@@ -59,6 +59,7 @@ export function PertView({
 }: PertViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const svgScrollRef = useRef<HTMLDivElement>(null);
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
 
@@ -165,8 +166,7 @@ export function PertView({
         style={{ width: LEFT_PANEL_WIDTH }}
         ref={scrollContainerRef}
         onScroll={(e) => {
-          const svgScroll = document.getElementById('pert-svg-scroll');
-          if (svgScroll) svgScroll.scrollTop = (e.target as HTMLDivElement).scrollTop;
+          if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop;
         }}
       >
         {flatItems.map((item) => {
@@ -230,7 +230,7 @@ export function PertView({
 
       {/* Right panel — PERT SVG */}
       <div
-        id="pert-svg-scroll"
+        ref={svgScrollRef}
         className="flex-1 overflow-auto"
         onScroll={(e) => {
           if (scrollContainerRef.current) {
