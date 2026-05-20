@@ -8,9 +8,6 @@ import {
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
   Map as MapIconLucide,
-  List, Columns3, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2,
-  Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers,
-  Flame, Table2, Grid3x3, Focus, Image, Bug, CheckSquare,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -27,6 +24,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { GlobalNavBar } from './GlobalNavBar';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
+import { getViewIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import type { SpaceWithRole } from '@spok/shared';
@@ -39,17 +37,10 @@ const NAV_ICONS: Record<string, LucideIcon> = {
 };
 const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 
-const VIEW_ICON_MAP: Record<string, LucideIcon> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
-  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
-};
-
 function SpaceIcon({ avatarUrl, defaultView }: { avatarUrl?: string | null; defaultView?: string | null }) {
   if (avatarUrl) return <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />;
   const mode = defaultView ? VIEW_MODES.find(v => v.value === defaultView) : null;
-  const Icon = (mode && VIEW_ICON_MAP[mode.icon]) || FolderKanban;
+  const Icon = mode ? getViewIcon(mode.icon) : FolderKanban;
   return <Icon className="w-4 h-4 flex-shrink-0" />;
 }
 

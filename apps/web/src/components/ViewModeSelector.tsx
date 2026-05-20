@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  List, GitBranch, Columns3, Share2, LayoutGrid,
-  GanttChart, CalendarCheck, Calendar, Network, FileText, CircleDot, Waypoints, PenTool, Circle, Orbit, SquareStack, TrendingDown, Layers, Disc, Table2, Grid3x3, Focus, Check,
-  ChevronDown, FolderKanban, CheckSquare, LayoutDashboard, ClipboardList, Flame, Gauge, Home,
-  Eye, Users, ExternalLink, Image, Bug, Clock,
+  Check, ChevronDown, FolderKanban, LayoutDashboard, ClipboardList, Gauge, Home, Eye,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { getViewIcon } from '../constants/viewIcons';
 import { useViewModeStore, type ViewCategory } from '../stores/viewMode';
 import { useViewConfig } from '../hooks/useViewConfig';
 import { useGlobalPages } from '../hooks/useGlobalPages';
@@ -29,41 +27,6 @@ const UnseenDot = () => (
   <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
 );
 
-const ICONS: Record<string, typeof List> = {
-  List,
-  GitBranch,
-  FileText,
-  Columns3,
-  Share2,
-  LayoutGrid,
-  GanttChart,
-  CalendarCheck,
-  Calendar,
-  Network,
-  CircleDot,
-  Waypoints,
-  PenTool,
-  Circle,
-  Orbit,
-  SquareStack,
-  TrendingDown,
-  Layers,
-  Disc,
-  FolderKanban,
-  CheckSquare,
-  Table2,
-  Grid3x3,
-  Focus,
-  Users,
-  LayoutDashboard,
-  Flame,
-  Gauge,
-  Home,
-  ExternalLink,
-  Image,
-  Bug,
-  Clock,
-};
 
 export function ViewModeSelector() {
   const { mode, setMode, allowedViews } = useViewModeStore();
@@ -196,7 +159,7 @@ export function ViewModeSelector() {
         <>
           <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{globalGroupLabel}</div>
           {globalTabs.map(dashTab => {
-            const Icon = ICONS[dashTab.icon];
+            const Icon = getViewIcon(dashTab.icon);
             const isActive = isDashboard && tab === dashTab.value;
             return (
               <button
@@ -216,7 +179,7 @@ export function ViewModeSelector() {
           <div className="h-px bg-border mx-1 my-1" />
           <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{myActivitiesGroupLabel}</div>
           {myActivitiesTabs.map(dashTab => {
-            const Icon = ICONS[dashTab.icon];
+            const Icon = getViewIcon(dashTab.icon);
             const isActive = isDashboard && tab === dashTab.value;
             return (
               <button
@@ -242,7 +205,7 @@ export function ViewModeSelector() {
       <>
         <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{globalGroupLabel}</div>
         {globalTabs.map(dashTab => {
-          const Icon = ICONS[dashTab.icon];
+          const Icon = getViewIcon(dashTab.icon);
           const isActive = isDashboard && tab === dashTab.value;
           return (
             <button
@@ -267,7 +230,7 @@ export function ViewModeSelector() {
               {catIdx > 0 && <div className="h-px bg-border mx-1 my-1" />}
               <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{cat.label}</div>
               {catModes.map(viewMode => {
-                const Icon = ICONS[viewMode.icon];
+                const Icon = getViewIcon(viewMode.icon);
                 const isActive = mode === viewMode.value;
                 return (
                   <button
@@ -290,7 +253,7 @@ export function ViewModeSelector() {
         <div className="h-px bg-border mx-1 my-1" />
         <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{myActivitiesGroupLabel}</div>
         {myActivitiesTabs.map(dashTab => {
-          const Icon = ICONS[dashTab.icon];
+          const Icon = getViewIcon(dashTab.icon);
           const isActive = isDashboard && tab === dashTab.value;
           return (
             <button
@@ -315,7 +278,7 @@ export function ViewModeSelector() {
   const renderDashboardInline = (showLabels: boolean) => (
     <div className="flex items-center gap-0.5">
       {globalTabs.map(dashTab => {
-        const Icon = ICONS[dashTab.icon];
+        const Icon = getViewIcon(dashTab.icon);
         const isActive = isDashboard && tab === dashTab.value;
         return (
           <button
@@ -334,7 +297,7 @@ export function ViewModeSelector() {
       })}
       <div className="w-px h-5 bg-border mx-1" />
       {myActivitiesTabs.map(dashTab => {
-        const Icon = ICONS[dashTab.icon];
+        const Icon = getViewIcon(dashTab.icon);
         const isActive = isDashboard && tab === dashTab.value;
         return (
           <button
@@ -358,7 +321,7 @@ export function ViewModeSelector() {
   const renderDashboardDropdownContent = () => (
     <>
       {globalTabs.map(dashTab => {
-        const Icon = ICONS[dashTab.icon];
+        const Icon = getViewIcon(dashTab.icon);
         const isActive = isDashboard && tab === dashTab.value;
         return (
           <button
@@ -382,7 +345,7 @@ export function ViewModeSelector() {
   const renderMyActivitiesDropdownContent = () => (
     <>
       {myActivitiesTabs.map(dashTab => {
-        const Icon = ICONS[dashTab.icon];
+        const Icon = getViewIcon(dashTab.icon);
         const isActive = isDashboard && tab === dashTab.value;
         return (
           <button
@@ -426,7 +389,7 @@ export function ViewModeSelector() {
               <div key={cat.value} className="min-w-[140px]">
                 <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{cat.label}</div>
                 {catModes.map(viewMode => {
-                  const Icon = ICONS[viewMode.icon];
+                  const Icon = getViewIcon(viewMode.icon);
                   const isActive = mode === viewMode.value;
                   return (
                     <button
@@ -471,7 +434,7 @@ export function ViewModeSelector() {
     return (
       <>
         {activeCategoryModes.map(viewMode => {
-          const Icon = ICONS[viewMode.icon];
+          const Icon = getViewIcon(viewMode.icon);
           const isActive = mode === viewMode.value;
           return (
             <button
