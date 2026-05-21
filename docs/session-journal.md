@@ -4,7 +4,7 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-20
+## EN COURS — 2026-05-21
 
 ### Vue PERT + refactor VIEW_REGISTRY (c020256, 967716f) — poussé en prod
 - `packages/shared/src/constants/viewRegistry.ts` : source unique pour les 30 vues — plus besoin de toucher N fichiers pour ajouter une vue
@@ -12,6 +12,7 @@
 - `apps/web/src/constants/viewIcons.ts` : map icônes centralisée (remplace ICONS dans ViewModeSelector et VIEW_ICON_MAP dans Layout)
 - `PertView.tsx` : création de liens par glisser-déposer (comme Gantt), handle SVG sur bord droit, détection target par containment rect
 - **MCP doc bloquée** : `mcp__spok__list_spaces` retourne vide, `get_space` retourne 404 — auth ztarr ne fonctionne plus (seules communautés publiques accessibles), doc SPOK à créer manuellement
+- Fix build prod : `Gauge` et `Home` retirés des imports inutilisés dans `ViewModeSelector.tsx` (TS6133)
 
 ### Restauration item après reconnexion (d4291a6)
 - `SpacePage` : sync bidirectionnelle `editingItemId ↔ ?item=` — param maintenu dans l'URL pendant toute l'ouverture de la modale

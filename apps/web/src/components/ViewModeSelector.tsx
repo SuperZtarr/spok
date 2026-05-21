@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Check, ChevronDown, FolderKanban, LayoutDashboard, ClipboardList, Gauge, Home, Eye,
+  Check, ChevronDown, FolderKanban, LayoutDashboard, ClipboardList, Eye,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { getViewIcon } from '../constants/viewIcons';
