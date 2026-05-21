@@ -4,7 +4,12 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-21
+## EN COURS — 2026-05-22
+
+### Dialog édition relation — Gantt + PERT (0e89e3c) — poussé en prod
+- `TimelineView.tsx` : clic sur flèche → dialog modifier/supprimer (remplace ConfirmModal delete-only), prop `onUpdateRelation` ajoutée
+- `PertView.tsx` : idem, path SVG transparent cliquable dans `renderArrow`, dialog avec PERT_RELATION_TYPES (blocks/depends)
+- `SpacePage.tsx` : `onUpdateRelation` câblé à TimelineView, `onDeleteRelation` + `onUpdateRelation` câblés à PertView
 
 ### Vue PERT + refactor VIEW_REGISTRY (c020256, 967716f) — poussé en prod
 - `packages/shared/src/constants/viewRegistry.ts` : source unique pour les 30 vues — plus besoin de toucher N fichiers pour ajouter une vue
