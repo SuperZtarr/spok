@@ -1213,7 +1213,7 @@ export function SpacePage() {
             >
               <div>
                 <div className="py-2">
-                  {rootItems.map((item: Item & { childCount?: number }, index: number) => (
+                  {filterBySearch(rootItems).map((item: Item & { childCount?: number }, index: number) => (
                     <TreeItem
                       key={item.id}
                       item={item}
