@@ -29,6 +29,8 @@ interface PertViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
+  onDeleteRelation?: (itemId: string, relationId: string) => void;
+  onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
@@ -51,6 +53,8 @@ export function PertView({
   onUpdateStatus,
   onAddChild,
   onCreateRelation,
+  onDeleteRelation,
+  onUpdateRelation,
   onMoveToSpace,
   onDuplicateToSpace,
   onConvertToSpace,
@@ -72,6 +76,11 @@ export function PertView({
     currentX: number; currentY: number;
   } | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+  const [editingRelation, setEditingRelation] = useState<{
+    relationId: string; fromItemId: string; toItemId: string;
+    type: string; label: string; sourceName: string; targetName: string;
+  } | null>(null);
+  const [editRelationType, setEditRelationType] = useState<string>('');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const svgScrollRef = useRef<HTMLDivElement>(null);
@@ -221,13 +230,40 @@ export function PertView({
     const stroke = isCritical ? '#f97316' : '#94a3b8';
     const strokeWidth = isCritical ? 2.5 : 1.5;
 
+    const pathD = `M${x1},${y1} C${x1 + cpOffset},${y1} ${x2 - cpOffset},${y2} ${x2},${y2}`;
     return (
-      <path
-        key={key}
-        d={`M${x1},${y1} C${x1 + cpOffset},${y1} ${x2 - cpOffset},${y2} ${x2},${y2}`}
-        fill="none" stroke={stroke} strokeWidth={strokeWidth}
-        markerEnd={`url(#arrow-${isCritical ? 'critical' : 'normal'})`}
-      />
+      <g key={key}>
+        <path
+          d={pathD}
+          fill="none" stroke={stroke} strokeWidth={strokeWidth}
+          markerEnd={`url(#arrow-${isCritical ? 'critical' : 'normal'})`}
+        />
+        {canEdit && (onDeleteRelation || onUpdateRelation) && (
+          <path
+            d={pathD}
+            fill="none"
+            stroke="transparent"
+            strokeWidth={12}
+            style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+            onClick={() => {
+              const sourceItem = items.find(i => i.id === rel.fromItemId);
+              const targetItem = items.find(i => i.id === rel.toItemId);
+              setEditingRelation({
+                relationId: rel.id,
+                fromItemId: rel.fromItemId,
+                toItemId: rel.toItemId,
+                type: rel.type,
+                label: rel.label || '',
+                sourceName: sourceItem?.title || '',
+                targetName: targetItem?.title || '',
+              });
+              setEditRelationType(rel.type);
+            }}
+          >
+            <title>Cliquer pour modifier</title>
+          </path>
+        )}
+      </g>
     );
   }
 
@@ -353,6 +389,67 @@ export function PertView({
           </svg>
         )}
       </div>
+
+      {/* Edit relation dialog */}
+      {editingRelation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-sm w-full mx-4">
+            <h3 className="text-base font-semibold mb-1">Modifier la relation</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              <span className="font-medium">{editingRelation.sourceName}</span>
+              {' → '}
+              <span className="font-medium">{editingRelation.targetName}</span>
+            </p>
+            <div className="grid grid-cols-1 gap-2 mb-4">
+              {PERT_RELATION_TYPES.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setEditRelationType(type.id)}
+                  className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
+                    editRelationType === type.id ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
+                  }`}
+                >
+                  <type.Icon className={`w-4 h-4 ${type.color}`} />
+                  <div>
+                    <span className="text-sm font-medium">{type.label}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{type.description}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              {onUpdateRelation && (
+                <button
+                  onClick={() => {
+                    onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type: editRelationType });
+                    setEditingRelation(null);
+                  }}
+                  className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Enregistrer
+                </button>
+              )}
+              {onDeleteRelation && (
+                <button
+                  onClick={() => {
+                    onDeleteRelation(editingRelation.fromItemId, editingRelation.relationId);
+                    setEditingRelation(null);
+                  }}
+                  className="px-3 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Supprimer
+                </button>
+              )}
+              <button
+                onClick={() => setEditingRelation(null)}
+                className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Relation type selection modal */}
       {pendingConnection && (

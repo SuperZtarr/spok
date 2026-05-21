@@ -821,6 +821,7 @@ export function SpacePage() {
               onUpdateDates={(id, startDate, endDate) => actions.handleInlineUpdate(id, { startDate, endDate })}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
+              onUpdateRelation={actions.handleUpdateRelation}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
@@ -849,6 +850,8 @@ export function SpacePage() {
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
               onCreateRelation={actions.handleCreateRelation}
+              onDeleteRelation={actions.handleDeleteRelation}
+              onUpdateRelation={actions.handleUpdateRelation}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}

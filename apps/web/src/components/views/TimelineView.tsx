@@ -14,7 +14,6 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { itemsApi } from '../../lib/api';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
-import { ConfirmModal } from '../ConfirmModal';
 import { getTypeIcon } from '../../constants/ui';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
@@ -37,6 +36,7 @@ interface TimelineViewProps {
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
+  onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
@@ -197,7 +197,7 @@ function GanttItemLabel({
   );
 }
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -208,7 +208,11 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const [compactMode, setCompactMode] = useState(false);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [reordering, setReordering] = useState(false);
-  const [pendingDeleteRelation, setPendingDeleteRelation] = useState<{ fromItemId: string; relationId: string; label: string } | null>(null);
+  const [editingRelation, setEditingRelation] = useState<{
+    relationId: string; fromItemId: string; toItemId: string;
+    type: string; label: string; sourceName: string; targetName: string;
+  } | null>(null);
+  const [editRelationType, setEditRelationType] = useState<string>('');
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{
@@ -680,7 +684,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const dependencyArrows = useMemo(() => {
     if (!relations || relations.length === 0) return [];
 
-    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string; relationId: string; fromItemId: string }[] = [];
+    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string; relationId: string; fromItemId: string; toItemId: string }[] = [];
     const rowIndexMap = new Map<string, number>();
     flatItems.forEach((item, idx) => rowIndexMap.set(item.id, idx));
 
@@ -702,7 +706,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       const fromY = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
       const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
 
-      arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId });
+      arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId, toItemId: rel.toItemId });
     }
 
     return arrows;
@@ -1174,7 +1178,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                         markerEnd={`url(#${markerId})`}
                       />
                       {/* Invisible wider clickable path */}
-                      {canEdit && onDeleteRelation && (
+                      {canEdit && (onDeleteRelation || onUpdateRelation) && (
                         <path
                           d={path}
                           fill="none"
@@ -1182,10 +1186,21 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           strokeWidth={12}
                           style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                           onClick={() => {
-                            setPendingDeleteRelation({ fromItemId: arrow.fromItemId, relationId: arrow.relationId, label: relLabel });
+                            const sourceItem = flatItems.find(i => i.id === arrow.fromItemId);
+                            const targetItem = flatItems.find(i => i.id === arrow.toItemId);
+                            setEditingRelation({
+                              relationId: arrow.relationId,
+                              fromItemId: arrow.fromItemId,
+                              toItemId: arrow.toItemId,
+                              type: arrow.type,
+                              label: '',
+                              sourceName: sourceItem?.title || '',
+                              targetName: targetItem?.title || '',
+                            });
+                            setEditRelationType(arrow.type);
                           }}
                         >
-                          <title>{`${relLabel} - Cliquer pour supprimer`}</title>
+                          <title>{`${relLabel} - Cliquer pour modifier`}</title>
                         </path>
                       )}
                     </g>
@@ -1278,19 +1293,68 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
           </div>
         </div>
       )}
-      <ConfirmModal
-        isOpen={!!pendingDeleteRelation}
-        onClose={() => setPendingDeleteRelation(null)}
-        onConfirm={() => {
-          if (pendingDeleteRelation && onDeleteRelation) {
-            onDeleteRelation(pendingDeleteRelation.fromItemId, pendingDeleteRelation.relationId);
-          }
-          setPendingDeleteRelation(null);
-        }}
-        title="Supprimer cette relation ?"
-        message={`Supprimer la relation « ${pendingDeleteRelation?.label || ''} » ?`}
-        confirmLabel="Supprimer"
-      />
+      {/* Edit relation dialog */}
+      {editingRelation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Modifier la relation</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium">{editingRelation.sourceName}</span>
+              {' → '}
+              <span className="font-medium">{editingRelation.targetName}</span>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {RELATION_TYPES.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => setEditRelationType(type.id)}
+                      className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
+                        editRelationType === type.id ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
+                      }`}
+                    >
+                      <type.Icon className={`w-4 h-4 ${type.color}`} />
+                      <span className="text-sm font-medium">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              {onUpdateRelation && (
+                <button
+                  onClick={() => {
+                    onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type: editRelationType });
+                    setEditingRelation(null);
+                  }}
+                  className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Enregistrer
+                </button>
+              )}
+              {onDeleteRelation && (
+                <button
+                  onClick={() => {
+                    onDeleteRelation(editingRelation.fromItemId, editingRelation.relationId);
+                    setEditingRelation(null);
+                  }}
+                  className="px-3 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Supprimer
+                </button>
+              )}
+              <button
+                onClick={() => setEditingRelation(null)}
+                className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
