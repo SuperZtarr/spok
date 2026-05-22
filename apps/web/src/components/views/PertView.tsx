@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { Ban, ArrowLeft, ChevronDown, ChevronRight, Minus, Plus } from 'lucide-react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
@@ -93,8 +93,24 @@ export function PertView({
   } | null>(null);
   const [editRelationType, setEditRelationType] = useState<string>('');
 
+  const [zoom, setZoom] = useState(1);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const svgScrollRef = useRef<HTMLDivElement>(null);
+
+  // Ctrl+scroll to zoom
+  useEffect(() => {
+    const el = svgScrollRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      setZoom(z => Math.min(3, Math.max(0.25, parseFloat((z + delta).toFixed(2)))));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
 
@@ -195,10 +211,10 @@ export function PertView({
     if (!container) return { x: 0, y: 0 };
     const rect = container.getBoundingClientRect();
     return {
-      x: e.clientX - rect.left + container.scrollLeft,
-      y: e.clientY - rect.top  + container.scrollTop,
+      x: (e.clientX - rect.left + container.scrollLeft) / zoom,
+      y: (e.clientY - rect.top  + container.scrollTop)  / zoom,
     };
-  }, []);
+  }, [zoom]);
 
   const handleDragStart = useCallback((e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
@@ -320,7 +336,7 @@ export function PertView({
         className="flex-shrink-0 border-r overflow-y-auto overflow-x-hidden"
         style={{ width: LEFT_PANEL_WIDTH }}
         ref={scrollContainerRef}
-        onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop; }}
+        onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop * zoom; }}
       >
         {flatItems.map((item) => {
           const hasChildren = item.children.length > 0;
@@ -370,16 +386,18 @@ export function PertView({
       </div>
 
       {/* Right panel — PERT SVG */}
-      <div
-        ref={svgScrollRef}
-        className="flex-1 overflow-auto"
-        style={{ cursor: relationDrag ? 'crosshair' : undefined }}
-        onScroll={(e) => { if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop; }}
-      >
+      <div className="flex-1 relative overflow-hidden">
+        <div
+          ref={svgScrollRef}
+          className="w-full h-full overflow-auto"
+          style={{ cursor: relationDrag ? 'crosshair' : undefined }}
+          onScroll={(e) => { if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop / zoom; }}
+        >
         {flatItems.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Aucun item dans cet espace</div>
         ) : (
-          <svg width={svgWidth} height={Math.max(svgHeight, 100)} className="block">
+          <div style={{ width: svgWidth * zoom, height: Math.max(svgHeight, 100) * zoom, position: 'relative', flexShrink: 0 }}>
+          <svg width={svgWidth} height={Math.max(svgHeight, 100)} style={{ transformOrigin: 'top left', transform: `scale(${zoom})`, position: 'absolute', top: 0, left: 0, display: 'block' }}>
             <defs>
               <marker id="arrow-normal"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
               <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
@@ -458,7 +476,34 @@ export function PertView({
               </>
             )}
           </svg>
+          </div>
         )}
+        </div>
+
+        {/* Zoom controls */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-0.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm px-1.5 py-1 z-10">
+          <button
+            onClick={() => setZoom(z => Math.max(0.25, parseFloat((z - 0.1).toFixed(2))))}
+            className="h-6 w-6 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+            title="Dézoomer"
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            className="text-xs w-11 text-center tabular-nums text-muted-foreground hover:text-foreground transition-colors"
+            title="Réinitialiser le zoom"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2))))}
+            className="h-6 w-6 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+            title="Zoomer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Edit relation dialog */}
