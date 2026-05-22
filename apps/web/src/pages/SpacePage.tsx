@@ -98,7 +98,17 @@ export function SpacePage() {
 
 
   // --- UI state ---
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
+    try {
+      const stored = sessionStorage.getItem(`spok_expanded_${spaceId}`);
+      if (stored) return new Set<string>(JSON.parse(stored));
+    } catch {}
+    return new Set<string>();
+  });
+  useEffect(() => {
+    if (!spaceId) return;
+    try { sessionStorage.setItem(`spok_expanded_${spaceId}`, JSON.stringify([...expandedItems])); } catch {}
+  }, [spaceId, expandedItems]);
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const mindmapRef = useRef<MindMapViewHandle>(null);
@@ -862,6 +872,11 @@ export function SpacePage() {
               onOpen={actions.handleOpen}
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
+              spaceId={spaceId}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              highlightColor={highlightColor}
+              searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
             />

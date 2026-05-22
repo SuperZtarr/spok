@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
+import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import {
   ReactFlow,
   Node,
@@ -115,7 +116,7 @@ function MindMapViewInner({
   const prevItemIdsRef = useRef<Set<string>>(new Set());
   const prevItemSigsRef = useRef<Map<string, string>>(new Map());
 
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const { collapsedIds, setCollapsedIds } = useCollapsedIds(spaceId ?? '');
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   const [editingEdge, setEditingEdge] = useState<{ relationId: string; fromItemId: string; type: string; label: string; sourceName: string; targetName: string } | null>(null);

@@ -1,12 +1,13 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Ban, ArrowLeft } from 'lucide-react';
-import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { buildTree, flattenTree } from './timeline-tree';
 import { buildPertGraph, computePertRanks, computeCriticalPathNaive } from './pert-utils';
+import { useCollapsedIds } from '../../lib/useCollapsedIds';
+import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
 const LEFT_PANEL_WIDTH = 288;
 const ROW_HEIGHT = 36;
@@ -24,6 +25,7 @@ const PERT_RELATION_TYPES = [
 interface PertViewProps {
   items: Item[];
   relations?: ItemRelation[];
+  spaceId?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -43,11 +45,16 @@ interface PertViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  highlightType?: ItemType;
+  highlightStatus?: string;
+  highlightColor?: { border: string; bg: string };
+  searchMatchIds?: Set<string>;
 }
 
 export function PertView({
   items,
   relations = [],
+  spaceId,
   onEdit,
   onDelete,
   onUpdateStatus,
@@ -67,8 +74,12 @@ export function PertView({
   referentiels,
   canEdit,
   canEditItem,
+  highlightType,
+  highlightStatus,
+  highlightColor,
+  searchMatchIds,
 }: PertViewProps) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const { collapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [relationDrag, setRelationDrag] = useState<{
     fromItemId: string;
@@ -90,13 +101,6 @@ export function PertView({
   const tree = useMemo(() => buildTree(items), [items]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
 
-  const toggleCollapse = useCallback((id: string) => {
-    setCollapsedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
 
   const pertRelations = useMemo(
     () => relations.filter(r => r.type === 'blocks' || r.type === 'depends'),
@@ -322,26 +326,44 @@ export function PertView({
           const hasChildren = item.children.length > 0;
           const isCollapsed = collapsedIds.has(item.id);
           const Icon = getTypeIcon(item.type as ItemType, item.url);
-          const menuGroups = buildItemMenuGroups(
-            item.id,
-            { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab },
-            { statusOptions, currentStatusId: item.status || undefined, canEdit: !!(canEdit && canEditItem?.(item)) }
-          );
+          const canEditThis = canEditItem ? canEditItem(item) : canEdit ?? true;
+          const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+          const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+          const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
           return (
             <div
               key={item.id}
-              className="group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer"
+              className={`group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
               style={{ height: ROW_HEIGHT, paddingLeft: `${8 + item.depth * 20}px` }}
               onClick={() => onEdit(item.id)}
             >
               {hasChildren ? (
-                <button onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }} className="p-0.5 hover:bg-muted rounded flex-shrink-0">
-                  {isCollapsed ? <ChevronRight className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
+                  className="p-0.5 hover:bg-muted rounded flex-shrink-0"
+                >
+                  {isCollapsed
+                    ? <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                 </button>
               ) : <span className="w-5 flex-shrink-0" />}
               <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="truncate text-sm flex-1 pr-1">{item.title}</span>
-              <ItemActionMenu groups={menuGroups} />
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pr-1">
+                <ItemActionMenu
+                  groups={buildItemMenuGroups(item.id, {
+                    onEdit, onDelete, onUpdateStatus, onAddChild,
+                    onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
+                    onSelfAssign, onMerge, onAbsorbChildren,
+                    onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
+                    onOpen, onOpenInNewTab,
+                  }, {
+                    canEdit: canEditThis,
+                    statusOptions,
+                    currentStatusId: item.status || undefined,
+                  })}
+                />
+              </div>
             </div>
           );
         })}
@@ -372,12 +394,15 @@ export function PertView({
               const isDragTarget = dragTargetId === item.id;
               const Icon = getTypeIcon(item.type as ItemType, item.url);
               const showHandle = canEdit && onCreateRelation && (hoveredNodeId === item.id) && !relationDrag;
+              const nodeIsHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+              const nodeIsDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+              const nodeIsSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
               return (
                 <g
                   key={item.id}
                   transform={`translate(${x}, ${y})`}
-                  style={{ cursor: relationDrag ? 'crosshair' : 'pointer' }}
+                  style={{ cursor: relationDrag ? 'crosshair' : 'pointer', opacity: nodeIsDimmed ? 0.3 : 1 }}
                   onClick={() => { if (!relationDrag) onEdit(item.id); }}
                   onMouseEnter={() => setHoveredNodeId(item.id)}
                   onMouseLeave={() => setHoveredNodeId(null)}
@@ -387,11 +412,15 @@ export function PertView({
                     className={
                       isDragTarget
                         ? 'fill-primary/10 stroke-primary'
-                        : isCritical
-                          ? 'fill-orange-50 dark:fill-orange-950/30 stroke-orange-400'
-                          : 'fill-background stroke-border'
+                        : nodeIsSearchMatch
+                          ? 'fill-yellow-50 dark:fill-yellow-950/30 stroke-yellow-400'
+                          : nodeIsHighlighted && highlightColor
+                            ? `stroke-current`
+                            : isCritical
+                              ? 'fill-orange-50 dark:fill-orange-950/30 stroke-orange-400'
+                              : 'fill-background stroke-border'
                     }
-                    strokeWidth={isDragTarget ? 2 : isCritical ? 2 : 1}
+                    strokeWidth={isDragTarget ? 2 : nodeIsSearchMatch ? 2 : nodeIsHighlighted ? 2 : isCritical ? 2 : 1}
                   />
                   <foreignObject x={4} y={2} width={NODE_WIDTH - 8} height={NODE_HEIGHT - 4}>
                     <div className="flex items-center gap-1 h-full overflow-hidden">
