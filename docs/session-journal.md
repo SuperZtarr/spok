@@ -6,6 +6,11 @@
 
 ## EN COURS — 2026-05-22
 
+### Relations proxies sur nœud replié — PERT
+- `PertView.tsx` : `parentMap` + `effectiveRelations` useMemo — résout chaque endpoint vers son ancêtre visible, déduplique, filtre les self-loops
+- Flèches proxies affichées en pointillés (`strokeDasharray`), non cliquables
+- Chemin critique désactivé sur les flèches proxies
+
 ### Dialog édition relation — Gantt + PERT (0e89e3c) — poussé en prod
 - `TimelineView.tsx` : clic sur flèche → dialog modifier/supprimer (remplace ConfirmModal delete-only), prop `onUpdateRelation` ajoutée
 - `PertView.tsx` : idem, path SVG transparent cliquable dans `renderArrow`, dialog avec PERT_RELATION_TYPES (blocks/depends)

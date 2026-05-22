@@ -124,6 +124,51 @@ export function PertView({
     return map;
   }, [flatItems]);
 
+  const parentMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items) {
+      if (item.parentId) map.set(item.id, item.parentId);
+    }
+    return map;
+  }, [items]);
+
+  // For each pertRelation, resolve endpoints to their visible ancestor when collapsed.
+  // Self-loops and duplicates are filtered out.
+  const effectiveRelations = useMemo(() => {
+    function getVisibleAncestor(id: string): string | null {
+      let cur: string | undefined = id;
+      while (cur) {
+        if (rowIndex.has(cur)) return cur;
+        cur = parentMap.get(cur);
+      }
+      return null;
+    }
+
+    const seen = new Set<string>();
+    const result: Array<{ rel: ItemRelation; visibleFrom: string; visibleTo: string; proxied: boolean }> = [];
+
+    for (const rel of pertRelations) {
+      let fromId: string;
+      let toId: string;
+      if (rel.type === 'blocks') { fromId = rel.fromItemId; toId = rel.toItemId; }
+      else                        { fromId = rel.toItemId;   toId = rel.fromItemId; }
+
+      const visibleFrom = getVisibleAncestor(fromId);
+      const visibleTo   = getVisibleAncestor(toId);
+
+      if (!visibleFrom || !visibleTo) continue;
+      if (visibleFrom === visibleTo) continue;
+
+      const key = `${visibleFrom}:${visibleTo}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      result.push({ rel, visibleFrom, visibleTo, proxied: visibleFrom !== fromId || visibleTo !== toId });
+    }
+
+    return result;
+  }, [pertRelations, rowIndex, parentMap]);
+
   const maxRank = useMemo(() => {
     let max = 0;
     for (const item of flatItems) {
@@ -212,21 +257,17 @@ export function PertView({
 
   // ── Arrow rendering ────────────────────────────────────────────
 
-  function renderArrow(rel: ItemRelation, key: string) {
-    let fromId: string;
-    let toId: string;
-    if (rel.type === 'blocks') { fromId = rel.fromItemId; toId = rel.toItemId; }
-    else                        { fromId = rel.toItemId;   toId = rel.fromItemId; }
-
-    if (!rowIndex.has(fromId) || !rowIndex.has(toId)) return null;
-
-    const x1 = nodeX(fromId) + NODE_WIDTH;
-    const y1 = nodeY(fromId) + NODE_HEIGHT / 2;
-    const x2 = nodeX(toId);
-    const y2 = nodeY(toId) + NODE_HEIGHT / 2;
+  function renderArrow(
+    { rel, visibleFrom, visibleTo, proxied }: { rel: ItemRelation; visibleFrom: string; visibleTo: string; proxied: boolean },
+    key: string,
+  ) {
+    const x1 = nodeX(visibleFrom) + NODE_WIDTH;
+    const y1 = nodeY(visibleFrom) + NODE_HEIGHT / 2;
+    const x2 = nodeX(visibleTo);
+    const y2 = nodeY(visibleTo) + NODE_HEIGHT / 2;
     const cpOffset = Math.abs(x2 - x1) * 0.4;
 
-    const isCritical = criticalPathIds.has(fromId) && criticalPathIds.has(toId);
+    const isCritical = !proxied && criticalPathIds.has(visibleFrom) && criticalPathIds.has(visibleTo);
     const stroke = isCritical ? '#f97316' : '#94a3b8';
     const strokeWidth = isCritical ? 2.5 : 1.5;
 
@@ -237,8 +278,9 @@ export function PertView({
           d={pathD}
           fill="none" stroke={stroke} strokeWidth={strokeWidth}
           markerEnd={`url(#arrow-${isCritical ? 'critical' : 'normal'})`}
+          strokeDasharray={proxied ? '5 3' : undefined}
         />
-        {canEdit && (onDeleteRelation || onUpdateRelation) && (
+        {!proxied && canEdit && (onDeleteRelation || onUpdateRelation) && (
           <path
             d={pathD}
             fill="none"
@@ -321,7 +363,7 @@ export function PertView({
               <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
             </defs>
 
-            {pertRelations.map((rel, i) => renderArrow(rel, `rel-${i}`))}
+            {effectiveRelations.map((er, i) => renderArrow(er, `rel-${i}`))}
 
             {flatItems.map((item) => {
               const x = nodeX(item.id);
