@@ -210,7 +210,6 @@ export function MainMenu({ onOpenProfile, currentCommunityId }: MainMenuProps) {
 
   // Item dans un dropdown
   const renderDropdownItem = (item: RenderItem) => {
-    if (item.id === 'logout') return null;
     const Icon = getIcon(item.icon);
     const isDanger = item.id === 'logout';
     return (

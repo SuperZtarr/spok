@@ -11,29 +11,29 @@ export interface ViewDefinition {
 export const VIEW_REGISTRY: ViewDefinition[] = [
   // ── basic ──
     { id: 'list',       label: 'Liste',          icon: 'List',         category: 'basic',     order: 0, visible: true, access: 'public' },
-    { id: 'thread',     label: 'Discussions',    icon: 'MessageSquare',category: 'basic',     order: 5, visible: true, access: 'public'   },
-    { id: 'text',       label: 'Texte',          icon: 'FileText',     category: 'basic',     order: 2, visible: true, access: 'public' },
-    { id: 'tree',       label: 'Arborescence',   icon: 'GitBranch',    category: 'basic',     order: 1, visible: true, access: 'public' },
-  { id: 'members',    label: 'Assignations',        icon: 'Users',        category: 'basic',     order: 4, visible: true, access: 'admin'   },
+    { id: 'thread',     label: 'Discussions',    icon: 'MessageSquare',category: 'basic',     order: 2, visible: true, access: 'public'   },
+    { id: 'text',       label: 'Texte',          icon: 'FileText',     category: 'basic',     order: 3, visible: true, access: 'public' },
+    { id: 'tree',       label: 'Arborescence',   icon: 'GitBranch',    category: 'basic',     order: 4, visible: true, access: 'public' },
+  { id: 'members',    label: 'Assignations',        icon: 'Users',        category: 'basic',     order: 5, visible: true, access: 'admin'   },
   { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2',       category: 'basic',     order: 6, visible: true, access: 'admin'   },
     { id: 'recent',     label: 'Récents',        icon: 'Clock',        category: 'basic',     order: 7, visible: true, access: 'user'   },
 
   // ── itemTypes ──
-  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 3, visible: true, access: 'admin' },
-  { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 0, visible: true, access: 'user' },
-  { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 1, visible: true, access: 'user' },
-  { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 2, visible: true, access: 'user'   },
-  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 3, visible: true, access: 'user'   },
-  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 4, visible: true, access: 'user'   },
+  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 0, visible: true, access: 'admin' },
+  { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 1, visible: true, access: 'user' },
+  { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'user' },
+  { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'user'   },
+  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 4, visible: true, access: 'user'   },
+  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 5, visible: true, access: 'user'   },
 
   // ── planning ──
   { id: 'kanban',   label: 'Kanban',         icon: 'Columns3',    category: 'planning', order: 0, visible: true, access: 'user'   },
-  { id: 'timeline', label: 'Gantt',          icon: 'GanttChart',  category: 'planning', order: 2, visible: true, access: 'public' },
-  { id: 'pert',     label: 'PERT',           icon: 'GitMerge',    category: 'planning', order: 6, visible: true, access: 'user'   },
+  { id: 'timeline', label: 'Gantt',          icon: 'GanttChart',  category: 'planning', order: 1, visible: true, access: 'public' },
+  { id: 'pert',     label: 'PERT',           icon: 'GitMerge',    category: 'planning', order: 2, visible: true, access: 'user'   },
   { id: 'calendar', label: 'Calendrier',     icon: 'Calendar',    category: 'planning', order: 3, visible: true, access: 'public' },
-  { id: 'planning', label: 'Planning',       icon: 'CalendarCheck',category: 'planning', order: 1, visible: true, access: 'user'  },
-  { id: 'burndown', label: 'Burndown',       icon: 'TrendingDown',category: 'planning', order: 4, visible: true, access: 'admin'   },
-  { id: 'cfd',      label: 'Flux cumulatif', icon: 'Layers',      category: 'planning', order: 5, visible: true, access: 'admin'   },
+  { id: 'planning', label: 'Planning',       icon: 'CalendarCheck',category: 'planning', order: 4, visible: true, access: 'user'  },
+  { id: 'burndown', label: 'Burndown',       icon: 'TrendingDown',category: 'planning', order: 5, visible: true, access: 'admin'   },
+  { id: 'cfd',      label: 'Flux cumulatif', icon: 'Layers',      category: 'planning', order: 6, visible: true, access: 'admin'   },
   { id: 'priority', label: 'Priorités',      icon: 'Flame',       category: 'planning', order: 7, visible: true, access: 'user'   },
 
   // ── exploration ──

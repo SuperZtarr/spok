@@ -4,10 +4,11 @@ import {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Map as MapIconLucide, Copy,
+  MessageSquare, Map as MapIconLucide, Copy, LogOut, Search,
   type LucideIcon,
 } from 'lucide-react';
-import { activityApi } from '../lib/api';
+import { activityApi, authApi } from '../lib/api';
+import { useAuthStore } from '../stores/auth';
 import { useMenuItems } from '../hooks/useMenuItems';
 import type { MenuItemConfig } from '@spok/shared';
 
@@ -15,20 +16,32 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, MapIcon: MapIconLucide, Copy,
+  MessageSquare, MapIcon: MapIconLucide, Copy, LogOut, Search,
 };
 
 const getIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 
 /** Sections qui ont leurs propres vues dans la SpaceToolbar — exclues ici */
 const SPACE_SECTIONS = new Set(['basic', 'itemTypes', 'planning', 'exploration']);
-/** Clés gérées ailleurs (profil modal, GlobalSearch, logout dans modal) */
-const EXCLUDED_KEYS = new Set(['profile', 'logout', 'search']);
+/** Clés gérées ailleurs (profil modal) */
+const EXCLUDED_KEYS = new Set(['profile']);
 
 export function GlobalNavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { sections } = useMenuItems();
+  const { logout, refreshToken } = useAuthStore();
+
+  const handleLogout = async () => {
+    try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
+    logout();
+    navigate('/');
+  };
+
+  const handleItemClick = (item: MenuItemConfig) => {
+    if (item.key === 'logout') { handleLogout(); return; }
+    if (item.route) navigate(item.route);
+  };
 
   const { data: activityData } = useQuery({
     queryKey: ['activity'],
@@ -64,14 +77,16 @@ export function GlobalNavBar() {
                 return (
                   <button
                     key={item.key}
-                    onClick={() => item.route && navigate(item.route)}
+                    onClick={() => handleItemClick(item)}
                     title={item.label}
                     className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                       active
                         ? 'bg-primary text-primary-foreground shadow-sm'
-                        : section.id === 'admin'
-                          ? 'text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        : item.key === 'logout'
+                          ? 'text-destructive hover:bg-accent/60'
+                          : section.id === 'admin'
+                            ? 'text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                     }`}
                   >
                     {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
