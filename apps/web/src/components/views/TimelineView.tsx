@@ -134,6 +134,40 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const tree = useMemo(() => buildTree(items), [items]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
+  // Compute effective dates for parents without own dates — derived from descendants
+  const effectiveDates = useMemo(() => {
+    const result = new Map<string, { start: string; end: string }>();
+
+    function computeDates(item: TreeItem): { start: Date | null; end: Date | null } {
+      const ownStart = item.startDate || item.dueDate ? new Date(item.startDate || item.dueDate!) : null;
+      const ownEnd   = item.endDate   || item.dueDate ? new Date(item.endDate   || item.dueDate!) : null;
+
+      if (item.children.length === 0) return { start: ownStart, end: ownEnd };
+
+      let minStart: Date | null = ownStart;
+      let maxEnd:   Date | null = ownEnd;
+
+      for (const child of item.children) {
+        const c = computeDates(child);
+        if (c.start && (!minStart || c.start < minStart)) minStart = c.start;
+        if (c.end   && (!maxEnd   || c.end   > maxEnd))   maxEnd   = c.end;
+      }
+
+      // Only store if the item has no own dates but descendants do
+      if (!ownStart && !ownEnd && (minStart || maxEnd)) {
+        result.set(item.id, {
+          start: (minStart ?? maxEnd!).toISOString(),
+          end:   (maxEnd   ?? minStart!).toISOString(),
+        });
+      }
+
+      return { start: minStart, end: maxEnd };
+    }
+
+    for (const root of tree) computeDates(root);
+    return result;
+  }, [tree]);
+
   // Gantt left-panel DnD handlers — defined after flatItems
   const handleGanttDragStart = useCallback((event: DragStartEvent) => {
     const id = event.active.id as string;
@@ -780,9 +814,12 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
             >
             {flatItems.map((item, itemIndex) => {
               const isPreview = dragPreview?.itemId === item.id;
+              const derived = !isPreview ? effectiveDates.get(item.id) : undefined;
               const barStyle = isPreview
                 ? getBarStyle(item, dragPreview!.startDate, dragPreview!.endDate)
-                : getBarStyle(item);
+                : derived
+                  ? getBarStyle(item, derived.start, derived.end)
+                  : getBarStyle(item);
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);
@@ -848,14 +885,16 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                     {barStyle && (
                       <div
                         {...(itemIndex === 0 ? { 'data-tour': 'timeline-bar' } : {})}
-                        className={`absolute top-1 h-8 rounded transition-all group/bar hover:z-10 ${statusColor} ${
-                          barStyle.hasDate
-                            ? isPortal ? 'border-2 border-dashed border-primary/30' : 'shadow-md border border-black/20'
-                            : 'border-2 border-dashed border-gray-400 opacity-60'
+                        className={`absolute top-1 h-8 rounded transition-all group/bar hover:z-10 ${
+                          derived
+                            ? 'opacity-40 border-2 border-dashed border-muted-foreground/70 bg-muted-foreground/20'
+                            : `${statusColor} ${barStyle.hasDate
+                                ? isPortal ? 'border-2 border-dashed border-primary/30' : 'shadow-md border border-black/20'
+                                : 'border-2 border-dashed border-gray-400 opacity-60'}`
                         } ${
-                          hoveredItem === item.id || dragging?.itemId === item.id
+                          !derived && (hoveredItem === item.id || dragging?.itemId === item.id
                             ? 'ring-2 ring-primary shadow-xl opacity-100'
-                            : 'hover:shadow-lg hover:opacity-100'
+                            : 'hover:shadow-lg hover:opacity-100')
                         } ${dragging?.itemId === item.id ? 'cursor-grabbing' : ''} ${
                           relationDrag && relationDragTargetIdx === itemIndex && item.id !== relationDrag.fromItemId
                             ? 'ring-2 ring-green-500 shadow-xl'
@@ -867,13 +906,15 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                           left: barStyle.left + 1,
                           width: barStyle.width,
                         }}
-                        title={barStyle.hasDate
-                          ? `${item.title}${isPortal && portalSpaceName ? ` (${portalSpaceName})` : ''}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${item.endDate ? formatDateShort(new Date(item.endDate)) : "aujourd'hui"}`
-                          : `${item.title}\n(Sans date - cliquer pour définir)`
+                        title={derived
+                          ? `${item.title}\n${formatDateShort(new Date(derived.start))} - ${formatDateShort(new Date(derived.end))} (étendue des enfants)`
+                          : barStyle.hasDate
+                            ? `${item.title}${isPortal && portalSpaceName ? ` (${portalSpaceName})` : ''}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${item.endDate ? formatDateShort(new Date(item.endDate)) : "aujourd'hui"}`
+                            : `${item.title}\n(Sans date - cliquer pour définir)`
                         }
                       >
                         {/* Left resize handle — arrow pointing left, outside bar */}
-                        {canEdit && onUpdateDates && (
+                        {!derived && canEdit && onUpdateDates && (
                           <div
                             className="absolute -left-5 top-1/2 -translate-y-1/2 cursor-ew-resize opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-opacity z-20"
                             onMouseDown={(e) => handleDragStart(
@@ -891,19 +932,21 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                         )}
 
                         {/* Content - clickable */}
-                        <div
-                          className="h-full flex items-center cursor-pointer px-1 min-w-0"
-                          onClick={() => onEdit(item.id)}
-                        >
-                          {barStyle.width > 50 && (
-                            <span className="text-xs truncate font-semibold">
-                              {item.title}
-                            </span>
-                          )}
-                        </div>
+                        {!derived && (
+                          <div
+                            className="h-full flex items-center cursor-pointer px-1 min-w-0"
+                            onClick={() => onEdit(item.id)}
+                          >
+                            {barStyle.width > 50 && (
+                              <span className="text-xs truncate font-semibold">
+                                {item.title}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Right resize handle — arrow pointing right, outside bar */}
-                        {canEdit && onUpdateDates && (
+                        {!derived && canEdit && onUpdateDates && (
                           <div
                             className="absolute -right-5 top-1/2 -translate-y-1/2 cursor-ew-resize opacity-0 group-hover/bar:opacity-80 hover:!opacity-100 transition-opacity z-20"
                             onMouseDown={(e) => handleDragStart(
