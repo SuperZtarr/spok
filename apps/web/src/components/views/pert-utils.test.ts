@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildPertGraph, computePertRanks, computeCriticalPathNaive } from './pert-utils';
+import { buildTree, flattenTree } from './timeline-tree';
 import type { Item, ItemRelation } from '@spok/shared';
 
 function makeItem(id: string): Item {
@@ -75,6 +76,57 @@ describe('computePertRanks', () => {
     expect(ranks.get('B')).toBe(1);
     expect(ranks.get('C')).toBe(1);
     expect(ranks.get('D')).toBe(2);
+  });
+});
+
+describe('PertView sort — buildTree with rank-based sortFn', () => {
+  // Simulates exactly what PertView does:
+  // 1. compute ranks, 2. build sortFn, 3. buildTree with sortFn, 4. flattenTree
+  function pertFlatOrder(items: Item[], rels: ItemRelation[]): string[] {
+    const { predecessors, successors } = buildPertGraph(items, rels);
+    const ranks = computePertRanks(items, predecessors, successors);
+    const sortFn = (a: { id: string; title: string }, b: { id: string; title: string }) => {
+      const rankDiff = (ranks.get(a.id) ?? 0) - (ranks.get(b.id) ?? 0);
+      if (rankDiff !== 0) return rankDiff;
+      return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+    };
+    const tree = buildTree(items, sortFn);
+    return flattenTree(tree, new Set()).map(i => i.id);
+  }
+
+  it('linear chain A→B→C appears in dependency order', () => {
+    // A blocks B, B blocks C  →  rank A=0, B=1, C=2
+    const items = [makeItem('C'), makeItem('A'), makeItem('B')]; // shuffled
+    const rels = [makeRel('A', 'B', 'blocks'), makeRel('B', 'C', 'blocks')];
+    expect(pertFlatOrder(items, rels)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('items with same rank are sorted alphabetically', () => {
+    // No relations → all rank 0, alpha order
+    const items = [makeItem('Zeta'), makeItem('Alpha'), makeItem('Mu')];
+    expect(pertFlatOrder(items, [])).toEqual(['Alpha', 'Mu', 'Zeta']);
+  });
+
+  it('mixed ranks and alpha: rank wins, alpha is tiebreaker', () => {
+    // A blocks C, B has no relation
+    // ranks: A=0, B=0, C=1
+    // expected: A, B (alpha among rank-0), then C
+    const items = [makeItem('C'), makeItem('B'), makeItem('A')];
+    const rels = [makeRel('A', 'C', 'blocks')];
+    expect(pertFlatOrder(items, rels)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('preserves parent–child hierarchy while sorting children by rank', () => {
+    // Parent P has children: C (rank 1, blocked by B), A (rank 0), B (rank 0)
+    // B blocks C → ranks: A=0, B=0, C=1
+    // Expected flat order: P, A, B, C  (children sorted by rank then alpha)
+    const p = { ...makeItem('P'), parentId: undefined };
+    const a = { ...makeItem('A'), parentId: 'P' };
+    const b = { ...makeItem('B'), parentId: 'P' };
+    const c = { ...makeItem('C'), parentId: 'P' };
+    const items = [p, c, a, b];
+    const rels = [makeRel('B', 'C', 'blocks')];
+    expect(pertFlatOrder(items, rels)).toEqual(['P', 'A', 'B', 'C']);
   });
 });
 

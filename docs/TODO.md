@@ -29,6 +29,7 @@
 - [x] Restauration item après reconnexion : ?item= maintenu dans l'URL + returnTo sessionStorage après expiration token — (2026-05-20)
 - [x] Vue PERT : VIEW_REGISTRY source unique pour 30 vues + création liens drag-and-drop — c020256, 967716f (2026-05-20)
 - [x] Vue PERT : relations proxies sur nœud replié (flèches pointillées reportées sur l'ancêtre visible) — (2026-05-22)
+- [x] Vue PERT : tri automatique par rang de dépendance (topologique, alphabétique à égalité), hiérarchie préservée — (2026-05-25)
 - [ ] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER)
 - [ ] Aperçu des vignettes dans les settings : section dédiée pour prévisualiser le rendu communauté / espace / utilisateur (cover + avatar) tel qu'il apparaît dans l'application
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)

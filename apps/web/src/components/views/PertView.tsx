@@ -114,10 +114,6 @@ export function PertView({
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
 
-  const tree = useMemo(() => buildTree(items), [items]);
-  const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
-
-
   const pertRelations = useMemo(
     () => relations.filter(r => r.type === 'blocks' || r.type === 'depends'),
     [relations]
@@ -137,6 +133,18 @@ export function PertView({
     () => computeCriticalPathNaive(items, predecessors, successors),
     [items, predecessors, successors]
   );
+
+  const pertSortFn = useMemo(
+    () => (a: { id: string; title: string }, b: { id: string; title: string }) => {
+      const rankDiff = (ranks.get(a.id) ?? 0) - (ranks.get(b.id) ?? 0);
+      if (rankDiff !== 0) return rankDiff;
+      return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+    },
+    [ranks]
+  );
+
+  const tree = useMemo(() => buildTree(items, pertSortFn), [items, pertSortFn]);
+  const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
 
   const rowIndex = useMemo(() => {
     const map = new Map<string, number>();

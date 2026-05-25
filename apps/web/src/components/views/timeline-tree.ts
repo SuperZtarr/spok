@@ -5,7 +5,10 @@ export interface TreeItem extends Item {
   depth: number;
 }
 
-export function buildTree(items: Item[]): TreeItem[] {
+export function buildTree(
+  items: Item[],
+  sortFn?: (a: TreeItem, b: TreeItem) => number,
+): TreeItem[] {
   const itemMap = new Map<string, TreeItem>();
   const rootItems: TreeItem[] = [];
 
@@ -23,8 +26,11 @@ export function buildTree(items: Item[]): TreeItem[] {
     }
   });
 
+  const defaultSort = (a: TreeItem, b: TreeItem) => (a.position ?? 0) - (b.position ?? 0);
+  const compareFn = sortFn ?? defaultSort;
+
   function setDepths(items: TreeItem[], depth: number) {
-    items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    items.sort(compareFn);
     items.forEach(item => {
       item.depth = depth;
       setDepths(item.children, depth + 1);

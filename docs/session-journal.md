@@ -4,7 +4,14 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-22
+## EN COURS — 2026-05-25
+
+### Vue PERT : tri automatique par rang de dépendance
+- `timeline-tree.ts` : `buildTree` accepte un `sortFn` optionnel (fallback tri par `position`)
+- `PertView.tsx` : `pertSortFn` (rang ASC, titre alpha ASC) passé à `buildTree` — tri local/temporaire, sans impact sur les autres vues
+- `pert-utils.test.ts` : 4 nouveaux tests (chaîne linéaire, alpha, rang+alpha, hiérarchie)
+
+## HISTORIQUE — 2026-05-22
 
 ### Relations proxies sur nœud replié — PERT
 - `PertView.tsx` : `parentMap` + `effectiveRelations` useMemo — résout chaque endpoint vers son ancêtre visible, déduplique, filtre les self-loops
