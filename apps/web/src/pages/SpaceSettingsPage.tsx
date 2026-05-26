@@ -156,7 +156,7 @@ export function SpaceSettingsPage() {
   const deleteSpaceMutation = useDeleteSpace();
   const queryClient = useQueryClient();
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'members' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'members' | 'apercu' | 'danger'>('general');
   const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('space-settings', SPACE_SETTINGS_TOUR);
 
@@ -373,6 +373,7 @@ export function SpaceSettingsPage() {
     ...(space?.type === 'GROUP' ? [{ id: 'general' as const, label: 'Général' }] : []),
     { id: 'images' as const, label: 'Images' },
     ...(space?.type === 'GROUP' ? [{ id: 'members' as const, label: `Membres (${spaceMembers?.length || 0})` }] : []),
+    { id: 'apercu' as const, label: 'Aperçu' },
     ...(canDelete ? [{ id: 'danger' as const, label: 'Danger' }] : []),
   ];
 
@@ -642,12 +643,16 @@ export function SpaceSettingsPage() {
               )}
             </div>
 
-            {/* Preview */}
-            <div className="mt-6 pt-6 border-t border-border">
-              <label className="block text-sm font-medium mb-3">Aperçu de la carte</label>
-              <div className="max-w-[280px]">
-                {space && <SpaceCard space={space} />}
-              </div>
+          </div>
+        )}
+
+        {/* === APERCU TAB === */}
+        {activeTab === 'apercu' && space && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">Aperçu des formats d'affichage</h2>
+            <div className="max-w-[280px] pointer-events-none">
+              <p className="text-sm font-medium mb-2">Carte (liste des espaces)</p>
+              <SpaceCard space={space} />
             </div>
           </div>
         )}

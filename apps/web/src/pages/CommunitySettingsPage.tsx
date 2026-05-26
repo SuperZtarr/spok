@@ -17,7 +17,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
-import { CommunityCard } from '../components/ui/CommunityCard';
+import { CommunityCard, CommunityBanner } from '../components/ui/CommunityCard';
 import { CommunityDeleteConfirmModal } from '../components/CommunityDeleteConfirmModal';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { useAuthStore } from '../stores/auth';
@@ -260,7 +260,7 @@ export function CommunitySettingsPage() {
   const [newSpaceName, setNewSpaceName] = useState('');
   const [spaceSearch, setSpaceSearch] = useState('');
   const [spaceToDelete, setSpaceToDelete] = useState<SpaceWithRole | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'tags' | 'spaces' | 'members' | 'emails' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'tags' | 'spaces' | 'members' | 'emails' | 'apercu' | 'danger'>('general');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
   const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', COMMUNITY_SETTINGS_TOUR);
@@ -561,6 +561,7 @@ export function CommunitySettingsPage() {
             { id: 'spaces', label: `Espaces (${communitySpaces.length})` },
             { id: 'members', label: `Membres (${community.memberCount || 0})` },
             ...(canEdit ? [{ id: 'emails' as const, label: 'Emails' }] : []),
+            { id: 'apercu' as const, label: 'Aperçu' },
             ...(canEdit ? [{ id: 'danger' as const, label: 'Danger' }] : []),
           ] as const).map(tab => (
             <button
@@ -765,14 +766,24 @@ export function CommunitySettingsPage() {
               )}
             </div>
 
-            {/* Preview */}
-            <div className="mt-6 pt-6 border-t border-border">
-              <label className="block text-sm font-medium mb-3">Aperçu de la carte</label>
-              <div className="max-w-[320px]">
+          </div></RoleGuard>
+        )}
+
+        {/* === APERCU TAB === */}
+        {activeTab === 'apercu' && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">Aperçu des formats d'affichage</h2>
+            <div className="max-w-[320px] space-y-6 pointer-events-none">
+              <div>
+                <p className="text-sm font-medium mb-2">Carte (liste des communautés)</p>
                 <CommunityCard community={community} />
               </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Bannière (page activité)</p>
+                <CommunityBanner community={community} />
+              </div>
             </div>
-          </div></RoleGuard>
+          </div>
         )}
 
         {/* === REFERENTIELS TAB === */}
