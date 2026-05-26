@@ -4,7 +4,10 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-25
+## EN COURS — 2026-05-26
+
+### Fix dropdowns header (NotificationBell + GlobalSearch)
+- `Layout.tsx` : retiré `overflow-hidden` du Row 1 header — clipait les dropdowns absolus
 
 ### Vue PERT : tri automatique par rang de dépendance
 - `timeline-tree.ts` : `buildTree` accepte un `sortFn` optionnel (fallback tri par `position`)

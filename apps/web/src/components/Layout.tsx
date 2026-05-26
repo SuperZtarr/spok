@@ -1102,7 +1102,7 @@ export function Layout() {
         <header className="border-b border-border bg-card flex flex-col flex-shrink-0">
           {/* Row 1: title + right controls */}
           <div
-            className="flex items-stretch h-12 relative isolate overflow-hidden"
+            className="flex items-stretch h-12 relative isolate"
           >
             {/* Cover image background */}
             {currentSpace?.coverUrl && (
