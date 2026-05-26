@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { RotateCcw } from 'lucide-react';
 import { authApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -18,6 +19,12 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [errorDetails, setErrorDetails] = useState<unknown>(null);
   const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true');
+  const [returnToPath, setReturnToPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const returnTo = sessionStorage.getItem('spok_returnTo');
+    if (returnTo) setReturnToPath(returnTo);
+  }, []);
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
@@ -76,6 +83,12 @@ export function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {returnToPath && (
+            <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-sm">
+              <RotateCcw className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>Après connexion, vous serez redirigé vers <span className="font-medium break-all">{returnToPath}</span></span>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">

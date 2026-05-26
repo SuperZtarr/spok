@@ -503,7 +503,7 @@ export function MyDashboardView() {
 
         {/* Échéances */}
         <div className="bg-card border rounded-lg p-4 max-w-4xl flex-1 min-w-[320px]">
-          <DeadlinesView embedded />
+          <DeadlinesView embedded filters={filters} />
         </div>
 
         {/* Priorités + En retard + Aujourd'hui */}

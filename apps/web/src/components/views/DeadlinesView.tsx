@@ -13,6 +13,7 @@ import type { Item } from '@spok/shared';
 import { ItemEditModal } from '../ItemEditModal';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
+import type { GlobalTaskFilterState } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
 
 const STATUS_COLOR_MAP = buildStatusColorMap();
@@ -99,19 +100,21 @@ function groupByDeadline(tasks: GlobalTask[]): DeadlineGroup[] {
   return groups;
 }
 
-export function DeadlinesView({ embedded }: { embedded?: boolean } = {}) {
+export function DeadlinesView({ embedded, filters: externalFilters }: { embedded?: boolean; filters?: GlobalTaskFilterState } = {}) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const [editingTask, setEditingTask] = useState<{ itemId: string; spaceId: string } | null>(null);
   const [showDone, setShowDone] = useState(false);
 
-  const filters = useGlobalTaskFilters({
+  const internalFilters = useGlobalTaskFilters({
     defaultTypes: ['NOTE', 'TASK', 'PROJECT', 'MEETING', 'PERIOD', 'LINK', 'DOCUMENT', 'IMAGE', 'BUG'],
     defaultSortBy: 'dueDate',
     defaultSortDir: 'asc',
     pageSize: 500,
   });
+
+  const filters = externalFilters ?? internalFilters;
 
   const { data: tasksData, isLoading } = useQuery({
     queryKey: ['deadlines-view', filters.queryParams],
