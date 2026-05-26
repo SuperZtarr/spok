@@ -20,8 +20,10 @@ import {
   CheckCircle2,
   Loader2,
   Target,
+  UserCheck,
 } from 'lucide-react';
 import { userTasksApi, spacesApi } from '../../lib/api';
+import { useAuthStore } from '../../stores/auth';
 import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
 import type { GlobalTask } from '../../lib/api';
 import { getPriorityConfig, TYPE_ICONS } from '../../constants/ui';
@@ -248,6 +250,7 @@ function Section({ title, icon, count, children, variant = 'default' }: {
 // ---------------------------------------------------------------------------
 
 export function MyDashboardView() {
+  const user = useAuthStore(s => s.user);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
@@ -363,6 +366,12 @@ export function MyDashboardView() {
       return d >= today && d <= todayEnd;
     }),
     [allTasks, today, todayEnd]
+  );
+
+  // --- Assigned to me ---
+  const assignedTasks = useMemo(() =>
+    allTasks.filter(t => t.assignedToId && t.assignedToId === user?.id),
+    [allTasks, user?.id]
   );
 
   // --- KPI computed ---
@@ -559,6 +568,22 @@ export function MyDashboardView() {
             </Section>
             {todayTasks.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">Rien pour aujourd'hui</p>
+            )}
+          </div>
+
+          {/* Assignés à moi */}
+          <div className="bg-card border rounded-lg p-4 space-y-2">
+            <Section
+              title="Assignés à moi"
+              icon={<UserCheck className="w-4 h-4 text-teal-500" />}
+              count={assignedTasks.length}
+            >
+              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                {assignedTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
+              </div>
+            </Section>
+            {assignedTasks.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Aucun item assigné</p>
             )}
           </div>
 

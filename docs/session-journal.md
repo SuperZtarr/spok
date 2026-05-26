@@ -6,6 +6,9 @@
 
 ## EN COURS — 2026-05-26
 
+### Dashboard : panneau "Assignés à moi"
+- `MyDashboardView.tsx` : dérivé `assignedTasks` depuis `allTasks` (assignedToId === user.id), panneau dans colonne droite après Aujourd'hui
+
 ### Fix bugs dashboard + auth returnTo
 - `DeadlinesView.tsx` : prop `filters?` optionnelle — quand embedded, utilise les filtres du parent au lieu de sa propre instance
 - `MyDashboardView.tsx` : passe `filters` à `<DeadlinesView embedded filters={filters} />`
