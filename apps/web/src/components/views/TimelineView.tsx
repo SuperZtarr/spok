@@ -13,6 +13,7 @@ import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
+import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { TreeItemRow } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 
@@ -589,7 +590,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const dependencyArrows = useMemo(() => {
     if (!relations || relations.length === 0) return [];
 
-    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string; relationId: string; fromItemId: string; toItemId: string }[] = [];
+    const arrows: { fromX: number; fromY: number; toX: number; toY: number; type: string; relationId: string; fromItemId: string; toItemId: string; label: string; fromTitle: string; toTitle: string }[] = [];
     const rowIndexMap = new Map<string, number>();
     flatItems.forEach((item, idx) => rowIndexMap.set(item.id, idx));
 
@@ -611,7 +612,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
       const fromY = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
       const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
 
-      arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId, toItemId: rel.toItemId });
+      arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId, toItemId: rel.toItemId, label: rel.label ?? '', fromTitle: fromItem.title, toTitle: toItem.title });
     }
 
     return arrows;
@@ -1116,6 +1117,16 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                         >
                           <title>{`${relLabel} - Cliquer pour modifier`}</title>
                         </path>
+                      )}
+                      {arrow.label && (
+                        <RelationCommentIconSvg
+                          x={(arrow.fromX + arrow.toX) / 2}
+                          y={(arrow.fromY + arrow.toY) / 2}
+                          label={arrow.label}
+                          relationType={arrow.type}
+                          fromTitle={arrow.fromTitle}
+                          toTitle={arrow.toTitle}
+                        />
                       )}
                     </g>
                   );

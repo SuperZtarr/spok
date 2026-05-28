@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Ban, ArrowLeft, ChevronDown, ChevronRight, Minus, Plus } from 'lucide-react';
+import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
@@ -300,6 +301,10 @@ export function PertView({
     const strokeWidth = isCritical ? 2.5 : 1.5;
 
     const pathD = `M${x1},${y1} C${x1 + cpOffset},${y1} ${x2 - cpOffset},${y2} ${x2},${y2}`;
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const fromItem = items.find(i => i.id === rel.fromItemId);
+    const toItem = items.find(i => i.id === rel.toItemId);
     return (
       <g key={key}>
         <path
@@ -332,6 +337,15 @@ export function PertView({
           >
             <title>Cliquer pour modifier</title>
           </path>
+        )}
+        {rel.label && !proxied && (
+          <RelationCommentIconSvg
+            x={mx} y={my}
+            label={rel.label}
+            relationType={rel.type}
+            fromTitle={fromItem?.title || rel.fromItemId}
+            toTitle={toItem?.title || rel.toItemId}
+          />
         )}
       </g>
     );

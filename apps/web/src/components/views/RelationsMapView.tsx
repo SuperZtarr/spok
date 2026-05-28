@@ -3,6 +3,7 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { Maximize2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import type { Item } from '@spok/shared';
+import { RelationTooltip } from '../RelationTooltip';
 
 const NODE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -42,6 +43,9 @@ interface GraphLink {
   target: string;
   type: string;
   color: string;
+  label?: string;
+  fromTitle?: string;
+  toTitle?: string;
 }
 
 interface RelationsMapViewProps {
@@ -67,6 +71,8 @@ export function RelationsMapView({
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [visibleRelTypes, setVisibleRelTypes] = useState<string[]>(['blocks', 'depends', 'relates']);
   const [showOrphans, setShowOrphans] = useState(false);
+  const [hoveredLink, setHoveredLink] = useState<any>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // Resize observer
   useEffect(() => {
@@ -94,11 +100,15 @@ export function RelationsMapView({
         if (!visibleRelTypes.includes(relType)) continue;
         const targetId = rel.toItem?.id || rel.toItemId;
         if (!targetId) continue;
+        const targetItem = itemMap.get(targetId);
         links.push({
           source: item.id,
           target: targetId,
           type: relType,
           color: RELATION_COLORS[relType] || '#94a3b8',
+          label: rel.label ?? undefined,
+          fromTitle: item.title,
+          toTitle: targetItem?.title ?? targetId,
         });
         connectedIds.add(item.id);
         connectedIds.add(targetId);
@@ -192,7 +202,7 @@ export function RelationsMapView({
   const hasHighlight = !!(searchMatchIds?.size || highlightType || highlightStatus);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[400px]">
+    <div ref={containerRef} className="relative w-full h-full min-h-[400px]" onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}>
       {/* Controls */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
         {/* Relation type toggles */}
@@ -291,6 +301,17 @@ export function RelationsMapView({
           d3VelocityDecay={0.3}
           cooldownTicks={100}
           backgroundColor="transparent"
+          onLinkHover={(link) => setHoveredLink(link ?? null)}
+        />
+      )}
+      {hoveredLink?.label && (
+        <RelationTooltip
+          label={hoveredLink.label}
+          relationType={hoveredLink.type ?? 'relates'}
+          fromTitle={hoveredLink.fromTitle ?? ''}
+          toTitle={hoveredLink.toTitle ?? ''}
+          x={mousePos.x}
+          y={mousePos.y}
         />
       )}
     </div>

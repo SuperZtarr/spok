@@ -63,6 +63,11 @@ function HomeRoute() {
 
   // Redirect authenticated users away from auth pages
   if (isAuthenticated && ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)) {
+    const returnTo = sessionStorage.getItem('spok_returnTo');
+    if (returnTo) {
+      sessionStorage.removeItem('spok_returnTo');
+      return <Navigate to={returnTo} replace />;
+    }
     return <Navigate to="/" replace />;
   }
 

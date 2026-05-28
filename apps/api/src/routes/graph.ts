@@ -18,6 +18,7 @@ interface GraphLink {
   target: string;
   linkType: 'hierarchy' | 'relation' | 'tag';
   relationLabel?: string;
+  label?: string;
 }
 
 interface GraphResponse {
@@ -172,6 +173,7 @@ async function buildGraph(
         target: rel.toItemId,
         linkType: 'relation',
         relationLabel: rel.type,
+        label: rel.label ?? undefined,
       });
     }
   }

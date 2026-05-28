@@ -5,6 +5,7 @@ import { Maximize2, FolderKanban, Building2, Globe } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useGraphData } from '../../hooks/useGraphData';
 import { communitiesApi } from '../../lib/api';
+import { RelationTooltip } from '../RelationTooltip';
 
 const STORAGE_KEY = 'graph-link-types';
 const SCOPE_STORAGE_KEY = 'graph-scope';
@@ -58,6 +59,8 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [hoveredLink, setHoveredLink] = useState<any>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // Scope selector — starts at the level prop, user can widen/narrow
   const [scope, setScope] = useState<Scope>(() => {
@@ -463,25 +466,41 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
         </div>
       </div>
 
-      <ForceGraph2D
-        ref={graphRef}
-        graphData={graphData}
-        width={dimensions.width}
-        height={dimensions.height}
-        backgroundColor="transparent"
-        nodeCanvasObject={nodeCanvasObject}
-        nodeCanvasObjectMode={() => 'replace'}
-        nodePointerAreaPaint={nodePointerAreaPaint}
-        nodeLabel={nodeLabel}
-        onNodeClick={handleNodeClick}
-        linkColor={linkColor}
-        linkWidth={linkWidth}
-        linkLineDash={linkLineDash}
-        linkDirectionalArrowLength={3}
-        linkDirectionalArrowRelPos={1}
-        cooldownTicks={100}
-        onEngineStop={() => graphRef.current?.zoomToFit(400, 50)}
-      />
+      <div
+        className="absolute inset-0"
+        onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+      >
+        <ForceGraph2D
+          ref={graphRef}
+          graphData={graphData}
+          width={dimensions.width}
+          height={dimensions.height}
+          backgroundColor="transparent"
+          nodeCanvasObject={nodeCanvasObject}
+          nodeCanvasObjectMode={() => 'replace'}
+          nodePointerAreaPaint={nodePointerAreaPaint}
+          nodeLabel={nodeLabel}
+          onNodeClick={handleNodeClick}
+          linkColor={linkColor}
+          linkWidth={linkWidth}
+          linkLineDash={linkLineDash}
+          linkDirectionalArrowLength={3}
+          linkDirectionalArrowRelPos={1}
+          cooldownTicks={100}
+          onEngineStop={() => graphRef.current?.zoomToFit(400, 50)}
+          onLinkHover={(link) => setHoveredLink(link ?? null)}
+        />
+      </div>
+      {hoveredLink?.label && (
+        <RelationTooltip
+          label={hoveredLink.label}
+          relationType={hoveredLink.relationLabel ?? 'relates'}
+          fromTitle={hoveredLink.fromTitle ?? ''}
+          toTitle={hoveredLink.toTitle ?? ''}
+          x={mousePos.x}
+          y={mousePos.y}
+        />
+      )}
     </div>
   );
 }

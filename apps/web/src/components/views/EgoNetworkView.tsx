@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import { RelationCommentIconSvg } from '../RelationCommentIcon';
 
 interface EgoNetworkViewProps {
   items: Item[];
@@ -38,6 +39,7 @@ interface Edge {
   from: string;
   to: string;
   type: 'relation' | 'hierarchy';
+  label?: string;
 }
 
 export function EgoNetworkView({ items, relations, onEdit, highlightType, highlightStatus, searchMatchIds }: EgoNetworkViewProps) {
@@ -121,7 +123,13 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
 
     // Relation edges
     for (const rel of relations) {
-      addEdge(rel.fromItemId, rel.toItemId, 'relation');
+      if (!iMap.has(rel.fromItemId) || !iMap.has(rel.toItemId)) continue;
+      if (!adj.has(rel.fromItemId)) adj.set(rel.fromItemId, new Set());
+      if (!adj.has(rel.toItemId)) adj.set(rel.toItemId, new Set());
+      adj.get(rel.fromItemId)!.add(rel.toItemId);
+      adj.get(rel.toItemId)!.add(rel.fromItemId);
+      const key = [rel.fromItemId, rel.toItemId].sort().join('-');
+      if (!edgeSet.has(key)) edgeSet.set(key, { from: rel.fromItemId, to: rel.toItemId, type: 'relation', label: rel.label ?? undefined });
     }
 
     // BFS from center
@@ -339,18 +347,32 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
               const from = posMap.get(edge.from);
               const to = posMap.get(edge.to);
               if (!from || !to) return null;
+              const mx = (from.x + to.x) / 2;
+              const my = (from.y + to.y) / 2;
+              const fromItem = itemMap.get(edge.from);
+              const toItem = itemMap.get(edge.to);
               return (
-                <line
-                  key={i}
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  stroke={edge.type === 'hierarchy' ? '#94a3b8' : '#a855f7'}
-                  strokeWidth={edge.type === 'hierarchy' ? 1.5 : 1}
-                  strokeOpacity={0.4}
-                  strokeDasharray={edge.type === 'relation' ? '4 2' : undefined}
-                />
+                <g key={i}>
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke={edge.type === 'hierarchy' ? '#94a3b8' : '#a855f7'}
+                    strokeWidth={edge.type === 'hierarchy' ? 1.5 : 1}
+                    strokeOpacity={0.4}
+                    strokeDasharray={edge.type === 'relation' ? '4 2' : undefined}
+                  />
+                  {edge.type === 'relation' && edge.label && (
+                    <RelationCommentIconSvg
+                      x={mx} y={my}
+                      label={edge.label}
+                      relationType="relates"
+                      fromTitle={fromItem?.title || edge.from}
+                      toTitle={toItem?.title || edge.to}
+                    />
+                  )}
+                </g>
               );
             })}
 

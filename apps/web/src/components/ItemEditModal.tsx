@@ -1425,7 +1425,13 @@ export function ItemEditModal({
                           options={[{ value: '', label: 'Sélectionner...' }, ...allItems.filter((i) => i.id !== itemId).map((i) => ({ value: i.id, label: i.title }))]} />
                       </div>
                     </div>
-                    <Input value={newRelationLabel} onChange={(e) => setNewRelationLabel(e.target.value)} placeholder="Commentaire (optionnel)" className="text-sm" />
+                    <textarea
+                      value={newRelationLabel}
+                      onChange={(e) => setNewRelationLabel(e.target.value)}
+                      placeholder="Justification de la relation (optionnel)"
+                      rows={2}
+                      className="w-full text-sm px-3 py-1.5 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
                     <div className="flex gap-2">
                       <Button type="button" size="sm" onClick={handleAddRelation} disabled={!newRelationTargetId || createRelationMutation.isPending}>
                         {createRelationMutation.isPending ? 'Ajout...' : 'Ajouter'}
@@ -1449,7 +1455,13 @@ export function ItemEditModal({
                               <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                               <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
                             </div>
-                            <Input value={editRelationLabel} onChange={(e) => setEditRelationLabel(e.target.value)} placeholder="Commentaire (optionnel)" className="text-xs h-7" />
+                            <textarea
+                              value={editRelationLabel}
+                              onChange={(e) => setEditRelationLabel(e.target.value)}
+                              placeholder="Justification de la relation (optionnel)"
+                              rows={2}
+                              className="w-full text-xs px-2 py-1 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
                             <div className="flex gap-2">
                               <Button type="button" size="sm" onClick={() => updateRelationMutation.mutate({ relationId: relation.id, data: { type: editRelationType, label: editRelationLabel.trim() || null } })} disabled={updateRelationMutation.isPending}>
                                 {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
@@ -1476,7 +1488,7 @@ export function ItemEditModal({
                                 </div>
                               )}
                             </div>
-                            {relation.label && <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>}
+                            {relation.label && <p className="text-xs text-muted-foreground italic pl-1 line-clamp-2" title={relation.label}>{relation.label}</p>}
                           </>
                         )}
                       </div>

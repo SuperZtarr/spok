@@ -37,6 +37,9 @@ import {
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
 import { calculateLayout, buildPortalNodesAndEdges, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+import { RelationEdge } from './RelationEdge';
+
+const edgeTypes = { relation: RelationEdge };
 
 export interface MindMapViewHandle {
   expandAll: () => void;
@@ -1044,6 +1047,7 @@ function MindMapViewInner({
         onConnect={canEdit !== false ? onConnect : undefined}
         nodesDraggable={canEdit !== false}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onInit={() => {
           setTimeout(() => {
             setEdges(currentEdges => {
