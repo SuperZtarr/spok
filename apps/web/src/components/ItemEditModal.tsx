@@ -363,7 +363,18 @@ export function ItemEditModal({
   const createContributionMutation = useMutation({
     mutationFn: (data: { content: string; parentId?: string }) =>
       itemsApi.createContribution(spaceId, itemId!, data),
-    onSuccess: () => {
+    onSuccess: (newContrib) => {
+      // Injecter immédiatement la nouvelle contribution dans le cache
+      queryClient.setQueryData(['item', spaceId, itemId], (old: any) => {
+        if (!old) return old;
+        const contrib = { ...newContrib, reactions: (newContrib as any).reactions ?? [] };
+        return {
+          ...old,
+          contributions: [contrib, ...(old.contributions || [])],
+          _count: { ...old._count, contributions: (old._count?.contributions ?? 0) + 1 },
+        };
+      });
+      // Synchroniser en arrière-plan
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
       setNewContribution('');
       setShowContributionField(false);
