@@ -1246,12 +1246,22 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Description</label>
+                <textarea
+                  value={editingRelation.label}
+                  onChange={(e) => setEditingRelation({ ...editingRelation, label: e.target.value })}
+                  placeholder="Justification de la relation (optionnel)"
+                  rows={2}
+                  className="w-full text-sm px-3 py-1.5 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
             </div>
             <div className="flex gap-2 mt-4">
               {onUpdateRelation && (
                 <button
                   onClick={() => {
-                    onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type: editRelationType });
+                    onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type: editRelationType, label: editingRelation.label || null });
                     setEditingRelation(null);
                   }}
                   className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
