@@ -32,7 +32,7 @@ interface PertViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onAddChild: (parentId: string) => void;
-  onCreateRelation?: (fromItemId: string, toItemId: string, type: string) => void;
+  onCreateRelation?: (fromItemId: string, toItemId: string, type: string, label?: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
   onMoveToSpace?: (id: string) => void;
@@ -89,6 +89,7 @@ export function PertView({
     currentX: number; currentY: number;
   } | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+  const [pendingLabel, setPendingLabel] = useState('');
   const [editingRelation, setEditingRelation] = useState<{
     relationId: string; fromItemId: string; toItemId: string;
     type: string; label: string; sourceName: string; targetName: string;
@@ -270,10 +271,11 @@ export function PertView({
 
   const handleRelationTypeSelect = useCallback((type: string) => {
     if (pendingConnection) {
-      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type);
+      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, pendingLabel || undefined);
       setPendingConnection(null);
+      setPendingLabel('');
     }
-  }, [pendingConnection, onCreateRelation]);
+  }, [pendingConnection, pendingLabel, onCreateRelation]);
 
   const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
   const pendingTargetItem = pendingConnection ? items.find(i => i.id === pendingConnection.target) : null;
@@ -608,6 +610,16 @@ export function PertView({
               {' → '}
               <span className="font-medium">{pendingTargetItem?.title}</span>
             </p>
+            <div className="mb-3">
+              <label className="text-xs text-muted-foreground mb-1 block">Commentaire (optionnel)</label>
+              <textarea
+                value={pendingLabel}
+                onChange={e => setPendingLabel(e.target.value)}
+                placeholder="Décrivez cette relation…"
+                rows={2}
+                className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
             <div className="flex flex-col gap-2">
               {PERT_RELATION_TYPES.map((type) => (
                 <button
@@ -624,7 +636,15 @@ export function PertView({
                 </button>
               ))}
             </div>
-            <button onClick={() => setPendingConnection(null)} className="mt-3 w-full text-sm text-muted-foreground hover:text-foreground">Annuler</button>
+            {pendingLabel && (
+              <button
+                onClick={() => handleRelationTypeSelect('relates')}
+                className="mt-2 w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Créer avec type par défaut
+              </button>
+            )}
+            <button onClick={() => { setPendingConnection(null); setPendingLabel(''); }} className="mt-3 w-full text-sm text-muted-foreground hover:text-foreground">Annuler</button>
           </div>
         </div>
       )}

@@ -119,8 +119,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   });
 
   const createRelationMutation = useMutation({
-    mutationFn: ({ fromItemId, itemSpaceId, toItemId, type }: { fromItemId: string; itemSpaceId: string; toItemId: string; type: string }) =>
-      itemsApi.createRelation(itemSpaceId, fromItemId, { toItemId, type }),
+    mutationFn: ({ fromItemId, itemSpaceId, toItemId, type, label }: { fromItemId: string; itemSpaceId: string; toItemId: string; type: string; label?: string }) =>
+      itemsApi.createRelation(itemSpaceId, fromItemId, { toItemId, type, label }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
@@ -286,9 +286,9 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [allItems, communitySpaces, executeCrossSpaceMove]);
 
-  const handleCreateRelation = useCallback((fromItemId: string, toItemId: string, type: string) => {
+  const handleCreateRelation = useCallback((fromItemId: string, toItemId: string, type: string, label?: string) => {
     const itemSpaceId = resolveItemSpaceId(fromItemId);
-    createRelationMutation.mutate({ fromItemId, itemSpaceId, toItemId, type });
+    createRelationMutation.mutate({ fromItemId, itemSpaceId, toItemId, type, label });
   }, [resolveItemSpaceId, createRelationMutation]);
 
   const handleDeleteRelation = useCallback((itemId: string, relationId: string) => {

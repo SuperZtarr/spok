@@ -123,6 +123,7 @@ function MindMapViewInner({
   const { collapsedIds, setCollapsedIds } = useCollapsedIds(spaceId ?? '');
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+  const [pendingLabel, setPendingLabel] = useState('');
   const [editingEdge, setEditingEdge] = useState<{ relationId: string; fromItemId: string; type: string; label: string; sourceName: string; targetName: string } | null>(null);
   const [editEdgeType, setEditEdgeType] = useState('');
   const [editEdgeLabel, setEditEdgeLabel] = useState('');
@@ -628,11 +629,12 @@ function MindMapViewInner({
   const handleRelationTypeSelect = useCallback(
     (type: string) => {
       if (pendingConnection) {
-        onCreateRelation?.(pendingConnection.source, pendingConnection.target, type);
+        onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, pendingLabel || undefined);
         setPendingConnection(null);
+        setPendingLabel('');
       }
     },
-    [pendingConnection, onCreateRelation]
+    [pendingConnection, pendingLabel, onCreateRelation]
   );
 
   const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
@@ -1143,11 +1145,21 @@ function MindMapViewInner({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2">Type de relation</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{pendingSourceItem?.title}</span>
               {' → '}
               <span className="font-medium">{pendingTargetItem?.title}</span>
             </p>
+            <div className="mb-3">
+              <label className="text-xs text-muted-foreground mb-1 block">Commentaire (optionnel)</label>
+              <textarea
+                value={pendingLabel}
+                onChange={e => setPendingLabel(e.target.value)}
+                placeholder="Décrivez cette relation…"
+                rows={2}
+                className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {RELATION_TYPES.map((type) => (
                 <button
@@ -1164,8 +1176,16 @@ function MindMapViewInner({
                 </button>
               ))}
             </div>
+            {pendingLabel && (
+              <button
+                onClick={() => handleRelationTypeSelect('relates')}
+                className="mt-2 w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Créer avec type par défaut
+              </button>
+            )}
             <button
-              onClick={() => setPendingConnection(null)}
+              onClick={() => { setPendingConnection(null); setPendingLabel(''); }}
               className="mt-4 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
               Annuler
