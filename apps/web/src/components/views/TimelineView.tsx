@@ -14,6 +14,7 @@ import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { TreeItemRow } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 
@@ -73,6 +74,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     type: string; label: string; sourceName: string; targetName: string;
   } | null>(null);
   const [editRelationType, setEditRelationType] = useState<string>('');
+  useEscapeKey(() => setEditingRelation(null), !!editingRelation);
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{

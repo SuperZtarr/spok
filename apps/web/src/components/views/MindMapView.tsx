@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import {
   ReactFlow,
   Node,
@@ -127,6 +128,9 @@ function MindMapViewInner({
   const [editEdgeLabel, setEditEdgeLabel] = useState('');
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [showPortalDialog, setShowPortalDialog] = useState(false);
+  useEscapeKey(() => setPendingConnection(null), !!pendingConnection);
+  useEscapeKey(() => { setEditingEdge(null); setEditEdgeType(''); setEditEdgeLabel(''); }, !!editingEdge);
+  useEscapeKey(() => setShowPortalDialog(false), showPortalDialog);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
   const { fitView, getIntersectingNodes, getNodes } = useReactFlow();
   const { setDropTargetId: setSidebarDropTargetId } = useContext(SidebarDropContext);

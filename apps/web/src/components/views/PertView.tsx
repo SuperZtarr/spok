@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowLeft, ChevronDown, ChevronRight, Minus, Plus } from 'lucide-react';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
@@ -95,6 +96,7 @@ export function PertView({
   const [editRelationType, setEditRelationType] = useState<string>('');
 
   const [zoom, setZoom] = useState(1);
+  useEscapeKey(() => setEditingRelation(null), !!editingRelation);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const svgScrollRef = useRef<HTMLDivElement>(null);
