@@ -121,7 +121,20 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const createRelationMutation = useMutation({
     mutationFn: ({ fromItemId, itemSpaceId, toItemId, type, label }: { fromItemId: string; itemSpaceId: string; toItemId: string; type: string; label?: string }) =>
       itemsApi.createRelation(itemSpaceId, fromItemId, { toItemId, type, label }),
-    onSuccess: () => {
+    onSuccess: (newRelation, variables) => {
+      if (newRelation) {
+        queryClient.setQueriesData({ queryKey: ['items', spaceId] }, (old: any) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: old.data.map((item: any) =>
+              item.id === variables.fromItemId
+                ? { ...item, relationsFrom: [...(item.relationsFrom || []), newRelation] }
+                : item
+            ),
+          };
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
   });
@@ -138,6 +151,28 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     mutationFn: ({ itemId, itemSpaceId, relationId, data }: { itemId: string; itemSpaceId: string; relationId: string; data: { type?: string; label?: string | null } }) =>
       itemsApi.updateRelation(itemSpaceId, itemId, relationId, data),
     onSuccess: (_, variables) => {
+      // Patch optimiste : met à jour le label/type de la relation dans le cache sans attendre le refetch
+      const patchCache = (queryKey: unknown[]) => {
+        queryClient.setQueriesData({ queryKey }, (old: any) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: old.data.map((item: any) => {
+              if (!item.relationsFrom) return item;
+              const hasRel = item.relationsFrom.some((r: any) => r.id === variables.relationId);
+              if (!hasRel) return item;
+              return {
+                ...item,
+                relationsFrom: item.relationsFrom.map((r: any) =>
+                  r.id === variables.relationId ? { ...r, ...variables.data } : r
+                ),
+              };
+            }),
+          };
+        });
+      };
+      patchCache(['items', spaceId]);
+      if (variables.itemSpaceId !== spaceId) patchCache(['items', variables.itemSpaceId]);
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       if (variables.itemSpaceId !== spaceId) {
         queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });

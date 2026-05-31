@@ -40,7 +40,6 @@ import { TypesView } from '../components/views/TypesView';
 import { TimelineView } from '../components/views/TimelineView';
 
 import { MindMapView } from '../components/views/MindMapView';
-import type { MindMapViewHandle } from '../components/views/MindMapView';
 import { PlanningView } from '../components/views/PlanningView';
 import { CalendarView } from '../components/views/CalendarView';
 import { SelectionActionBar } from '../components/SelectionActionBar';
@@ -111,10 +110,8 @@ export function SpacePage() {
   }, [spaceId, expandedItems]);
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const mindmapRef = useRef<MindMapViewHandle>(null);
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const viewReadyRef = useRef(false); // true once defaultView has been applied for current space
-  const [mindmapExpanded, setMindmapExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -490,26 +487,10 @@ export function SpacePage() {
 
   // --- Toolbar callbacks ---
   const handleToggleExpand = useCallback(() => {
-    if (viewMode === 'mindmap') {
-      if (mindmapExpanded) {
-        mindmapRef.current?.collapseAll();
-        setMindmapExpanded(false);
-      } else {
-        mindmapRef.current?.expandAll();
-        setMindmapExpanded(true);
-      }
-    } else {
-      hasExpandedItems ? collapseAll() : expandAll();
-    }
-  }, [viewMode, mindmapExpanded, hasExpandedItems]);
+    hasExpandedItems ? collapseAll() : expandAll();
+  }, [hasExpandedItems]);
 
-  const handleResetLayout = useCallback(() => {
-    mindmapRef.current?.resetLayout();
-  }, []);
 
-  const handleFitAll = useCallback(() => {
-    mindmapRef.current?.fitAll();
-  }, []);
 
   const handleNewItem = useCallback(() => {
     const type = filter === 'ALL' ? 'NOTE' : filter;
@@ -584,10 +565,8 @@ export function SpacePage() {
           onSetMode={setMode}
           allowedViews={allowedViews}
           spaceViews={spaceViews}
-          isExpanded={viewMode === 'mindmap' ? mindmapExpanded : hasExpandedItems}
+          isExpanded={hasExpandedItems}
           onToggleExpand={handleToggleExpand}
-          onResetLayout={handleResetLayout}
-          onFitAll={viewMode === 'mindmap' ? handleFitAll : undefined}
           canEdit={canEdit}
           isSelectionMode={isSelectionMode}
           onToggleSelectionMode={() => setSelectionMode(!isSelectionMode)}
@@ -824,6 +803,7 @@ export function SpacePage() {
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               currentSpaceId={spaceId}
               spaceId={spaceId}
+              spaceName={space?.name ?? ''}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
@@ -855,6 +835,7 @@ export function SpacePage() {
             <PertView
               items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
+              spaceName={space?.name ?? ''}
               onEdit={setEditingItemId}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
@@ -883,7 +864,6 @@ export function SpacePage() {
           ) : viewMode === 'mindmap' ? (
             <MindMapView
               key={spaceId}
-              ref={mindmapRef}
               items={filterBySearch(allItemsData?.data)}
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}

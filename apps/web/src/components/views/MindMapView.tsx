@@ -19,7 +19,13 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2 } from 'lucide-react';
+import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { getViewportForBounds } from '@xyflow/react';
+import { jsPDF } from 'jspdf';
+import { CollapseToggleButton } from '../ui/CollapseToggleButton';
+import { Button } from '../ui/Button';
+import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 
 import {
   type TreeItem,
@@ -115,6 +121,8 @@ function MindMapViewInner({
   innerRef,
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
   // Track previous items to detect content-only vs structural changes
+  const userHasInteracted = useRef(false);
+  useEffect(() => { userHasInteracted.current = false; }, [spaceId]);
   const prevStructureRef = useRef<string>('');
   const prevDepsRef = useRef<string>('');
   const prevItemIdsRef = useRef<Set<string>>(new Set());
@@ -133,7 +141,7 @@ function MindMapViewInner({
   useEscapeKey(() => { setEditingEdge(null); setEditEdgeType(''); setEditEdgeLabel(''); }, !!editingEdge);
   useEscapeKey(() => setShowPortalDialog(false), showPortalDialog);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
-  const { fitView, getIntersectingNodes, getNodes } = useReactFlow();
+  const { fitView, getIntersectingNodes, getNodes, getNodesBounds: getNodesBoundsHook } = useReactFlow();
   const { setDropTargetId: setSidebarDropTargetId } = useContext(SidebarDropContext);
 
   // Helper: trouve l'espace sidebar sous les coordonnées écran
@@ -596,7 +604,7 @@ function MindMapViewInner({
     const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], edgePosMap);
     setNodes(allNodes);
     setEdges(allEdges);
-    setTimeout(() => fitView({ padding: 0.1 }), 50);
+    if (!userHasInteracted.current) setTimeout(() => fitView({ padding: 0.1 }), 50);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, structureSignature, depsSignature]);
 
   // Update drop target highlight on nodes
@@ -1033,6 +1041,73 @@ function MindMapViewInner({
     fitView({ padding: 0.1 });
   }, [fitView]);
 
+  const [exporting, setExporting] = useState(false);
+
+  const captureGraph = useCallback(async (padding = 40) => {
+    const nodes = getNodes();
+    if (nodes.length === 0) return null;
+    const bounds = getNodesBoundsHook(nodes);
+    const imageWidth = Math.round(bounds.width + padding * 2);
+    const imageHeight = Math.round(bounds.height + padding * 2);
+    const viewport = getViewportForBounds(bounds, imageWidth, imageHeight, 0.01, 4, padding / Math.max(imageWidth, imageHeight));
+    const flowEl = document.querySelector('.react-flow__viewport') as HTMLElement;
+    if (!flowEl) return null;
+    return toPng(flowEl, {
+      backgroundColor: '#ffffff',
+      width: imageWidth,
+      height: imageHeight,
+      skipFonts: true,
+      filter: (node) => {
+        // Ignorer les images externes (favicons, etc.) qui bloquent sur CORS
+        if (node instanceof HTMLImageElement && node.src && !node.src.startsWith(window.location.origin) && !node.src.startsWith('data:')) {
+          return false;
+        }
+        return true;
+      },
+      style: {
+        width: String(imageWidth),
+        height: String(imageHeight),
+        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        transformOrigin: 'top left',
+      },
+    }).then(dataUrl => ({ dataUrl, imageWidth, imageHeight }));
+  }, [getNodes]);
+
+  const sanitizedName = `${spaceName} - Carte mentale`.replace(/[<>:"/\\|?*]/g, '_').slice(0, 100);
+
+  const exportPNG = useCallback(async () => {
+    setExporting(true);
+    try {
+      const result = await captureGraph();
+      if (!result) return;
+      const a = document.createElement('a');
+      a.href = result.dataUrl;
+      a.download = `${sanitizedName}.png`;
+      a.click();
+    } finally {
+      setExporting(false);
+    }
+  }, [captureGraph, sanitizedName]);
+
+  const exportPDF = useCallback(async () => {
+    setExporting(true);
+    try {
+      const result = await captureGraph();
+      if (!result) return;
+      const { dataUrl, imageWidth, imageHeight } = result;
+      const isLandscape = imageWidth > imageHeight;
+      const doc = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [imageWidth, imageHeight],
+      });
+      doc.addImage(dataUrl, 'PNG', 0, 0, imageWidth, imageHeight);
+      doc.save(`${sanitizedName}.pdf`);
+    } finally {
+      setExporting(false);
+    }
+  }, [captureGraph, sanitizedName]);
+
   useImperativeHandle(innerRef, () => ({
     expandAll, collapseAll, resetLayout, hasCollapsedNodes, fitAll,
   }), [expandAll, collapseAll, resetLayout, hasCollapsedNodes, fitAll]);
@@ -1068,6 +1143,7 @@ function MindMapViewInner({
         minZoom={0.01}
         maxZoom={2}
         connectOnClick={false}
+        onMoveEnd={() => { userHasInteracted.current = true; }}
         defaultEdgeOptions={{
           type: 'default',
           style: { stroke: '#94a3b8', strokeWidth: 2 },
@@ -1093,49 +1169,71 @@ function MindMapViewInner({
             </button>
           </Panel>
         )}
-        <Panel position="bottom-left" className="bg-white/95 border rounded-lg shadow-sm p-2 text-xs max-w-[220px]">
-          <button
-            onClick={() => setLegendOpen(v => !v)}
-            className="flex items-center gap-1 font-semibold text-foreground w-full"
-            title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
-          >
-            <ChevronRight className={`w-3 h-3 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
-            Légende
-          </button>
-
-          <div className={`${legendOpen ? 'block' : 'hidden'} mt-2`}>
-            <div className="space-y-1 mb-3 text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
-                <span>Glissez pour créer une relation</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
-                <span>Cliquez pour supprimer</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
-                <span>Portail : autre espace</span>
-              </div>
-            </div>
-
-            <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Relations</div>
-            <div className="flex flex-wrap gap-1">
-              {RELATION_TYPES.map((type) => (
-                <div
-                  key={type.id}
-                  className="group relative p-1.5 rounded-md hover:bg-gray-100 cursor-help transition-colors"
-                  title={`${type.label} — ${type.description}`}
-                >
-                  <type.Icon className={`w-4 h-4 ${type.color}`} />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                    <div className="font-medium">{type.label}</div>
-                    <div className="text-gray-300 text-[10px]">{type.description}</div>
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+        <Panel position="top-left" className="flex gap-1">
+          <CollapseToggleButton
+            isCollapsed={collapsedIds.size > 0}
+            onToggle={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
+          />
+          <Button variant="bordered" size="sm" onClick={resetLayout} title="Réorganiser les éléments">
+            <RotateCcw className="w-4 h-4 mr-1" />
+            Réorganiser
+          </Button>
+          <Button variant="bordered" size="sm" onClick={fitAll} title="Tout voir">
+            <Maximize2 className="w-4 h-4 mr-1" />
+            Tout voir
+          </Button>
+          <ExportDropdownButton
+            disabled={exporting}
+            groups={[{ options: [
+              { label: 'PNG — schéma complet (.png)', onClick: exportPNG },
+              { label: 'PDF — schéma complet (.pdf)', onClick: exportPDF },
+            ]}]}
+          />
+          <div className="relative">
+            <Button
+              variant="bordered"
+              size="sm"
+              onClick={() => setLegendOpen(v => !v)}
+              title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
+            >
+              <ChevronRight className={`w-4 h-4 mr-1 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
+              Légende
+            </Button>
+            {legendOpen && (
+              <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
+                <div className="space-y-1.5 mb-3 text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                    <span>Glissez pour créer une relation</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
+                    <span>Cliquez pour supprimer</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+                    <span>Portail : autre espace</span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Relations</div>
+                <div className="flex flex-wrap gap-1">
+                  {RELATION_TYPES.map((type) => (
+                    <div
+                      key={type.id}
+                      className="group relative p-1.5 rounded-md hover:bg-accent cursor-help transition-colors"
+                      title={`${type.label} — ${type.description}`}
+                    >
+                      <type.Icon className={`w-4 h-4 ${type.color}`} />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                        <div className="font-medium">{type.label}</div>
+                        <div className="text-gray-300 text-[10px]">{type.description}</div>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Panel>
       </ReactFlow>

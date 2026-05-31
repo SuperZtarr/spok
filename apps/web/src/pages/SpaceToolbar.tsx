@@ -4,10 +4,6 @@ import {
   ChevronDown,
   Search,
   X,
-  ChevronsUpDown,
-  ChevronsDownUp,
-  RotateCcw,
-  Maximize2,
   Settings,
   History,
   ListChecks,
@@ -49,6 +45,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import { ViewHelpButton } from '../components/ViewHelpButton';
+import { CollapseToggleButton } from '../components/ui/CollapseToggleButton';
 import { SpaceExportButton } from '../components/SpaceExportButton';
 import type { ViewMode } from '../stores/viewMode';
 import type { MenuItemConfig, Item } from '@spok/shared';
@@ -92,10 +89,6 @@ export interface SpaceToolbarProps {
   // Expand/Collapse
   isExpanded: boolean;
   onToggleExpand: () => void;
-  // MindMap reset
-  onResetLayout: () => void;
-  // Fit all
-  onFitAll?: () => void;
   // Actions
   canEdit: boolean;
   isSelectionMode: boolean;
@@ -131,8 +124,6 @@ export function SpaceToolbar({
   defaultView,
   isExpanded,
   onToggleExpand,
-  onResetLayout,
-  onFitAll,
   canEdit,
   isSelectionMode,
   onToggleSelectionMode,
@@ -173,8 +164,7 @@ export function SpaceToolbar({
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
   }, [typeDropdownOpen, statusDropdownOpen]);
 
-  const showExpandCollapse = viewMode === 'tree' || viewMode === 'mindmap';
-  const showResetLayout = viewMode === 'mindmap';
+  const showExpandCollapse = viewMode === 'tree';
 
   return (
     <div className="flex flex-col gap-2 mb-3 z-20 bg-background pb-2 flex-shrink-0 relative">
@@ -377,55 +367,14 @@ export function SpaceToolbar({
         {showExpandCollapse && (
           <>
             <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
-            <Button
-              variant="bordered"
-              size="sm"
-              onClick={onToggleExpand}
-              title={isExpanded ? 'Tout réduire' : 'Tout étendre'}
+            <CollapseToggleButton
+              isCollapsed={!isExpanded}
+              onToggle={onToggleExpand}
               className="flex-shrink-0"
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronsDownUp className="w-4 h-4 mr-1" />
-                  Réduire
-                </>
-              ) : (
-                <>
-                  <ChevronsUpDown className="w-4 h-4 mr-1" />
-                  Étendre
-                </>
-              )}
-            </Button>
+            />
           </>
         )}
 
-        {showResetLayout && (
-          <>
-            <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
-            <Button
-              variant="bordered"
-              size="sm"
-              onClick={onResetLayout}
-              title="Réorganiser les éléments"
-              className="flex-shrink-0"
-            >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Réorganiser
-            </Button>
-            {onFitAll && (
-              <Button
-                variant="bordered"
-                size="sm"
-                onClick={onFitAll}
-                title="Tout voir"
-                className="flex-shrink-0"
-              >
-                <Maximize2 className="w-4 h-4 mr-1" />
-                Tout voir
-              </Button>
-            )}
-          </>
-        )}
 
         <div className="ml-auto flex gap-1 flex-shrink-0">
           {/* Mobile filter toggle */}
@@ -443,8 +392,8 @@ export function SpaceToolbar({
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />
             )}
           </button>
-          {exportItems && spaceName && (
-            <SpaceExportButton items={exportItems} spaceName={spaceName} viewContainerRef={viewContainerRef} />
+          {exportItems && spaceName && viewMode !== 'mindmap' && viewMode !== 'pert' && viewMode !== 'timeline' && (
+            <SpaceExportButton items={exportItems} spaceName={spaceName} viewMode={viewMode} viewContainerRef={viewContainerRef} />
           )}
           {canEdit && (
             <Link to={`/spaces/${spaceId}/history`}>

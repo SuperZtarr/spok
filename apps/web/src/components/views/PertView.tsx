@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Ban, ArrowLeft, ChevronDown, ChevronRight, Minus, Plus, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { PertToolbar } from './PertToolbar';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -28,6 +29,7 @@ interface PertViewProps {
   items: Item[];
   relations?: ItemRelation[];
   spaceId?: string;
+  spaceName?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -80,6 +82,7 @@ export function PertView({
   highlightStatus,
   highlightColor,
   searchMatchIds,
+  spaceName = '',
 }: PertViewProps) {
   const { collapsedIds, setCollapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -97,10 +100,15 @@ export function PertView({
   const [editRelationType, setEditRelationType] = useState<string>('');
 
   const [zoom, setZoom] = useState(1);
+  const zoomIn = useCallback(() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2)))), []);
+  const zoomOut = useCallback(() => setZoom(z => Math.max(0.25, parseFloat((z - 0.1).toFixed(2)))), []);
+  const resetZoom = useCallback(() => setZoom(1), []);
+
   useEscapeKey(() => setEditingRelation(null), !!editingRelation);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const svgScrollRef = useRef<HTMLDivElement>(null);
+  const pertContainerRef = useRef<HTMLDivElement>(null);
 
   // Ctrl+scroll to zoom
   useEffect(() => {
@@ -157,7 +165,7 @@ export function PertView({
     return ids;
   }, [tree]);
 
-  const rowIndex = useMemo(() => {
+const rowIndex = useMemo(() => {
     const map = new Map<string, number>();
     flatItems.forEach((item, i) => map.set(item.id, i));
     return map;
@@ -363,7 +371,21 @@ export function PertView({
   }
 
   return (
-    <div className="flex h-full overflow-hidden border rounded-lg">
+    <div className="flex flex-col h-full overflow-hidden border rounded-lg" ref={pertContainerRef}>
+      <PertToolbar
+        zoom={zoom}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetZoom={resetZoom}
+        hasParents={parentIds.length > 0}
+        hasCollapsed={collapsedIds.size > 0}
+        onCollapseAll={() => setCollapsedIds(new Set(parentIds))}
+        onExpandAll={() => setCollapsedIds(new Set())}
+        items={items}
+        spaceName={spaceName}
+        containerRef={pertContainerRef}
+      />
+      <div className="flex flex-1 overflow-hidden">
       {/* Left panel — tree */}
       <div
         className="flex-shrink-0 border-r overflow-y-auto overflow-x-hidden"
@@ -513,49 +535,6 @@ export function PertView({
         )}
         </div>
 
-        {/* Collapse controls */}
-        {parentIds.length > 0 && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-0.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm px-1.5 py-1 z-10">
-            <button
-              onClick={() => setCollapsedIds(new Set(parentIds))}
-              className="h-6 px-2 flex items-center gap-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground text-xs"
-              title="Tout réduire"
-            >
-              <ChevronsDownUp className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setCollapsedIds(new Set())}
-              className="h-6 px-2 flex items-center gap-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground text-xs"
-              title="Tout étendre"
-            >
-              <ChevronsUpDown className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-        {/* Zoom controls */}
-        <div className="absolute bottom-3 right-3 flex items-center gap-0.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm px-1.5 py-1 z-10">
-          <button
-            onClick={() => setZoom(z => Math.max(0.25, parseFloat((z - 0.1).toFixed(2))))}
-            className="h-6 w-6 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-            title="Dézoomer"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setZoom(1)}
-            className="text-xs w-11 text-center tabular-nums text-muted-foreground hover:text-foreground transition-colors"
-            title="Réinitialiser le zoom"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-          <button
-            onClick={() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2))))}
-            className="h-6 w-6 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-            title="Zoomer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </div>
 
       {/* Edit relation dialog */}
@@ -674,6 +653,7 @@ export function PertView({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

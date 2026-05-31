@@ -1,5 +1,8 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch } from 'lucide-react';
+import { CollapseToggleButton } from '../ui/CollapseToggleButton';
+import { ExportDropdownButton } from '../ui/ExportDropdownButton';
+import { buildExportFilename, exportCSV, exportExcel, exportDataPDF, exportContainerPNG } from '../../lib/exportUtils';
 import {
   DndContext, DragOverlay, pointerWithin,
   useSensors, useSensor, PointerSensor,
@@ -55,12 +58,14 @@ interface TimelineViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  spaceName?: string;
 }
 
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: TimelineViewProps) {
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '' }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
   const [centerDate, setCenterDate] = useState<Date>(() => startOfDay(new Date()));
@@ -252,6 +257,13 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     if (!showCriticalPath || !relations || relations.length === 0) return new Set<string>();
     return computeCriticalPath(items, relations);
   }, [showCriticalPath, items, relations]);
+
+  const parentIds = useMemo(() => {
+    const ids: string[] = [];
+    function collect(nodes: typeof tree) { for (const n of nodes) { if (n.children.length > 0) { ids.push(n.id); collect(n.children); } } }
+    collect(tree);
+    return ids;
+  }, [tree]);
 
   // Generate days array
   const days = useMemo(() => {
@@ -627,7 +639,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
   const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month';
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" ref={viewContainerRef}>
       {/* Toolbar */}
       <div className="flex items-center justify-between p-3 border-b bg-muted/30 gap-4">
         <div className="flex items-center gap-2">
@@ -678,6 +690,14 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
             )}
           </Button>
 
+          {/* Collapse/expand all */}
+          {parentIds.length > 0 && (
+            <CollapseToggleButton
+              isCollapsed={collapsedIds.size > 0}
+              onToggle={() => collapsedIds.size > 0 ? setCollapsedIds(new Set()) : setCollapsedIds(new Set(parentIds))}
+            />
+          )}
+
           {/* Chemin critique toggle */}
           <Button
             variant={showCriticalPath ? 'default' : 'outline'}
@@ -724,6 +744,20 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
               <ZoomOut className="w-4 h-4" />
             </Button>
           </div>
+          <ExportDropdownButton
+            groups={[
+              { options: [
+                { label: 'CSV (.csv)',    onClick: () => exportCSV(items, buildExportFilename(spaceName, 'timeline')) },
+                { label: 'Excel (.xlsx)', onClick: () => exportExcel(items, buildExportFilename(spaceName, 'timeline')) },
+              ]},
+              { options: [
+                { label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, buildExportFilename(spaceName, 'timeline'), spaceName) },
+              ]},
+              { options: [
+                { label: 'PNG — vue (.png)', onClick: () => viewContainerRef.current ? exportContainerPNG(viewContainerRef.current, buildExportFilename(spaceName, 'timeline')) : Promise.resolve() },
+              ]},
+            ]}
+          />
         </div>
       </div>
 
