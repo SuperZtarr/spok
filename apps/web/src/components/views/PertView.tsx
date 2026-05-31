@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Ban, ArrowLeft, ChevronDown, ChevronRight, Minus, Plus } from 'lucide-react';
+import { Ban, ArrowLeft, ChevronDown, ChevronRight, Minus, Plus, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -81,7 +81,7 @@ export function PertView({
   highlightColor,
   searchMatchIds,
 }: PertViewProps) {
-  const { collapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
+  const { collapsedIds, setCollapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [relationDrag, setRelationDrag] = useState<{
     fromItemId: string;
@@ -149,6 +149,13 @@ export function PertView({
 
   const tree = useMemo(() => buildTree(items, pertSortFn), [items, pertSortFn]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
+
+  const parentIds = useMemo(() => {
+    const ids: string[] = [];
+    function collect(nodes: typeof tree) { for (const n of nodes) { if (n.children.length > 0) { ids.push(n.id); collect(n.children); } } }
+    collect(tree);
+    return ids;
+  }, [tree]);
 
   const rowIndex = useMemo(() => {
     const map = new Map<string, number>();
@@ -506,6 +513,25 @@ export function PertView({
         )}
         </div>
 
+        {/* Collapse controls */}
+        {parentIds.length > 0 && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-0.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm px-1.5 py-1 z-10">
+            <button
+              onClick={() => setCollapsedIds(new Set(parentIds))}
+              className="h-6 px-2 flex items-center gap-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground text-xs"
+              title="Tout réduire"
+            >
+              <ChevronsDownUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setCollapsedIds(new Set())}
+              className="h-6 px-2 flex items-center gap-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground text-xs"
+              title="Tout étendre"
+            >
+              <ChevronsUpDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
         {/* Zoom controls */}
         <div className="absolute bottom-3 right-3 flex items-center gap-0.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm px-1.5 py-1 z-10">
           <button
