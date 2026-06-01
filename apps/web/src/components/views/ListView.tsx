@@ -124,6 +124,13 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     }
   }, [sortField]);
 
+  // Build parent name map
+  const parentNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    items.forEach(item => { map[item.id] = item.title; });
+    return map;
+  }, [items]);
+
   // Sort items
   const sortedItems = useMemo(() => {
     if (!sortField) return items;
@@ -163,14 +170,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           return 0;
       }
     });
-  }, [items, sortField, sortDir]);
-
-  // Build parent name map
-  const parentNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    items.forEach(item => { map[item.id] = item.title; });
-    return map;
-  }, [items]);
+  }, [items, sortField, sortDir, parentNames]);
 
   // Build status and type maps from referentiels
   const { statusLabels, statusColors, typeLabelsShort } = useMemo(() => {

@@ -4,7 +4,27 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-05-26
+## EN COURS — 2026-06-01
+
+### Fix PERT export + tri alpha + fix ListView
+- `ExportDropdownButton.tsx` : dropdown via `createPortal` → corrige position hors écran
+- `PertToolbar.tsx` + `PertView.tsx` : toggle tri dépendances / alphabétique
+- `ListView.tsx` : fix crash `parentNames` utilisé avant initialisation
+
+## HISTORIQUE — 2026-05-31
+
+### Refactor toolbars par vue + export unifié (dba38db)
+- `PertToolbar.tsx` : zoom + collapse + ExportDropdownButton (PDF data, PNG, PDF visuel)
+- `TimelineView` : collapse/expand + ExportDropdownButton (CSV, Excel, PDF, PNG) dans toolbar interne
+- `MindMapView` : boutons dans Panel RF (collapse, réorganiser, tout voir, ExportDropdownButton PNG+PDF schéma)
+- `CollapseToggleButton` + `ExportDropdownButton` : composants partagés
+- `exportUtils.ts` : fonctions d'export centralisées
+- `SpaceToolbar` : ne garde que search/filtres/sélecteur/nouveau
+- Fix icône commentaire relation : `setQueryData` optimiste sur create/update relation
+- Fix MindMap fitView : ne recentre plus après interaction utilisateur
+- Fix NotificationBell z-index
+
+## HISTORIQUE — 2026-05-26
 
 ### Dashboard : panneau "Assignés à moi"
 - `MyDashboardView.tsx` : dérivé `assignedTasks` depuis `allTasks` (assignedToId === user.id), panneau dans colonne droite après Aujourd'hui

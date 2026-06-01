@@ -146,13 +146,18 @@ export function PertView({
     [items, predecessors, successors]
   );
 
+  const [pertSortMode, setPertSortMode] = useState<'rank' | 'alpha'>('rank');
+
   const pertSortFn = useMemo(
     () => (a: { id: string; title: string }, b: { id: string; title: string }) => {
+      if (pertSortMode === 'alpha') {
+        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+      }
       const rankDiff = (ranks.get(a.id) ?? 0) - (ranks.get(b.id) ?? 0);
       if (rankDiff !== 0) return rankDiff;
       return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
     },
-    [ranks]
+    [ranks, pertSortMode]
   );
 
   const tree = useMemo(() => buildTree(items, pertSortFn), [items, pertSortFn]);
@@ -384,6 +389,8 @@ const rowIndex = useMemo(() => {
         items={items}
         spaceName={spaceName}
         containerRef={pertContainerRef}
+        sortMode={pertSortMode}
+        onSortModeChange={setPertSortMode}
       />
       <div className="flex flex-1 overflow-hidden">
       {/* Left panel — tree */}

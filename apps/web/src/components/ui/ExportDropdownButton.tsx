@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Download } from 'lucide-react';
 import { Button } from './Button';
 
@@ -57,7 +58,7 @@ export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonP
         <Download className="w-4 h-4 mr-1" />
         {exporting ? 'Export…' : 'Exporter'}
       </Button>
-      {open && pos && (
+      {open && pos && createPortal(
         <div
           ref={dropdownRef}
           className="fixed bg-card border rounded-lg shadow-xl py-1 min-w-[200px]"
@@ -77,7 +78,8 @@ export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonP
               ))}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

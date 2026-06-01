@@ -1,4 +1,4 @@
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, ArrowDownAZ, Network } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import type { Item } from '@spok/shared';
@@ -16,12 +16,15 @@ interface PertToolbarProps {
   items: Item[];
   spaceName: string;
   containerRef: React.RefObject<HTMLDivElement>;
+  sortMode: 'rank' | 'alpha';
+  onSortModeChange: (mode: 'rank' | 'alpha') => void;
 }
 
 export function PertToolbar({
   zoom, onZoomIn, onZoomOut, onResetZoom,
   hasParents, hasCollapsed, onCollapseAll, onExpandAll,
   items, spaceName, containerRef,
+  sortMode, onSortModeChange,
 }: PertToolbarProps) {
   const filename = buildExportFilename(spaceName, 'pert');
 
@@ -56,6 +59,21 @@ export function PertToolbar({
         title="Zoomer"
       >
         <Plus className="w-3.5 h-3.5" />
+      </button>
+      <div className="h-4 w-px bg-border mx-1" />
+      <button
+        onClick={() => onSortModeChange('rank')}
+        className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${sortMode === 'rank' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+        title="Trier par dépendances"
+      >
+        <Network className="w-3.5 h-3.5" />
+      </button>
+      <button
+        onClick={() => onSortModeChange('alpha')}
+        className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${sortMode === 'alpha' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+        title="Trier alphabétiquement"
+      >
+        <ArrowDownAZ className="w-3.5 h-3.5" />
       </button>
       <div className="h-4 w-px bg-border mx-1" />
       <ExportDropdownButton
