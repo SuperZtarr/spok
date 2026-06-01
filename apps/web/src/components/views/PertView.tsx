@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { PertToolbar } from './PertToolbar';
+import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -127,27 +128,29 @@ export function PertView({
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
 
+  const [pertSortMode, setPertSortMode] = useState<'rank' | 'alpha'>('rank');
+  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const sortedItems = useMemo(() => applyTreeSort(items, treeSort), [items, treeSort]);
+
   const pertRelations = useMemo(
     () => relations.filter(r => r.type === 'blocks' || r.type === 'depends'),
     [relations]
   );
 
   const { predecessors, successors } = useMemo(
-    () => buildPertGraph(items, pertRelations),
-    [items, pertRelations]
+    () => buildPertGraph(sortedItems, pertRelations),
+    [sortedItems, pertRelations]
   );
 
   const ranks = useMemo(
-    () => computePertRanks(items, predecessors, successors),
-    [items, predecessors, successors]
+    () => computePertRanks(sortedItems, predecessors, successors),
+    [sortedItems, predecessors, successors]
   );
 
   const criticalPathIds = useMemo(
-    () => computeCriticalPathNaive(items, predecessors, successors),
-    [items, predecessors, successors]
+    () => computeCriticalPathNaive(sortedItems, predecessors, successors),
+    [sortedItems, predecessors, successors]
   );
-
-  const [pertSortMode, setPertSortMode] = useState<'rank' | 'alpha'>('rank');
 
   const pertSortFn = useMemo(
     () => (a: { id: string; title: string }, b: { id: string; title: string }) => {
@@ -161,7 +164,7 @@ export function PertView({
     [ranks, pertSortMode]
   );
 
-  const tree = useMemo(() => buildTree(items, pertSortFn), [items, pertSortFn]);
+  const tree = useMemo(() => buildTree(sortedItems, pertSortFn), [sortedItems, pertSortFn]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
 
   const parentIds = useMemo(() => {
@@ -393,6 +396,8 @@ const rowIndex = useMemo(() => {
         svgRef={pertSvgRef}
         sortMode={pertSortMode}
         onSortModeChange={setPertSortMode}
+        treeSort={treeSort}
+        onTreeSortChange={setTreeSort}
       />
       <div className="flex flex-1 overflow-hidden">
       {/* Left panel — tree */}

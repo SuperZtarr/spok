@@ -3,6 +3,8 @@ import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import type { Item } from '@spok/shared';
 import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } from '../../lib/exportUtils';
+import { TreeSortButton } from '../ui/TreeSortButton';
+import { type TreeSort } from '../../lib/treeSort';
 
 interface PertToolbarProps {
   zoom: number;
@@ -19,6 +21,8 @@ interface PertToolbarProps {
   svgRef: React.RefObject<SVGSVGElement>;
   sortMode: 'rank' | 'alpha';
   onSortModeChange: (mode: 'rank' | 'alpha') => void;
+  treeSort: TreeSort;
+  onTreeSortChange: (mode: TreeSort) => void;
 }
 
 export function PertToolbar({
@@ -26,6 +30,7 @@ export function PertToolbar({
   hasParents, hasCollapsed, onCollapseAll, onExpandAll,
   items, spaceName, svgRef,
   sortMode, onSortModeChange,
+  treeSort, onTreeSortChange,
 }: PertToolbarProps) {
   const filename = buildExportFilename(spaceName, 'pert');
 
@@ -61,6 +66,8 @@ export function PertToolbar({
       >
         <Plus className="w-3.5 h-3.5" />
       </button>
+      <div className="h-4 w-px bg-border mx-1" />
+      <TreeSortButton value={treeSort} onChange={onTreeSortChange} />
       <div className="h-4 w-px bg-border mx-1" />
       <button
         onClick={() => onSortModeChange('rank')}

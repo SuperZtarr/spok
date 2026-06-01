@@ -2,6 +2,8 @@ import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
+import { TreeSortButton } from '../ui/TreeSortButton';
+import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { buildExportFilename, exportCSV, exportExcel, exportDataPDF, exportContainerPNG } from '../../lib/exportUtils';
 import {
   DndContext, DragOverlay, pointerWithin,
@@ -140,7 +142,9 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
     return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
   }, [portalGroups]);
 
-  const tree = useMemo(() => buildTree(items), [items]);
+  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const sortedItems = useMemo(() => applyTreeSort(items, treeSort), [items, treeSort]);
+  const tree = useMemo(() => buildTree(sortedItems), [sortedItems]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
   // Compute effective dates for parents without own dates — derived from descendants
@@ -659,6 +663,7 @@ export function TimelineView({ items, relations, currentSpaceId, portalGroups, o
         </div>
 
         <div className="flex items-center gap-2">
+          <TreeSortButton value={treeSort} onChange={setTreeSort} />
           <span className="text-sm text-muted-foreground">
             {items.length} ({itemsWithDatesCount} planifiés)
           </span>

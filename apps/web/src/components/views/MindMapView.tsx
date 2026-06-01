@@ -19,7 +19,7 @@ import '@xyflow/react/dist/style.css';
 import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw } from 'lucide-react';
+import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Filter, X } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { getViewportForBounds } from '@xyflow/react';
 import { jsPDF } from 'jspdf';
@@ -266,6 +266,16 @@ function MindMapViewInner({
 
   const hasPortalSupport = availableSpaces.length > 0;
 
+  const [localHighlightType, setLocalHighlightType] = useState<string | undefined>(undefined);
+  const [localHighlightStatus, setLocalHighlightStatus] = useState<string | undefined>(undefined);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLDivElement>(null);
+
+  // Local filter takes priority over SpaceToolbar props
+  const effectiveHighlightType = localHighlightType ?? highlightType;
+  const effectiveHighlightStatus = localHighlightStatus ?? highlightStatus;
+  const hasLocalFilter = !!(localHighlightType || localHighlightStatus);
+
   const statuses = useMemo(() => {
     return referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
   }, [referentiels]);
@@ -281,6 +291,25 @@ function MindMapViewInner({
     if (!spaceId) return items;
     return items.filter(i => i.spaceId === spaceId);
   }, [items, spaceId]);
+
+  // Types actually present in this space
+  const presentTypes = useMemo(() => {
+    const types = new Set(currentSpaceItems.map(i => i.type));
+    const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+    return Array.from(types).map(t => ({
+      id: t,
+      label: (typeLabels as any)[t]?.label ?? t,
+    })).sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+  }, [currentSpaceItems, referentiels]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!filterBtnRef.current?.contains(e.target as globalThis.Node)) setFilterOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [filterOpen]);
 
   const portalItemsBySpace = useMemo(() => {
     if (!spaceId) return new Map<string, ItemWithRelations[]>();
@@ -357,11 +386,14 @@ function MindMapViewInner({
   }), [onEdit, onDelete, onUpdateStatus, onAddChild, handleAddPortal, toggleCollapse, handleReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, togglePin, handleSavePosition]);
 
   const layoutOptions: MindMapLayoutOptions = useMemo(() => ({
-    hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem,
+    hasPortalSupport, statusOptions,
+    highlightType: effectiveHighlightType,
+    highlightStatus: effectiveHighlightStatus,
+    searchMatchIds, canEdit, canEditItem,
     pinnedIdsSet: pinnedIds.current,
     currentSpaceId: spaceId,
     portalSpaceNames,
-  }), [hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, spaceId, portalSpaceNames]);
+  }), [hasPortalSupport, statusOptions, effectiveHighlightType, effectiveHighlightStatus, searchMatchIds, canEdit, canEditItem, spaceId, portalSpaceNames]);
 
   const { initialNodes, initialEdges } = useMemo(() => {
     const { nodes, edges, relationEdges } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
@@ -1189,6 +1221,79 @@ function MindMapViewInner({
               { label: 'PDF — schéma complet (.pdf)', onClick: exportPDF },
             ]}]}
           />
+          <div ref={filterBtnRef} className="relative">
+            <Button
+              variant={hasLocalFilter ? 'default' : 'bordered'}
+              size="sm"
+              onClick={() => setFilterOpen(v => !v)}
+              title="Filtrer par type ou statut"
+            >
+              <Filter className="w-4 h-4 mr-1" />
+              {localHighlightType
+                ? presentTypes.find(t => t.id === localHighlightType)?.label ?? localHighlightType
+                : localHighlightStatus
+                  ? (statusOptions.find(s => s.id === localHighlightStatus)?.label ?? localHighlightStatus)
+                  : 'Filtrer'}
+              {hasLocalFilter && (
+                <span
+                  className="ml-1 hover:text-destructive"
+                  onClick={e => { e.stopPropagation(); setLocalHighlightType(undefined); setLocalHighlightStatus(undefined); }}
+                  title="Effacer le filtre"
+                >
+                  <X className="w-3 h-3" />
+                </span>
+              )}
+            </Button>
+            {filterOpen && (
+              <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-xl py-1 min-w-[200px] z-50">
+                {presentTypes.length > 0 && (
+                  <>
+                    <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Par type</div>
+                    {presentTypes.map(t => (
+                      <button
+                        key={t.id}
+                        className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2 ${localHighlightType === t.id ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => { setLocalHighlightType(localHighlightType === t.id ? undefined : t.id); setLocalHighlightStatus(undefined); setFilterOpen(false); }}
+                      >
+                        {localHighlightType === t.id && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                        {localHighlightType !== t.id && <span className="w-1.5 h-1.5 flex-shrink-0" />}
+                        {t.label}
+                      </button>
+                    ))}
+                  </>
+                )}
+                {statusOptions.length > 0 && (
+                  <>
+                    <div className="h-px bg-border mx-2 my-1" />
+                    <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Par statut</div>
+                    {statusOptions.map(s => (
+                      <button
+                        key={s.id}
+                        className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2 ${localHighlightStatus === s.id ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => { setLocalHighlightStatus(localHighlightStatus === s.id ? undefined : s.id); setLocalHighlightType(undefined); setFilterOpen(false); }}
+                      >
+                        {localHighlightStatus === s.id && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                        {localHighlightStatus !== s.id && <span className="w-1.5 h-1.5 flex-shrink-0" />}
+                        {s.label}
+                      </button>
+                    ))}
+                  </>
+                )}
+                {hasLocalFilter && (
+                  <>
+                    <div className="h-px bg-border mx-2 my-1" />
+                    <button
+                      className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors text-muted-foreground"
+                      onClick={() => { setLocalHighlightType(undefined); setLocalHighlightStatus(undefined); setFilterOpen(false); }}
+                    >
+                      Effacer le filtre
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="relative">
             <Button
               variant="bordered"

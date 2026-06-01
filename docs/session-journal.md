@@ -6,6 +6,13 @@
 
 ## EN COURS — 2026-06-01
 
+### Tri arborescence multi-vues + filtre MindMap
+- `lib/treeSort.ts` : utilitaire partagé (TreeSort, sortTreeAlpha, applyTreeSort)
+- `ui/TreeSortButton.tsx` : composant dropdown partagé
+- `ListView.tsx` : refactorisé vers composants partagés
+- `ThreadView.tsx`, `TimelineView.tsx`, `PertView.tsx`, `PertToolbar.tsx`, `SpacePage.tsx` : bouton tri ajouté
+- `MindMapView.tsx` : bouton Filtrer local (type/statut) dans Panel top-left, priorité sur props SpaceToolbar
+
 ### Corrections diverses vues (en cours)
 - `exportUtils.ts` : export SVG PERT via canvas (data URI, inlining styles, remplacement foreignObject)
 - `SpacePage.tsx` : fix DnD arborescence (rootItemsList → rootItems)

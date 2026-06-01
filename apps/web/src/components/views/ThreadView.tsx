@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MessageSquare, ChevronDown, ChevronRight, Clock, ExternalLink } from 'lucide-react';
+import { TreeSortButton } from '../ui/TreeSortButton';
+import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { Button } from '../ui/Button';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
@@ -113,12 +115,15 @@ export function ThreadView({
   searchMatchIds,
 }: ThreadViewProps) {
   const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
+  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+
+  const sortedItems = useMemo(() => applyTreeSort(items || [], treeSort), [items, treeSort]);
 
   // Build item tree (parent-child hierarchy)
   const itemTree = useMemo(() => {
-    if (!items) return [];
-    return buildItemTree(items);
-  }, [items]);
+    if (!sortedItems.length) return [];
+    return buildItemTree(sortedItems);
+  }, [sortedItems]);
 
   const toggleThread = (itemId: string) => {
     setExpandedThreadId(prev => prev === itemId ? null : itemId);
@@ -306,6 +311,9 @@ export function ThreadView({
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="flex items-center gap-2 mb-2">
+          <TreeSortButton value={treeSort} onChange={setTreeSort} />
+        </div>
         {/* Thread list — forum style with hierarchy */}
         <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
           {itemTree.map(node => renderItemNode(node, 0))}

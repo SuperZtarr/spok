@@ -80,6 +80,8 @@ import { stripMarkup } from '../lib/bbcode';
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
 import { useSpaceActions } from './useSpaceActions';
+import { TreeSortButton } from '../components/ui/TreeSortButton';
+import { type TreeSort, applyTreeSort } from '../lib/treeSort';
 import { SpaceToolbar } from './SpaceToolbar';
 import { useAuthStore } from '../stores/auth';
 import { recordSpaceVisit } from '../hooks/useRecentSpaces';
@@ -353,6 +355,7 @@ export function SpacePage() {
   const [overId, setOverId] = useState<string | null>(null);
   const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
+  const [treeViewSort, setTreeViewSort] = useState<TreeSort>('manual');
   const pointerYRef = useRef(0);
 
   useEffect(() => {
@@ -1207,8 +1210,11 @@ export function SpacePage() {
               onDragCancel={handleDragCancel}
             >
               <div>
+                <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1 border-b border-border bg-card/80">
+                  <TreeSortButton value={treeViewSort} onChange={setTreeViewSort} />
+                </div>
                 <div className="py-2">
-                  {filterBySearch(rootItems).map((item: Item & { childCount?: number }, index: number) => (
+                  {filterBySearch(applyTreeSort(rootItems, treeViewSort)).map((item: Item & { childCount?: number }, index: number) => (
                     <TreeItem
                       key={item.id}
                       item={item}
