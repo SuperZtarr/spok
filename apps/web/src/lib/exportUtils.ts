@@ -149,6 +149,106 @@ export function exportDataPDF(items: Item[], filename: string, spaceName: string
   doc.save(`${filename}.pdf`);
 }
 
+function prepareSvgForExport(original: SVGSVGElement): SVGSVGElement {
+  const clone = original.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  // Strip zoom transform so the full diagram renders at natural size
+  clone.style.transform = '';
+  clone.style.transformOrigin = '';
+
+  // Walk original + clone in parallel: inline computed styles, replace foreignObject with <text>
+  function walk(origEl: Element, cloneEl: Element) {
+    if (origEl.tagName === 'foreignObject') {
+      // Replace foreignObject with SVG <text> showing the item title
+      const title = origEl.querySelector('span')?.textContent?.trim() || '';
+      const x = parseFloat(origEl.getAttribute('x') || '4');
+      const y = parseFloat(origEl.getAttribute('y') || '2');
+      const h = parseFloat(origEl.getAttribute('height') || '28');
+      const w = parseFloat(origEl.getAttribute('width') || '160');
+      const ns = 'http://www.w3.org/2000/svg';
+      const text = document.createElementNS(ns, 'text');
+      text.setAttribute('x', String(x + 2));
+      text.setAttribute('y', String(y + h / 2));
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-size', '11');
+      text.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+      text.setAttribute('fill', '#1e293b');
+      // Estimate max chars based on node width (~6px per char at font-size 11)
+      const maxChars = Math.floor((w - 12) / 6);
+      text.textContent = title.length > maxChars ? title.slice(0, maxChars - 1) + '…' : title;
+      cloneEl.parentNode?.replaceChild(text, cloneEl);
+      return; // no recursion into foreignObject
+    }
+
+    // Inline fill and stroke from computed styles (resolves CSS vars + Tailwind classes)
+    const computed = window.getComputedStyle(origEl);
+    const fill = computed.getPropertyValue('fill');
+    const stroke = computed.getPropertyValue('stroke');
+    const strokeWidth = computed.getPropertyValue('stroke-width');
+    const opacity = computed.getPropertyValue('opacity');
+    if (fill) (cloneEl as SVGElement).setAttribute('fill', fill);
+    if (stroke) (cloneEl as SVGElement).setAttribute('stroke', stroke);
+    if (strokeWidth) (cloneEl as SVGElement).setAttribute('stroke-width', strokeWidth);
+    if (opacity && opacity !== '1') (cloneEl as SVGElement).setAttribute('opacity', opacity);
+
+    const origChildren = Array.from(origEl.children);
+    const cloneChildren = Array.from(cloneEl.children);
+    origChildren.forEach((child, i) => { if (cloneChildren[i]) walk(child, cloneChildren[i]); });
+  }
+
+  walk(original, clone);
+  return clone;
+}
+
+function svgToDataUri(svg: SVGSVGElement): string {
+  const prepared = prepareSvgForExport(svg);
+  const svgStr = new XMLSerializer().serializeToString(prepared);
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+}
+
+async function svgToCanvas(svg: SVGSVGElement, scale = 2): Promise<HTMLCanvasElement> {
+  const width = svg.width.baseVal.value;
+  const height = svg.height.baseVal.value;
+  const img = new Image();
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = svgToDataUri(svg);
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(scale, scale);
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas;
+}
+
+export async function exportSvgAsPng(svg: SVGSVGElement, filename: string): Promise<void> {
+  const canvas = await svgToCanvas(svg, 2);
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${filename}.png`;
+    a.click();
+  }, 'image/png');
+}
+
+export async function exportSvgAsPdf(svg: SVGSVGElement, filename: string): Promise<void> {
+  const width = svg.width.baseVal.value;
+  const height = svg.height.baseVal.value;
+  const canvas = await svgToCanvas(svg, 2);
+  const dataUrl = canvas.toDataURL('image/png');
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation: width > height ? 'landscape' : 'portrait', unit: 'px', format: [width, height] });
+  doc.addImage(dataUrl, 'PNG', 0, 0, width, height);
+  doc.save(`${filename}.pdf`);
+}
+
 const toPngOptions = (container: HTMLElement) => ({
   backgroundColor: '#ffffff' as const,
   skipFonts: true,

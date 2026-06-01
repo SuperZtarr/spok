@@ -2,7 +2,7 @@ import { Minus, Plus, ArrowDownAZ, Network } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import type { Item } from '@spok/shared';
-import { buildExportFilename, exportDataPDF, exportContainerPNG, exportContainerPDF } from '../../lib/exportUtils';
+import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } from '../../lib/exportUtils';
 
 interface PertToolbarProps {
   zoom: number;
@@ -16,6 +16,7 @@ interface PertToolbarProps {
   items: Item[];
   spaceName: string;
   containerRef: React.RefObject<HTMLDivElement>;
+  svgRef: React.RefObject<SVGSVGElement>;
   sortMode: 'rank' | 'alpha';
   onSortModeChange: (mode: 'rank' | 'alpha') => void;
 }
@@ -23,13 +24,13 @@ interface PertToolbarProps {
 export function PertToolbar({
   zoom, onZoomIn, onZoomOut, onResetZoom,
   hasParents, hasCollapsed, onCollapseAll, onExpandAll,
-  items, spaceName, containerRef,
+  items, spaceName, svgRef,
   sortMode, onSortModeChange,
 }: PertToolbarProps) {
   const filename = buildExportFilename(spaceName, 'pert');
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm">
+    <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm">
       {hasParents && (
         <>
           <CollapseToggleButton
@@ -80,8 +81,8 @@ export function PertToolbar({
         groups={[
           { options: [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] },
           { options: [
-            { label: 'PNG — vue (.png)', onClick: () => containerRef.current ? exportContainerPNG(containerRef.current, filename) : Promise.resolve() },
-            { label: 'PDF — vue (.pdf)', onClick: () => containerRef.current ? exportContainerPDF(containerRef.current, filename) : Promise.resolve() },
+            { label: 'PNG — vue (.png)', onClick: () => svgRef.current ? exportSvgAsPng(svgRef.current, filename) : Promise.resolve() },
+            { label: 'PDF — vue (.pdf)', onClick: () => svgRef.current ? exportSvgAsPdf(svgRef.current, filename) : Promise.resolve() },
           ]},
         ]}
       />

@@ -6,6 +6,16 @@
 
 ## EN COURS — 2026-06-01
 
+### Corrections diverses vues (en cours)
+- `exportUtils.ts` : export SVG PERT via canvas (data URI, inlining styles, remplacement foreignObject)
+- `SpacePage.tsx` : fix DnD arborescence (rootItemsList → rootItems)
+- `ListView.tsx` : tri arborescence (manual/alpha-flat/alpha-tree), toolbar sticky
+- `PertToolbar.tsx` : sticky top-0
+- `PertView.tsx` : toggle tri rank/alpha, svgRef pour export, tooltip titre nœuds
+- `TreeItemRow.tsx` : tooltip titre tronqué
+
+## HISTORIQUE — 2026-06-01
+
 ### Fix PERT export + tri alpha + fix ListView
 - `ExportDropdownButton.tsx` : dropdown via `createPortal` → corrige position hors écran
 - `PertToolbar.tsx` + `PertView.tsx` : toggle tri dépendances / alphabétique

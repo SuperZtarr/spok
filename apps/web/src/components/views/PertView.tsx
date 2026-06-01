@@ -109,6 +109,7 @@ export function PertView({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const svgScrollRef = useRef<HTMLDivElement>(null);
   const pertContainerRef = useRef<HTMLDivElement>(null);
+  const pertSvgRef = useRef<SVGSVGElement>(null);
 
   // Ctrl+scroll to zoom
   useEffect(() => {
@@ -389,6 +390,7 @@ const rowIndex = useMemo(() => {
         items={items}
         spaceName={spaceName}
         containerRef={pertContainerRef}
+        svgRef={pertSvgRef}
         sortMode={pertSortMode}
         onSortModeChange={setPertSortMode}
       />
@@ -459,7 +461,7 @@ const rowIndex = useMemo(() => {
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Aucun item dans cet espace</div>
         ) : (
           <div style={{ width: svgWidth * zoom, height: Math.max(svgHeight, 100) * zoom, position: 'relative', flexShrink: 0 }}>
-          <svg width={svgWidth} height={Math.max(svgHeight, 100)} style={{ transformOrigin: 'top left', transform: `scale(${zoom})`, position: 'absolute', top: 0, left: 0, display: 'block' }}>
+          <svg ref={pertSvgRef} width={svgWidth} height={Math.max(svgHeight, 100)} style={{ transformOrigin: 'top left', transform: `scale(${zoom})`, position: 'absolute', top: 0, left: 0, display: 'block' }}>
             <defs>
               <marker id="arrow-normal"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
               <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
@@ -487,6 +489,7 @@ const rowIndex = useMemo(() => {
                   onMouseEnter={() => setHoveredNodeId(item.id)}
                   onMouseLeave={() => setHoveredNodeId(null)}
                 >
+                  <title>{item.title}</title>
                   <rect
                     width={NODE_WIDTH} height={NODE_HEIGHT} rx={4}
                     className={

@@ -1,6 +1,6 @@
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
+import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info, ListTree, ArrowDownAZ, Check } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels } from '@spok/shared';
@@ -100,13 +100,53 @@ function ImageThumbnail({ url }: { url: string }) {
 
 type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 'contributions';
 type SortDir = 'asc' | 'desc';
+type TreeSort = 'manual' | 'alpha-flat' | 'alpha-tree';
+
+const TREE_SORT_LABELS: Record<TreeSort, string> = {
+  'manual': 'Position (défaut)',
+  'alpha-flat': 'Alphabétique à plat',
+  'alpha-tree': 'Alphabétique par groupe',
+};
+
+function sortTreeAlpha<T extends Item>(items: T[]): T[] {
+  const childrenMap = new Map<string | null, T[]>();
+  for (const item of items) {
+    const pid = item.parentId || null;
+    if (!childrenMap.has(pid)) childrenMap.set(pid, []);
+    childrenMap.get(pid)!.push(item);
+  }
+  for (const children of childrenMap.values()) {
+    children.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
+  }
+  const result: T[] = [];
+  function collect(parentId: string | null) {
+    for (const item of childrenMap.get(parentId) || []) {
+      result.push(item);
+      collect(item.id);
+    }
+  }
+  collect(null);
+  return result;
+}
 
 export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, referentiels, canEdit = true, canEditItem }: ListViewProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [treeSortOpen, setTreeSortOpen] = useState(false);
+  const treeSortRef = useRef<HTMLDivElement>(null);
   const [openInfoId, setOpenInfoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!treeSortOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!treeSortRef.current?.contains(e.target as Node)) setTreeSortOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [treeSortOpen]);
 
   // Portal support
   const hasPortals = !!(portalGroups && portalGroups.length > 0);
@@ -131,11 +171,18 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     return map;
   }, [items]);
 
+  // Apply tree sort as base ordering
+  const treeSortedItems = useMemo(() => {
+    if (treeSort === 'alpha-flat') return [...items].sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
+    if (treeSort === 'alpha-tree') return sortTreeAlpha(items);
+    return items;
+  }, [items, treeSort]);
+
   // Sort items
   const sortedItems = useMemo(() => {
-    if (!sortField) return items;
+    if (!sortField) return treeSortedItems;
     const mul = sortDir === 'asc' ? 1 : -1;
-    return [...items].sort((a, b) => {
+    return [...treeSortedItems].sort((a, b) => {
       switch (sortField) {
         case 'title':
           return mul * a.title.localeCompare(b.title, 'fr');
@@ -170,7 +217,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           return 0;
       }
     });
-  }, [items, sortField, sortDir, parentNames]);
+  }, [treeSortedItems, sortField, sortDir, parentNames]);
 
   // Build status and type maps from referentiels
   const { statusLabels, statusColors, typeLabelsShort } = useMemo(() => {
@@ -214,8 +261,36 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
         </div>
       ) : (
         <>
+          {/* Tree sort toolbar */}
+          <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1 border-b border-border bg-card/80 flex-shrink-0">
+            <div ref={treeSortRef} className="relative">
+              <button
+                onClick={() => setTreeSortOpen(v => !v)}
+                className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded hover:bg-accent transition-colors ${treeSort !== 'manual' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+                title="Tri de l'arborescence"
+              >
+                {treeSort === 'manual' ? <ListTree className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
+                {TREE_SORT_LABELS[treeSort]}
+              </button>
+              {treeSortOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-xl py-1 min-w-[220px] z-50">
+                  {(['manual', 'alpha-flat', 'alpha-tree'] as TreeSort[]).map(mode => (
+                    <button
+                      key={mode}
+                      className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
+                      onClick={() => { setTreeSort(mode); setTreeSortOpen(false); }}
+                    >
+                      <Check className={`w-3.5 h-3.5 flex-shrink-0 ${treeSort === mode ? 'opacity-100' : 'opacity-0'}`} />
+                      {TREE_SORT_LABELS[mode]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Header — fixed outside scroll */}
-          <div data-tour="list-headers" className={`grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
+          <div data-tour="list-headers" className={`sticky top-[33px] z-10 grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre

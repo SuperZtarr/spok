@@ -416,7 +416,7 @@ export function SpacePage() {
 
     if (!over || active.id === over.id) return;
 
-    const rootItemsList = itemsData?.data || [];
+    const rootItemsList = rootItems;
     const activeItem = allItems.find((item: Item) => item.id === active.id);
     if (!activeItem) return;
 

@@ -105,6 +105,7 @@ export function TreeItemRow({
         <span
           className="truncate text-sm flex-1"
           onClick={() => onEdit(item.id)}
+          title={item.title}
         >
           {item.title}
         </span>
