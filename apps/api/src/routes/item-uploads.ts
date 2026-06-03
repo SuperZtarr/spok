@@ -5,29 +5,21 @@ import { checkSpaceAccess } from './items.js';
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 Mo
 
-const ALLOWED_DOCUMENT_MIMES = [
-  // PDF
-  'application/pdf',
-  // Office
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',       // xlsx
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
-  'application/msword',                    // doc
-  'application/vnd.ms-excel',              // xls
-  'application/vnd.ms-powerpoint',         // ppt
-  // Text
-  'text/plain',
-  'text/csv',
-  'text/markdown',
-  // Images
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  // Archives
-  'application/zip',
-  'application/x-zip-compressed',
-];
+const BLOCKED_DOCUMENT_MIMES = new Set([
+  'application/x-msdownload',
+  'application/x-executable',
+  'application/x-sh',
+  'application/x-bat',
+  'application/x-msi',
+  'application/x-dosexec',
+]);
+
+const BLOCKED_DOCUMENT_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.com', '.scr', '.msi', '.dll',
+  '.sh', '.bash', '.zsh', '.ps1', '.psm1', '.psd1',
+  '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh',
+  '.jar', '.py', '.rb', '.pl', '.php',
+]);
 const MAX_DOCUMENT_SIZE = 25 * 1024 * 1024; // 25 Mo
 
 export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
@@ -131,8 +123,9 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Aucun fichier envoyé');
       }
 
-      if (!ALLOWED_DOCUMENT_MIMES.includes(file.mimetype)) {
-        return reply.badRequest('Format non supporté. Types acceptés : PDF, Office, texte, images, archives.');
+      const ext = '.' + (file.filename.split('.').pop()?.toLowerCase() ?? '');
+      if (BLOCKED_DOCUMENT_MIMES.has(file.mimetype) || BLOCKED_DOCUMENT_EXTENSIONS.has(ext)) {
+        return reply.badRequest('Ce type de fichier n\'est pas autorisé.');
       }
 
       const buffer = await file.toBuffer();
