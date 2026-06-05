@@ -1,4 +1,4 @@
-import { Minus, Plus, ArrowDownAZ, Network, History, Settings } from 'lucide-react';
+import { Minus, Plus, ArrowDownAZ, Network, History, Settings, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
@@ -34,6 +34,8 @@ interface PertToolbarProps {
   defaultView?: ViewMode;
   onNewItem?: () => void;
   canEdit?: boolean;
+  showOnlyBlocking?: boolean;
+  onToggleBlocking?: () => void;
   spaceId?: string;
   spaceRole?: string;
   onStartTour?: () => void;
@@ -54,6 +56,7 @@ export function PertToolbar({
   treeSort, onTreeSortChange,
   spaceViews, allowedViews, onSetMode, defaultView,
   onNewItem, canEdit, spaceId, spaceRole,
+  showOnlyBlocking = false, onToggleBlocking,
   onStartTour, pulseHelp,
   filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange,
   totalItemCount, referentiels,
@@ -103,6 +106,16 @@ export function PertToolbar({
         <button onClick={() => onSortModeChange('alpha')} className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${sortMode === 'alpha' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`} title="Trier alphabétiquement">
           <ArrowDownAZ className="w-3.5 h-3.5" />
         </button>
+        {onToggleBlocking && (
+          <button
+            onClick={onToggleBlocking}
+            className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showOnlyBlocking ? 'bg-orange-100 text-orange-700 border border-orange-300' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+            title={showOnlyBlocking ? 'Afficher tous les items' : 'Afficher uniquement les items avec liens bloquants'}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Bloquants</span>
+          </button>
+        )}
         <div className="h-4 w-px bg-border mx-1" />
         <ExportDropdownButton
           groups={[

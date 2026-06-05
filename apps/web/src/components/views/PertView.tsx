@@ -147,12 +147,30 @@ export function PertView({
 
   const [pertSortMode, setPertSortMode] = useState<'rank' | 'alpha'>('rank');
   const [treeSort, setTreeSort] = useState<TreeSort>('manual');
-  const sortedItems = useMemo(() => applyTreeSort(items, treeSort), [items, treeSort]);
+  const [showOnlyBlocking, setShowOnlyBlocking] = useState(false);
 
   const pertRelations = useMemo(
     () => relations.filter(r => r.type === 'blocks' || r.type === 'depends'),
     [relations]
   );
+
+  // IDs des items impliqués dans une relation bloquante
+  const blockingItemIds = useMemo(() => {
+    const blockingRels = relations.filter(r => r.type === 'blocks');
+    const ids = new Set<string>();
+    for (const r of blockingRels) {
+      ids.add(r.fromItemId);
+      ids.add(r.toItemId);
+    }
+    return ids;
+  }, [relations]);
+
+  const sortedItems = useMemo(() => {
+    const filtered = showOnlyBlocking
+      ? items.filter(i => blockingItemIds.has(i.id))
+      : items;
+    return applyTreeSort(filtered, treeSort);
+  }, [items, treeSort, showOnlyBlocking, blockingItemIds]);
 
   const { predecessors, successors } = useMemo(
     () => buildPertGraph(sortedItems, pertRelations),
@@ -415,6 +433,8 @@ const rowIndex = useMemo(() => {
         onSortModeChange={setPertSortMode}
         treeSort={treeSort}
         onTreeSortChange={setTreeSort}
+        showOnlyBlocking={showOnlyBlocking}
+        onToggleBlocking={() => setShowOnlyBlocking(v => !v)}
         spaceViews={spaceViews}
         allowedViews={allowedViews}
         onSetMode={onSetMode}

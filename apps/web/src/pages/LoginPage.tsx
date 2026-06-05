@@ -37,9 +37,13 @@ export function LoginPage() {
         localStorage.removeItem('spok_pending_invitation_token');
         navigate(`/invitation?token=${pendingToken}`);
       } else {
-        // La redirection vers spok_returnTo est gérée par HomeRoute
-        // (évite la race condition où HomeRoute lit sessionStorage avant navigate)
-        navigate('/');
+        const returnTo = sessionStorage.getItem('spok_returnTo');
+        if (returnTo) {
+          sessionStorage.removeItem('spok_returnTo');
+          navigate(returnTo, { replace: true });
+        } else {
+          navigate('/');
+        }
       }
     },
     onError: (err) => {
