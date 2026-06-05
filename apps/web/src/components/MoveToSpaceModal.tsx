@@ -4,7 +4,6 @@ import { X, FolderInput, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
-import { useSelectionStore } from '../stores/selection';
 
 interface MoveToSpaceModalProps {
   isOpen: boolean;
@@ -15,13 +14,11 @@ interface MoveToSpaceModalProps {
 
 export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: MoveToSpaceModalProps) {
   const queryClient = useQueryClient();
-  const { selectedIds, clearSelection } = useSelectionStore();
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
   const [includeChildren, setIncludeChildren] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Utiliser les itemIds en prop si fournis, sinon le selection store
-  const effectiveIds = itemIds || Array.from(selectedIds);
+  const effectiveIds = itemIds || [];
 
   const { data: spaces, isLoading: spacesLoading } = useQuery({
     queryKey: ['spaces'],
@@ -41,7 +38,6 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
       queryClient.invalidateQueries({ queryKey: ['items', selectedSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', currentSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', selectedSpaceId] });
-      if (!itemIds) clearSelection();
       onClose();
     },
   });

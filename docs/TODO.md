@@ -32,6 +32,8 @@
 - [x] Vue PERT : tri automatique par rang de dépendance (topologique, alphabétique à égalité), hiérarchie préservée — (2026-05-25)
 - [x] Mode admin dans settings : options elargies quand admin mode actif (selecteur communaute complet, suppression sans etre OWNER) — déjà implémenté
 - [x] Aperçu des vignettes dans les settings : onglet Aperçu dans CommunitySettingsPage et SpaceSettingsPage — 2026-05-26
+- [ ] Bug : redirection vers l'URL d'origine après déconnexion/expiration token ne fonctionne toujours pas (returnTo sessionStorage)
+- [ ] Vue Tableau croisé : export dédié (CSV ou Excel avec lignes/colonnes du tableau)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)

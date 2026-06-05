@@ -6,9 +6,7 @@ import {
   X,
   Settings,
   History,
-  ListChecks,
   SlidersHorizontal,
-  Plus,
   List,
   GitBranch,
   Columns3,
@@ -40,15 +38,11 @@ import {
   Clock,
   type LucideIcon,
 } from 'lucide-react';
-import type { ItemType } from '@spok/shared';
+import type { ItemType, MenuItemConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
-import { ViewHelpButton } from '../components/ViewHelpButton';
-import { CollapseToggleButton } from '../components/ui/CollapseToggleButton';
-import { SpaceExportButton } from '../components/SpaceExportButton';
 import type { ViewMode } from '../stores/viewMode';
-import type { MenuItemConfig, Item } from '@spok/shared';
 
 const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
@@ -86,23 +80,12 @@ export interface SpaceToolbarProps {
   allowedViews: ViewMode[] | null;
   spaceViews: MenuItemConfig[];
   defaultView?: ViewMode;
-  // Expand/Collapse
-  isExpanded: boolean;
-  onToggleExpand: () => void;
   // Actions
   canEdit: boolean;
-  isSelectionMode: boolean;
-  onToggleSelectionMode: () => void;
-  onNewItem: () => void;
+  onNewItem?: () => void;
   // Space
   spaceId?: string;
   spaceRole?: string;
-  // Export
-  items?: Item[];
-  spaceName?: string;
-  viewContainerRef?: React.RefObject<HTMLDivElement>;
-  onStartTour?: () => void;
-  pulseHelp?: boolean;
 }
 
 export function SpaceToolbar({
@@ -122,19 +105,9 @@ export function SpaceToolbar({
   allowedViews,
   spaceViews,
   defaultView,
-  isExpanded,
-  onToggleExpand,
   canEdit,
-  isSelectionMode,
-  onToggleSelectionMode,
-  onNewItem,
   spaceId,
   spaceRole,
-  items: exportItems,
-  spaceName,
-  viewContainerRef,
-  onStartTour,
-  pulseHelp,
 }: SpaceToolbarProps) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -164,12 +137,11 @@ export function SpaceToolbar({
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
   }, [typeDropdownOpen, statusDropdownOpen]);
 
-  const showExpandCollapse = viewMode === 'tree';
 
   return (
-    <div className="flex flex-col gap-2 mb-3 z-20 bg-background pb-2 flex-shrink-0 relative">
+    <div className={`flex flex-col gap-2 z-20 bg-background flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','priority','mindmap'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
 
-      {/* View mode buttons row — filtered by admin menu config + role */}
+      {/* View mode buttons row */}
       {(() => {
         const filteredViews = spaceViews.filter(
           (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
@@ -222,23 +194,18 @@ export function SpaceToolbar({
         );
       })()}
 
-      <div className="flex gap-1.5 flex-wrap items-center pb-1">
+      {!['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','priority','mindmap'].includes(viewMode) && <div className="flex gap-1.5 flex-wrap items-center pb-1">
         {/* Mode indicator + filters — always visible on sm+, toggle on mobile */}
         <div className={`${showMobileFilters ? 'flex' : 'hidden'} sm:flex gap-1.5 items-center flex-wrap`}>
-        {isHighlightMode ? (
+        {isHighlightMode && (
           <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
             <span className="w-2 h-2 rounded-full bg-yellow-400" />
             <span className="hidden sm:inline">Lumière</span>
           </span>
-        ) : (
-          <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-blue-300 bg-blue-50 text-blue-700 shadow-sm flex-shrink-0">
-            <span className="w-2 h-2 rounded-full bg-blue-400" />
-            <span className="hidden sm:inline">Filtre</span>
-          </span>
         )}
 
-        {/* Type filter dropdown */}
-        <div ref={typeDropdownRef} className="relative flex-shrink-0" data-tour="toolbar-filters">
+        {/* Type + Status filters — hidden in list view (moved to ListView toolbar) */}
+        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <div ref={typeDropdownRef} className="relative flex-shrink-0" data-tour="toolbar-filters">
           <button
             onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
             className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
@@ -271,10 +238,9 @@ export function SpaceToolbar({
               })}
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* Status filter dropdown */}
-        <div ref={statusDropdownRef} className="relative flex-shrink-0">
+        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <div ref={statusDropdownRef} className="relative flex-shrink-0">
           {(() => {
             const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
             const activeStatus = activeStatusFilter ? statuses.find((s: any) => s.id === activeStatusFilter) : null;
@@ -324,11 +290,11 @@ export function SpaceToolbar({
               </>
             );
           })()}
-        </div>
+        </div>}
         </div>{/* end mobile filters wrapper */}
 
-        {/* Search input */}
-        <div className="relative flex-shrink-0" data-tour="toolbar-search">
+        {/* Search input — hidden in list view (moved to ListView toolbar) */}
+        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <div className="relative flex-shrink-0" data-tour="toolbar-search">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
@@ -345,10 +311,10 @@ export function SpaceToolbar({
               <X className="w-3.5 h-3.5" />
             </button>
           )}
-        </div>
+        </div>}
 
-        {/* Item count */}
-        <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
+        {/* Item count — hidden in list view (moved to ListView toolbar) */}
+        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
           {(() => {
             const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
             const hasSearch = searchQuery.trim().length > 0;
@@ -360,20 +326,8 @@ export function SpaceToolbar({
             }
             return `${totalItemCount} éléments`;
           })()}
-        </span>
+        </span>}
 
-        <ViewHelpButton viewMode={viewMode} onStartTour={onStartTour} pulse={pulseHelp} />
-
-        {showExpandCollapse && (
-          <>
-            <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
-            <CollapseToggleButton
-              isCollapsed={!isExpanded}
-              onToggle={onToggleExpand}
-              className="flex-shrink-0"
-            />
-          </>
-        )}
 
 
         <div className="ml-auto flex gap-1 flex-shrink-0">
@@ -392,9 +346,6 @@ export function SpaceToolbar({
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />
             )}
           </button>
-          {exportItems && spaceName && viewMode !== 'mindmap' && viewMode !== 'pert' && viewMode !== 'timeline' && (
-            <SpaceExportButton items={exportItems} spaceName={spaceName} viewMode={viewMode} viewContainerRef={viewContainerRef} />
-          )}
           {canEdit && (
             <Link to={`/spaces/${spaceId}/history`}>
               <Button variant="ghost" size="sm" title="Historique des modifications">
@@ -409,24 +360,8 @@ export function SpaceToolbar({
               </Button>
             </Link>
           )}
-          {canEdit && (
-            <Button
-              variant={isSelectionMode ? 'default' : 'ghost'}
-              size="sm"
-              onClick={onToggleSelectionMode}
-              title={isSelectionMode ? 'Quitter le mode sélection' : 'Mode sélection'}
-            >
-              <ListChecks className="w-4 h-4" />
-            </Button>
-          )}
-          {canEdit && (
-            <Button size="sm" onClick={onNewItem} data-tour="toolbar-new-item">
-              <Plus className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Nouveau</span>
-            </Button>
-          )}
         </div>
-      </div>
+      </div>}
 
     </div>
   );

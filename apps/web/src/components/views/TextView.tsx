@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } from 'lucide-react';
+import { ViewToolbar } from '../ui/ViewToolbar';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
-import type { Item, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
@@ -50,6 +51,22 @@ interface TextViewProps {
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
+  spaceId?: string;
+  spaceRole?: string;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  globalSearchQuery?: string;
+  onGlobalSearchQueryChange?: (q: string) => void;
+  totalItemCount?: number;
+  filteredItemCount?: number;
+  searchMatchCount?: number;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 function formatDate(dateString: string | null | undefined): string | null {
@@ -98,7 +115,13 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
 }
 
 export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds }: TextViewProps) {
+            onOpenInNewTab, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds,
+            spaceId, spaceRole,
+            filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange,
+            globalSearchQuery = '', onGlobalSearchQueryChange,
+            totalItemCount, filteredItemCount, searchMatchCount,
+            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
+          }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { statusLabels, statusColors } = useMemo(() => {
@@ -148,6 +171,28 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
 
   return (
     <div className="flex flex-col h-full">
+      <ViewToolbar
+        viewMode="text"
+        spaceId={spaceId}
+        spaceRole={spaceRole}
+        canEdit={canEdit}
+        onNewItem={onNewItem}
+        exportItems={items}
+        spaceName={spaceName}
+        viewContainerRef={viewContainerRef}
+        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        searchQuery={globalSearchQuery}
+        onSearchQueryChange={onGlobalSearchQueryChange}
+        totalItemCount={totalItemCount}
+        filteredItemCount={filteredItemCount}
+        searchMatchCount={searchMatchCount}
+        referentiels={referentiels}
+      />
       {/* Search bar */}
       <div className="p-3 border-b border-border">
         <div className="relative">

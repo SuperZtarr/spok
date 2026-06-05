@@ -4,7 +4,8 @@ import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { PertToolbar } from './PertToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig } from '@spok/shared';
+import type { ViewMode } from '../../stores/viewMode';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { buildTree, flattenTree } from './timeline-tree';
@@ -54,6 +55,19 @@ interface PertViewProps {
   highlightStatus?: string;
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
+  spaceViews?: MenuItemConfig[];
+  allowedViews?: ViewMode[] | null;
+  onSetMode?: (mode: ViewMode) => void;
+  defaultView?: ViewMode;
+  spaceRole?: string;
+  onNewItem?: () => void;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  totalItemCount?: number;
 }
 
 export function PertView({
@@ -84,6 +98,9 @@ export function PertView({
   highlightColor,
   searchMatchIds,
   spaceName = '',
+  spaceViews, allowedViews, onSetMode, defaultView,
+  spaceRole, onNewItem, onStartTour, pulseHelp,
+  filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
 }: PertViewProps) {
   const { collapsedIds, setCollapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -398,6 +415,22 @@ const rowIndex = useMemo(() => {
         onSortModeChange={setPertSortMode}
         treeSort={treeSort}
         onTreeSortChange={setTreeSort}
+        spaceViews={spaceViews}
+        allowedViews={allowedViews}
+        onSetMode={onSetMode}
+        defaultView={defaultView}
+        onNewItem={onNewItem}
+        canEdit={canEdit}
+        spaceId={spaceId}
+        spaceRole={spaceRole}
+        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        totalItemCount={totalItemCount}
+        referentiels={referentiels}
       />
       <div className="flex flex-1 overflow-hidden">
       {/* Left panel — tree */}

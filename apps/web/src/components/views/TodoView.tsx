@@ -66,5 +66,5 @@ export function TodoView({ items, portalGroups, ...rest }: TodoViewProps) {
     );
   }
 
-  return <ListView items={todos} portalGroups={todoPortalGroups} {...rest} />;
+  return <ListView items={todos} portalGroups={todoPortalGroups} hideToolbar {...rest} />;
 }

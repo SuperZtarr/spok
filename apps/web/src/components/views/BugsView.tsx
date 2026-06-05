@@ -55,5 +55,5 @@ export function BugsView({ items, portalGroups, ...rest }: BugsViewProps) {
     );
   }
 
-  return <ListView items={bugs} portalGroups={bugPortalGroups} {...rest} />;
+  return <ListView items={bugs} portalGroups={bugPortalGroups} hideToolbar {...rest} />;
 }

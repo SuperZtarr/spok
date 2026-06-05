@@ -1,7 +1,8 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { Clock, Plus, Pencil } from 'lucide-react';
 import { ListView } from './ListView';
-import type { Item, SpaceReferentiels } from '@spok/shared';
+import { ViewToolbar } from '../ui/ViewToolbar';
+import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 
 interface PortalGroup {
   spaceId: string;
@@ -29,6 +30,21 @@ interface RecentChangesViewProps {
   onOpenInNewTab?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
+  totalItemCount?: number;
+  filteredItemCount?: number;
+  searchMatchCount?: number;
+  spaceRole?: string;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 const STORAGE_KEY_PREFIX = 'spok-last-visit-';
@@ -67,6 +83,12 @@ export function RecentChangesView({
   items,
   spaceId,
   portalGroups,
+  filter = 'ALL', onFilterChange,
+  statusFilter = 'ALL', onStatusFilterChange,
+  searchQuery = '', onSearchQueryChange,
+  totalItemCount, filteredItemCount, searchMatchCount,
+  referentiels,
+  spaceRole, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
   ...rest
 }: RecentChangesViewProps) {
   const savedAtMount = useRef<Date | null>(null);
@@ -107,15 +129,44 @@ export function RecentChangesView({
     newItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     modifiedItems.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-    return { newItems, modifiedItems, lastVisit };
-  }, [items]);
+    const applyFilters = (arr: Item[]) => {
+      let r = arr;
+      if (filter !== 'ALL') r = r.filter(i => i.type === filter);
+      if (statusFilter !== 'ALL') r = r.filter(i => i.status === statusFilter);
+      return r;
+    };
+
+    return { newItems: applyFilters(newItems), modifiedItems: applyFilters(modifiedItems), lastVisit };
+  }, [items, filter, statusFilter]);
 
   const isEmpty = newItems.length === 0 && modifiedItems.length === 0;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 text-sm text-muted-foreground flex-shrink-0">
+      <ViewToolbar
+        viewMode="recent"
+        spaceId={spaceId}
+        spaceRole={spaceRole}
+        canEdit={!!onNewItem}
+        onNewItem={onNewItem}
+        exportItems={items}
+        spaceName={spaceName}
+        viewContainerRef={viewContainerRef}
+        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        searchQuery={searchQuery}
+        onSearchQueryChange={onSearchQueryChange}
+        totalItemCount={totalItemCount}
+        filteredItemCount={filteredItemCount}
+        searchMatchCount={searchMatchCount}
+        referentiels={referentiels}
+      />
+      {/* Info dernière visite */}
+      <div className="flex items-center gap-2 px-4 py-1.5 border-b bg-muted/30 text-sm text-muted-foreground flex-shrink-0">
         <Clock className="w-4 h-4" />
         {lastVisit ? (
           <span>Depuis votre dernière visite — <strong className="text-foreground">{formatRelativeTime(lastVisit)}</strong></span>
@@ -141,7 +192,7 @@ export function RecentChangesView({
                     Nouveaux ({newItems.length})
                   </h3>
                 </div>
-                <ListView items={newItems} portalGroups={[]} {...rest} />
+                <ListView items={newItems} portalGroups={[]} hideToolbar {...rest} />
               </section>
             )}
 
@@ -153,7 +204,7 @@ export function RecentChangesView({
                     Modifiés ({modifiedItems.length})
                   </h3>
                 </div>
-                <ListView items={modifiedItems} portalGroups={[]} {...rest} />
+                <ListView items={modifiedItems} portalGroups={[]} hideToolbar {...rest} />
               </section>
             )}
           </div>

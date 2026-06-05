@@ -1,13 +1,12 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
-import { TreeSortButton } from '../ui/TreeSortButton';
+import { ViewToolbar } from '../ui/ViewToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
-import type { Item, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-
 import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
@@ -44,6 +43,23 @@ interface ListViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
+  totalItemCount?: number;
+  filteredItemCount?: number;
+  searchMatchCount?: number;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
+  onNewItem?: () => void;
+  spaceId?: string;
+  spaceRole?: string;
+  hideToolbar?: boolean;
 }
 
 // Format date for display
@@ -104,7 +120,12 @@ type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 
 type SortDir = 'asc' | 'desc';
 
 export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, referentiels, canEdit = true, canEditItem }: ListViewProps) {
+            onOpenInNewTab, referentiels, canEdit = true, canEditItem,
+            filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange,
+            searchQuery = '', onSearchQueryChange,
+            totalItemCount, filteredItemCount, searchMatchCount,
+            spaceName, viewContainerRef, onStartTour, pulseHelp, onNewItem,
+            spaceId, spaceRole, hideToolbar = false }: ListViewProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -210,6 +231,29 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
 
   return (
     <div className="flex flex-col h-full">
+      {!hideToolbar && <ViewToolbar
+        viewMode="list"
+        spaceId={spaceId}
+        spaceRole={spaceRole}        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        onNewItem={onNewItem}
+        canEdit={canEdit}
+        exportItems={items}
+        spaceName={spaceName}
+        viewContainerRef={viewContainerRef}
+        treeSortValue={treeSort}
+        onTreeSortChange={setTreeSort}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        searchQuery={searchQuery}
+        onSearchQueryChange={onSearchQueryChange}
+        totalItemCount={totalItemCount}
+        filteredItemCount={filteredItemCount}
+        searchMatchCount={searchMatchCount}
+        referentiels={referentiels}
+      />}
       {/* Items list */}
       {sortedItems.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
@@ -219,13 +263,9 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
         </div>
       ) : (
         <>
-          {/* Tree sort toolbar */}
-          <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1 border-b border-border bg-card/80 flex-shrink-0">
-            <TreeSortButton value={treeSort} onChange={setTreeSort} />
-          </div>
 
           {/* Header — fixed outside scroll */}
-          <div data-tour="list-headers" className={`sticky top-[33px] z-10 grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
+          <div data-tour="list-headers" className={`sticky top-[33px] z-[1] grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre

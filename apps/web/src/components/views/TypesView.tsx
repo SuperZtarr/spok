@@ -14,6 +14,7 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 import { ExternalLink, GripVertical, FolderKanban, GripHorizontal } from 'lucide-react';
+import { ViewToolbar } from '../ui/ViewToolbar';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
@@ -48,7 +49,20 @@ interface TypesViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-}
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
+  totalItemCount?: number;
+  filteredItemCount?: number;
+  searchMatchCount?: number;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
+  onNewItem?: () => void;
+  spaceId?: string;
+  spaceRole?: string;}
 
 interface TypeColumnConfig {
   id: ItemType;
@@ -312,7 +326,12 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
 }
 
 export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: TypesViewProps) {
+            onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem,
+            statusFilter = 'ALL', onStatusFilterChange,
+            searchQuery = '', onSearchQueryChange,
+            totalItemCount, filteredItemCount, searchMatchCount,
+            spaceName, viewContainerRef, onStartTour, pulseHelp, onNewItem,
+            spaceId, spaceRole }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -356,19 +375,24 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
     return { statusLabels: labels, statusColors: colors };
   }, [referentiels]);
 
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'ALL') return items;
+    return items.filter(i => i.status === statusFilter);
+  }, [items, statusFilter]);
+
   // Build space sections: main space + portal spaces
   const spaceSections = useMemo(() => {
     if (!currentSpaceId || !portalGroups?.length) {
-      return [{ spaceId: currentSpaceId || 'default', spaceName: null, isPortal: false, items }];
+      return [{ spaceId: currentSpaceId || 'default', spaceName: null, isPortal: false, items: filteredItems }];
     }
-    const mainItems = items.filter(i => i.spaceId === currentSpaceId);
+    const mainItems = filteredItems.filter(i => i.spaceId === currentSpaceId);
     const sections = [{ spaceId: currentSpaceId, spaceName: null as string | null, isPortal: false, items: mainItems }];
     for (const pg of portalGroups) {
-      const spaceItems = items.filter(i => i.spaceId === pg.spaceId);
+      const spaceItems = filteredItems.filter(i => i.spaceId === pg.spaceId);
       sections.push({ spaceId: pg.spaceId, spaceName: pg.spaceName, isPortal: true, items: spaceItems });
     }
     return sections;
-  }, [items, currentSpaceId, portalGroups]);
+  }, [filteredItems, currentSpaceId, portalGroups]);
 
   // Resizable heights per space
   const [boardHeights, setBoardHeights] = useState<Record<string, number>>({});
@@ -449,6 +473,25 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
+      <ViewToolbar
+        viewMode="types"
+        spaceId={spaceId}
+        spaceRole={spaceRole}        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        onNewItem={onNewItem}
+        canEdit={canEdit}
+        exportItems={items}
+        spaceName={spaceName}
+        viewContainerRef={viewContainerRef}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        searchQuery={searchQuery}
+        onSearchQueryChange={onSearchQueryChange}
+        totalItemCount={totalItemCount}
+        filteredItemCount={filteredItemCount}
+        searchMatchCount={searchMatchCount}
+        referentiels={referentiels}
+      />
       <div className="p-4 overflow-y-auto h-full space-y-2">
         {spaceSections.map((section, idx) => {
           const grouped = groupedBySpace[section.spaceId] || {};

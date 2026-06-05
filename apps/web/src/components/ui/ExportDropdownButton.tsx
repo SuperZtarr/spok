@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download } from 'lucide-react';
-import { Button } from './Button';
 
 export interface ExportOption {
   label: string;
@@ -47,17 +46,16 @@ export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonP
 
   return (
     <>
-      <Button
+      <button
         ref={btnRef}
-        variant="bordered"
-        size="sm"
         onClick={() => setOpen(v => !v)}
         disabled={disabled || exporting}
         title="Exporter"
+        className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-accent border border-input transition-colors disabled:opacity-50"
       >
-        <Download className="w-4 h-4 mr-1" />
+        <Download className="w-3.5 h-3.5" />
         {exporting ? 'Export…' : 'Exporter'}
-      </Button>
+      </button>
       {open && pos && createPortal(
         <div
           ref={dropdownRef}

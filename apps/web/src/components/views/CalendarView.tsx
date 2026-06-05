@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useRef } from 'react';
+import { ViewToolbar } from '../ui/ViewToolbar';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -33,6 +34,16 @@ interface CalendarViewProps {
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
+  spaceId?: string;
+  spaceRole?: string;
+  onNewItem?: () => void;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  totalItemCount?: number;
 }
 
 // Convert hex-like tailwind color refs to usable CSS
@@ -65,6 +76,8 @@ export function CalendarView({
   highlightStatus,
   searchMatchIds,
   canEdit = true,
+  spaceId, spaceRole, onNewItem, onStartTour, pulseHelp,
+  filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -181,7 +194,24 @@ export function CalendarView({
   }, [onCreateItem, canEdit]);
 
   return (
-    <div data-tour="calendar-toolbar" className="flex-1 min-h-0 flex flex-col fc-spok-wrapper" style={{ height: 'calc(100vh - 140px)' }}>
+    <div className="flex flex-col h-full">
+      <ViewToolbar
+        viewMode="calendar"
+        spaceId={spaceId}
+        spaceRole={spaceRole}
+        canEdit={canEdit}
+        onNewItem={onNewItem}
+        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        isHighlightMode={true}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        totalItemCount={totalItemCount}
+        referentiels={referentiels}
+      />
+    <div data-tour="calendar-toolbar" className="flex-1 min-h-0 flex flex-col fc-spok-wrapper">
       <style>{`
         .fc-spok-wrapper {
           --fc-border-color: hsl(var(--border));
@@ -289,6 +319,7 @@ export function CalendarView({
         weekNumbers={true}
         weekText="S"
       />
+    </div>
     </div>
   );
 }

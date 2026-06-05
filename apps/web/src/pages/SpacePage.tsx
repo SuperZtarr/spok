@@ -33,7 +33,6 @@ import { Modal } from '../components/ui/Modal';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore, VIEWER_ALLOWED_VIEWS, type ViewMode } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
-import { useSelectionStore } from '../stores/selection';
 import { ListView } from '../components/views/ListView';
 import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
@@ -42,7 +41,6 @@ import { TimelineView } from '../components/views/TimelineView';
 import { MindMapView } from '../components/views/MindMapView';
 import { PlanningView } from '../components/views/PlanningView';
 import { CalendarView } from '../components/views/CalendarView';
-import { SelectionActionBar } from '../components/SelectionActionBar';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
 import { GraphView } from '../components/views/GraphView';
@@ -80,7 +78,7 @@ import { stripMarkup } from '../lib/bbcode';
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
 import { useSpaceActions } from './useSpaceActions';
-import { TreeSortButton } from '../components/ui/TreeSortButton';
+import { ViewToolbar } from '../components/ui/ViewToolbar';
 import { type TreeSort, applyTreeSort } from '../lib/treeSort';
 import { SpaceToolbar } from './SpaceToolbar';
 import { useAuthStore } from '../stores/auth';
@@ -91,9 +89,8 @@ export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { mode: viewMode, setMode, setAllowedViews, allowedViews } = useViewModeStore();
+  const { mode: viewMode, setMode, setAllowedViews } = useViewModeStore();
   const { spaceViews } = useMenuItems();
-  const { selectedIds, isSelectionMode, toggleSelection, setSelectionMode, clearSelection } = useSelectionStore();
   const { user } = useAuthStore();
 
 
@@ -124,10 +121,6 @@ export function SpacePage() {
   const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const { includeChildrenSpaceIds } = useSpaceStore();
 
-  // Clear selection when leaving the page or changing space
-  useEffect(() => {
-    return () => clearSelection();
-  }, [spaceId, clearSelection]);
 
   useEffect(() => {
     if (spaceId) recordSpaceVisit(spaceId);
@@ -549,8 +542,8 @@ export function SpacePage() {
   }
 
   return (
-    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' ? ' h-full' : ''}`}>
+    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'thread' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'thread' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -566,22 +559,13 @@ export function SpacePage() {
           referentiels={referentiels}
           viewMode={viewMode}
           onSetMode={setMode}
-          allowedViews={allowedViews}
+          allowedViews={canEdit ? null : VIEWER_ALLOWED_VIEWS}
           spaceViews={spaceViews}
-          isExpanded={hasExpandedItems}
-          onToggleExpand={handleToggleExpand}
+          defaultView={space?.defaultView as ViewMode | undefined}
           canEdit={canEdit}
-          isSelectionMode={isSelectionMode}
-          onToggleSelectionMode={() => setSelectionMode(!isSelectionMode)}
           onNewItem={handleNewItem}
           spaceId={spaceId}
           spaceRole={space?.role}
-          items={allItems}
-          spaceName={space?.name}
-          viewContainerRef={viewContainerRef}
-          onStartTour={() => startViewTour(viewMode)}
-          pulseHelp={pulseHelp}
-          defaultView={space?.defaultView as ViewMode | undefined}
         />
 
         {/* Deferred items banner */}
@@ -632,7 +616,22 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-            />
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+              searchMatchCount={searchMatchIds?.size}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceId={spaceId}
+              spaceRole={space?.role}            />
           ) : viewMode === 'text' ? (
             <TextView
               items={filterBySearch(textViewData?.data || allItemsData?.data)}
@@ -659,6 +658,22 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
+              spaceId={spaceId}
+              spaceRole={space?.role}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              globalSearchQuery={searchQuery}
+              onGlobalSearchQueryChange={setSearchQuery}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+              searchMatchCount={searchMatchIds?.size}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
           ) : viewMode === 'recent' ? (
             <RecentChangesView
@@ -682,6 +697,21 @@ export function SpacePage() {
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+              searchMatchCount={searchMatchIds?.size}
+              spaceRole={space?.role}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
           ) : viewMode === 'thread' ? (
             <ThreadView
@@ -704,9 +734,47 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
               searchMatchIds={searchMatchIds}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+              searchMatchCount={searchMatchIds?.size}
+              spaceId={spaceId}
+              spaceRole={space?.role}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
           ) : viewMode === 'kanban' ? (
-            <KanbanView
+            <>
+              <ViewToolbar
+                viewMode="kanban"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                searchMatchCount={searchMatchIds?.size}
+                referentiels={referentiels}
+              />
+              <KanbanView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
@@ -729,9 +797,11 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
             />
+            </>
           ) : viewMode === 'types' ? (
             <TypesView
               items={filterBySearch(itemsData?.data)}
+              spaceId={spaceId!}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={setEditingItemId}
@@ -752,9 +822,39 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-            />
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+              searchMatchCount={searchMatchIds?.size}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceRole={space?.role}            />
           ) : viewMode === 'planning' ? (
-            <PlanningView
+            <>
+              <ViewToolbar
+                viewMode="planning"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <PlanningView
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
@@ -780,6 +880,7 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
             />
+            </>
           ) : viewMode === 'calendar' ? (
             <CalendarView
               items={filterBySearch(allItemsData?.data)}
@@ -799,6 +900,16 @@ export function SpacePage() {
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
+              spaceId={spaceId}
+              spaceRole={space?.role}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
@@ -833,6 +944,15 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              spaceRole={space?.role}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
             />
           ) : viewMode === 'pert' ? (
             <PertView
@@ -863,8 +983,34 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              spaceRole={space?.role}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
             />
           ) : viewMode === 'mindmap' ? (
+            <>
+              <ViewToolbar
+                viewMode="mindmap"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                referentiels={referentiels}
+              />
             <MindMapView
               key={spaceId}
               items={filterBySearch(allItemsData?.data)}
@@ -896,10 +1042,28 @@ export function SpacePage() {
               onUpdateRelation={actions.handleUpdateRelation}
               referentiels={referentiels}
               canEdit={canEdit}
-              canEditItem={canEditItem}
-            />
+              canEditItem={canEditItem}            />
+            </>
           ) : viewMode === 'graph' ? (
-            <GraphView
+            <>
+              <ViewToolbar
+                viewMode="graph"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <GraphView
               level="space"
               entityId={spaceId}
               spaceId={spaceId}
@@ -913,8 +1077,27 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
             />
+            </>
           ) : viewMode === 'sunburst' ? (
-            <SunburstView
+            <>
+              <ViewToolbar
+                viewMode="sunburst"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <SunburstView
               spaceId={spaceId}
               spaceName={space?.name}
               onNodeClick={(itemId) => setEditingItemId(itemId)}
@@ -924,8 +1107,27 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
             />
+            </>
           ) : viewMode === 'relations' ? (
-            <RelationsMapView
+            <>
+              <ViewToolbar
+                viewMode="relations"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <RelationsMapView
               items={(itemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -935,8 +1137,27 @@ export function SpacePage() {
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'bubble' ? (
-            <BubbleView
+            <>
+              <ViewToolbar
+                viewMode="bubble"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <BubbleView
               items={(allItemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -946,8 +1167,27 @@ export function SpacePage() {
               highlightColor={highlightColor}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'radialTree' ? (
-            <RadialTreeView
+            <>
+              <ViewToolbar
+                viewMode="radialTree"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <RadialTreeView
               items={(allItemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -956,8 +1196,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'treemap' ? (
-            <TreemapView
+            <>
+              <ViewToolbar
+                viewMode="treemap"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <TreemapView
               items={(allItemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -966,8 +1225,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'burndown' ? (
-            <BurndownView
+            <>
+              <ViewToolbar
+                viewMode="burndown"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <BurndownView
               items={(allItemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -976,8 +1254,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'cfd' ? (
-            <CfdView
+            <>
+              <ViewToolbar
+                viewMode="cfd"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <CfdView
               items={(allItemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -986,8 +1283,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'chord' ? (
-            <ChordView
+            <>
+              <ViewToolbar
+                viewMode="chord"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <ChordView
               items={(allItemsData?.data || []) as Item[]}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -996,8 +1312,29 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'crossTable' ? (
-            <CrossTableView
+            <>
+              <ViewToolbar
+                viewMode="crossTable"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <CrossTableView
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
@@ -1007,8 +1344,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'heatmap' ? (
-            <HeatmapView
+            <>
+              <ViewToolbar
+                viewMode="heatmap"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <HeatmapView
               items={filterBySearch(allItemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -1018,8 +1374,27 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'ego' ? (
-            <EgoNetworkView
+            <>
+              <ViewToolbar
+                viewMode="ego"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <EgoNetworkView
               items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               portalGroups={portalGroups}
@@ -1030,6 +1405,7 @@ export function SpacePage() {
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
             />
+            </>
           ) : viewMode === 'members' ? (
             <MembersKanbanView
               items={filterBySearch(itemsData?.data)}
@@ -1053,9 +1429,42 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+              searchMatchCount={searchMatchIds?.size}
+              spaceRole={space?.role}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              exportSpaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
           ) : viewMode === 'priority' ? (
-            <PriorityView
+            <>
+              <ViewToolbar
+                viewMode="priority"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                isHighlightMode={true}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                referentiels={referentiels}
+              />
+              <PriorityView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -1077,8 +1486,31 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
             />
+            </>
           ) : viewMode === 'todo' ? (
-            <TodoView
+            <>
+                            <ViewToolbar
+                viewMode="todo"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                searchMatchCount={searchMatchIds?.size}
+                referentiels={referentiels}
+              />
+              <TodoView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
@@ -1099,8 +1531,31 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
             />
+            </>
           ) : viewMode === 'bugs' ? (
-            <BugsView
+            <>
+                            <ViewToolbar
+                viewMode="bugs"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                searchMatchCount={searchMatchIds?.size}
+                referentiels={referentiels}
+              />
+              <BugsView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
@@ -1121,8 +1576,31 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
             />
+            </>
           ) : viewMode === 'documents' ? (
-            <DocumentsView
+            <>
+                            <ViewToolbar
+                viewMode="documents"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                searchMatchCount={searchMatchIds?.size}
+                referentiels={referentiels}
+              />
+              <DocumentsView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -1145,8 +1623,31 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
             />
+            </>
           ) : viewMode === 'links' ? (
-            <LinksView
+            <>
+                            <ViewToolbar
+                viewMode="links"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                searchMatchCount={searchMatchIds?.size}
+                referentiels={referentiels}
+              />
+              <LinksView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -1169,8 +1670,31 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
             />
+            </>
           ) : viewMode === 'images' ? (
-            <ImagesView
+            <>
+                            <ViewToolbar
+                viewMode="images"
+                spaceId={spaceId}
+                spaceRole={space?.role}
+                canEdit={canEdit}
+                onNewItem={canEdit ? handleNewItem : undefined}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+                filter={filter}
+                onFilterChange={setFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                searchMatchCount={searchMatchIds?.size}
+                referentiels={referentiels}
+              />
+              <ImagesView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
@@ -1193,6 +1717,7 @@ export function SpacePage() {
               canEdit={canEdit}
               canEditItem={canEditItem}
             />
+            </>
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -1210,9 +1735,29 @@ export function SpacePage() {
               onDragCancel={handleDragCancel}
             >
               <div>
-                <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1 border-b border-border bg-card/80">
-                  <TreeSortButton value={treeViewSort} onChange={setTreeViewSort} />
-                </div>
+                <ViewToolbar
+                  viewMode="tree"
+                  spaceId={spaceId}
+                  spaceRole={space?.role}
+                  canEdit={canEdit}
+                  onNewItem={canEdit ? handleNewItem : undefined}
+                  spaceName={space?.name}
+                  viewContainerRef={viewContainerRef}
+                  onStartTour={() => startViewTour(viewMode)}
+                  pulseHelp={pulseHelp}
+                  treeSortValue={treeViewSort}
+                  onTreeSortChange={setTreeViewSort}
+                  isExpanded={hasExpandedItems}
+                  onToggleExpand={handleToggleExpand}
+                  isHighlightMode={true}
+                  filter={filter}
+                  onFilterChange={setFilter}
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
+                  totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+                  filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
+                  referentiels={referentiels}
+                />
                 <div className="py-2">
                   {filterBySearch(applyTreeSort(rootItems, treeViewSort)).map((item: Item & { childCount?: number }, index: number) => (
                     <TreeItem
@@ -1241,11 +1786,7 @@ export function SpacePage() {
                       onMove={actions.handleMove}
                       globalOverId={overId}
                       globalDropMode={dropMode}
-                      globalDropPosition={dropPosition}
-                      isSelectionMode={isSelectionMode}
-                      isSelected={selectedIds.has(item.id)}
-                      onToggleSelection={toggleSelection}
-                      expandedItems={expandedItems}
+                      globalDropPosition={dropPosition}                      expandedItems={expandedItems}
                       canEdit={canEdit}
                       highlightType={activeTypeFilter}
                       highlightStatus={activeStatusFilter}
@@ -1295,11 +1836,7 @@ export function SpacePage() {
                           onMove={actions.handleMove}
                           globalOverId={overId}
                           globalDropMode={dropMode}
-                          globalDropPosition={dropPosition}
-                          isSelectionMode={isSelectionMode}
-                          isSelected={selectedIds.has(item.id)}
-                          onToggleSelection={toggleSelection}
-                          expandedItems={expandedItems}
+                          globalDropPosition={dropPosition}                          expandedItems={expandedItems}
                           canEdit={false}
                           highlightType={activeTypeFilter}
                           highlightStatus={activeStatusFilter}
@@ -1356,13 +1893,6 @@ export function SpacePage() {
         onSplitDescription={actions.handleSplitDescription}
       />
 
-      {/* Selection action bar */}
-      {canEdit && isSelectionMode && (
-        <SelectionActionBar
-          onMoveToSpace={() => setShowMoveModal(true)}
-          onDuplicateToSpace={() => setShowDuplicateModal(true)}
-        />
-      )}
 
       {canEdit && (
         <>

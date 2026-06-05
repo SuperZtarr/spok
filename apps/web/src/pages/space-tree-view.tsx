@@ -12,7 +12,6 @@ import { itemsApi } from '../lib/api';
 import { Badge } from '../components/ui/Badge';
 import { ItemActionMenu } from '../components/ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../lib/itemMenuGroups';
-import { useSelectionStore } from '../stores/selection';
 import { getTypeIcon } from '../constants/ui';
 
 // Root drop zone to move items to root level
@@ -58,11 +57,7 @@ export interface TreeItemProps {
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
-  globalDropPosition?: 'before' | 'after' | 'nest';
-  isSelectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelection?: (id: string) => void;
-  expandedItems: Set<string>;
+  globalDropPosition?: 'before' | 'after' | 'nest';  expandedItems: Set<string>;
   canEdit?: boolean;
   highlightType?: string;
   highlightStatus?: string;
@@ -98,11 +93,7 @@ export function TreeItem({
   onMove,
   globalOverId,
   globalDropMode,
-  globalDropPosition,
-  isSelectionMode,
-  isSelected,
-  onToggleSelection,
-  expandedItems,
+  globalDropPosition,  expandedItems,
   canEdit,
   highlightType,
   highlightStatus,
@@ -136,11 +127,7 @@ export function TreeItem({
   const hasChildren = (item.childCount || 0) > 0;
 
   const handleClick = () => {
-    if (isSelectionMode && onToggleSelection) {
-      onToggleSelection(item.id);
-    } else {
-      onEdit(item.id);
-    }
+    onEdit(item.id);
   };
 
   return (
@@ -157,19 +144,11 @@ export function TreeItem({
         data-item-id={item.id}
         className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-colors duration-150 ${
           currentDropPosition === 'nest' ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-400' : ''
-        } ${isSelected ? 'bg-primary/10 border border-primary' : ''} ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
+        } ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={handleClick}
       >
-        {isSelectionMode ? (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelection?.(item.id)}
-            onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded"
-          />
-        ) : canEdit !== false ? (
+        {canEdit !== false ? (
           <button
             ref={setDragRef}
             {...attributes}
@@ -289,10 +268,7 @@ export function TreeItem({
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
-          globalDropPosition={globalDropPosition}
-          isSelectionMode={isSelectionMode}
-          onToggleSelection={onToggleSelection}
-          expandedItems={expandedItems}
+          globalDropPosition={globalDropPosition}          expandedItems={expandedItems}
           onToggleExpand={onToggleExpand}
           canEdit={canEdit}
           highlightType={highlightType}
@@ -329,10 +305,7 @@ export function ItemChildren({
   onMove,
   globalOverId,
   globalDropMode,
-  globalDropPosition,
-  isSelectionMode,
-  onToggleSelection,
-  expandedItems,
+  globalDropPosition,  expandedItems,
   onToggleExpand,
   canEdit,
   highlightType,
@@ -362,10 +335,7 @@ export function ItemChildren({
   onMove: (id: string, parentId: string | null, position: number) => void;
   globalOverId: string | null;
   globalDropMode: 'reorder' | 'nest';
-  globalDropPosition?: 'before' | 'after' | 'nest';
-  isSelectionMode?: boolean;
-  onToggleSelection?: (id: string) => void;
-  expandedItems: Set<string>;
+  globalDropPosition?: 'before' | 'after' | 'nest';  expandedItems: Set<string>;
   onToggleExpand: (id: string) => void;
   canEdit?: boolean;
   highlightType?: string;
@@ -379,9 +349,6 @@ export function ItemChildren({
     queryKey: ['items', spaceId, 'children', parentId],
     queryFn: () => itemsApi.list(spaceId, { parentId, pageSize: 5000 }),
   });
-
-  // Get selection store for checking selection state (must be before any early return)
-  const { selectedIds: globalSelectedIds } = useSelectionStore();
 
   if (!data?.data.length) return null;
 
@@ -413,11 +380,7 @@ export function ItemChildren({
           onMove={onMove}
           globalOverId={globalOverId}
           globalDropMode={globalDropMode}
-          globalDropPosition={globalDropPosition}
-          isSelectionMode={isSelectionMode}
-          isSelected={globalSelectedIds.has(item.id)}
-          onToggleSelection={onToggleSelection}
-          expandedItems={expandedItems}
+          globalDropPosition={globalDropPosition}          expandedItems={expandedItems}
           canEdit={canEdit}
           highlightType={highlightType}
           highlightStatus={highlightStatus}

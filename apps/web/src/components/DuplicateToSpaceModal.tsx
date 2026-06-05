@@ -4,7 +4,6 @@ import { X, Copy, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
-import { useSelectionStore } from '../stores/selection';
 
 interface DuplicateToSpaceModalProps {
   isOpen: boolean;
@@ -15,13 +14,11 @@ interface DuplicateToSpaceModalProps {
 
 export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: DuplicateToSpaceModalProps) {
   const queryClient = useQueryClient();
-  const { selectedIds, clearSelection } = useSelectionStore();
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>(currentSpaceId);
   const [includeChildren, setIncludeChildren] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Utiliser les itemIds en prop si fournis, sinon le selection store
-  const effectiveIds = itemIds || Array.from(selectedIds);
+  const effectiveIds = itemIds || [];
 
   const { data: spaces, isLoading: spacesLoading } = useQuery({
     queryKey: ['spaces'],
@@ -44,7 +41,6 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
       queryClient.invalidateQueries({ queryKey: ['space', currentSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', selectedSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['auditLogs', selectedSpaceId] });
-      if (!itemIds) clearSelection();
       onClose();
     },
   });

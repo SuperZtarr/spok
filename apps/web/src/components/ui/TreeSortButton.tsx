@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ListTree, ArrowDownAZ, Check } from 'lucide-react';
 import { type TreeSort, TREE_SORT_LABELS } from '../../lib/treeSort';
 
@@ -9,29 +10,41 @@ interface TreeSortButtonProps {
 
 export function TreeSortButton({ value, onChange }: TreeSortButtonProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) { setPos(null); return; }
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left });
+    }
     const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      if (btnRef.current?.contains(e.target as Node) || dropdownRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={btnRef}
         onClick={() => setOpen(v => !v)}
-        className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded hover:bg-accent transition-colors ${value !== 'manual' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+        className={`flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors ${value !== 'manual' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
         title="Tri de l'arborescence"
       >
         {value === 'manual' ? <ListTree className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
-        {TREE_SORT_LABELS[value]}
+        Ordre
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-xl py-1 min-w-[220px] z-50">
+      {open && pos && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed bg-card border rounded-lg shadow-xl py-1 min-w-[220px] z-[9999]"
+          style={{ top: pos.top, left: pos.left }}
+        >
           {(['manual', 'alpha-flat', 'alpha-tree'] as TreeSort[]).map(mode => (
             <button
               key={mode}
@@ -42,7 +55,8 @@ export function TreeSortButton({ value, onChange }: TreeSortButtonProps) {
               {TREE_SORT_LABELS[mode]}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -16,7 +16,9 @@ import {
   Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
+import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole, MenuItemConfig } from '@spok/shared';
+import type { ViewMode } from '../../stores/viewMode';
+import { ViewSelectorBar } from '../ui/ViewSelectorBar';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Filter, X } from 'lucide-react';
@@ -86,6 +88,10 @@ interface MindMapViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  spaceViews?: MenuItemConfig[];
+  allowedViews?: ViewMode[] | null;
+  onSetMode?: (mode: ViewMode) => void;
+  defaultView?: ViewMode;
 }
 
 // Inner component that uses useReactFlow
@@ -1517,9 +1523,20 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
+  spaceViews, allowedViews, onSetMode, defaultView,
 }, ref) {
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex flex-col">
+      {spaceViews && onSetMode && (
+        <ViewSelectorBar
+          viewMode="mindmap"
+          onSetMode={onSetMode}
+          allowedViews={allowedViews ?? null}
+          spaceViews={spaceViews}
+          defaultView={defaultView}
+        />
+      )}
+      <div className="flex-1 min-h-0">
       <ReactFlowProvider>
         <MindMapViewInner
           items={items} spaceName={spaceName} spaceId={spaceId} communitySpaces={communitySpaces}
@@ -1533,6 +1550,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           innerRef={ref}
         />
       </ReactFlowProvider>
+      </div>
     </div>
   );
 });

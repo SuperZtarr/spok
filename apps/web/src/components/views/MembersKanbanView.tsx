@@ -15,7 +15,8 @@ import {
   pointerWithin,
 } from '@dnd-kit/core';
 import { GripVertical, User, Users, FolderKanban, GripHorizontal } from 'lucide-react';
-import type { Item, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import { ViewToolbar } from '../ui/ViewToolbar';
 import { spacesApi } from '../../lib/api';
 import type { SpaceMember } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
@@ -61,6 +62,21 @@ interface MembersKanbanViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
+  totalItemCount?: number;
+  filteredItemCount?: number;
+  searchMatchCount?: number;
+  spaceRole?: string;
+  onNewItem?: () => void;
+  exportSpaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 const MIN_BOARD_HEIGHT = 200;
@@ -343,6 +359,11 @@ export function MembersKanbanView({
   referentiels,
   canEdit = true,
   canEditItem,
+  filter = 'ALL', onFilterChange,
+  statusFilter = 'ALL', onStatusFilterChange,
+  searchQuery = '', onSearchQueryChange,
+  totalItemCount, filteredItemCount, searchMatchCount,
+  spaceRole, onNewItem, exportSpaceName, viewContainerRef, onStartTour, pulseHelp,
 }: MembersKanbanViewProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -361,20 +382,27 @@ export function MembersKanbanView({
     }));
   }, []);
 
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (filter !== 'ALL') result = result.filter(i => i.type === filter);
+    if (statusFilter !== 'ALL') result = result.filter(i => i.status === statusFilter);
+    return result;
+  }, [items, filter, statusFilter]);
+
   // Build space sections (main + portals)
   const spaceSections = useMemo(() => {
     const mainSpaceId = currentSpaceId || spaceId;
     if (!portalGroups?.length) {
-      return [{ spaceId: mainSpaceId, spaceName: null as string | null, isPortal: false, items }];
+      return [{ spaceId: mainSpaceId, spaceName: null as string | null, isPortal: false, items: filteredItems }];
     }
-    const mainItems = items.filter(i => i.spaceId === mainSpaceId);
+    const mainItems = filteredItems.filter(i => i.spaceId === mainSpaceId);
     const sections = [{ spaceId: mainSpaceId, spaceName: null as string | null, isPortal: false, items: mainItems }];
     for (const pg of portalGroups) {
-      const spaceItems = items.filter(i => i.spaceId === pg.spaceId);
+      const spaceItems = filteredItems.filter(i => i.spaceId === pg.spaceId);
       sections.push({ spaceId: pg.spaceId, spaceName: pg.spaceName, isPortal: true, items: spaceItems });
     }
     return sections;
-  }, [items, currentSpaceId, spaceId, portalGroups]);
+  }, [filteredItems, currentSpaceId, spaceId, portalGroups]);
 
   // Fetch members for all spaces involved
   const allSpaceIds = useMemo(() => spaceSections.map(s => s.spaceId), [spaceSections]);
@@ -481,6 +509,28 @@ export function MembersKanbanView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
+      <ViewToolbar
+        viewMode="members"
+        spaceId={spaceId}
+        spaceRole={spaceRole}
+        canEdit={canEdit}
+        onNewItem={onNewItem}
+        exportItems={items}
+        spaceName={exportSpaceName}
+        viewContainerRef={viewContainerRef}
+        onStartTour={onStartTour}
+        pulseHelp={pulseHelp}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
+        searchQuery={searchQuery}
+        onSearchQueryChange={onSearchQueryChange}
+        totalItemCount={totalItemCount}
+        filteredItemCount={filteredItemCount}
+        searchMatchCount={searchMatchCount}
+        referentiels={referentiels}
+      />
       <div className="p-4 overflow-y-auto h-full space-y-2">
         {spaceSections.map((section, idx) => {
           const cols = columnsBySpace[section.spaceId] || [];
