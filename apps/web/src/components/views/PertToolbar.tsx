@@ -72,9 +72,19 @@ export function PertToolbar({
         {/* Standard — gauche */}
         <ViewHelpButton viewMode="pert" onStartTour={onStartTour} pulse={pulseHelp} />
         {canEdit && onNewItem && (
-          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0">
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Nouveau</span>
+          </button>
+        )}
+        {onToggleBlocking && (
+          <button
+            onClick={onToggleBlocking}
+            className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showOnlyBlocking ? 'bg-orange-100 text-orange-700 border border-orange-300' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+            title={showOnlyBlocking ? 'Afficher tous les items' : 'Afficher uniquement les items avec liens bloquants'}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Bloquants</span>
           </button>
         )}
         <div className="h-4 w-px bg-border mx-1" />
@@ -106,26 +116,6 @@ export function PertToolbar({
         <button onClick={() => onSortModeChange('alpha')} className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${sortMode === 'alpha' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`} title="Trier alphabétiquement">
           <ArrowDownAZ className="w-3.5 h-3.5" />
         </button>
-        {onToggleBlocking && (
-          <button
-            onClick={onToggleBlocking}
-            className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showOnlyBlocking ? 'bg-orange-100 text-orange-700 border border-orange-300' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-            title={showOnlyBlocking ? 'Afficher tous les items' : 'Afficher uniquement les items avec liens bloquants'}
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Bloquants</span>
-          </button>
-        )}
-        <div className="h-4 w-px bg-border mx-1" />
-        <ExportDropdownButton
-          groups={[
-            { options: [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] },
-            { options: [
-              { label: 'PNG — vue (.png)', onClick: () => svgRef.current ? exportSvgAsPng(svgRef.current, filename) : Promise.resolve() },
-              { label: 'PDF — vue (.pdf)', onClick: () => svgRef.current ? exportSvgAsPdf(svgRef.current, filename) : Promise.resolve() },
-            ]},
-          ]}
-        />
         <div className="h-4 w-px bg-border mx-1" />
         {/* Lumière + droite */}
         <FilterToolbar
@@ -136,6 +126,15 @@ export function PertToolbar({
           totalItemCount={totalItemCount}
           referentiels={referentiels}
           isHighlightMode={true}
+        />
+        <ExportDropdownButton
+          groups={[
+            { options: [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] },
+            { options: [
+              { label: 'PNG — vue (.png)', onClick: () => svgRef.current ? exportSvgAsPng(svgRef.current, filename) : Promise.resolve() },
+              { label: 'PDF — vue (.pdf)', onClick: () => svgRef.current ? exportSvgAsPdf(svgRef.current, filename) : Promise.resolve() },
+            ]},
+          ]}
         />
         {canEdit && spaceId && (
           <Link to={`/spaces/${spaceId}/history`}>

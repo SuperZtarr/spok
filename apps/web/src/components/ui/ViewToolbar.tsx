@@ -60,7 +60,7 @@ export function ViewToolbar({
   isHighlightMode = false,
   className = '',
 }: ViewToolbarProps) {
-  const showExport = !['mindmap', 'pert', 'timeline'].includes(viewMode);
+  const showExport = !['pert', 'timeline', 'mindmap'].includes(viewMode);
 
   return (
     <div className={`sticky top-0 z-[1] flex items-center gap-2 px-4 py-1 border-b border-border bg-background flex-shrink-0 ${className}`}>
@@ -69,14 +69,11 @@ export function ViewToolbar({
           <button
             onClick={onNewItem}
             data-tour="toolbar-new-item"
-            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0"
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Nouveau</span>
           </button>
-        )}
-        {showExport && exportItems && spaceName && viewContainerRef && (
-          <SpaceExportButton items={exportItems} spaceName={spaceName} viewMode={viewMode} viewContainerRef={viewContainerRef} />
         )}
         {treeSortValue !== undefined && onTreeSortChange && (
           <TreeSortButton value={treeSortValue} onChange={onTreeSortChange} />
@@ -100,6 +97,10 @@ export function ViewToolbar({
           referentiels={referentiels}
           isHighlightMode={isHighlightMode}
         />
+
+        {showExport && exportItems && spaceName && viewContainerRef && (
+          <SpaceExportButton items={exportItems} spaceName={spaceName} viewMode={viewMode} viewContainerRef={viewContainerRef} />
+        )}
 
         {/* Droite : Historique, Paramètres */}
         {canEdit && spaceId && (

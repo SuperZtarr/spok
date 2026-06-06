@@ -39,6 +39,7 @@
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 - [ ] ajouter un correcteur d'orthographe dans les zones de textes
+- [ ] Bug : barre de recherche et notifications en dessous du menu des espaces, et on ne peux pas cliquer dessus
 
 ### Modales
 - [x] Les tableaux ne sont pas éditables ? (modale édition item) — ajout/suppression lignes et colonnes via toolbar contextuelle — résolu 2026-04-22

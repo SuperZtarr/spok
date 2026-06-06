@@ -3,9 +3,6 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { FilterToolbar } from '../ui/FilterToolbar';
-import { ViewSelectorBar } from '../ui/ViewSelectorBar';
-import type { MenuItemConfig } from '@spok/shared';
-import type { ViewMode } from '../../stores/viewMode';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import { TreeSortButton } from '../ui/TreeSortButton';
@@ -68,10 +65,6 @@ interface TimelineViewProps {
   canEditItem?: (item: { createdById?: string }) => boolean;
   spaceName?: string;
   spaceRole?: string;
-  spaceViews?: MenuItemConfig[];
-  allowedViews?: ViewMode[] | null;
-  onSetMode?: (mode: ViewMode) => void;
-  defaultView?: ViewMode;
   onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
@@ -84,7 +77,6 @@ interface TimelineViewProps {
 
 
 export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '', spaceRole,
-spaceViews, allowedViews, onSetMode, defaultView,
 onNewItem, onStartTour, pulseHelp,
 filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
 }: TimelineViewProps) {
@@ -673,7 +665,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
         {/* Standard controls — left */}
         <ViewHelpButton viewMode="timeline" onStartTour={onStartTour} pulse={pulseHelp} />
         {canEdit && onNewItem && (
-          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0">
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Nouveau</span>
           </button>
@@ -780,6 +772,17 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
               <ZoomOut className="w-4 h-4" />
             </Button>
           </div>
+          <div className="h-4 w-px bg-border" />
+          {/* Filter/Lumière */}
+          <FilterToolbar
+            filter={filter}
+            onFilterChange={onFilterChange}
+            statusFilter={statusFilter}
+            onStatusFilterChange={onStatusFilterChange}
+            totalItemCount={totalItemCount}
+            referentiels={referentiels}
+            isHighlightMode={true}
+          />
           <ExportDropdownButton
             groups={[
               { options: [
@@ -793,17 +796,6 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
                 { label: 'PNG — vue (.png)', onClick: () => viewContainerRef.current ? exportContainerPNG(viewContainerRef.current, buildExportFilename(spaceName, 'timeline')) : Promise.resolve() },
               ]},
             ]}
-          />
-          <div className="h-4 w-px bg-border" />
-          {/* Filter/Lumière */}
-          <FilterToolbar
-            filter={filter}
-            onFilterChange={onFilterChange}
-            statusFilter={statusFilter}
-            onStatusFilterChange={onStatusFilterChange}
-            totalItemCount={totalItemCount}
-            referentiels={referentiels}
-            isHighlightMode={true}
           />
           {/* History + Settings */}
           {canEdit && spaceId && (

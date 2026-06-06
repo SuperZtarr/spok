@@ -1,5 +1,4 @@
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
-import { Button } from './Button';
 
 interface CollapseToggleButtonProps {
   isCollapsed: boolean;
@@ -9,24 +8,22 @@ interface CollapseToggleButtonProps {
 
 export function CollapseToggleButton({ isCollapsed, onToggle, className }: CollapseToggleButtonProps) {
   return (
-    <Button
-      variant="bordered"
-      size="sm"
+    <button
       onClick={onToggle}
       title={isCollapsed ? 'Tout étendre' : 'Tout réduire'}
-      className={className}
+      className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex-shrink-0 ${className ?? ''}`}
     >
       {isCollapsed ? (
         <>
-          <ChevronsUpDown className="w-4 h-4 mr-1" />
-          Étendre
+          <ChevronsUpDown className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Étendre</span>
         </>
       ) : (
         <>
-          <ChevronsDownUp className="w-4 h-4 mr-1" />
-          Réduire
+          <ChevronsDownUp className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Réduire</span>
         </>
       )}
-    </Button>
+    </button>
   );
 }

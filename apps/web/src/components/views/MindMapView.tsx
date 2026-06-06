@@ -21,13 +21,17 @@ import type { ViewMode } from '../../stores/viewMode';
 import { ViewSelectorBar } from '../ui/ViewSelectorBar';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Filter, X } from 'lucide-react';
+import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Filter, X, Plus, History, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ViewHelpButton } from '../ViewHelpButton';
+import { FilterToolbar } from '../ui/FilterToolbar';
+import type { ItemType } from '@spok/shared';
 import { toPng } from 'html-to-image';
 import { getViewportForBounds } from '@xyflow/react';
 import { jsPDF } from 'jspdf';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
-import { Button } from '../ui/Button';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
+import { buildExportFilename, exportCSV, exportExcel, exportDataPDF } from '../../lib/exportUtils';
 
 import {
   type TreeItem,
@@ -92,6 +96,16 @@ interface MindMapViewProps {
   allowedViews?: ViewMode[] | null;
   onSetMode?: (mode: ViewMode) => void;
   defaultView?: ViewMode;
+  // Toolbar props
+  spaceRole?: string;
+  onNewItem?: () => void;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
+  filter?: ItemType | 'ALL';
+  onFilterChange?: (filter: ItemType | 'ALL') => void;
+  statusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
+  totalItemCount?: number;
 }
 
 // Inner component that uses useReactFlow
@@ -124,6 +138,8 @@ function MindMapViewInner({
   referentiels,
   canEdit,
   canEditItem,
+  spaceRole, onNewItem, onStartTour, pulseHelp,
+  filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
   innerRef,
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
   // Track previous items to detect content-only vs structural changes
@@ -1151,7 +1167,205 @@ function MindMapViewInner({
   }), [expandAll, collapseAll, resetLayout, hasCollapsedNodes, fitAll]);
 
   return (
-    <>
+    <div className="flex flex-col h-full">
+      {/* Toolbar MindMap */}
+      <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        <ViewHelpButton viewMode="mindmap" onStartTour={onStartTour} pulse={pulseHelp} />
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Nouveau</span>
+          </button>
+        )}
+        <div className="h-4 w-px bg-border mx-1" />
+        <CollapseToggleButton
+          isCollapsed={collapsedIds.size > 0}
+          onToggle={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
+        />
+        <button
+          onClick={resetLayout}
+          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title="Réorganiser les éléments"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Réorganiser</span>
+        </button>
+        <button
+          onClick={fitAll}
+          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title="Tout voir"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Tout voir</span>
+        </button>
+        <div className="h-4 w-px bg-border mx-1" />
+        <div ref={filterBtnRef} className="relative">
+          <button
+            className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${hasLocalFilter ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+            onClick={() => setFilterOpen(v => !v)}
+            title="Filtrer par type ou statut"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
+              {localHighlightType
+                ? presentTypes.find(t => t.id === localHighlightType)?.label ?? localHighlightType
+                : localHighlightStatus
+                  ? (statusOptions.find(s => s.id === localHighlightStatus)?.label ?? localHighlightStatus)
+                  : 'Filtrer'}
+            </span>
+            {hasLocalFilter && (
+              <span
+                className="ml-1 hover:text-destructive"
+                onClick={e => { e.stopPropagation(); setLocalHighlightType(undefined); setLocalHighlightStatus(undefined); }}
+                title="Effacer le filtre"
+              >
+                <X className="w-3 h-3" />
+              </span>
+            )}
+          </button>
+          {filterOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-xl py-1 min-w-[200px] z-50">
+              {presentTypes.length > 0 && (
+                <>
+                  <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Par type</div>
+                  {presentTypes.map(t => (
+                    <button
+                      key={t.id}
+                      className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2 ${localHighlightType === t.id ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
+                      onClick={() => { setLocalHighlightType(localHighlightType === t.id ? undefined : t.id); setLocalHighlightStatus(undefined); setFilterOpen(false); }}
+                    >
+                      {localHighlightType === t.id && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                      {localHighlightType !== t.id && <span className="w-1.5 h-1.5 flex-shrink-0" />}
+                      {t.label}
+                    </button>
+                  ))}
+                </>
+              )}
+              {statusOptions.length > 0 && (
+                <>
+                  <div className="h-px bg-border mx-2 my-1" />
+                  <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Par statut</div>
+                  {statusOptions.map(s => (
+                    <button
+                      key={s.id}
+                      className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2 ${localHighlightStatus === s.id ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
+                      onClick={() => { setLocalHighlightStatus(localHighlightStatus === s.id ? undefined : s.id); setLocalHighlightType(undefined); setFilterOpen(false); }}
+                    >
+                      {localHighlightStatus === s.id && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                      {localHighlightStatus !== s.id && <span className="w-1.5 h-1.5 flex-shrink-0" />}
+                      {s.label}
+                    </button>
+                  ))}
+                </>
+              )}
+              {hasLocalFilter && (
+                <>
+                  <div className="h-px bg-border mx-2 my-1" />
+                  <button
+                    className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors text-muted-foreground"
+                    onClick={() => { setLocalHighlightType(undefined); setLocalHighlightStatus(undefined); setFilterOpen(false); }}
+                  >
+                    Effacer le filtre
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="h-4 w-px bg-border mx-1" />
+        <div className="relative">
+          <button
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            onClick={() => setLegendOpen(v => !v)}
+            title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
+          >
+            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
+            <span className="hidden sm:inline">Légende</span>
+          </button>
+          {legendOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
+              <div className="space-y-1.5 mb-3 text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                  <span>Glissez pour créer une relation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
+                  <span>Cliquez pour supprimer</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+                  <span>Portail : autre espace</span>
+                </div>
+              </div>
+              <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Relations</div>
+              <div className="flex flex-wrap gap-1">
+                {RELATION_TYPES.map((type) => (
+                  <div
+                    key={type.id}
+                    className="group relative p-1.5 rounded-md hover:bg-accent cursor-help transition-colors"
+                    title={`${type.label} — ${type.description}`}
+                  >
+                    <type.Icon className={`w-4 h-4 ${type.color}`} />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                      <div className="font-medium">{type.label}</div>
+                      <div className="text-gray-300 text-[10px]">{type.description}</div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="h-4 w-px bg-border mx-1" />
+        <FilterToolbar
+          filter={filter}
+          onFilterChange={onFilterChange}
+          statusFilter={statusFilter}
+          onStatusFilterChange={onStatusFilterChange}
+          totalItemCount={totalItemCount}
+          referentiels={referentiels}
+          isHighlightMode={true}
+        />
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Droite : count, export, historique, paramètres */}
+        {totalItemCount !== undefined && (
+          <span className="text-xs text-muted-foreground flex-shrink-0">{totalItemCount} élément{totalItemCount !== 1 ? 's' : ''}</span>
+        )}
+        <ExportDropdownButton
+          disabled={exporting}
+          groups={[
+            { options: [
+              { label: 'CSV (.csv)', onClick: () => exportCSV(items, buildExportFilename(spaceName, 'mindmap')) },
+              { label: 'Excel (.xlsx)', onClick: () => exportExcel(items, buildExportFilename(spaceName, 'mindmap')) },
+              { label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, buildExportFilename(spaceName, 'mindmap'), spaceName) },
+            ]},
+            { options: [
+              { label: 'PNG — schéma complet (.png)', onClick: exportPNG },
+              { label: 'PDF — schéma complet (.pdf)', onClick: exportPDF },
+            ]},
+          ]}
+        />
+        {canEdit && spaceId && (
+          <Link to={`/spaces/${spaceId}/history`}>
+            <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Historique">
+              <History className="w-4 h-4" />
+            </button>
+          </Link>
+        )}
+        {spaceRole === 'OWNER' && spaceId && (
+          <Link to={`/spaces/${spaceId}/settings`}>
+            <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Paramètres">
+              <Settings className="w-4 h-4" />
+            </button>
+          </Link>
+        )}
+      </div>
+      <div className="flex-1 min-h-0">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1207,147 +1421,8 @@ function MindMapViewInner({
             </button>
           </Panel>
         )}
-        <Panel position="top-left" className="flex gap-1">
-          <CollapseToggleButton
-            isCollapsed={collapsedIds.size > 0}
-            onToggle={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
-          />
-          <Button variant="bordered" size="sm" onClick={resetLayout} title="Réorganiser les éléments">
-            <RotateCcw className="w-4 h-4 mr-1" />
-            Réorganiser
-          </Button>
-          <Button variant="bordered" size="sm" onClick={fitAll} title="Tout voir">
-            <Maximize2 className="w-4 h-4 mr-1" />
-            Tout voir
-          </Button>
-          <ExportDropdownButton
-            disabled={exporting}
-            groups={[{ options: [
-              { label: 'PNG — schéma complet (.png)', onClick: exportPNG },
-              { label: 'PDF — schéma complet (.pdf)', onClick: exportPDF },
-            ]}]}
-          />
-          <div ref={filterBtnRef} className="relative">
-            <Button
-              variant={hasLocalFilter ? 'default' : 'bordered'}
-              size="sm"
-              onClick={() => setFilterOpen(v => !v)}
-              title="Filtrer par type ou statut"
-            >
-              <Filter className="w-4 h-4 mr-1" />
-              {localHighlightType
-                ? presentTypes.find(t => t.id === localHighlightType)?.label ?? localHighlightType
-                : localHighlightStatus
-                  ? (statusOptions.find(s => s.id === localHighlightStatus)?.label ?? localHighlightStatus)
-                  : 'Filtrer'}
-              {hasLocalFilter && (
-                <span
-                  className="ml-1 hover:text-destructive"
-                  onClick={e => { e.stopPropagation(); setLocalHighlightType(undefined); setLocalHighlightStatus(undefined); }}
-                  title="Effacer le filtre"
-                >
-                  <X className="w-3 h-3" />
-                </span>
-              )}
-            </Button>
-            {filterOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-xl py-1 min-w-[200px] z-50">
-                {presentTypes.length > 0 && (
-                  <>
-                    <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Par type</div>
-                    {presentTypes.map(t => (
-                      <button
-                        key={t.id}
-                        className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2 ${localHighlightType === t.id ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
-                        onClick={() => { setLocalHighlightType(localHighlightType === t.id ? undefined : t.id); setLocalHighlightStatus(undefined); setFilterOpen(false); }}
-                      >
-                        {localHighlightType === t.id && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
-                        {localHighlightType !== t.id && <span className="w-1.5 h-1.5 flex-shrink-0" />}
-                        {t.label}
-                      </button>
-                    ))}
-                  </>
-                )}
-                {statusOptions.length > 0 && (
-                  <>
-                    <div className="h-px bg-border mx-2 my-1" />
-                    <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Par statut</div>
-                    {statusOptions.map(s => (
-                      <button
-                        key={s.id}
-                        className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2 ${localHighlightStatus === s.id ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
-                        onClick={() => { setLocalHighlightStatus(localHighlightStatus === s.id ? undefined : s.id); setLocalHighlightType(undefined); setFilterOpen(false); }}
-                      >
-                        {localHighlightStatus === s.id && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
-                        {localHighlightStatus !== s.id && <span className="w-1.5 h-1.5 flex-shrink-0" />}
-                        {s.label}
-                      </button>
-                    ))}
-                  </>
-                )}
-                {hasLocalFilter && (
-                  <>
-                    <div className="h-px bg-border mx-2 my-1" />
-                    <button
-                      className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors text-muted-foreground"
-                      onClick={() => { setLocalHighlightType(undefined); setLocalHighlightStatus(undefined); setFilterOpen(false); }}
-                    >
-                      Effacer le filtre
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
-            <Button
-              variant="bordered"
-              size="sm"
-              onClick={() => setLegendOpen(v => !v)}
-              title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
-            >
-              <ChevronRight className={`w-4 h-4 mr-1 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
-              Légende
-            </Button>
-            {legendOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
-                <div className="space-y-1.5 mb-3 text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
-                    <span>Glissez pour créer une relation</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 flex-shrink-0" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #8b5cf6 0, #8b5cf6 3px, transparent 3px, transparent 6px)' }} />
-                    <span>Cliquez pour supprimer</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
-                    <span>Portail : autre espace</span>
-                  </div>
-                </div>
-                <div className="font-semibold text-foreground mb-1.5 pt-2 border-t">Relations</div>
-                <div className="flex flex-wrap gap-1">
-                  {RELATION_TYPES.map((type) => (
-                    <div
-                      key={type.id}
-                      className="group relative p-1.5 rounded-md hover:bg-accent cursor-help transition-colors"
-                      title={`${type.label} — ${type.description}`}
-                    >
-                      <type.Icon className={`w-4 h-4 ${type.color}`} />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                        <div className="font-medium">{type.label}</div>
-                        <div className="text-gray-300 text-[10px]">{type.description}</div>
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </Panel>
       </ReactFlow>
+      </div>
 
       {/* Relation type selection dialog */}
       {pendingConnection && (
@@ -1515,7 +1590,7 @@ function MindMapViewInner({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -1524,6 +1599,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
   spaceViews, allowedViews, onSetMode, defaultView,
+  spaceRole, onNewItem, onStartTour, pulseHelp, filter, onFilterChange, statusFilter, onStatusFilterChange, totalItemCount,
 }, ref) {
   return (
     <div className="h-full w-full flex flex-col">
@@ -1536,7 +1612,6 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           defaultView={defaultView}
         />
       )}
-      <div className="flex-1 min-h-0">
       <ReactFlowProvider>
         <MindMapViewInner
           items={items} spaceName={spaceName} spaceId={spaceId} communitySpaces={communitySpaces}
@@ -1547,10 +1622,11 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
  onOpenInNewTab={onOpenInNewTab} onReorder={onReorder} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
           referentiels={referentiels} canEdit={canEdit} canEditItem={canEditItem}
+          spaceRole={spaceRole} onNewItem={onNewItem} onStartTour={onStartTour} pulseHelp={pulseHelp}
+          filter={filter} onFilterChange={onFilterChange} statusFilter={statusFilter} onStatusFilterChange={onStatusFilterChange} totalItemCount={totalItemCount}
           innerRef={ref}
         />
       </ReactFlowProvider>
-      </div>
     </div>
   );
 });

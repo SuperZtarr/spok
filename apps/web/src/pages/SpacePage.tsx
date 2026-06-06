@@ -759,6 +759,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -843,6 +844,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -910,6 +914,8 @@ export function SpacePage() {
               statusFilter={statusFilter}
               onStatusFilterChange={setStatusFilter}
               totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
@@ -994,28 +1000,12 @@ export function SpacePage() {
               totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
             />
           ) : viewMode === 'mindmap' ? (
-            <>
-              <ViewToolbar
-                viewMode="mindmap"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                referentiels={referentiels}
-              />
             <MindMapView
               key={spaceId}
               items={filterBySearch(allItemsData?.data)}
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
+              spaceRole={space?.role}
               communitySpaces={communitySpaces || []}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1034,7 +1024,6 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               onReorder={actions.handleReorder}
               onCreateRelation={actions.handleCreateRelation}
@@ -1042,8 +1031,16 @@ export function SpacePage() {
               onUpdateRelation={actions.handleUpdateRelation}
               referentiels={referentiels}
               canEdit={canEdit}
-              canEditItem={canEditItem}            />
-            </>
+              canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+              filter={filter}
+              onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+            />
           ) : viewMode === 'graph' ? (
             <>
               <ViewToolbar
@@ -1052,6 +1049,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1086,6 +1086,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1116,6 +1119,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1146,6 +1152,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1176,6 +1185,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1205,6 +1217,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1234,6 +1249,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1263,6 +1281,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1292,6 +1313,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1321,6 +1345,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -1353,6 +1378,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1383,6 +1411,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1453,6 +1484,9 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
+                spaceName={space?.name}
+                viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
                 isHighlightMode={true}
@@ -1495,6 +1529,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -1540,6 +1575,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -1585,6 +1621,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -1632,6 +1669,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -1679,6 +1717,7 @@ export function SpacePage() {
                 spaceRole={space?.role}
                 canEdit={canEdit}
                 onNewItem={canEdit ? handleNewItem : undefined}
+                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
                 viewContainerRef={viewContainerRef}
                 onStartTour={() => startViewTour(viewMode)}
@@ -1741,6 +1780,7 @@ export function SpacePage() {
                   spaceRole={space?.role}
                   canEdit={canEdit}
                   onNewItem={canEdit ? handleNewItem : undefined}
+                  exportItems={itemsData?.data ?? []}
                   spaceName={space?.name}
                   viewContainerRef={viewContainerRef}
                   onStartTour={() => startViewTour(viewMode)}

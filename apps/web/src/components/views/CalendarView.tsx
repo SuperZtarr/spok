@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { ViewToolbar } from '../ui/ViewToolbar';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -44,6 +44,8 @@ interface CalendarViewProps {
   statusFilter?: string;
   onStatusFilterChange?: (status: string) => void;
   totalItemCount?: number;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 // Convert hex-like tailwind color refs to usable CSS
@@ -78,6 +80,7 @@ export function CalendarView({
   canEdit = true,
   spaceId, spaceRole, onNewItem, onStartTour, pulseHelp,
   filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
+  spaceName, viewContainerRef,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -201,6 +204,9 @@ export function CalendarView({
         spaceRole={spaceRole}
         canEdit={canEdit}
         onNewItem={onNewItem}
+        exportItems={items}
+        spaceName={spaceName}
+        viewContainerRef={viewContainerRef}
         onStartTour={onStartTour}
         pulseHelp={pulseHelp}
         isHighlightMode={true}
