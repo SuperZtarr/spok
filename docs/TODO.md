@@ -71,6 +71,10 @@
 - [x] MCP : CRUD complet items, espaces, communautés (15 outils) — 65800d7 (2026-04-29)
 - [x] MCP : get_item, champs complets list/search/get, fix description HTML, 253 items doc migrés — b460cfc, a900086 (2026-05-10)
 
+### Outillage Claude
+
+- [ ] Skill `spok-layout` : documenter Sidebar + MainMenu (invariants, ce qui a régressé, fichiers clés) — enrichir aussi ARCHITECTURE.md avec le détail
+
 ## Idées (à explorer)
 
 ### Monitoring (priorité basse)

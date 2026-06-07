@@ -413,6 +413,30 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           itemCount: membership.space._count.items,
         };
       }
+
+      // 1b. Admin bypass — full access without membership
+      const adminUser = await fastify.prisma.user.findUnique({
+        where: { id: userId },
+        select: { globalRole: true },
+      });
+      if (adminUser?.globalRole === 'ADMIN') {
+        const adminSpace = await fastify.prisma.space.findUnique({
+          where: { id: request.params.id },
+          include: {
+            _count: { select: { memberships: true, items: true } },
+            community: { select: { id: true, name: true } },
+            parent: { select: { id: true, name: true } },
+          },
+        });
+        if (adminSpace) {
+          return {
+            ...adminSpace,
+            role: 'ADMIN' as Role,
+            memberCount: adminSpace._count.memberships,
+            itemCount: adminSpace._count.items,
+          };
+        }
+      }
     }
 
     // 2. Try community membership or public community → VIEWER access
@@ -1031,6 +1055,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             },
           }));
         }
+      }
+
+      // Admin bypass
+      if (!hasAccess) {
+        const user = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
+        if (user?.globalRole === 'ADMIN') hasAccess = true;
       }
     }
 

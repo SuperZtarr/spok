@@ -28,6 +28,16 @@ Lorsqu'une solution est convenue, proposer un plan a valider avant de coder
 - **Sidebar** : style Notion/Linear — ne pas réintroduire de sidebar compacte non demandée
 - **Auth/Token** : logique refresh proactive — ne pas simplifier sans comprendre pourquoi
 
+### Référence technique obligatoire
+
+Lire `docs/ARCHITECTURE.md` avant de travailler sur :
+- N'importe quel composant vue (ListView, KanbanView, MindMapView, etc.)
+- Les stores Zustand (`stores/`)
+- Les hooks TanStack Query (`hooks/`)
+- SpacePage
+
+Ce fichier documente les patterns de code, les stores existants, les conventions queryKey, et la structure attendue des vues. Ne pas déduire ces patterns depuis le code seul.
+
 ### Documentation — règles obligatoires
 
 **Consulter avant de coder**

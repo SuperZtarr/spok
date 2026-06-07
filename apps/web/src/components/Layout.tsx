@@ -1099,7 +1099,7 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="border-b border-border bg-card flex flex-col flex-shrink-0">
+        <header className="border-b border-border bg-card flex flex-col flex-shrink-0 relative z-30">
           {/* Row 1: title + right controls */}
           <div
             className="flex items-stretch h-12 relative isolate"

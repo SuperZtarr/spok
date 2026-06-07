@@ -35,9 +35,10 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
    - Si un onglet existe : naviguer vers `http://localhost:3000` via `mcp__Claude_in_Chrome__navigate`
    - Si aucun onglet disponible : créer un onglet via `mcp__Claude_in_Chrome__tabs_create_mcp` puis naviguer — **ne jamais utiliser `createIfEmpty: true`** (crée un nouveau groupe "Démarre" à chaque session)
 
-4. **Lire le contexte de session**
+4. **Lire le contexte de session** (en parallèle) :
    - `docs/session-journal.md` — section EN COURS
    - `docs/TODO.md` — tâches en attente
+   - `docs/ARCHITECTURE.md` — patterns de code, stores, zones fragiles
 
 5. **Présenter un résumé** : ce qui était en cours, ce qui reste à faire, proposer la suite.
 

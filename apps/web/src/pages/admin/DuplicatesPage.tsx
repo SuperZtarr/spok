@@ -26,13 +26,15 @@ type DuplicateItem = {
   spaceId: string;
   spaceName: string;
   communityName: string | null;
+  ownerName: string | null;
   ancestors: Array<{ id: string; title: string }>;
 };
 
-// Breadcrumb: Communauté > Espace > Grand-parent > Parent
+// Breadcrumb: Communauté (ou Owner) > Espace > Grand-parent > Parent
 function Breadcrumb({ item }: { item: DuplicateItem }) {
   const parts: string[] = [];
   if (item.communityName) parts.push(item.communityName);
+  else if (item.ownerName) parts.push(item.ownerName);
   parts.push(item.spaceName);
   for (const a of item.ancestors) parts.push(a.title);
 

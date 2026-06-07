@@ -94,6 +94,12 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       },
     });
     if (membership) return membership;
+
+    // Admin bypass — full access without membership
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+    if (user?.globalRole === 'ADMIN') {
+      return { userId, spaceId, role: 'ADMIN' as const, id: '', joinedAt: new Date() };
+    }
   }
 
   // 2. Community membership or public community → access depends on effective visibility

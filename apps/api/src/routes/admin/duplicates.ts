@@ -13,6 +13,7 @@ interface RawItem {
   spaceName: string;
   communityId: string | null;
   communityName: string | null;
+  ownerName: string | null;
   parentId: string | null;
   parentTitle: string | null;
   grandparentId: string | null;
@@ -36,6 +37,7 @@ interface DuplicateItem {
   spaceName: string;
   communityId: string | null;
   communityName: string | null;
+  ownerName: string | null;
   ancestors: Ancestor[]; // [grandparent?, parent?] — nearest last
 }
 
@@ -45,17 +47,20 @@ interface DuplicateGroup {
   items: DuplicateItem[];
 }
 
-// Two levels of parent JOINs for breadcrumb
+// Two levels of parent JOINs for breadcrumb + space owner
 const ITEM_SELECT = `
   i.id, i.title, i.type, i.url, i.status, i.priority,
   i."createdAt"::text as "createdAt", i."spaceId",
   s.name as "spaceName", s."communityId",
   c.name as "communityName",
+  ou.name as "ownerName",
   p.id as "parentId", p.title as "parentTitle",
   gp.id as "grandparentId", gp.title as "grandparentTitle"
 FROM items i
 JOIN spaces s ON s.id = i."spaceId"
 LEFT JOIN communities c ON c.id = s."communityId"
+LEFT JOIN space_memberships sm ON sm."spaceId" = s.id AND sm.role = 'OWNER'
+LEFT JOIN users ou ON ou.id = sm."userId"
 LEFT JOIN items p ON p.id = i."parentId"
 LEFT JOIN items gp ON gp.id = p."parentId"
 `;
@@ -80,6 +85,7 @@ function toItem(r: RawItem): DuplicateItem {
     spaceName: r.spaceName,
     communityId: r.communityId,
     communityName: r.communityName,
+    ownerName: r.ownerName,
     ancestors,
   };
 }
