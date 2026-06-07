@@ -44,7 +44,7 @@ export function FilterToolbar({
   const itemCountLabel = (() => {
     if (searchQuery?.trim() && searchMatchCount !== undefined)
       return `${searchMatchCount}/${totalItemCount} éléments`;
-    if ((filter !== 'ALL' || statusFilter !== 'ALL') && filteredItemCount !== undefined)
+    if (filteredItemCount !== undefined && filteredItemCount !== totalItemCount)
       return `${filteredItemCount}/${totalItemCount} éléments`;
     return `${totalItemCount} éléments`;
   })();

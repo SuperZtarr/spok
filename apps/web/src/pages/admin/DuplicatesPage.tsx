@@ -26,7 +26,7 @@ type DuplicateItem = {
   spaceId: string;
   spaceName: string;
   communityName: string | null;
-  ownerName: string | null;
+  ownerName?: string | null;
   ancestors: Array<{ id: string; title: string }>;
 };
 

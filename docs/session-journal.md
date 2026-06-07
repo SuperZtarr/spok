@@ -6,10 +6,11 @@
 
 ## EN COURS — 2026-06-07
 
-### Fixes z-index header + admin/duplicates
-- `Layout.tsx` : `isolate` → `z-10` row 1 header, cover `-z-10` → `z-0` — notifications passent devant SpaceToolbar
-- `spaces.ts` + `items.ts` : bypass admin membership pour GET espace/items/membres/référentiels (630ac21)
-- `admin/duplicates.ts` + `DuplicatesPage.tsx` : owner affiché dans breadcrumb vignette quand pas de communauté (630ac21)
+### PertToolbar migré sur ViewToolbar + fixes count
+- `ViewToolbar.tsx` : slots `extraControls` + `customExport` pour injection de contrôles spécifiques
+- `PertToolbar.tsx` : migré sur `ViewToolbar`, ne garde que les contrôles PERT (bloquants, zoom, sortMode, export SVG)
+- `FilterToolbar.tsx` : count `X/Y` affiché dès que `filteredItemCount !== totalItemCount` (couvre filtre bloquants PERT)
+- `PertView.tsx` : `filteredItemCount={showOnlyBlocking ? sortedItems.length : undefined}`
 
 ## HISTORIQUE — 2026-06-01
 

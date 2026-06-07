@@ -42,6 +42,9 @@ export interface ViewToolbarProps {
   searchMatchCount?: number;
   referentiels?: SpaceReferentiels;
   isHighlightMode?: boolean;
+  // Slots pour toolbars custom
+  extraControls?: React.ReactNode;
+  customExport?: React.ReactNode;
   // Layout
   className?: string;
 }
@@ -58,6 +61,8 @@ export function ViewToolbar({
   totalItemCount, filteredItemCount, searchMatchCount,
   referentiels,
   isHighlightMode = false,
+  extraControls,
+  customExport,
   className = '',
 }: ViewToolbarProps) {
   const showExport = !['pert', 'timeline', 'mindmap'].includes(viewMode);
@@ -81,6 +86,7 @@ export function ViewToolbar({
         {onToggleExpand && (
           <CollapseToggleButton isCollapsed={!isExpanded} onToggle={onToggleExpand} />
         )}
+        {extraControls}
 
         <div className="h-4 w-px bg-border" />
 
@@ -98,9 +104,9 @@ export function ViewToolbar({
           isHighlightMode={isHighlightMode}
         />
 
-        {showExport && exportItems && spaceName && viewContainerRef && (
+        {customExport ?? (showExport && exportItems && spaceName && viewContainerRef && (
           <SpaceExportButton items={exportItems} spaceName={spaceName} viewMode={viewMode} viewContainerRef={viewContainerRef} />
-        )}
+        ))}
 
         {/* Droite : Historique, Paramètres */}
         {canEdit && spaceId && (

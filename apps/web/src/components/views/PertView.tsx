@@ -450,6 +450,7 @@ const rowIndex = useMemo(() => {
         statusFilter={statusFilter}
         onStatusFilterChange={onStatusFilterChange}
         totalItemCount={totalItemCount}
+        filteredItemCount={showOnlyBlocking ? sortedItems.length : undefined}
         referentiels={referentiels}
       />
       <div className="flex flex-1 overflow-hidden">
