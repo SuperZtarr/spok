@@ -4,15 +4,12 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-06-06
+## EN COURS — 2026-06-07
 
-### Refactor toolbars — toutes les vues migrées
-- `ViewToolbar.tsx` + `FilterToolbar.tsx` : composants réutilisables (Aide→Nouveau→Export→Tri→|→Filtre/Lumière→Count→Historique→Paramètres)
-- `SpaceToolbar.tsx` : ne contient plus que le sélecteur de vues
-- Toutes les vues migrées vers ViewToolbar (ou toolbar interne enrichie pour PERT/Timeline)
-- Suppression multi-sélection (`SelectionActionBar`, `useSelectionStore`)
-- `hideToolbar` prop sur `ListView` pour les vues qui l'embarquent (Bugs, Todo, Recent)
-- `FilterToolbar` : mode Lumière (jaune) vs Filtre (bleu) selon `isHighlightMode`
+### Fixes z-index header + admin/duplicates
+- `Layout.tsx` : `isolate` → `z-10` row 1 header, cover `-z-10` → `z-0` — notifications passent devant SpaceToolbar
+- `spaces.ts` + `items.ts` : bypass admin membership pour GET espace/items/membres/référentiels (630ac21)
+- `admin/duplicates.ts` + `DuplicatesPage.tsx` : owner affiché dans breadcrumb vignette quand pas de communauté (630ac21)
 
 ## HISTORIQUE — 2026-06-01
 
