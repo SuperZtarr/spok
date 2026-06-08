@@ -9,18 +9,27 @@ import type { ViewMode } from '../../stores/viewMode';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { buildTree, flattenTree } from './timeline-tree';
-import { buildPertGraph, computePertRanks, computeCriticalPathNaive } from './pert-utils';
+import { buildPertGraph, computeCriticalPathNaive } from './pert-utils';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
 const LEFT_PANEL_WIDTH = 288;
 const ROW_HEIGHT = 36;
+const SPACE_HEADER_HEIGHT = 32;
 const NODE_WIDTH = 160;
 const NODE_HEIGHT = 28;
 const COLUMN_WIDTH = 220;
 const H_PADDING = 24;
 const V_PADDING = 4;
+
+const SPACE_COLORS = [
+  { fill: 'rgba(99,102,241,0.06)',  stroke: 'rgba(99,102,241,0.30)',  text: 'rgba(99,102,241,0.75)'  },
+  { fill: 'rgba(16,185,129,0.06)',  stroke: 'rgba(16,185,129,0.30)',  text: 'rgba(16,185,129,0.75)'  },
+  { fill: 'rgba(245,158,11,0.06)',  stroke: 'rgba(245,158,11,0.30)',  text: 'rgba(245,158,11,0.75)'  },
+  { fill: 'rgba(239,68,68,0.06)',   stroke: 'rgba(239,68,68,0.30)',   text: 'rgba(239,68,68,0.75)'   },
+  { fill: 'rgba(168,85,247,0.06)',  stroke: 'rgba(168,85,247,0.30)',  text: 'rgba(168,85,247,0.75)'  },
+];
 
 const PERT_RELATION_TYPES = [
   { id: 'blocks',  label: 'Bloque',     Icon: Ban,       description: 'A doit être terminé avant B', color: 'text-red-500'    },
@@ -183,10 +192,6 @@ export function PertView({
     return ids;
   }, [relations]);
 
-  const portalSpaceNames = useMemo(() => {
-    if (!portalGroups?.length) return new Map<string, string>();
-    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
-  }, [portalGroups]);
 
   const sortedItems = useMemo(() => {
     const filtered = showOnlyBlocking
@@ -220,10 +225,46 @@ export function PertView({
     [sortedItems, pertRelations]
   );
 
-  const ranks = useMemo(
-    () => computePertRanks(sortedItems, predecessors, successors),
-    [sortedItems, predecessors, successors]
-  );
+  const ranks = useMemo(() => {
+    const idSet = new Set(sortedItems.map(i => i.id));
+    const itemMap = new Map(sortedItems.map(i => [i.id, i]));
+
+    // PERT predecessors per item (items that must come strictly before)
+    const pertPreds = new Map<string, string[]>();
+    for (const rel of pertRelations) {
+      let predId: string, succId: string;
+      if (rel.type === 'blocks') { predId = rel.fromItemId; succId = rel.toItemId; }
+      else { predId = rel.toItemId; succId = rel.fromItemId; }
+      if (idSet.has(predId) && idSet.has(succId)) {
+        if (!pertPreds.has(succId)) pertPreds.set(succId, []);
+        pertPreds.get(succId)!.push(predId);
+      }
+    }
+
+    // Combined rank: max(rank(pert_preds) + 1, rank(parent))
+    const rank = new Map<string, number>();
+    const inStack = new Set<string>(); // cycle guard
+
+    function assignRank(id: string): number {
+      if (rank.has(id)) return rank.get(id)!;
+      if (inStack.has(id)) return 0; // cycle — fallback
+      inStack.add(id);
+      let r = 0;
+      for (const predId of (pertPreds.get(id) ?? [])) {
+        r = Math.max(r, assignRank(predId) + 1);
+      }
+      const parentId = itemMap.get(id)?.parentId;
+      if (parentId && idSet.has(parentId)) {
+        r = Math.max(r, assignRank(parentId));
+      }
+      inStack.delete(id);
+      rank.set(id, r);
+      return r;
+    }
+
+    for (const item of sortedItems) assignRank(item.id);
+    return rank;
+  }, [sortedItems, pertRelations]);
 
   const criticalPathIds = useMemo(
     () => computeCriticalPathNaive(sortedItems, predecessors, successors),
@@ -242,7 +283,29 @@ export function PertView({
     [ranks, pertSortMode]
   );
 
-  const tree = useMemo(() => buildTree(sortedItems, pertSortFn), [sortedItems, pertSortFn]);
+  // Break cross-space parent-child links so each space forms its own independent tree
+  const treeItems = useMemo(() => {
+    if (!portalGroups?.length || !currentSpaceId) return sortedItems;
+    const itemSpaceMap = new Map(sortedItems.map(i => [i.id, i.spaceId ?? currentSpaceId]));
+    return sortedItems.map(item => {
+      if (!item.parentId) return item;
+      const parentSpace = itemSpaceMap.get(item.parentId);
+      const itemSpace = item.spaceId ?? currentSpaceId;
+      if (parentSpace && parentSpace !== itemSpace) return { ...item, parentId: null };
+      return item;
+    });
+  }, [sortedItems, portalGroups, currentSpaceId]);
+
+  const tree = useMemo(() => {
+    const rawTree = buildTree(treeItems, pertSortFn);
+    if (!portalGroups?.length || !currentSpaceId) return rawTree;
+    const spaceOrder = [currentSpaceId, ...(portalGroups.map(g => g.spaceId))];
+    return [...rawTree].sort((a, b) => {
+      const ai = spaceOrder.indexOf(a.spaceId ?? currentSpaceId);
+      const bi = spaceOrder.indexOf(b.spaceId ?? currentSpaceId);
+      return ai - bi;
+    });
+  }, [treeItems, pertSortFn, portalGroups, currentSpaceId]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
   const visibleFlatItems = useMemo(() => {
     if (!collapsedSpaces.size) return flatItems;
@@ -256,11 +319,42 @@ export function PertView({
     return ids;
   }, [tree]);
 
-const rowIndex = useMemo(() => {
+  type SvgRow =
+    | { kind: 'space-header'; spaceId: string; spaceName: string; colorIdx: number }
+    | { kind: 'item'; item: (typeof visibleFlatItems)[0] };
+
+  const svgRows = useMemo<SvgRow[]>(() => {
+    if (!portalGroups?.length) {
+      return visibleFlatItems.map(item => ({ kind: 'item' as const, item }));
+    }
+    const spaceNames = new Map<string, string>();
+    if (currentSpaceId && spaceName) spaceNames.set(currentSpaceId, spaceName);
+    portalGroups.forEach(g => spaceNames.set(g.spaceId, g.spaceName));
+    const rows: SvgRow[] = [];
+    let lastSpaceId: string | null = null;
+    let colorIdx = 0;
+    const spaceColorMap = new Map<string, number>();
+    for (const item of visibleFlatItems) {
+      const sid = item.spaceId ?? currentSpaceId ?? '';
+      if (sid !== lastSpaceId) {
+        if (!spaceColorMap.has(sid)) spaceColorMap.set(sid, colorIdx++ % SPACE_COLORS.length);
+        rows.push({ kind: 'space-header', spaceId: sid, spaceName: spaceNames.get(sid) ?? sid, colorIdx: spaceColorMap.get(sid)! });
+        lastSpaceId = sid;
+      }
+      rows.push({ kind: 'item', item });
+    }
+    return rows;
+  }, [visibleFlatItems, portalGroups, currentSpaceId, spaceName]);
+
+  const rowIndex = useMemo(() => {
     const map = new Map<string, number>();
-    visibleFlatItems.forEach((item, i) => map.set(item.id, i));
+    let y = 0;
+    for (const row of svgRows) {
+      if (row.kind === 'space-header') { y += SPACE_HEADER_HEIGHT; }
+      else { map.set(row.item.id, y); y += ROW_HEIGHT; }
+    }
     return map;
-  }, [visibleFlatItems]);
+  }, [svgRows]);
 
   const parentMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -316,11 +410,43 @@ const rowIndex = useMemo(() => {
     return max;
   }, [visibleFlatItems, ranks]);
 
+  // Branch boxes: enclosing rect around each parent + visible descendants
+  const branchBoxes = useMemo(() => {
+    const visibleIds = new Set(visibleFlatItems.map(i => i.id));
+    const childrenOf = new Map<string, string[]>();
+    for (const item of visibleFlatItems) {
+      if (item.parentId && visibleIds.has(item.parentId)) {
+        if (!childrenOf.has(item.parentId)) childrenOf.set(item.parentId, []);
+        childrenOf.get(item.parentId)!.push(item.id);
+      }
+    }
+    function allDescendants(id: string): string[] {
+      return [id, ...(childrenOf.get(id) ?? []).flatMap(c => allDescendants(c))];
+    }
+    // Only top-level parents (not nested parents whose own parent is also a parent)
+    const topParents = [...childrenOf.keys()].filter(id => {
+      const parentId = visibleFlatItems.find(i => i.id === id)?.parentId;
+      return !parentId || !childrenOf.has(parentId);
+    });
+    return topParents.map(parentId => {
+      const ids = allDescendants(parentId);
+      const ys = ids.map(id => rowIndex.get(id) ?? 0);
+      const xs = ids.map(id => H_PADDING + (ranks.get(id) ?? 0) * COLUMN_WIDTH);
+      return {
+        id: parentId,
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs) + NODE_WIDTH,
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys),
+      };
+    });
+  }, [visibleFlatItems, rowIndex, ranks]);
+
   const svgWidth = (maxRank + 1) * COLUMN_WIDTH + H_PADDING * 2 + NODE_WIDTH;
-  const svgHeight = visibleFlatItems.length * ROW_HEIGHT;
+  const svgHeight = svgRows.reduce((h, row) => h + (row.kind === 'space-header' ? SPACE_HEADER_HEIGHT : ROW_HEIGHT), 0);
 
   function nodeX(id: string) { return H_PADDING + (ranks.get(id) ?? 0) * COLUMN_WIDTH; }
-  function nodeY(id: string) { return (rowIndex.get(id) ?? 0) * ROW_HEIGHT + V_PADDING; }
+  function nodeY(id: string) { return (rowIndex.get(id) ?? 0) + V_PADDING; }
 
   // ── Relation drag ──────────────────────────────────────────────
 
@@ -534,82 +660,69 @@ const rowIndex = useMemo(() => {
         ref={scrollContainerRef}
         onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop * zoom; }}
       >
-        {(() => {
-          const hasMultipleSpaces = portalGroups && portalGroups.length > 0 && currentSpaceId;
-          const renderedSpaceHeaders = new Set<string>();
-          let headerCount = 0;
-          const rows: React.ReactNode[] = [];
-          for (const item of flatItems) {
-            const itemSpaceId = item.spaceId ?? currentSpaceId ?? null;
-            if (hasMultipleSpaces && item.depth === 0 && itemSpaceId && !renderedSpaceHeaders.has(itemSpaceId)) {
-              const name = itemSpaceId === currentSpaceId
-                ? (portalGroups!.length > 0 ? (spaceName || 'Espace courant') : null)
-                : (portalSpaceNames.get(itemSpaceId) ?? itemSpaceId);
-              if (name) {
-                const isSpaceCollapsed = collapsedSpaces.has(itemSpaceId);
-                rows.push(
-                  <div
-                    key={`header-${itemSpaceId}-${headerCount++}`}
-                    className="flex items-center gap-1 px-2 text-xs font-semibold text-muted-foreground bg-muted/40 border-b border-border/50 cursor-pointer hover:bg-muted/60 select-none"
-                    style={{ height: 24 }}
-                    onClick={() => toggleSpaceCollapse(itemSpaceId)}
-                  >
-                    {isSpaceCollapsed
-                      ? <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                      : <ChevronDown className="w-3 h-3 flex-shrink-0" />}
-                    <span className="truncate">{name}</span>
-                  </div>
-                );
-              }
-              renderedSpaceHeaders.add(itemSpaceId);
-            }
-            if (hasMultipleSpaces && itemSpaceId && collapsedSpaces.has(itemSpaceId)) continue;
-            const hasChildren = item.children.length > 0;
-            const isCollapsed = collapsedIds.has(item.id);
-            const Icon = getTypeIcon(item.type as ItemType, item.url);
-            const canEditThis = canEditItem ? canEditItem(item) : canEdit ?? true;
-            const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
-            const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
-            rows.push(
+        {svgRows.map((row, rowIdx) => {
+          if (row.kind === 'space-header') {
+            const c = SPACE_COLORS[row.colorIdx];
+            const isCollapsed = collapsedSpaces.has(row.spaceId);
+            return (
               <div
-                key={item.id}
-                className={`group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
-                style={{ height: ROW_HEIGHT, paddingLeft: `${8 + item.depth * 20}px` }}
-                onClick={() => onEdit(item.id)}
+                key={`lh-${row.spaceId}-${rowIdx}`}
+                className="flex items-center gap-1 px-2 text-xs font-semibold border-b cursor-pointer select-none"
+                style={{ height: SPACE_HEADER_HEIGHT, backgroundColor: c.fill, borderColor: c.stroke, borderLeftWidth: 3, borderLeftColor: c.stroke }}
+                onClick={() => toggleSpaceCollapse(row.spaceId)}
               >
-                {hasChildren ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
-                    className="p-0.5 hover:bg-muted rounded flex-shrink-0"
-                  >
-                    {isCollapsed
-                      ? <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                  </button>
-                ) : <span className="w-5 flex-shrink-0" />}
-                <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="truncate text-sm flex-1 pr-1">{item.title}</span>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pr-1">
-                  <ItemActionMenu
-                    groups={buildItemMenuGroups(item.id, {
-                      onEdit, onDelete, onUpdateStatus, onAddChild,
-                      onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
-                      onSelfAssign, onMerge, onAbsorbChildren,
-                      onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
-                      onOpen, onOpenInNewTab,
-                    }, {
-                      canEdit: canEditThis,
-                      statusOptions,
-                      currentStatusId: item.status || undefined,
-                    })}
-                  />
-                </div>
+                {isCollapsed
+                  ? <ChevronRight className="w-3 h-3 flex-shrink-0" style={{ color: c.text }} />
+                  : <ChevronDown className="w-3 h-3 flex-shrink-0" style={{ color: c.text }} />}
+                <span className="text-sm font-semibold leading-tight" style={{ color: c.text }}>{row.spaceName}</span>
               </div>
             );
           }
-          return rows;
-        })()}
+          const { item } = row;
+          const hasChildren = item.children.length > 0;
+          const isCollapsed = collapsedIds.has(item.id);
+          const Icon = getTypeIcon(item.type as ItemType, item.url);
+          const canEditThis = canEditItem ? canEditItem(item) : canEdit ?? true;
+          const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+          const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+          const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+          return (
+            <div
+              key={item.id}
+              className={`group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
+              style={{ height: ROW_HEIGHT, paddingLeft: `${8 + item.depth * 20}px` }}
+              onClick={() => onEdit(item.id)}
+            >
+              {hasChildren ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
+                  className="p-0.5 hover:bg-muted rounded flex-shrink-0"
+                >
+                  {isCollapsed
+                    ? <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+              ) : <span className="w-5 flex-shrink-0" />}
+              <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="truncate text-sm flex-1 pr-1">{item.title}</span>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pr-1">
+                <ItemActionMenu
+                  groups={buildItemMenuGroups(item.id, {
+                    onEdit, onDelete, onUpdateStatus, onAddChild,
+                    onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
+                    onSelfAssign, onMerge, onAbsorbChildren,
+                    onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
+                    onOpen, onOpenInNewTab,
+                  }, {
+                    canEdit: canEditThis,
+                    statusOptions,
+                    currentStatusId: item.status || undefined,
+                  })}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Right panel — PERT SVG */}
@@ -630,9 +743,37 @@ const rowIndex = useMemo(() => {
               <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
             </defs>
 
+            {/* Branch enclosing boxes */}
+            {branchBoxes.map(b => (
+              <rect key={`branch-${b.id}`}
+                x={b.minX - 10} y={b.minY - 5}
+                width={b.maxX - b.minX + 20} height={b.maxY - b.minY + ROW_HEIGHT + 10}
+                rx={8} ry={8}
+                fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.30)" strokeWidth={1} strokeDasharray="5,3"
+              />
+            ))}
+
             {effectiveRelations.map((er, i) => renderArrow(er, `rel-${i}`))}
 
-            {visibleFlatItems.map((item) => {
+            {(() => {
+              let accY = 0;
+              return svgRows.map(row => {
+                const rowY = accY;
+                accY += row.kind === 'space-header' ? SPACE_HEADER_HEIGHT : ROW_HEIGHT;
+
+              if (row.kind === 'space-header') {
+                const c = SPACE_COLORS[row.colorIdx];
+                return (
+                  <g key={`sh-${row.spaceId}-${rowY}`}>
+                    <rect x={0} y={rowY} width={svgWidth} height={SPACE_HEADER_HEIGHT} fill={c.fill} />
+                    <rect x={0} y={rowY} width={3} height={SPACE_HEADER_HEIGHT} fill={c.stroke} />
+                    <line x1={0} y1={rowY} x2={svgWidth} y2={rowY} stroke={c.stroke} strokeWidth={1} opacity={0.5} />
+                    <text x={10} y={rowY + SPACE_HEADER_HEIGHT / 2 + 4} fontSize={12} fontWeight={700} fill={c.text} style={{ userSelect: 'none' }}>{row.spaceName}</text>
+                  </g>
+                );
+              }
+
+              const { item } = row;
               const x = nodeX(item.id);
               const y = nodeY(item.id);
               const isCritical = criticalPathIds.has(item.id);
@@ -687,7 +828,8 @@ const rowIndex = useMemo(() => {
                   )}
                 </g>
               );
-            })}
+              });
+            })()}
 
             {/* Drag line */}
             {relationDrag && (

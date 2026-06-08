@@ -6,11 +6,11 @@
 
 ## EN COURS — 2026-06-08
 
-### Regroupement par espace PERT + Gantt + fixes scroll
-- `PertView.tsx` : props `portalGroups` + `currentSpaceId`, items racine triés par espace, séparateurs d'espace dans le left panel
-- `TimelineView.tsx` : même regroupement dans `flatRows`, séparateurs visuels dans le rendu Gantt, `itemYOffset` pour aligner les flèches de dépendance
-- `SpacePage.tsx` : `portalGroups` + `currentSpaceId` passés à `PertView`, `timeline` ajouté à la liste `h-full overflow-hidden`
-- `TimelineView.tsx` : auto-scroll pendant drag de relation (RAF + `findScrollParent`), suppression double scrollbar via `h-full` contraint
+### PERT : groupement visuel par espace + branches + hiérarchie
+- `PertView.tsx` : `svgRows` avec header rows par espace (swim lanes colorées, panel gauche + SVG synchronisés)
+- `PertView.tsx` : `branchBoxes` — rectangle pointillé englobant parent + enfants visibles
+- `PertView.tsx` : `ranks` recalculé avec contraintes parent-enfant + PERT simultanément (enfants sous leur parent, relations décalent)
+- `TimelineView.tsx` : `treeItems` — rupture des liens cross-space (même fix que PertView)
 
 ## HISTORIQUE — 2026-06-07
 

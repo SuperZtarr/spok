@@ -190,7 +190,20 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     ];
     return [...orderedRoots, ...children];
   }, [items, treeSort, portalGroups, currentSpaceId]);
-  const tree = useMemo(() => buildTree(sortedItems), [sortedItems]);
+  // Break cross-space parent-child links so each space forms its own independent tree
+  const treeItems = useMemo(() => {
+    if (!portalGroups?.length || !currentSpaceId) return sortedItems;
+    const itemSpaceMap = new Map(sortedItems.map(i => [i.id, i.spaceId ?? currentSpaceId]));
+    return sortedItems.map(item => {
+      if (!item.parentId) return item;
+      const parentSpace = itemSpaceMap.get(item.parentId);
+      const itemSpace = item.spaceId ?? currentSpaceId;
+      if (parentSpace && parentSpace !== itemSpace) return { ...item, parentId: null };
+      return item;
+    });
+  }, [sortedItems, portalGroups, currentSpaceId]);
+
+  const tree = useMemo(() => buildTree(treeItems), [treeItems]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
   type FlatRow =
