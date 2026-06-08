@@ -1102,12 +1102,12 @@ export function Layout() {
         <header className="border-b border-border bg-card flex flex-col flex-shrink-0 relative z-30">
           {/* Row 1: title + right controls */}
           <div
-            className="flex items-stretch h-12 relative z-10"
+            className="flex items-stretch h-12 relative isolate"
           >
             {/* Cover image background */}
             {currentSpace?.coverUrl && (
               <div
-                className="absolute inset-0 z-0 bg-cover"
+                className="absolute inset-0 -z-10 bg-cover"
                 style={{
                   backgroundImage: `url(${currentSpace.coverUrl})`,
                   backgroundPosition: `center ${currentSpace.coverPosition ?? 50}%`,
@@ -1115,7 +1115,7 @@ export function Layout() {
               />
             )}
             {currentSpace?.coverUrl && (
-              <div className="absolute inset-0 z-0 bg-card/80 backdrop-blur-sm" />
+              <div className="absolute inset-0 -z-10 bg-card/80 backdrop-blur-sm" />
             )}
           {/* Left: hamburger + title + badges */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 flex-shrink-0">

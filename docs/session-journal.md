@@ -4,7 +4,15 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-06-07
+## EN COURS — 2026-06-08
+
+### Regroupement par espace PERT + Gantt + fixes scroll
+- `PertView.tsx` : props `portalGroups` + `currentSpaceId`, items racine triés par espace, séparateurs d'espace dans le left panel
+- `TimelineView.tsx` : même regroupement dans `flatRows`, séparateurs visuels dans le rendu Gantt, `itemYOffset` pour aligner les flèches de dépendance
+- `SpacePage.tsx` : `portalGroups` + `currentSpaceId` passés à `PertView`, `timeline` ajouté à la liste `h-full overflow-hidden`
+- `TimelineView.tsx` : auto-scroll pendant drag de relation (RAF + `findScrollParent`), suppression double scrollbar via `h-full` contraint
+
+## HISTORIQUE — 2026-06-07
 
 ### PertToolbar migré sur ViewToolbar + fixes count
 - `ViewToolbar.tsx` : slots `extraControls` + `customExport` pour injection de contrôles spécifiques

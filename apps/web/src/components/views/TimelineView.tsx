@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -25,6 +25,9 @@ import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { TreeItemRow } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
+
+const ROW_HEIGHT = 40;
+const HEADER_HEIGHT = 24;
 
 interface PortalGroup {
   spaceId: string;
@@ -158,9 +161,64 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
   }, [portalGroups]);
 
   const [treeSort, setTreeSort] = useState<TreeSort>('manual');
-  const sortedItems = useMemo(() => applyTreeSort(items, treeSort), [items, treeSort]);
+  const sortedItems = useMemo(() => {
+    const sorted = applyTreeSort(items, treeSort);
+    if (!portalGroups?.length || !currentSpaceId) return sorted;
+    const portalOrder = portalGroups.map(g => g.spaceId);
+    const rootIds = new Set(sorted.filter(i => !i.parentId).map(i => i.id));
+    const bySpace = new Map<string, Item[]>();
+    for (const item of sorted) {
+      if (!rootIds.has(item.id)) continue;
+      const sid = item.spaceId ?? currentSpaceId;
+      const arr = bySpace.get(sid) ?? [];
+      arr.push(item);
+      bySpace.set(sid, arr);
+    }
+    const children = sorted.filter(i => !rootIds.has(i.id));
+    const orderedRoots: Item[] = [
+      ...(bySpace.get(currentSpaceId) ?? []),
+      ...portalOrder.flatMap(sid => bySpace.get(sid) ?? []),
+    ];
+    return [...orderedRoots, ...children];
+  }, [items, treeSort, portalGroups, currentSpaceId]);
   const tree = useMemo(() => buildTree(sortedItems), [sortedItems]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
+
+  type FlatRow =
+    | { kind: 'header'; spaceId: string; spaceName: string }
+    | { kind: 'item'; item: TreeItem; itemIndex: number };
+
+  const flatRows = useMemo((): FlatRow[] => {
+    if (!portalGroups?.length || !currentSpaceId) {
+      return flatItems.map((item, itemIndex) => ({ kind: 'item', item, itemIndex }));
+    }
+    const rows: FlatRow[] = [];
+    const seenSpaces = new Set<string>();
+    let idx = 0;
+    for (const item of flatItems) {
+      const sid = item.spaceId ?? currentSpaceId;
+      if (item.depth === 0 && !seenSpaces.has(sid)) {
+        const name = sid === currentSpaceId
+          ? (spaceName || 'Espace courant')
+          : (portalSpaceNames.get(sid) ?? sid);
+        rows.push({ kind: 'header', spaceId: sid, spaceName: name });
+        seenSpaces.add(sid);
+      }
+      rows.push({ kind: 'item', item, itemIndex: idx++ });
+    }
+    return rows;
+  }, [flatItems, portalGroups, currentSpaceId, spaceName, portalSpaceNames]);
+
+  // Y pixel offset for each item, accounting for space headers
+  const itemYOffset = useMemo(() => {
+    const map = new Map<string, number>();
+    let y = 0;
+    for (const row of flatRows) {
+      if (row.kind === 'header') { y += HEADER_HEIGHT; }
+      else { map.set(row.item.id, y); y += ROW_HEIGHT; }
+    }
+    return map;
+  }, [flatRows]);
 
   // Compute effective dates for parents without own dates — derived from descendants
   const effectiveDates = useMemo(() => {
@@ -561,6 +619,38 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     }
   }, [relationDrag, handleRelationDragMove, handleRelationDragEnd]);
 
+  // Auto-scroll when dragging a relation near edges
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    if (!relationDrag) return;
+    const EDGE = 80;
+    const SPEED = 10;
+    // Find the actual scrollable ancestor at drag start
+    function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+      if (!el) return null;
+      const { overflowY } = window.getComputedStyle(el);
+      if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+      return findScrollParent(el.parentElement);
+    }
+    const scrollEl = findScrollParent(timelineAreaRef.current);
+    if (!scrollEl) return;
+    const onMove = (e: MouseEvent) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; };
+    window.addEventListener('mousemove', onMove);
+    let raf: number;
+    const tick = () => {
+      const rect = scrollEl.getBoundingClientRect();
+      const { y } = mousePosRef.current;
+      if (y < rect.top + EDGE && scrollEl.scrollTop > 0) scrollEl.scrollTop -= SPEED;
+      else if (y > rect.bottom - EDGE) scrollEl.scrollTop += SPEED;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, [!!relationDrag]);
+
   // Track container width via ResizeObserver — visibleStartDate se recale automatiquement
   useEffect(() => {
     const container = containerRef.current;
@@ -619,8 +709,6 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
 
   const visibleEndDate = addDays(visibleStartDate, visibleDays);
 
-  const ROW_HEIGHT = 40;
-
   // Compute dependency arrows between related items
   const dependencyArrows = useMemo(() => {
     if (!relations || relations.length === 0) return [];
@@ -644,14 +732,14 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
       // Arrow: always from end of source bar to start of target bar
       const fromX = fromBar.left + fromBar.width;
       const toX = toBar.left;
-      const fromY = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const toY = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+      const fromY = (itemYOffset.get(fromItem.id) ?? fromIdx * ROW_HEIGHT) + ROW_HEIGHT / 2;
+      const toY = (itemYOffset.get(toItem.id) ?? toIdx * ROW_HEIGHT) + ROW_HEIGHT / 2;
 
       arrows.push({ fromX, fromY, toX, toY, type: rel.type, relationId: rel.id, fromItemId: rel.fromItemId, toItemId: rel.toItemId, label: rel.label ?? '', fromTitle: fromItem.title, toTitle: toItem.title });
     }
 
     return arrows;
-  }, [relations, flatItems, visibleStartDate, zoomConfig, dayWidth]);
+  }, [relations, flatItems, itemYOffset, visibleStartDate, zoomConfig, dayWidth]);
 
   // Determine which header rows to show based on zoom level
   const showMonthRow = true; // Toujours afficher les mois
@@ -905,7 +993,25 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
               onDragEnd={handleGanttDragEnd}
               onDragCancel={handleGanttDragCancel}
             >
-            {flatItems.map((item, itemIndex) => {
+            {flatRows.map((row) => {
+              if (row.kind === 'header') {
+                return (
+                  <div
+                    key={`header-${row.spaceId}-${flatRows.indexOf(row)}`}
+                    className="flex border-b bg-muted/40"
+                    style={{ height: HEADER_HEIGHT }}
+                  >
+                    <div
+                      className="px-3 flex items-center text-xs font-semibold text-muted-foreground truncate"
+                      style={{ width: 288, flexShrink: 0 }}
+                    >
+                      {row.spaceName}
+                    </div>
+                    <div className="flex-1 border-l" />
+                  </div>
+                );
+              }
+              const { item, itemIndex } = row;
               const isPreview = dragPreview?.itemId === item.id;
               const derived = !isPreview ? effectiveDates.get(item.id) : undefined;
               const barStyle = isPreview
@@ -1131,7 +1237,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
             {dependencyArrows.length > 0 && (
               <svg
                 className="absolute top-0"
-                style={{ left: 288, width: visibleDays * dayWidth, height: flatItems.length * ROW_HEIGHT, pointerEvents: 'none' }}
+                style={{ left: 288, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0), pointerEvents: 'none' }}
               >
                 <defs>
                   <marker id="arrowhead-depends" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
@@ -1230,7 +1336,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
             {relationDrag && (
               <svg
                 className="absolute top-0 pointer-events-none z-20"
-                style={{ left: 288, width: visibleDays * dayWidth, height: flatItems.length * ROW_HEIGHT }}
+                style={{ left: 288, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0) }}
               >
                 <line
                   x1={relationDrag.fromX}

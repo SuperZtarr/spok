@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { PertToolbar } from './PertToolbar';
@@ -27,10 +27,18 @@ const PERT_RELATION_TYPES = [
   { id: 'depends', label: 'Dépend de',  Icon: ArrowLeft, description: 'A nécessite B pour avancer',  color: 'text-orange-500' },
 ];
 
+interface PortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: Item[];
+}
+
 interface PertViewProps {
   items: Item[];
   relations?: ItemRelation[];
   spaceId?: string;
+  currentSpaceId?: string;
+  portalGroups?: PortalGroup[];
   spaceName?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -74,6 +82,8 @@ export function PertView({
   items,
   relations = [],
   spaceId,
+  currentSpaceId,
+  portalGroups,
   onEdit,
   onDelete,
   onUpdateStatus,
@@ -165,12 +175,35 @@ export function PertView({
     return ids;
   }, [relations]);
 
+  const portalSpaceNames = useMemo(() => {
+    if (!portalGroups?.length) return new Map<string, string>();
+    return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+  }, [portalGroups]);
+
   const sortedItems = useMemo(() => {
     const filtered = showOnlyBlocking
       ? items.filter(i => blockingItemIds.has(i.id))
       : items;
-    return applyTreeSort(filtered, treeSort);
-  }, [items, treeSort, showOnlyBlocking, blockingItemIds]);
+    const sorted = applyTreeSort(filtered, treeSort);
+    if (!portalGroups?.length || !currentSpaceId) return sorted;
+    // Reorder root-level items: current space first, then portal groups in order
+    const portalOrder = portalGroups.map(g => g.spaceId);
+    const rootIds = new Set(sorted.filter(i => !i.parentId).map(i => i.id));
+    const bySpace = new Map<string, Item[]>();
+    for (const item of sorted) {
+      if (!rootIds.has(item.id)) continue;
+      const sid = item.spaceId ?? currentSpaceId;
+      const arr = bySpace.get(sid) ?? [];
+      arr.push(item);
+      bySpace.set(sid, arr);
+    }
+    const children = sorted.filter(i => !rootIds.has(i.id));
+    const orderedRoots: Item[] = [
+      ...(bySpace.get(currentSpaceId) ?? []),
+      ...portalOrder.flatMap(sid => bySpace.get(sid) ?? []),
+    ];
+    return [...orderedRoots, ...children];
+  }, [items, treeSort, showOnlyBlocking, blockingItemIds, portalGroups, currentSpaceId]);
 
   const { predecessors, successors } = useMemo(
     () => buildPertGraph(sortedItems, pertRelations),
@@ -328,6 +361,33 @@ const rowIndex = useMemo(() => {
     };
   }, [relationDrag, handleDragMove, handleDragEnd]);
 
+  // Auto-scroll both panels when dragging near edges
+  useEffect(() => {
+    if (!relationDrag) return;
+    const EDGE = 60;
+    const SPEED = 12;
+    let mouseX = 0, mouseY = 0;
+    const onMove = (e: MouseEvent) => { mouseX = e.clientX; mouseY = e.clientY; };
+    window.addEventListener('mousemove', onMove);
+    let raf: number;
+    const tick = () => {
+      for (const el of [svgScrollRef.current, scrollContainerRef.current]) {
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (mouseY < rect.top + EDGE) el.scrollTop -= SPEED;
+        else if (mouseY > rect.bottom - EDGE) el.scrollTop += SPEED;
+        if (mouseX < rect.left + EDGE) el.scrollLeft -= SPEED;
+        else if (mouseX > rect.right - EDGE) el.scrollLeft += SPEED;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, [!!relationDrag]);
+
   const handleRelationTypeSelect = useCallback((type: string) => {
     if (pendingConnection) {
       onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, pendingLabel || undefined);
@@ -461,51 +521,76 @@ const rowIndex = useMemo(() => {
         ref={scrollContainerRef}
         onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop * zoom; }}
       >
-        {flatItems.map((item) => {
-          const hasChildren = item.children.length > 0;
-          const isCollapsed = collapsedIds.has(item.id);
-          const Icon = getTypeIcon(item.type as ItemType, item.url);
-          const canEditThis = canEditItem ? canEditItem(item) : canEdit ?? true;
-          const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-          const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
-          const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
-          return (
-            <div
-              key={item.id}
-              className={`group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
-              style={{ height: ROW_HEIGHT, paddingLeft: `${8 + item.depth * 20}px` }}
-              onClick={() => onEdit(item.id)}
-            >
-              {hasChildren ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
-                  className="p-0.5 hover:bg-muted rounded flex-shrink-0"
-                >
-                  {isCollapsed
-                    ? <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
-              ) : <span className="w-5 flex-shrink-0" />}
-              <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="truncate text-sm flex-1 pr-1">{item.title}</span>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pr-1">
-                <ItemActionMenu
-                  groups={buildItemMenuGroups(item.id, {
-                    onEdit, onDelete, onUpdateStatus, onAddChild,
-                    onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
-                    onSelfAssign, onMerge, onAbsorbChildren,
-                    onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
-                    onOpen, onOpenInNewTab,
-                  }, {
-                    canEdit: canEditThis,
-                    statusOptions,
-                    currentStatusId: item.status || undefined,
-                  })}
-                />
+        {(() => {
+          const hasMultipleSpaces = portalGroups && portalGroups.length > 0 && currentSpaceId;
+          const renderedSpaceHeaders = new Set<string>();
+          let headerCount = 0;
+          const rows: React.ReactNode[] = [];
+          for (const item of flatItems) {
+            const itemSpaceId = item.spaceId ?? currentSpaceId ?? null;
+            if (hasMultipleSpaces && item.depth === 0 && itemSpaceId && !renderedSpaceHeaders.has(itemSpaceId)) {
+              const name = itemSpaceId === currentSpaceId
+                ? (portalGroups!.length > 0 ? (spaceName || 'Espace courant') : null)
+                : (portalSpaceNames.get(itemSpaceId) ?? itemSpaceId);
+              if (name) {
+                rows.push(
+                  <div
+                    key={`header-${itemSpaceId}-${headerCount++}`}
+                    className="px-3 py-1 text-xs font-semibold text-muted-foreground bg-muted/40 border-b border-border/50 truncate"
+                    style={{ height: 24 }}
+                  >
+                    {name}
+                  </div>
+                );
+              }
+              renderedSpaceHeaders.add(itemSpaceId);
+            }
+            const hasChildren = item.children.length > 0;
+            const isCollapsed = collapsedIds.has(item.id);
+            const Icon = getTypeIcon(item.type as ItemType, item.url);
+            const canEditThis = canEditItem ? canEditItem(item) : canEdit ?? true;
+            const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+            const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+            rows.push(
+              <div
+                key={item.id}
+                className={`group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
+                style={{ height: ROW_HEIGHT, paddingLeft: `${8 + item.depth * 20}px` }}
+                onClick={() => onEdit(item.id)}
+              >
+                {hasChildren ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
+                    className="p-0.5 hover:bg-muted rounded flex-shrink-0"
+                  >
+                    {isCollapsed
+                      ? <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+                ) : <span className="w-5 flex-shrink-0" />}
+                <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="truncate text-sm flex-1 pr-1">{item.title}</span>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pr-1">
+                  <ItemActionMenu
+                    groups={buildItemMenuGroups(item.id, {
+                      onEdit, onDelete, onUpdateStatus, onAddChild,
+                      onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
+                      onSelfAssign, onMerge, onAbsorbChildren,
+                      onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
+                      onOpen, onOpenInNewTab,
+                    }, {
+                      canEdit: canEditThis,
+                      statusOptions,
+                      currentStatusId: item.status || undefined,
+                    })}
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          }
+          return rows;
+        })()}
       </div>
 
       {/* Right panel — PERT SVG */}
