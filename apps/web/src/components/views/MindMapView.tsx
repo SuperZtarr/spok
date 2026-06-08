@@ -881,7 +881,9 @@ function MindMapViewInner({
           || (portalTarget.id.startsWith('child-space-') ? portalTarget.id.replace('child-space-', '') : null)
           || portals.find(p => p.id === portalTarget.id)?.spaceId;
         if (targetSpaceId) {
-          onMoveToSpaceDirect(draggedNode.id, spaceId, targetSpaceId);
+          const draggedItem = items.find(i => i.id === draggedNode.id);
+          const sourceSpaceId = draggedItem?.spaceId || spaceId;
+          onMoveToSpaceDirect(draggedNode.id, sourceSpaceId, targetSpaceId);
           dragDescendants.current = null;
           setDropTargetId(null);
           return;
