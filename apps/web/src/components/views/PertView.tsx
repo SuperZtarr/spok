@@ -39,6 +39,7 @@ const PERT_RELATION_TYPES = [
 interface PortalGroup {
   spaceId: string;
   spaceName: string;
+  parentSpaceId?: string | null;
   items: Item[];
 }
 
@@ -283,6 +284,35 @@ export function PertView({
     [ranks, pertSortMode]
   );
 
+  // Sorted space order: current space first, then portal spaces sorted hierarchically + alphabetically
+  const spaceOrder = useMemo(() => {
+    if (!portalGroups?.length || !currentSpaceId) return currentSpaceId ? [currentSpaceId] : [];
+    const portalIds = new Set(portalGroups.map(g => g.spaceId));
+    const nameOf = new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+
+    // Build children map (only within portal spaces)
+    const childrenOf = new Map<string | null, string[]>();
+    for (const g of portalGroups) {
+      const parent = portalIds.has(g.parentSpaceId ?? '') ? g.parentSpaceId! : null;
+      if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+      childrenOf.get(parent)!.push(g.spaceId);
+    }
+    // Sort each level alphabetically
+    for (const [, children] of childrenOf) {
+      children.sort((a, b) => (nameOf.get(a) ?? '').localeCompare(nameOf.get(b) ?? '', 'fr'));
+    }
+
+    // DFS from roots (parentSpaceId not in portal set → treated as root)
+    const result: string[] = [];
+    function visit(id: string) {
+      result.push(id);
+      for (const child of (childrenOf.get(id) ?? [])) visit(child);
+    }
+    for (const rootId of (childrenOf.get(null) ?? [])) visit(rootId);
+
+    return [currentSpaceId, ...result];
+  }, [portalGroups, currentSpaceId]);
+
   // Break cross-space parent-child links so each space forms its own independent tree
   const treeItems = useMemo(() => {
     if (!portalGroups?.length || !currentSpaceId) return sortedItems;
@@ -299,13 +329,12 @@ export function PertView({
   const tree = useMemo(() => {
     const rawTree = buildTree(treeItems, pertSortFn);
     if (!portalGroups?.length || !currentSpaceId) return rawTree;
-    const spaceOrder = [currentSpaceId, ...(portalGroups.map(g => g.spaceId))];
     return [...rawTree].sort((a, b) => {
       const ai = spaceOrder.indexOf(a.spaceId ?? currentSpaceId);
       const bi = spaceOrder.indexOf(b.spaceId ?? currentSpaceId);
       return ai - bi;
     });
-  }, [treeItems, pertSortFn, portalGroups, currentSpaceId]);
+  }, [treeItems, pertSortFn, portalGroups, currentSpaceId, spaceOrder]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
   const visibleFlatItems = useMemo(() => {
     if (!collapsedSpaces.size) return flatItems;
@@ -332,19 +361,18 @@ export function PertView({
     portalGroups.forEach(g => spaceNames.set(g.spaceId, g.spaceName));
     const rows: SvgRow[] = [];
     let lastSpaceId: string | null = null;
-    let colorIdx = 0;
-    const spaceColorMap = new Map<string, number>();
+    const spaceColorMap = new Map<string, number>(spaceOrder.map((sid, i) => [sid, i % SPACE_COLORS.length]));
     for (const item of visibleFlatItems) {
       const sid = item.spaceId ?? currentSpaceId ?? '';
       if (sid !== lastSpaceId) {
-        if (!spaceColorMap.has(sid)) spaceColorMap.set(sid, colorIdx++ % SPACE_COLORS.length);
+        if (!spaceColorMap.has(sid)) spaceColorMap.set(sid, spaceColorMap.size % SPACE_COLORS.length);
         rows.push({ kind: 'space-header', spaceId: sid, spaceName: spaceNames.get(sid) ?? sid, colorIdx: spaceColorMap.get(sid)! });
         lastSpaceId = sid;
       }
       rows.push({ kind: 'item', item });
     }
     return rows;
-  }, [visibleFlatItems, portalGroups, currentSpaceId, spaceName]);
+  }, [visibleFlatItems, portalGroups, currentSpaceId, spaceName, spaceOrder]);
 
   const rowIndex = useMemo(() => {
     const map = new Map<string, number>();

@@ -266,11 +266,15 @@ export function SpacePage() {
         groupedBySpace.set(item.spaceId, existing);
       }
     }
-    return [...groupedBySpace.entries()].map(([sid, items]) => ({
-      spaceId: sid,
-      spaceName: communitySpaces?.find(s => s.id === sid)?.name || 'Espace',
-      items,
-    }));
+    return [...groupedBySpace.entries()].map(([sid, items]) => {
+      const space = communitySpaces?.find(s => s.id === sid);
+      return {
+        spaceId: sid,
+        spaceName: space?.name || 'Espace',
+        parentSpaceId: space?.parentId ?? null,
+        items,
+      };
+    });
   }, [itemsData?.data, spaceId, checkedDescendantIds, communitySpaces]);
 
   const { data: allItemsData } = useQuery({

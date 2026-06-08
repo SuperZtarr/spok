@@ -32,6 +32,7 @@ const HEADER_HEIGHT = 24;
 interface PortalGroup {
   spaceId: string;
   spaceName: string;
+  parentSpaceId?: string | null;
   items: Item[];
 }
 
@@ -168,11 +169,33 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     return new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
   }, [portalGroups]);
 
+  // Sorted space order: current space first, then portal spaces sorted hierarchically + alphabetically
+  const spaceOrder = useMemo(() => {
+    if (!portalGroups?.length || !currentSpaceId) return currentSpaceId ? [currentSpaceId] : [];
+    const portalIds = new Set(portalGroups.map(g => g.spaceId));
+    const nameOf = new Map(portalGroups.map(g => [g.spaceId, g.spaceName]));
+    const childrenOf = new Map<string | null, string[]>();
+    for (const g of portalGroups) {
+      const parent = portalIds.has(g.parentSpaceId ?? '') ? g.parentSpaceId! : null;
+      if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+      childrenOf.get(parent)!.push(g.spaceId);
+    }
+    for (const [, children] of childrenOf) {
+      children.sort((a, b) => (nameOf.get(a) ?? '').localeCompare(nameOf.get(b) ?? '', 'fr'));
+    }
+    const result: string[] = [];
+    function visit(id: string) {
+      result.push(id);
+      for (const child of (childrenOf.get(id) ?? [])) visit(child);
+    }
+    for (const rootId of (childrenOf.get(null) ?? [])) visit(rootId);
+    return [currentSpaceId, ...result];
+  }, [portalGroups, currentSpaceId]);
+
   const [treeSort, setTreeSort] = useState<TreeSort>('manual');
   const sortedItems = useMemo(() => {
     const sorted = applyTreeSort(items, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
-    const portalOrder = portalGroups.map(g => g.spaceId);
     const sortedIds = new Set(sorted.map(i => i.id));
     const rootIds = new Set(sorted.filter(i => !i.parentId || !sortedIds.has(i.parentId)).map(i => i.id));
     const bySpace = new Map<string, Item[]>();
@@ -184,12 +207,9 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
       bySpace.set(sid, arr);
     }
     const children = sorted.filter(i => !rootIds.has(i.id));
-    const orderedRoots: Item[] = [
-      ...(bySpace.get(currentSpaceId) ?? []),
-      ...portalOrder.flatMap(sid => bySpace.get(sid) ?? []),
-    ];
+    const orderedRoots = spaceOrder.flatMap(sid => bySpace.get(sid) ?? []);
     return [...orderedRoots, ...children];
-  }, [items, treeSort, portalGroups, currentSpaceId]);
+  }, [items, treeSort, portalGroups, currentSpaceId, spaceOrder]);
   // Break cross-space parent-child links so each space forms its own independent tree
   const treeItems = useMemo(() => {
     if (!portalGroups?.length || !currentSpaceId) return sortedItems;
@@ -203,7 +223,15 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     });
   }, [sortedItems, portalGroups, currentSpaceId]);
 
-  const tree = useMemo(() => buildTree(treeItems), [treeItems]);
+  const tree = useMemo(() => {
+    const rawTree = buildTree(treeItems);
+    if (!portalGroups?.length || !currentSpaceId) return rawTree;
+    return [...rawTree].sort((a, b) => {
+      const ai = spaceOrder.indexOf(a.spaceId ?? currentSpaceId);
+      const bi = spaceOrder.indexOf(b.spaceId ?? currentSpaceId);
+      return ai - bi;
+    });
+  }, [treeItems, portalGroups, currentSpaceId, spaceOrder]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
   type FlatRow =
