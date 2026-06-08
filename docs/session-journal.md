@@ -6,11 +6,9 @@
 
 ## EN COURS — 2026-06-08
 
-### PERT : groupement visuel par espace + branches + hiérarchie
-- `PertView.tsx` : `svgRows` avec header rows par espace (swim lanes colorées, panel gauche + SVG synchronisés)
-- `PertView.tsx` : `branchBoxes` — rectangle pointillé englobant parent + enfants visibles
-- `PertView.tsx` : `ranks` recalculé avec contraintes parent-enfant + PERT simultanément (enfants sous leur parent, relations décalent)
-- `TimelineView.tsx` : `treeItems` — rupture des liens cross-space (même fix que PertView)
+### PERT : DnD arborescence panel gauche
+- `PertView.tsx` : DnD Kit (DndContext, TreeItemRow, pertActiveId/pertOverId/pertDropPosition) — même pattern que Gantt
+- `SpacePage.tsx` : `onMove={actions.handleMove}` ajouté sur `<PertView>`
 
 ## HISTORIQUE — 2026-06-07
 

@@ -1,6 +1,11 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  DndContext, DragOverlay, pointerWithin,
+  useSensors, useSensor, PointerSensor,
+  type DragStartEvent, type DragOverEvent, type DragEndEvent,
+} from '@dnd-kit/core';
 import { PertToolbar } from './PertToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
@@ -11,8 +16,7 @@ import { getTypeIcon } from '../../constants/ui';
 import { buildTree, flattenTree } from './timeline-tree';
 import { buildPertGraph, computeCriticalPathNaive } from './pert-utils';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
-import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { TreeItemRow } from './TreeItemRow';
 
 const LEFT_PANEL_WIDTH = 288;
 const ROW_HEIGHT = 36;
@@ -57,6 +61,7 @@ interface PertViewProps {
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string, label?: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
+  onMove?: (id: string, parentId: string | null, position: number) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
@@ -98,6 +103,7 @@ export function PertView({
   onDelete,
   onUpdateStatus,
   onAddChild,
+  onMove,
   onCreateRelation,
   onDeleteRelation,
   onUpdateRelation,
@@ -137,6 +143,14 @@ export function PertView({
   } | null>(null);
   const [editRelationType, setEditRelationType] = useState<string>('');
 
+  // DnD state for left-panel reordering
+  const [pertActiveId, setPertActiveId] = useState<string | null>(null);
+  const [pertOverId, setPertOverId] = useState<string | null>(null);
+  const [pertDropPosition, setPertDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
+  const pertPointerYRef = useRef(0);
+  const pertPreDragCollapsedRef = useRef<Set<string>>(new Set());
+  const pertSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
   const [zoom, setZoom] = useState(1);
   const zoomIn = useCallback(() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2)))), []);
   const zoomOut = useCallback(() => setZoom(z => Math.max(0.25, parseFloat((z - 0.1).toFixed(2)))), []);
@@ -162,6 +176,44 @@ export function PertView({
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, []);
+
+  // DnD handlers for left-panel reordering
+  const handlePertDragStart = useCallback((event: DragStartEvent) => {
+    const id = event.active.id as string;
+    setPertActiveId(id);
+    pertPreDragCollapsedRef.current = new Set(collapsedIds);
+    setCollapsedIds(prev => { const s = new Set(prev); s.add(id); return s; });
+  }, [collapsedIds, setCollapsedIds]);
+
+  const handlePertDragOver = useCallback((event: DragOverEvent) => {
+    const overId = event.over?.id as string | null;
+    setPertOverId(overId);
+    if (!overId) { setPertDropPosition('nest'); return; }
+    const el = document.querySelector(`[data-pert-item-id="${overId}"]`) as HTMLElement | null;
+    const rect = el?.getBoundingClientRect();
+    if (!rect || rect.height === 0) { setPertDropPosition('nest'); return; }
+    const ratio = (pertPointerYRef.current - rect.top) / rect.height;
+    if (ratio < 0.33) setPertDropPosition('before');
+    else if (ratio > 0.67) setPertDropPosition('after');
+    else setPertDropPosition('nest');
+  }, []);
+
+  const handlePertDragCancel = useCallback(() => {
+    const id = pertActiveId;
+    setPertActiveId(null);
+    setPertOverId(null);
+    setPertDropPosition('nest');
+    if (id && !pertPreDragCollapsedRef.current.has(id)) {
+      setCollapsedIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }
+  }, [pertActiveId, setCollapsedIds]);
+
+  useEffect(() => {
+    if (!pertActiveId) return;
+    const handler = (e: PointerEvent) => { pertPointerYRef.current = e.clientY; };
+    window.addEventListener('pointermove', handler);
+    return () => window.removeEventListener('pointermove', handler);
+  }, [pertActiveId]);
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
   const [collapsedSpaces, setCollapsedSpaces] = React.useState<Set<string>>(new Set());
@@ -336,6 +388,42 @@ export function PertView({
     });
   }, [treeItems, pertSortFn, portalGroups, currentSpaceId, spaceOrder]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
+
+  // DnD drag-end handler — defined after flatItems
+  const handlePertDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    const activeId = active.id as string;
+    const pos = pertDropPosition;
+    const wasCollapsed = pertPreDragCollapsedRef.current.has(activeId);
+    setPertActiveId(null);
+    setPertOverId(null);
+    setPertDropPosition('nest');
+    if (!over || activeId === over.id || !onMove) {
+      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
+      return;
+    }
+    const overItem = flatItems.find((i: Item) => i.id === over.id);
+    if (!overItem) {
+      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
+      return;
+    }
+    if (pos === 'nest') {
+      onMove(activeId, over.id as string, 0);
+      setCollapsedIds(prev => {
+        const s = new Set(prev);
+        s.delete(over.id as string);
+        if (!wasCollapsed) s.delete(activeId);
+        return s;
+      });
+    } else {
+      const siblings = flatItems.filter((i: Item) => i.parentId === overItem.parentId);
+      const overIndex = siblings.findIndex((i: Item) => i.id === over.id);
+      const targetPos = pos === 'after' ? overIndex + 1 : overIndex;
+      onMove(activeId, overItem.parentId ?? null, targetPos >= 0 ? targetPos : 0);
+      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
+    }
+  }, [pertDropPosition, flatItems, onMove, setCollapsedIds]);
+
   const visibleFlatItems = useMemo(() => {
     if (!collapsedSpaces.size) return flatItems;
     return flatItems.filter(item => !collapsedSpaces.has(item.spaceId ?? currentSpaceId ?? ''));
@@ -362,17 +450,17 @@ export function PertView({
     const rows: SvgRow[] = [];
     let lastSpaceId: string | null = null;
     const spaceColorMap = new Map<string, number>(spaceOrder.map((sid, i) => [sid, i % SPACE_COLORS.length]));
-    for (const item of visibleFlatItems) {
+    for (const item of flatItems) {
       const sid = item.spaceId ?? currentSpaceId ?? '';
       if (sid !== lastSpaceId) {
         if (!spaceColorMap.has(sid)) spaceColorMap.set(sid, spaceColorMap.size % SPACE_COLORS.length);
         rows.push({ kind: 'space-header', spaceId: sid, spaceName: spaceNames.get(sid) ?? sid, colorIdx: spaceColorMap.get(sid)! });
         lastSpaceId = sid;
       }
-      rows.push({ kind: 'item', item });
+      if (!collapsedSpaces.has(sid)) rows.push({ kind: 'item', item });
     }
     return rows;
-  }, [visibleFlatItems, portalGroups, currentSpaceId, spaceName, spaceOrder]);
+  }, [flatItems, collapsedSpaces, portalGroups, currentSpaceId, spaceName, spaceOrder]);
 
   const rowIndex = useMemo(() => {
     const map = new Map<string, number>();
@@ -688,69 +776,83 @@ export function PertView({
         ref={scrollContainerRef}
         onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop * zoom; }}
       >
-        {svgRows.map((row, rowIdx) => {
-          if (row.kind === 'space-header') {
-            const c = SPACE_COLORS[row.colorIdx];
-            const isCollapsed = collapsedSpaces.has(row.spaceId);
-            return (
-              <div
-                key={`lh-${row.spaceId}-${rowIdx}`}
-                className="flex items-center gap-1 px-2 text-xs font-semibold border-b cursor-pointer select-none"
-                style={{ height: SPACE_HEADER_HEIGHT, backgroundColor: c.fill, borderColor: c.stroke, borderLeftWidth: 3, borderLeftColor: c.stroke }}
-                onClick={() => toggleSpaceCollapse(row.spaceId)}
-              >
-                {isCollapsed
-                  ? <ChevronRight className="w-3 h-3 flex-shrink-0" style={{ color: c.text }} />
-                  : <ChevronDown className="w-3 h-3 flex-shrink-0" style={{ color: c.text }} />}
-                <span className="text-sm font-semibold leading-tight" style={{ color: c.text }}>{row.spaceName}</span>
-              </div>
-            );
-          }
-          const { item } = row;
-          const hasChildren = item.children.length > 0;
-          const isCollapsed = collapsedIds.has(item.id);
-          const Icon = getTypeIcon(item.type as ItemType, item.url);
-          const canEditThis = canEditItem ? canEditItem(item) : canEdit ?? true;
-          const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-          const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
-          const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
-          return (
-            <div
-              key={item.id}
-              className={`group flex items-center gap-1 border-b border-border/50 hover:bg-muted/50 cursor-pointer ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
-              style={{ height: ROW_HEIGHT, paddingLeft: `${8 + item.depth * 20}px` }}
-              onClick={() => onEdit(item.id)}
-            >
-              {hasChildren ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleCollapse(item.id); }}
-                  className="p-0.5 hover:bg-muted rounded flex-shrink-0"
+        <DndContext
+          sensors={pertSensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handlePertDragStart}
+          onDragOver={handlePertDragOver}
+          onDragEnd={handlePertDragEnd}
+          onDragCancel={handlePertDragCancel}
+        >
+          {svgRows.map((row, rowIdx) => {
+            if (row.kind === 'space-header') {
+              const c = SPACE_COLORS[row.colorIdx];
+              const isCollapsed = collapsedSpaces.has(row.spaceId);
+              return (
+                <div
+                  key={`lh-${row.spaceId}-${rowIdx}`}
+                  className="flex items-center gap-1 px-2 text-xs font-semibold border-b cursor-pointer select-none"
+                  style={{ height: SPACE_HEADER_HEIGHT, backgroundColor: c.fill, borderColor: c.stroke, borderLeftWidth: 3, borderLeftColor: c.stroke }}
+                  onClick={() => toggleSpaceCollapse(row.spaceId)}
                 >
                   {isCollapsed
-                    ? <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
-              ) : <span className="w-5 flex-shrink-0" />}
-              <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="truncate text-sm flex-1 pr-1">{item.title}</span>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pr-1">
-                <ItemActionMenu
-                  groups={buildItemMenuGroups(item.id, {
-                    onEdit, onDelete, onUpdateStatus, onAddChild,
-                    onMoveToSpace, onDuplicateToSpace, onConvertToSpace,
-                    onSelfAssign, onMerge, onAbsorbChildren,
-                    onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
-                    onOpen, onOpenInNewTab,
-                  }, {
-                    canEdit: canEditThis,
-                    statusOptions,
-                    currentStatusId: item.status || undefined,
-                  })}
+                    ? <ChevronRight className="w-3 h-3 flex-shrink-0" style={{ color: c.text }} />
+                    : <ChevronDown className="w-3 h-3 flex-shrink-0" style={{ color: c.text }} />}
+                  <span className="text-sm font-semibold leading-tight" style={{ color: c.text }}>{row.spaceName}</span>
+                </div>
+              );
+            }
+            const { item } = row;
+            const hasChildren = item.children.length > 0;
+            const isCollapsed = collapsedIds.has(item.id);
+            const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
+            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+            const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+            const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
+            return (
+              <div
+                key={item.id}
+                data-pert-item-id={item.id}
+                className={`group ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-inset ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''}`}
+                style={{ height: ROW_HEIGHT }}
+              >
+                <TreeItemRow
+                  item={item}
+                  hasChildren={hasChildren}
+                  isCollapsed={isCollapsed}
+                  isPortal={isPortal}
+                  isOver={pertOverId === item.id}
+                  dropPosition={pertDropPosition}
+                  canEdit={canEdit}
+                  onMove={onMove}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onUpdateStatus={onUpdateStatus}
+                  onAddChild={onAddChild}
+                  onMoveToSpace={onMoveToSpace}
+                  onDuplicateToSpace={onDuplicateToSpace}
+                  onConvertToSpace={onConvertToSpace}
+                  onSelfAssign={onSelfAssign}
+                  onMerge={onMerge}
+                  onAbsorbChildren={onAbsorbChildren}
+                  onSplitDescription={onSplitDescription}
+                  onOpen={onOpen}
+                  onOpenInNewTab={onOpenInNewTab}
+                  toggleCollapse={toggleCollapse}
+                  statusOptions={statusOptions}
+                  canEditItem={canEditItem}
                 />
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+          {pertActiveId && (
+            <DragOverlay>
+              <div className="bg-background border rounded shadow px-3 py-1 text-sm opacity-90">
+                {flatItems.find(i => i.id === pertActiveId)?.title ?? pertActiveId}
+              </div>
+            </DragOverlay>
+          )}
+        </DndContext>
       </div>
 
       {/* Right panel — PERT SVG */}

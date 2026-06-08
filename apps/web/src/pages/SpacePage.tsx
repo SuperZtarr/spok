@@ -340,8 +340,10 @@ export function SpacePage() {
 
   // Create item mutation
   const createItemMutation = useMutation({
-    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string; startDate?: string; endDate?: string }) =>
-      itemsApi.create(spaceId!, data),
+    mutationFn: (data: { type: ItemType; title: string; url?: string; parentId?: string; status?: string; dueDate?: string; startDate?: string; endDate?: string; targetSpaceId?: string }) => {
+      const { targetSpaceId, ...itemData } = data;
+      return itemsApi.create(targetSpaceId ?? spaceId!, itemData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
@@ -460,8 +462,10 @@ export function SpacePage() {
   };
 
   const handleAddChild = (parentId: string) => {
+    const parentItem = allItems.find((i: Item) => i.id === parentId);
+    const targetSpaceId = parentItem?.spaceId || spaceId!;
     createItemMutation.mutate(
-      { type: 'NOTE', title: '', status: '', parentId },
+      { type: 'NOTE', title: '', status: '', parentId, targetSpaceId },
       { onSuccess: (created: any) => {
         setEditingItemId(created.id);
         setExpandedItems((prev) => new Set([...prev, parentId]));
@@ -975,6 +979,7 @@ export function SpacePage() {
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
+              onMove={actions.handleMove}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
               onUpdateRelation={actions.handleUpdateRelation}
