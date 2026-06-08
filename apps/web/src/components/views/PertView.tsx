@@ -154,6 +154,14 @@ export function PertView({
   }, []);
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
+  const [collapsedSpaces, setCollapsedSpaces] = React.useState<Set<string>>(new Set());
+  const toggleSpaceCollapse = React.useCallback((sid: string) => {
+    setCollapsedSpaces(prev => {
+      const next = new Set(prev);
+      if (next.has(sid)) next.delete(sid); else next.add(sid);
+      return next;
+    });
+  }, []);
 
   const [pertSortMode, setPertSortMode] = useState<'rank' | 'alpha'>('rank');
   const [treeSort, setTreeSort] = useState<TreeSort>('manual');
@@ -187,8 +195,10 @@ export function PertView({
     const sorted = applyTreeSort(filtered, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
     // Reorder root-level items: current space first, then portal groups in order
+    // Use effective roots = items whose parent is not in the list (same logic as buildTree)
     const portalOrder = portalGroups.map(g => g.spaceId);
-    const rootIds = new Set(sorted.filter(i => !i.parentId).map(i => i.id));
+    const sortedIds = new Set(sorted.map(i => i.id));
+    const rootIds = new Set(sorted.filter(i => !i.parentId || !sortedIds.has(i.parentId)).map(i => i.id));
     const bySpace = new Map<string, Item[]>();
     for (const item of sorted) {
       if (!rootIds.has(item.id)) continue;
@@ -234,6 +244,10 @@ export function PertView({
 
   const tree = useMemo(() => buildTree(sortedItems, pertSortFn), [sortedItems, pertSortFn]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
+  const visibleFlatItems = useMemo(() => {
+    if (!collapsedSpaces.size) return flatItems;
+    return flatItems.filter(item => !collapsedSpaces.has(item.spaceId ?? currentSpaceId ?? ''));
+  }, [flatItems, collapsedSpaces, currentSpaceId]);
 
   const parentIds = useMemo(() => {
     const ids: string[] = [];
@@ -244,9 +258,9 @@ export function PertView({
 
 const rowIndex = useMemo(() => {
     const map = new Map<string, number>();
-    flatItems.forEach((item, i) => map.set(item.id, i));
+    visibleFlatItems.forEach((item, i) => map.set(item.id, i));
     return map;
-  }, [flatItems]);
+  }, [visibleFlatItems]);
 
   const parentMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -295,15 +309,15 @@ const rowIndex = useMemo(() => {
 
   const maxRank = useMemo(() => {
     let max = 0;
-    for (const item of flatItems) {
+    for (const item of visibleFlatItems) {
       const r = ranks.get(item.id) ?? 0;
       if (r > max) max = r;
     }
     return max;
-  }, [flatItems, ranks]);
+  }, [visibleFlatItems, ranks]);
 
   const svgWidth = (maxRank + 1) * COLUMN_WIDTH + H_PADDING * 2 + NODE_WIDTH;
-  const svgHeight = flatItems.length * ROW_HEIGHT;
+  const svgHeight = visibleFlatItems.length * ROW_HEIGHT;
 
   function nodeX(id: string) { return H_PADDING + (ranks.get(id) ?? 0) * COLUMN_WIDTH; }
   function nodeY(id: string) { return (rowIndex.get(id) ?? 0) * ROW_HEIGHT + V_PADDING; }
@@ -327,7 +341,7 @@ const rowIndex = useMemo(() => {
     const fy = nodeY(itemId) + NODE_HEIGHT / 2;
     setRelationDrag({ fromItemId: itemId, fromX: fx, fromY: fy, currentX: fx, currentY: fy });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flatItems, ranks, rowIndex]);
+  }, [visibleFlatItems, ranks, rowIndex]);
 
   const handleDragMove = useCallback((e: MouseEvent) => {
     if (!relationDrag) return;
@@ -338,8 +352,7 @@ const rowIndex = useMemo(() => {
   const handleDragEnd = useCallback((e: MouseEvent) => {
     if (!relationDrag || !onCreateRelation) { setRelationDrag(null); return; }
     const { x, y } = getSvgCoords(e);
-    // Find target node under cursor
-    const target = flatItems.find(item => {
+    const target = visibleFlatItems.find(item => {
       const nx = nodeX(item.id);
       const ny = nodeY(item.id);
       return x >= nx && x <= nx + NODE_WIDTH && y >= ny && y <= ny + NODE_HEIGHT;
@@ -349,7 +362,7 @@ const rowIndex = useMemo(() => {
     }
     setRelationDrag(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relationDrag, flatItems, ranks, rowIndex, getSvgCoords, onCreateRelation]);
+  }, [relationDrag, visibleFlatItems, ranks, rowIndex, getSvgCoords, onCreateRelation]);
 
   useEffect(() => {
     if (!relationDrag) return;
@@ -400,7 +413,7 @@ const rowIndex = useMemo(() => {
   const pendingTargetItem = pendingConnection ? items.find(i => i.id === pendingConnection.target) : null;
 
   // Detect node under cursor during drag (for highlight)
-  const dragTargetId = relationDrag ? (flatItems.find(item => {
+  const dragTargetId = relationDrag ? (visibleFlatItems.find(item => {
     const nx = nodeX(item.id);
     const ny = nodeY(item.id);
     return relationDrag.currentX >= nx && relationDrag.currentX <= nx + NODE_WIDTH
@@ -533,18 +546,24 @@ const rowIndex = useMemo(() => {
                 ? (portalGroups!.length > 0 ? (spaceName || 'Espace courant') : null)
                 : (portalSpaceNames.get(itemSpaceId) ?? itemSpaceId);
               if (name) {
+                const isSpaceCollapsed = collapsedSpaces.has(itemSpaceId);
                 rows.push(
                   <div
                     key={`header-${itemSpaceId}-${headerCount++}`}
-                    className="px-3 py-1 text-xs font-semibold text-muted-foreground bg-muted/40 border-b border-border/50 truncate"
+                    className="flex items-center gap-1 px-2 text-xs font-semibold text-muted-foreground bg-muted/40 border-b border-border/50 cursor-pointer hover:bg-muted/60 select-none"
                     style={{ height: 24 }}
+                    onClick={() => toggleSpaceCollapse(itemSpaceId)}
                   >
-                    {name}
+                    {isSpaceCollapsed
+                      ? <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                      : <ChevronDown className="w-3 h-3 flex-shrink-0" />}
+                    <span className="truncate">{name}</span>
                   </div>
                 );
               }
               renderedSpaceHeaders.add(itemSpaceId);
             }
+            if (hasMultipleSpaces && itemSpaceId && collapsedSpaces.has(itemSpaceId)) continue;
             const hasChildren = item.children.length > 0;
             const isCollapsed = collapsedIds.has(item.id);
             const Icon = getTypeIcon(item.type as ItemType, item.url);
@@ -601,7 +620,7 @@ const rowIndex = useMemo(() => {
           style={{ cursor: relationDrag ? 'crosshair' : undefined }}
           onScroll={(e) => { if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop / zoom; }}
         >
-        {flatItems.length === 0 ? (
+        {visibleFlatItems.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Aucun item dans cet espace</div>
         ) : (
           <div style={{ width: svgWidth * zoom, height: Math.max(svgHeight, 100) * zoom, position: 'relative', flexShrink: 0 }}>
@@ -613,7 +632,7 @@ const rowIndex = useMemo(() => {
 
             {effectiveRelations.map((er, i) => renderArrow(er, `rel-${i}`))}
 
-            {flatItems.map((item) => {
+            {visibleFlatItems.map((item) => {
               const x = nodeX(item.id);
               const y = nodeY(item.id);
               const isCritical = criticalPathIds.has(item.id);

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { FilterToolbar } from '../ui/FilterToolbar';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
@@ -100,6 +100,14 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
   } | null>(null);
   const [editRelationType, setEditRelationType] = useState<string>('');
   useEscapeKey(() => setEditingRelation(null), !!editingRelation);
+  const [collapsedSpaces, setCollapsedSpaces] = useState<Set<string>>(new Set());
+  const toggleSpaceCollapse = useCallback((sid: string) => {
+    setCollapsedSpaces(prev => {
+      const next = new Set(prev);
+      if (next.has(sid)) next.delete(sid); else next.add(sid);
+      return next;
+    });
+  }, []);
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{
@@ -165,7 +173,8 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     const sorted = applyTreeSort(items, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
     const portalOrder = portalGroups.map(g => g.spaceId);
-    const rootIds = new Set(sorted.filter(i => !i.parentId).map(i => i.id));
+    const sortedIds = new Set(sorted.map(i => i.id));
+    const rootIds = new Set(sorted.filter(i => !i.parentId || !sortedIds.has(i.parentId)).map(i => i.id));
     const bySpace = new Map<string, Item[]>();
     for (const item of sorted) {
       if (!rootIds.has(item.id)) continue;
@@ -185,7 +194,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
   type FlatRow =
-    | { kind: 'header'; spaceId: string; spaceName: string }
+    | { kind: 'header'; spaceId: string; spaceName: string; isCollapsed: boolean }
     | { kind: 'item'; item: TreeItem; itemIndex: number };
 
   const flatRows = useMemo((): FlatRow[] => {
@@ -201,13 +210,14 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
         const name = sid === currentSpaceId
           ? (spaceName || 'Espace courant')
           : (portalSpaceNames.get(sid) ?? sid);
-        rows.push({ kind: 'header', spaceId: sid, spaceName: name });
+        rows.push({ kind: 'header', spaceId: sid, spaceName: name, isCollapsed: collapsedSpaces.has(sid) });
         seenSpaces.add(sid);
       }
+      if (collapsedSpaces.has(sid)) continue;
       rows.push({ kind: 'item', item, itemIndex: idx++ });
     }
     return rows;
-  }, [flatItems, portalGroups, currentSpaceId, spaceName, portalSpaceNames]);
+  }, [flatItems, portalGroups, currentSpaceId, spaceName, portalSpaceNames, collapsedSpaces]);
 
   // Y pixel offset for each item, accounting for space headers
   const itemYOffset = useMemo(() => {
@@ -998,13 +1008,17 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
                 return (
                   <div
                     key={`header-${row.spaceId}-${flatRows.indexOf(row)}`}
-                    className="flex border-b bg-muted/40"
+                    className="flex border-b bg-muted/40 cursor-pointer hover:bg-muted/60 select-none"
                     style={{ height: HEADER_HEIGHT }}
+                    onClick={() => toggleSpaceCollapse(row.spaceId)}
                   >
                     <div
-                      className="px-3 flex items-center text-xs font-semibold text-muted-foreground truncate"
+                      className="px-2 flex items-center gap-1 text-xs font-semibold text-muted-foreground truncate"
                       style={{ width: 288, flexShrink: 0 }}
                     >
+                      {row.isCollapsed
+                        ? <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                        : <ChevronDown className="w-3 h-3 flex-shrink-0" />}
                       {row.spaceName}
                     </div>
                     <div className="flex-1 border-l" />
