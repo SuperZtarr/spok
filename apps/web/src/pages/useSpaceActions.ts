@@ -186,6 +186,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       itemsApi.convertToSpace(itemSpaceId, itemId, {
         spaceName,
         communityId: communityId || undefined,
+        parentSpaceId: spaceId || undefined,
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
