@@ -522,7 +522,9 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     if (!dragging) return;
 
     const deltaX = e.clientX - dragging.initialX;
-    const deltaDays = Math.round(deltaX / dayWidth);
+    const rawDays = deltaX / dayWidth;
+    const snap = zoomConfig.snapDays;
+    const deltaDays = Math.round(rawDays / snap) * snap;
 
     if (deltaDays === dragging.lastDeltaDays) return;
 
@@ -794,7 +796,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
 
   // Determine which header rows to show based on zoom level
   const showMonthRow = true; // Toujours afficher les mois
-  const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month';
+  const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month' || zoomLevel === 'quarter';
 
   return (
     <div className="flex flex-col h-full" ref={viewContainerRef}>
@@ -1005,26 +1007,27 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
                 Élément
               </div>
               <div className="flex">
-                {days.map((day, idx) => (
-                  <div
-                    key={idx}
-                    className={`text-xs text-center border-r ${
-                      isToday(day) ? 'bg-primary/20 font-bold' : isWeekend(day) ? 'bg-muted/50' : ''
-                    } ${zoomConfig.showDayNumbers ? 'py-2' : 'py-1'}`}
-                    style={{ width: dayWidth }}
-                  >
-                    {zoomConfig.showDayNumbers && (
-                      <>
-                        <div>{day.getDate()}</div>
-                        {zoomConfig.showWeekdays && (
-                          <div className="text-muted-foreground">
-                            {day.toLocaleDateString('fr-FR', { weekday: 'narrow' })}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
+                {zoomConfig.showDayNumbers ? (
+                  days.map((day, idx) => (
+                    <div
+                      key={idx}
+                      className={`text-xs text-center border-r ${
+                        isToday(day) ? 'bg-primary/20 font-bold' : isWeekend(day) ? 'bg-muted/50' : ''
+                      } py-2`}
+                      style={{ width: dayWidth }}
+                    >
+                      <div>{day.getDate()}</div>
+                      {zoomConfig.showWeekdays && (
+                        <div className="text-muted-foreground">
+                          {day.toLocaleDateString('fr-FR', { weekday: 'narrow' })}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  // quarter/year : cellule vide de la bonne largeur totale
+                  <div style={{ width: visibleDays * dayWidth }} />
+                )}
               </div>
             </div>
           </div>
@@ -1124,15 +1127,25 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
 
                   {/* Timeline bar area */}
                   <div className="relative flex-1" style={{ minHeight: 40 }}>
-                    {/* Day grid lines */}
+                    {/* Grid lines — per-day (day/week/month), per-week (quarter), per-month (year) */}
                     <div className="absolute inset-0 flex">
-                      {days.map((day, idx) => (
-                        <div
-                          key={idx}
-                          className={`border-r ${isToday(day) ? 'bg-primary/10' : isWeekend(day) ? 'bg-muted/30' : ''}`}
-                          style={{ width: dayWidth }}
-                        />
-                      ))}
+                      {zoomConfig.showDayNumbers ? (
+                        days.map((day, idx) => (
+                          <div
+                            key={idx}
+                            className={`border-r ${isToday(day) ? 'bg-primary/10' : isWeekend(day) ? 'bg-muted/30' : ''}`}
+                            style={{ width: dayWidth }}
+                          />
+                        ))
+                      ) : zoomLevel === 'quarter' ? (
+                        weeks.map((week, idx) => (
+                          <div key={idx} className="border-r border-muted/50" style={{ width: week.days.length * dayWidth }} />
+                        ))
+                      ) : (
+                        months.map((month, idx) => (
+                          <div key={idx} className="border-r border-muted/50" style={{ width: month.days.length * dayWidth }} />
+                        ))
+                      )}
                     </div>
 
                     {/* Item bar */}

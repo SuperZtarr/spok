@@ -63,11 +63,6 @@ function HomeRoute() {
 
   // Redirect authenticated users away from auth pages
   if (isAuthenticated && ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)) {
-    const returnTo = sessionStorage.getItem('spok_returnTo');
-    if (returnTo) {
-      sessionStorage.removeItem('spok_returnTo');
-      return <Navigate to={returnTo} replace />;
-    }
     return <Navigate to="/" replace />;
   }
 
@@ -157,7 +152,8 @@ export default function App() {
 
   useEffect(() => {
     const handleLogout = () => {
-      const currentItem = sessionStorage.getItem('spok_current_item');
+      const currentItemRaw = sessionStorage.getItem('spok_current_item');
+      const currentItem = currentItemRaw ? currentItemRaw.split(':')[1] : null;
       const current = window.location.pathname + window.location.search;
       if (current !== '/login' && !current.startsWith('/register')) {
         const returnTo = currentItem

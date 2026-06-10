@@ -520,6 +520,7 @@ export function SpacePage() {
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ouvrir la modale si ?item=:itemId (lien "ouvrir dans un nouvel onglet" ou returnTo)
+  // Ou restaurer depuis sessionStorage si item était ouvert avant F5 / reconnexion
   const itemParamHandledRef = useRef(false);
   useEffect(() => {
     const itemParam = searchParams.get('item');
@@ -527,17 +528,24 @@ export function SpacePage() {
       itemParamHandledRef.current = true;
       setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
       setEditingItemId(itemParam);
+    } else if (!itemParam && !itemParamHandledRef.current) {
+      itemParamHandledRef.current = true;
+      const saved = sessionStorage.getItem('spok_current_item');
+      if (saved) {
+        const [savedSpace, savedItem] = saved.split(':');
+        if (savedSpace === spaceId && savedItem) setEditingItemId(savedItem);
+      }
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist current item in sessionStorage for reconnection (sans modifier l'URL)
   useEffect(() => {
     if (editingItemId) {
-      sessionStorage.setItem('spok_current_item', editingItemId);
+      sessionStorage.setItem('spok_current_item', `${spaceId}:${editingItemId}`);
     } else {
       sessionStorage.removeItem('spok_current_item');
     }
-  }, [editingItemId]);
+  }, [editingItemId, spaceId]);
 
   // --- Render ---
   // Overview mode — full page, no toolbar

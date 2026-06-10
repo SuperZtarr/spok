@@ -29,21 +29,16 @@ export function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (data) => {
-      setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
       queryClient.clear();
-      // Redirect to pending invitation if any
       const pendingToken = localStorage.getItem('spok_pending_invitation_token');
+      const returnTo = !pendingToken ? sessionStorage.getItem('spok_returnTo') : null;
+      if (returnTo) sessionStorage.removeItem('spok_returnTo');
+      setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
       if (pendingToken) {
         localStorage.removeItem('spok_pending_invitation_token');
         navigate(`/invitation?token=${pendingToken}`);
       } else {
-        const returnTo = sessionStorage.getItem('spok_returnTo');
-        if (returnTo) {
-          sessionStorage.removeItem('spok_returnTo');
-          navigate(returnTo, { replace: true });
-        } else {
-          navigate('/');
-        }
+        navigate(returnTo || '/');
       }
     },
     onError: (err) => {
