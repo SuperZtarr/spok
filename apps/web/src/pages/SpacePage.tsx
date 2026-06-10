@@ -461,9 +461,8 @@ export function SpacePage() {
     });
   };
 
-  const handleAddChild = (parentId: string) => {
-    const parentItem = allItems.find((i: Item) => i.id === parentId);
-    const targetSpaceId = parentItem?.spaceId || spaceId!;
+  const handleAddChild = (parentId: string, parentSpaceId?: string) => {
+    const targetSpaceId = parentSpaceId || allItems.find((i: Item) => i.id === parentId)?.spaceId || spaceId!;
     createItemMutation.mutate(
       { type: 'NOTE', title: '', status: '', parentId, targetSpaceId },
       { onSuccess: (created: any) => {

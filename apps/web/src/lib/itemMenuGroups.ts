@@ -9,7 +9,7 @@ export interface ItemMenuCallbacks {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateStatus?: (id: string, status: string) => void;
-  onAddChild?: (id: string) => void;
+  onAddChild?: (id: string, spaceId?: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
@@ -28,6 +28,8 @@ export interface ItemMenuOptions {
   extraOrganise?: ItemAction[];
   // Sections supplémentaires (ex: Exporter dans ListView/Kanban)
   extraSections?: Array<{ label?: string; actions: ItemAction[] }>;
+  // spaceId de l'item courant (pour addChild multi-espace)
+  itemSpaceId?: string;
   // Permissions : false = masquer toutes les actions d'écriture (delete, move, merge...)
   canEdit?: boolean;
 }
@@ -52,7 +54,7 @@ export function buildItemMenuGroups(
     onAbsorbChildren,
     onSplitDescription,
   } = callbacks;
-  const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], canEdit = true } = options;
+  const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true } = options;
 
   // Groupe 1 — Ouvrir (toujours visible)
   const group1: ItemAction[] = [
@@ -90,7 +92,7 @@ export function buildItemMenuGroups(
 
   // Groupe 4 — Ajouter : Ajouter un enfant, Dupliquer
   const group4: ItemAction[] = canEdit ? [
-    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(itemId) }] : []),
+    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(itemId, itemSpaceId) }] : []),
     ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer vers...', icon: Copy, onClick: () => onDuplicateToSpace(itemId) }] : []),
     ...extraChildren,
   ] : [];

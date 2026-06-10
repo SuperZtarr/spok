@@ -15,10 +15,10 @@ export interface ZoomConfig {
 
 export const ZOOM_CONFIGS: Record<ZoomLevel, ZoomConfig> = {
   day:     { label: 'Jour',      days: 7,   dayWidth: 80, navStep: 1,  showDayNumbers: true,  showWeekdays: true,  snapDays: 1  },
-  week:    { label: 'Semaine',   days: 42,  dayWidth: 40, navStep: 7,  showDayNumbers: true,  showWeekdays: true,  snapDays: 1  },
-  month:   { label: 'Mois',      days: 90,  dayWidth: 20, navStep: 30, showDayNumbers: true,  showWeekdays: false, snapDays: 7  },
-  quarter: { label: 'Trimestre', days: 180, dayWidth: 8,  navStep: 30, showDayNumbers: false, showWeekdays: false, snapDays: 7  },
-  year:    { label: 'Année',     days: 365, dayWidth: 4,  navStep: 90, showDayNumbers: false, showWeekdays: false, snapDays: 30 },
+  week:    { label: 'Semaine',   days: 42,  dayWidth: 40, navStep: 1,  showDayNumbers: true,  showWeekdays: true,  snapDays: 1  },
+  month:   { label: 'Mois',      days: 90,  dayWidth: 20, navStep: 7,  showDayNumbers: true,  showWeekdays: false, snapDays: 7  },
+  quarter: { label: 'Trimestre', days: 180, dayWidth: 8,  navStep: 7,  showDayNumbers: false, showWeekdays: false, snapDays: 7  },
+  year:    { label: 'Année',     days: 365, dayWidth: 4,  navStep: 30, showDayNumbers: false, showWeekdays: false, snapDays: 30 },
 };
 
 export const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];

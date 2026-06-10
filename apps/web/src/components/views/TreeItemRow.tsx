@@ -19,7 +19,7 @@ export interface TreeItemRowProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
-  onAddChild: (id: string) => void;
+  onAddChild: (id: string, spaceId?: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
@@ -109,16 +109,6 @@ export function TreeItemRow({
         >
           {item.title}
         </span>
-        {isPortal && portalSpaceName && (
-          <Link
-            to={`/spaces/${item.spaceId}`}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <FolderKanban className="w-3 h-3" />
-            <span className="truncate max-w-[60px]">{portalSpaceName}</span>
-          </Link>
-        )}
         {!isPortal && (
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
             <ItemActionMenu
@@ -132,6 +122,7 @@ export function TreeItemRow({
                 canEdit: canEditItem ? canEditItem(item) : canEdit ?? true,
                 statusOptions,
                 currentStatusId: item.status || undefined,
+                itemSpaceId: item.spaceId,
               })}
             />
           </div>
