@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, FolderKanban, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
@@ -11,7 +10,6 @@ export interface TreeItemRowProps {
   hasChildren: boolean;
   isCollapsed: boolean;
   isPortal: boolean;
-  portalSpaceName?: string;
   isOver: boolean;
   dropPosition: 'before' | 'after' | 'nest';
   canEdit?: boolean;
@@ -39,7 +37,6 @@ export function TreeItemRow({
   hasChildren,
   isCollapsed,
   isPortal,
-  portalSpaceName,
   isOver,
   dropPosition,
   canEdit,

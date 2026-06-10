@@ -1,13 +1,80 @@
-import { Minus, Plus, ArrowDownAZ, Network, ShieldAlert } from 'lucide-react';
+import { Minus, Plus, ShieldAlert, ListTree, ArrowDownAZ, Check } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import { ViewSelectorBar } from '../ui/ViewSelectorBar';
 import { ViewToolbar } from '../ui/ViewToolbar';
 import type { Item, ItemType, MenuItemConfig, SpaceReferentiels } from '@spok/shared';
 import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } from '../../lib/exportUtils';
-import { TreeSortButton } from '../ui/TreeSortButton';
 import { type TreeSort } from '../../lib/treeSort';
 import type { ViewMode } from '../../stores/viewMode';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+
+const PERT_SORT_OPTIONS: { treeSort: TreeSort; sortMode: 'rank' | 'alpha'; label: string }[] = [
+  { treeSort: 'manual',     sortMode: 'rank',  label: 'Position (défaut)' },
+  { treeSort: 'alpha-flat', sortMode: 'alpha', label: 'Alphabétique à plat' },
+  { treeSort: 'alpha-tree', sortMode: 'alpha', label: 'Alphabétique par groupe' },
+];
+
+function PertSortButton({ treeSort, sortMode, onTreeSortChange, onSortModeChange }: {
+  treeSort: TreeSort;
+  sortMode: 'rank' | 'alpha';
+  onTreeSortChange: (m: TreeSort) => void;
+  onSortModeChange: (m: 'rank' | 'alpha') => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) { setPos(null); return; }
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left });
+    }
+    const close = (e: MouseEvent) => {
+      if (btnRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  const isDefault = treeSort === 'manual' && sortMode === 'rank';
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={() => setOpen(v => !v)}
+        className={`flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors ${!isDefault ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+        title="Tri"
+      >
+        {isDefault ? <ListTree className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
+        Ordre
+      </button>
+      {open && pos && createPortal(
+        <div ref={dropRef} className="fixed bg-card border rounded-lg shadow-xl py-1 min-w-[220px] z-[9999]" style={{ top: pos.top, left: pos.left }}>
+          {PERT_SORT_OPTIONS.map(opt => {
+            const active = opt.treeSort === treeSort && opt.sortMode === sortMode;
+            return (
+              <button
+                key={opt.treeSort}
+                className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
+                onClick={() => { onTreeSortChange(opt.treeSort); onSortModeChange(opt.sortMode); setOpen(false); }}
+              >
+                <Check className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'opacity-100' : 'opacity-0'}`} />
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
 
 interface PertToolbarProps {
   zoom: number;
@@ -94,14 +161,7 @@ export function PertToolbar({
         <Plus className="w-3.5 h-3.5" />
       </button>
       <div className="h-4 w-px bg-border mx-1" />
-      <TreeSortButton value={treeSort} onChange={onTreeSortChange} />
-      <div className="h-4 w-px bg-border mx-1" />
-      <button onClick={() => onSortModeChange('rank')} className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${sortMode === 'rank' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`} title="Trier par dépendances">
-        <Network className="w-3.5 h-3.5" />
-      </button>
-      <button onClick={() => onSortModeChange('alpha')} className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${sortMode === 'alpha' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`} title="Trier alphabétiquement">
-        <ArrowDownAZ className="w-3.5 h-3.5" />
-      </button>
+      <PertSortButton treeSort={treeSort} sortMode={sortMode} onTreeSortChange={onTreeSortChange} onSortModeChange={onSortModeChange} />
     </>
   );
 
