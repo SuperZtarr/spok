@@ -1102,7 +1102,6 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
                     hasChildren={hasChildren}
                     isCollapsed={isCollapsed}
                     isPortal={isPortal}
-                    portalSpaceName={portalSpaceName}
                     isOver={ganttOverId === item.id}
                     dropPosition={ganttDropPosition}
                     canEdit={canEdit}
