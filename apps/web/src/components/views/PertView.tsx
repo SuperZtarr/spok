@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Ban, ArrowLeft, ArrowRight, Link2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Ban, ArrowRight, Link2, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   DndContext, DragOverlay, pointerWithin,
   useSensors, useSensor, PointerSensor,
@@ -36,15 +36,13 @@ const SPACE_COLORS = [
 ];
 
 const PERT_RELATION_TYPES = [
-  { id: 'blocks',     label: 'Bloque',       Icon: Ban,        hexColor: '#ef4444', tailwindColor: 'text-red-500'    },
-  { id: 'depends',    label: 'Dépend de',    Icon: ArrowLeft,  hexColor: '#f97316', tailwindColor: 'text-orange-500' },
-  { id: 'implements', label: 'Implémente',   Icon: ArrowRight, hexColor: '#22c55e', tailwindColor: 'text-green-500'  },
-  { id: 'relates',    label: 'Lié à',        Icon: Link2,      hexColor: '#3b82f6', tailwindColor: 'text-blue-500'   },
+  { id: 'blocks',     label: 'Bloque',  Icon: Ban,        hexColor: '#ef4444', tailwindColor: 'text-red-500'   },
+  { id: 'implements', label: 'Permet',  Icon: ArrowRight, hexColor: '#22c55e', tailwindColor: 'text-green-500' },
+  { id: 'relates',    label: 'Lié à',   Icon: Link2,      hexColor: '#3b82f6', tailwindColor: 'text-blue-500'  },
 ] as const;
 
 const RELATION_HEX: Record<string, string> = {
   blocks: '#ef4444',
-  depends: '#f97316',
   implements: '#22c55e',
   relates: '#3b82f6',
 };
@@ -59,8 +57,7 @@ function getRelationContextLabel(typeId: string, sourceName: string, targetName:
   const b = truncate(targetName);
   switch (typeId) {
     case 'blocks':     return `"${b}" est bloqué par "${a}"`;
-    case 'depends':    return `"${b}" dépend de "${a}"`;
-    case 'implements': return `"${b}" est implémenté après "${a}"`;
+    case 'implements': return `"${a}" permet "${b}"`;
     case 'relates':    return `"${a}" et "${b}" doivent être traités ensemble`;
     default:           return `${a} → ${b}`;
   }
@@ -256,7 +253,7 @@ export function PertView({
   const [showOnlyBlocking, setShowOnlyBlocking] = useState(false);
 
   const pertRelations = useMemo(
-    () => relations.filter(r => r.type === 'blocks' || r.type === 'depends' || r.type === 'implements' || r.type === 'relates'),
+    () => relations.filter(r => r.type === 'blocks' || r.type === 'implements' || r.type === 'relates'),
     [relations]
   );
 
@@ -898,7 +895,6 @@ export function PertView({
             <defs>
               <marker id="arrow-normal"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
               <marker id="arrow-blocks"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef4444" /></marker>
-              <marker id="arrow-depends"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
               <marker id="arrow-implements" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#22c55e" /></marker>
               <marker id="arrow-relates"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3b82f6" /></marker>
             </defs>

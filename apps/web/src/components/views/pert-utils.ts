@@ -19,16 +19,11 @@ export function buildPertGraph(items: Item[], relations: ItemRelation[]): PertGr
     const from = rel.fromItemId;
     const to = rel.toItemId;
     if (!itemSet.has(from) || !itemSet.has(to)) continue;
-    if (rel.type !== 'blocks' && rel.type !== 'depends') continue;
+    if (rel.type !== 'blocks' && rel.type !== 'implements') continue;
 
-    if (rel.type === 'blocks') {
-      predecessors.get(to)!.push(from);
-      successors.get(from)!.push(to);
-    } else {
-      // depends: from depends on to → to is predecessor of from
-      predecessors.get(from)!.push(to);
-      successors.get(to)!.push(from);
-    }
+    // blocks / implements: from → to means from is predecessor of to
+    predecessors.get(to)!.push(from);
+    successors.get(from)!.push(to);
   }
 
   return { predecessors, successors };
