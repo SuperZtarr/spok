@@ -18,7 +18,7 @@ export const ROLES = ['OWNER', 'MEMBER'] as const;
 
 export const GLOBAL_ROLES = ['USER', 'ADMIN'] as const;
 
-export const RELATION_TYPES = ['blocks', 'relates', 'depends', 'parent'] as const;
+export const RELATION_TYPES = ['blocks', 'relates', 'depends', 'parent', 'implements'] as const;
 
 export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'cancelled'] as const;
 
