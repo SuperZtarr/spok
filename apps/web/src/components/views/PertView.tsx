@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Ban, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { Ban, ArrowLeft, ArrowRight, Link2, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   DndContext, DragOverlay, pointerWithin,
   useSensors, useSensor, PointerSensor,
@@ -36,9 +36,35 @@ const SPACE_COLORS = [
 ];
 
 const PERT_RELATION_TYPES = [
-  { id: 'blocks',  label: 'Bloque',     Icon: Ban,       description: 'A doit être terminé avant B', color: 'text-red-500'    },
-  { id: 'depends', label: 'Dépend de',  Icon: ArrowLeft, description: 'A nécessite B pour avancer',  color: 'text-orange-500' },
-];
+  { id: 'blocks',     label: 'Bloque',       Icon: Ban,        hexColor: '#ef4444', tailwindColor: 'text-red-500'    },
+  { id: 'depends',    label: 'Dépend de',    Icon: ArrowLeft,  hexColor: '#f97316', tailwindColor: 'text-orange-500' },
+  { id: 'implements', label: 'Implémente',   Icon: ArrowRight, hexColor: '#22c55e', tailwindColor: 'text-green-500'  },
+  { id: 'relates',    label: 'Lié à',        Icon: Link2,      hexColor: '#3b82f6', tailwindColor: 'text-blue-500'   },
+] as const;
+
+const RELATION_HEX: Record<string, string> = {
+  blocks: '#ef4444',
+  depends: '#f97316',
+  implements: '#22c55e',
+  relates: '#3b82f6',
+};
+function getRelationColor(type: string): string {
+  return RELATION_HEX[type] ?? '#94a3b8';
+}
+function truncate(s: string, n = 22): string {
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+function getRelationContextLabel(typeId: string, sourceName: string, targetName: string): string {
+  const a = truncate(sourceName);
+  const b = truncate(targetName);
+  switch (typeId) {
+    case 'blocks':     return `"${b}" est bloqué par "${a}"`;
+    case 'depends':    return `"${b}" dépend de "${a}"`;
+    case 'implements': return `"${b}" est implémenté après "${a}"`;
+    case 'relates':    return `"${a}" et "${b}" doivent être traités ensemble`;
+    default:           return `${a} → ${b}`;
+  }
+}
 
 interface PortalGroup {
   spaceId: string;
@@ -675,8 +701,9 @@ export function PertView({
     const cpOffset = Math.abs(x2 - x1) * 0.4;
 
     const isCritical = !proxied && criticalPathIds.has(visibleFrom) && criticalPathIds.has(visibleTo);
-    const stroke = isCritical ? '#f97316' : '#94a3b8';
+    const stroke = getRelationColor(rel.type);
     const strokeWidth = isCritical ? 2.5 : 1.5;
+    const markerType = rel.type in RELATION_HEX ? rel.type : 'normal';
 
     const pathD = `M${x1},${y1} C${x1 + cpOffset},${y1} ${x2 - cpOffset},${y2} ${x2},${y2}`;
     const mx = (x1 + x2) / 2;
@@ -688,7 +715,7 @@ export function PertView({
         <path
           d={pathD}
           fill="none" stroke={stroke} strokeWidth={strokeWidth}
-          markerEnd={`url(#arrow-${isCritical ? 'critical' : 'normal'})`}
+          markerEnd={`url(#arrow-${markerType})`}
           strokeDasharray={proxied ? '5 3' : undefined}
         />
         {!proxied && canEdit && (onDeleteRelation || onUpdateRelation) && (
@@ -869,8 +896,11 @@ export function PertView({
           <div style={{ width: svgWidth * zoom, height: Math.max(svgHeight, 100) * zoom, position: 'relative', flexShrink: 0 }}>
           <svg ref={pertSvgRef} width={svgWidth} height={Math.max(svgHeight, 100)} style={{ transformOrigin: 'top left', transform: `scale(${zoom})`, position: 'absolute', top: 0, left: 0, display: 'block' }}>
             <defs>
-              <marker id="arrow-normal"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
-              <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
+              <marker id="arrow-normal"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
+              <marker id="arrow-blocks"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef4444" /></marker>
+              <marker id="arrow-depends"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f97316" /></marker>
+              <marker id="arrow-implements" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#22c55e" /></marker>
+              <marker id="arrow-relates"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3b82f6" /></marker>
             </defs>
 
             {/* Branch enclosing boxes */}
@@ -1001,10 +1031,9 @@ export function PertView({
                     editRelationType === type.id ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
                   }`}
                 >
-                  <type.Icon className={`w-4 h-4 ${type.color}`} />
-                  <div>
-                    <span className="text-sm font-medium">{type.label}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{type.description}</span>
+                  <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
+                  <div className="text-sm">
+                    {getRelationContextLabel(type.id, editingRelation.sourceName, editingRelation.targetName)}
                   </div>
                 </button>
               ))}
@@ -1076,12 +1105,10 @@ export function PertView({
                   key={type.id}
                   onClick={() => handleRelationTypeSelect(type.id)}
                   className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-accent transition-colors text-left"
-                  title={type.description}
                 >
-                  <type.Icon className={`w-4 h-4 ${type.color}`} />
-                  <div>
-                    <div className="text-sm font-medium">{type.label}</div>
-                    <div className="text-xs text-muted-foreground">{type.description}</div>
+                  <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
+                  <div className="text-sm">
+                    {getRelationContextLabel(type.id, pendingSourceItem?.title ?? '', pendingTargetItem?.title ?? '')}
                   </div>
                 </button>
               ))}
