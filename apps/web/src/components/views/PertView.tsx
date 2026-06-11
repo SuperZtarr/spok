@@ -256,7 +256,7 @@ export function PertView({
   const [showOnlyBlocking, setShowOnlyBlocking] = useState(false);
 
   const pertRelations = useMemo(
-    () => relations.filter(r => r.type === 'blocks' || r.type === 'depends'),
+    () => relations.filter(r => r.type === 'blocks' || r.type === 'depends' || r.type === 'implements' || r.type === 'relates'),
     [relations]
   );
 
