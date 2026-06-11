@@ -203,7 +203,7 @@ export function ItemEditModal({
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
-  const [newRelationType, setNewRelationType] = useState<'depends' | 'blocks' | 'relates'>('depends');
+  const [newRelationType, setNewRelationType] = useState<'depends' | 'blocks' | 'relates' | 'implements'>('depends');
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
   const [newRelationLabel, setNewRelationLabel] = useState('');
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
@@ -1427,8 +1427,13 @@ export function ItemEditModal({
                     <div className="space-y-2">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Type</label>
-                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks' | 'relates')}
-                          options={[{ value: 'depends', label: 'Dépend de...' }, { value: 'blocks', label: 'Bloque...' }, { value: 'relates', label: 'Lié à...' }]} />
+                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as 'depends' | 'blocks' | 'relates' | 'implements')}
+                          options={[
+                            { value: 'depends',    label: 'Dépend de...'  },
+                            { value: 'blocks',     label: 'Bloque...'     },
+                            { value: 'implements', label: 'Implémente...' },
+                            { value: 'relates',    label: 'Lié à...'      },
+                          ]} />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Élément</label>
