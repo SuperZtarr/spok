@@ -1011,7 +1011,7 @@ export function PertView({
       {/* Edit relation dialog */}
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-sm w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-base font-semibold mb-1">Modifier la relation</h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{editingRelation.sourceName}</span>
@@ -1028,7 +1028,7 @@ export function PertView({
                   }`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="text-sm">
+                  <div className="text-sm font-semibold">
                     {getRelationContextLabel(type.id, editingRelation.sourceName, editingRelation.targetName)}
                   </div>
                 </button>
@@ -1078,7 +1078,7 @@ export function PertView({
       {/* Relation type selection modal */}
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-sm w-full mx-4">
+          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-base font-semibold mb-1">Type de relation</h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{pendingSourceItem?.title}</span>
@@ -1103,7 +1103,7 @@ export function PertView({
                   className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-colors text-left ${type.hoverClass}`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="text-sm">
+                  <div className="text-sm font-semibold">
                     {getRelationContextLabel(type.id, pendingSourceItem?.title ?? '', pendingTargetItem?.title ?? '')}
                   </div>
                 </button>
