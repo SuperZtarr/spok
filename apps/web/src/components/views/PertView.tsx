@@ -49,27 +49,29 @@ const RELATION_HEX: Record<string, string> = {
 function getRelationColor(type: string): string {
   return RELATION_HEX[type] ?? '#94a3b8';
 }
-function truncate(s: string, n = 24): string {
-  return s.length > n ? s.slice(0, n) + '…' : s;
-}
 function ItemChip({ name }: { name: string }) {
   return (
-    <span className="inline-block bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-xs font-semibold text-foreground mx-0.5">
-      {truncate(name)}
+    <span className="inline-block bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-xs font-semibold text-foreground break-words">
+      {name}
     </span>
   );
 }
 function RelationContextContent({ typeId, sourceName, targetName }: { typeId: string; sourceName: string; targetName: string }) {
-  switch (typeId) {
-    case 'blocks':
-      return <><ItemChip name={targetName} /><span className="text-muted-foreground mx-1">est bloqué par</span><ItemChip name={sourceName} /></>;
-    case 'implements':
-      return <><ItemChip name={sourceName} /><span className="text-muted-foreground mx-1">permet</span><ItemChip name={targetName} /></>;
-    case 'relates':
-      return <><ItemChip name={sourceName} /><span className="text-muted-foreground mx-1">est lié à</span><ItemChip name={targetName} /></>;
-    default:
-      return <><ItemChip name={sourceName} /><span className="text-muted-foreground mx-1">→</span><ItemChip name={targetName} /></>;
-  }
+  const rows: [string, string, string] = (() => {
+    switch (typeId) {
+      case 'blocks':     return [targetName, 'est bloqué par', sourceName];
+      case 'implements': return [sourceName, 'permet',         targetName];
+      case 'relates':    return [sourceName, 'est lié à',      targetName];
+      default:           return [sourceName, '→',              targetName];
+    }
+  })();
+  return (
+    <div className="flex flex-col items-start gap-1 w-full">
+      <ItemChip name={rows[0]} />
+      <span className="text-xs text-muted-foreground px-1">{rows[1]}</span>
+      <ItemChip name={rows[2]} />
+    </div>
+  );
 }
 
 interface PortalGroup {
@@ -1037,7 +1039,7 @@ export function PertView({
                   }`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="flex items-center flex-wrap gap-y-1 text-sm">
+                  <div className="flex-1 min-w-0">
                     <RelationContextContent typeId={type.id} sourceName={editingRelation.sourceName} targetName={editingRelation.targetName} />
                   </div>
                 </button>
@@ -1112,7 +1114,7 @@ export function PertView({
                   className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-colors text-left ${type.hoverClass}`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="flex items-center flex-wrap gap-y-1 text-sm">
+                  <div className="flex-1 min-w-0">
                     <RelationContextContent typeId={type.id} sourceName={pendingSourceItem?.title ?? ''} targetName={pendingTargetItem?.title ?? ''} />
                   </div>
                 </button>
