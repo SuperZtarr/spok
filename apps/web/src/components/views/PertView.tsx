@@ -534,8 +534,8 @@ export function PertView({
     for (const rel of pertRelations) {
       let fromId: string;
       let toId: string;
-      if (rel.type === 'blocks') { fromId = rel.fromItemId; toId = rel.toItemId; }
-      else                        { fromId = rel.toItemId;   toId = rel.fromItemId; }
+      fromId = rel.fromItemId;
+      toId   = rel.toItemId;
 
       const visibleFrom = getVisibleAncestor(fromId);
       const visibleTo   = getVisibleAncestor(toId);
