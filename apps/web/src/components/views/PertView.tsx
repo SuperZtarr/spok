@@ -51,7 +51,7 @@ function getRelationColor(type: string): string {
 }
 function ItemChip({ name }: { name: string }) {
   return (
-    <span className="inline-block bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-xs font-semibold text-foreground break-words">
+    <span className="block w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-xs font-semibold text-foreground break-words">
       {name}
     </span>
   );
