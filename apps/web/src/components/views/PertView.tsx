@@ -57,7 +57,7 @@ function ItemChip({ name }: { name: string }) {
   );
 }
 function RelationContextContent({ typeId, sourceName, targetName }: { typeId: string; sourceName: string; targetName: string }) {
-  const rows: [string, string, string] = (() => {
+  const [item1, verb, item2]: [string, string, string] = (() => {
     switch (typeId) {
       case 'blocks':     return [targetName, 'est bloqué par', sourceName];
       case 'implements': return [sourceName, 'permet',         targetName];
@@ -66,10 +66,10 @@ function RelationContextContent({ typeId, sourceName, targetName }: { typeId: st
     }
   })();
   return (
-    <div className="flex flex-col items-start gap-1 w-full">
-      <ItemChip name={rows[0]} />
-      <span className="text-xs text-muted-foreground px-1">{rows[1]}</span>
-      <ItemChip name={rows[2]} />
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 w-full">
+      <ItemChip name={item1} />
+      <span className="text-xs text-muted-foreground whitespace-nowrap">{verb}</span>
+      <ItemChip name={item2} />
     </div>
   );
 }
@@ -1039,7 +1039,7 @@ export function PertView({
                   }`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full">
                     <RelationContextContent typeId={type.id} sourceName={editingRelation.sourceName} targetName={editingRelation.targetName} />
                   </div>
                 </button>
@@ -1114,7 +1114,7 @@ export function PertView({
                   className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-colors text-left ${type.hoverClass}`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full">
                     <RelationContextContent typeId={type.id} sourceName={pendingSourceItem?.title ?? ''} targetName={pendingTargetItem?.title ?? ''} />
                   </div>
                 </button>
