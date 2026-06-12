@@ -1,19 +1,15 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowRight, Link2, ChevronDown, ChevronRight } from 'lucide-react';
-import {
-  DndContext, DragOverlay, pointerWithin,
-  useSensors, useSensor, PointerSensor,
-  type DragStartEvent, type DragOverEvent, type DragEndEvent,
-} from '@dnd-kit/core';
 import { PertToolbar } from './PertToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig } from '@spok/shared';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig, StatusConfig } from '@spok/shared';
 import type { ViewMode } from '../../stores/viewMode';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { buildTree, flattenTree } from './timeline-tree';
+import { tailwindBgToHex } from './mindmap-utils';
 import { buildPertGraph, computeCriticalPathNaive } from './pert-utils';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { TreeItemRow } from './TreeItemRow';
@@ -49,29 +45,46 @@ const RELATION_HEX: Record<string, string> = {
 function getRelationColor(type: string): string {
   return RELATION_HEX[type] ?? '#94a3b8';
 }
-function ItemChip({ name }: { name: string }) {
+function ItemChip({ name, status, statusOptions, borderColor }: {
+  name: string;
+  status?: string | null;
+  statusOptions: StatusConfig[];
+  borderColor?: string;
+}) {
+  const statusColor = statusOptions.find(s => s.id === status)?.color ?? 'bg-gray-100 text-gray-700';
   return (
-    <span className="block w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-xs font-semibold text-foreground break-words">
+    <span
+      className={`block w-full rounded px-2 py-0.5 text-xs font-semibold break-words ${statusColor}`}
+      style={{ border: `1.5px solid ${borderColor ?? '#d1d5db'}` }}
+    >
       {name}
     </span>
   );
 }
-function RelationRow({ typeId, sourceName, targetName }: { typeId: string; sourceName: string; targetName: string }) {
-  const [item1, verb, item2]: [string, string, string] = (() => {
+function RelationRow({ typeId, sourceName, targetName, sourceStatus, targetStatus, statusOptions }: {
+  typeId: string;
+  sourceName: string;
+  targetName: string;
+  sourceStatus?: string | null;
+  targetStatus?: string | null;
+  statusOptions: StatusConfig[];
+}) {
+  const borderColor = RELATION_HEX[typeId] ?? '#94a3b8';
+  const [item1, verb, item2, s1, s2]: [string, string, string, string | null | undefined, string | null | undefined] = (() => {
     switch (typeId) {
-      case 'blocks':     return [targetName, 'est bloqué par', sourceName];
-      case 'implements': return [targetName, 'est permis par', sourceName];
-      case 'relates':    return [sourceName, 'est lié à',      targetName];
-      default:           return [sourceName, '→',              targetName];
+      case 'blocks':     return [sourceName, 'bloque',    targetName, sourceStatus, targetStatus];
+      case 'implements': return [sourceName, 'permet',    targetName, sourceStatus, targetStatus];
+      case 'relates':    return [sourceName, 'est lié à', targetName, sourceStatus, targetStatus];
+      default:           return [sourceName, '→',         targetName, sourceStatus, targetStatus];
     }
   })();
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
-      <div className="w-[42%] flex-shrink-0"><ItemChip name={item1} /></div>
+      <div className="w-[42%] flex-shrink-0"><ItemChip name={item1} status={s1} statusOptions={statusOptions} borderColor={borderColor} /></div>
       <div className="w-[20%] flex-shrink-0 text-center">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">{verb}</span>
+        <span className="text-xs font-bold text-foreground whitespace-nowrap">{verb}</span>
       </div>
-      <div className="flex-1 min-w-0"><ItemChip name={item2} /></div>
+      <div className="flex-1 min-w-0"><ItemChip name={item2} status={s2} statusOptions={statusOptions} borderColor={borderColor} /></div>
     </div>
   );
 }
@@ -139,7 +152,6 @@ export function PertView({
   onDelete,
   onUpdateStatus,
   onAddChild,
-  onMove,
   onCreateRelation,
   onDeleteRelation,
   onUpdateRelation,
@@ -179,13 +191,6 @@ export function PertView({
   } | null>(null);
   const [editRelationType, setEditRelationType] = useState<string>('');
 
-  // DnD state for left-panel reordering
-  const [pertActiveId, setPertActiveId] = useState<string | null>(null);
-  const [pertOverId, setPertOverId] = useState<string | null>(null);
-  const [pertDropPosition, setPertDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
-  const pertPointerYRef = useRef(0);
-  const pertPreDragCollapsedRef = useRef<Set<string>>(new Set());
-  const pertSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const [zoom, setZoom] = useState(1);
   const zoomIn = useCallback(() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2)))), []);
@@ -213,43 +218,6 @@ export function PertView({
     return () => el.removeEventListener('wheel', handler);
   }, []);
 
-  // DnD handlers for left-panel reordering
-  const handlePertDragStart = useCallback((event: DragStartEvent) => {
-    const id = event.active.id as string;
-    setPertActiveId(id);
-    pertPreDragCollapsedRef.current = new Set(collapsedIds);
-    setCollapsedIds(prev => { const s = new Set(prev); s.add(id); return s; });
-  }, [collapsedIds, setCollapsedIds]);
-
-  const handlePertDragOver = useCallback((event: DragOverEvent) => {
-    const overId = event.over?.id as string | null;
-    setPertOverId(overId);
-    if (!overId) { setPertDropPosition('nest'); return; }
-    const el = document.querySelector(`[data-pert-item-id="${overId}"]`) as HTMLElement | null;
-    const rect = el?.getBoundingClientRect();
-    if (!rect || rect.height === 0) { setPertDropPosition('nest'); return; }
-    const ratio = (pertPointerYRef.current - rect.top) / rect.height;
-    if (ratio < 0.33) setPertDropPosition('before');
-    else if (ratio > 0.67) setPertDropPosition('after');
-    else setPertDropPosition('nest');
-  }, []);
-
-  const handlePertDragCancel = useCallback(() => {
-    const id = pertActiveId;
-    setPertActiveId(null);
-    setPertOverId(null);
-    setPertDropPosition('nest');
-    if (id && !pertPreDragCollapsedRef.current.has(id)) {
-      setCollapsedIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-    }
-  }, [pertActiveId, setCollapsedIds]);
-
-  useEffect(() => {
-    if (!pertActiveId) return;
-    const handler = (e: PointerEvent) => { pertPointerYRef.current = e.clientY; };
-    window.addEventListener('pointermove', handler);
-    return () => window.removeEventListener('pointermove', handler);
-  }, [pertActiveId]);
 
   const statusOptions = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
   const [collapsedSpaces, setCollapsedSpaces] = React.useState<Set<string>>(new Set());
@@ -322,7 +290,7 @@ export function PertView({
     const pertPreds = new Map<string, string[]>();
     for (const rel of pertRelations) {
       let predId: string, succId: string;
-      if (rel.type === 'blocks') { predId = rel.fromItemId; succId = rel.toItemId; }
+      if (rel.type === 'blocks' || rel.type === 'implements') { predId = rel.fromItemId; succId = rel.toItemId; }
       else { predId = rel.toItemId; succId = rel.fromItemId; }
       if (idSet.has(predId) && idSet.has(succId)) {
         if (!pertPreds.has(succId)) pertPreds.set(succId, []);
@@ -425,40 +393,6 @@ export function PertView({
   }, [treeItems, pertSortFn, portalGroups, currentSpaceId, spaceOrder]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds), [tree, collapsedIds]);
 
-  // DnD drag-end handler — defined after flatItems
-  const handlePertDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    const activeId = active.id as string;
-    const pos = pertDropPosition;
-    const wasCollapsed = pertPreDragCollapsedRef.current.has(activeId);
-    setPertActiveId(null);
-    setPertOverId(null);
-    setPertDropPosition('nest');
-    if (!over || activeId === over.id || !onMove) {
-      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
-      return;
-    }
-    const overItem = flatItems.find((i: Item) => i.id === over.id);
-    if (!overItem) {
-      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
-      return;
-    }
-    if (pos === 'nest') {
-      onMove(activeId, over.id as string, 0);
-      setCollapsedIds(prev => {
-        const s = new Set(prev);
-        s.delete(over.id as string);
-        if (!wasCollapsed) s.delete(activeId);
-        return s;
-      });
-    } else {
-      const siblings = flatItems.filter((i: Item) => i.parentId === overItem.parentId);
-      const overIndex = siblings.findIndex((i: Item) => i.id === over.id);
-      const targetPos = pos === 'after' ? overIndex + 1 : overIndex;
-      onMove(activeId, overItem.parentId ?? null, targetPos >= 0 ? targetPos : 0);
-      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
-    }
-  }, [pertDropPosition, flatItems, onMove, setCollapsedIds]);
 
   const visibleFlatItems = useMemo(() => {
     if (!collapsedSpaces.size) return flatItems;
@@ -704,9 +638,10 @@ export function PertView({
     { rel, visibleFrom, visibleTo, proxied }: { rel: ItemRelation; visibleFrom: string; visibleTo: string; proxied: boolean },
     key: string,
   ) {
-    const x1 = nodeX(visibleFrom) + NODE_WIDTH;
+    const isRelates = rel.type === 'relates';
+    const x1 = isRelates ? nodeX(visibleFrom) + NODE_WIDTH / 2 : nodeX(visibleFrom) + NODE_WIDTH;
     const y1 = nodeY(visibleFrom) + NODE_HEIGHT / 2;
-    const x2 = nodeX(visibleTo);
+    const x2 = isRelates ? nodeX(visibleTo) + NODE_WIDTH / 2 : nodeX(visibleTo);
     const y2 = nodeY(visibleTo) + NODE_HEIGHT / 2;
     const cpOffset = Math.abs(x2 - x1) * 0.4;
 
@@ -725,8 +660,8 @@ export function PertView({
         <path
           d={pathD}
           fill="none" stroke={stroke} strokeWidth={strokeWidth}
-          markerEnd={`url(#arrow-${markerType})`}
-          strokeDasharray={proxied ? '5 3' : undefined}
+          markerEnd={isRelates ? undefined : `url(#arrow-${markerType})`}
+          strokeDasharray={proxied ? '5 3' : (isRelates ? '6 3' : undefined)}
         />
         {!proxied && canEdit && (onDeleteRelation || onUpdateRelation) && (
           <path
@@ -813,14 +748,6 @@ export function PertView({
         ref={scrollContainerRef}
         onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop * zoom; }}
       >
-        <DndContext
-          sensors={pertSensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handlePertDragStart}
-          onDragOver={handlePertDragOver}
-          onDragEnd={handlePertDragEnd}
-          onDragCancel={handlePertDragCancel}
-        >
           {svgRows.map((row, rowIdx) => {
             if (row.kind === 'space-header') {
               const c = SPACE_COLORS[row.colorIdx];
@@ -858,10 +785,9 @@ export function PertView({
                   hasChildren={hasChildren}
                   isCollapsed={isCollapsed}
                   isPortal={isPortal}
-                  isOver={pertOverId === item.id}
-                  dropPosition={pertDropPosition}
+                  isOver={false}
+                  dropPosition="nest"
                   canEdit={canEdit}
-                  onMove={onMove}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onUpdateStatus={onUpdateStatus}
@@ -882,14 +808,6 @@ export function PertView({
               </div>
             );
           })}
-          {pertActiveId && (
-            <DragOverlay>
-              <div className="bg-background border rounded shadow px-3 py-1 text-sm opacity-90">
-                {flatItems.find(i => i.id === pertActiveId)?.title ?? pertActiveId}
-              </div>
-            </DragOverlay>
-          )}
-        </DndContext>
       </div>
 
       {/* Right panel — PERT SVG */}
@@ -945,13 +863,19 @@ export function PertView({
               const { item } = row;
               const x = nodeX(item.id);
               const y = nodeY(item.id);
-              const isCritical = criticalPathIds.has(item.id);
               const isDragTarget = dragTargetId === item.id;
               const Icon = getTypeIcon(item.type as ItemType, item.url);
               const showHandle = canEdit && onCreateRelation && (hoveredNodeId === item.id) && !relationDrag;
-              const nodeIsHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
               const nodeIsDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
               const nodeIsSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
+              const nodeRelationStroke = (() => {
+                const nodeRels = pertRelations.filter(r => r.fromItemId === item.id || r.toItemId === item.id);
+                if (nodeRels.some(r => r.type === 'blocks' && r.fromItemId === item.id)) return '#ef4444'; // bloque → rouge
+                if (nodeRels.some(r => r.type === 'blocks' && r.toItemId   === item.id)) return '#fb923c'; // est bloqué → orange clair
+                if (nodeRels.some(r => r.type === 'implements')) return RELATION_HEX.implements;
+                if (nodeRels.some(r => r.type === 'relates'))    return null;
+                return null;
+              })();
 
               return (
                 <g
@@ -965,18 +889,18 @@ export function PertView({
                   <title>{item.title}</title>
                   <rect
                     width={NODE_WIDTH} height={NODE_HEIGHT} rx={4}
-                    className={
-                      isDragTarget
-                        ? 'fill-primary/10 stroke-primary'
-                        : nodeIsSearchMatch
-                          ? 'fill-yellow-50 dark:fill-yellow-950/30 stroke-yellow-400'
-                          : nodeIsHighlighted && highlightColor
-                            ? `stroke-current`
-                            : isCritical
-                              ? 'fill-orange-50 dark:fill-orange-950/30 stroke-orange-400'
-                              : 'fill-background stroke-border'
-                    }
-                    strokeWidth={isDragTarget ? 2 : nodeIsSearchMatch ? 2 : nodeIsHighlighted ? 2 : isCritical ? 2 : 1}
+                    className="fill-none"
+                    style={(() => {
+                      if (isDragTarget) return { fill: 'transparent', stroke: 'var(--primary)' };
+                      if (nodeIsSearchMatch) return { fill: '#fefce8', stroke: '#facc15' };
+                      const statusEntry = statusOptions.find(s => s.id === (item.status ?? 'undefined'));
+                      const bgClass = statusEntry?.color.split(' ').find(c => c.startsWith('bg-'));
+                      return {
+                        fill: bgClass ? tailwindBgToHex(bgClass) : '#ffffff',
+                        stroke: nodeRelationStroke ?? '#e2e8f0',
+                        strokeWidth: nodeRelationStroke ? 2 : 1,
+                      };
+                    })()}
                   />
                   <foreignObject x={4} y={2} width={NODE_WIDTH - 8} height={NODE_HEIGHT - 4}>
                     <div className="flex items-center gap-1 h-full overflow-hidden">
@@ -1041,7 +965,14 @@ export function PertView({
                   }`}
                 >
                   <type.Icon className={`w-4 h-4 flex-shrink-0 ${type.tailwindColor}`} />
-                  <RelationRow typeId={type.id} sourceName={editingRelation.sourceName} targetName={editingRelation.targetName} />
+                  <RelationRow
+                    typeId={type.id}
+                    sourceName={editingRelation.sourceName}
+                    targetName={editingRelation.targetName}
+                    sourceStatus={items.find(i => i.id === editingRelation.fromItemId)?.status}
+                    targetStatus={items.find(i => i.id === editingRelation.toItemId)?.status}
+                    statusOptions={statusOptions}
+                  />
                 </button>
               ))}
             </div>
@@ -1114,7 +1045,14 @@ export function PertView({
                   className={`flex items-center gap-3 px-3 py-2 border border-border rounded-lg transition-colors w-full ${type.hoverClass}`}
                 >
                   <type.Icon className={`w-4 h-4 flex-shrink-0 ${type.tailwindColor}`} />
-                  <RelationRow typeId={type.id} sourceName={pendingSourceItem?.title ?? ''} targetName={pendingTargetItem?.title ?? ''} />
+                  <RelationRow
+                    typeId={type.id}
+                    sourceName={pendingSourceItem?.title ?? ''}
+                    targetName={pendingTargetItem?.title ?? ''}
+                    sourceStatus={pendingSourceItem?.status}
+                    targetStatus={pendingTargetItem?.status}
+                    statusOptions={statusOptions}
+                  />
                 </button>
               ))}
             </div>
