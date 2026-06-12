@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import {
@@ -64,13 +64,20 @@ export function DateTimeField({
   const openCalendar = useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const calendarHeight = 320;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const top = spaceBelow >= calendarHeight ? rect.bottom + 4 : rect.top - calendarHeight - 4;
-      setCalendarPos({ top, left: rect.left });
+      setCalendarPos({ top: rect.bottom + 4, left: rect.left });
     }
     setIsCalendarOpen(true);
   }, []);
+
+  // Après rendu du calendrier : le repositionner vers le haut si débordement
+  useLayoutEffect(() => {
+    if (!isCalendarOpen || !calendarRef.current || !buttonRef.current) return;
+    const cal = calendarRef.current.getBoundingClientRect();
+    const btn = buttonRef.current.getBoundingClientRect();
+    if (cal.bottom > window.innerHeight - 8) {
+      setCalendarPos({ top: btn.top - cal.height - 4, left: btn.left });
+    }
+  }, [isCalendarOpen]);
 
   // --- Helpers ---
 
