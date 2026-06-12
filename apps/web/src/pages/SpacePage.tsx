@@ -303,10 +303,9 @@ export function SpacePage() {
   const deferredIds = useMemo(() => new Set(deferredItems.map((i: Item) => i.id)), [deferredItems]);
 
   // --- Search ---
-  const filterBySearch = useCallback((items: Item[] | undefined): Item[] => {
+  const filterBySearch = useCallback((items: Item[] | undefined, skipDeferredFilter = false): Item[] => {
     if (!items) return [];
-    // Filter deferred items unless explicitly shown
-    const visible = showDeferred ? items : items.filter((item: Item) => !deferredIds.has(item.id));
+    const visible = skipDeferredFilter || showDeferred ? items : items.filter((item: Item) => !deferredIds.has(item.id));
     if (!searchQuery.trim() || isHighlightMode) return visible;
     const query = searchQuery.toLowerCase();
     return visible.filter((item) =>
@@ -314,6 +313,7 @@ export function SpacePage() {
       stripMarkup(item.description || '').toLowerCase().includes(query)
     );
   }, [searchQuery, isHighlightMode, showDeferred, deferredIds]);
+
 
   const searchMatchIds = useMemo((): Set<string> | undefined => {
     if (!searchQuery.trim()) return undefined;
@@ -934,7 +934,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
-              items={filterBySearch(allItemsData?.data)}
+              items={filterBySearch(allItemsData?.data, true)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               currentSpaceId={spaceId}
               spaceId={spaceId}

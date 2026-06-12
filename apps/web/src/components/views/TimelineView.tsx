@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus, CalendarClock } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { FilterToolbar } from '../ui/FilterToolbar';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
@@ -15,8 +15,8 @@ import {
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, isItemDeferred } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
@@ -94,6 +94,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
   const { collapsedIds, setCollapsedIds, toggleCollapse: toggleCollapseFromHook } = useCollapsedIds(spaceId ?? '');
   const [compactMode, setCompactMode] = useState(false);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
+  const [hideDeferred, setHideDeferred] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [editingRelation, setEditingRelation] = useState<{
     relationId: string; fromItemId: string; toItemId: string;
@@ -193,8 +194,13 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
   }, [portalGroups, currentSpaceId]);
 
   const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const visibleItems = useMemo(() => {
+    if (!hideDeferred) return items;
+    return items.filter(item => !isItemDeferred(item, statuses));
+  }, [items, hideDeferred, statuses]);
+  const deferredCount = useMemo(() => items.filter(item => isItemDeferred(item, statuses)).length, [items, statuses]);
   const sortedItems = useMemo(() => {
-    const sorted = applyTreeSort(items, treeSort);
+    const sorted = applyTreeSort(visibleItems, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
     const sortedIds = new Set(sorted.map(i => i.id));
     const rootIds = new Set(sorted.filter(i => !i.parentId || !sortedIds.has(i.parentId)).map(i => i.id));
@@ -209,7 +215,7 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     const children = sorted.filter(i => !rootIds.has(i.id));
     const orderedRoots = spaceOrder.flatMap(sid => bySpace.get(sid) ?? []);
     return [...orderedRoots, ...children];
-  }, [items, treeSort, portalGroups, currentSpaceId, spaceOrder]);
+  }, [visibleItems, treeSort, portalGroups, currentSpaceId, spaceOrder]);
   // Break cross-space parent-child links so each space forms its own independent tree
   const treeItems = useMemo(() => {
     if (!portalGroups?.length || !currentSpaceId) return sortedItems;
@@ -524,11 +530,41 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     const deltaX = e.clientX - dragging.initialX;
     const rawDays = deltaX / dayWidth;
     const snap = zoomConfig.snapDays;
-    const deltaDays = Math.round(rawDays / snap) * snap;
 
+    // Date brute avec précision fractionnaire (addDays tronque, on utilise les ms)
+    const rawMs = dragging.initialDate.getTime() + rawDays * 86400000;
+    const raw = new Date(rawMs);
+
+    let newDate: Date;
+    if (snap === 7) {
+      const dow = raw.getDay(); // 0=dim, 1=lun…6=sam
+      if (dragging.type === 'end') {
+        // Snap au dimanche le plus proche
+        const daysFromSunday = dow === 0 ? 0 : dow;
+        newDate = addDays(raw, daysFromSunday <= 3.5 ? -daysFromSunday : 7 - daysFromSunday);
+      } else {
+        // Snap au lundi le plus proche
+        const daysFromMonday = dow === 0 ? 6 : dow - 1;
+        newDate = addDays(raw, daysFromMonday <= 3.5 ? -daysFromMonday : 7 - daysFromMonday);
+      }
+    } else if (snap === 30) {
+      if (dragging.type === 'end') {
+        // Snap au dernier jour du mois le plus proche
+        const d1 = new Date(raw.getFullYear(), raw.getMonth() + 1, 0); // fin mois courant
+        const d2 = new Date(raw.getFullYear(), raw.getMonth(), 0);      // fin mois précédent
+        newDate = (raw.getDate() / d1.getDate()) >= 0.5 ? d1 : d2;
+      } else {
+        // Snap au 1er du mois le plus proche
+        const d1 = new Date(raw.getFullYear(), raw.getMonth(), 1);
+        const d2 = new Date(raw.getFullYear(), raw.getMonth() + 1, 1);
+        newDate = raw.getDate() <= 15 ? d1 : d2;
+      }
+    } else {
+      newDate = addDays(dragging.initialDate, Math.round(rawDays / snap) * snap);
+    }
+
+    const deltaDays = Math.round((newDate.getTime() - dragging.initialDate.getTime()) / 86400000);
     if (deltaDays === dragging.lastDeltaDays) return;
-
-    const newDate = addDays(dragging.initialDate, deltaDays);
     const item = items.find(i => i.id === dragging.itemId);
     if (!item) return;
 
@@ -866,6 +902,16 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
               onToggle={() => collapsedIds.size > 0 ? setCollapsedIds(new Set()) : setCollapsedIds(new Set(parentIds))}
             />
           )}
+
+          {/* Filtre éléments différés */}
+          <Button
+            variant={hideDeferred ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setHideDeferred(prev => !prev)}
+            title={hideDeferred ? `Afficher les éléments planifiés à long terme` : `Masquer les éléments planifiés à long terme`}
+          >
+            <CalendarClock className="w-4 h-4" />
+          </Button>
 
           {/* Chemin critique toggle */}
           <Button
@@ -1307,17 +1353,13 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
                 style={{ left: 288, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0), pointerEvents: 'none' }}
               >
                 <defs>
-                  <marker id="arrowhead-depends" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="hsl(var(--primary))" opacity="0.7" />
-                  </marker>
-                  <marker id="arrowhead-blocks" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="hsl(var(--destructive))" opacity="0.7" />
-                  </marker>
+                  <marker id="arrowhead-blocks"     markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ef4444" opacity="0.8" /></marker>
+                  <marker id="arrowhead-implements" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#22c55e" opacity="0.8" /></marker>
+                  <marker id="arrowhead-relates"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3b82f6" opacity="0.8" /></marker>
                 </defs>
                 {dependencyArrows.map((arrow, idx) => {
-                  const isBlocks = arrow.type === 'blocks';
-                  const color = isBlocks ? 'hsl(var(--destructive))' : 'hsl(var(--primary))';
-                  const markerId = isBlocks ? 'arrowhead-blocks' : 'arrowhead-depends';
+                  const color = arrow.type === 'blocks' ? '#ef4444' : arrow.type === 'implements' ? '#22c55e' : '#3b82f6';
+                  const markerId = `arrowhead-${arrow.type === 'blocks' ? 'blocks' : arrow.type === 'implements' ? 'implements' : 'relates'}`;
                   const relType = RELATION_TYPES.find(t => t.id === arrow.type);
                   const relLabel = relType?.label || arrow.type;
 
