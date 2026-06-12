@@ -49,17 +49,26 @@ const RELATION_HEX: Record<string, string> = {
 function getRelationColor(type: string): string {
   return RELATION_HEX[type] ?? '#94a3b8';
 }
-function truncate(s: string, n = 22): string {
+function truncate(s: string, n = 24): string {
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
-function getRelationContextLabel(typeId: string, sourceName: string, targetName: string): string {
-  const a = truncate(sourceName);
-  const b = truncate(targetName);
+function ItemChip({ name }: { name: string }) {
+  return (
+    <span className="inline-block bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-xs font-semibold text-foreground mx-0.5">
+      {truncate(name)}
+    </span>
+  );
+}
+function RelationContextContent({ typeId, sourceName, targetName }: { typeId: string; sourceName: string; targetName: string }) {
   switch (typeId) {
-    case 'blocks':     return `"${b}" est bloqué par "${a}"`;
-    case 'implements': return `"${a}" permet "${b}"`;
-    case 'relates':    return `"${a}" et "${b}" doivent être traités ensemble`;
-    default:           return `${a} → ${b}`;
+    case 'blocks':
+      return <><ItemChip name={targetName} /><span className="text-muted-foreground mx-1">est bloqué par</span><ItemChip name={sourceName} /></>;
+    case 'implements':
+      return <><ItemChip name={sourceName} /><span className="text-muted-foreground mx-1">permet</span><ItemChip name={targetName} /></>;
+    case 'relates':
+      return <><ItemChip name={sourceName} /><span className="text-muted-foreground mx-1">est lié à</span><ItemChip name={targetName} /></>;
+    default:
+      return <><ItemChip name={sourceName} /><span className="text-muted-foreground mx-1">→</span><ItemChip name={targetName} /></>;
   }
 }
 
@@ -1011,7 +1020,7 @@ export function PertView({
       {/* Edit relation dialog */}
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-lg w-full mx-4">
             <h3 className="text-base font-semibold mb-1">Modifier la relation</h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{editingRelation.sourceName}</span>
@@ -1028,8 +1037,8 @@ export function PertView({
                   }`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="text-sm font-semibold">
-                    {getRelationContextLabel(type.id, editingRelation.sourceName, editingRelation.targetName)}
+                  <div className="flex items-center flex-wrap gap-y-1 text-sm">
+                    <RelationContextContent typeId={type.id} sourceName={editingRelation.sourceName} targetName={editingRelation.targetName} />
                   </div>
                 </button>
               ))}
@@ -1078,7 +1087,7 @@ export function PertView({
       {/* Relation type selection modal */}
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-lg w-full mx-4">
             <h3 className="text-base font-semibold mb-1">Type de relation</h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{pendingSourceItem?.title}</span>
@@ -1103,8 +1112,8 @@ export function PertView({
                   className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-colors text-left ${type.hoverClass}`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="text-sm font-semibold">
-                    {getRelationContextLabel(type.id, pendingSourceItem?.title ?? '', pendingTargetItem?.title ?? '')}
+                  <div className="flex items-center flex-wrap gap-y-1 text-sm">
+                    <RelationContextContent typeId={type.id} sourceName={pendingSourceItem?.title ?? ''} targetName={pendingTargetItem?.title ?? ''} />
                   </div>
                 </button>
               ))}
