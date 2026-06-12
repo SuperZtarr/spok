@@ -64,7 +64,10 @@ export function DateTimeField({
   const openCalendar = useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setCalendarPos({ top: rect.bottom + 4, left: rect.left });
+      const calendarHeight = 320;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow >= calendarHeight ? rect.bottom + 4 : rect.top - calendarHeight - 4;
+      setCalendarPos({ top, left: rect.left });
     }
     setIsCalendarOpen(true);
   }, []);
