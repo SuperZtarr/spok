@@ -36,9 +36,9 @@ const SPACE_COLORS = [
 ];
 
 const PERT_RELATION_TYPES = [
-  { id: 'blocks',     label: 'Bloque',  Icon: Ban,        hexColor: '#ef4444', tailwindColor: 'text-red-500'   },
-  { id: 'implements', label: 'Permet',  Icon: ArrowRight, hexColor: '#22c55e', tailwindColor: 'text-green-500' },
-  { id: 'relates',    label: 'Lié à',   Icon: Link2,      hexColor: '#3b82f6', tailwindColor: 'text-blue-500'  },
+  { id: 'blocks',     label: 'Bloque',  Icon: Ban,        hexColor: '#ef4444', tailwindColor: 'text-red-500',   selectedClass: 'bg-red-50   border-red-400   dark:bg-red-950/30',   hoverClass: 'hover:bg-red-50   hover:border-red-300'   },
+  { id: 'implements', label: 'Permet',  Icon: ArrowRight, hexColor: '#22c55e', tailwindColor: 'text-green-500', selectedClass: 'bg-green-50 border-green-400 dark:bg-green-950/30', hoverClass: 'hover:bg-green-50 hover:border-green-300' },
+  { id: 'relates',    label: 'Lié à',   Icon: Link2,      hexColor: '#3b82f6', tailwindColor: 'text-blue-500',  selectedClass: 'bg-blue-50  border-blue-400  dark:bg-blue-950/30',  hoverClass: 'hover:bg-blue-50  hover:border-blue-300'  },
 ] as const;
 
 const RELATION_HEX: Record<string, string> = {
@@ -1024,7 +1024,7 @@ export function PertView({
                   key={type.id}
                   onClick={() => setEditRelationType(type.id)}
                   className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
-                    editRelationType === type.id ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
+                    editRelationType === type.id ? type.selectedClass : `border-border ${type.hoverClass}`
                   }`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
@@ -1100,7 +1100,7 @@ export function PertView({
                 <button
                   key={type.id}
                   onClick={() => handleRelationTypeSelect(type.id)}
-                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-accent transition-colors text-left"
+                  className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-colors text-left ${type.hoverClass}`}
                 >
                   <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
                   <div className="text-sm">
