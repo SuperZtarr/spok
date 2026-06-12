@@ -10,7 +10,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, User, X, Link2, ArrowRight, Ban, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -209,6 +209,7 @@ export function ItemEditModal({
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
   const [editRelationType, setEditRelationType] = useState('');
   const [editRelationLabel, setEditRelationLabel] = useState('');
+  const [editingRelationMeta, setEditingRelationMeta] = useState<{ sourceName: string; targetName: string } | null>(null);
 
   const { user } = useAuthStore();
 
@@ -426,6 +427,7 @@ export function ItemEditModal({
       itemsApi.createRelation(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       setShowAddRelation(false);
       setNewRelationTargetId('');
       setNewRelationLabel('');
@@ -437,6 +439,7 @@ export function ItemEditModal({
       itemsApi.deleteRelation(spaceId, itemId!, relationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
     },
   });
 
@@ -445,6 +448,7 @@ export function ItemEditModal({
       itemsApi.updateRelation(spaceId, itemId!, relationId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       setEditingRelationId(null);
       setEditRelationType('');
       setEditRelationLabel('');
@@ -1460,66 +1464,36 @@ export function ItemEditModal({
 
                 {((item.relationsFrom && item.relationsFrom.length > 0) || (item.relationsTo && item.relationsTo.length > 0)) ? (
                   <div className="space-y-2">
-                    {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => (
-                      <div key={relation.id} className="p-3 bg-card border border-border rounded-lg text-sm space-y-1">
-                        {editingRelationId === relation.id ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Select value={editRelationType} onChange={(e) => setEditRelationType(e.target.value)} className="text-xs h-7"
-                                options={[{ value: 'depends', label: 'Dépend de' }, { value: 'blocks', label: 'Bloque' }, { value: 'relates', label: 'Lié à' }]} />
-                              <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
-                            </div>
-                            <textarea
-                              value={editRelationLabel}
-                              onChange={(e) => setEditRelationLabel(e.target.value)}
-                              placeholder="Justification de la relation (optionnel)"
-                              rows={2}
-                              className="w-full text-xs px-2 py-1 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                            />
-                            <div className="flex gap-2">
-                              <Button type="button" size="sm" onClick={() => updateRelationMutation.mutate({ relationId: relation.id, data: { type: editRelationType, label: editRelationLabel.trim() || null } })} disabled={updateRelationMutation.isPending}>
-                                {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-                              </Button>
-                              <Button type="button" size="sm" variant="bordered" onClick={() => setEditingRelationId(null)}>Annuler</Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${relation.type === 'depends' ? 'bg-orange-100 text-orange-700' : relation.type === 'blocks' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                                  {relation.type === 'depends' ? 'Dépend de' : relation.type === 'blocks' ? 'Bloque' : 'Lié à'}
-                                </span>
-                                <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                                <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
-                              </div>
-                              {canEdit && (
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <button type="button" onClick={() => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); }}
-                                    className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground" title="Modifier"><Pencil className="w-3 h-3" /></button>
-                                  <button type="button" onClick={() => handleDeleteRelation(relation.id)}
-                                    className="p-1 hover:bg-muted rounded transition-colors text-destructive" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
-                                </div>
-                              )}
-                            </div>
-                            {relation.label && <p className="text-xs text-muted-foreground italic pl-1 line-clamp-2" title={relation.label}>{relation.label}</p>}
-                          </>
-                        )}
-                      </div>
-                    ))}
-                    {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => (
-                      <div key={relation.id} className="p-3 bg-card border border-border rounded-lg text-sm space-y-1">
-                        <div className="flex items-center gap-2 min-w-0">
+                    {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => {
+                      const typeLabel = relation.type === 'blocks' ? 'Bloque' : relation.type === 'implements' ? 'Permet' : 'Lié à';
+                      const typeClass = relation.type === 'blocks' ? 'bg-red-100 text-red-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+                      const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: item.title, targetName: relation.toItem?.title || '' }); } : undefined;
+                      return (
+                        <div key={relation.id}
+                          className={`px-3 py-2 bg-card border border-border rounded-lg text-sm flex items-center gap-2 ${canEdit ? 'cursor-pointer hover:bg-muted transition-colors' : ''}`}
+                          onClick={openModal}
+                        >
+                          <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${typeClass}`}>{typeLabel}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{relation.toItem?.title || 'Élément inconnu'}</span>
+                        </div>
+                      );
+                    })}
+                    {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => {
+                      const typeLabel = relation.type === 'blocks' ? 'Bloqué par' : relation.type === 'implements' ? 'Permis par' : 'Lié à';
+                      const typeClass = relation.type === 'blocks' ? 'bg-orange-100 text-orange-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+                      const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: relation.fromItem?.title || '', targetName: item.title }); } : undefined;
+                      return (
+                        <div key={relation.id}
+                          className={`px-3 py-2 bg-card border border-border rounded-lg text-sm flex items-center gap-2 ${canEdit ? 'cursor-pointer hover:bg-muted transition-colors' : ''}`}
+                          onClick={openModal}
+                        >
                           <span className="truncate">{relation.fromItem?.title || 'Élément inconnu'}</span>
                           <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${relation.type === 'depends' ? 'bg-blue-100 text-blue-700' : relation.type === 'blocks' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {relation.type === 'depends' ? 'dépend de ceci' : relation.type === 'blocks' ? 'est bloqué par ceci' : 'lié à ceci'}
-                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${typeClass}`}>{typeLabel}</span>
                         </div>
-                        {relation.label && <p className="text-xs text-muted-foreground italic pl-1">{relation.label}</p>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Aucune dépendance</p>
@@ -1709,6 +1683,62 @@ export function ItemEditModal({
             onClose();
           }}
         />
+      )}
+      {/* Relation edit modal */}
+      {editingRelationId && editingRelationMeta && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setEditingRelationId(null)} />
+          <div className="relative bg-background rounded-xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Modifier la relation</h3>
+              <button type="button" onClick={() => setEditingRelationId(null)} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {([
+                { id: 'blocks',     label: 'bloque',    Icon: Ban,        hex: '#ef4444', sel: 'bg-red-50 border-red-400',   hov: 'hover:bg-red-50 hover:border-red-300'   },
+                { id: 'implements', label: 'permet',    Icon: ArrowRight, hex: '#22c55e', sel: 'bg-green-50 border-green-400', hov: 'hover:bg-green-50 hover:border-green-300' },
+                { id: 'relates',    label: 'est lié à', Icon: Link2,      hex: '#3b82f6', sel: 'bg-blue-50 border-blue-400',  hov: 'hover:bg-blue-50 hover:border-blue-300'  },
+              ] as const).map(type => (
+                <button key={type.id} type="button"
+                  onClick={() => setEditRelationType(type.id)}
+                  className={`flex items-center gap-3 px-3 py-2 border rounded-lg transition-colors w-full text-left ${editRelationType === type.id ? type.sel : `border-border ${type.hov}`}`}
+                >
+                  <type.Icon className="w-4 h-4 flex-shrink-0" style={{ color: type.hex }} />
+                  <span className="text-sm">
+                    <span className="font-medium">{editingRelationMeta.sourceName}</span>
+                    {' '}<span className="font-bold">{type.label}</span>{' '}
+                    <span className="font-medium">{editingRelationMeta.targetName}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={editRelationLabel}
+              onChange={e => setEditRelationLabel(e.target.value)}
+              placeholder="Commentaire (optionnel)"
+              rows={2}
+              className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <div className="flex gap-2">
+              <button type="button"
+                onClick={() => updateRelationMutation.mutate({ relationId: editingRelationId, data: { type: editRelationType, label: editRelationLabel.trim() || null } })}
+                disabled={updateRelationMutation.isPending}
+                className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">
+                {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+              <button type="button"
+                onClick={() => { setEditingRelationId(null); handleDeleteRelation(editingRelationId); }}
+                className="px-3 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:opacity-90 transition-opacity">
+                Supprimer
+              </button>
+              <button type="button" onClick={() => setEditingRelationId(null)}
+                className="px-3 py-2 border border-border text-sm rounded-lg hover:bg-muted transition-colors">
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
       {/* Confirm delete relation */}
       <ConfirmModal

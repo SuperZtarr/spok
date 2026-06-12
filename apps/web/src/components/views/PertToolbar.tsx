@@ -1,4 +1,4 @@
-import { Minus, Plus, ShieldAlert, ListTree, ArrowDownAZ, Check } from 'lucide-react';
+import { Minus, Plus, ShieldAlert, ListTree, ArrowDownAZ, Check, Info } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import { ViewSelectorBar } from '../ui/ViewSelectorBar';
@@ -69,6 +69,82 @@ function PertSortButton({ treeSort, sortMode, onTreeSortChange, onSortModeChange
               </button>
             );
           })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function LegendButton() {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) { setPos(null); return; }
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left });
+    }
+    const close = (e: MouseEvent) => {
+      if (btnRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors text-muted-foreground"
+        title="Légende"
+      >
+        <Info className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Légende</span>
+      </button>
+      {open && pos && createPortal(
+        <div ref={dropRef} className="fixed bg-card border rounded-xl shadow-xl p-4 z-[9999] w-64 space-y-3" style={{ top: pos.top, left: pos.left }}>
+          <p className="text-xs font-semibold text-foreground">Contour des nœuds</p>
+          <div className="space-y-1.5">
+            {[
+              { color: '#ef4444', label: 'Bloque (source)' },
+              { color: '#fb923c', label: 'Est bloqué (cible)' },
+              { color: '#22c55e', label: 'Permet / est permis' },
+            ].map(({ color, label }) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-sm flex-shrink-0 border-2" style={{ borderColor: color, backgroundColor: 'transparent' }} />
+                <span className="text-xs text-muted-foreground">{label}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-sm flex-shrink-0 border" style={{ borderColor: '#e2e8f0' }} />
+              <span className="text-xs text-muted-foreground">Aucune relation</span>
+            </div>
+          </div>
+          <div className="border-t pt-3">
+            <p className="text-xs font-semibold text-foreground mb-1.5">Fond des nœuds</p>
+            <p className="text-xs text-muted-foreground">Couleur du statut de l'item (À faire, En cours, Fait…)</p>
+          </div>
+          <div className="border-t pt-3">
+            <p className="text-xs font-semibold text-foreground mb-1.5">Flèches</p>
+            <div className="space-y-1.5">
+              {[
+                { color: '#ef4444', label: 'Bloque →' },
+                { color: '#22c55e', label: 'Permet →' },
+                { color: '#3b82f6', label: 'Lié à (pointillé)' },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <span className="w-4 h-0.5 flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>,
         document.body
       )}
@@ -162,6 +238,8 @@ export function PertToolbar({
       </button>
       <div className="h-4 w-px bg-border mx-1" />
       <PertSortButton treeSort={treeSort} sortMode={sortMode} onTreeSortChange={onTreeSortChange} onSortModeChange={onSortModeChange} />
+      <div className="h-4 w-px bg-border mx-1" />
+      <LegendButton />
     </>
   );
 
