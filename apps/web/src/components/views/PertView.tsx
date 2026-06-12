@@ -1020,7 +1020,7 @@ export function PertView({
       {/* Edit relation dialog */}
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-lg w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
             <h3 className="text-base font-semibold mb-1">Modifier la relation</h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{editingRelation.sourceName}</span>
@@ -1087,7 +1087,7 @@ export function PertView({
       {/* Relation type selection modal */}
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-lg w-full mx-4">
+          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
             <h3 className="text-base font-semibold mb-1">Type de relation</h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{pendingSourceItem?.title}</span>
