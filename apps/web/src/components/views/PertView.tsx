@@ -56,7 +56,7 @@ function ItemChip({ name }: { name: string }) {
     </span>
   );
 }
-function RelationContextContent({ typeId, sourceName, targetName }: { typeId: string; sourceName: string; targetName: string }) {
+function RelationRow({ typeId, sourceName, targetName }: { typeId: string; sourceName: string; targetName: string }) {
   const [item1, verb, item2]: [string, string, string] = (() => {
     switch (typeId) {
       case 'blocks':     return [targetName, 'est bloqué par', sourceName];
@@ -66,10 +66,12 @@ function RelationContextContent({ typeId, sourceName, targetName }: { typeId: st
     }
   })();
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 w-full">
-      <ItemChip name={item1} />
-      <span className="text-xs text-muted-foreground whitespace-nowrap">{verb}</span>
-      <ItemChip name={item2} />
+    <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="w-[42%] flex-shrink-0"><ItemChip name={item1} /></div>
+      <div className="w-[20%] flex-shrink-0 text-center">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{verb}</span>
+      </div>
+      <div className="flex-1 min-w-0"><ItemChip name={item2} /></div>
     </div>
   );
 }
@@ -1029,19 +1031,17 @@ export function PertView({
               {' → '}
               <span className="font-medium">{editingRelation.targetName}</span>
             </p>
-            <div className="grid grid-cols-1 gap-2 mb-3">
+            <div className="flex flex-col gap-2 mb-3">
               {PERT_RELATION_TYPES.map((type) => (
                 <button
                   key={type.id}
                   onClick={() => setEditRelationType(type.id)}
-                  className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
+                  className={`flex items-center gap-3 px-3 py-2 border rounded-lg transition-colors w-full ${
                     editRelationType === type.id ? type.selectedClass : `border-border ${type.hoverClass}`
                   }`}
                 >
-                  <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="flex-1 min-w-0 w-full">
-                    <RelationContextContent typeId={type.id} sourceName={editingRelation.sourceName} targetName={editingRelation.targetName} />
-                  </div>
+                  <type.Icon className={`w-4 h-4 flex-shrink-0 ${type.tailwindColor}`} />
+                  <RelationRow typeId={type.id} sourceName={editingRelation.sourceName} targetName={editingRelation.targetName} />
                 </button>
               ))}
             </div>
@@ -1111,12 +1111,10 @@ export function PertView({
                 <button
                   key={type.id}
                   onClick={() => handleRelationTypeSelect(type.id)}
-                  className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-colors text-left ${type.hoverClass}`}
+                  className={`flex items-center gap-3 px-3 py-2 border border-border rounded-lg transition-colors w-full ${type.hoverClass}`}
                 >
-                  <type.Icon className={`w-4 h-4 ${type.tailwindColor}`} />
-                  <div className="flex-1 min-w-0 w-full">
-                    <RelationContextContent typeId={type.id} sourceName={pendingSourceItem?.title ?? ''} targetName={pendingTargetItem?.title ?? ''} />
-                  </div>
+                  <type.Icon className={`w-4 h-4 flex-shrink-0 ${type.tailwindColor}`} />
+                  <RelationRow typeId={type.id} sourceName={pendingSourceItem?.title ?? ''} targetName={pendingTargetItem?.title ?? ''} />
                 </button>
               ))}
             </div>
