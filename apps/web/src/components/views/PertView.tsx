@@ -60,7 +60,7 @@ function RelationRow({ typeId, sourceName, targetName }: { typeId: string; sourc
   const [item1, verb, item2]: [string, string, string] = (() => {
     switch (typeId) {
       case 'blocks':     return [targetName, 'est bloqué par', sourceName];
-      case 'implements': return [sourceName, 'permet',         targetName];
+      case 'implements': return [targetName, 'est permis par', sourceName];
       case 'relates':    return [sourceName, 'est lié à',      targetName];
       default:           return [sourceName, '→',              targetName];
     }
