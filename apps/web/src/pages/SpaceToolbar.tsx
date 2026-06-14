@@ -43,7 +43,24 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import type { ViewMode } from '../stores/viewMode';
+import { useInterfaceModeStore } from '../stores/interfaceMode';
 import type { TreeSort } from '../lib/treeSort';
+
+/** Vues autorisées par mode (liste blanche) — null = toutes */
+const MODE_ALLOWED: Record<string, Set<string> | null> = {
+  forum:       new Set(['thread', 'recent']),
+  projet:      null,
+  exploration: null,
+  tous:        null,
+};
+
+/** Vues masquées par mode (liste noire) */
+const MODE_EXCLUDED: Record<string, Set<string>> = {
+  forum:       new Set(),
+  projet:      new Set(['thread', 'text', 'tree', 'crossTable', 'links', 'images', 'documents', 'list', 'sunburst', 'relations', 'cfd', 'ego', 'heatmap', 'chord', 'treemap', 'radialTree', 'bubble', 'graph']),
+  exploration: new Set(['thread', 'text', 'kanban', 'timeline', 'pert', 'calendar', 'planning', 'priority', 'recent', 'bugs', 'todo']),
+  tous:        new Set(),
+};
 
 const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
@@ -125,6 +142,7 @@ export function SpaceToolbar({
   spaceId,
   spaceRole,
 }: SpaceToolbarProps) {
+  const { mode: interfaceMode } = useInterfaceModeStore();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [hlTypeDropdownOpen, setHlTypeDropdownOpen] = useState(false);
@@ -167,8 +185,13 @@ export function SpaceToolbar({
 
       {/* View mode buttons row */}
       {(() => {
+        const modeAllowed = MODE_ALLOWED[interfaceMode];
+        const modeExcluded = MODE_EXCLUDED[interfaceMode];
         const filteredViews = spaceViews.filter(
-          (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
+          (v) => v.viewMode
+            && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
+            && (modeAllowed === null || modeAllowed.has(v.viewMode))
+            && !modeExcluded?.has(v.viewMode)
         );
         const sectionMap = new Map<string, { sectionOrder: number; views: typeof filteredViews }>();
         for (const v of filteredViews) {

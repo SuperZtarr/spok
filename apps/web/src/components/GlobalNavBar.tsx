@@ -10,7 +10,16 @@ import {
 import { activityApi, authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useMenuItems } from '../hooks/useMenuItems';
+import { useInterfaceModeStore } from '../stores/interfaceMode';
+import { AdminModeToggle } from './DevDbStatus';
 import type { MenuItemConfig } from '@spok/shared';
+
+const MODE_GLOBAL_EXCLUDED: Record<string, Set<string>> = {
+  forum:       new Set(['global-graph', 'global-sunburst', 'global-links', 'global-mindmap', 'dashboard', 'tasks', 'activity']),
+  projet:      new Set(['global-sunburst', 'global-mindmap', 'global-graph', 'global-links']),
+  exploration: new Set(['dashboard', 'tasks', 'activity']),
+  tous:        new Set(),
+};
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
@@ -31,6 +40,7 @@ export function GlobalNavBar() {
   const location = useLocation();
   const { sections } = useMenuItems();
   const { logout, refreshToken } = useAuthStore();
+  const { mode: interfaceMode } = useInterfaceModeStore();
 
   const handleLogout = async () => {
     try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
@@ -60,13 +70,16 @@ export function GlobalNavBar() {
   };
 
   return (
-    <div className="hidden md:flex items-start gap-3 overflow-x-auto scrollbar-none px-4 py-1.5 border-t border-border/50">
+    <div className="hidden md:flex items-start gap-3 overflow-x-auto scrollbar-none px-4 py-1.5 border-t border-border/50 relative">
       {navSections.map(section => {
-        const items = section.items.filter(item => !EXCLUDED_KEYS.has(item.key));
+        const items = section.items.filter(item =>
+          !EXCLUDED_KEYS.has(item.key) &&
+          !(MODE_GLOBAL_EXCLUDED[interfaceMode]?.has(item.key))
+        );
         if (items.length === 0) return null;
 
         return (
-          <div key={section.id} className="flex flex-col gap-0.5 flex-shrink-0">
+          <div key={section.id} className={`flex flex-col gap-0.5 flex-shrink-0${section.id === 'misc' ? ' ml-auto' : ''}`}>
             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
               {section.label}
             </span>
@@ -99,10 +112,12 @@ export function GlobalNavBar() {
                   </button>
                 );
               })}
+              {section.id === 'misc' && <AdminModeToggle />}
             </div>
           </div>
         );
       })}
+
     </div>
   );
 }

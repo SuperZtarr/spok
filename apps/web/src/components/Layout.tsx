@@ -27,6 +27,14 @@ import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { getViewIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
+import { useInterfaceModeStore, type InterfaceMode } from '../stores/interfaceMode';
+
+const INTERFACE_MODES: { value: InterfaceMode; label: string }[] = [
+  { value: 'forum',       label: 'Forum' },
+  { value: 'projet',      label: 'Projet' },
+  { value: 'exploration', label: 'Exploration' },
+  { value: 'tous',        label: 'Tous' },
+];
 import type { SpaceWithRole } from '@spok/shared';
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -613,6 +621,7 @@ export function Layout() {
   // Current view/function name helpers
   const { mode } = useViewModeStore();
   const { tab } = useDashboardTabStore();
+  const { mode: interfaceMode, setMode: setInterfaceMode } = useInterfaceModeStore();
 
   const getCurrentFunctionLabel = () => {
     const path = location.pathname;
@@ -1202,6 +1211,22 @@ export function Layout() {
                 <span className="hidden sm:inline">Nouvel item</span>
               </button>
             )}
+            {/* Sélecteur de mode d'interface */}
+            <div className="hidden sm:flex items-center gap-0.5 rounded-md border border-border p-0.5 flex-shrink-0">
+              {INTERFACE_MODES.map(m => (
+                <button
+                  key={m.value}
+                  onClick={() => setInterfaceMode(m.value)}
+                  className={`h-6 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                    interfaceMode === m.value
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
             <div id="header-global-search" className="hidden sm:block"><GlobalSearch /></div>
             {user ? (
               <>

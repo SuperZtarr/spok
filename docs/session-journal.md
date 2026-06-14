@@ -6,13 +6,17 @@
 
 ## EN COURS — 2026-06-14
 
-### Migration ViewHeader + GlobalToolbar
-- Toutes les vues migrées vers ViewHeader (+ Nouveau / Aide / Exporter) — ViewToolbar retiré de SpacePage
-- GlobalToolbar unifié : Filtre, Aperçu, Ordre (3 boutons) dans SpaceToolbar pour toutes les vues
-- `showFiltersForView` : supprimé les exclusions members/recent/types — filtres visibles partout
-- `ViewHelpButton` : style aligné sur toolbar (h-7 w-7, sans border), pulse via bg-primary/15 sans ring
-- `PriorityView` : fix items={[]} → items={items} dans SpaceExportButton
-- Didacticiels à revoir : thread (pas de tour), text (tour vide) + tous les autres — noté TODO
+### Modes d'interface + refactor ItemEditModal
+- `interfaceMode.ts` (store Zustand) : modes Forum/Projet/Exploration/Tous, persisté localStorage
+- `Layout.tsx` : sélecteur de mode dans le header (à gauche de la recherche)
+- `SpaceToolbar.tsx` : filtres vues par mode (MODE_ALLOWED + MODE_EXCLUDED par table)
+- `GlobalNavBar.tsx` : filtres vues globales (MODE_GLOBAL_EXCLUDED), section Divers à droite, AdminModeToggle
+- `MainMenu.tsx` : supprimé (inutilisé depuis 1-2 mois)
+- `ItemEditModal.tsx` : refactor complet (conditions par type supprimées), TimeRangePicker restauré, toggle "Journée entière", champs cachés en mode Forum
+
+### À faire ensuite
+- Affiner specs mode Forum/Projet/Exploration (étapes 3-5)
+- Didacticiels : thread (pas de tour), text (tour vide)
 
 ## HISTORIQUE — 2026-06-07
 

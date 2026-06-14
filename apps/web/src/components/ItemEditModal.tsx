@@ -30,12 +30,13 @@ import { DateTimeField } from './ui/DateTimeField';
 import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import { formatDate, formatDateTime } from '../lib/utils';
-import { MEETING_DURATIONS, PERIOD_DURATIONS, TASK_DURATIONS, PROJECT_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
+import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
 import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
 import { hasHeadings } from '../lib/itemMenuGroups';
+import { useInterfaceModeStore } from '../stores/interfaceMode';
 
 function ItemHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
   const [open, setOpen] = useState(false);
@@ -158,6 +159,8 @@ export function ItemEditModal({
   const queryClient = useQueryClient();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', ITEM_MODAL_TOUR);
   const adminMode = useAdminMode();
+  const { mode: interfaceMode } = useInterfaceModeStore();
+  const isForumMode = interfaceMode === 'forum';
   const [visitorPreview, setVisitorPreview] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -171,6 +174,7 @@ export function ItemEditModal({
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [allDay, setAllDay] = useState(false);
   const [priority, setPriority] = useState<number | null>(null);
   const [diagramXml, setDiagramXml] = useState('');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
@@ -306,8 +310,10 @@ export function ItemEditModal({
       const date = new Date(item.startDate);
       const formatted = date.toISOString().slice(0, 16);
       setStartDate(formatted);
+      setAllDay(date.getUTCHours() === 0 && date.getUTCMinutes() === 0);
     } else {
       setStartDate('');
+      setAllDay(false);
     }
     if (item.endDate) {
       const date = new Date(item.endDate);
@@ -994,8 +1000,8 @@ export function ItemEditModal({
           {/* === CENTER COLUMN === */}
           <div className="space-y-6 min-w-0">
 
-              {/* Type */}
-              <div className="space-y-2" data-tour="item-type-selector">
+              {/* Type — masqué en mode Forum */}
+              {!isForumMode && <div className="space-y-2" data-tour="item-type-selector">
                 <label className="text-sm font-medium">Type</label>
                 {canEdit ? (
                   <>
@@ -1037,10 +1043,10 @@ export function ItemEditModal({
                     {typeConfig?.labelShort || TYPE_LABELS[type] || type}
                   </span>
                 )}
-              </div>
+              </div>}
 
-              {/* Statut */}
-              <div className="space-y-2" data-tour="item-status">
+              {/* Statut — masqué en mode Forum */}
+              {!isForumMode && <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1093,10 +1099,10 @@ export function ItemEditModal({
                     ) : <span className="text-sm text-muted-foreground">Non défini</span>;
                   })()
                 )}
-              </div>
+              </div>}
 
-              {/* Priorité */}
-              <div className="space-y-2">
+              {/* Priorité — masqué en mode Forum */}
+              {!isForumMode && <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
                 {canEdit ? (
                   <>
@@ -1133,136 +1139,90 @@ export function ItemEditModal({
                     ) : <span className="text-sm text-muted-foreground">Non définie</span>;
                   })()
                 )}
-              </div>
+              </div>}
 
-              {/* Dates */}
-              <div data-tour="item-dates">
-                {type === 'MEETING' && canEdit ? (
-                  /* MEETING : picker vertical + champs côte à côte */
-                  <div className="flex gap-3 items-start">
-                    {/* Plage horaire */}
-                    <div className="w-48 flex-shrink-0">
+              {/* Dates — masqué en mode Forum */}
+              {!isForumMode && <div data-tour="item-dates" className="flex gap-4 items-start">
+                {canEdit && (
+                  <div className="flex-shrink-0 w-36 space-y-2">
+                    <button type="button"
+                      onClick={() => setAllDay(v => !v)}
+                      className={`w-full px-2 py-1 text-xs rounded-md border transition-all ${allDay ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-muted/50'}`}>
+                      Journée entière
+                    </button>
+                    {!allDay && (
                       <TimeRangePicker
                         startTime={startDate ? startDate.slice(11, 16) : null}
                         endTime={endDate ? endDate.slice(11, 16) : null}
                         onChange={handleTimeRangeChange}
                       />
-                    </div>
-                    {/* Champs de date */}
-                    <div className="flex-1 min-w-0 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Début</label>
-                        <DateTimeField value={startDate} onChange={handleStartDateChange} showTime />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Fin</label>
-                        <div className="space-y-2">
-                          {startDate && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {MEETING_DURATIONS.map((d) => {
-                                const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
-                                return (
-                                  <button key={d.ms} type="button"
-                                    onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
-                                    className={`px-2 py-0.5 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                    {d.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <DateTimeField value={endDate} onChange={handleEndDateChange} showTime minDate={startDate} />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Échéance</label>
-                        <div className="space-y-2">
-                          {startDate && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {DUE_DATE_DURATIONS.map((d) => {
-                                const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                                const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
-                                return (
-                                  <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
-                                    className={`px-2 py-0.5 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                    {d.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* Autres types : layout standard */
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Début</label>
-                      {canEdit ? (
-                        <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={type === 'TASK'} />
-                      ) : (
-                        <p className="text-sm">{startDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(startDate) : formatDate(startDate)) : <span className="text-muted-foreground">—</span>}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Fin</label>
-                      {canEdit ? (
-                        <div className="space-y-2">
-                          {(type === 'PERIOD' || type === 'PROJECT' || type === 'TASK') && startDate && (
-                            <div className="hidden sm:flex flex-wrap gap-1.5">
-                              {(type === 'TASK' ? TASK_DURATIONS : type === 'PROJECT' ? PROJECT_DURATIONS : PERIOD_DURATIONS).map((d) => {
-                                const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
-                                return (
-                                  <button key={d.ms} type="button"
-                                    onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
-                                    className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                    {d.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={type === 'TASK'} showPresets={type !== 'PROJECT' && type !== 'TASK' && type !== 'PERIOD'} minDate={startDate} />
-                        </div>
-                      ) : (
-                        <p className="text-sm">{endDate ? (type === 'MEETING' || type === 'TASK' ? formatDateTime(endDate) : formatDate(endDate)) : <span className="text-muted-foreground">—</span>}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Échéance</label>
-                      {canEdit ? (
-                        <div className="space-y-2">
-                          {startDate && type !== 'PERIOD' && (
-                            <div className="hidden sm:flex flex-wrap gap-1.5">
-                              {DUE_DATE_DURATIONS.map((d) => {
-                                const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                                const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
-                                return (
-                                  <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
-                                    className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                    {d.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
-                        </div>
-                      ) : (
-                        <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
-              </div>
+                <div className="flex-1 min-w-0 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Début</label>
+                  {canEdit ? (
+                    <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={!allDay} />
+                  ) : (
+                    <p className="text-sm">{startDate ? (allDay ? formatDate(startDate) : formatDateTime(startDate)) : <span className="text-muted-foreground">—</span>}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fin</label>
+                  {canEdit ? (
+                    <div className="space-y-2">
+                      {startDate && (
+                        <div className="hidden sm:flex flex-wrap gap-1.5">
+                          {MEETING_DURATIONS.map((d) => {
+                            const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                            return (
+                              <button key={d.ms} type="button"
+                                onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
+                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                {d.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={!allDay} minDate={startDate} />
+                    </div>
+                  ) : (
+                    <p className="text-sm">{endDate ? (allDay ? formatDate(endDate) : formatDateTime(endDate)) : <span className="text-muted-foreground">—</span>}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Échéance</label>
+                  {canEdit ? (
+                    <div className="space-y-2">
+                      {startDate && (
+                        <div className="hidden sm:flex flex-wrap gap-1.5">
+                          {DUE_DATE_DURATIONS.map((d) => {
+                            const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                            const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
+                            return (
+                              <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
+                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                {d.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
+                    </div>
+                  ) : (
+                    <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
+                  )}
+                </div>
+                </div>
+              </div>}
 
               {/* URL */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">URL</label>
-                {type === 'LINK' && canEdit ? (
+                {canEdit ? (
                   <Input type="url" value={url}
                     onChange={(e) => { setUrl(e.target.value); const extracted = urlToTitle(e.target.value); if (extracted) autoFillTitle(extracted); }}
                     placeholder="https://..." />
@@ -1271,96 +1231,70 @@ export function ItemEditModal({
                   <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
                     <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
                   </a>
+                ) : null}
+              </div>
+
+              {/* Diagramme — masqué en mode Forum */}
+              {!isForumMode && <div className="space-y-2">
+                <label className="text-sm font-medium">Diagramme</label>
+                <DrawioEditor
+                  xml={diagramXml}
+                  onChange={setDiagramXml}
+                  onSaveAndClose={async (savedXml, pngBlob) => {
+                    if (!itemId) return;
+                    await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
+                    setDiagramXml(savedXml);
+                    const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
+                    await uploadImageMutation.mutateAsync(file);
+                    queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+                  }}
+                  previewUrl={url || undefined}
+                  editable={canEdit}
+                />
+              </div>}
+
+              {/* Image */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Image</label>
+                {canEdit ? (
+                  <>
+                    <ImageUploadZone currentUrl={url || null}
+                      onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
+                      onRemove={() => setUrl('')} isUploading={uploadImageMutation.isPending} />
+                    {uploadImageMutation.isError && <p className="text-sm text-destructive">{(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
+                  </>
+                ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
+                  <>
+                    <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
+                    {imageExpanded && (
+                      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
+                        <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">Aucune URL</p>
+                  <p className="text-sm text-muted-foreground">Aucune image</p>
                 )}
               </div>
 
-              {/* Diagramme */}
-              {type === 'DIAGRAM' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Diagramme</label>
-                  <DrawioEditor
-                    xml={diagramXml}
-                    onChange={setDiagramXml}
-                    onSaveAndClose={async (savedXml, pngBlob) => {
-                      if (!itemId) return;
-                      await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
-                      setDiagramXml(savedXml);
-                      const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
-                      await uploadImageMutation.mutateAsync(file);
-                      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-                    }}
-                    previewUrl={url || undefined}
-                    editable={canEdit}
-                  />
-                </div>
-              )}
-
-              {/* Image */}
-              {type === 'IMAGE' ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Image</label>
-                  {canEdit ? (
-                    <>
-                      <ImageUploadZone currentUrl={url || null}
-                        onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
-                        onRemove={() => setUrl('')} isUploading={uploadImageMutation.isPending} />
-                      {uploadImageMutation.isError && <p className="text-sm text-destructive">{(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
-                      <details className="text-xs text-muted-foreground">
-                        <summary className="cursor-pointer hover:text-foreground transition-colors">URL externe (optionnel)</summary>
-                        <div className="mt-2"><Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
-                      </details>
-                    </>
-                  ) : url ? (
-                    <>
-                      <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
-                      {imageExpanded && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
-                          <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Aucune image</p>
-                  )}
-                </div>
-              ) : url && type !== 'DIAGRAM' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Image</label>
-                  <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
-                  {imageExpanded && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
-                      <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {/* Document */}
-              {type === 'DOCUMENT' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Fichier</label>
-                  {canEdit ? (
-                    <>
-                      <FileUploadZone currentUrl={url || null}
-                        onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
-                        onRemove={() => setUrl('')} isUploading={uploadDocumentMutation.isPending} />
-                      {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
-                      <details className="text-xs text-muted-foreground">
-                        <summary className="cursor-pointer hover:text-foreground transition-colors">URL externe (optionnel)</summary>
-                        <div className="mt-2"><Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
-                      </details>
-                    </>
-                  ) : url ? (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
-                      <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
-                    </a>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Aucun fichier</p>
-                  )}
-                </div>
-              )}
+              {/* Fichier */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fichier</label>
+                {canEdit ? (
+                  <>
+                    <FileUploadZone currentUrl={url || null}
+                      onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
+                      onRemove={() => setUrl('')} isUploading={uploadDocumentMutation.isPending} />
+                    {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
+                  </>
+                ) : url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+                    <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucun fichier</p>
+                )}
+              </div>
 
           </div>{/* end center column */}
 
@@ -1388,8 +1322,8 @@ export function ItemEditModal({
               </div>
               )}
 
-              {/* Assigné à */}
-              {spaceMembers && spaceMembers.length > 0 && (
+              {/* Assigné à — masqué en mode Forum */}
+              {!isForumMode && spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
                   {canEdit ? (
@@ -1412,8 +1346,8 @@ export function ItemEditModal({
                 </div>
               )}
 
-              {/* Dépendances */}
-              <div className="space-y-3" data-tour="item-relations">
+              {/* Dépendances — masqué en mode Forum */}
+              {!isForumMode && <div className="space-y-3" data-tour="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -1498,7 +1432,7 @@ export function ItemEditModal({
                 ) : (
                   <p className="text-sm text-muted-foreground">Aucune dépendance</p>
                 )}
-              </div>
+              </div>}
 
               {/* Tags */}
               <div className="space-y-3" data-tour="item-tags">

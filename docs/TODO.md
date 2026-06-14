@@ -6,10 +6,10 @@
 
 > Prérequis absolu avant de coder les modes : refactoriser ItemEditModal
 
-- [ ] **Étape 1 — Refactor ItemEditModal** : supprimer toutes les conditions d'affichage par type d'item (`if item.type === X`), repartir d'une base uniforme tous champs visibles
-- [ ] **Étape 2 — Implémenter le système de modes** : sélecteur global dans la navigation, stockage à définir (localStorage ou préférence utilisateur)
-- [ ] **Étape 3 — Mode Forum** : vues globales (toutes sauf Graphe global) / vues personnelles (Activités) / vues d'espace (Discussions, Récents, Images, Documents) / champs items (Description, Commentaires, Type, URL, Fichier, Image, Parent, Tags)
-- [ ] **Étape 4 — Mode Projet** : vues globales (toutes) / vues personnelles (toutes) / vues d'espace (Kanban, Gantt, PERT, Bugs, Calendrier, Burndown) / champs items (tous)
+- [x] **Étape 1 — Refactor ItemEditModal** : supprimer toutes les conditions d'affichage par type d'item (`if item.type === X`), repartir d'une base uniforme tous champs visibles — 2026-06-14
+- [x] **Étape 2 — Implémenter le système de modes** : sélecteur global dans la navigation, stockage localStorage, store Zustand, filtres vues (SpaceToolbar + GlobalNavBar) et champs (ItemEditModal) — 2026-06-14
+- [ ] **Étape 3 — Mode Forum** : affiner spec vues/champs
+- [ ] **Étape 4 — Mode Projet** : affiner spec vues/champs
 - [ ] **Étape 5 — Mode Exploration** : tout exposé, à affiner
 
 ### Didacticiels / aide contextuelle
