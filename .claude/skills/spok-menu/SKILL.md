@@ -5,6 +5,15 @@ description: Use when adding, modifying or understanding any menu or toolbar in 
 
 # spok-menu — Menus et Toolbars SPOK
 
+## Règle absolue — documentation dans le code
+
+**Tout fichier créé ou modifié dans cette session reçoit un commentaire en tête** :
+- Raison d'être du composant/hook/utilitaire
+- Props ou params clés et leur rôle
+- Règles d'usage (où l'utiliser, ce qu'on ne doit pas faire)
+
+Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que le TS check.
+
 ## Architecture réelle
 
 Le menu de navigation est piloté par la table **`MenuItem`** (base de données), via `DEFAULT_MENU_ITEMS` dans `@spok/shared` comme fallback.
@@ -135,83 +144,69 @@ cd apps/web && npx tsc --noEmit
 
 ## Standards des toolbars de vue
 
-### Architecture
+### Architecture globale — DÉCISION 2026-06-13
 
-Deux niveaux de toolbar :
-
-1. **`ViewToolbar`** (`apps/web/src/components/ui/ViewToolbar.tsx`) — composant réutilisable pour la majorité des vues
-2. **Toolbar interne** — pour les vues complexes (MindMap, PERT, Timeline) qui ont des boutons spécifiques ; elles embarquent `FilterToolbar` directement
-
-### Ordre canonique des boutons (gauche → droite)
+`SpaceToolbar` est divisée en deux sections de code distinctes. Chaque vue a un `ViewHeader` dans sa propre zone de contenu.
 
 ```
-[Aide] [Nouveau] [Réduire/Étendre] [Tri] [boutons spécifiques vue] | [Lumière/Filtre] → flex-1 spacer ← [Count] [Export] [Historique] [Paramètres]
+SpacePage
+├── SpaceToolbar
+│   ├── #view-selector   — sélecteur de vue
+│   └── #global-toolbar  — toujours visible, toutes les vues
+└── <VueActive>
+    ├── #view-header     — header de contenu, contrôles vue-spécifiques uniquement
+    └── <contenu>
 ```
 
-| Zone | Boutons | Notes |
-|------|---------|-------|
-| Gauche | Aide, Nouveau, Réduire/Étendre, Tri, boutons vue | Dans cet ordre |
-| Séparateur `|` | `<div className="h-4 w-px bg-border mx-1" />` | Avant FilterToolbar |
-| FilterToolbar | Lumière ou Filtre | Avec ou sans séparateur selon contexte |
-| Spacer | `<div className="flex-1" />` | Pousse le reste à droite |
-| Droite | Count, Export, Historique, Paramètres | Count avant Export |
+#### `#global-toolbar` — ordre gauche→droite
 
-### Composant `ViewToolbar` — vues standard
-
-Utilisé par : ListView, KanbanView, ThreadView, TextDocView, MembersView, RecentView, CalendarView, LinksView, ImagesView, DocumentsView, BugsView, TodoView, PlanningView, CrossTableView, BurndownView, SequenceView, GraphView, SunburstView.
-
-Props clés :
-- `viewMode` — obligatoire, détermine si l'export est rendu (`showExport = !['pert','timeline','mindmap']`)
-- `canEdit + onNewItem` — affiche le bouton Nouveau
-- `treeSortValue + onTreeSortChange` — affiche `TreeSortButton`
-- `isExpanded + onToggleExpand` — affiche `CollapseToggleButton`
-- `isHighlightMode` — passe en mode "Lumière" (jaune) vs "Filtre" (bleu) dans FilterToolbar
-- `totalItemCount + filteredItemCount` — count affiché par FilterToolbar
-
-### Composant `FilterToolbar` — règles
-
-- Le count (`X éléments`) est **toujours dans FilterToolbar** avec `ml-auto` — ne pas l'afficher en doublon ailleurs
-- **Exception** : dans les toolbars internes (MindMap, PERT, Timeline), le count est un `<span>` placé **après le spacer `flex-1`** et FilterToolbar est appelé **sans** `totalItemCount`
-- `isHighlightMode={true}` → bouton jaune "Lumière" (ne filtre pas les items, les dim/highlight)
-- `isHighlightMode={false}` (défaut) → bouton bleu "Filtre" (filtre les items de la liste)
-- Les dropdowns Types/Statuts ne s'affichent que si `onFilterChange`/`onStatusFilterChange` sont passés
-
-### Toolbar interne (MindMap, PERT, Timeline)
-
-Ces vues ont leurs propres boutons spécifiques (ex: MindMap : Réduire, Réorganiser, Tout voir, Légende). Elles appellent `FilterToolbar` et gèrent le count manuellement :
-
-```tsx
-{/* Toolbar interne */}
-<div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-  <ViewHelpButton ... />
-  {canEdit && onNewItem && <button ...>Nouveau</button>}
-  <div className="h-4 w-px bg-border mx-1" />
-  {/* boutons spécifiques */}
-  <div className="h-4 w-px bg-border mx-1" />
-  <FilterToolbar filter={filter} onFilterChange={onFilterChange}
-    statusFilter={statusFilter} onStatusFilterChange={onStatusFilterChange}
-    referentiels={referentiels} isHighlightMode={true} />
-  {/* NE PAS passer totalItemCount à FilterToolbar ici */}
-  <div className="flex-1" />
-  {totalItemCount !== undefined && (
-    <span className="text-xs text-muted-foreground flex-shrink-0">
-      {totalItemCount} élément{totalItemCount !== 1 ? 's' : ''}
-    </span>
-  )}
-  <ExportDropdownButton ... />
-  {/* Historique, Paramètres */}
-</div>
+```
+[Filtre: Types|Statuts|Recherche]  [Highlight: Types|Statuts|Recherche]  [Position | A→Z à plat | A→Z par groupe]  → flex-1 ←  [Count] [Export] [Historique] [Paramètres]
 ```
 
-### Style des boutons
+| Zone | Contenu | Comportement |
+|------|---------|--------------|
+| **Filtre** | Types · Statuts · Barre de recherche | Réduit la liste d'items |
+| **Highlight** | Types · Statuts · Barre de recherche | Dim/highlight sans filtrer |
+| **Ordre** | 3 boutons inline : Position \| A→Z à plat \| A→Z par groupe | Pas de dropdown |
+| Spacer | `<div className="flex-1" />` | |
+| **Droite** | Count · Historique · Paramètres | Dans cet ordre |
 
-Tous les boutons de toolbar suivent ce pattern :
+- Filtre et Highlight : **discrets** si vide, **foncés** si critère actif
+- Ordre : bouton actif = foncé
+- **Pas de bouton "Lumière"** — Filtre et Highlight sont deux blocs permanents et distincts
+- Les états (filter, highlight, ordre) sont dans `SpacePage`, pas dans les vues
+
+#### `#view-header` — header de chaque vue
+
+Deux zones :
+
+```
+[Nouveau] [boutons spécifiques vue]   →flex-1→   [Légende?] [Aide] [Export]
+```
+
+| Zone | Bouton | Présence | Notes |
+|------|--------|----------|-------|
+| Gauche | **Nouveau** | Vues éditables | Crée un item dans le contexte de la vue |
+| Gauche | **Boutons vue** | Spécifiques | ex: collapse MindMap, hide-deferred Gantt, zoom PERT… |
+| Droite | **Légende** | Optionnel | Uniquement si la vue a une légende (PERT, MindMap, Timeline…) |
+| Droite | **Aide** | Toutes les vues | Ouvre le tour / tooltip d'aide |
+| Droite | **Export** | Toutes les vues | Formats spécifiques à la vue (CSV, Excel, SVG, PNG…) |
+
+- **Ne contient jamais** : Types, Statuts, Recherche, Lumière, Ordre, Count, Historique, Paramètres — tout ça est dans `#global-toolbar`
+
+### Style des boutons d'état actif/inactif
+
+- **Inactif (aucun critère)** : `text-muted-foreground hover:bg-accent hover:text-foreground`
+- **Actif (critère appliqué)** : `bg-accent text-foreground font-semibold`
+
+### Style des boutons de toolbar
 
 ```
 className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
 ```
 
-- Bouton **Nouveau** uniquement : `bg-secondary text-secondary-foreground hover:bg-secondary/80`
+- Bouton **Nouveau** : `bg-secondary text-secondary-foreground hover:bg-secondary/80`
 - Boutons icône seule (Historique, Paramètres) : `h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors`
 - Icônes : `w-3.5 h-3.5` pour les boutons texte, `w-4 h-4` pour les boutons icône seule
 - Labels : `<span className="hidden sm:inline">Label</span>` pour masquer sur mobile
@@ -222,14 +217,26 @@ className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium t
 <div className="h-4 w-px bg-border mx-1" />  // entre groupes logiques
 ```
 
-Groupes dans ViewToolbar : [Aide/Nouveau/Tri/Réduire] | [FilterToolbar] [Export/Historique/Paramètres]
+### ViewHeader — structure type
 
-### Règles à ne pas violer
+```tsx
+<div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header">
+  {/* boutons SPÉCIFIQUES à cette vue uniquement */}
+</div>
+```
 
-- **Ne jamais afficher le count deux fois** dans la même toolbar
-- **Ne jamais ajouter un filtre type/statut local** si FilterToolbar est déjà présent dans la même toolbar
-- `showExport` dans ViewToolbar exclut automatiquement pert/timeline/mindmap — ces vues gèrent leur propre export via `ExportDropdownButton`
-- Toujours passer `filteredItemCount` pour que FilterToolbar puisse afficher `X/Y éléments` quand un filtre est actif
+### Règles absolues
+
+- **Ne jamais dupliquer** Filtre, Highlight ou Ordre dans un `#view-header`
+- **Ne jamais afficher le count deux fois**
+- Si un filtre est actif et qu'on change de vue, il reste visible dans `#global-toolbar`
+
+### Composants legacy (ne plus utiliser pour nouveaux développements)
+
+- `ViewToolbar` — remplacé par `#global-toolbar` dans `SpaceToolbar`
+- `FilterToolbar` — remplacé par les blocs Filtre/Highlight dans `#global-toolbar`
+- `TreeSortButton` (dropdown) — remplacé par les 3 boutons inline Ordre dans `#global-toolbar`
+- Bouton "Lumière" — supprimé
 
 ---
 

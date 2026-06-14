@@ -16,6 +16,8 @@ import {
 import { ExternalLink, GripVertical, Calendar, FolderKanban, GripHorizontal, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
@@ -62,6 +64,11 @@ interface KanbanViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 interface KanbanColumnProps {
@@ -364,7 +371,8 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
 }
 
 export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem }: KanbanViewProps) {
+            onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem,
+            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -475,6 +483,21 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
   };
 
   return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* ViewHeader */}
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="kanban" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={spaceName} viewMode="kanban" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
@@ -570,5 +593,6 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
   );
 }

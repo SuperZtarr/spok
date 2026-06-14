@@ -58,7 +58,7 @@ export function ViewHelpButton({ viewMode, onStartTour, pulse }: ViewHelpButtonP
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
+        className={`inline-flex items-center justify-center h-7 w-7 rounded transition-colors flex-shrink-0${pulse ? ' animate-pulse text-primary bg-primary/15' : ' text-muted-foreground hover:text-foreground hover:bg-accent'}`}
         title="Aide sur cette vue"
       >
         <HelpCircle className="w-4 h-4" />

@@ -15,8 +15,9 @@ import {
   pointerWithin,
 } from '@dnd-kit/core';
 import { GripVertical, User, Users, FolderKanban, GripHorizontal } from 'lucide-react';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
-import { ViewToolbar } from '../ui/ViewToolbar';
+import type { Item, SpaceReferentiels } from '@spok/shared';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import { spacesApi } from '../../lib/api';
 import type { SpaceMember } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
@@ -62,15 +63,6 @@ interface MembersKanbanViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  searchMatchCount?: number;
   spaceRole?: string;
   onNewItem?: () => void;
   exportSpaceName?: string;
@@ -359,11 +351,7 @@ export function MembersKanbanView({
   referentiels,
   canEdit = true,
   canEditItem,
-  filter = 'ALL', onFilterChange,
-  statusFilter = 'ALL', onStatusFilterChange,
-  searchQuery = '', onSearchQueryChange,
-  totalItemCount, filteredItemCount, searchMatchCount,
-  spaceRole, onNewItem, exportSpaceName, viewContainerRef, onStartTour, pulseHelp,
+  spaceRole: _spaceRole, onNewItem, exportSpaceName, viewContainerRef, onStartTour, pulseHelp,
 }: MembersKanbanViewProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -382,12 +370,7 @@ export function MembersKanbanView({
     }));
   }, []);
 
-  const filteredItems = useMemo(() => {
-    let result = items;
-    if (filter !== 'ALL') result = result.filter(i => i.type === filter);
-    if (statusFilter !== 'ALL') result = result.filter(i => i.status === statusFilter);
-    return result;
-  }, [items, filter, statusFilter]);
+  const filteredItems = items;
 
   // Build space sections (main + portals)
   const spaceSections = useMemo(() => {
@@ -509,28 +492,20 @@ export function MembersKanbanView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <ViewToolbar
-        viewMode="members"
-        spaceId={spaceId}
-        spaceRole={spaceRole}
-        canEdit={canEdit}
-        onNewItem={onNewItem}
-        exportItems={items}
-        spaceName={exportSpaceName}
-        viewContainerRef={viewContainerRef}
-        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        searchQuery={searchQuery}
-        onSearchQueryChange={onSearchQueryChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={filteredItemCount}
-        searchMatchCount={searchMatchCount}
-        referentiels={referentiels}
-      />
+      {/* ViewHeader */}
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="members" onStartTour={onStartTour} pulse={pulseHelp} />
+        {exportSpaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={exportSpaceName} viewMode="members" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
       <div className="p-4 overflow-y-auto h-full space-y-2">
         {spaceSections.map((section, idx) => {
           const cols = columnsBySpace[section.spaceId] || [];

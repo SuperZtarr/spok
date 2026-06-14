@@ -1,11 +1,12 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
-import { ViewToolbar } from '../ui/ViewToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
@@ -43,15 +44,6 @@ interface ListViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  searchMatchCount?: number;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
@@ -60,6 +52,8 @@ interface ListViewProps {
   spaceId?: string;
   spaceRole?: string;
   hideToolbar?: boolean;
+  treeSort?: TreeSort;
+  onTreeSortChange?: (sort: TreeSort) => void;
 }
 
 // Format date for display
@@ -121,15 +115,14 @@ type SortDir = 'asc' | 'desc';
 
 export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, referentiels, canEdit = true, canEditItem,
-            filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange,
-            searchQuery = '', onSearchQueryChange,
-            totalItemCount, filteredItemCount, searchMatchCount,
             spaceName, viewContainerRef, onStartTour, pulseHelp, onNewItem,
-            spaceId, spaceRole, hideToolbar = false }: ListViewProps) {
+            spaceId: _spaceId, spaceRole: _spaceRole, hideToolbar = false,
+            treeSort: treeSortProp, onTreeSortChange: _onTreeSortChange }: ListViewProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [localTreeSort] = useState<TreeSort>('manual');
+  const treeSort = treeSortProp ?? localTreeSort;
   const [openInfoId, setOpenInfoId] = useState<string | null>(null);
 
   // Portal support
@@ -231,29 +224,22 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
 
   return (
     <div className="flex flex-col h-full">
-      {!hideToolbar && <ViewToolbar
-        viewMode="list"
-        spaceId={spaceId}
-        spaceRole={spaceRole}        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        onNewItem={onNewItem}
-        canEdit={canEdit}
-        exportItems={items}
-        spaceName={spaceName}
-        viewContainerRef={viewContainerRef}
-        treeSortValue={treeSort}
-        onTreeSortChange={setTreeSort}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        searchQuery={searchQuery}
-        onSearchQueryChange={onSearchQueryChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={filteredItemCount}
-        searchMatchCount={searchMatchCount}
-        referentiels={referentiels}
-      />}
+      {/* ViewHeader */}
+      {!hideToolbar && <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {/* Gauche */}
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        {/* Droite */}
+        <ViewHelpButton viewMode="list" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={spaceName} viewMode="list" viewContainerRef={viewContainerRef} />
+        )}
+      </div>}
       {/* Items list */}
       {sortedItems.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">

@@ -1,8 +1,9 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { Clock, Plus, Pencil } from 'lucide-react';
 import { ListView } from './ListView';
-import { ViewToolbar } from '../ui/ViewToolbar';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
+import type { Item, SpaceReferentiels } from '@spok/shared';
 
 interface PortalGroup {
   spaceId: string;
@@ -30,16 +31,6 @@ interface RecentChangesViewProps {
   onOpenInNewTab?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  searchMatchCount?: number;
-  spaceRole?: string;
   onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
@@ -83,12 +74,8 @@ export function RecentChangesView({
   items,
   spaceId,
   portalGroups,
-  filter = 'ALL', onFilterChange,
-  statusFilter = 'ALL', onStatusFilterChange,
-  searchQuery = '', onSearchQueryChange,
-  totalItemCount, filteredItemCount, searchMatchCount,
   referentiels,
-  spaceRole, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
+  canEdit = true, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
   ...rest
 }: RecentChangesViewProps) {
   const savedAtMount = useRef<Date | null>(null);
@@ -106,7 +93,6 @@ export function RecentChangesView({
     if (!items) return { newItems: [], modifiedItems: [], lastVisit: null };
 
     if (!lastVisit) {
-      // Première visite : montrer les 20 plus récents
       const sorted = [...items].sort(
         (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
@@ -129,42 +115,25 @@ export function RecentChangesView({
     newItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     modifiedItems.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-    const applyFilters = (arr: Item[]) => {
-      let r = arr;
-      if (filter !== 'ALL') r = r.filter(i => i.type === filter);
-      if (statusFilter !== 'ALL') r = r.filter(i => i.status === statusFilter);
-      return r;
-    };
-
-    return { newItems: applyFilters(newItems), modifiedItems: applyFilters(modifiedItems), lastVisit };
-  }, [items, filter, statusFilter]);
+    return { newItems, modifiedItems, lastVisit };
+  }, [items]);
 
   const isEmpty = newItems.length === 0 && modifiedItems.length === 0;
 
   return (
-    <div className="flex flex-col h-full">
-      <ViewToolbar
-        viewMode="recent"
-        spaceId={spaceId}
-        spaceRole={spaceRole}
-        canEdit={!!onNewItem}
-        onNewItem={onNewItem}
-        exportItems={items}
-        spaceName={spaceName}
-        viewContainerRef={viewContainerRef}
-        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        searchQuery={searchQuery}
-        onSearchQueryChange={onSearchQueryChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={filteredItemCount}
-        searchMatchCount={searchMatchCount}
-        referentiels={referentiels}
-      />
+    <div className="flex flex-col h-full overflow-hidden">
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="recent" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="recent" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
       {/* Info dernière visite */}
       <div className="flex items-center gap-2 px-4 py-1.5 border-b bg-muted/30 text-sm text-muted-foreground flex-shrink-0">
         <Clock className="w-4 h-4" />

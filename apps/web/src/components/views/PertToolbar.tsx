@@ -1,80 +1,11 @@
-import { Minus, Plus, ShieldAlert, ListTree, ArrowDownAZ, Check, Info } from 'lucide-react';
+import { Minus, Plus, ShieldAlert, Info } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
-import { ViewSelectorBar } from '../ui/ViewSelectorBar';
-import { ViewToolbar } from '../ui/ViewToolbar';
-import type { Item, ItemType, MenuItemConfig, SpaceReferentiels } from '@spok/shared';
+import { ViewHelpButton } from '../ViewHelpButton';
+import type { Item } from '@spok/shared';
 import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } from '../../lib/exportUtils';
-import { type TreeSort } from '../../lib/treeSort';
-import type { ViewMode } from '../../stores/viewMode';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-
-const PERT_SORT_OPTIONS: { treeSort: TreeSort; sortMode: 'rank' | 'alpha'; label: string }[] = [
-  { treeSort: 'manual',     sortMode: 'rank',  label: 'Position (défaut)' },
-  { treeSort: 'alpha-flat', sortMode: 'alpha', label: 'Alphabétique à plat' },
-  { treeSort: 'alpha-tree', sortMode: 'alpha', label: 'Alphabétique par groupe' },
-];
-
-function PertSortButton({ treeSort, sortMode, onTreeSortChange, onSortModeChange }: {
-  treeSort: TreeSort;
-  sortMode: 'rank' | 'alpha';
-  onTreeSortChange: (m: TreeSort) => void;
-  onSortModeChange: (m: 'rank' | 'alpha') => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) { setPos(null); return; }
-    if (btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left });
-    }
-    const close = (e: MouseEvent) => {
-      if (btnRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [open]);
-
-  const isDefault = treeSort === 'manual' && sortMode === 'rank';
-
-  return (
-    <div className="relative">
-      <button
-        ref={btnRef}
-        onClick={() => setOpen(v => !v)}
-        className={`flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors ${!isDefault ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
-        title="Tri"
-      >
-        {isDefault ? <ListTree className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
-        Ordre
-      </button>
-      {open && pos && createPortal(
-        <div ref={dropRef} className="fixed bg-card border rounded-lg shadow-xl py-1 min-w-[220px] z-[9999]" style={{ top: pos.top, left: pos.left }}>
-          {PERT_SORT_OPTIONS.map(opt => {
-            const active = opt.treeSort === treeSort && opt.sortMode === sortMode;
-            return (
-              <button
-                key={opt.treeSort}
-                className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
-                onClick={() => { onTreeSortChange(opt.treeSort); onSortModeChange(opt.sortMode); setOpen(false); }}
-              >
-                <Check className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'opacity-100' : 'opacity-0'}`} />
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
 
 function LegendButton() {
   const [open, setOpen] = useState(false);
@@ -163,50 +94,34 @@ interface PertToolbarProps {
   onExpandAll: () => void;
   items: Item[];
   spaceName: string;
-  containerRef: React.RefObject<HTMLDivElement>;
   svgRef: React.RefObject<SVGSVGElement>;
-  sortMode: 'rank' | 'alpha';
-  onSortModeChange: (mode: 'rank' | 'alpha') => void;
-  treeSort: TreeSort;
-  onTreeSortChange: (mode: TreeSort) => void;
-  spaceViews?: MenuItemConfig[];
-  allowedViews?: ViewMode[] | null;
-  onSetMode?: (mode: ViewMode) => void;
-  defaultView?: ViewMode;
   onNewItem?: () => void;
   canEdit?: boolean;
   showOnlyBlocking?: boolean;
   onToggleBlocking?: () => void;
-  spaceId?: string;
-  spaceRole?: string;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  referentiels?: SpaceReferentiels;
 }
 
 export function PertToolbar({
   zoom, onZoomIn, onZoomOut, onResetZoom,
   hasParents, hasCollapsed, onCollapseAll, onExpandAll,
   items, spaceName, svgRef,
-  sortMode, onSortModeChange,
-  treeSort, onTreeSortChange,
-  spaceViews, allowedViews, onSetMode, defaultView,
-  onNewItem, canEdit, spaceId, spaceRole,
+  onNewItem, canEdit,
   showOnlyBlocking = false, onToggleBlocking,
   onStartTour, pulseHelp,
-  filter, onFilterChange, statusFilter, onStatusFilterChange,
-  totalItemCount, filteredItemCount, referentiels,
 }: PertToolbarProps) {
   const filename = buildExportFilename(spaceName, 'pert');
 
-  const extraControls = (
-    <>
+  return (
+    <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      {canEdit && onNewItem && (
+        <button onClick={onNewItem}
+          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+          + Nouveau
+        </button>
+      )}
+      <div className="h-4 w-px bg-border mx-1" />
       {onToggleBlocking && (
         <button
           onClick={onToggleBlocking}
@@ -217,16 +132,13 @@ export function PertToolbar({
           <span className="hidden sm:inline">Bloquants</span>
         </button>
       )}
-      <div className="h-4 w-px bg-border mx-1" />
       {hasParents && (
-        <>
-          <CollapseToggleButton
-            isCollapsed={hasCollapsed}
-            onToggle={hasCollapsed ? onExpandAll : onCollapseAll}
-          />
-          <div className="h-4 w-px bg-border mx-1" />
-        </>
+        <CollapseToggleButton
+          isCollapsed={hasCollapsed}
+          onToggle={hasCollapsed ? onExpandAll : onCollapseAll}
+        />
       )}
+      <div className="h-4 w-px bg-border mx-1" />
       <button onClick={onZoomOut} className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground" title="Dézoomer">
         <Minus className="w-3.5 h-3.5" />
       </button>
@@ -236,48 +148,17 @@ export function PertToolbar({
       <button onClick={onZoomIn} className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground" title="Zoomer">
         <Plus className="w-3.5 h-3.5" />
       </button>
-      <div className="h-4 w-px bg-border mx-1" />
-      <PertSortButton treeSort={treeSort} sortMode={sortMode} onTreeSortChange={onTreeSortChange} onSortModeChange={onSortModeChange} />
-      <div className="h-4 w-px bg-border mx-1" />
+      <div className="flex-1" />
       <LegendButton />
-    </>
-  );
-
-  const customExport = (
-    <ExportDropdownButton
-      groups={[
-        { options: [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] },
-        { options: [
-          { label: 'PNG — vue (.png)', onClick: () => svgRef.current ? exportSvgAsPng(svgRef.current, filename) : Promise.resolve() },
-          { label: 'PDF — vue (.pdf)', onClick: () => svgRef.current ? exportSvgAsPdf(svgRef.current, filename) : Promise.resolve() },
-        ]},
-      ]}
-    />
-  );
-
-  return (
-    <div className="sticky top-0 z-10 flex flex-col">
-      {spaceViews && onSetMode && (
-        <ViewSelectorBar viewMode="pert" onSetMode={onSetMode} allowedViews={allowedViews ?? null} spaceViews={spaceViews} defaultView={defaultView} />
-      )}
-      <ViewToolbar
-        viewMode="pert"
-        spaceId={spaceId}
-        spaceRole={spaceRole}
-        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        onNewItem={onNewItem}
-        canEdit={canEdit}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={filteredItemCount}
-        referentiels={referentiels}
-        isHighlightMode={true}
-        extraControls={extraControls}
-        customExport={customExport}
+      <ViewHelpButton viewMode="pert" onStartTour={onStartTour} pulse={pulseHelp} />
+      <ExportDropdownButton
+        groups={[
+          { options: [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] },
+          { options: [
+            { label: 'PNG — vue (.png)', onClick: () => svgRef.current ? exportSvgAsPng(svgRef.current, filename) : Promise.resolve() },
+            { label: 'PDF — vue (.pdf)', onClick: () => svgRef.current ? exportSvgAsPdf(svgRef.current, filename) : Promise.resolve() },
+          ]},
+        ]}
       />
     </div>
   );

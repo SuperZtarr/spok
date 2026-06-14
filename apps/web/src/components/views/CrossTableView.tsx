@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS, TYPE_LABELS } from '../../constants/ui';
 
@@ -26,6 +28,12 @@ interface CrossTableViewProps {
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
+  canEdit?: boolean;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 function getDimensionValue(item: Item, dim: Dimension): string {
@@ -59,7 +67,7 @@ function getDimensionLabel(value: string, dim: Dimension, referentiels?: SpaceRe
   }
 }
 
-export function CrossTableView({ items, onEdit, referentiels, highlightType, highlightStatus, searchMatchIds }: CrossTableViewProps) {
+export function CrossTableView({ items, onEdit, referentiels, highlightType, highlightStatus, searchMatchIds, canEdit = true, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: CrossTableViewProps) {
   const [rowDim, setRowDim] = useState<Dimension>('type');
   const [colDim, setColDim] = useState<Dimension>('status');
   const [expandedCell, setExpandedCell] = useState<string | null>(null);
@@ -154,7 +162,19 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
   const cellKey = (rv: string, cv: string) => `${rv}::${cv}`;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="crossTable" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="crossTable" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
       {/* Dimension selectors */}
       <div data-tour="crosstable-dimensions" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm">
         <label className="flex items-center gap-2">

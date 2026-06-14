@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } from 'lucide-react';
-import { ViewToolbar } from '../ui/ViewToolbar';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
@@ -53,15 +54,6 @@ interface TextViewProps {
   searchMatchIds?: Set<string>;
   spaceId?: string;
   spaceRole?: string;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  globalSearchQuery?: string;
-  onGlobalSearchQueryChange?: (q: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  searchMatchCount?: number;
   onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
@@ -116,10 +108,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
 
 export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds,
-            spaceId, spaceRole,
-            filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange,
-            globalSearchQuery = '', onGlobalSearchQueryChange,
-            totalItemCount, filteredItemCount, searchMatchCount,
+            spaceId: _spaceId, spaceRole: _spaceRole,
             onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
           }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -171,28 +160,20 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
 
   return (
     <div className="flex flex-col h-full">
-      <ViewToolbar
-        viewMode="text"
-        spaceId={spaceId}
-        spaceRole={spaceRole}
-        canEdit={canEdit}
-        onNewItem={onNewItem}
-        exportItems={items}
-        spaceName={spaceName}
-        viewContainerRef={viewContainerRef}
-        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        searchQuery={globalSearchQuery}
-        onSearchQueryChange={onGlobalSearchQueryChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={filteredItemCount}
-        searchMatchCount={searchMatchCount}
-        referentiels={referentiels}
-      />
+      {/* ViewHeader */}
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="text" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={spaceName} viewMode="text" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
       {/* Search bar */}
       <div className="p-3 border-b border-border">
         <div className="relative">

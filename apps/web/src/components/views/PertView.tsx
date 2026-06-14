@@ -135,11 +135,8 @@ interface PertViewProps {
   onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  totalItemCount?: number;
+  treeSort?: TreeSort;
+  onTreeSortChange?: (sort: TreeSort) => void;
 }
 
 export function PertView({
@@ -172,9 +169,9 @@ export function PertView({
   highlightColor,
   searchMatchIds,
   spaceName = '',
-  spaceViews, allowedViews, onSetMode, defaultView,
-  spaceRole, onNewItem, onStartTour, pulseHelp,
-  filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
+  spaceViews: _spaceViews, allowedViews: _allowedViews, onSetMode: _onSetMode, defaultView: _defaultView,
+  spaceRole: _spaceRole, onNewItem, onStartTour, pulseHelp,
+  treeSort: treeSortProp,
 }: PertViewProps) {
   const { collapsedIds, setCollapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -229,8 +226,8 @@ export function PertView({
     });
   }, []);
 
-  const [pertSortMode, setPertSortMode] = useState<'rank' | 'alpha'>('rank');
-  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [localTreeSort] = useState<TreeSort>('manual');
+  const treeSort = treeSortProp ?? localTreeSort;
   const [showOnlyBlocking, setShowOnlyBlocking] = useState(false);
 
   const pertRelations = useMemo(
@@ -330,14 +327,11 @@ export function PertView({
 
   const pertSortFn = useMemo(
     () => (a: { id: string; title: string }, b: { id: string; title: string }) => {
-      if (pertSortMode === 'alpha') {
-        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-      }
       const rankDiff = (ranks.get(a.id) ?? 0) - (ranks.get(b.id) ?? 0);
       if (rankDiff !== 0) return rankDiff;
       return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
     },
-    [ranks, pertSortMode]
+    [ranks]
   );
 
   // Sorted space order: current space first, then portal spaces sorted hierarchically + alphabetically
@@ -714,31 +708,13 @@ export function PertView({
         onExpandAll={() => setCollapsedIds(new Set())}
         items={items}
         spaceName={spaceName}
-        containerRef={pertContainerRef}
         svgRef={pertSvgRef}
-        sortMode={pertSortMode}
-        onSortModeChange={setPertSortMode}
-        treeSort={treeSort}
-        onTreeSortChange={setTreeSort}
         showOnlyBlocking={showOnlyBlocking}
         onToggleBlocking={() => setShowOnlyBlocking(v => !v)}
-        spaceViews={spaceViews}
-        allowedViews={allowedViews}
-        onSetMode={onSetMode}
-        defaultView={defaultView}
         onNewItem={onNewItem}
         canEdit={canEdit}
-        spaceId={spaceId}
-        spaceRole={spaceRole}
         onStartTour={onStartTour}
         pulseHelp={pulseHelp}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={showOnlyBlocking ? sortedItems.length : undefined}
-        referentiels={referentiels}
       />
       <div className="flex flex-1 overflow-hidden">
       {/* Left panel — tree */}

@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { MessageSquare, ChevronDown, ChevronRight, Clock, ExternalLink } from 'lucide-react';
-import { ViewToolbar } from '../ui/ViewToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import { Button } from '../ui/Button';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
-import type { Item, ItemType, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
+import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 
 interface ItemWithContributions extends Item {
@@ -33,15 +34,6 @@ interface ThreadViewProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   searchMatchIds?: Set<string>;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  searchMatchCount?: number;
   spaceId?: string;
   spaceRole?: string;
   onNewItem?: () => void;
@@ -49,6 +41,8 @@ interface ThreadViewProps {
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
   pulseHelp?: boolean;
+  treeSort?: TreeSort;
+  onTreeSortChange?: (sort: TreeSort) => void;
 }
 
 function formatRelativeDate(dateString: string): string {
@@ -129,22 +123,15 @@ export function ThreadView({
   canEdit,
   canEditItem,
   searchMatchIds,
-  filter = 'ALL', onFilterChange,
-  statusFilter = 'ALL', onStatusFilterChange,
-  searchQuery = '', onSearchQueryChange,
-  totalItemCount, filteredItemCount, searchMatchCount,
-  spaceId, spaceRole,
+  spaceId: _spaceId, spaceRole: _spaceRole,
   onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
+  treeSort: treeSortProp,
 }: ThreadViewProps) {
   const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
-  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [localTreeSort] = useState<TreeSort>('manual');
+  const treeSort = treeSortProp ?? localTreeSort;
 
-  const sortedItems = useMemo(() => {
-    let result = applyTreeSort(items || [], treeSort);
-    if (filter !== 'ALL') result = result.filter(i => i.type === filter);
-    if (statusFilter !== 'ALL') result = result.filter(i => i.status === statusFilter);
-    return result;
-  }, [items, treeSort, filter, statusFilter]);
+  const sortedItems = useMemo(() => applyTreeSort(items || [], treeSort), [items, treeSort]);
 
   // Build item tree (parent-child hierarchy)
   const itemTree = useMemo(() => {
@@ -337,30 +324,20 @@ export function ThreadView({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <ViewToolbar
-          viewMode="thread"
-          spaceId={spaceId}
-          spaceRole={spaceRole}
-          canEdit={canEdit}
-          onNewItem={onNewItem}
-          exportItems={items}
-          spaceName={spaceName}
-          viewContainerRef={viewContainerRef}
-          onStartTour={onStartTour}
-          pulseHelp={pulseHelp}
-          treeSortValue={treeSort}
-          onTreeSortChange={setTreeSort}
-          filter={filter}
-          onFilterChange={onFilterChange}
-          statusFilter={statusFilter}
-          onStatusFilterChange={onStatusFilterChange}
-          searchQuery={searchQuery}
-          onSearchQueryChange={onSearchQueryChange}
-          totalItemCount={totalItemCount}
-          filteredItemCount={filteredItemCount}
-          searchMatchCount={searchMatchCount}
-          referentiels={referentiels}
-        />
+      {/* ViewHeader */}
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="thread" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={spaceName} viewMode="thread" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 py-4">
           {/* Thread list — forum style with hierarchy */}

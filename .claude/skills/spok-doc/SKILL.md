@@ -5,6 +5,17 @@ description: Hub central de documentation SPOK. Invoquer pour documenter, consul
 
 # spok-doc — Hub de documentation SPOK
 
+## Règle absolue — documentation dans le code
+
+**Tout fichier créé ou modifié reçoit un commentaire en tête** (composant, hook, utilitaire, store, route API) :
+- Raison d'être : pourquoi ce fichier existe
+- Params/props clés et leur rôle
+- Règles d'usage : où l'utiliser, ce qu'on ne doit pas faire
+
+Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que le TS check.
+
+---
+
 Ce skill remplit trois rôles :
 1. **Consulter** — orienter vers la bonne documentation existante
 2. **Documenter** — conventions et format pour créer un item de doc

@@ -21,11 +21,8 @@ import type { ViewMode } from '../../stores/viewMode';
 import { ViewSelectorBar } from '../ui/ViewSelectorBar';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Plus, History, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Plus } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
-import { FilterToolbar } from '../ui/FilterToolbar';
-import type { ItemType } from '@spok/shared';
 import { toPng } from 'html-to-image';
 import { getViewportForBounds } from '@xyflow/react';
 import { jsPDF } from 'jspdf';
@@ -97,15 +94,9 @@ interface MindMapViewProps {
   onSetMode?: (mode: ViewMode) => void;
   defaultView?: ViewMode;
   // Toolbar props
-  spaceRole?: string;
   onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  totalItemCount?: number;
 }
 
 // Inner component that uses useReactFlow
@@ -138,8 +129,7 @@ function MindMapViewInner({
   referentiels,
   canEdit,
   canEditItem,
-  spaceRole, onNewItem, onStartTour, pulseHelp,
-  filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
+  onNewItem, onStartTour, pulseHelp,
   innerRef,
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
   // Track previous items to detect content-only vs structural changes
@@ -1145,9 +1135,8 @@ function MindMapViewInner({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar MindMap */}
-      <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        <ViewHelpButton viewMode="mindmap" onStartTour={onStartTour} pulse={pulseHelp} />
+      {/* ViewHeader */}
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
           <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
             <Plus className="w-3.5 h-3.5" />
@@ -1175,7 +1164,7 @@ function MindMapViewInner({
           <Maximize2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Tout voir</span>
         </button>
-        <div className="h-4 w-px bg-border mx-1" />
+        <div className="flex-1" />
         <div className="relative">
           <button
             className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -1186,7 +1175,7 @@ function MindMapViewInner({
             <span className="hidden sm:inline">Légende</span>
           </button>
           {legendOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
+            <div className="absolute top-full right-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
               <div className="space-y-1.5 mb-3 text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
@@ -1221,22 +1210,7 @@ function MindMapViewInner({
             </div>
           )}
         </div>
-        <div className="h-4 w-px bg-border mx-1" />
-        <FilterToolbar
-          filter={filter}
-          onFilterChange={onFilterChange}
-          statusFilter={statusFilter}
-          onStatusFilterChange={onStatusFilterChange}
-          referentiels={referentiels}
-          isHighlightMode={true}
-        />
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {totalItemCount !== undefined && (
-          <span className="text-xs text-muted-foreground flex-shrink-0">{totalItemCount} élément{totalItemCount !== 1 ? 's' : ''}</span>
-        )}
+        <ViewHelpButton viewMode="mindmap" onStartTour={onStartTour} pulse={pulseHelp} />
         <ExportDropdownButton
           disabled={exporting}
           groups={[
@@ -1251,20 +1225,6 @@ function MindMapViewInner({
             ]},
           ]}
         />
-        {canEdit && spaceId && (
-          <Link to={`/spaces/${spaceId}/history`}>
-            <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Historique">
-              <History className="w-4 h-4" />
-            </button>
-          </Link>
-        )}
-        {spaceRole === 'OWNER' && spaceId && (
-          <Link to={`/spaces/${spaceId}/settings`}>
-            <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Paramètres">
-              <Settings className="w-4 h-4" />
-            </button>
-          </Link>
-        )}
       </div>
       <div className="flex-1 min-h-0">
       <ReactFlow
@@ -1500,7 +1460,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
   spaceViews, allowedViews, onSetMode, defaultView,
-  spaceRole, onNewItem, onStartTour, pulseHelp, filter, onFilterChange, statusFilter, onStatusFilterChange, totalItemCount,
+  onNewItem, onStartTour, pulseHelp,
 }, ref) {
   return (
     <div className="h-full w-full flex flex-col">
@@ -1523,8 +1483,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
  onOpenInNewTab={onOpenInNewTab} onReorder={onReorder} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
           referentiels={referentiels} canEdit={canEdit} canEditItem={canEditItem}
-          spaceRole={spaceRole} onNewItem={onNewItem} onStartTour={onStartTour} pulseHelp={pulseHelp}
-          filter={filter} onFilterChange={onFilterChange} statusFilter={statusFilter} onStatusFilterChange={onStatusFilterChange} totalItemCount={totalItemCount}
+          onNewItem={onNewItem} onStartTour={onStartTour} pulseHelp={pulseHelp}
           innerRef={ref}
         />
       </ReactFlowProvider>

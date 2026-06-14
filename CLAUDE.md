@@ -38,6 +38,15 @@ Lire `docs/ARCHITECTURE.md` avant de travailler sur :
 
 Ce fichier documente les patterns de code, les stores existants, les conventions queryKey, et la structure attendue des vues. Ne pas déduire ces patterns depuis le code seul.
 
+### Documentation dans le code — règle absolue
+
+**Tout fichier créé ou modifié reçoit un commentaire en tête** (composant, hook, utilitaire, store, route API, helper) :
+- Raison d'être : pourquoi ce fichier existe, quel problème il résout
+- Params/props clés : ce qu'on lui passe et pourquoi
+- Règles d'usage : où l'utiliser, ce qu'on ne doit pas faire avec
+
+Format : bloc `/* ... */` ou JSDoc `/** ... */` avant les imports. Une ligne suffit si c'est simple. Ne pas attendre que l'utilisateur le demande — c'est non négociable, au même titre que le TS check.
+
 ### Documentation — règles obligatoires
 
 **Consulter avant de coder**

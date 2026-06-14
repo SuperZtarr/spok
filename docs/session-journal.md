@@ -4,11 +4,15 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-06-08
+## EN COURS — 2026-06-14
 
-### PERT : DnD arborescence panel gauche
-- `PertView.tsx` : DnD Kit (DndContext, TreeItemRow, pertActiveId/pertOverId/pertDropPosition) — même pattern que Gantt
-- `SpacePage.tsx` : `onMove={actions.handleMove}` ajouté sur `<PertView>`
+### Migration ViewHeader + GlobalToolbar
+- Toutes les vues migrées vers ViewHeader (+ Nouveau / Aide / Exporter) — ViewToolbar retiré de SpacePage
+- GlobalToolbar unifié : Filtre, Aperçu, Ordre (3 boutons) dans SpaceToolbar pour toutes les vues
+- `showFiltersForView` : supprimé les exclusions members/recent/types — filtres visibles partout
+- `ViewHelpButton` : style aligné sur toolbar (h-7 w-7, sans border), pulse via bg-primary/15 sans ring
+- `PriorityView` : fix items={[]} → items={items} dans SpaceExportButton
+- Didacticiels à revoir : thread (pas de tour), text (tour vide) + tous les autres — noté TODO
 
 ## HISTORIQUE — 2026-06-07
 

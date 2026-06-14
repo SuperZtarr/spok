@@ -1,6 +1,8 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { ImageIcon, ChevronLeft, ChevronRight, X, FolderKanban, GripVertical, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
@@ -140,10 +142,16 @@ interface ImagesViewProps {
   canEditItem?: (item: { createdById?: string }) => boolean;
   portalGroups?: PortalGroup[];
   currentSpaceId?: string;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId }: ImagesViewProps) {
+            onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId,
+            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: ImagesViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(2); // default M
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -233,19 +241,39 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
     return flatImages.findIndex(fi => fi.id === img.id);
   }, [flatImages]);
 
+  const header = (
+    <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      {canEdit && onNewItem && (
+        <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+          + Nouveau
+        </button>
+      )}
+      <div className="flex-1" />
+      <ViewHelpButton viewMode="images" onStartTour={onStartTour} pulse={pulseHelp} />
+      {spaceName && viewContainerRef && (
+        <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="images" viewContainerRef={viewContainerRef} />
+      )}
+    </div>
+  );
+
   if (images.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center">
-          <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-          <p className="text-lg font-medium">Aucune image</p>
-          <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item avec une image.</p>
+      <div className="flex flex-col h-full overflow-hidden">
+        {header}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
+            <p className="text-lg font-medium">Aucune image</p>
+            <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item avec une image.</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {header}
     <DndContext sensors={dndSensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
     <div className="flex-1 overflow-auto p-4 space-y-4">
       {/* Zoom controls */}
@@ -437,5 +465,6 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
       )}
     </div>
     </DndContext>
+    </div>
   );
 }

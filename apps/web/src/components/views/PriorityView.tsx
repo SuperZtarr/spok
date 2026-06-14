@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import {
   DndContext,
   DragOverlay,
@@ -301,6 +303,11 @@ interface PriorityViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 export function PriorityView({
@@ -323,6 +330,11 @@ export function PriorityView({
   referentiels,
   canEdit = true,
   canEditItem,
+  onNewItem,
+  spaceName,
+  viewContainerRef,
+  onStartTour,
+  pulseHelp,
 }: PriorityViewProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -398,6 +410,19 @@ export function PriorityView({
   const draggedItem = draggedItemId ? allItems.find(i => i.id === draggedItemId) : null;
 
   return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="priority" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={spaceName} viewMode="priority" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
@@ -406,7 +431,7 @@ export function PriorityView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="p-4 overflow-x-auto overflow-y-hidden h-full">
+      <div className="p-4 overflow-x-auto overflow-y-hidden flex-1">
         <div className="flex gap-3 h-full min-w-min" data-tour="priority-column">
           {PRIORITY_COLUMNS.map(col => (
             <PriorityColumn
@@ -458,5 +483,6 @@ export function PriorityView({
         )}
       </DragOverlay>
     </DndContext>
+    </div>
   );
 }

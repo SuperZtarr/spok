@@ -43,6 +43,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import type { ViewMode } from '../stores/viewMode';
+import type { TreeSort } from '../lib/treeSort';
 
 const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
@@ -59,15 +60,20 @@ const VIEW_ICON_MAP: Record<string, LucideIcon> = {
 };
 
 export interface SpaceToolbarProps {
-  // Filters
+  // Filtre block
   filter: ItemType | 'ALL';
   onFilterChange: (filter: ItemType | 'ALL') => void;
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
-  isHighlightMode: boolean;
-  // Search
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
+  // Highlight block
+  highlightFilter: ItemType | 'ALL';
+  onHighlightFilterChange: (filter: ItemType | 'ALL') => void;
+  highlightStatus: string;
+  onHighlightStatusChange: (status: string) => void;
+  highlightSearch: string;
+  onHighlightSearchChange: (q: string) => void;
   // Counts
   totalItemCount: number;
   filteredItemCount: number;
@@ -80,6 +86,9 @@ export interface SpaceToolbarProps {
   allowedViews: ViewMode[] | null;
   spaceViews: MenuItemConfig[];
   defaultView?: ViewMode;
+  // Ordre
+  treeSort: TreeSort;
+  onTreeSortChange: (sort: TreeSort) => void;
   // Actions
   canEdit: boolean;
   onNewItem?: () => void;
@@ -93,9 +102,14 @@ export function SpaceToolbar({
   onFilterChange,
   statusFilter,
   onStatusFilterChange,
-  isHighlightMode,
   searchQuery,
   onSearchQueryChange,
+  highlightFilter,
+  onHighlightFilterChange,
+  highlightStatus,
+  onHighlightStatusChange,
+  highlightSearch,
+  onHighlightSearchChange,
   totalItemCount,
   filteredItemCount,
   searchMatchCount,
@@ -105,37 +119,47 @@ export function SpaceToolbar({
   allowedViews,
   spaceViews,
   defaultView,
+  treeSort,
+  onTreeSortChange,
   canEdit,
   spaceId,
   spaceRole,
 }: SpaceToolbarProps) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [hlTypeDropdownOpen, setHlTypeDropdownOpen] = useState(false);
+  const [hlStatusDropdownOpen, setHlStatusDropdownOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [filtreOpen, setFiltreOpen] = useState(false);
+  const [aperçuOpen, setAperçuOpen] = useState(false);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const hlTypeDropdownRef = useRef<HTMLDivElement>(null);
+  const hlStatusDropdownRef = useRef<HTMLDivElement>(null);
 
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
+  const activeHlTypeFilter = highlightFilter !== 'ALL' ? highlightFilter : undefined;
+  const activeHlStatusFilter = highlightStatus !== 'ALL' ? highlightStatus : undefined;
 
-  // Close filter dropdowns on click outside or Escape
+  const showFiltersForView = true;
+
+  // Close all dropdowns on click outside or Escape
   useEffect(() => {
-    if (!typeDropdownOpen && !statusDropdownOpen) return;
+    if (!typeDropdownOpen && !statusDropdownOpen && !hlTypeDropdownOpen && !hlStatusDropdownOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
-        setTypeDropdownOpen(false);
-      }
-      if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
-        setStatusDropdownOpen(false);
-      }
+      if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) setTypeDropdownOpen(false);
+      if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) setStatusDropdownOpen(false);
+      if (hlTypeDropdownOpen && hlTypeDropdownRef.current && !hlTypeDropdownRef.current.contains(e.target as Node)) setHlTypeDropdownOpen(false);
+      if (hlStatusDropdownOpen && hlStatusDropdownRef.current && !hlStatusDropdownRef.current.contains(e.target as Node)) setHlStatusDropdownOpen(false);
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); }
+      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setHlTypeDropdownOpen(false); setHlStatusDropdownOpen(false); }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [typeDropdownOpen, statusDropdownOpen]);
+  }, [typeDropdownOpen, statusDropdownOpen, hlTypeDropdownOpen, hlStatusDropdownOpen]);
 
 
   return (
@@ -194,157 +218,248 @@ export function SpaceToolbar({
         );
       })()}
 
-      {!['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','priority','mindmap'].includes(viewMode) && <div className="flex gap-1.5 flex-wrap items-center pb-1">
-        {/* Mode indicator + filters — always visible on sm+, toggle on mobile */}
+      {/* GlobalToolbar */}
+      <div id="global-toolbar" className="flex gap-1.5 flex-wrap items-center pb-1">
         <div className={`${showMobileFilters ? 'flex' : 'hidden'} sm:flex gap-1.5 items-center flex-wrap`}>
-        {isHighlightMode && (
-          <span className="inline-flex items-center justify-center gap-1 h-8 rounded-md px-3 text-xs font-medium border border-yellow-300 bg-yellow-50 text-yellow-700 shadow-sm flex-shrink-0">
-            <span className="w-2 h-2 rounded-full bg-yellow-400" />
-            <span className="hidden sm:inline">Lumière</span>
-          </span>
-        )}
+          {showFiltersForView && <>
+            {/* === ORDRE === */}
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {([
+                { value: 'manual', label: 'Position' },
+                { value: 'alpha-flat', label: 'A→Z à plat' },
+                { value: 'alpha-tree', label: 'A→Z par groupe' },
+              ] as const).map(({ value, label }) => (
+                <button key={value} onClick={() => onTreeSortChange(value)}
+                  className={`inline-flex items-center h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                    treeSort === value ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
 
-        {/* Type + Status filters — hidden in list view (moved to ListView toolbar) */}
-        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <div ref={typeDropdownRef} className="relative flex-shrink-0" data-tour="toolbar-filters">
-          <button
-            onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
-            className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
-              activeTypeFilter
-                ? `border-2 ${getTypeColor(activeTypeFilter, referentiels?.typeLabels).color} ${getTypeColor(activeTypeFilter, referentiels?.typeLabels).bgHover} font-semibold shadow-sm`
-                : 'border-input bg-background shadow-sm hover:bg-accent text-muted-foreground'
-            }`}
-          >
-            {activeTypeFilter ? TYPE_LABELS[activeTypeFilter] : 'Types'}
-            <ChevronDown className={`w-3 h-3 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {typeDropdownOpen && (
-            <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
-              {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
-                const isActive = filter === t;
-                const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
-                return (
+            <div className="h-4 w-px bg-border mx-1 flex-shrink-0" />
+
+            {/* === FILTRE toggle === */}
+            {(() => {
+              const hasActive = !!(activeTypeFilter || activeStatusFilter || searchQuery);
+              return (
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <button
-                    key={t}
-                    onClick={() => { onFilterChange(t); setTypeDropdownOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                      isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                    onClick={() => { setFiltreOpen(v => !v); setAperçuOpen(false); }}
+                    className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                      hasActive ? 'bg-accent text-foreground font-semibold' : filtreOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     }`}
                   >
-                    {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
-                    <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
-                    {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
+                    Filtre
+                    <ChevronDown className={`w-3 h-3 transition-transform ${filtreOpen ? 'rotate-180' : ''}`} />
                   </button>
-                );
-              })}
-            </div>
-          )}
-        </div>}
-
-        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <div ref={statusDropdownRef} className="relative flex-shrink-0">
-          {(() => {
-            const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-            const activeStatus = activeStatusFilter ? statuses.find((s: any) => s.id === activeStatusFilter) : null;
-            const visibleStatuses = statuses.filter((s: any) => s.visible);
-            return (
-              <>
-                <button
-                  onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
-                  className={`inline-flex items-center gap-1.5 h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap border ${
-                    activeStatus
-                      ? `border-2 ${activeStatus.borderColor} font-semibold shadow-sm`
-                      : 'border-input bg-background shadow-sm hover:bg-accent text-muted-foreground'
-                  }`}
-                >
-                  {activeStatus ? activeStatus.label : 'Statuts'}
-                  <ChevronDown className={`w-3 h-3 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {statusDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
-                    <button
-                      onClick={() => { onStatusFilterChange('ALL'); setStatusDropdownOpen(false); }}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                        statusFilter === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                      }`}
-                    >
-                      <span className="flex-1 text-left">Tous les statuts</span>
-                    </button>
-                    {visibleStatuses.map((s: any) => {
-                      const isActive = statusFilter === s.id;
-                      const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
-                      return (
+                  {filtreOpen && (
+                    <div className="flex items-center gap-1">
+                      {/* Types */}
+                      <div ref={typeDropdownRef} className="relative flex-shrink-0" data-tour="toolbar-filters">
                         <button
-                          key={s.id}
-                          onClick={() => { onStatusFilterChange(s.id); setStatusDropdownOpen(false); }}
-                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                            isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                          onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
+                          className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${
+                            activeTypeFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                           }`}
                         >
-                          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                          <span className="flex-1 text-left">{s.label}</span>
-                          {isActive && <span className="text-primary text-xs">✓</span>}
+                          {activeTypeFilter ? TYPE_LABELS[activeTypeFilter] : 'Types'}
+                          <ChevronDown className={`w-3 h-3 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>}
+                        {typeDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
+                            {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
+                              const isActive = filter === t;
+                              const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
+                              return (
+                                <button key={t} onClick={() => { onFilterChange(t); setTypeDropdownOpen(false); }}
+                                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                  {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
+                                  <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
+                                  {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      {/* Statuts */}
+                      <div ref={statusDropdownRef} className="relative flex-shrink-0">
+                        {(() => {
+                          const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+                          const activeStatus = activeStatusFilter ? statuses.find((s: any) => s.id === activeStatusFilter) : null;
+                          const visibleStatuses = statuses.filter((s: any) => s.visible);
+                          return (
+                            <>
+                              <button onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
+                                className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeStatus ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+                                {activeStatus ? activeStatus.label : 'Statuts'}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                              {statusDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
+                                  <button onClick={() => { onStatusFilterChange('ALL'); setStatusDropdownOpen(false); }}
+                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${statusFilter === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                    <span className="flex-1 text-left">Tous les statuts</span>
+                                  </button>
+                                  {visibleStatuses.map((s: any) => {
+                                    const isActive = statusFilter === s.id;
+                                    const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
+                                    return (
+                                      <button key={s.id} onClick={() => { onStatusFilterChange(s.id); setStatusDropdownOpen(false); }}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                        <span className="flex-1 text-left">{s.label}</span>
+                                        {isActive && <span className="text-primary text-xs">✓</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      {/* Recherche */}
+                      <div className="relative flex-shrink-0" data-tour="toolbar-search">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                        <input type="text" placeholder="Rechercher..." value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)}
+                          className="h-7 w-28 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                        {searchQuery && (
+                          <button onClick={() => onSearchQueryChange('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div className="h-4 w-px bg-border mx-1 flex-shrink-0" />
+
+            {/* === APERÇU toggle === */}
+            {(() => {
+              const hasActive = !!(activeHlTypeFilter || activeHlStatusFilter || highlightSearch);
+              return (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => { setAperçuOpen(v => !v); setFiltreOpen(false); }}
+                    className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                      hasActive ? 'bg-accent text-foreground font-semibold' : aperçuOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    Aperçu
+                    <ChevronDown className={`w-3 h-3 transition-transform ${aperçuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {aperçuOpen && (
+                    <div className="flex items-center gap-1">
+                      {/* HL Types */}
+                      <div ref={hlTypeDropdownRef} className="relative flex-shrink-0">
+                        <button onClick={() => { setHlTypeDropdownOpen(!hlTypeDropdownOpen); setHlStatusDropdownOpen(false); }}
+                          className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeHlTypeFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+                          {activeHlTypeFilter ? TYPE_LABELS[activeHlTypeFilter] : 'Types'}
+                          <ChevronDown className={`w-3 h-3 transition-transform ${hlTypeDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {hlTypeDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
+                            {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
+                              const isActive = highlightFilter === t;
+                              const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
+                              return (
+                                <button key={t} onClick={() => { onHighlightFilterChange(t); setHlTypeDropdownOpen(false); }}
+                                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                  {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
+                                  <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
+                                  {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      {/* HL Statuts */}
+                      <div ref={hlStatusDropdownRef} className="relative flex-shrink-0">
+                        {(() => {
+                          const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+                          const activeHlStatus = activeHlStatusFilter ? statuses.find((s: any) => s.id === activeHlStatusFilter) : null;
+                          const visibleStatuses = statuses.filter((s: any) => s.visible);
+                          return (
+                            <>
+                              <button onClick={() => { setHlStatusDropdownOpen(!hlStatusDropdownOpen); setHlTypeDropdownOpen(false); }}
+                                className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeHlStatus ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+                                {activeHlStatus ? activeHlStatus.label : 'Statuts'}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${hlStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                              {hlStatusDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
+                                  <button onClick={() => { onHighlightStatusChange('ALL'); setHlStatusDropdownOpen(false); }}
+                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${highlightStatus === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                    <span className="flex-1 text-left">Tous les statuts</span>
+                                  </button>
+                                  {visibleStatuses.map((s: any) => {
+                                    const isActive = highlightStatus === s.id;
+                                    const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
+                                    return (
+                                      <button key={s.id} onClick={() => { onHighlightStatusChange(s.id); setHlStatusDropdownOpen(false); }}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                        <span className="flex-1 text-left">{s.label}</span>
+                                        {isActive && <span className="text-primary text-xs">✓</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      {/* HL Recherche */}
+                      <div className="relative flex-shrink-0">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                        <input type="text" placeholder="Rechercher..." value={highlightSearch} onChange={(e) => onHighlightSearchChange(e.target.value)}
+                          className="h-7 w-28 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                        {highlightSearch && (
+                          <button onClick={() => onHighlightSearchChange('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+          </>}
         </div>{/* end mobile filters wrapper */}
 
-        {/* Search input — hidden in list view (moved to ListView toolbar) */}
-        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <div className="relative flex-shrink-0" data-tour="toolbar-search">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            value={searchQuery}
-            onChange={(e) => onSearchQueryChange(e.target.value)}
-            className="h-8 w-40 pl-8 pr-7 text-xs border border-input rounded-md bg-background shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchQueryChange('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+          {/* Item count */}
+          {showFiltersForView && (
+            <span className="inline-flex items-center justify-center h-7 rounded px-2 text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+              {(() => {
+                const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
+                const hasSearch = searchQuery.trim().length > 0;
+                if (hasSearch) return `${searchMatchCount ?? 0}/${totalItemCount} éléments`;
+                if (hasFilter) return `${filteredItemCount}/${totalItemCount} éléments`;
+                return `${totalItemCount} éléments`;
+              })()}
+            </span>
           )}
-        </div>}
-
-        {/* Item count — hidden in list view (moved to ListView toolbar) */}
-        {viewMode !== 'list' && viewMode !== 'thread' && viewMode !== 'members' && viewMode !== 'recent' && viewMode !== 'types' && <span className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-input bg-background shadow-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
-          {(() => {
-            const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
-            const hasSearch = searchQuery.trim().length > 0;
-            if (hasSearch) {
-              return `${searchMatchCount ?? 0}/${totalItemCount} éléments`;
-            }
-            if (hasFilter && !isHighlightMode) {
-              return `${filteredItemCount}/${totalItemCount} éléments`;
-            }
-            return `${totalItemCount} éléments`;
-          })()}
-        </span>}
-
-
-
-        <div className="ml-auto flex gap-1 flex-shrink-0">
           {/* Mobile filter toggle */}
           <button
             className={`sm:hidden relative inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors flex-shrink-0 ${
-              showMobileFilters
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-input bg-background text-muted-foreground hover:bg-accent'
+              showMobileFilters ? 'border-primary bg-primary/10 text-primary' : 'border-input bg-background text-muted-foreground hover:bg-accent'
             }`}
             onClick={() => setShowMobileFilters(v => !v)}
             title="Filtres"
           >
             <SlidersHorizontal className="w-4 h-4" />
-            {(activeTypeFilter || activeStatusFilter) && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />
-            )}
+            {(activeTypeFilter || activeStatusFilter) && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />}
           </button>
           {canEdit && (
             <Link to={`/spaces/${spaceId}/history`}>
@@ -361,7 +476,7 @@ export function SpaceToolbar({
             </Link>
           )}
         </div>
-      </div>}
+      </div>
 
     </div>
   );

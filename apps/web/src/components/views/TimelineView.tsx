@@ -1,11 +1,10 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, History, Settings, Plus, CalendarClock } from 'lucide-react';
+
+import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Plus, CalendarClock } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
-import { FilterToolbar } from '../ui/FilterToolbar';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
-import { TreeSortButton } from '../ui/TreeSortButton';
+
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { buildExportFilename, exportCSV, exportExcel, exportDataPDF, exportContainerPNG } from '../../lib/exportUtils';
 import {
@@ -68,21 +67,17 @@ interface TimelineViewProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   spaceName?: string;
-  spaceRole?: string;
   onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  totalItemCount?: number;
+  treeSort?: TreeSort;
+  onTreeSortChange?: (sort: TreeSort) => void;
 }
 
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '', spaceRole,
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '',
 onNewItem, onStartTour, pulseHelp,
-filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
+treeSort: treeSortProp,
 }: TimelineViewProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -193,12 +188,12 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
     return [currentSpaceId, ...result];
   }, [portalGroups, currentSpaceId]);
 
-  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [localTreeSort] = useState<TreeSort>('manual');
+  const treeSort = treeSortProp ?? localTreeSort;
   const visibleItems = useMemo(() => {
     if (!hideDeferred) return items;
     return items.filter(item => !isItemDeferred(item, statuses));
   }, [items, hideDeferred, statuses]);
-  const deferredCount = useMemo(() => items.filter(item => isItemDeferred(item, statuses)).length, [items, statuses]);
   const sortedItems = useMemo(() => {
     const sorted = applyTreeSort(visibleItems, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
@@ -836,18 +831,15 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
 
   return (
     <div className="flex flex-col h-full" ref={viewContainerRef}>
-      {/* Toolbar */}
-      <div className="flex flex-col border-b bg-background">
-      <div className="flex items-center gap-2 px-4 py-1 border-b border-border flex-shrink-0">
-        {/* Standard controls — left */}
-        <ViewHelpButton viewMode="timeline" onStartTour={onStartTour} pulse={pulseHelp} />
+      {/* ViewHeader */}
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
           <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Nouveau</span>
           </button>
         )}
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border mx-1" />
         {/* Navigation */}
         <Button variant="bordered" size="sm" onClick={goToPrevious} title="Précédent">
           <ChevronLeft className="w-4 h-4" />
@@ -858,148 +850,86 @@ filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, tota
         <Button variant="bordered" size="sm" onClick={goToNext} title="Suivant">
           <ChevronRight className="w-4 h-4" />
         </Button>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground hidden sm:block">
           {formatDateFull(visibleStartDate)} - {formatDateFull(addDays(visibleEndDate, -1))}
         </div>
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border mx-1" />
         {/* Timeline-specific controls */}
-        <TreeSortButton value={treeSort} onChange={setTreeSort} />
-          <span className="text-sm text-muted-foreground">
-            {itemsWithDatesCount} planifiés
-          </span>
-
-          {/* Chronological reorder */}
-          {canEdit && spaceId && (
-            <Button
-              variant="bordered"
-              size="sm"
-              onClick={handleChronoReorder}
-              disabled={reordering}
-              title="Réordonner chronologiquement (persisté)"
-            >
-              <ArrowUpDown className="w-4 h-4" />
-            </Button>
-          )}
-
-          {/* Compact mode toggle */}
-          <Button
-            variant={compactMode ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setCompactMode(prev => !prev)}
-            title={compactMode ? 'Afficher tous les éléments' : 'Masquer les éléments sans date'}
-          >
-            {compactMode ? (
-              <ChevronsUpDown className="w-4 h-4" />
-            ) : (
-              <ChevronsDownUp className="w-4 h-4" />
-            )}
+        <span className="text-xs text-muted-foreground flex-shrink-0">
+          {itemsWithDatesCount} planifiés
+        </span>
+        {canEdit && spaceId && (
+          <Button variant="bordered" size="sm" onClick={handleChronoReorder} disabled={reordering} title="Réordonner chronologiquement (persisté)">
+            <ArrowUpDown className="w-4 h-4" />
           </Button>
-
-          {/* Collapse/expand all */}
-          {parentIds.length > 0 && (
-            <CollapseToggleButton
-              isCollapsed={collapsedIds.size > 0}
-              onToggle={() => collapsedIds.size > 0 ? setCollapsedIds(new Set()) : setCollapsedIds(new Set(parentIds))}
-            />
-          )}
-
-          {/* Filtre éléments différés */}
-          <Button
-            variant={hideDeferred ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setHideDeferred(prev => !prev)}
-            title={hideDeferred ? `Afficher les éléments planifiés à long terme` : `Masquer les éléments planifiés à long terme`}
-          >
-            <CalendarClock className="w-4 h-4" />
-          </Button>
-
-          {/* Chemin critique toggle */}
-          <Button
-            variant={showCriticalPath ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setShowCriticalPath(prev => !prev)}
-            title={showCriticalPath ? 'Masquer le chemin critique' : 'Afficher le chemin critique'}
-            className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
-          >
-            <GitBranch className="w-4 h-4" />
-          </Button>
-
-          {/* Zoom controls */}
-          <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={zoomIn}
-              disabled={!canZoomIn}
-              title="Zoom avant"
-              className="h-8 px-2"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <select
-              className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 min-w-[100px] text-center"
-              value={zoomLevel}
-              onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
-              title="Niveau de zoom"
-            >
-              <option value="day">Jour</option>
-              <option value="week">Semaine</option>
-              <option value="month">Mois</option>
-              <option value="quarter">Trimestre</option>
-              <option value="year">Année</option>
-            </select>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={zoomOut}
-              disabled={!canZoomOut}
-              title="Zoom arrière"
-              className="h-8 px-2"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          {/* Filter/Lumière */}
-          <FilterToolbar
-            filter={filter}
-            onFilterChange={onFilterChange}
-            statusFilter={statusFilter}
-            onStatusFilterChange={onStatusFilterChange}
-            totalItemCount={totalItemCount}
-            referentiels={referentiels}
-            isHighlightMode={true}
+        )}
+        <Button
+          variant={compactMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setCompactMode(prev => !prev)}
+          title={compactMode ? 'Afficher tous les éléments' : 'Masquer les éléments sans date'}
+        >
+          {compactMode ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
+        </Button>
+        {parentIds.length > 0 && (
+          <CollapseToggleButton
+            isCollapsed={collapsedIds.size > 0}
+            onToggle={() => collapsedIds.size > 0 ? setCollapsedIds(new Set()) : setCollapsedIds(new Set(parentIds))}
           />
-          <ExportDropdownButton
-            groups={[
-              { options: [
-                { label: 'CSV (.csv)',    onClick: () => exportCSV(items, buildExportFilename(spaceName, 'timeline')) },
-                { label: 'Excel (.xlsx)', onClick: () => exportExcel(items, buildExportFilename(spaceName, 'timeline')) },
-              ]},
-              { options: [
-                { label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, buildExportFilename(spaceName, 'timeline'), spaceName) },
-              ]},
-              { options: [
-                { label: 'PNG — vue (.png)', onClick: () => viewContainerRef.current ? exportContainerPNG(viewContainerRef.current, buildExportFilename(spaceName, 'timeline')) : Promise.resolve() },
-              ]},
-            ]}
-          />
-          {/* History + Settings */}
-          {canEdit && spaceId && (
-            <Link to={`/spaces/${spaceId}/history`}>
-              <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Historique">
-                <History className="w-4 h-4" />
-              </button>
-            </Link>
-          )}
-          {spaceRole === 'OWNER' && spaceId && (
-            <Link to={`/spaces/${spaceId}/settings`}>
-              <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Paramètres">
-                <Settings className="w-4 h-4" />
-              </button>
-            </Link>
-          )}
+        )}
+        <Button
+          variant={hideDeferred ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setHideDeferred(prev => !prev)}
+          title={hideDeferred ? 'Afficher les éléments planifiés à long terme' : 'Masquer les éléments planifiés à long terme'}
+        >
+          <CalendarClock className="w-4 h-4" />
+        </Button>
+        <Button
+          variant={showCriticalPath ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setShowCriticalPath(prev => !prev)}
+          title={showCriticalPath ? 'Masquer le chemin critique' : 'Afficher le chemin critique'}
+          className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
+        >
+          <GitBranch className="w-4 h-4" />
+        </Button>
+        <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
+          <Button variant="ghost" size="sm" onClick={zoomIn} disabled={!canZoomIn} title="Zoom avant" className="h-8 px-2">
+            <ZoomIn className="w-4 h-4" />
+          </Button>
+          <select
+            className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 min-w-[100px] text-center"
+            value={zoomLevel}
+            onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
+            title="Niveau de zoom"
+          >
+            <option value="day">Jour</option>
+            <option value="week">Semaine</option>
+            <option value="month">Mois</option>
+            <option value="quarter">Trimestre</option>
+            <option value="year">Année</option>
+          </select>
+          <Button variant="ghost" size="sm" onClick={zoomOut} disabled={!canZoomOut} title="Zoom arrière" className="h-8 px-2">
+            <ZoomOut className="w-4 h-4" />
+          </Button>
         </div>
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="timeline" onStartTour={onStartTour} pulse={pulseHelp} />
+        <ExportDropdownButton
+          groups={[
+            { options: [
+              { label: 'CSV (.csv)',    onClick: () => exportCSV(items, buildExportFilename(spaceName, 'timeline')) },
+              { label: 'Excel (.xlsx)', onClick: () => exportExcel(items, buildExportFilename(spaceName, 'timeline')) },
+            ]},
+            { options: [
+              { label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, buildExportFilename(spaceName, 'timeline'), spaceName) },
+            ]},
+            { options: [
+              { label: 'PNG — vue (.png)', onClick: () => viewContainerRef.current ? exportContainerPNG(viewContainerRef.current, buildExportFilename(spaceName, 'timeline')) : Promise.resolve() },
+            ]},
+          ]}
+        />
       </div>
 
       {/* Timeline content */}

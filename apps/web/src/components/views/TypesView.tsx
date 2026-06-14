@@ -14,7 +14,8 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 import { ExternalLink, GripVertical, FolderKanban, GripHorizontal } from 'lucide-react';
-import { ViewToolbar } from '../ui/ViewToolbar';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
@@ -49,20 +50,13 @@ interface TypesViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
-  totalItemCount?: number;
-  filteredItemCount?: number;
-  searchMatchCount?: number;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
   pulseHelp?: boolean;
   onNewItem?: () => void;
   spaceId?: string;
-  spaceRole?: string;}
+}
 
 interface TypeColumnConfig {
   id: ItemType;
@@ -327,11 +321,8 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
 
 export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem,
-            statusFilter = 'ALL', onStatusFilterChange,
-            searchQuery = '', onSearchQueryChange,
-            totalItemCount, filteredItemCount, searchMatchCount,
             spaceName, viewContainerRef, onStartTour, pulseHelp, onNewItem,
-            spaceId, spaceRole }: TypesViewProps) {
+            spaceId: _spaceId }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -375,10 +366,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
     return { statusLabels: labels, statusColors: colors };
   }, [referentiels]);
 
-  const filteredItems = useMemo(() => {
-    if (statusFilter === 'ALL') return items;
-    return items.filter(i => i.status === statusFilter);
-  }, [items, statusFilter]);
+  const filteredItems = items;
 
   // Build space sections: main space + portal spaces
   const spaceSections = useMemo(() => {
@@ -465,6 +453,19 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
   };
 
   return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="types" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="types" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
@@ -473,26 +474,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <ViewToolbar
-        viewMode="types"
-        spaceId={spaceId}
-        spaceRole={spaceRole}        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        onNewItem={onNewItem}
-        canEdit={canEdit}
-        exportItems={items}
-        spaceName={spaceName}
-        viewContainerRef={viewContainerRef}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        searchQuery={searchQuery}
-        onSearchQueryChange={onSearchQueryChange}
-        totalItemCount={totalItemCount}
-        filteredItemCount={filteredItemCount}
-        searchMatchCount={searchMatchCount}
-        referentiels={referentiels}
-      />
-      <div className="p-4 overflow-y-auto h-full space-y-2">
+      <div className="p-4 overflow-y-auto flex-1 space-y-2">
         {spaceSections.map((section, idx) => {
           const grouped = groupedBySpace[section.spaceId] || {};
           return (
@@ -578,5 +560,6 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   Loader2,
   CalendarClock,
   EyeOff,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
@@ -78,9 +79,10 @@ import { stripMarkup } from '../lib/bbcode';
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
 import { useSpaceActions } from './useSpaceActions';
-import { ViewToolbar } from '../components/ui/ViewToolbar';
 import { type TreeSort, applyTreeSort } from '../lib/treeSort';
 import { SpaceToolbar } from './SpaceToolbar';
+import { ViewHelpButton } from '../components/ViewHelpButton';
+import { SpaceExportButton } from '../components/SpaceExportButton';
 import { useAuthStore } from '../stores/auth';
 import { recordSpaceVisit } from '../hooks/useRecentSpaces';
 import { useMenuItems } from '../hooks/useMenuItems';
@@ -109,6 +111,10 @@ export function SpacePage() {
   }, [spaceId, expandedItems]);
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [highlightFilter, setHighlightFilter] = useState<ItemType | 'ALL'>('ALL');
+  const [highlightStatus, setHighlightStatus] = useState<string>('ALL');
+  const [highlightSearch, setHighlightSearch] = useState('');
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const viewReadyRef = useRef(false); // true once defaultView has been applied for current space
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -354,7 +360,7 @@ export function SpacePage() {
   const [overId, setOverId] = useState<string | null>(null);
   const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
-  const [treeViewSort, setTreeViewSort] = useState<TreeSort>('manual');
+  const [treeViewSort] = useState<TreeSort>('manual');
   const pointerYRef = useRef(0);
 
   useEffect(() => {
@@ -565,9 +571,14 @@ export function SpacePage() {
           onFilterChange={setFilter}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          isHighlightMode={isHighlightMode}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
+          highlightFilter={highlightFilter}
+          onHighlightFilterChange={setHighlightFilter}
+          highlightStatus={highlightStatus}
+          onHighlightStatusChange={setHighlightStatus}
+          highlightSearch={highlightSearch}
+          onHighlightSearchChange={setHighlightSearch}
           totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
           filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
           searchMatchCount={searchMatchIds?.size}
@@ -577,6 +588,8 @@ export function SpacePage() {
           allowedViews={canEdit ? null : VIEWER_ALLOWED_VIEWS}
           spaceViews={spaceViews}
           defaultView={space?.defaultView as ViewMode | undefined}
+          treeSort={treeSort}
+          onTreeSortChange={setTreeSort}
           canEdit={canEdit}
           onNewItem={handleNewItem}
           spaceId={spaceId}
@@ -626,27 +639,20 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-              searchMatchCount={searchMatchIds?.size}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
               onNewItem={canEdit ? handleNewItem : undefined}
               spaceId={spaceId}
-              spaceRole={space?.role}            />
+              spaceRole={space?.role}
+              treeSort={treeSort}
+              onTreeSortChange={setTreeSort}
+            />
           ) : viewMode === 'text' ? (
             <TextView
               items={filterBySearch(textViewData?.data || allItemsData?.data)}
@@ -675,15 +681,6 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               spaceId={spaceId}
               spaceRole={space?.role}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              globalSearchQuery={searchQuery}
-              onGlobalSearchQueryChange={setSearchQuery}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-              searchMatchCount={searchMatchIds?.size}
               onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
@@ -712,16 +709,6 @@ export function SpacePage() {
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-              searchMatchCount={searchMatchIds?.size}
-              spaceRole={space?.role}
               onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
@@ -743,21 +730,11 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
               searchMatchIds={searchMatchIds}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-              searchMatchCount={searchMatchIds?.size}
               spaceId={spaceId}
               spaceRole={space?.role}
               onNewItem={canEdit ? handleNewItem : undefined}
@@ -765,31 +742,10 @@ export function SpacePage() {
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
+              treeSort={treeSort}
+              onTreeSortChange={setTreeSort}
             />
           ) : viewMode === 'kanban' ? (
-            <>
-              <ViewToolbar
-                viewMode="kanban"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                searchMatchCount={searchMatchIds?.size}
-                referentiels={referentiels}
-              />
               <KanbanView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
@@ -806,14 +762,17 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               onMoveItemToSpace={actions.handleMoveItemToSpace}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'types' ? (
             <TypesView
               items={filterBySearch(itemsData?.data)}
@@ -838,41 +797,13 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-              searchMatchCount={searchMatchIds?.size}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
               onNewItem={canEdit ? handleNewItem : undefined}
-              spaceRole={space?.role}            />
+            />
           ) : viewMode === 'planning' ? (
-            <>
-              <ViewToolbar
-                viewMode="planning"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
               <PlanningView
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
@@ -889,7 +820,6 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
@@ -898,8 +828,12 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'calendar' ? (
             <CalendarView
               items={filterBySearch(allItemsData?.data)}
@@ -920,15 +854,9 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               spaceId={spaceId}
-              spaceRole={space?.role}
               onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
             />
@@ -965,15 +893,11 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              spaceRole={space?.role}
               onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              treeSort={treeSort}
+              onTreeSortChange={setTreeSort}
             />
           ) : viewMode === 'pert' ? (
             <PertView
@@ -1007,15 +931,11 @@ export function SpacePage() {
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              spaceRole={space?.role}
               onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
+              treeSort={treeSort}
+              onTreeSortChange={setTreeSort}
             />
           ) : viewMode === 'mindmap' ? (
             <MindMapView
@@ -1023,7 +943,6 @@ export function SpacePage() {
               items={filterBySearch(allItemsData?.data)}
               spaceName={space?.name || 'Espace'}
               spaceId={spaceId}
-              spaceRole={space?.role}
               communitySpaces={communitySpaces || []}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1053,330 +972,250 @@ export function SpacePage() {
               onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
             />
           ) : viewMode === 'graph' ? (
-            <>
-              <ViewToolbar
-                viewMode="graph"
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="graph" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="graph" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <GraphView
+                level="space"
+                entityId={spaceId}
                 spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
                 spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
+                communityId={space?.communityId || undefined}
+                communityName={space?.community?.name}
+                onNodeClick={(itemId) => setEditingItemId(itemId)}
+                highlightType={activeTypeFilter}
+                highlightStatus={activeStatusFilter}
+                highlightColor={highlightColor}
+                searchMatchIds={searchMatchIds}
+                additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
               />
-              <GraphView
-              level="space"
-              entityId={spaceId}
-              spaceId={spaceId}
-              spaceName={space?.name}
-              communityId={space?.communityId || undefined}
-              communityName={space?.community?.name}
-              onNodeClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              highlightColor={highlightColor}
-              searchMatchIds={searchMatchIds}
-              additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
-            />
-            </>
+              </div>
+            </div>
           ) : viewMode === 'sunburst' ? (
-            <>
-              <ViewToolbar
-                viewMode="sunburst"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <SunburstView
-              spaceId={spaceId}
-              spaceName={space?.name}
-              onNodeClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              highlightColor={highlightColor}
-              searchMatchIds={searchMatchIds}
-              additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="sunburst" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="sunburst" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <SunburstView
+                  spaceId={spaceId}
+                  spaceName={space?.name}
+                  onNodeClick={(itemId) => setEditingItemId(itemId)}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  highlightColor={highlightColor}
+                  searchMatchIds={searchMatchIds}
+                  additionalSpaceIds={checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined}
+                />
+              </div>
+            </div>
           ) : viewMode === 'relations' ? (
-            <>
-              <ViewToolbar
-                viewMode="relations"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <RelationsMapView
-              items={(itemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onNodeClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              highlightColor={highlightColor}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="relations" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="relations" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <RelationsMapView
+                  items={(itemsData?.data || []) as Item[]}
+                  portalGroups={portalGroups}
+                  currentSpaceId={spaceId}
+                  onNodeClick={(itemId) => setEditingItemId(itemId)}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  highlightColor={highlightColor}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
           ) : viewMode === 'bubble' ? (
-            <>
-              <ViewToolbar
-                viewMode="bubble"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <BubbleView
-              items={(allItemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onItemClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              highlightColor={highlightColor}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="bubble" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="bubble" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <BubbleView
+                  items={(allItemsData?.data || []) as Item[]}
+                  portalGroups={portalGroups}
+                  currentSpaceId={spaceId}
+                  onItemClick={(itemId) => setEditingItemId(itemId)}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  highlightColor={highlightColor}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
           ) : viewMode === 'radialTree' ? (
-            <>
-              <ViewToolbar
-                viewMode="radialTree"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <RadialTreeView
-              items={(allItemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onItemClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="radialTree" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="radialTree" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <RadialTreeView
+                  items={(allItemsData?.data || []) as Item[]}
+                  portalGroups={portalGroups}
+                  currentSpaceId={spaceId}
+                  onItemClick={(itemId) => setEditingItemId(itemId)}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
           ) : viewMode === 'treemap' ? (
-            <>
-              <ViewToolbar
-                viewMode="treemap"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="treemap" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="treemap" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <TreemapView
+                items={(allItemsData?.data || []) as Item[]}
+                portalGroups={portalGroups}
+                currentSpaceId={spaceId}
+                onItemClick={(itemId) => setEditingItemId(itemId)}
+                highlightType={activeTypeFilter}
+                highlightStatus={activeStatusFilter}
+                searchMatchIds={searchMatchIds}
               />
-              <TreemapView
-              items={(allItemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onItemClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+              </div>
+            </div>
           ) : viewMode === 'burndown' ? (
-            <>
-              <ViewToolbar
-                viewMode="burndown"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="burndown" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="burndown" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <BurndownView
+                items={(allItemsData?.data || []) as Item[]}
+                portalGroups={portalGroups}
+                currentSpaceId={spaceId}
+                onItemClick={(itemId) => setEditingItemId(itemId)}
+                highlightType={activeTypeFilter}
+                highlightStatus={activeStatusFilter}
+                searchMatchIds={searchMatchIds}
               />
-              <BurndownView
-              items={(allItemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onItemClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+              </div>
+            </div>
           ) : viewMode === 'cfd' ? (
-            <>
-              <ViewToolbar
-                viewMode="cfd"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="cfd" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="cfd" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <CfdView
+                items={(allItemsData?.data || []) as Item[]}
+                portalGroups={portalGroups}
+                currentSpaceId={spaceId}
+                onItemClick={(itemId) => setEditingItemId(itemId)}
+                highlightType={activeTypeFilter}
+                highlightStatus={activeStatusFilter}
+                searchMatchIds={searchMatchIds}
               />
-              <CfdView
-              items={(allItemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onItemClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+              </div>
+            </div>
           ) : viewMode === 'chord' ? (
-            <>
-              <ViewToolbar
-                viewMode="chord"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <ChordView
-              items={(allItemsData?.data || []) as Item[]}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onItemClick={(itemId) => setEditingItemId(itemId)}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="chord" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="chord" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ChordView
+                  items={(allItemsData?.data || []) as Item[]}
+                  portalGroups={portalGroups}
+                  currentSpaceId={spaceId}
+                  onItemClick={(itemId) => setEditingItemId(itemId)}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
           ) : viewMode === 'crossTable' ? (
-            <>
-              <ViewToolbar
-                viewMode="crossTable"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
               <CrossTableView
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
@@ -1386,75 +1225,68 @@ export function SpacePage() {
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
+              canEdit={canEdit}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'heatmap' ? (
-            <>
-              <ViewToolbar
-                viewMode="heatmap"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <HeatmapView
-              items={filterBySearch(allItemsData?.data)}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onEdit={setEditingItemId}
-              referentiels={referentiels}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="heatmap" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="heatmap" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <HeatmapView
+                  items={filterBySearch(allItemsData?.data)}
+                  portalGroups={portalGroups}
+                  currentSpaceId={spaceId}
+                  onEdit={setEditingItemId}
+                  referentiels={referentiels}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
           ) : viewMode === 'ego' ? (
-            <>
-              <ViewToolbar
-                viewMode="ego"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
-              <EgoNetworkView
-              items={filterBySearch(allItemsData?.data)}
-              relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
-              portalGroups={portalGroups}
-              currentSpaceId={spaceId}
-              onEdit={setEditingItemId}
-              referentiels={referentiels}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-            />
-            </>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                {canEdit && (
+                  <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    + Nouveau
+                  </button>
+                )}
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="ego" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+                {space?.name && viewContainerRef && (
+                  <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="ego" viewContainerRef={viewContainerRef} />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <EgoNetworkView
+                  items={filterBySearch(allItemsData?.data)}
+                  relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
+                  portalGroups={portalGroups}
+                  currentSpaceId={spaceId}
+                  onEdit={setEditingItemId}
+                  referentiels={referentiels}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
           ) : viewMode === 'members' ? (
             <MembersKanbanView
               items={filterBySearch(itemsData?.data)}
@@ -1478,15 +1310,6 @@ export function SpacePage() {
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              filter={filter}
-              onFilterChange={setFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-              filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-              searchMatchCount={searchMatchIds?.size}
               spaceRole={space?.role}
               onNewItem={canEdit ? handleNewItem : undefined}
               exportSpaceName={space?.name}
@@ -1495,27 +1318,6 @@ export function SpacePage() {
               pulseHelp={pulseHelp}
             />
           ) : viewMode === 'priority' ? (
-            <>
-              <ViewToolbar
-                viewMode="priority"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                isHighlightMode={true}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                referentiels={referentiels}
-              />
               <PriorityView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
@@ -1532,37 +1334,17 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'todo' ? (
-            <>
-                            <ViewToolbar
-                viewMode="todo"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                searchMatchCount={searchMatchIds?.size}
-                referentiels={referentiels}
-              />
               <TodoView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
@@ -1579,36 +1361,16 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'bugs' ? (
-            <>
-                            <ViewToolbar
-                viewMode="bugs"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                searchMatchCount={searchMatchIds?.size}
-                referentiels={referentiels}
-              />
               <BugsView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
@@ -1625,36 +1387,16 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'documents' ? (
-            <>
-                            <ViewToolbar
-                viewMode="documents"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                searchMatchCount={searchMatchIds?.size}
-                referentiels={referentiels}
-              />
               <DocumentsView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
@@ -1671,38 +1413,18 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'links' ? (
-            <>
-                            <ViewToolbar
-                viewMode="links"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                searchMatchCount={searchMatchIds?.size}
-                referentiels={referentiels}
-              />
               <LinksView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
@@ -1719,38 +1441,18 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : viewMode === 'images' ? (
-            <>
-                            <ViewToolbar
-                viewMode="images"
-                spaceId={spaceId}
-                spaceRole={space?.role}
-                canEdit={canEdit}
-                onNewItem={canEdit ? handleNewItem : undefined}
-                exportItems={itemsData?.data ?? []}
-                spaceName={space?.name}
-                viewContainerRef={viewContainerRef}
-                onStartTour={() => startViewTour(viewMode)}
-                pulseHelp={pulseHelp}
-                filter={filter}
-                onFilterChange={setFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                searchMatchCount={searchMatchIds?.size}
-                referentiels={referentiels}
-              />
               <ImagesView
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
@@ -1767,14 +1469,17 @@ export function SpacePage() {
               onAbsorbChildren={actions.handleAbsorbChildren}
               onSplitDescription={actions.handleSplitDescription}
               onOpen={actions.handleOpen}
-
               onOpenInNewTab={actions.handleOpenInNewTab}
               onMove={actions.handleMove}
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
-            </>
           ) : itemsData?.data.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -1783,6 +1488,28 @@ export function SpacePage() {
             </div>
           ) : (
             /* Tree view (default) */
+            <div className="flex flex-col h-full overflow-hidden">
+            <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              {canEdit && (
+                <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                  + Nouveau
+                </button>
+              )}
+              <div className="h-4 w-px bg-border mx-1" />
+              <button
+                onClick={handleToggleExpand}
+                className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                title={hasExpandedItems ? 'Tout réduire' : 'Tout étendre'}
+              >
+                {hasExpandedItems ? <ChevronsUpDown className="w-3.5 h-3.5" /> : <ChevronsUpDown className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{hasExpandedItems ? 'Réduire' : 'Étendre'}</span>
+              </button>
+              <div className="flex-1" />
+              <ViewHelpButton viewMode="tree" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+              {space?.name && viewContainerRef && (
+                <SpaceExportButton items={itemsData?.data ?? []} spaceName={space.name} viewMode="tree" viewContainerRef={viewContainerRef} />
+              )}
+            </div>
             <DndContext
               sensors={sensors}
               collisionDetection={pointerWithin}
@@ -1791,31 +1518,7 @@ export function SpacePage() {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              <div>
-                <ViewToolbar
-                  viewMode="tree"
-                  spaceId={spaceId}
-                  spaceRole={space?.role}
-                  canEdit={canEdit}
-                  onNewItem={canEdit ? handleNewItem : undefined}
-                  exportItems={itemsData?.data ?? []}
-                  spaceName={space?.name}
-                  viewContainerRef={viewContainerRef}
-                  onStartTour={() => startViewTour(viewMode)}
-                  pulseHelp={pulseHelp}
-                  treeSortValue={treeViewSort}
-                  onTreeSortChange={setTreeViewSort}
-                  isExpanded={hasExpandedItems}
-                  onToggleExpand={handleToggleExpand}
-                  isHighlightMode={true}
-                  filter={filter}
-                  onFilterChange={setFilter}
-                  statusFilter={statusFilter}
-                  onStatusFilterChange={setStatusFilter}
-                  totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
-                  filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
-                  referentiels={referentiels}
-                />
+              <div className="flex-1 overflow-auto">
                 <div className="py-2">
                   {filterBySearch(applyTreeSort(rootItems, treeViewSort)).map((item: Item & { childCount?: number }, index: number) => (
                     <TreeItem
@@ -1924,6 +1627,7 @@ export function SpacePage() {
                 ) : null}
               </DragOverlay>
             </DndContext>
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useRef } from 'react';
-import { ViewToolbar } from '../ui/ViewToolbar';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -39,11 +40,6 @@ interface CalendarViewProps {
   onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  filter?: ItemType | 'ALL';
-  onFilterChange?: (filter: ItemType | 'ALL') => void;
-  statusFilter?: string;
-  onStatusFilterChange?: (status: string) => void;
-  totalItemCount?: number;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
 }
@@ -78,8 +74,7 @@ export function CalendarView({
   highlightStatus,
   searchMatchIds,
   canEdit = true,
-  spaceId, spaceRole, onNewItem, onStartTour, pulseHelp,
-  filter = 'ALL', onFilterChange, statusFilter = 'ALL', onStatusFilterChange, totalItemCount,
+  spaceId: _spaceId, spaceRole: _spaceRole, onNewItem, onStartTour, pulseHelp,
   spaceName, viewContainerRef,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null);
@@ -198,25 +193,18 @@ export function CalendarView({
 
   return (
     <div className="flex flex-col h-full">
-      <ViewToolbar
-        viewMode="calendar"
-        spaceId={spaceId}
-        spaceRole={spaceRole}
-        canEdit={canEdit}
-        onNewItem={onNewItem}
-        exportItems={items}
-        spaceName={spaceName}
-        viewContainerRef={viewContainerRef}
-        onStartTour={onStartTour}
-        pulseHelp={pulseHelp}
-        isHighlightMode={true}
-        filter={filter}
-        onFilterChange={onFilterChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        totalItemCount={totalItemCount}
-        referentiels={referentiels}
-      />
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="calendar" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items} spaceName={spaceName} viewMode="calendar" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
     <div data-tour="calendar-toolbar" className="flex-1 min-h-0 flex flex-col fc-spok-wrapper">
       <style>{`
         .fc-spok-wrapper {

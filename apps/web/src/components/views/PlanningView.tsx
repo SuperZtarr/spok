@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import {
   ExternalLink,
   AlertTriangle,
@@ -147,6 +149,11 @@ interface PlanningViewProps {
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
 interface PlanningItemProps {
@@ -362,7 +369,8 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
 }
 
 export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem }: PlanningViewProps) {
+            onOpenInNewTab, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem,
+            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -427,7 +435,20 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
   }
 
   return (
-    <div className="p-4 overflow-y-auto h-full" data-tour="planning-sections">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {canEdit && onNewItem && (
+          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+            + Nouveau
+          </button>
+        )}
+        <div className="flex-1" />
+        <ViewHelpButton viewMode="planning" onStartTour={onStartTour} pulse={pulseHelp} />
+        {spaceName && viewContainerRef && (
+          <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="planning" viewContainerRef={viewContainerRef} />
+        )}
+      </div>
+    <div className="p-4 overflow-y-auto flex-1" data-tour="planning-sections">
       {PERIOD_CONFIGS.map((config) => (
         <PeriodSection
           key={config.id}
@@ -458,6 +479,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
           canEditItem={canEditItem}
         />
       ))}
+    </div>
     </div>
   );
 }

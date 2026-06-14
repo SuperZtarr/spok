@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { Bug } from 'lucide-react';
 import { ListView } from './ListView';
+import { SpaceExportButton } from '../SpaceExportButton';
+import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 
 interface PortalGroup {
@@ -28,9 +30,14 @@ interface BugsViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   portalGroups?: PortalGroup[];
+  onNewItem?: () => void;
+  spaceName?: string;
+  viewContainerRef?: React.RefObject<HTMLDivElement>;
+  onStartTour?: () => void;
+  pulseHelp?: boolean;
 }
 
-export function BugsView({ items, portalGroups, ...rest }: BugsViewProps) {
+export function BugsView({ items, portalGroups, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: BugsViewProps) {
   const bugs = useMemo(() => {
     if (!items) return [];
     return items.filter(item => item.type === 'BUG');
@@ -43,17 +50,40 @@ export function BugsView({ items, portalGroups, ...rest }: BugsViewProps) {
       .filter(g => g.items.length > 0);
   }, [portalGroups]);
 
+  const header = (
+    <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      {canEdit && onNewItem && (
+        <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+          + Nouveau
+        </button>
+      )}
+      <div className="flex-1" />
+      <ViewHelpButton viewMode="bugs" onStartTour={onStartTour} pulse={pulseHelp} />
+      {spaceName && viewContainerRef && (
+        <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="bugs" viewContainerRef={viewContainerRef} />
+      )}
+    </div>
+  );
+
   if (bugs.length === 0 && (!bugPortalGroups || bugPortalGroups.length === 0)) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center">
-          <Bug className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-          <p className="text-lg font-medium">Aucun bug</p>
-          <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item de type BUG.</p>
+      <div className="flex flex-col h-full overflow-hidden">
+        {header}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <Bug className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
+            <p className="text-lg font-medium">Aucun bug</p>
+            <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item de type BUG.</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  return <ListView items={bugs} portalGroups={bugPortalGroups} hideToolbar {...rest} />;
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {header}
+      <ListView items={bugs} portalGroups={bugPortalGroups} hideToolbar canEdit={canEdit} {...rest} />
+    </div>
+  );
 }
