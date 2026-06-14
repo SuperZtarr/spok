@@ -2,6 +2,16 @@
 
 ## À faire
 
+### Modes d'interface (Forum / Projet / Exploration)
+
+> Prérequis absolu avant de coder les modes : refactoriser ItemEditModal
+
+- [ ] **Étape 1 — Refactor ItemEditModal** : supprimer toutes les conditions d'affichage par type d'item (`if item.type === X`), repartir d'une base uniforme tous champs visibles
+- [ ] **Étape 2 — Implémenter le système de modes** : sélecteur global dans la navigation, stockage à définir (localStorage ou préférence utilisateur)
+- [ ] **Étape 3 — Mode Forum** : vues globales (toutes sauf Graphe global) / vues personnelles (Activités) / vues d'espace (Discussions, Récents, Images, Documents) / champs items (Description, Commentaires, Type, URL, Fichier, Image, Parent, Tags)
+- [ ] **Étape 4 — Mode Projet** : vues globales (toutes) / vues personnelles (toutes) / vues d'espace (Kanban, Gantt, PERT, Bugs, Calendrier, Burndown) / champs items (tous)
+- [ ] **Étape 5 — Mode Exploration** : tout exposé, à affiner
+
 ### Didacticiels / aide contextuelle
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide
 

@@ -51,7 +51,7 @@ export function SpacesListPage() {
 
   return (
     <div className="flex-1 overflow-auto p-4 md:p-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{title}</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -74,7 +74,7 @@ export function SpacesListPage() {
                 {!currentCommunity && (
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Espaces de groupe</h2>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {spaces.map(space => (
                     <SpaceCard key={space.id} space={space} />
                   ))}
@@ -85,7 +85,7 @@ export function SpacesListPage() {
             {personalSpaces.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Espaces personnels</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {personalSpaces.map(space => (
                     <SpaceCard key={space.id} space={space} />
                   ))}
