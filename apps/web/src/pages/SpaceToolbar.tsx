@@ -36,6 +36,7 @@ import {
   CheckSquare,
   MessageSquare,
   Clock,
+  ArrowUpDown,
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig } from '@spok/shared';
@@ -244,25 +245,29 @@ export function SpaceToolbar({
       {/* GlobalToolbar */}
       <div id="global-toolbar" className="flex gap-1.5 flex-wrap items-center pb-1">
         <div className={`${showMobileFilters ? 'flex' : 'hidden'} sm:flex gap-1.5 items-center flex-wrap`}>
+          {/* === ORDRE === */}
+          {(['list', 'tree', 'thread', 'kanban', 'timeline', 'pert'] as const).includes(viewMode as any) && (
+            <>
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                {([
+                  { value: 'manual', label: 'Position' },
+                  { value: 'alpha-flat', label: 'A→Z à plat' },
+                  { value: 'alpha-tree', label: 'A→Z par groupe' },
+                ] as const).map(({ value, label }) => (
+                  <button key={value} onClick={() => onTreeSortChange(value)}
+                    className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                      treeSort === value ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}>
+                    <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="h-4 w-px bg-border mx-1 flex-shrink-0" />
+            </>
+          )}
+
           {showFiltersForView && <>
-            {/* === ORDRE === */}
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              {([
-                { value: 'manual', label: 'Position' },
-                { value: 'alpha-flat', label: 'A→Z à plat' },
-                { value: 'alpha-tree', label: 'A→Z par groupe' },
-              ] as const).map(({ value, label }) => (
-                <button key={value} onClick={() => onTreeSortChange(value)}
-                  className={`inline-flex items-center h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
-                    treeSort === value ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="h-4 w-px bg-border mx-1 flex-shrink-0" />
-
             {/* === FILTRE toggle === */}
             {(() => {
               const hasActive = !!(activeTypeFilter || activeStatusFilter || searchQuery);
@@ -274,7 +279,8 @@ export function SpaceToolbar({
                       hasActive ? 'bg-accent text-foreground font-semibold' : filtreOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     }`}
                   >
-                    Filtre
+                    <SlidersHorizontal className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="hidden sm:inline">Filtre</span>
                     <ChevronDown className={`w-3 h-3 transition-transform ${filtreOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {filtreOpen && (

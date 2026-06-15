@@ -1,4 +1,4 @@
-import { Minus, Plus, Info } from 'lucide-react';
+import { Minus, Plus, Info, ArrowUpDown } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -99,6 +99,10 @@ interface PertToolbarProps {
   canEdit?: boolean;
   activeRelFilters?: Set<string>;
   onToggleRelFilter?: (type: string) => void;
+  pertRankSort?: boolean;
+  onTogglePertRankSort?: () => void;
+  totalItemCount?: number;
+  filteredItemCount?: number;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
@@ -109,6 +113,8 @@ export function PertToolbar({
   items, spaceName, svgRef,
   onNewItem, canEdit,
   activeRelFilters = new Set(), onToggleRelFilter,
+  pertRankSort = false, onTogglePertRankSort,
+  totalItemCount, filteredItemCount,
   onStartTour, pulseHelp,
 }: PertToolbarProps) {
   const filename = buildExportFilename(spaceName, 'pert');
@@ -119,6 +125,17 @@ export function PertToolbar({
         <button onClick={onNewItem}
           className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
           + Nouveau
+        </button>
+      )}
+      <div className="h-4 w-px bg-border mx-1" />
+      {onTogglePertRankSort && (
+        <button
+          onClick={onTogglePertRankSort}
+          className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${pertRankSort ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+          title="Trier par rang de dépendance"
+        >
+          <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="hidden sm:inline">Par rang</span>
         </button>
       )}
       <div className="h-4 w-px bg-border mx-1" />
@@ -161,6 +178,13 @@ export function PertToolbar({
         <Plus className="w-3.5 h-3.5" />
       </button>
       <div className="flex-1" />
+      {totalItemCount !== undefined && (
+        <span className="text-xs text-muted-foreground flex-shrink-0">
+          {filteredItemCount !== undefined && filteredItemCount !== totalItemCount
+            ? `${filteredItemCount} / ${totalItemCount} éléments`
+            : `${totalItemCount} élément${totalItemCount !== 1 ? 's' : ''}`}
+        </span>
+      )}
       <LegendButton />
       <ViewHelpButton viewMode="pert" onStartTour={onStartTour} pulse={pulseHelp} />
       <ExportDropdownButton

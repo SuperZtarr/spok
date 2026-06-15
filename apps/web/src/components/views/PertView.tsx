@@ -229,24 +229,64 @@ export function PertView({
   const [localTreeSort] = useState<TreeSort>('manual');
   const treeSort = treeSortProp ?? localTreeSort;
   const [activeRelFilters, setActiveRelFilters] = useState<Set<string>>(new Set());
+  const [pertRankSort, setPertRankSort] = useState(false);
 
   const pertRelations = useMemo(
     () => relations.filter(r => r.type === 'blocks' || r.type === 'implements' || r.type === 'relates'),
     [relations]
   );
 
-  // IDs des items impliqués dans les types de relation actifs
-  const filteredRelItemIds = useMemo(() => {
-    if (activeRelFilters.size === 0) return null;
-    const ids = new Set<string>();
-    for (const r of relations) {
-      if (activeRelFilters.has(r.type)) {
-        ids.add(r.fromItemId);
-        ids.add(r.toItemId);
+  // Rangs calculés depuis les items bruts — indépendant de sortedItems pour éviter la circularité
+  const rawRanks = useMemo(() => {
+    const idSet = new Set(items.map(i => i.id));
+    const parentMap = new Map(items.map(i => [i.id, i.parentId]));
+    const pertPreds = new Map<string, string[]>();
+    for (const rel of pertRelations) {
+      let predId: string, succId: string;
+      if (rel.type === 'blocks' || rel.type === 'implements') { predId = rel.fromItemId; succId = rel.toItemId; }
+      else { predId = rel.toItemId; succId = rel.fromItemId; }
+      if (idSet.has(predId) && idSet.has(succId)) {
+        if (!pertPreds.has(succId)) pertPreds.set(succId, []);
+        pertPreds.get(succId)!.push(predId);
       }
     }
+    const rank = new Map<string, number>();
+    const inStack = new Set<string>();
+    function assignRank(id: string): number {
+      if (rank.has(id)) return rank.get(id)!;
+      if (inStack.has(id)) return 0;
+      inStack.add(id);
+      let r = 0;
+      for (const predId of (pertPreds.get(id) ?? [])) r = Math.max(r, assignRank(predId) + 1);
+      const parentId = parentMap.get(id);
+      if (parentId && idSet.has(parentId)) r = Math.max(r, assignRank(parentId));
+      inStack.delete(id);
+      rank.set(id, r);
+      return r;
+    }
+    for (const item of items) assignRank(item.id);
+    return rank;
+  }, [items, pertRelations]);
+
+  // IDs des items impliqués dans les types de relation actifs + leurs ancêtres
+  const filteredRelItemIds = useMemo(() => {
+    if (activeRelFilters.size === 0) return null;
+    const direct = new Set<string>();
+    for (const r of relations) {
+      if (activeRelFilters.has(r.type)) {
+        direct.add(r.fromItemId);
+        direct.add(r.toItemId);
+      }
+    }
+    // Remonter les ancêtres pour conserver l'arborescence
+    const parentMap = new Map(items.map(i => [i.id, i.parentId]));
+    const ids = new Set<string>(direct);
+    for (const id of direct) {
+      let cur = parentMap.get(id);
+      while (cur) { ids.add(cur); cur = parentMap.get(cur); }
+    }
     return ids;
-  }, [relations, activeRelFilters]);
+  }, [relations, activeRelFilters, items]);
 
   const toggleRelFilter = (type: string) => {
     setActiveRelFilters(prev => {
@@ -260,7 +300,12 @@ export function PertView({
     const filtered = filteredRelItemIds
       ? items.filter(i => filteredRelItemIds.has(i.id))
       : items;
-    const sorted = applyTreeSort(filtered, treeSort);
+    const sorted = pertRankSort
+      ? [...filtered].sort((a, b) => {
+          const rd = (rawRanks.get(a.id) ?? 0) - (rawRanks.get(b.id) ?? 0);
+          return rd !== 0 ? rd : a.title.localeCompare(b.title);
+        })
+      : applyTreeSort(filtered, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
     // Reorder root-level items: current space first, then portal groups in order
     // Use effective roots = items whose parent is not in the list (same logic as buildTree)
@@ -281,7 +326,7 @@ export function PertView({
       ...portalOrder.flatMap(sid => bySpace.get(sid) ?? []),
     ];
     return [...orderedRoots, ...children];
-  }, [items, treeSort, filteredRelItemIds, portalGroups, currentSpaceId]);
+  }, [items, treeSort, pertRankSort, rawRanks, filteredRelItemIds, portalGroups, currentSpaceId]);
 
   const { predecessors, successors } = useMemo(
     () => buildPertGraph(sortedItems, pertRelations),
@@ -720,6 +765,10 @@ export function PertView({
         svgRef={pertSvgRef}
         activeRelFilters={activeRelFilters}
         onToggleRelFilter={toggleRelFilter}
+        pertRankSort={pertRankSort}
+        onTogglePertRankSort={() => setPertRankSort(v => !v)}
+        totalItemCount={items.length}
+        filteredItemCount={filteredRelItemIds ? sortedItems.length : undefined}
         onNewItem={onNewItem}
         canEdit={canEdit}
         onStartTour={onStartTour}
