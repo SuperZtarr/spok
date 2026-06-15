@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Plus, CalendarClock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Plus } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
-import { DEFAULT_REFERENTIELS, isItemDeferred } from '@spok/shared';
+import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
@@ -89,8 +89,7 @@ treeSort: treeSortProp,
   const { collapsedIds, setCollapsedIds, toggleCollapse: toggleCollapseFromHook } = useCollapsedIds(spaceId ?? '');
   const [compactMode, setCompactMode] = useState(false);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
-  const [hideDeferred, setHideDeferred] = useState(false);
-  const [reordering, setReordering] = useState(false);
+const [reordering, setReordering] = useState(false);
   const [editingRelation, setEditingRelation] = useState<{
     relationId: string; fromItemId: string; toItemId: string;
     type: string; label: string; sourceName: string; targetName: string;
@@ -190,10 +189,7 @@ treeSort: treeSortProp,
 
   const [localTreeSort] = useState<TreeSort>('manual');
   const treeSort = treeSortProp ?? localTreeSort;
-  const visibleItems = useMemo(() => {
-    if (!hideDeferred) return items;
-    return items.filter(item => !isItemDeferred(item, statuses));
-  }, [items, hideDeferred, statuses]);
+  const visibleItems = useMemo(() => items, [items]);
   const sortedItems = useMemo(() => {
     const sorted = applyTreeSort(visibleItems, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
@@ -877,15 +873,7 @@ treeSort: treeSortProp,
             onToggle={() => collapsedIds.size > 0 ? setCollapsedIds(new Set()) : setCollapsedIds(new Set(parentIds))}
           />
         )}
-        <Button
-          variant={hideDeferred ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setHideDeferred(prev => !prev)}
-          title={hideDeferred ? 'Afficher les éléments planifiés à long terme' : 'Masquer les éléments planifiés à long terme'}
-        >
-          <CalendarClock className="w-4 h-4" />
-        </Button>
-        <Button
+<Button
           variant={showCriticalPath ? 'default' : 'outline'}
           size="sm"
           onClick={() => setShowCriticalPath(prev => !prev)}

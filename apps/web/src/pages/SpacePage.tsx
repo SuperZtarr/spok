@@ -19,13 +19,11 @@ import {
   FolderInput,
   AlertTriangle,
   Loader2,
-  CalendarClock,
-  EyeOff,
   ChevronsUpDown,
 } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
-import { buildStatusColorMap, buildStatusLabelMap, isItemDeferred } from '@spok/shared';
+import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
 import { useViewOnboarding } from '../hooks/useOnboarding';
 import { useSpaces } from '../hooks/useSpaces';
@@ -123,8 +121,7 @@ export function SpacePage() {
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDeferred, setShowDeferred] = useState(false);
-  const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
+const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const { includeChildrenSpaceIds } = useSpaceStore();
 
 
@@ -299,26 +296,16 @@ export function SpacePage() {
   const allItems = useMemo(() => allItemsData?.data || itemsData?.data || [], [allItemsData?.data, itemsData?.data]);
 
   // --- Deferred items (statut planifié + startDate > 30j) ---
-  const statuses = useMemo(() => referentiels?.statuses || [], [referentiels]);
-
-  const deferredItems = useMemo(() => {
-    const all = allItemsData?.data || itemsData?.data || [];
-    return all.filter((item: Item) => isItemDeferred(item, statuses));
-  }, [allItemsData?.data, itemsData?.data, statuses]);
-
-  const deferredIds = useMemo(() => new Set(deferredItems.map((i: Item) => i.id)), [deferredItems]);
-
   // --- Search ---
-  const filterBySearch = useCallback((items: Item[] | undefined, skipDeferredFilter = false): Item[] => {
+  const filterBySearch = useCallback((items: Item[] | undefined): Item[] => {
     if (!items) return [];
-    const visible = skipDeferredFilter || showDeferred ? items : items.filter((item: Item) => !deferredIds.has(item.id));
-    if (!searchQuery.trim() || isHighlightMode) return visible;
+    if (!searchQuery.trim() || isHighlightMode) return items;
     const query = searchQuery.toLowerCase();
-    return visible.filter((item) =>
+    return items.filter((item) =>
       item.title.toLowerCase().includes(query) ||
       stripMarkup(item.description || '').toLowerCase().includes(query)
     );
-  }, [searchQuery, isHighlightMode, showDeferred, deferredIds]);
+  }, [searchQuery, isHighlightMode]);
 
 
   const searchMatchIds = useMemo((): Set<string> | undefined => {
@@ -596,25 +583,6 @@ export function SpacePage() {
           spaceRole={space?.role}
         />
 
-        {/* Deferred items banner */}
-        {deferredItems.length > 0 && (
-          <button
-            onClick={() => setShowDeferred(v => !v)}
-            className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md mb-1 border transition-colors ${
-              showDeferred
-                ? 'bg-sky-100 border-sky-300 text-sky-800'
-                : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            {showDeferred ? <EyeOff className="w-3.5 h-3.5 flex-shrink-0" /> : <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" />}
-            <span>
-              {showDeferred
-                ? `Masquer les ${deferredItems.length} élément${deferredItems.length > 1 ? 's' : ''} planifiés à long terme`
-                : `${deferredItems.length} élément${deferredItems.length > 1 ? 's' : ''} planifié${deferredItems.length > 1 ? 's' : ''} à long terme (démarrage dans plus de 30 jours) — cliquer pour afficher`}
-            </span>
-          </button>
-        )}
-
         {/* Items / Views */}
         <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'members' || viewMode === 'types' || viewMode === 'priority' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'pert' || viewMode === 'text' || viewMode === 'thread' || viewMode === 'tree' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
@@ -862,7 +830,7 @@ export function SpacePage() {
             />
           ) : viewMode === 'timeline' ? (
             <TimelineView
-              items={filterBySearch(allItemsData?.data, true)}
+              items={filterBySearch(allItemsData?.data)}
               relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
               currentSpaceId={spaceId}
               spaceId={spaceId}

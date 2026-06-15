@@ -228,28 +228,37 @@ export function PertView({
 
   const [localTreeSort] = useState<TreeSort>('manual');
   const treeSort = treeSortProp ?? localTreeSort;
-  const [showOnlyBlocking, setShowOnlyBlocking] = useState(false);
+  const [activeRelFilters, setActiveRelFilters] = useState<Set<string>>(new Set());
 
   const pertRelations = useMemo(
     () => relations.filter(r => r.type === 'blocks' || r.type === 'implements' || r.type === 'relates'),
     [relations]
   );
 
-  // IDs des items impliqués dans une relation bloquante
-  const blockingItemIds = useMemo(() => {
-    const blockingRels = relations.filter(r => r.type === 'blocks');
+  // IDs des items impliqués dans les types de relation actifs
+  const filteredRelItemIds = useMemo(() => {
+    if (activeRelFilters.size === 0) return null;
     const ids = new Set<string>();
-    for (const r of blockingRels) {
-      ids.add(r.fromItemId);
-      ids.add(r.toItemId);
+    for (const r of relations) {
+      if (activeRelFilters.has(r.type)) {
+        ids.add(r.fromItemId);
+        ids.add(r.toItemId);
+      }
     }
     return ids;
-  }, [relations]);
+  }, [relations, activeRelFilters]);
 
+  const toggleRelFilter = (type: string) => {
+    setActiveRelFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type); else next.add(type);
+      return next;
+    });
+  };
 
   const sortedItems = useMemo(() => {
-    const filtered = showOnlyBlocking
-      ? items.filter(i => blockingItemIds.has(i.id))
+    const filtered = filteredRelItemIds
+      ? items.filter(i => filteredRelItemIds.has(i.id))
       : items;
     const sorted = applyTreeSort(filtered, treeSort);
     if (!portalGroups?.length || !currentSpaceId) return sorted;
@@ -272,7 +281,7 @@ export function PertView({
       ...portalOrder.flatMap(sid => bySpace.get(sid) ?? []),
     ];
     return [...orderedRoots, ...children];
-  }, [items, treeSort, showOnlyBlocking, blockingItemIds, portalGroups, currentSpaceId]);
+  }, [items, treeSort, filteredRelItemIds, portalGroups, currentSpaceId]);
 
   const { predecessors, successors } = useMemo(
     () => buildPertGraph(sortedItems, pertRelations),
@@ -709,8 +718,8 @@ export function PertView({
         items={items}
         spaceName={spaceName}
         svgRef={pertSvgRef}
-        showOnlyBlocking={showOnlyBlocking}
-        onToggleBlocking={() => setShowOnlyBlocking(v => !v)}
+        activeRelFilters={activeRelFilters}
+        onToggleRelFilter={toggleRelFilter}
         onNewItem={onNewItem}
         canEdit={canEdit}
         onStartTour={onStartTour}

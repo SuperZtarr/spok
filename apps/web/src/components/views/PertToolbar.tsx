@@ -1,4 +1,4 @@
-import { Minus, Plus, ShieldAlert, Info } from 'lucide-react';
+import { Minus, Plus, Info } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -97,8 +97,8 @@ interface PertToolbarProps {
   svgRef: React.RefObject<SVGSVGElement>;
   onNewItem?: () => void;
   canEdit?: boolean;
-  showOnlyBlocking?: boolean;
-  onToggleBlocking?: () => void;
+  activeRelFilters?: Set<string>;
+  onToggleRelFilter?: (type: string) => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
@@ -108,7 +108,7 @@ export function PertToolbar({
   hasParents, hasCollapsed, onCollapseAll, onExpandAll,
   items, spaceName, svgRef,
   onNewItem, canEdit,
-  showOnlyBlocking = false, onToggleBlocking,
+  activeRelFilters = new Set(), onToggleRelFilter,
   onStartTour, pulseHelp,
 }: PertToolbarProps) {
   const filename = buildExportFilename(spaceName, 'pert');
@@ -122,15 +122,27 @@ export function PertToolbar({
         </button>
       )}
       <div className="h-4 w-px bg-border mx-1" />
-      {onToggleBlocking && (
-        <button
-          onClick={onToggleBlocking}
-          className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showOnlyBlocking ? 'bg-orange-100 text-orange-700 border border-orange-300' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-          title={showOnlyBlocking ? 'Afficher tous les items' : 'Afficher uniquement les items avec liens bloquants'}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Bloquants</span>
-        </button>
+      {onToggleRelFilter && (
+        <>
+          {[
+            { type: 'blocks',     label: 'Bloque',   activeClass: 'bg-red-100 text-red-700 border border-red-300',   dot: 'bg-red-500' },
+            { type: 'implements', label: 'Permet',   activeClass: 'bg-green-100 text-green-700 border border-green-300', dot: 'bg-green-500' },
+            { type: 'relates',    label: 'Lié à',    activeClass: 'bg-blue-100 text-blue-700 border border-blue-300',  dot: 'bg-blue-500' },
+          ].map(({ type, label, activeClass, dot }) => {
+            const active = activeRelFilters.has(type);
+            return (
+              <button
+                key={type}
+                onClick={() => onToggleRelFilter(type)}
+                className={`inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs font-medium transition-colors ${active ? activeClass : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                title={active ? `Retirer le filtre "${label}"` : `Filtrer les items "${label}"`}
+              >
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            );
+          })}
+        </>
       )}
       {hasParents && (
         <CollapseToggleButton
