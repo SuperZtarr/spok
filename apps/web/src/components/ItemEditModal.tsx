@@ -1145,11 +1145,18 @@ export function ItemEditModal({
               {!isForumMode && <div data-tour="item-dates" className="flex gap-4 items-start">
                 {canEdit && (
                   <div className="flex-shrink-0 w-36 space-y-2">
-                    <button type="button"
-                      onClick={() => setAllDay(v => !v)}
-                      className={`w-full px-2 py-1 text-xs rounded-md border transition-all ${allDay ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-muted/50'}`}>
-                      Journée entière
-                    </button>
+                    <div className="flex rounded-md border border-border overflow-hidden text-xs">
+                      <button type="button"
+                        onClick={() => setAllDay(true)}
+                        className={`flex-1 px-2 py-1 transition-all ${allDay ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50'}`}>
+                        Jours pleins
+                      </button>
+                      <button type="button"
+                        onClick={() => setAllDay(false)}
+                        className={`flex-1 px-2 py-1 transition-all border-l border-border ${!allDay ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50'}`}>
+                        Heures
+                      </button>
+                    </div>
                     {!allDay && (
                       <TimeRangePicker
                         startTime={startDate ? startDate.slice(11, 16) : null}
