@@ -4,19 +4,16 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-06-14
+## EN COURS — 2026-06-17
 
-### Modes d'interface + refactor ItemEditModal
-- `interfaceMode.ts` (store Zustand) : modes Forum/Projet/Exploration/Tous, persisté localStorage
-- `Layout.tsx` : sélecteur de mode dans le header (à gauche de la recherche)
-- `SpaceToolbar.tsx` : filtres vues par mode (MODE_ALLOWED + MODE_EXCLUDED par table)
-- `GlobalNavBar.tsx` : filtres vues globales (MODE_GLOBAL_EXCLUDED), section Divers à droite, AdminModeToggle
-- `MainMenu.tsx` : supprimé (inutilisé depuis 1-2 mois)
-- `ItemEditModal.tsx` : refactor complet (conditions par type supprimées), TimeRangePicker restauré, toggle "Journée entière", champs cachés en mode Forum
+### Gantt — scrollbar navigation + positionnement aujourd'hui
+- `TimelineView.tsx` + `index.css` : barre de défilement horizontale en bas (±3 ans, thumb proportionnel au zoom)
+- `TimelineView.tsx` : aujourd'hui positionné au 1/4 gauche (init + bouton Aujourd'hui)
 
 ### À faire ensuite
 - Affiner specs mode Forum/Projet/Exploration (étapes 3-5)
 - Didacticiels : thread (pas de tour), text (tour vide)
+- Gantt : root drop zone + grip toujours visible (universalisation treeview)
 
 ## HISTORIQUE — 2026-06-07
 

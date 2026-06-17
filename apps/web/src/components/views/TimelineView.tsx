@@ -83,9 +83,25 @@ treeSort: treeSortProp,
   const containerRef = useRef<HTMLDivElement>(null);
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month');
-  const [centerDate, setCenterDate] = useState<Date>(() => startOfDay(new Date()));
+  const initialOffsetApplied = useRef(false);
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(() => {
+    const saved = spaceId ? sessionStorage.getItem(`gantt-zoom-${spaceId}`) : null;
+    return (saved as ZoomLevel | null) ?? 'month';
+  });
+  const hasSavedCenter = spaceId ? !!sessionStorage.getItem(`gantt-center-${spaceId}`) : false;
+  const [centerDate, setCenterDate] = useState<Date>(() => {
+    const saved = spaceId ? sessionStorage.getItem(`gantt-center-${spaceId}`) : null;
+    return saved ? startOfDay(new Date(saved)) : startOfDay(new Date());
+  });
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  useEffect(() => {
+    if (spaceId) sessionStorage.setItem(`gantt-zoom-${spaceId}`, zoomLevel);
+  }, [spaceId, zoomLevel]);
+
+  useEffect(() => {
+    if (spaceId) sessionStorage.setItem(`gantt-center-${spaceId}`, centerDate.toISOString());
+  }, [spaceId, centerDate]);
+
   const { collapsedIds, setCollapsedIds, toggleCollapse: toggleCollapseFromHook } = useCollapsedIds(spaceId ?? '');
   const [compactMode, setCompactMode] = useState(false);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
@@ -221,14 +237,17 @@ const [reordering, setReordering] = useState(false);
   }, [sortedItems, portalGroups, currentSpaceId]);
 
   const tree = useMemo(() => {
-    const rawTree = buildTree(treeItems);
+    const sortFn = treeSort !== 'manual'
+      ? (a: TreeItem, b: TreeItem) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' })
+      : undefined;
+    const rawTree = buildTree(treeItems, sortFn);
     if (!portalGroups?.length || !currentSpaceId) return rawTree;
     return [...rawTree].sort((a, b) => {
       const ai = spaceOrder.indexOf(a.spaceId ?? currentSpaceId);
       const bi = spaceOrder.indexOf(b.spaceId ?? currentSpaceId);
       return ai - bi;
     });
-  }, [treeItems, portalGroups, currentSpaceId, spaceOrder]);
+  }, [treeItems, treeSort, portalGroups, currentSpaceId, spaceOrder]);
   const flatItems = useMemo(() => flattenTree(tree, collapsedIds, compactMode), [tree, collapsedIds, compactMode]);
 
   type FlatRow =
@@ -442,7 +461,17 @@ const [reordering, setReordering] = useState(false);
   // Navigation — déplace centerDate, visibleStartDate se recalcule
   const goToPrevious = () => setCenterDate(prev => addDays(prev, -zoomConfig.navStep));
   const goToNext = () => setCenterDate(prev => addDays(prev, zoomConfig.navStep));
-  const goToToday = () => setCenterDate(startOfDay(new Date()));
+
+  // Scrollbar horizontale — plage ±3 ans autour d'aujourd'hui
+  const SCROLL_RANGE_DAYS = 365 * 6;
+  const scrollRangeStart = useMemo(() => startOfDay(addDays(new Date(), -SCROLL_RANGE_DAYS / 2)), []);
+  const scrollValue = differenceInDays(centerDate, scrollRangeStart);
+  const handleScrollbarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCenterDate(addDays(scrollRangeStart, Number(e.target.value)));
+  };
+  // Largeur du thumb proportionnelle à la fenêtre visible vs plage totale
+  const thumbPercent = Math.max(2, Math.round((visibleDays / SCROLL_RANGE_DAYS) * 100));
+  const goToToday = () => setCenterDate(startOfDay(addDays(new Date(), Math.floor(visibleDays / 4))));
 
   // Zoom controls
   const zoomIn = () => {
@@ -736,7 +765,14 @@ const [reordering, setReordering] = useState(false);
     const container = containerRef.current;
     if (!container) return;
     const observer = new ResizeObserver(entries => {
-      setContainerWidth(entries[0].contentRect.width);
+      const w = entries[0].contentRect.width;
+      setContainerWidth(w);
+      // Au premier rendu sans valeur sauvegardée : positionne aujourd'hui au 1/4 gauche
+      if (!initialOffsetApplied.current && !hasSavedCenter && w > LABEL_WIDTH) {
+        initialOffsetApplied.current = true;
+        const days = Math.max(7, Math.floor((w - LABEL_WIDTH) / ZOOM_CONFIGS[zoomLevel].dayWidth));
+        setCenterDate(startOfDay(addDays(new Date(), Math.floor(days / 4))));
+      }
     });
     observer.observe(container);
     return () => observer.disconnect();
@@ -1406,6 +1442,20 @@ const [reordering, setReordering] = useState(false);
             </DndContext>
           </div>)}
         </div>
+      </div>
+
+      {/* Scrollbar horizontale de navigation temporelle */}
+      <div className="flex-shrink-0 px-4 py-1.5 border-t border-border bg-background">
+        <input
+          type="range"
+          min={0}
+          max={SCROLL_RANGE_DAYS}
+          value={scrollValue}
+          onChange={handleScrollbarChange}
+          className="gantt-scrollbar"
+          style={{ '--thumb-width': `${thumbPercent}%` } as React.CSSProperties}
+          aria-label="Navigation temporelle"
+        />
       </div>
 
       {/* Relation type selection modal */}
