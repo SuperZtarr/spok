@@ -298,27 +298,22 @@ export function ItemEditModal({
     setAssignedToId(item.assignedToId || '');
     setType(item.type);
     setDiagramXml((item.content as Record<string, unknown>)?.xml as string || '');
-    // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+    // Format date for datetime-local input (YYYY-MM-DDTHH:mm) — en heure locale
     if (item.dueDate) {
-      const date = new Date(item.dueDate);
-      const formatted = date.toISOString().slice(0, 16);
-      setDueDate(formatted);
+      setDueDate(toDatetimeLocal(new Date(item.dueDate)));
     } else {
       setDueDate('');
     }
     if (item.startDate) {
       const date = new Date(item.startDate);
-      const formatted = date.toISOString().slice(0, 16);
-      setStartDate(formatted);
-      setAllDay(date.getUTCHours() === 0 && date.getUTCMinutes() === 0);
+      setStartDate(toDatetimeLocal(date));
+      setAllDay(date.getHours() === 0 && date.getMinutes() === 0);
     } else {
       setStartDate('');
       setAllDay(false);
     }
     if (item.endDate) {
-      const date = new Date(item.endDate);
-      const formatted = date.toISOString().slice(0, 16);
-      setEndDate(formatted);
+      setEndDate(toDatetimeLocal(new Date(item.endDate)));
     } else {
       setEndDate('');
     }
@@ -1142,87 +1137,93 @@ export function ItemEditModal({
               </div>}
 
               {/* Dates — masqué en mode Forum */}
-              {!isForumMode && <div data-tour="item-dates" className="flex gap-4 items-start">
+              {!isForumMode && <div data-tour="item-dates" className="space-y-3">
+                {/* Toggle Jours pleins / Heures — pleine largeur */}
                 {canEdit && (
-                  <div className="flex-shrink-0 w-36 space-y-2">
+                  <div className="flex items-center gap-3">
                     <div className="flex rounded-md border border-border overflow-hidden text-xs">
                       <button type="button"
                         onClick={() => setAllDay(true)}
-                        className={`flex-1 px-2 py-1 transition-all ${allDay ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50'}`}>
+                        className={`px-3 py-1 transition-all ${allDay ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50'}`}>
                         Jours pleins
                       </button>
                       <button type="button"
                         onClick={() => setAllDay(false)}
-                        className={`flex-1 px-2 py-1 transition-all border-l border-border ${!allDay ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50'}`}>
+                        className={`px-3 py-1 transition-all border-l border-border ${!allDay ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50'}`}>
                         Heures
                       </button>
                     </div>
-                    {!allDay && (
+                  </div>
+                )}
+                {/* Champs de dates + sélecteur heures à droite */}
+                <div className="flex gap-4 items-start">
+                  <div className="flex-1 min-w-0 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Début</label>
+                    {canEdit ? (
+                      <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={!allDay} />
+                    ) : (
+                      <p className="text-sm">{startDate ? (allDay ? formatDate(startDate) : formatDateTime(startDate)) : <span className="text-muted-foreground">—</span>}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Fin</label>
+                    {canEdit ? (
+                      <div className="space-y-2">
+                        {startDate && (
+                          <div className="hidden sm:flex flex-wrap gap-1.5">
+                            {MEETING_DURATIONS.map((d) => {
+                              const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
+                              return (
+                                <button key={d.ms} type="button"
+                                  onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
+                                  className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                  {d.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={!allDay} minDate={startDate} />
+                      </div>
+                    ) : (
+                      <p className="text-sm">{endDate ? (allDay ? formatDate(endDate) : formatDateTime(endDate)) : <span className="text-muted-foreground">—</span>}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Échéance</label>
+                    {canEdit ? (
+                      <div className="space-y-2">
+                        {startDate && (
+                          <div className="hidden sm:flex flex-wrap gap-1.5">
+                            {DUE_DATE_DURATIONS.map((d) => {
+                              const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
+                              const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
+                              return (
+                                <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
+                                  className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                                  {d.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
+                      </div>
+                    ) : (
+                      <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
+                    )}
+                  </div>
+                  </div>
+                  {canEdit && !allDay && (
+                    <div className="flex-shrink-0 w-40">
                       <TimeRangePicker
                         startTime={startDate ? startDate.slice(11, 16) : null}
                         endTime={endDate ? endDate.slice(11, 16) : null}
                         onChange={handleTimeRangeChange}
                       />
-                    )}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Début</label>
-                  {canEdit ? (
-                    <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={!allDay} />
-                  ) : (
-                    <p className="text-sm">{startDate ? (allDay ? formatDate(startDate) : formatDateTime(startDate)) : <span className="text-muted-foreground">—</span>}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Fin</label>
-                  {canEdit ? (
-                    <div className="space-y-2">
-                      {startDate && (
-                        <div className="hidden sm:flex flex-wrap gap-1.5">
-                          {MEETING_DURATIONS.map((d) => {
-                            const isSelected = startDate && endDate && Math.abs(diffMs(startDate, endDate) - d.ms) < 60000;
-                            return (
-                              <button key={d.ms} type="button"
-                                onClick={() => setEndDate(toDatetimeLocal(new Date(fromDatetimeLocal(startDate).getTime() + d.ms)))}
-                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                {d.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <DateTimeField value={endDate} onChange={handleEndDateChange} showTime={!allDay} minDate={startDate} />
                     </div>
-                  ) : (
-                    <p className="text-sm">{endDate ? (allDay ? formatDate(endDate) : formatDateTime(endDate)) : <span className="text-muted-foreground">—</span>}</p>
                   )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Échéance</label>
-                  {canEdit ? (
-                    <div className="space-y-2">
-                      {startDate && (
-                        <div className="hidden sm:flex flex-wrap gap-1.5">
-                          {DUE_DATE_DURATIONS.map((d) => {
-                            const targetDate = new Date(fromDatetimeLocal(startDate).getTime() + d.ms);
-                            const isSelected = dueDate && Math.abs(fromDatetimeLocal(dueDate).getTime() - targetDate.getTime()) < 60000;
-                            return (
-                              <button key={d.ms} type="button" onClick={() => setDueDate(toDatetimeLocal(targetDate))}
-                                className={`px-2.5 py-1 text-xs rounded-md border transition-all ${isSelected ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
-                                {d.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <DateTimeField value={dueDate} onChange={setDueDate} showTime={false} minDate={startDate} />
-                    </div>
-                  ) : (
-                    <p className="text-sm">{dueDate ? formatDate(dueDate) : <span className="text-muted-foreground">—</span>}</p>
-                  )}
-                </div>
                 </div>
               </div>}
 

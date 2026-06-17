@@ -197,13 +197,13 @@ export function DateTimeField({
           </span>
         </button>
 
-        {/* Time selectors */}
-        {showTime && currentDate && (
+        {/* Time selectors — toujours visibles en mode showTime */}
+        {showTime && (
           <div className="flex items-center gap-1">
             <select
-              value={currentDate.getHours()}
+              value={currentDate ? currentDate.getHours() : 0}
               onChange={(e) => handleHourChange(Number(e.target.value))}
-              disabled={disabled}
+              disabled={disabled || !currentDate}
               className="h-9 px-2 text-sm rounded-md border border-input bg-transparent shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 appearance-none text-center w-14"
             >
               {Array.from({ length: 24 }, (_, i) => (
@@ -212,9 +212,9 @@ export function DateTimeField({
             </select>
             <span className="text-muted-foreground font-medium">:</span>
             <select
-              value={currentDate.getMinutes()}
+              value={currentDate ? currentDate.getMinutes() : 0}
               onChange={(e) => handleMinuteChange(Number(e.target.value))}
-              disabled={disabled}
+              disabled={disabled || !currentDate}
               className="h-9 px-2 text-sm rounded-md border border-input bg-transparent shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 appearance-none text-center w-14"
             >
               {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
