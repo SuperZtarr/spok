@@ -1,3 +1,10 @@
+/**
+ * DateTimeField — Sélecteur de date (et heure optionnelle) avec calendrier popover.
+ * Props : value (string "YYYY-MM-DDTHH:mm" en heure locale), onChange, showTime, minDate, disabled.
+ * showTime=true : affiche toujours les selects H:MM (grisés si pas de date). Ne jamais conditionner sur currentDate.
+ * Le calendrier s'ouvre via createPortal pour échapper aux overflow/z-index de la modale parente.
+ * Utilise toDatetimeLocal/fromDatetimeLocal (heure locale) — ne pas utiliser toISOString() ici.
+ */
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';

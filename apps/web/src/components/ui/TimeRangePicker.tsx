@@ -1,3 +1,10 @@
+/**
+ * TimeRangePicker — Sélecteur de plage horaire par glisser-déposer sur une frise verticale (7h–22h).
+ * Props : startTime/endTime ("HH:mm"), onChange(startTime, endTime).
+ * Utilisé dans ItemEditModal en mode "Heures" pour définir l'heure de début et fin d'un item.
+ * La largeur est contrôlée par le conteneur parent (w-40 dans ItemEditModal).
+ * Snap à 15 min, durée min 15 min. Clic sur la frise crée un créneau d'1h centré sur le clic.
+ */
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 const MIN_HOUR    = 7;

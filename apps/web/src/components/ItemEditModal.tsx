@@ -1,3 +1,12 @@
+/**
+ * ItemEditModal — Modale d'édition complète d'un item.
+ * Affiche et permet de modifier tous les champs : titre, type, description, statut, priorité,
+ * assignation, tags, dates (début/fin/échéance), URL, relations, contributions (thread).
+ * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state.
+ * Les dates sont lues/écrites en heure locale via toDatetimeLocal() — ne jamais utiliser toISOString() pour afficher.
+ * Modes d'interface (Forum/Projet/Exploration/Tous) masquent certaines sections via isForumMode etc.
+ * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
+ */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

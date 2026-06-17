@@ -1,3 +1,12 @@
+/**
+ * TimelineView — Vue Gantt interactive.
+ * Affiche les items avec dates sous forme de barres horizontales sur une frise temporelle.
+ * Gère : zoom (jour/semaine/mois/trimestre/année), navigation centerDate, DnD repositionnement dates,
+ * DnD réordonnancement arborescence panneau gauche, création de relations par glisser-déposer,
+ * chemin critique, export, scrollbar de navigation temporelle en bas de vue.
+ * Props clés : items, relations, onUpdateDates, onCreateRelation, onDeleteRelation, spaceId.
+ * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
+ */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
 import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Plus } from 'lucide-react';
@@ -105,7 +114,7 @@ treeSort: treeSortProp,
   const { collapsedIds, setCollapsedIds, toggleCollapse: toggleCollapseFromHook } = useCollapsedIds(spaceId ?? '');
   const [compactMode, setCompactMode] = useState(false);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
-const [reordering, setReordering] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [editingRelation, setEditingRelation] = useState<{
     relationId: string; fromItemId: string; toItemId: string;
     type: string; label: string; sourceName: string; targetName: string;
