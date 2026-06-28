@@ -31,9 +31,8 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
 3. **Ouvrir le navigateur avec le plugin Chrome** :
    - Vérifier si Chrome est déjà ouvert : `mcp__Claude_in_Chrome__list_connected_browsers`
    - Si aucun browser connecté : `Start-Process "chrome.exe"` puis attendre quelques secondes
-   - Appeler `mcp__Claude_in_Chrome__tabs_context_mcp` **sans** `createIfEmpty` pour récupérer les onglets existants
-   - Si un onglet existe : naviguer vers `http://localhost:3000` via `mcp__Claude_in_Chrome__navigate`
-   - Si aucun onglet disponible : créer un onglet via `mcp__Claude_in_Chrome__tabs_create_mcp` puis naviguer — **ne jamais utiliser `createIfEmpty: true`** (crée un nouveau groupe "Démarre" à chaque session)
+   - Naviguer directement vers `http://localhost:3000` via `mcp__Claude_in_Chrome__navigate` — c'est suffisant
+   - **INTERDIT** : `tabs_context_mcp` avec `createIfEmpty`, `tabs_create_mcp` avec un groupe, ou tout paramètre qui crée un groupe Chrome — chaque appel crée un nouveau groupe "Démarre" qui s'accumule à l'infini
 
 4. **Lire le contexte de session** (en parallèle) :
    - `docs/session-journal.md` — section EN COURS
@@ -52,6 +51,18 @@ git -C "C:/_dev/spok" branch -d $BRANCH
 ```
 
 Les changements doivent avoir été faits directement sur master — il n'y a donc rien à merger.
+
+## Règle de documentation — obligatoire avant tout code
+
+**Avant de modifier ou créer un fichier source** (`.ts`, `.tsx`, route API, hook, store, utilitaire) :
+
+1. Invoquer le skill `spok-doc` : `Skill({ skill: "spok-doc" })`
+2. Après avoir codé : ajouter un bloc `/* ... */` en tête de chaque fichier modifié (avant les imports) :
+   - Raison d'être du fichier
+   - Props/params clés
+   - Règles d'usage
+
+Ne pas attendre que l'utilisateur le demande. C'est non négociable, au même titre que le typecheck.
 
 ## Points d'attention
 

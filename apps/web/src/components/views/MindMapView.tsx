@@ -1,3 +1,12 @@
+/**
+ * Vue Carte mentale (React Flow + d3 radial tree).
+ * Invariants critiques : savedPositions.current persiste les positions manuelles entre
+ * recalculs ; reorganizeRef.current capture le closure courant (pattern obligatoire).
+ * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
+ * pour éviter qu'un collapse enfant ne décale le parent.
+ * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
+ * les ajouter/retirer sans déclencher de recalcul de layout.
+ */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -21,7 +30,7 @@ import type { ViewMode } from '../../stores/viewMode';
 import { ViewSelectorBar } from '../ui/ViewSelectorBar';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Plus } from 'lucide-react';
+import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Plus, Share2 } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { toPng } from 'html-to-image';
 import { getViewportForBounds } from '@xyflow/react';
@@ -176,6 +185,10 @@ function MindMapViewInner({
 
   // Pinned node IDs (protected from reorganization)
   const pinnedIds = useRef<Set<string>>(new Set());
+
+  // Show/hide relation edges (cross-item arrows) without recalculating layout
+  const [showRelations, setShowRelations] = useState(true);
+  const lastRelationEdgesRef = useRef<Edge[]>([]);
 
   // Load saved positions from localStorage (clear if no data for this space)
   useEffect(() => {
@@ -415,6 +428,7 @@ function MindMapViewInner({
       const parentPosRaw = absPositions.get(parentId);
       if (!parentPosRaw) return;
       parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
+      savedPositions.current[parentId] = parentPos;
       const spacePos = absPositions.get('__space__') || { x: 0, y: 0 };
       baseAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x);
     } else {
@@ -433,6 +447,7 @@ function MindMapViewInner({
       const parentPosRaw = absPositions.get(parentId);
       if (!parentPosRaw) return;
       parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
+      savedPositions.current[parentId] = parentPos;
       const parentItem = items.find(i => i.id === parentId);
       const grandParentId = parentItem?.parentId || '__space__';
       const portalNodeId = parentItem?.spaceId && parentItem.spaceId !== spaceId
@@ -620,11 +635,22 @@ function MindMapViewInner({
 
     const allNodes = [...positionedNodes, ...portalNodes];
     const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
-    const allEdges = recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], edgePosMap);
+    const currentRelationEdges = [...relationEdges, ...portalRelationEdges];
+    lastRelationEdgesRef.current = recalculateEdgeHandles(currentRelationEdges, edgePosMap);
+    const allEdges = recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], edgePosMap);
     setNodes(allNodes);
     setEdges(allEdges);
     if (!userHasInteracted.current) setTimeout(() => fitView({ padding: 0.1 }), 50);
   }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, structureSignature, depsSignature]);
+
+  // Toggle relation edges without full layout recalculation
+  useEffect(() => {
+    setEdges(currentEdges => {
+      const withoutRelations = currentEdges.filter(e => !e.data?.relationId);
+      if (!showRelations) return withoutRelations;
+      return [...withoutRelations, ...lastRelationEdgesRef.current];
+    });
+  }, [showRelations, setEdges]);
 
   // Update drop target highlight on nodes
   useEffect(() => {
@@ -1028,10 +1054,12 @@ function MindMapViewInner({
 
     const allNodes = [...repositionedNodes, ...portalNodes];
     const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
+    const currentRelationEdges = [...relationEdges, ...portalRelationEdges];
+    lastRelationEdgesRef.current = recalculateEdgeHandles(currentRelationEdges, resetEdgePosMap);
     setNodes(allNodes);
-    setEdges(recalculateEdgeHandles([...newEdges, ...relationEdges, ...portalRelationEdges, ...portalEdges], resetEdgePosMap));
+    setEdges(recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], resetEdgePosMap));
     setTimeout(() => fitView({ padding: 0.1 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, savePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, fullTree]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, savePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, fullTree, showRelations]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
@@ -1163,6 +1191,14 @@ function MindMapViewInner({
         >
           <Maximize2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Tout voir</span>
+        </button>
+        <button
+          onClick={() => setShowRelations(v => !v)}
+          className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showRelations ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+          title={showRelations ? 'Masquer les relations' : 'Afficher les relations'}
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Relations</span>
         </button>
         <div className="flex-1" />
         <div className="relative">

@@ -1,3 +1,8 @@
+/**
+ * Page principale d'un espace (vues : liste, kanban, timeline, mindmap, etc.).
+ * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
+ * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
+ */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -109,7 +114,13 @@ export function SpacePage() {
   }, [spaceId, expandedItems]);
   const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [treeSort, setTreeSort] = useState<TreeSort>('manual');
+  const [treeSort, setTreeSort] = useState<TreeSort>(() => {
+    const saved = spaceId ? sessionStorage.getItem(`space-treeSort-${spaceId}`) : null;
+    return (saved as TreeSort | null) ?? 'manual';
+  });
+  useEffect(() => {
+    if (spaceId) sessionStorage.setItem(`space-treeSort-${spaceId}`, treeSort);
+  }, [spaceId, treeSort]);
   const [highlightFilter, setHighlightFilter] = useState<ItemType | 'ALL'>('ALL');
   const [highlightStatus, setHighlightStatus] = useState<string>('ALL');
   const [highlightSearch, setHighlightSearch] = useState('');
@@ -347,7 +358,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const [overId, setOverId] = useState<string | null>(null);
   const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
-  const [treeViewSort] = useState<TreeSort>('manual');
   const pointerYRef = useRef(0);
 
   useEffect(() => {
@@ -538,6 +548,17 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
       sessionStorage.removeItem('spok_current_item');
     }
   }, [editingItemId, spaceId]);
+
+  // Continuous save of current location for session-expiry resume
+  useEffect(() => {
+    if (!spaceId || !space) return;
+    const item = editingItemId ? allItems.find((i: { id: string; title: string }) => i.id === editingItemId) : null;
+    const url = editingItemId
+      ? `${window.location.pathname}?item=${editingItemId}`
+      : window.location.pathname;
+    const label = item ? item.title : (space.name || 'Espace');
+    sessionStorage.setItem('spok_last_location', JSON.stringify({ url, label }));
+  }, [editingItemId, spaceId, space, allItems]);
 
   // --- Render ---
   // Overview mode — full page, no toolbar
@@ -1488,7 +1509,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             >
               <div className="flex-1 overflow-auto">
                 <div className="py-2">
-                  {filterBySearch(applyTreeSort(rootItems, treeViewSort)).map((item: Item & { childCount?: number }, index: number) => (
+                  {filterBySearch(applyTreeSort(rootItems, treeSort)).map((item: Item & { childCount?: number }, index: number) => (
                     <TreeItem
                       key={item.id}
                       item={item}

@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+/**
+ * Page de connexion.
+ * Après login réussi : si `spok_session_expired` est présent (expiration forcée),
+ * promeut `spok_last_location` en `spok_resume` pour que GlobalNavBar affiche
+ * le bouton "Retourner à". Ne redirige jamais automatiquement — toujours vers `/`.
+ */
+import { useState } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { RotateCcw } from 'lucide-react';
 import { authApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -19,26 +24,23 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [errorDetails, setErrorDetails] = useState<unknown>(null);
   const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true');
-  const [returnToPath, setReturnToPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    const returnTo = sessionStorage.getItem('spok_returnTo');
-    if (returnTo) setReturnToPath(returnTo);
-  }, []);
-
   const loginMutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (data) => {
       queryClient.clear();
+      // If session expired (not voluntary logout), promote last location to resume entry
+      if (sessionStorage.getItem('spok_session_expired')) {
+        const lastLocation = sessionStorage.getItem('spok_last_location');
+        if (lastLocation) sessionStorage.setItem('spok_resume', lastLocation);
+        sessionStorage.removeItem('spok_session_expired');
+      }
       const pendingToken = localStorage.getItem('spok_pending_invitation_token');
-      const returnTo = !pendingToken ? sessionStorage.getItem('spok_returnTo') : null;
-      if (returnTo) sessionStorage.removeItem('spok_returnTo');
       setAuth(data.user, data.tokens.accessToken, data.tokens.refreshToken);
       if (pendingToken) {
         localStorage.removeItem('spok_pending_invitation_token');
         navigate(`/invitation?token=${pendingToken}`);
       } else {
-        navigate(returnTo || '/');
+        navigate('/');
       }
     },
     onError: (err) => {
@@ -78,12 +80,6 @@ export function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {returnToPath && (
-            <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-sm">
-              <RotateCcw className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Après connexion, vous serez redirigé vers <span className="font-medium break-all">{returnToPath}</span></span>
-            </div>
-          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">

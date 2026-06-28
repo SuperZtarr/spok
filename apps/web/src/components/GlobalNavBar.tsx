@@ -1,10 +1,17 @@
+/**
+ * Barre de navigation globale (bandeau bas, desktop uniquement).
+ * Affiche les sections de menu issues de useMenuItems, filtrées par mode d'interface.
+ * Gère la déconnexion volontaire (efface spok_last_location) et le bouton "Retourner à"
+ * (visible uniquement après une expiration forcée de session, via spok_resume en sessionStorage).
+ */
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Map as MapIconLucide, Copy, LogOut, Search,
+  MessageSquare, Map as MapIconLucide, Copy, LogOut, Search, RotateCcw,
   type LucideIcon,
 } from 'lucide-react';
 import { activityApi, authApi } from '../lib/api';
@@ -44,6 +51,9 @@ export function GlobalNavBar() {
 
   const handleLogout = async () => {
     try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
+    // Voluntary logout: clear saved location (no resume needed)
+    sessionStorage.removeItem('spok_last_location');
+    sessionStorage.removeItem('spok_resume');
     logout();
     navigate('/');
   };
@@ -51,6 +61,28 @@ export function GlobalNavBar() {
   const handleItemClick = (item: MenuItemConfig) => {
     if (item.key === 'logout') { handleLogout(); return; }
     if (item.route) navigate(item.route);
+  };
+
+  const { user } = useAuthStore();
+  const [resumeInfo, setResumeInfo] = useState<{ url: string; label: string } | null>(null);
+
+  // Read resume entry after re-login following session expiry
+  useEffect(() => {
+    if (user) {
+      const raw = sessionStorage.getItem('spok_resume');
+      if (raw) {
+        try { setResumeInfo(JSON.parse(raw)); } catch { /* ignore */ }
+      }
+    } else {
+      setResumeInfo(null);
+    }
+  }, [user]);
+
+  const handleResume = () => {
+    if (!resumeInfo) return;
+    sessionStorage.removeItem('spok_resume');
+    setResumeInfo(null);
+    navigate(resumeInfo.url);
   };
 
   const { data: activityData } = useQuery({
@@ -113,6 +145,16 @@ export function GlobalNavBar() {
                 );
               })}
               {section.id === 'misc' && <AdminModeToggle />}
+              {section.id === 'misc' && resumeInfo && (
+                <button
+                  onClick={handleResume}
+                  title={`Retourner à ${resumeInfo.label}`}
+                  className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 animate-pulse"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Retourner à {resumeInfo.label}</span>
+                </button>
+              )}
             </div>
           </div>
         );

@@ -1,3 +1,9 @@
+/**
+ * Point d'entrée React de l'application.
+ * Gère le routage global et l'écouteur d'événement `auth:logout` (expiration forcée de session).
+ * Distinction volontaire/forcée : déconnexion forcée → `spok_session_expired` en sessionStorage
+ * pour déclencher le bouton "Retourner à" dans GlobalNavBar après reconnexion.
+ */
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
@@ -152,15 +158,8 @@ export default function App() {
 
   useEffect(() => {
     const handleLogout = () => {
-      const currentItemRaw = sessionStorage.getItem('spok_current_item');
-      const currentItem = currentItemRaw ? currentItemRaw.split(':')[1] : null;
-      const current = window.location.pathname + window.location.search;
-      if (current !== '/login' && !current.startsWith('/register')) {
-        const returnTo = currentItem
-          ? `${window.location.pathname}?item=${currentItem}`
-          : current;
-        sessionStorage.setItem('spok_returnTo', returnTo);
-      }
+      // Forced expiry: mark session as expired so resume button shows after re-login
+      sessionStorage.setItem('spok_session_expired', 'true');
       sessionStorage.removeItem('spok_current_item');
       logout();
       navigate('/login', { replace: true });

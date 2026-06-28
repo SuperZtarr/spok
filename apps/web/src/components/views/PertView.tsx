@@ -777,7 +777,7 @@ export function PertView({
       <div className="flex flex-1 overflow-hidden">
       {/* Left panel — tree */}
       <div
-        className="flex-shrink-0 border-r overflow-y-auto overflow-x-hidden"
+        className="flex-shrink-0 border-r overflow-y-auto overflow-x-hidden no-scrollbar"
         style={{ width: LEFT_PANEL_WIDTH }}
         ref={scrollContainerRef}
         onScroll={(e) => { if (svgScrollRef.current) svgScrollRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop * zoom; }}

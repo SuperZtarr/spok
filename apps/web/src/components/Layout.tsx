@@ -303,6 +303,7 @@ export function Layout() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+
   // Expand/collapse state for space tree (persisted in localStorage)
   const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => {
     try {
