@@ -1,4 +1,10 @@
+/**
+ * Cloche de notifications dans le header.
+ * Le dropdown est rendu via createPortal dans document.body pour échapper
+ * au stacking context du header (z-30).
+ */
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database } from 'lucide-react';
@@ -30,6 +36,8 @@ function timeAgo(dateStr: string): string {
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -104,11 +112,39 @@ export function NotificationBell() {
   const invitationCount = pendingInvitations?.length ?? 0;
   const unreadCount = (unreadData?.count ?? 0) + invitationCount;
 
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setDropdownStyle({
+      position: 'fixed',
+      top: rect.bottom + 4,
+      right: window.innerWidth - rect.right,
+      width: 320,
+      maxHeight: 'calc(100vh - 4rem)',
+      zIndex: 9999,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [open, updatePosition]);
+
   // Close dropdown on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const portal = document.getElementById('notification-bell-portal');
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        !(portal && portal.contains(e.target as Node))
+      ) {
         setOpen(false);
       }
     };
@@ -129,6 +165,7 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-md hover:bg-accent transition-colors"
         title="Notifications"
@@ -141,8 +178,8 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-80 max-h-[calc(100vh-4rem)] bg-card border border-border rounded-lg shadow-xl flex flex-col" style={{ zIndex: 10000 }}>
+      {createPortal(open ? (
+        <div id="notification-bell-portal" style={dropdownStyle} className="bg-card border border-border rounded-lg shadow-xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <span className="text-sm font-semibold">Notifications</span>
@@ -277,7 +314,7 @@ export function NotificationBell() {
             )}
           </div>
         </div>
-      )}
+      ) : null, document.body)}
     </div>
   );
 }
