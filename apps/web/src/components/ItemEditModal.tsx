@@ -180,10 +180,11 @@ export function ItemEditModal({
   const [status, setStatus] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
+  const isExclusiveType = type === 'DIAGRAM' || type === 'IMAGE' || type === 'DOCUMENT' || type === 'LINK';
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [allDay, setAllDay] = useState(false);
+  const [allDay, setAllDay] = useState(true);
   const [priority, setPriority] = useState<number | null>(null);
   const [diagramXml, setDiagramXml] = useState('');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
@@ -295,8 +296,9 @@ export function ItemEditModal({
   // Populate the form once the correct item data has arrived
   useEffect(() => {
     if (!item) return;
-    if (initializedItemIdRef.current === item.id) return; // already initialised for this item
-    initializedItemIdRef.current = item.id;
+    const initKey = `${item.id}::${item.startDate ?? ''}::${item.endDate ?? ''}`;
+    if (initializedItemIdRef.current === initKey) return; // already initialised for this item+dates
+    initializedItemIdRef.current = initKey;
 
     setTitle(item.title);
     setDescription(item.description || '');
@@ -314,12 +316,11 @@ export function ItemEditModal({
       setDueDate('');
     }
     if (item.startDate) {
-      const date = new Date(item.startDate);
-      setStartDate(toDatetimeLocal(date));
-      setAllDay(date.getHours() === 0 && date.getMinutes() === 0);
+      setStartDate(toDatetimeLocal(new Date(item.startDate)));
+      setAllDay(true);
     } else {
       setStartDate('');
-      setAllDay(false);
+      setAllDay(true);
     }
     if (item.endDate) {
       setEndDate(toDatetimeLocal(new Date(item.endDate)));
@@ -860,7 +861,7 @@ export function ItemEditModal({
           <div className="space-y-6 min-w-0">
 
               {/* Description */}
-              <div className="space-y-2" data-tour="item-description">
+              {!isExclusiveType && <div className="space-y-2" data-tour="item-description">
                 <label className="text-sm font-medium">Description</label>
                 <RichTextEditor
                   key={itemId}
@@ -871,10 +872,10 @@ export function ItemEditModal({
                   minHeight={240}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
-              </div>
+              </div>}
 
               {/* Reactions + Contributions */}
-              <div className="space-y-3" data-tour="item-reactions">
+              {!isExclusiveType && <div className="space-y-3" data-tour="item-reactions">
                 {/* Reaction bar on item */}
                 {item && (
                   <ReactionBar
@@ -997,7 +998,7 @@ export function ItemEditModal({
                     </div>
                   );
                 })()}
-              </div>
+              </div>}
 
           </div>{/* end left column */}
 
@@ -1049,8 +1050,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Statut — masqué en mode Forum */}
-              {!isForumMode && <div className="space-y-2" data-tour="item-status">
+              {/* Statut — masqué en mode Forum et types media */}
+              {!isForumMode && !isExclusiveType && <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1064,8 +1065,8 @@ export function ItemEditModal({
                           if (newStatus === '') { setStartDate(''); setEndDate(''); }
                           else {
                             let currentEndDate = endDate;
-                            if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) { currentEndDate = toDatetimeLocal(new Date()); setEndDate(currentEndDate); }
-                            if (!startDate) { const now = new Date(); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(now)); }
+                            if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) { const m = new Date(); m.setHours(0,0,0,0); currentEndDate = toDatetimeLocal(m); setEndDate(currentEndDate); }
+                            if (!startDate) { const now = new Date(); const m = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(m)); }
                           }
                         }}
                         options={(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => ({ value: s.id, label: s.label }))}
@@ -1105,8 +1106,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Priorité — masqué en mode Forum */}
-              {!isForumMode && <div className="space-y-2">
+              {/* Priorité — masqué en mode Forum et types media */}
+              {!isForumMode && !isExclusiveType && <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
                 {canEdit ? (
                   <>
@@ -1145,8 +1146,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Dates — masqué en mode Forum */}
-              {!isForumMode && <div data-tour="item-dates" className="space-y-3">
+              {/* Dates — masqué en mode Forum et types media */}
+              {!isForumMode && !isExclusiveType && <div data-tour="item-dates" className="space-y-3">
                 {/* Toggle Jours pleins / Heures — pleine largeur */}
                 {canEdit && (
                   <div className="flex items-center gap-3">
@@ -1236,8 +1237,8 @@ export function ItemEditModal({
                 </div>
               </div>}
 
-              {/* URL */}
-              <div className="space-y-2">
+              {/* URL — seulement pour le type LINK */}
+              {type === 'LINK' && <div className="space-y-2">
                 <label className="text-sm font-medium">URL</label>
                 {canEdit ? (
                   <Input type="url" value={url}
@@ -1249,10 +1250,10 @@ export function ItemEditModal({
                     <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
                   </a>
                 ) : null}
-              </div>
+              </div>}
 
-              {/* Diagramme — masqué en mode Forum */}
-              {!isForumMode && <div className="space-y-2">
+              {/* Diagramme — seulement pour le type DIAGRAM */}
+              {type === 'DIAGRAM' && <div className="space-y-2">
                 <label className="text-sm font-medium">Diagramme</label>
                 <DrawioEditor
                   xml={diagramXml}
@@ -1270,8 +1271,8 @@ export function ItemEditModal({
                 />
               </div>}
 
-              {/* Image */}
-              <div className="space-y-2">
+              {/* Image — seulement pour le type IMAGE */}
+              {type === 'IMAGE' && <div className="space-y-2">
                 <label className="text-sm font-medium">Image</label>
                 {canEdit ? (
                   <>
@@ -1292,10 +1293,10 @@ export function ItemEditModal({
                 ) : (
                   <p className="text-sm text-muted-foreground">Aucune image</p>
                 )}
-              </div>
+              </div>}
 
-              {/* Fichier */}
-              <div className="space-y-2">
+              {/* Fichier — seulement pour le type DOCUMENT */}
+              {type === 'DOCUMENT' && <div className="space-y-2">
                 <label className="text-sm font-medium">Fichier</label>
                 {canEdit ? (
                   <>
@@ -1311,7 +1312,7 @@ export function ItemEditModal({
                 ) : (
                   <p className="text-sm text-muted-foreground">Aucun fichier</p>
                 )}
-              </div>
+              </div>}
 
           </div>{/* end center column */}
 
@@ -1324,8 +1325,8 @@ export function ItemEditModal({
                 <span className="text-xs text-muted-foreground font-mono select-all">{item.id}</span>
               </div>
 
-              {/* Parent (hidden in viewer mode — breadcrumb is enough) */}
-              {canEdit && (
+              {/* Parent (hidden in viewer mode et types media) */}
+              {canEdit && !isExclusiveType && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent</label>
@@ -1339,8 +1340,8 @@ export function ItemEditModal({
               </div>
               )}
 
-              {/* Assigné à — masqué en mode Forum */}
-              {!isForumMode && spaceMembers && spaceMembers.length > 0 && (
+              {/* Assigné à — masqué en mode Forum et types media */}
+              {!isForumMode && !isExclusiveType && spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
                   {canEdit ? (
@@ -1363,8 +1364,8 @@ export function ItemEditModal({
                 </div>
               )}
 
-              {/* Dépendances — masqué en mode Forum */}
-              {!isForumMode && <div className="space-y-3" data-tour="item-relations">
+              {/* Dépendances — masqué en mode Forum et types media */}
+              {!isForumMode && !isExclusiveType && <div className="space-y-3" data-tour="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -1451,8 +1452,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Tags */}
-              <div className="space-y-3" data-tour="item-tags">
+              {/* Tags — masqué pour types media */}
+              {!isExclusiveType && <div className="space-y-3" data-tour="item-tags">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <TagIcon className="w-4 h-4" />
                   Tags
@@ -1468,7 +1469,7 @@ export function ItemEditModal({
                     )}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Children items */}
               {item && (() => {

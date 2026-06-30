@@ -1,3 +1,11 @@
+/**
+ * Hook centralisant les actions mutatives de SpacePage (update, move, relations,
+ * suppression, fusion, conversion, propagation de statut, déplacement cross-space).
+ * Toute mutation qui touche des champs lisibles immédiatement après coup (ex: dates
+ * mises à jour par drag dans le Gantt puis relues par ItemEditModal) doit appliquer
+ * une mise à jour optimiste du cache React Query — sinon l'UI lit des données stales
+ * pendant la fenêtre réseau entre le clic et la réponse du serveur.
+ */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -94,6 +102,26 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const updateItemMutation = useMutation({
     mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string; propagateToChildren?: boolean } }) =>
       itemsApi.update(itemSpaceId, id, data),
+    // Optimistic update : applique startDate/endDate au cache avant la réponse serveur.
+    // Évite qu'ItemEditModal lise des dates stales si ouverte juste après un drag dans le Gantt.
+    onMutate: ({ id, data }) => {
+      if (data.startDate === undefined && data.endDate === undefined) return;
+      queryClient.setQueriesData({ queryKey: ['items'] }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((item: any) =>
+            item.id === id
+              ? {
+                  ...item,
+                  ...(data.startDate !== undefined ? { startDate: data.startDate } : {}),
+                  ...(data.endDate !== undefined ? { endDate: data.endDate } : {}),
+                }
+              : item
+          ),
+        };
+      });
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       if (variables.itemSpaceId !== spaceId) {
