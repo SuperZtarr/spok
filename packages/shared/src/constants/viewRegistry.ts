@@ -1,3 +1,9 @@
+/*
+ * Registre central des vues d'espace (id, libellé, icône, catégorie, ordre, niveau d'accès).
+ * `access` contrôle la visibilité via useMenuItems (public < user < admin) — ne pas confondre avec
+ * les modes d'interface (forum/projet/exploration, cf. stores/interfaceMode.ts) qui filtrent en plus
+ * les vues déjà accessibles selon le contexte d'usage courant.
+ */
 export interface ViewDefinition {
   id: string;
   label: string;
@@ -19,7 +25,7 @@ export const VIEW_REGISTRY: ViewDefinition[] = [
     { id: 'recent',     label: 'Récents',        icon: 'Clock',        category: 'basic',     order: 7, visible: true, access: 'user'   },
 
   // ── itemTypes ──
-  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 0, visible: true, access: 'admin' },
+  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 0, visible: true, access: 'user' },
   { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 1, visible: true, access: 'user' },
   { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'user' },
   { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'user'   },
