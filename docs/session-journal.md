@@ -4,16 +4,28 @@
 
 > Les consignes et règles de collaboration sont dans `CLAUDE.md` (projet et global). Ce journal est réservé au contexte de session en cours.
 
-## EN COURS — 2026-06-17
-
-### Gantt — scrollbar navigation + positionnement aujourd'hui
-- `TimelineView.tsx` + `index.css` : barre de défilement horizontale en bas (±3 ans, thumb proportionnel au zoom)
-- `TimelineView.tsx` : aujourd'hui positionné au 1/4 gauche (init + bouton Aujourd'hui)
+## EN COURS
 
 ### À faire ensuite
 - Affiner specs mode Forum/Projet/Exploration (étapes 3-5)
 - Didacticiels : thread (pas de tour), text (tour vide)
-- Gantt : root drop zone + grip toujours visible (universalisation treeview)
+
+## HISTORIQUE — 2026-07-05
+
+### Fusion TreeItem/TreeItemRow — root drop zone + grip toujours visible Gantt
+- `TreeItemRow.tsx` : composant de ligne d'arborescence unique (variant `inline` ListView / `sticky` Gantt-PERT), grip toujours visible, `RootDropZone` co-localisée
+- `space-tree-view.tsx` : `TreeItem` délègue le rendu à `TreeItemRow`, garde le fetch récursif des enfants (`ItemChildren`)
+- `TimelineView.tsx` : ajout `RootDropZone` pendant le drag + gestion du drop `over.id === 'root'` dans `handleGanttDragEnd`
+- `PertView.tsx` : bascule sur le composant partagé (pas de DnD activé, `onMove` toujours absent côté PERT)
+
+### Mode Projet — vue Types accessible aux utilisateurs
+- `viewRegistry.ts` : `types` passe de `access: 'admin'` à `access: 'user'` — n'était bloqué que par le niveau d'accès, pas par le filtre de mode (déjà non exclu pour "projet")
+
+## HISTORIQUE — 2026-06-17
+
+### Gantt — scrollbar navigation + positionnement aujourd'hui (terminé)
+- `TimelineView.tsx` + `index.css` : barre de défilement horizontale en bas (±3 ans, thumb proportionnel au zoom)
+- `TimelineView.tsx` : aujourd'hui positionné au 1/4 gauche (init + bouton Aujourd'hui)
 
 ## HISTORIQUE — 2026-06-07
 
