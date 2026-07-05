@@ -1,36 +1,15 @@
+/*
+ * Arborescence de ListView — TreeItem délègue le rendu de ligne à TreeItemRow (composant partagé
+ * avec Gantt/PERT, variant "inline") et garde ici son fetch récursif des enfants (ItemChildren, useQuery).
+ * RootDropZone est ré-exportée depuis TreeItemRow.tsx pour ne pas casser les imports existants (SpacePage.tsx).
+ */
 import { useQuery } from '@tanstack/react-query';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
-import {
-  ChevronRight,
-  ChevronDown,
-  GripVertical,
-  ExternalLink,
-} from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../lib/api';
-import { Badge } from '../components/ui/Badge';
-import { ItemActionMenu } from '../components/ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../lib/itemMenuGroups';
-import { getTypeIcon } from '../constants/ui';
+import { TreeItemRow } from '../components/views/TreeItemRow';
 
-// Root drop zone to move items to root level
-export function RootDropZone({ isOver }: { isOver: boolean }) {
-  const { setNodeRef } = useDroppable({ id: 'root' });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`mx-3 mt-2 py-2 px-3 rounded-md border-2 border-dashed transition-colors ${
-        isOver
-          ? 'border-green-500 bg-green-50 text-green-700'
-          : 'border-gray-300 text-gray-400'
-      }`}
-    >
-      <span className="text-sm">↓ Déposer ici pour mettre à la racine</span>
-    </div>
-  );
-}
+export { RootDropZone } from '../components/views/TreeItemRow';
 
 // TreeItem props interface
 export interface TreeItemProps {
@@ -103,149 +82,51 @@ export function TreeItem({
   statusLabelMap,
   isFirstTreeItem,
 }: TreeItemProps) {
-  // Draggable (for the grip handle)
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({ id: item.id });
-
-  // Droppable (for receiving drops)
-  const {
-    setNodeRef: setDropRef,
-  } = useDroppable({ id: item.id });
-
   const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
-  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+  const isDimmed = !!((highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id)));
   const isHighlighted = hasHighlight && !isDimmed;
   const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
-  const currentDropPosition = isOver ? (globalDropPosition || 'nest') : null;
-
-  const Icon = getTypeIcon(item.type, item.url);
   const hasChildren = (item.childCount || 0) > 0;
-
-  const handleClick = () => {
-    onEdit(item.id);
-  };
+  const statusOptions = DEFAULT_REFERENTIELS.statuses.filter(s => s.visible).sort((a, b) => a.order - b.order);
 
   return (
-    <div style={{ opacity: isDragging ? 0.4 : isDimmed ? 0.35 : 1 }}>
-      {/* Line before this item (insert before) */}
-      {currentDropPosition === 'before' && (
-        <div className="relative mx-3 h-0.5" style={{ marginLeft: `${12 + depth * 24}px` }}>
-          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
-        </div>
-      )}
-      <div
-        ref={setDropRef}
-        data-item-id={item.id}
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-colors duration-150 ${
-          currentDropPosition === 'nest' ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-400' : ''
-        } ${isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
-        style={{ paddingLeft: `${12 + depth * 24}px` }}
-        onClick={handleClick}
-      >
-        {canEdit !== false ? (
-          <button
-            ref={setDragRef}
-            {...attributes}
-            {...listeners}
-            {...(isFirstTreeItem ? { 'data-tour': 'tree-drag' } : {})}
-            className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
-            onClick={(e) => e.stopPropagation()}
-            title="Glisser pour réorganiser"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        ) : null}
-
-        {hasChildren ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand(item.id);
-            }}
-            {...(isFirstTreeItem ? { 'data-tour': 'tree-expand' } : {})}
-            className="p-0.5 hover:bg-muted rounded"
-            title={isExpanded ? 'Réduire' : 'Développer'}
-          >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-        ) : (
-          <div className="w-5" />
-        )}
-
-        <span className="text-xs text-muted-foreground font-mono min-w-[1.5rem]">{orderNumber}</span>
-
-        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-        <span className="flex-1 truncate">{item.title}</span>
-
-        {item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
-          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
-        )}
-
-        {item.url && (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            title="Ouvrir le lien"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        )}
-
-        <Badge
-          className={`text-xs ${statusColorMap[item.status || 'none'] || statusColorMap['undefined'] || 'bg-gray-100 text-gray-500'}`}
-          variant="secondary"
-        >
-          {statusLabelMap[item.status || ''] || statusLabelMap['undefined'] || 'Non défini'}
-        </Badge>
-
-        {canEdit !== false && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-            <ItemActionMenu
-              groups={buildItemMenuGroups(item.id, {
-                onOpen,
-                onOpenInNewTab,
-                onEdit,
-                onDelete,
-                onUpdateStatus,
-                onAddChild,
-                onAbsorbChildren,
-                onSplitDescription: onSplitDescription && item.description && /<h[2-3][^>]*>/i.test(item.description) ? onSplitDescription : undefined,
-                onMerge,
-                onSelfAssign,
-                onMoveToSpace,
-                onDuplicateToSpace,
-                onConvertToSpace,
-              }, {
-                statusOptions: DEFAULT_REFERENTIELS.statuses.filter(s => s.visible).sort((a, b) => a.order - b.order),
-                currentStatusId: item.status || undefined,
-                canEdit: canEdit ?? true,
-              })}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Line after this item (insert after) */}
-      {currentDropPosition === 'after' && (
-        <div className="relative mx-3 h-0.5" style={{ marginLeft: `${12 + depth * 24}px` }}>
-          <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-primary rounded-full" />
-        </div>
-      )}
+    <>
+      <TreeItemRow
+        item={item}
+        depth={depth}
+        variant="inline"
+        orderNumber={orderNumber}
+        hasChildren={hasChildren}
+        isCollapsed={!isExpanded}
+        isPortal={false}
+        isOver={isOver}
+        dropPosition={globalDropPosition || 'nest'}
+        canEdit={canEdit}
+        onMove={onMove}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onUpdateStatus={onUpdateStatus}
+        onAddChild={onAddChild}
+        onMoveToSpace={onMoveToSpace}
+        onDuplicateToSpace={onDuplicateToSpace}
+        onConvertToSpace={onConvertToSpace}
+        onSelfAssign={onSelfAssign}
+        onMerge={onMerge}
+        onAbsorbChildren={onAbsorbChildren}
+        onSplitDescription={onSplitDescription}
+        onOpen={onOpen}
+        onOpenInNewTab={onOpenInNewTab}
+        toggleCollapse={onToggleExpand}
+        statusOptions={statusOptions}
+        statusColorMap={statusColorMap}
+        statusLabelMap={statusLabelMap}
+        isHighlighted={isHighlighted}
+        isDimmed={isDimmed}
+        isSearchMatch={isSearchMatch}
+        highlightColor={highlightColor}
+        isFirstTreeItem={isFirstTreeItem}
+      />
 
       {isExpanded && hasChildren && (
         <ItemChildren
@@ -279,7 +160,7 @@ export function TreeItem({
           statusLabelMap={statusLabelMap}
         />
       )}
-    </div>
+    </>
   );
 }
 

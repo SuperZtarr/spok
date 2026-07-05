@@ -1,3 +1,8 @@
+/**
+ * PertView — Réseau PERT (dépendances/jalons) affiché comme diagramme + panneau arborescence à gauche.
+ * Panneau gauche : lignes via TreeItemRow (composant partagé avec le Gantt, variant "sticky" par défaut).
+ * Pas de drag & drop de réorganisation ici (onMove non câblé) — le tri est géré par PertToolbar (rang/alpha).
+ */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowRight, Link2, ChevronDown, ChevronRight } from 'lucide-react';
@@ -816,6 +821,7 @@ export function PertView({
               >
                 <TreeItemRow
                   item={item}
+                  depth={item.depth}
                   hasChildren={hasChildren}
                   isCollapsed={isCollapsed}
                   isPortal={isPortal}

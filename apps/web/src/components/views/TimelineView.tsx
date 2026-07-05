@@ -2,8 +2,8 @@
  * TimelineView — Vue Gantt interactive.
  * Affiche les items avec dates sous forme de barres horizontales sur une frise temporelle.
  * Gère : zoom (jour/semaine/mois/trimestre/année), navigation centerDate, DnD repositionnement dates,
- * DnD réordonnancement arborescence panneau gauche, création de relations par glisser-déposer,
- * chemin critique, export, scrollbar de navigation temporelle en bas de vue.
+ * DnD réordonnancement arborescence panneau gauche (RootDropZone pour remonter un item à la racine),
+ * création de relations par glisser-déposer, chemin critique, export, scrollbar de navigation temporelle en bas de vue.
  * Props clés : items, relations, onUpdateDates, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  */
@@ -31,7 +31,7 @@ import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull,
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { TreeItemRow } from './TreeItemRow';
+import { TreeItemRow, RootDropZone } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 
 const ROW_HEIGHT = 40;
@@ -360,6 +360,11 @@ treeSort: treeSortProp,
     setGanttOverId(null);
     setGanttDropPosition('nest');
     if (!over || activeId === over.id || !onMove) {
+      if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
+      return;
+    }
+    if (over.id === 'root') {
+      onMove(activeId, null, 0);
       if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
       return;
     }
@@ -1108,6 +1113,7 @@ treeSort: treeSortProp,
                   {/* Item label — extracted as component to allow useDraggable/useDroppable hooks */}
                   <TreeItemRow
                     item={item}
+                    depth={item.depth}
                     hasChildren={hasChildren}
                     isCollapsed={isCollapsed}
                     isPortal={isPortal}
@@ -1440,6 +1446,9 @@ treeSort: treeSortProp,
                   />
                 )}
               </svg>
+            )}
+            {ganttActiveId && (
+              <RootDropZone isOver={ganttOverId === 'root'} />
             )}
             <DragOverlay dropAnimation={null}>
               {ganttActiveId ? (
