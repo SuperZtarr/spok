@@ -1,3 +1,4 @@
+/* Types contribution : Contribution, avec auteur et réactions. */
 export interface Contribution {
   id: string;
   content: string;

@@ -1,3 +1,7 @@
+/*
+ * Menu : GET public (MENU_REGISTRY + overrides AppConfig 'menu_overrides'), PATCH admin des
+ * overrides (visible/access par clé). Pas de table MenuItem — cf. skill spok-menu.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { MENU_REGISTRY } from '@spok/shared';
 import type { MenuOverride } from '@spok/shared';

@@ -1,3 +1,4 @@
+/* Types AuditLog : actions, entités, aperçu de suppression (delete preview). */
 export type AuditAction =
   | 'CREATE'
   | 'UPDATE'

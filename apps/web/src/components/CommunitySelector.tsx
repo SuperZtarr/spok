@@ -1,3 +1,4 @@
+/* Sélecteur de communauté courante (header) : dropdown des communautés de l'utilisateur. */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Building2, ChevronDown, Globe, Settings, UserPlus, Eye, LogOut, Plus, Loader2 } from 'lucide-react';

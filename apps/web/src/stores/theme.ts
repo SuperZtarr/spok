@@ -1,3 +1,7 @@
+/*
+ * Store Zustand : thème light/dark — applique la classe sur <html>, synchronise la préférence
+ * utilisateur côté API. initTheme(pref) à l'ouverture de session.
+ */
 import { create } from 'zustand';
 import type { ThemePreference } from '@spok/shared';
 import { userApi } from '../lib/api';

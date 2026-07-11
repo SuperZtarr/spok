@@ -224,7 +224,8 @@
       "Bash(pnpm --version)",
       "Bash(gh run *)",
       "Bash(gh workflow *)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "Bash(node scripts/check-doc-headers.mjs 7880966)"
     ]
   },
   "hooks": {

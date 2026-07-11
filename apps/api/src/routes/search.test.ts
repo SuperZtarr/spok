@@ -1,3 +1,6 @@
+/*
+ * TNR de /search : résultats, pagination, périmètre par memberships, anonyme → vide.
+ */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'

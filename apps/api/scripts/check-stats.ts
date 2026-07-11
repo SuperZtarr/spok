@@ -1,3 +1,4 @@
+/* Vérification ponctuelle de compteurs en base (debug). */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 

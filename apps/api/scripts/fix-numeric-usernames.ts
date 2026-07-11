@@ -1,3 +1,4 @@
+/* Correctif one-shot : renommage des utilisateurs à pseudo numérique issus de l'import. */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 

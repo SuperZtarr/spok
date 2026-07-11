@@ -1,3 +1,4 @@
+/* Vue Tableau croisé : items en lignes/colonnes selon deux axes (type, statut, assigné...). */
 import { useState, useMemo } from 'react';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { SpaceExportButton } from '../SpaceExportButton';

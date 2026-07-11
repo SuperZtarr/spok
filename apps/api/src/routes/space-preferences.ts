@@ -1,3 +1,4 @@
+/* Préférences par espace et par utilisateur (état MindMap : repliés, épinglés, portails). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 

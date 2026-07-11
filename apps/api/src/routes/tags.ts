@@ -1,3 +1,4 @@
+/* Tags d'un espace : CRUD + association aux items (couleur hex, unicité par espace). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { checkSpaceAccess } from './items.js';

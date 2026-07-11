@@ -1,3 +1,7 @@
+/*
+ * TNR des routes /spaces : CRUD, visibilité effective (OPEN→MEMBER implicite), suppression
+ * (community OWNER seul), invitations par token, multi-OWNER. Réalignés le 2026-07-11.
+ */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildSpacesTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
 import type { FastifyInstance } from 'fastify'

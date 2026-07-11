@@ -1,3 +1,7 @@
+/*
+ * TNR des routes /communities : création (workflow pendingPublic), visibilité, membres
+ * (multi-OWNER), invitations par token. Réalignés le 2026-07-11 sur les comportements actuels.
+ */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildCommunitiesTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
 import type { FastifyInstance } from 'fastify'

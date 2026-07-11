@@ -1,3 +1,7 @@
+/*
+ * AppConfig (clé/valeur JSON) : config des vues, catégories, pages globales.
+ * Stockage du système parallèle useViewConfig — cf. skill spok-menu.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_VIEW_CONFIG, DEFAULT_VIEW_CATEGORIES, DEFAULT_GLOBAL_PAGES, DEFAULT_GLOBAL_PAGE_GROUPS } from '@spok/shared';

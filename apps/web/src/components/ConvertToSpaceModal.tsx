@@ -1,3 +1,4 @@
+/* Conversion d'un item en espace : nom, communauté cible, migration des enfants. */
 import { useState, useEffect } from 'react';
 import { FolderPlus, Loader2, ArrowRight } from 'lucide-react';
 import { Modal } from './ui/Modal';

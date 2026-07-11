@@ -1,3 +1,4 @@
+/* TNR des tags d'espace : CRUD, validation couleur, droits par rôle. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'

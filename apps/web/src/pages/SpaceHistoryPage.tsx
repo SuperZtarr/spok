@@ -1,3 +1,4 @@
+/* Historique d'un espace (/spaces/:id/history) : journal d'audit filtré (useAuditLogs). */
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

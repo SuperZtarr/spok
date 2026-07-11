@@ -1,3 +1,4 @@
+/* Propagation d'un changement de statut aux enfants d'un item (optionnelle). */
 import { GitBranch } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';

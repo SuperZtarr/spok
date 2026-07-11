@@ -1,3 +1,4 @@
+/* Liste paginée d'entrées d'audit (compose AuditLogItem). */
 import { useState } from 'react';
 import type { AuditLog, AuditLogFilters } from '@spok/shared';
 import { Button } from '../ui/Button';

@@ -1,3 +1,4 @@
+/* Vérification d'email (/verify-email?token=...) : valide le compte après inscription. */
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { authApi } from '../lib/api';

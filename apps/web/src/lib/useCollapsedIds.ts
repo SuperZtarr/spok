@@ -1,3 +1,4 @@
+/* Hook : ids repliés d'une arborescence, persistés par espace en localStorage (spok_collapsed_*). */
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 export function useCollapsedIds(spaceId: string) {

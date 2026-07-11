@@ -1,3 +1,7 @@
+/*
+ * Indicateur d'environnement (dev/DB) + toggle du mode admin (useAdminMode) — le mode admin
+ * conditionne l'accès aux items de menu et vues access:'admin'.
+ */
 import { useEffect, useState } from 'react';
 import { healthApi, ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';

@@ -1,3 +1,4 @@
+/* Hooks TanStack Query des espaces : liste (queryKey ['spaces', communityId]), détail, mutations. */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesApi } from '../lib/api';
 import type { CreateSpaceInput } from '@spok/shared';

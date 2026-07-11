@@ -1,3 +1,4 @@
+/* Gestion des membres d'un espace : rôles, invitations, retrait — page settings espace. */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesApi } from '../../lib/api';
 import { MembersColumnManager } from './MembersColumnManager';

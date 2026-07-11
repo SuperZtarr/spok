@@ -1,3 +1,4 @@
+/* Carte mentale globale (lecture seule) : tous les espaces accessibles — distincte de MindMapView. */
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,

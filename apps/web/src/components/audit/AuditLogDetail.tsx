@@ -1,3 +1,4 @@
+/* Détail d'une entrée d'audit : diff before/after + bouton restaurer. */
 import { useState } from 'react';
 import type { AuditLog, AuditAction } from '@spok/shared';
 import { Button } from '../ui/Button';

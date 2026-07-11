@@ -1,3 +1,4 @@
+/* Vue Todo : liste simple des tâches cochables (statut done au clic). */
 import { useMemo } from 'react';
 import { CheckSquare } from 'lucide-react';
 import { ListView } from './ListView';

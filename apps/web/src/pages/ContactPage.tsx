@@ -1,3 +1,4 @@
+/* Formulaire de contact (/contact) : crée un item dans l'espace Support via POST /contact. */
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Send, CheckCircle, MessageSquare, Bug, Lightbulb, Wrench } from 'lucide-react';

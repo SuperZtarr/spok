@@ -1,3 +1,7 @@
+/*
+ * Upload de fichiers d'un item vers R2 : images (5 Mo max, mimes whitelist) et documents
+ * (mimes exécutables bloqués). Nécessite R2 configuré (isR2Configured).
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { isR2Configured, processImage, uploadImageToR2, deleteImageFromR2, uploadFileToR2, deleteFileFromR2 } from '../utils/r2.js';
 import { checkSpaceAccess } from './items.js';

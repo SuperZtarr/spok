@@ -1,3 +1,4 @@
+/* Zone de dépôt de fichiers (drag & drop + clic) avec validation mime/taille. */
 import { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, FileText, FileSpreadsheet, FileImage, FileArchive, File as FileIcon, Download } from 'lucide-react';
 

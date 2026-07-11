@@ -1,3 +1,4 @@
+/* Tri d'arborescences partagé entre vues : manual (position), alpha-flat, alpha-tree. */
 import type { Item } from '@spok/shared';
 
 export type TreeSort = 'manual' | 'alpha-flat' | 'alpha-tree';

@@ -1,3 +1,4 @@
+/* Restauration depuis le journal d'audit : réapplique l'état « before » d'une entrée. */
 import { useState, useMemo } from 'react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';

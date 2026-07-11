@@ -1,3 +1,4 @@
+/* Vue Aperçu : synthèse d'un espace (description, stats, derniers items). */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

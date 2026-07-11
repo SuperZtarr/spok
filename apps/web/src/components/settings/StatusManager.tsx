@@ -1,3 +1,4 @@
+/* Éditeur des statuts d'un référentiel : ajout, couleurs, ordre (DnD), visibilité, usage. */
 import { useState } from 'react';
 import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import type { StatusConfig } from '@spok/shared';

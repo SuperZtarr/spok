@@ -1,3 +1,4 @@
+/* Types réaction : ReactionSummary + types de réactions par défaut. */
 export interface Reaction {
   id: string;
   reactionType: string;

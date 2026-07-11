@@ -1,3 +1,7 @@
+/*
+ * Étapes des didacticiels par vue (driver.js) : un tour par ViewMode, consommé par useOnboarding.
+ * Une vue sans étapes ne doit pas afficher le bouton d'aide (cf. TODO didacticiels).
+ */
 import type { ViewMode } from '../stores/viewMode';
 
 export interface TourStep {

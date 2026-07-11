@@ -1,3 +1,4 @@
+/* Vue Priorités : matrice/groupes par priorité 1-4, DnD entre groupes. */
 import { useState, useMemo, useCallback } from 'react';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';

@@ -1,3 +1,4 @@
+/* Badge (variants secondary/outline...) — statuts, compteurs, étiquettes. */
 import { type HTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 

@@ -1,3 +1,4 @@
+/* TNR du client API : ApiError, construction des query strings, helpers. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ApiError, isConflictError } from './api'
 

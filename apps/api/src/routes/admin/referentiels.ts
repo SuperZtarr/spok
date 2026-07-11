@@ -1,3 +1,4 @@
+/* Vue d'ensemble admin des référentiels : défauts + communautés personnalisées (community.referentiels). */
 import { FastifyPluginAsync } from 'fastify';
 import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
 

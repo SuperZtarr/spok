@@ -1,3 +1,4 @@
+/* Icône selon l'extension d'un fichier (pdf, xls, zip...). */
 import type { SVGProps } from 'react';
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number | string };

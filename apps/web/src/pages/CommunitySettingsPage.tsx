@@ -1,3 +1,4 @@
+/* Paramètres communauté (/communities/:id/settings) : infos, visibilité, membres, référentiels, emails — OWNER. */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

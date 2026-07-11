@@ -1,3 +1,4 @@
+/* TNR du store auth : setAuth/clearAuth, persistance, init du thème au login. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAuthStore } from './auth'
 

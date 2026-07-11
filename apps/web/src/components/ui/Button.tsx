@@ -1,3 +1,4 @@
+/* Bouton de base (variants primary/bordered/ghost/danger, tailles) — composant UI standard. */
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 

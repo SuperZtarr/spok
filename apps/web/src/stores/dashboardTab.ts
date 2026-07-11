@@ -1,3 +1,7 @@
+/*
+ * Store Zustand : onglet actif de la page d'accueil/dashboard (spaces, communities, graph...).
+ * DASHBOARD_TABS est un fallback statique — la liste réelle vient de la config des menus.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

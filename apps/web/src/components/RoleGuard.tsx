@@ -1,3 +1,4 @@
+/* Garde d'affichage par rôle global (ADMIN) — enveloppe des éléments réservés. */
 import { useState, useEffect, type ReactNode } from 'react';
 
 type RoleLevel = 'MEMBER' | 'OWNER' | 'ADMIN';

@@ -1,3 +1,4 @@
+/* Hook : raccourci Ctrl+S/Cmd+S → onSave si activé (formulaires d'édition). */
 import { useEffect } from 'react';
 
 /**

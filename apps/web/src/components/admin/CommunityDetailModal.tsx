@@ -1,3 +1,4 @@
+/* Modale admin : détail communauté (membres, espaces, approbation visibilité). */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building2, Users, FolderKanban, Plus, Trash2, Save, UserPlus, Loader2 } from 'lucide-react';

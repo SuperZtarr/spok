@@ -1,3 +1,4 @@
+/* Journal d'audit global (admin) : tous espaces, filtres entité/action/utilisateur/dates. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';

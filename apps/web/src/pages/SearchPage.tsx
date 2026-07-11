@@ -1,3 +1,4 @@
+/* Recherche globale (/search?q=...) : items et contributions, pagination — anonyme = vide. */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

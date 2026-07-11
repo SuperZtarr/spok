@@ -1,3 +1,7 @@
+/*
+ * Layout principal connecté : header (MainMenu, recherche, notifications, profil) + zone de contenu.
+ * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
+ */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';

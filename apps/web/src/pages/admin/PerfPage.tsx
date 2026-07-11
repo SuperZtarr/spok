@@ -1,3 +1,4 @@
+/* Admin performance (/admin/perf) : métriques DB et temps de réponse. */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Activity, Trash2, RefreshCw, AlertTriangle, Weight } from 'lucide-react';

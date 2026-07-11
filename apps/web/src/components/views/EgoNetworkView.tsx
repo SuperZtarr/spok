@@ -1,3 +1,4 @@
+/* Vue Réseau ego : relations centrées sur un item sélectionné. */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';

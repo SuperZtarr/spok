@@ -1,3 +1,4 @@
+/* Templates de création d'espace : statuts/labels préconfigurés par cas d'usage. */
 import type { StatusConfig, TypeLabelConfig } from '../types/referentiels.js';
 import type { ItemType } from '../types/item.js';
 

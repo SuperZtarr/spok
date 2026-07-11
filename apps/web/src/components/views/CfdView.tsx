@@ -1,3 +1,4 @@
+/* Vue Flux cumulatif (CFD) : évolution des statuts dans le temps. */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import type { Item } from '@spok/shared';
 

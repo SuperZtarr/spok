@@ -1,3 +1,7 @@
+/*
+ * TNR des routes /spaces/:spaceId/items : accès (membership direct/communauté), CRUD
+ * (titre optionnel, défaut ''), détail avec relations/tags/reactionSummary.
+ */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
 import type { FastifyInstance } from 'fastify'

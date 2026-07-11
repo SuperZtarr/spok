@@ -1,3 +1,7 @@
+/*
+ * Administration des communautés : liste globale, création, approbation du passage en public
+ * (pendingPublic → isPublic), suppression.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { CreateCommunityInput, CommunityDeletePreview } from '@spok/shared';

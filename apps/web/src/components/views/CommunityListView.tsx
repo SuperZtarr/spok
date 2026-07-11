@@ -1,3 +1,4 @@
+/* Liste des communautés avec leurs espaces en arborescence (accueil/communautés). */
 import { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';

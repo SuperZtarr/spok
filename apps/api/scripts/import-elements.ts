@@ -1,3 +1,4 @@
+/* Import one-shot d'éléments génériques (migration initiale). */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 

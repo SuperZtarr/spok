@@ -1,3 +1,4 @@
+/* TNR du journal d'audit d'espace : accès par rôle, filtres, pagination. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'

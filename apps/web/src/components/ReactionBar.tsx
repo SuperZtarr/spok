@@ -1,3 +1,4 @@
+/* Barre de réactions (emoji) d'un item ou d'une contribution : compteurs + toggle utilisateur. */
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SmilePlus } from 'lucide-react';

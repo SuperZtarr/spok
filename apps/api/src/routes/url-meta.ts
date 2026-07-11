@@ -1,3 +1,4 @@
+/* Métadonnées d'une URL (title/description/favicon) pour l'aperçu des items LINK — fetch côté serveur. */
 import { FastifyPluginAsync } from 'fastify';
 
 interface UrlMeta {

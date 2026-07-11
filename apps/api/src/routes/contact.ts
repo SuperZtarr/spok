@@ -1,3 +1,4 @@
+/* Formulaire de contact public : crée un item dans l'espace Support de la communauté SPOK. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createNotification } from '../utils/notifications.js';

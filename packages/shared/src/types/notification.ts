@@ -1,3 +1,4 @@
+/* Types notification : Notification, NotificationType, payloads. */
 export type NotificationType = 'INVITATION' | 'ASSIGNMENT' | 'CONTRIBUTION' | 'MENTION' | 'EMAIL_VERIFICATION' | 'NEW_USER' | 'AUDIT_ALERT';
 
 // 'all' = in-app + email, 'in_app' = in-app only, 'none' = disabled

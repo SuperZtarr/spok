@@ -1,3 +1,4 @@
+/* Admin statistiques (/admin/stats) : compteurs par entité et activité. */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, FileText, MessageSquare, Users, FolderKanban, TrendingUp, TrendingDown, Minus } from 'lucide-react';

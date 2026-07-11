@@ -1,3 +1,4 @@
+/* Admin config des vues (/admin/views) : AppConfig du système useViewConfig — cf. skill spok-menu. */
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, RotateCcw, Loader2, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';

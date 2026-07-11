@@ -1,3 +1,4 @@
+/* Plan du site (/sitemap) : liste des pages et communautés publiques. */
 import { Link } from 'react-router-dom';
 import { Globe, User, Shield, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';

@@ -1,3 +1,4 @@
+/* Hook générique de tri de tableaux : clé + ordre asc/desc, accesseurs typés, toggle par colonne. */
 import { useState, useCallback } from 'react';
 
 type SortOrder = 'asc' | 'desc';

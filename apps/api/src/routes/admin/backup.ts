@@ -1,3 +1,4 @@
+/* Enregistrement des métadonnées de backup (appelé par le workflow GitHub backup.yml). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 

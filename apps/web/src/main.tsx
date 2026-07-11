@@ -1,3 +1,4 @@
+/* Point d'entrée React : providers (Router, QueryClient, thème) + montage de <App/>. */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

@@ -1,3 +1,4 @@
+/* Modale de base : portal, overlay, Escape, tailles — socle de toutes les modales. */
 import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';

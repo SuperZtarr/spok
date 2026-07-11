@@ -1,3 +1,4 @@
+/* MENU_REGISTRY : items de menu par défaut (globaux, vues, admin) — overrides via AppConfig menu_overrides. */
 import type { MenuItemConfig } from '../types/menuItem.js';
 import { VIEW_REGISTRY } from './viewRegistry.js';
 

@@ -1,3 +1,4 @@
+/* Ancienne page dashboard — conservée pour compat de route, redirige vers DashboardViewPage. */
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

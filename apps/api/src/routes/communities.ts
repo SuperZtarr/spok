@@ -1,3 +1,8 @@
+/*
+ * Routes /communities : CRUD (visibilité avec workflow d'approbation pendingPublic), membres
+ * (multi-OWNER, mute), invitations par token, join/leave, avatar/cover, tags, emails.
+ * Seul le OWNER modifie la communauté ; création = PRIVATE + pendingVisibility.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';

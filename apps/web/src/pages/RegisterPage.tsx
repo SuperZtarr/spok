@@ -1,3 +1,4 @@
+/* Inscription (/register) : formulaire de création de compte + envoi de l'email de vérification. */
 import { useState } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Link, useNavigate } from 'react-router-dom';

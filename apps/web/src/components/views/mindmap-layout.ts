@@ -1,3 +1,4 @@
+/* Layout de la MindMap : placement radial des nœuds, espacement, recalcul — zone fragile (cf. CLAUDE.md). */
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';

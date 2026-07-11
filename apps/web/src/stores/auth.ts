@@ -1,3 +1,7 @@
+/*
+ * Store Zustand d'authentification : user + tokens (access/refresh), persisté en localStorage.
+ * Source de vérité de la session côté front — le refresh proactif vit dans lib/api.ts, ne pas le dupliquer ici.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthUser } from '@spok/shared';

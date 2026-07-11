@@ -1,3 +1,7 @@
+/*
+ * Déplacement d'un item dans l'arborescence (parentId + position) avec renumérotation des
+ * frères. Utilisé par le DnD des vues (ListView, Gantt). Garde anti-cycle.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';

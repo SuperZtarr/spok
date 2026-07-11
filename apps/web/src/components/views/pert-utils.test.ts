@@ -1,3 +1,7 @@
+/*
+ * TNR des utilitaires PERT : graphe de précédence (blocks/implements seulement — depends
+ * n'ordonne pas, cf. spec 2026-06-11), rangs, chemin critique.
+ */
 import { describe, it, expect } from 'vitest';
 import { buildPertGraph, computePertRanks, computeCriticalPathNaive } from './pert-utils';
 import { buildTree, flattenTree } from './timeline-tree';

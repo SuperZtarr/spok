@@ -1,3 +1,4 @@
+/* Carte d'item (kanban, listes) : titre, type, statut, tags, échéance, assigné. */
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { TYPE_LABELS } from '../../constants/ui';
 

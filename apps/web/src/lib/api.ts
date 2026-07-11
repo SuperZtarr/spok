@@ -1,3 +1,7 @@
+/*
+ * Client API REST : fetch typé + gestion des tokens (refresh proactif < 1 min et retry sur 401 —
+ * ne pas simplifier, cf. zones fragiles CLAUDE.md) + tous les endpoints groupés par domaine.
+ */
 import type {
   AuthResponse,
   LoginInput,

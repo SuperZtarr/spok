@@ -1,3 +1,4 @@
+/* Vue Types : items groupés par type d'item (colonnes façon kanban). */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {

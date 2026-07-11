@@ -1,3 +1,4 @@
+/* Vue Échéances : items à échéance triés par urgence — embeddable dans le dashboard (prop filters). */
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';

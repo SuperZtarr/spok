@@ -1,3 +1,4 @@
+/* Tableau de bord personnel : aujourd'hui, échéances (DeadlinesView embedded), assignés à moi. */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';

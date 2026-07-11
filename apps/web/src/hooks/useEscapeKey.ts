@@ -1,3 +1,4 @@
+/* Hook : callback sur touche Escape quand `active` — fermeture de modales/dropdowns. */
 import { useEffect } from 'react';
 
 export function useEscapeKey(onEscape: () => void, active: boolean) {

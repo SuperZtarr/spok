@@ -1,3 +1,7 @@
+/*
+ * Hook : items de menu (MENU_REGISTRY + overrides AppConfig via GET /menu-items), filtrés par
+ * niveau d'accès (public/user/admin) et groupés en sections. Source unique du menu et des vues.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { menuApi } from '../lib/api';
 import { MENU_REGISTRY } from '@spok/shared';

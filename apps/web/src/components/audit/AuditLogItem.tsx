@@ -1,3 +1,4 @@
+/* Ligne d'audit : action, entité, auteur, date — ouvre le détail. */
 import type { AuditLog, AuditAction } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';

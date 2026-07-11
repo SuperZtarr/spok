@@ -1,3 +1,4 @@
+/* Bouton Exporter avec dropdown en portal (groupes d'options par format) — partagé par les vues. */
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download } from 'lucide-react';

@@ -1,3 +1,4 @@
+/* Vue Images : galerie des items IMAGE (upload, aperçu plein écran). */
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { ImageIcon, ChevronLeft, ChevronRight, X, FolderKanban, GripVertical, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';

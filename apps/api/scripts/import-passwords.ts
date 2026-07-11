@@ -1,3 +1,4 @@
+/* Import one-shot des hash de mots de passe depuis l'ancien système. */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 

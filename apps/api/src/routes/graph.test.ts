@@ -1,3 +1,7 @@
+/*
+ * TNR des routes graphe/sunburst, y compris l'accès public (visitorPreview) : anonyme et
+ * non-membre sur communautés publiques/privées — garantit l'absence de 500 anonymes.
+ */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'

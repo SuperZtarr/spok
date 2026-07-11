@@ -1,3 +1,4 @@
+/* Select standard (label, options, erreur). */
 import { forwardRef, type SelectHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 

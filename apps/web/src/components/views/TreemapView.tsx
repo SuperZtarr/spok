@@ -1,3 +1,4 @@
+/* Vue Treemap (D3) : hiérarchie en rectangles imbriqués proportionnels. */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';

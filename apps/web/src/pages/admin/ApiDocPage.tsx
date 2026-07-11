@@ -1,3 +1,4 @@
+/* Admin doc API (/admin/api-doc) : référence des endpoints REST. */
 export function ApiDocPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">

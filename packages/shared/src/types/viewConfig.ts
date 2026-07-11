@@ -1,3 +1,4 @@
+/* Types du système de config des vues (AppConfig) : ViewConfigItem, catégories, pages globales. */
 export type ViewAccess = 'public' | 'user' | 'admin';
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 

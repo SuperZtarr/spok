@@ -1,3 +1,4 @@
+/* TNR du store community : set/clear de la communauté courante, persistance. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useCommunityStore } from './community'
 

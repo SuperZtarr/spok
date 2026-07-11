@@ -1,3 +1,4 @@
+/* Export d'une communauté de doc du local vers la prod (espaces + items). Credentials via _env.ts. */
 import { PrismaClient } from '@spok/database';
 import { ENV } from './_env';
 

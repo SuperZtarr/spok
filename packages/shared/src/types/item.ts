@@ -1,3 +1,4 @@
+/* Types item : Item, ItemType, relations, inputs de création/déplacement. */
 import type { ContributionWithAuthor } from './contribution.js';
 import type { ReactionSummary } from './reaction.js';
 

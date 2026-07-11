@@ -1,3 +1,4 @@
+/* Modale de bienvenue à la première connexion : lance le tour d'onboarding (useOnboarding). */
 import { useState } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Users, FolderKanban, LayoutGrid, GitBranch, BarChart3, Search, Bell, ArrowRight } from 'lucide-react';

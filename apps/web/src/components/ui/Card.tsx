@@ -1,3 +1,4 @@
+/* Carte conteneur de base (Card/CardHeader/CardContent). */
 import { forwardRef, type HTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 

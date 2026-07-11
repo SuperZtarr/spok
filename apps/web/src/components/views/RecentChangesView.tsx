@@ -1,3 +1,4 @@
+/* Vue Récents : derniers items modifiés de l'espace. */
 import { useMemo, useEffect, useRef } from 'react';
 import { Clock, Plus, Pencil } from 'lucide-react';
 import { ListView } from './ListView';

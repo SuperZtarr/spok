@@ -1,3 +1,4 @@
+/* Liste de suggestions @mention dans l'éditeur riche (extension TipTap). */
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { User, Hash } from 'lucide-react';
 

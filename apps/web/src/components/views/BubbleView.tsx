@@ -1,3 +1,4 @@
+/* Vue Bulles (D3 pack) : items en cercles groupés par espace/statut. */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, pack, type HierarchyCircularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';

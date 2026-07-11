@@ -1,3 +1,7 @@
+/*
+ * Fusion de deux items : choix champ par champ (source/target), absorption des enfants,
+ * contributions et relations, puis suppression de la source.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';

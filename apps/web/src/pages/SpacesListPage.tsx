@@ -1,3 +1,4 @@
+/* Liste des espaces (/spaces) : tous les espaces accessibles groupés par communauté. */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';

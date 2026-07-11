@@ -1,3 +1,8 @@
+/*
+ * GET /user/tasks : items multi-espaces de l'utilisateur (dashboards, page Tâches) — filtres
+ * multi-valeurs, tri, pagination. Périmètre borné aux espaces accessibles, y compris pour les
+ * admins (pas de bypass — les pages admin ont leurs propres endpoints).
+ */
 import { FastifyPluginAsync } from 'fastify';
 
 export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {

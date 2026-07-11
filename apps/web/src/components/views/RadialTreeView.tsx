@@ -1,3 +1,4 @@
+/* Vue Arbre radial (D3) : hiérarchie en étoile. */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, tree, type HierarchyPointNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';

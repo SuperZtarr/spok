@@ -1,3 +1,4 @@
+/* Fusion de deux items : choix champ par champ source/cible, aperçu du résultat. */
 import { useState, useEffect, useMemo } from 'react';
 import { Search, ArrowRight } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

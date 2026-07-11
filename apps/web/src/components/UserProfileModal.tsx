@@ -1,3 +1,4 @@
+/* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe. */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';

@@ -1,3 +1,4 @@
+/* Dialogue de conflit d'édition : l'item a changé pendant l'édition (updatedAt), choix écraser/recharger. */
 import { useState } from 'react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';

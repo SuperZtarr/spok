@@ -1,3 +1,4 @@
+/* TNR du hook useSort : tri asc/desc, null en fin, toggle de colonne. */
 import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSort } from './useSort'

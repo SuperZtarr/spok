@@ -1,3 +1,4 @@
+/* Smoke tests web : les stores et modules clés s'importent sans erreur. */
 import { describe, it, expect } from 'vitest'
 
 describe('Web smoke test', () => {

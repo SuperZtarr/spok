@@ -1,3 +1,4 @@
+/* Plugin Fastify : instancie PrismaClient et le décore sur fastify.prisma (déconnexion au close). */
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import { prisma, PrismaClient } from '@spok/database';

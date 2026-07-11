@@ -1,3 +1,8 @@
+/*
+ * Routes /spaces : CRUD (visibilité effective, accès anonyme aux espaces publics), hiérarchie,
+ * membres (multi-OWNER), invitations par token, join/leave, avatar/cover, sous-routes items/tags/
+ * referentiels. Suppression : space OWNER ou community OWNER uniquement.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Role, SpaceDeletePreview } from '@spok/shared';

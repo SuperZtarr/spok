@@ -1,3 +1,4 @@
+/* Types communauté : Community, memberships, rôles, visibilité, admin. */
 export type CommunityRole = 'OWNER' | 'MEMBER';
 
 export interface Community {

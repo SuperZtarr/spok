@@ -1,3 +1,4 @@
+/* Vue Calendrier : items datés par mois/semaine, navigation, création à la date cliquée. */
 import React, { useMemo, useCallback, useRef } from 'react';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';

@@ -1,3 +1,4 @@
+/* Admin journaux d'audit (/admin/audit-logs) : tous espaces, filtres globaux. */
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter, Copy, Check } from 'lucide-react';

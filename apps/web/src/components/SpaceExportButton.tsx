@@ -1,3 +1,4 @@
+/* Export complet d'un espace (items + arborescence) depuis la toolbar. */
 import type { Item } from '@spok/shared';
 import type { ViewMode } from '../stores/viewMode';
 import { buildExportFilename, exportCSV, exportJSON, exportExcel, exportDataPDF, exportContainerPNG } from '../lib/exportUtils';

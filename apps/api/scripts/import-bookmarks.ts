@@ -1,3 +1,4 @@
+/* Import one-shot des favoris depuis bookmarks.json. */
 import { PrismaClient } from '@spok/database';
 import * as fs from 'fs';
 import { isProd, ADMIN_ID, ENV } from './_env';

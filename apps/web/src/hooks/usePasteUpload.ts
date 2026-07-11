@@ -1,3 +1,4 @@
+/* Hook : collage Ctrl+V d'une image → onPaste(File) pour upload (éditeur riche, zones d'image). */
 import { useEffect } from 'react';
 
 /**

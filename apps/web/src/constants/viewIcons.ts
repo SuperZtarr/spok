@@ -1,3 +1,4 @@
+/* Mapping nom d'icône Lucide → composant, pour le rendu des menus de vues. */
 import {
   List, GitBranch, GitMerge, FileText, LayoutGrid, Users, MessageSquare, Table2, Clock,
   ExternalLink, Image, Bug, CheckSquare,

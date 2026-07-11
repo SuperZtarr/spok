@@ -1,3 +1,4 @@
+/* Nœuds React Flow de la MindMap : item, espace, portail — rendu et poignées. */
 import { useState, useRef, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { Handle, Position, useReactFlow } from '@xyflow/react';

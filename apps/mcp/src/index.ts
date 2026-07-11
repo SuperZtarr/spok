@@ -1,3 +1,7 @@
+/*
+ * Serveur MCP SPOK : expose les données (items, espaces, communautés...) comme outils MCP.
+ * S'authentifie sur l'API REST avec SPOK_EMAIL/SPOK_PASSWORD (fournis par launch.mjs via .env).
+ */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';

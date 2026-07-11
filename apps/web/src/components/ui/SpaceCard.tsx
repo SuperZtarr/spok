@@ -1,3 +1,4 @@
+/* Carte d'espace (listes/accueil) : nom, communauté, compteurs, cover. */
 import { Link } from 'react-router-dom';
 import { Clock, FolderOpen } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';

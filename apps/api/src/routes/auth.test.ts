@@ -1,3 +1,4 @@
+/* TNR des routes /auth : register, login, refresh, reset password (bcrypt et emails mockés). */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { FastifyInstance } from 'fastify'
 import { buildTestApp, MockPrisma, getTestToken } from '../test/helpers.js'

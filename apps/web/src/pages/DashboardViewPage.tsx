@@ -1,3 +1,4 @@
+/* Tableau de bord (/dashboard) : MyDashboardView (aujourd'hui, échéances, assignés à moi). */
 import { HelpCircle } from 'lucide-react';
 import { MyDashboardView } from '../components/views/MyDashboardView';
 import { usePageTourPulse } from '../hooks/useOnboarding';

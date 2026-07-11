@@ -1,3 +1,4 @@
+/* Garde de navigation : confirme si modifications non enregistrées (useFormChanges). */
 import { useEffect, useState } from 'react';
 import { Button } from './Button';
 

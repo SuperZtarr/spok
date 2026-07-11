@@ -1,3 +1,4 @@
+/* Hook : historique des espaces récemment visités (localStorage, max 20) pour la navigation rapide. */
 const STORAGE_KEY = 'spok-recent-spaces';
 const MAX_RECENT = 20;
 

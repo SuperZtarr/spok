@@ -1,3 +1,6 @@
+/*
+ * TNR de /admin/referentiels : défauts + communautés personnalisées (community.referentiels).
+ */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'

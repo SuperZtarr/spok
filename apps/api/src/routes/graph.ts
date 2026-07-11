@@ -1,3 +1,9 @@
+/*
+ * Routes de visualisation : graphe d'espace, graphe de communauté, graphe global, sunburst.
+ * Toutes sous optionalAuthenticate — l'accès anonyme/non-membre suit la Matrice des droits
+ * (visitorPreview) : communautés publiques visibles, espaces PRIVATE exclus, 403 sinon.
+ * Ne jamais lire request.user.userId sans garde ici (crash 500 anonyme, vécu 2026-07-11).
+ */
 import { FastifyPluginAsync } from 'fastify';
 import type { SunburstNode } from '@spok/shared';
 

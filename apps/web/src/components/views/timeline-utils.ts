@@ -1,3 +1,4 @@
+/* Utilitaires du Gantt : calculs de dates/positions de barres, plages visibles, snapping. */
 import type { StatusConfig } from '@spok/shared';
 import type { Item, ItemRelation } from '@spok/shared';
 

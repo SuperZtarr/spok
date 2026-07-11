@@ -1,3 +1,7 @@
+/*
+ * Construction des groupes d'actions du menu contextuel des items (ItemActionMenu) : Ajouter,
+ * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
+ */
 import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, Circle } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 

@@ -1,3 +1,4 @@
+/* Filtres du journal d'audit : entité, action, utilisateur, période. */
 import { useState } from 'react';
 import type { AuditAction, AuditEntity, AuditLogFilters } from '@spok/shared';
 import { Button } from '../ui/Button';

@@ -1,3 +1,4 @@
+/* Hook TanStack Query : hiérarchie sunburst (globale, par communautés ou par espace + portails). */
 import { useQuery } from '@tanstack/react-query';
 import { graphApi } from '../lib/api';
 

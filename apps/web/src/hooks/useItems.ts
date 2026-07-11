@@ -1,3 +1,4 @@
+/* Hooks TanStack Query des items d'un espace : liste (queryKey ['items', spaceId, params]), détail, mutations. */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi } from '../lib/api';
 import type { CreateItemInput, UpdateItemInput, ItemFilterParams } from '@spok/shared';

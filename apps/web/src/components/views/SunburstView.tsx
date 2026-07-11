@@ -1,3 +1,4 @@
+/* Vue Sunburst (D3) : hiérarchie en cercles concentriques, zoom par secteur — mode espace ou global. */
 import { useState, useEffect, useRef, useMemo, useCallback, type RefCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

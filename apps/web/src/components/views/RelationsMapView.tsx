@@ -1,3 +1,4 @@
+/* Vue Relations : carte des relations entre items (sans hiérarchie). */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { Maximize2 } from 'lucide-react';

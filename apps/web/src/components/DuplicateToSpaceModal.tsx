@@ -1,3 +1,4 @@
+/* Duplication d'un item (et enfants) vers un autre espace. */
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Copy, Loader2, Search } from 'lucide-react';

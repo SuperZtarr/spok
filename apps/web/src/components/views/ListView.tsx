@@ -1,3 +1,4 @@
+/* Vue Liste : arborescence d'items (TreeItemRow inline), tri, DnD, RootDropZone — vue par défaut. */
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';

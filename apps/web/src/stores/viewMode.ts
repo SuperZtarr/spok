@@ -1,3 +1,7 @@
+/*
+ * Store Zustand : vue active d'un espace (ViewMode) + vues autorisées (allowedViews, rôle VIEWER).
+ * Les définitions des vues viennent de VIEW_REGISTRY (@spok/shared) — ne pas dupliquer ici.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { VIEW_REGISTRY } from '@spok/shared';

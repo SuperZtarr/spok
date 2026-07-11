@@ -1,3 +1,7 @@
+/*
+ * Fonctions d'export centralisées des vues : CSV, Excel, PDF (données et visuel), PNG, SVG
+ * (PERT via canvas + inlining des styles). Utilisées par ExportDropdownButton dans chaque vue.
+ */
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';

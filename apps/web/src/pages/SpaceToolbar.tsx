@@ -1,3 +1,8 @@
+/*
+ * Barre d'outils d'espace : sélecteur de vues (sections filtrées par mode d'interface
+ * forum/projet/exploration via MODE_ALLOWED/MODE_EXCLUDED), filtres, highlight, tri, création.
+ * Les vues affichées = spaceViews (useMenuItems, niveau d'accès) ∩ règles du mode courant.
+ */
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {

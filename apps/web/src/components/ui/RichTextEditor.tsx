@@ -1,3 +1,7 @@
+/*
+ * Éditeur riche TipTap : gras/listes/titres/liens/images (upload R2), @mentions, collage d'images.
+ * Utilisé pour descriptions d'items et contributions.
+ */
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent, ReactRenderer, useEditorState, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';

@@ -1,3 +1,4 @@
+/* Éditeur de diagrammes draw.io embarqué (iframe) : lit/écrit le XML dans item.content. */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Workflow, Loader2 } from 'lucide-react';
 import { Button } from './Button';

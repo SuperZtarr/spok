@@ -1,3 +1,4 @@
+/* Vue Documents : items DOCUMENT en tableau (téléchargement, remplacement). */
 import { useMemo, useCallback } from 'react';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { FileText, Download, FolderKanban, GripVertical } from 'lucide-react';

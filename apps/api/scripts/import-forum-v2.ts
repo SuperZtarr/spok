@@ -1,3 +1,4 @@
+/* Import one-shot du forum v2 (sujets/messages → items/contributions). */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 import bcrypt from 'bcrypt';

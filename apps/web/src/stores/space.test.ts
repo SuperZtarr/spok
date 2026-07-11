@@ -1,3 +1,4 @@
+/* TNR du store space : espace courant, toggle includeChildren, persistance des ids. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSpaceStore } from './space'
 

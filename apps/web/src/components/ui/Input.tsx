@@ -1,3 +1,4 @@
+/* Champ texte standard (label, erreur, tailles). */
 import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 

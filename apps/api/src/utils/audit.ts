@@ -1,3 +1,4 @@
+/* Création des entrées AuditLog + sérialiseurs par entité (item, espace, communauté, relation). */
 import type { PrismaClient } from '@spok/database';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 

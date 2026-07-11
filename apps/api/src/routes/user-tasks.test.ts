@@ -1,3 +1,7 @@
+/*
+ * TNR de /user/tasks : filtres multi-valeurs, pagination, tri — périmètre borné aux espaces
+ * accessibles de l'utilisateur (pas de bypass admin depuis la refonte dashboards).
+ */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'

@@ -1,3 +1,4 @@
+/* Exécution des TNR depuis l'admin (spawn vitest) — usage local/debug uniquement. */
 import { FastifyPluginAsync } from 'fastify';
 
 interface TestResult {

@@ -1,3 +1,4 @@
+/* Types auth : AuthUser, credentials, réponses de tokens, admin. */
 export interface RegisterInput {
   email: string;
   password: string;

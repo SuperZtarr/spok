@@ -1,3 +1,4 @@
+/* Admin diagnostics (/admin/anomalies) : anomalies de données par catégorie. */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, ChevronDown, ChevronRight, ExternalLink, CheckCircle, AlertTriangle, AlertCircle, Info, Play, XCircle, Clock, ChevronLeft } from 'lucide-react';

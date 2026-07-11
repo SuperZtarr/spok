@@ -1,3 +1,4 @@
+/* Seed initial de la base locale : admin, communauté et espaces d'exemple (pnpm db:seed). */
 import { PrismaClient, SpaceType, Role, ItemType, GlobalRole, CommunityRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 

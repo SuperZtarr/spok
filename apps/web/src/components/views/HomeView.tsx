@@ -1,3 +1,4 @@
+/* Accueil connecté : onglets (communautés, espaces, visualisations) selon dashboardTab. */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';

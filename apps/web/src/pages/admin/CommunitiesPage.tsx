@@ -1,3 +1,4 @@
+/* Admin communautés (/admin/communities) : liste, approbation des passages en public, suppression. */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

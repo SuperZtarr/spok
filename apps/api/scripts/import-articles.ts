@@ -1,3 +1,4 @@
+/* Import one-shot des articles de l'ancien site en items. */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 

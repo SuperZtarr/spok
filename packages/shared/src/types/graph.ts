@@ -1,3 +1,4 @@
+/* Types graphe : nœuds/liens (GraphData), sunburst (SunburstNode). */
 export interface SunburstNode {
   name: string;
   id: string;

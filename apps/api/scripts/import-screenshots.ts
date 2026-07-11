@@ -1,3 +1,4 @@
+/* Import en masse de captures d'écran locales vers R2 + items IMAGE en prod. Credentials via .env racine. */
 import { PrismaClient } from '@prisma/client';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';

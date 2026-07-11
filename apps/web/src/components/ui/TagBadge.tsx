@@ -1,3 +1,4 @@
+/* Badge de tag coloré (nom + couleur du tag). */
 import { X } from 'lucide-react';
 import type { Tag } from '@spok/shared';
 

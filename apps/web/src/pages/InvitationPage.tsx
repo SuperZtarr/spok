@@ -1,3 +1,4 @@
+/* Acceptation d'invitation (/invitation?token=...) : rejoint la communauté/l'espace, crée le compte si besoin. */
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

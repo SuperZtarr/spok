@@ -1,3 +1,4 @@
+/* Barre de sélection de vue (boutons par section) utilisée par SpaceToolbar. */
 import {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
   LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,

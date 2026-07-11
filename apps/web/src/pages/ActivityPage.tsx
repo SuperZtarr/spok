@@ -1,3 +1,4 @@
+/* Feed d'activité (/activity) : éléments non lus groupés communauté > espace, avec mute. */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Activity, Loader2 } from 'lucide-react';

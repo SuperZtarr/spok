@@ -1,3 +1,4 @@
+/* Toolbar de filtres legacy (remplacée par les blocs Filtre/Highlight du global-toolbar, cf. skill spok-menu). */
 import { useState, useRef } from 'react';
 import { ChevronDown, Search, X } from 'lucide-react';
 import type { ItemType, SpaceReferentiels } from '@spok/shared';

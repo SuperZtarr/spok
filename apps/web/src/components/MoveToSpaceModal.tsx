@@ -1,3 +1,4 @@
+/* Déplacement d'un item vers un autre espace : sélecteur groupé par communauté. */
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, FolderInput, Loader2, Search } from 'lucide-react';

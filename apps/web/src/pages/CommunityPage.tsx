@@ -1,3 +1,4 @@
+/* Page communauté (/communities/:id) : cover, espaces en arborescence, membres, activité. */
 import { useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

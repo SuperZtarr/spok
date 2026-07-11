@@ -1,3 +1,8 @@
+/*
+ * Recherche globale (/search et /search/advanced) sur items et contributions.
+ * optionalAuthenticate : un anonyme reçoit des résultats vides (pas d'espaces accessibles).
+ * Le périmètre est borné aux espaces des memberships (pas de bypass admin).
+ */
 import { FastifyPluginAsync } from 'fastify';
 
 interface AdvancedSearchQuery {

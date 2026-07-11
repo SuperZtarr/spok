@@ -1,3 +1,4 @@
+/* Carte mentale globale (/mindmap) : DashboardMindMapView, lecture seule pour la navigation. */
 import { useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { spacesApi, communitiesApi } from '../lib/api';

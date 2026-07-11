@@ -1,3 +1,4 @@
+/* Référentiels par défaut : statuts (couleurs, ordre) et labels de types — base des personnalisations. */
 import type { StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
 
 // =============================================================================

@@ -1,3 +1,4 @@
+/* Fil d'Ariane d'un espace : communauté > espaces parents > espace courant, liens cliquables. */
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';

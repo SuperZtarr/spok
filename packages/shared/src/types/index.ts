@@ -1,3 +1,4 @@
+/* Ré-export de tous les types partagés. */
 export * from './auth.js';
 export * from './space.js';
 export * from './item.js';

@@ -1,3 +1,4 @@
+/* Constantes UI partagées : icônes par type d'item (getTypeIcon), couleurs de statut, tailles. */
 import {
   FileText,
   CheckSquare,

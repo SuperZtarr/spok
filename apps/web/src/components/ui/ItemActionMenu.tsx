@@ -1,3 +1,7 @@
+/*
+ * Menu contextuel générique des items (trigger MoreVertical, portal, sous-menus au survol).
+ * Prend des groupes construits par lib/itemMenuGroups — cf. skill spok-menu, ne pas recréer de menu custom.
+ */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical, ChevronRight, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';

@@ -1,3 +1,4 @@
+/* Config de vues par défaut dérivée de VIEW_REGISTRY (système AppConfig/useViewConfig). */
 import type { ViewConfigItem, ViewCategoryConfig, GlobalPageConfig, GlobalPageGroupConfig } from '../types/viewConfig.js';
 import { VIEW_REGISTRY } from './viewRegistry.js';
 

@@ -1,3 +1,4 @@
+/* Smoke tests API : l'app démarre, les plugins se chargent. */
 import { describe, it, expect } from 'vitest'
 
 describe('API smoke test', () => {

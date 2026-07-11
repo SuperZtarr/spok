@@ -1,3 +1,4 @@
+/* Tâches globales (/tasks) : tableau paginé multi-espaces sur /user/tasks, filtres et tri par colonne. */
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';

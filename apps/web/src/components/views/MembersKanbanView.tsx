@@ -1,3 +1,4 @@
+/* Vue Assignations : kanban par membre (colonnes = membres de l'espace). */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

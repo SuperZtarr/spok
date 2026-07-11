@@ -1,3 +1,4 @@
+/* Liste des communautés (/communities) : les miennes + publiques à rejoindre + invitations en attente. */
 import { useRef } from 'react';
 import { CommunityListView } from '../components/views/CommunityListView';
 import type { CommunityListViewHandle } from '../components/views/CommunityListView';

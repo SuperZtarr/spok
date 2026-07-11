@@ -1,3 +1,7 @@
+/*
+ * Référentiels au niveau communauté (statuts, labels de types) : lecture, PUT (OWNER),
+ * reset. Les espaces résolvent leurs référentiels ici (cf. routes/referentiels.ts).
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_REFERENTIELS, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';

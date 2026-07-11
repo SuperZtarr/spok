@@ -1,3 +1,4 @@
+/* Sélecteur de couleur (palette + hex) pour statuts et tags. */
 import { BADGE_COLOR_OPTIONS, BORDER_COLOR_OPTIONS } from '@spok/shared';
 
 interface ColorPickerProps {

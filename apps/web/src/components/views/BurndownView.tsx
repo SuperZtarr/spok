@@ -1,3 +1,4 @@
+/* Vue Burndown : restant vs temps sur les tâches à échéance (graphique). */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import type { Item } from '@spok/shared';
 

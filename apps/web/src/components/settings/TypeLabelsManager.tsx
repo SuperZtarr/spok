@@ -1,3 +1,4 @@
+/* Éditeur des labels de types d'items d'un référentiel (renommage par communauté). */
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { TypeLabelConfig } from '@spok/shared';

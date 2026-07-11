@@ -1,3 +1,4 @@
+/* Correctif one-shot : réparation d'encodage (mojibake) sur les contenus importés. */
 import { prisma } from '@spok/database';
 
 // =============================================================

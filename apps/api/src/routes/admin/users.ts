@@ -1,3 +1,7 @@
+/*
+ * Administration des utilisateurs : liste, détail, création, rôle global, activation/désactivation,
+ * suppression avec réassignation des contenus.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
 import type { CreateUserInput, UpdateUserInput, AdminUser } from '@spok/shared';

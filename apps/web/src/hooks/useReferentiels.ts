@@ -1,3 +1,7 @@
+/*
+ * Hooks TanStack Query des référentiels (statuts, labels de types) : lecture par espace (résolus
+ * via la communauté côté API) et mutations au niveau communauté.
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { referentielsApi } from '../lib/api';
 import type { SpaceReferentiels } from '@spok/shared';

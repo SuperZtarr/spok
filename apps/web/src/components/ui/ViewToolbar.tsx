@@ -1,3 +1,4 @@
+/* Toolbar de vue legacy (slots extraControls/customExport) — ne plus utiliser pour du neuf, cf. skill spok-menu. */
 import { Plus, History, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { ItemType, Item, SpaceReferentiels } from '@spok/shared';

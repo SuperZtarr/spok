@@ -1,3 +1,4 @@
+/* Plugin : décorateur authenticateAdmin — 403 si globalRole différent de ADMIN. */
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 

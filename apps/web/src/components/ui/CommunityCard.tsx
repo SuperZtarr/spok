@@ -1,3 +1,4 @@
+/* Carte de communauté (listes/accueil) : nom, visibilité, compteurs, cover. */
 import { Link } from 'react-router-dom';
 import { Users, Globe, Lock, Crown, User, Eye, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
 import { Button } from './Button';

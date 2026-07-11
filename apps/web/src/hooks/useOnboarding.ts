@@ -1,3 +1,7 @@
+/*
+ * Hook : didacticiels driver.js — tour principal à la première visite + tours par vue (viewTours),
+ * suivi « déjà vu » en localStorage (spok-onboarding-done, spok-view-tour-done-*).
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';

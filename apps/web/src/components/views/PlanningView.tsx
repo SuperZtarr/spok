@@ -1,3 +1,4 @@
+/* Vue Planning : agenda par périodes (jour/semaine) des items datés. */
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { SpaceExportButton } from '../SpaceExportButton';

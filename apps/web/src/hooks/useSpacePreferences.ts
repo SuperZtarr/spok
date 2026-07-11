@@ -1,3 +1,7 @@
+/*
+ * Hook : préférences par espace et par utilisateur (MindMap : nœuds repliés/épinglés/portails...),
+ * persistées côté API (space-preferences). Debounce les écritures.
+ */
 import { useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 

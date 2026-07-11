@@ -1,3 +1,4 @@
+/* Mise à jour ponctuelle d'items de doc en prod (contenu passé en dur au moment de l'usage). */
 import { PrismaClient } from '@spok/database';
 import { ENV } from './_env';
 

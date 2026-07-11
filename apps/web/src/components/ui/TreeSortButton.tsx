@@ -1,3 +1,4 @@
+/* Dropdown de tri d'arborescence (legacy — remplacé par les boutons inline Ordre, cf. skill spok-menu). */
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ListTree, ArrowDownAZ, Check } from 'lucide-react';

@@ -1,3 +1,4 @@
+/* Opérations en masse sur les items : duplication/déplacement multi-items vers un autre espace. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';

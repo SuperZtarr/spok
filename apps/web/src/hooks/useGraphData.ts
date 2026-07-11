@@ -1,3 +1,7 @@
+/*
+ * Hook TanStack Query : données de graphe selon le niveau (space/community/global) et les types
+ * de liens. Route l'appel vers le bon endpoint graphApi — utilisé par GraphView et GraphPage.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { graphApi } from '../lib/api';
 

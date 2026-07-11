@@ -1,3 +1,4 @@
+/* Hook : pages globales du menu (section global), filtrées par niveau d'accès et mode admin. */
 import { useQuery } from '@tanstack/react-query';
 import { configApi } from '../lib/api';
 import { DEFAULT_GLOBAL_PAGES, DEFAULT_GLOBAL_PAGE_GROUPS } from '@spok/shared';

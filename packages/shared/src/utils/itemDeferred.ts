@@ -1,3 +1,4 @@
+/* Calcul de l'état « différé » d'un item selon son statut (config par référentiels). */
 import type { StatusConfig } from '../types/referentiels.js';
 
 const DEFERRED_DAYS_THRESHOLD = 30;

@@ -1,3 +1,9 @@
+/*
+ * Routes /spaces/:spaceId/items : CRUD des items (titre optionnel, défaut ''), split par titres,
+ * détail avec relations/contributions/reactionSummary. Exporte checkSpaceAccess et
+ * getEffectiveVisibility (visibilité espace → parent → communauté ; OPEN→MEMBER, READONLY→VIEWER)
+ * utilisés par de nombreuses routes — toute modification impacte l'accès global.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';

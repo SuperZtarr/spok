@@ -1,3 +1,4 @@
+/* Admin utilisateurs (/admin/users) : liste, création, rôles, activation, suppression. */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';

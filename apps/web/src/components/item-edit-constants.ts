@@ -1,3 +1,4 @@
+/* Constantes d'ItemEditModal : types, sections, libellés de champs — base uniforme tous types. */
 const DAY = 24 * 60 * 60 * 1000;
 
 export const MEETING_DURATIONS = [

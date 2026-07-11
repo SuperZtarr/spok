@@ -1,3 +1,7 @@
+/*
+ * Point d'entrée de l'API Fastify : enregistrement des plugins (prisma, jwt, sensible, multipart)
+ * et de toutes les routes avec leurs préfixes. Gestion d'erreurs Zod → 400 structuré.
+ */
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';

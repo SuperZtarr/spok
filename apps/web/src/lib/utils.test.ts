@@ -1,3 +1,4 @@
+/* TNR de cn() : merge de classes Tailwind (clsx + tailwind-merge). */
 import { describe, it, expect } from 'vitest'
 import { cn, formatDate, formatDateTime } from './utils'
 

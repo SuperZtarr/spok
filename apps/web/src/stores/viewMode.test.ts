@@ -1,3 +1,4 @@
+/* TNR du store viewMode : constantes VIEW_MODES, mode par défaut, persistance. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewMode } from './viewMode'
 

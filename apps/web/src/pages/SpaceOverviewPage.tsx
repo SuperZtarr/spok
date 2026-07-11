@@ -1,3 +1,4 @@
+/* Présentation d'un espace (/spaces/:id) : description, stats, derniers items, accès au contenu. */
 import { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

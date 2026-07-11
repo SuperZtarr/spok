@@ -1,3 +1,4 @@
+/* Journal d'audit d'un espace : liste filtrée (entité, action, dates) — lecture réservée aux membres. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';

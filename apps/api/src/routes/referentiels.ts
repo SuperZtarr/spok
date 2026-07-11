@@ -1,3 +1,7 @@
+/*
+ * GET /spaces/:spaceId/referentiels — lecture seule : résout les référentiels de la communauté
+ * parente ou renvoie les défauts. L'édition vit dans community-referentiels.ts.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { DEFAULT_REFERENTIELS, type SpaceReferentiels } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';

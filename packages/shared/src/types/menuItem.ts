@@ -1,3 +1,4 @@
+/* Types menu : MenuItemConfig, MenuAccess, sections, overrides. */
 export type MenuAccess = 'public' | 'user' | 'admin';
 
 export interface MenuOverride {

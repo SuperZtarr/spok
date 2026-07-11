@@ -1,3 +1,4 @@
+/* Statistiques globales admin : compteurs par entité, activité récente, croissance. */
 import { FastifyPluginAsync } from 'fastify';
 
 export const adminStatsRoutes: FastifyPluginAsync = async (fastify) => {

@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+
+### Rattrapage documentation code — 2026-07-12
+- Passe complète sur le repo : 293 fichiers source sans commentaire d’en-tête → 0 restant (vagues : stores/hooks/lib 41, routes/plugins/utils 53, pages/constants/scripts/packages 80, composants 115, reliquat 4)
+- Script permanent scripts/check-doc-headers.mjs + étape 5 bloquante dans la skill spok-deploy
+- Vérifié : build packages, typecheck web+api, 426/426 TNR
+- Non commité — prochain mep
 ### Accès public graph.ts (option 2) — 2026-07-12
 - `graph.ts` : les 4 routes (space graph, community graph, global, sunburst) gèrent l'anonyme et le non-membre selon la Matrice des droits (visitorPreview) — communautés publiques visibles, espaces PRIVATE exclus, 403 propre sinon
 - `graph.test.ts` : +5 tests (anonyme public/privé, non-membre public/privé, global anonyme) — 426/426 verts

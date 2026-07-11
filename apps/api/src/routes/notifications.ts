@@ -1,3 +1,4 @@
+/* Notifications utilisateur : liste, marquage lu/tout lu, suppression. Création via utils/notifications. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 

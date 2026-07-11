@@ -1,3 +1,4 @@
+/* Sunburst global (/sunburst) : SunburstView en mode global (hiérarchie communautés > espaces > items). */
 import { SunburstView } from '../components/views/SunburstView';
 
 export function SunburstPage() {

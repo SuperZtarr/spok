@@ -1,3 +1,4 @@
+/* Titre/description/tips de chaque vue (Record<ViewMode> strict — TS échoue si une vue manque). */
 import type { ViewMode } from '../stores/viewMode';
 
 export interface ViewDescription {

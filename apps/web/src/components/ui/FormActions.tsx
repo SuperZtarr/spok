@@ -1,3 +1,4 @@
+/* Boutons standard de formulaire (Enregistrer/Annuler) avec état dirty/saving. */
 import { Loader2 } from 'lucide-react';
 import { Button } from './Button';
 

@@ -1,3 +1,4 @@
+/* Point d'entrée @spok/database : ré-exporte PrismaClient et les types Prisma générés. */
 import { PrismaClient } from '@prisma/client';
 
 export * from '@prisma/client';

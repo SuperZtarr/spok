@@ -1,3 +1,4 @@
+/* Bandeau « email non vérifié » avec renvoi du mail de vérification. */
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Mail, X, Loader2 } from 'lucide-react';

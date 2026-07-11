@@ -1,3 +1,4 @@
+/* Confirmation de suppression de communauté : delete-preview + choix cascade/orphelins. */
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Folder, Loader2, FileText, Users } from 'lucide-react';
 import { Modal } from './ui/Modal';

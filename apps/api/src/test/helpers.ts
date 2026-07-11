@@ -1,3 +1,8 @@
+/*
+ * Fabriques des apps Fastify de test (auth, items, spaces, communities) + MockPrisma.
+ * MockPrisma : factory uniforme, findMany→[] par défaut, tous les modèles du schéma —
+ * ajouter ici tout nouveau modèle Prisma sinon les routes qui l'utilisent renverront 500 en test.
+ */
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
 import { ZodError } from 'zod'

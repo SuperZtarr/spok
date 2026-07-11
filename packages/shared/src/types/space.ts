@@ -1,3 +1,4 @@
+/* Types espace : Space, memberships, rôles, visibilité, préférences. */
 export type SpaceType = 'PERSONAL' | 'GROUP';
 export type Role = 'OWNER' | 'MEMBER' | 'VIEWER';
 export type SpaceVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';

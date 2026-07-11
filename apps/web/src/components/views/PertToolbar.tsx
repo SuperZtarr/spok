@@ -1,3 +1,4 @@
+/* Toolbar de la vue PERT : filtre bloquants, zoom, tri rang/alpha, export SVG (sur ViewToolbar). */
 import { Minus, Plus, Info, ArrowUpDown } from 'lucide-react';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';

@@ -1,3 +1,4 @@
+/* Helpers d'ItemEditModal : préparation des payloads, diff des champs modifiés. */
 import type { Item } from '@spok/shared';
 
 /** Extract a clean name from a filename (remove extension) */

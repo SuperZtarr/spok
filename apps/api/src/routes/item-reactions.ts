@@ -1,3 +1,4 @@
+/* Réactions (emoji) sur items et contributions : toggle par utilisateur et type. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { checkSpaceAccess } from './items.js';

@@ -1,3 +1,4 @@
+/* Profil utilisateur : préférences (thème), avatar (R2), changement de mot de passe. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';

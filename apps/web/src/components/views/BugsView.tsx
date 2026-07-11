@@ -1,3 +1,4 @@
+/* Vue Bugs : items BUG en tableau avec statuts. */
 import { useMemo } from 'react';
 import { Bug } from 'lucide-react';
 import { ListView } from './ListView';

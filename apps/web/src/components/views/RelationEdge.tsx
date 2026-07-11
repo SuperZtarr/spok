@@ -1,3 +1,4 @@
+/* Arête de relation (SVG) partagée : couleur/marqueur par type, commentaire, sélection. */
 import { useState } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
 import { MessageCircle } from 'lucide-react';

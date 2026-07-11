@@ -1,3 +1,4 @@
+/* Diagnostics admin : détection d'anomalies de données (orphelins, incohérences) par catégorie. */
 import { FastifyPluginAsync } from 'fastify';
 import { Prisma } from '@spok/database';
 

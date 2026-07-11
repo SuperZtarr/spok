@@ -1,3 +1,4 @@
+/* Gestion des membres d'une communauté : rôles (multi-OWNER), invitations, retrait, mute. */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { communitiesApi } from '../../lib/api';
 import { MembersColumnManager } from './MembersColumnManager';

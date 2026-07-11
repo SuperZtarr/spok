@@ -1,3 +1,4 @@
+/* Vue Liens : items LINK en tableau avec métadonnées d'URL. */
 import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';

@@ -1,3 +1,7 @@
+/*
+ * Store Zustand : communauté courante (avec rôle), persistée pour survivre aux rechargements.
+ * Utilisé par le layout et les pages communauté pour le contexte de navigation.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CommunityWithRole } from '@spok/shared';

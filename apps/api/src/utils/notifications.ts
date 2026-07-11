@@ -1,3 +1,7 @@
+/*
+ * Création de notifications en base + envoi d'emails transactionnels (Resend) : invitations,
+ * mentions, contributions. sendInvitationEmail no-op sans RESEND_API_KEY.
+ */
 import type { PrismaClient, NotificationType } from '@spok/database';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@spok/shared';
 import type { NotificationPreferences, NotificationChannel } from '@spok/shared';

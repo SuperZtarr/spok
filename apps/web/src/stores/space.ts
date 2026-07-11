@@ -1,3 +1,7 @@
+/*
+ * Store Zustand : espace courant + option « inclure les sous-espaces » (persistée par espace
+ * en localStorage). Contexte utilisé par SpacePage et les vues.
+ */
 import { create } from 'zustand';
 import type { SpaceWithRole } from '@spok/shared';
 

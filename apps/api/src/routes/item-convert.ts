@@ -1,3 +1,4 @@
+/* Conversion d'un item en espace : crée l'espace, migre les enfants en items racine. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';

@@ -1,3 +1,4 @@
+/* Graphe global (/graph) : GraphView en mode global (communautés accessibles, filtre par communauté). */
 import { useNavigate } from 'react-router-dom';
 import { GraphView } from '../components/views/GraphView';
 

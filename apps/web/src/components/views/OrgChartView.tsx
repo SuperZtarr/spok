@@ -1,3 +1,4 @@
+/* Vue Organigramme : hiérarchie des items en boîtes (à revoir, cf. TODO). */
 import { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { spacesApi } from '../../lib/api';

@@ -1,3 +1,4 @@
+/* Template HTML commun des emails SPOK (wrapper avec logo et pied de page). */
 const SITE_URL = process.env.SITE_URL || 'https://spok.space';
 const LOGO_URL = `${SITE_URL}/logo.png`;
 

@@ -1,3 +1,4 @@
+/* cn() : merge de classes Tailwind (clsx + tailwind-merge) — unique utilitaire global de style. */
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

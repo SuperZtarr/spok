@@ -1,3 +1,4 @@
+/* Barre de filtres de la page Tâches globales : types, statuts, priorités, dates, mes tâches. */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, SlidersHorizontal } from 'lucide-react';

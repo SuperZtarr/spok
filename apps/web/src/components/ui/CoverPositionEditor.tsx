@@ -1,3 +1,4 @@
+/* Réglage de la position/zoom d'une image de couverture (communauté/espace). */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Move, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 

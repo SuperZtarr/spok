@@ -1,3 +1,4 @@
+/* Vérification ponctuelle de la répartition des visibilités d'espaces en prod (lecture seule). */
 import { prodPrisma } from './_env';
 const p = prodPrisma();
 

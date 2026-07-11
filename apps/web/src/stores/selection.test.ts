@@ -1,3 +1,4 @@
+/* TNR du store selection : toggle, sélection multiple, sortie du mode sélection. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSelectionStore } from './selection'
 

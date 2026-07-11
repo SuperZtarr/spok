@@ -1,3 +1,4 @@
+/* Admin référentiels (/admin/referentiels) : défauts + communautés personnalisées. */
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';

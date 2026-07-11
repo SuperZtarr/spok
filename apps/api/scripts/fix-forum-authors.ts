@@ -1,3 +1,4 @@
+/* Correctif one-shot : réattribution des auteurs après import forum. */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 import bcrypt from 'bcrypt';

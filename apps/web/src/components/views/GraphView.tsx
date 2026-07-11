@@ -1,3 +1,4 @@
+/* Vue Graphe (D3 force) : nœuds items/espaces/communautés, liens hiérarchie/relations/tags, filtres. */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useQuery } from '@tanstack/react-query';

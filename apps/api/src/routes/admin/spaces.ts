@@ -1,3 +1,4 @@
+/* Administration des espaces : liste globale avec compteurs, détail, suppression, transfert. */
 import { FastifyPluginAsync } from 'fastify';
 import type { SpaceDeletePreview } from '@spok/shared';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../../utils/audit.js';

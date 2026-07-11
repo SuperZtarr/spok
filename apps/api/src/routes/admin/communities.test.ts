@@ -1,3 +1,4 @@
+/* TNR de l'administration des communautés : liste, approbation public, suppression. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'

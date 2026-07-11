@@ -1,3 +1,4 @@
+/* Vue Kanban : colonnes par statut (référentiels), DnD des cartes, création rapide. */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {

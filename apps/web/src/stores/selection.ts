@@ -1,3 +1,7 @@
+/*
+ * Store Zustand : sélection multiple d'items (mode sélection des vues liste/kanban).
+ * Set d'ids + actions toggle/select/clear — état volatil, non persisté.
+ */
 import { create } from 'zustand';
 
 interface SelectionState {

@@ -1,3 +1,4 @@
+/* Zone de dépôt d'images avec aperçu et upload R2. */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, ClipboardPaste } from 'lucide-react';
 

@@ -1,3 +1,4 @@
+/* Toolbar du tableau de bord : slot actions + bouton aide — ne pas migrer vers ViewToolbar (cf. skill spok-menu). */
 import { useState, useRef, useEffect } from 'react';
 import { HelpCircle, X, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';

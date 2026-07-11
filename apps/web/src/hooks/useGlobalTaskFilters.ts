@@ -1,3 +1,7 @@
+/*
+ * Hook : état des filtres de la page Tâches globales (types, statuts, priorités, dates, recherche
+ * débouncée, mes tâches) + sérialisation vers les params de /user/tasks.
+ */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { GlobalTaskFilters } from '../lib/api';
 

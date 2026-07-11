@@ -1,3 +1,4 @@
+/* Extraction des @mentions dans le HTML des descriptions/contributions → notifications. */
 import type { PrismaClient } from '@spok/database';
 import { createNotification } from './notifications.js';
 

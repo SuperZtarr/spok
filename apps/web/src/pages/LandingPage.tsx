@@ -1,3 +1,4 @@
+/* Page d'accueil publique (/) pour visiteur non connecté : présentation + communautés publiques. */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {

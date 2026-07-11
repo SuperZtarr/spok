@@ -1,3 +1,4 @@
+/* Favoris (/bookmarks) : espaces et items épinglés par l'utilisateur. */
 import { useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Star, Bookmark, Clock, FolderOpen, Loader2, Trash2 } from 'lucide-react';

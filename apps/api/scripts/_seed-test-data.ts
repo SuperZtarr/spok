@@ -1,3 +1,4 @@
+/* Seed de données de test en local (communautés/espaces/items factices). */
 import { PrismaClient } from '@spok/database';
 
 const p = new PrismaClient();

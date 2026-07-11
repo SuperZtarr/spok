@@ -1,3 +1,4 @@
+/* Export d'un item seul (contenu + contributions) en texte/HTML — menu contextuel des items. */
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Item, ItemWithRelations, ContributionWithAuthor } from '@spok/shared';

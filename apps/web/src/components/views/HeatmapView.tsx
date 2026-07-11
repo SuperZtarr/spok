@@ -1,3 +1,4 @@
+/* Vue Heatmap : activité par jour/période en cases colorées. */
 import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 

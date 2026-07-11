@@ -1,3 +1,4 @@
+/* Métriques de performance admin : tailles des tables, requêtes lentes, stats Prisma. */
 import { FastifyPluginAsync } from 'fastify';
 
 export const adminPerfRoutes: FastifyPluginAsync = async (app) => {

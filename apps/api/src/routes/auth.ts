@@ -1,3 +1,7 @@
+/*
+ * Authentification : register (vérification email via Resend), login, refresh, logout,
+ * reset/forgot password. Tokens JWT (access 15 min / refresh 7 j) — hash bcrypt cost 10.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { hash, compare } from 'bcrypt';
 import { z } from 'zod';

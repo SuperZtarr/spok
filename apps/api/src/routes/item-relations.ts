@@ -1,3 +1,7 @@
+/*
+ * Relations entre items (blocks, depends, implements, relates) : CRUD + commentaire de relation.
+ * La sémantique PERT des types vit côté web (pert-utils) — cf. spec 2026-06-11.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeRelationForAudit } from '../utils/audit.js';

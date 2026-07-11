@@ -1,3 +1,4 @@
+/* Import one-shot du forum v3 — remplace import-forum-v2. */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 

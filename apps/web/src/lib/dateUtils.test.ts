@@ -1,3 +1,4 @@
+/* TNR des utilitaires de dates : formats FR, ranges, helpers calendrier. */
 import { describe, it, expect } from 'vitest'
 import {
   MONTH_NAMES_FR,

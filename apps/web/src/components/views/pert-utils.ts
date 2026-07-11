@@ -1,3 +1,7 @@
+/*
+ * Utilitaires PERT : graphe de précédence (blocks/implements ordonnent, depends non — spec
+ * 2026-06-11), rangs par plus long chemin, chemin critique. Testé par pert-utils.test.ts.
+ */
 import type { Item, ItemRelation } from '@spok/shared';
 
 export interface PertGraph {

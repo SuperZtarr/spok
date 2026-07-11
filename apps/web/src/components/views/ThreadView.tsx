@@ -1,3 +1,4 @@
+/* Vue Discussions : items en fils de discussion avec contributions (mode forum). */
 import { useState, useMemo } from 'react';
 import { MessageSquare, ChevronDown, ChevronRight, Clock, ExternalLink } from 'lucide-react';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';

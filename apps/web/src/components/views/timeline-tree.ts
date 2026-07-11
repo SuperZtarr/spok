@@ -1,3 +1,4 @@
+/* Construction de l'arbre du Gantt/PERT : buildTree (sortFn optionnel), flattenTree, TreeItem. */
 import type { Item } from '@spok/shared';
 
 export interface TreeItem extends Item {

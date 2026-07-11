@@ -1,3 +1,4 @@
+/* Config des colonnes de la vue Assignations (membres affichés, ordre). */
 import { useState, useMemo } from 'react';
 import { Users, Crown, User, ChevronRight, ChevronLeft, Loader2, Search } from 'lucide-react';
 import { RoleGuard } from '../RoleGuard';

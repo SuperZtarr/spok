@@ -1,3 +1,7 @@
+/*
+ * Contributions (commentaires threadés) d'un item : CRUD + réactions, notifications
+ * des participants et des @mentions.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog } from '../utils/audit.js';

@@ -1,3 +1,7 @@
+/*
+ * Feed d'activité non lue : contributions/items récents groupés communauté > espace, avec
+ * respect des mutes (membership.muted) et du suivi de lecture (ItemView).
+ */
 import { FastifyPluginAsync } from 'fastify';
 
 export const activityRoutes: FastifyPluginAsync = async (app) => {

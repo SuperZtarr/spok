@@ -1,3 +1,4 @@
+/* Demande de réinitialisation de mot de passe (/forgot-password) : envoi de l'email avec token. */
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';

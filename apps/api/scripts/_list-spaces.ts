@@ -1,3 +1,4 @@
+/* Liste les espaces prod dont l'admin est OWNER (lecture seule, debug). */
 import { PrismaClient } from '@prisma/client'
 import { ENV } from './_env'
 const prisma = new PrismaClient({ datasources: { db: { url: ENV.PROD_DB_URL } } })

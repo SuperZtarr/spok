@@ -1,3 +1,4 @@
+/* TNR du store dashboardTab : onglet par défaut, changement, persistance localStorage. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useDashboardTabStore, DASHBOARD_TABS, type DashboardTab } from './dashboardTab'
 

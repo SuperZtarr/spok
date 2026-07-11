@@ -1,3 +1,4 @@
+/* Modale admin : détail utilisateur (memberships, contenus, actions rôle/activation). */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Building2, FolderKanban, Plus, Trash2, Save, Loader2 } from 'lucide-react';

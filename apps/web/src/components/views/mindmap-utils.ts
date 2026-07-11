@@ -1,3 +1,4 @@
+/* Utilitaires MindMap : construction nodes/edges depuis les items, portails — edges recalculés via onInit. */
 import type { ItemWithRelations, StatusConfig } from '@spok/shared';
 import type { Node, Edge } from '@xyflow/react';
 import { Link2, Ban, ArrowRight, type LucideIcon } from 'lucide-react';

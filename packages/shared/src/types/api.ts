@@ -1,3 +1,4 @@
+/* Types des réponses API génériques (pagination, erreurs). */
 export interface ApiError {
   statusCode: number;
   error: string;

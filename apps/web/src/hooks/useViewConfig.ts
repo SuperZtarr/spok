@@ -1,3 +1,7 @@
+/*
+ * Hook : config des vues (AppConfig) — système parallèle utilisé par ViewModeSelector, composant
+ * non rendu (remplacé par MainMenu). Conservé pour /admin/views. Cf. skill spok-menu.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { configApi } from '../lib/api';
 import { DEFAULT_VIEW_CONFIG, DEFAULT_VIEW_CATEGORIES } from '@spok/shared';

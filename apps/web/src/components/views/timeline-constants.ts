@@ -1,3 +1,4 @@
+/* Constantes du Gantt : hauteurs de lignes, largeurs de colonnes, niveaux de zoom. */
 import { Link2, Ban, ArrowRight, type LucideIcon } from 'lucide-react';
 
 // Zoom level configuration

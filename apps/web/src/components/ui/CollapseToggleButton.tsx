@@ -1,3 +1,4 @@
+/* Bouton replier/déplier tout (arborescences des vues). */
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 
 interface CollapseToggleButtonProps {

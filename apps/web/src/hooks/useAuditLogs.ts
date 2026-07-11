@@ -1,3 +1,4 @@
+/* Hook TanStack Query : journal d'audit d'un espace (queryKey ['auditLogs', spaceId, filters]). */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AuditLogFilters } from '@spok/shared';
 import { auditLogsApi } from '../lib/api';

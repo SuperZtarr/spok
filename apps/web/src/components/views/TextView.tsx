@@ -1,3 +1,4 @@
+/* Vue Texte : document continu des items (titres + descriptions) en lecture/édition. */
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } from 'lucide-react';

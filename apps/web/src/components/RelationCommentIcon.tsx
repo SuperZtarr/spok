@@ -1,3 +1,4 @@
+/* Icône de commentaire sur une relation (SVG partagé Gantt/PERT) — indique un commentaire présent. */
 import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { RelationTooltip } from './RelationTooltip';

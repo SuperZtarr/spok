@@ -1,3 +1,4 @@
+/* Tooltip d'une relation (type, items liés, commentaire) au survol dans les vues Gantt/PERT. */
 import { createPortal } from 'react-dom';
 
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {

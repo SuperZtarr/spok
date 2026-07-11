@@ -1,3 +1,4 @@
+/* TNR du store theme : toggle, classe DOM, sync préférence API (mockée). */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Mock the API before importing the store

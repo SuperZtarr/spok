@@ -1,3 +1,4 @@
+/* Réinitialisation du mot de passe (/reset-password?token=...) après clic sur l'email. */
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';

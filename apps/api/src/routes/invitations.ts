@@ -1,3 +1,7 @@
+/*
+ * Invitations par token (communauté ou espace) : création, acceptation (avec auto-join des
+ * espaces à defaultRole), refus, liste. Helper createInvitation partagé par communities/spaces.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { createNotification } from '../utils/notifications.js';

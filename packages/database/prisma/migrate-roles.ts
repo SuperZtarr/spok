@@ -1,3 +1,4 @@
+/* Migration one-shot des rôles (ancienne → nouvelle taxonomie). */
 import { PrismaClient } from '@prisma/client';
 
 const dbUrl = process.argv[2] || process.env.DATABASE_URL;

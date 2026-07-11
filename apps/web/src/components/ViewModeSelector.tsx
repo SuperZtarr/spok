@@ -1,3 +1,7 @@
+/*
+ * Sélecteur de vues legacy — NON RENDU (remplacé par MainMenu), conservé pour le système
+ * AppConfig/useViewConfig. Ne pas réintroduire — cf. skill spok-menu.
+ */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {

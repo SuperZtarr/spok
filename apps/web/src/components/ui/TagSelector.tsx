@@ -1,3 +1,4 @@
+/* Sélecteur multi-tags d'un item : recherche, création à la volée. */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';

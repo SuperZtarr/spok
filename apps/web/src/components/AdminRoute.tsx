@@ -1,3 +1,4 @@
+/* Garde de route : n'affiche les pages admin que si globalRole ADMIN (sinon redirection). */
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import { useAdminMode } from './DevDbStatus';

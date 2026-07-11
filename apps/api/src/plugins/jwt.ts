@@ -1,3 +1,7 @@
+/*
+ * Plugin JWT : décorateurs authenticate (401 sans token), optionalAuthenticate (request.user
+ * undefined pour un anonyme — toujours garder request.user?.userId) et authenticateAdmin.
+ */
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fastifyJwt from '@fastify/jwt';

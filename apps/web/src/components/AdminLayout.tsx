@@ -1,3 +1,4 @@
+/* Layout des pages /admin/* : navigation latérale admin + garde de rôle. */
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History, Eye, LogOut, Shield, Search, Map as MapIcon, Activity } from 'lucide-react';

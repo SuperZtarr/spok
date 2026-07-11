@@ -1,3 +1,4 @@
+/* TNR de l'administration des espaces : liste globale, détail, suppression. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'

@@ -1,3 +1,4 @@
+/* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER. */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

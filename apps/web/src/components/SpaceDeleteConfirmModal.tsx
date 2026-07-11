@@ -1,3 +1,4 @@
+/* Confirmation de suppression d'espace : delete-preview (sous-espaces, items) + cascade. */
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Folder, Loader2, FileText } from 'lucide-react';
 import { Modal } from './ui/Modal';

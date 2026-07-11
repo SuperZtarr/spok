@@ -1,3 +1,4 @@
+/* Envoi d'un email aux membres d'une communauté (composition + destinataires). */
 import { useState, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Mail, Check, Loader2 } from 'lucide-react';

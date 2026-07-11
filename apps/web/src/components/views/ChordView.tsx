@@ -1,3 +1,4 @@
+/* Vue Chord (D3) : relations entre espaces en arcs de cercle. */
 import { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { chord, ribbon } from 'd3-chord';
 import { arc as d3Arc } from 'd3-shape';

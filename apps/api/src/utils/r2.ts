@@ -1,3 +1,7 @@
+/*
+ * Client Cloudflare R2 (S3) : upload/suppression d'images et fichiers, redimensionnement avatars
+ * et covers (sharp). isR2Configured() garde toutes les routes d'upload.
+ */
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 

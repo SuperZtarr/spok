@@ -1,3 +1,4 @@
+/* Réimport one-shot du HTML forum (corrections de rendu après premier import). */
 import { prisma } from '@spok/database';
 import * as fs from 'fs';
 import bcrypt from 'bcrypt';

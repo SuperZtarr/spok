@@ -1,3 +1,4 @@
+/* Confirmation de suppression d'item : aperçu des enfants impactés, choix cascade/orphelins. */
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Calendar, Link as LinkIcon, User, Tag as TagIcon, Flag } from 'lucide-react';
 import { Modal } from './ui/Modal';

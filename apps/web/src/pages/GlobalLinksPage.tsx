@@ -1,3 +1,4 @@
+/* Liens globaux (/links) : tous les items LINK des espaces accessibles, filtres par espace. */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, Search, FolderOpen, Building2, ChevronRight } from 'lucide-react';

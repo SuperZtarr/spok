@@ -1,3 +1,4 @@
+/* Hook : suivi des modifications d'un formulaire (dirty, save/cancel, garde de sortie). */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 /**

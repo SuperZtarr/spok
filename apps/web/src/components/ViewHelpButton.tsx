@@ -1,3 +1,4 @@
+/* Bouton d'aide d'une vue : lance le tour driver.js de la vue courante (viewTours). */
 import { useState, useRef, useEffect } from 'react';
 import { HelpCircle, X, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';

@@ -1,3 +1,4 @@
+/* Config Vite : alias @/ → src/, proxy /api → API locale (VITE_API_PROXY_TARGET), build. */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';

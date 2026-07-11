@@ -1,3 +1,4 @@
+/* Types invitation : Invitation, statuts, payloads d'acceptation. */
 import type { Role } from './space.js';
 import type { CommunityRole } from './community.js';
 
