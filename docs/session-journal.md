@@ -13,7 +13,10 @@
 - Nettoyage repo : `_env.ts` lit le .env racine (nouvelles clés PROD_DATABASE_URL, SPOK_EMAIL, SPOK_PASSWORD), 6 scripts + MCP (launch.mjs, start-prod.bat) + skill spok-api + settings.local.json purgés — plus aucun secret dans les fichiers trackés (vérifié)
 - Clés R2 rotées (Roll du token, secret = SHA-256 du token value) : .env local à jour, accès bucket testé OK — Thomas colle le secret dans Railway + GitHub Actions
 - Skills corrigées : spok-tnr (vitest EST installé), spok-rebuild + spok-deploy + CLAUDE.md (pnpm typecheck ne vérifie rien → npx tsc --noEmit par app), spok-menu (pas de table MenuItem → MENU_REGISTRY + AppConfig menu_overrides), spok-start (noms outils claude-in-chrome)
-- RESTE : commit/push du nettoyage (feu vert Thomas) ; purge historique git (optionnel)
+- Nettoyage + skills commités/poussés (f1605ec, f6a9752, fd7d7b6) — repo public propre à HEAD
+- spok-tnr enrichie : section "Check santé post-modification" + script permanent `apps/api/scripts/health-check.ts` (API/Web/DB locale, DB prod, R2 en une passe) — testée en réel : infra tout vert, typecheck OK
+- TNR : 47/414 tests en échec — dérive antérieure (tests jamais maintenus depuis ee2359f), ajouté au TODO
+- RESTE : commit de health-check.ts + skill spok-tnr + TODO/journal ; purge historique git (optionnel)
 
 ### Diagnostic doc "Fonctionnement structurel" + corrections — 2026-07-11
 - Doc SPOK Modèle de données : ItemView créé (tables techniques), MenuItem requalifié (stocké via AppConfig, pas une table), ItemType sorti des tables (enum, à la racine), doublon PasswordResetToken (Autres fonctionnalités) → cancelled

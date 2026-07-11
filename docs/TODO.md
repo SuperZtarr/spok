@@ -12,6 +12,9 @@
 - [ ] **Étape 4 — Mode Projet** : affiner spec vues/champs
 - [ ] **Étape 5 — Mode Exploration** : tout exposé, à affiner
 
+### Tests / qualité
+- [ ] Réparer les TNR : 47 tests API en échec sur 414 (constaté 2026-07-11) — les tests datent du commit initial Vitest (ee2359f) et n'ont pas suivi l'évolution des routes (communities, spaces, referentiels, user-tasks, items, graph, search) + useSort.test.ts (erreur d'import) + 1 test pert-utils
+
 ### Didacticiels / aide contextuelle
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide
 

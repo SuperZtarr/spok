@@ -89,6 +89,24 @@ apps/web/src/
 - Après une migration Prisma (smoke test au minimum)
 - Avant un deploy en prod
 
+## Check santé post-modification
+
+Après une rotation de credentials, un changement d'infra (ports, variables Railway, R2), une modification des scripts `_env.ts`/MCP, ou en cas de doute général :
+
+```bash
+cd C:/_dev/spok
+npx tsx apps/api/scripts/health-check.ts   # API locale, Web local, DB locale, DB prod, R2 — en une passe
+cd apps/web && npx tsc --noEmit            # typecheck web
+cd ../.. && pnpm exec vitest run           # TNR complets
+```
+
+Compléments non couverts par le script :
+- **MCP SPOK** : appeler `mcp__spok__list_spaces` — si erreur d'auth, vérifier `SPOK_EMAIL`/`SPOK_PASSWORD` dans le `.env` racine et redémarrer Claude (le MCP lit le .env au lancement via `apps/mcp/launch.mjs`)
+- **Site prod** : demander à Thomas de tester https://spok.space (login + données) — ne jamais appeler `api.spok.space` directement
+- **API prod** : statut visible sur Railway (service spok-api → Deployments)
+
+Si `health-check.ts` échoue sur DB prod ou R2 : vérifier que les clés du `.env` racine (`PROD_DATABASE_URL`, `R2_*`) correspondent aux variables Railway.
+
 ## Ajouter un test
 
 1. Créer `apps/api/src/routes/[route].test.ts` ou `apps/web/src/[...]/[module].test.ts`
