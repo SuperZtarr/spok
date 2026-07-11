@@ -49,7 +49,7 @@ import type { TreeSort } from '../lib/treeSort';
 
 /** Vues autorisées par mode (liste blanche) — null = toutes */
 const MODE_ALLOWED: Record<string, Set<string> | null> = {
-  forum:       new Set(['thread', 'recent']),
+  forum:       new Set(['thread', 'recent', 'text']),
   projet:      null,
   exploration: null,
   tous:        null,
