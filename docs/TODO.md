@@ -13,7 +13,10 @@
 - [ ] **Étape 5 — Mode Exploration** : tout exposé, à affiner
 
 ### Tests / qualité
-- [ ] Réparer les TNR : 47 tests API en échec sur 414 (constaté 2026-07-11) — les tests datent du commit initial Vitest (ee2359f) et n'ont pas suivi l'évolution des routes (communities, spaces, referentiels, user-tasks, items, graph, search) + useSort.test.ts (erreur d'import) + 1 test pert-utils
+- [x] Réparer les TNR : 47 tests en échec réalignés sur les comportements actuels des routes — 422/422 verts — 2026-07-11
+- [ ] Routes graph.ts : plusieurs handlers sous `optionalAuthenticate` crashent (500) pour un visiteur anonyme (`request.user.userId` sans garde, ~8 occurrences hors `/spaces/:spaceId/graph` qui est corrigé) — clarifier l'intention d'accès public puis corriger
+- [ ] spaces.ts DELETE /:id : le commentaire dit "Community OWNER or ADMIN can delete" mais le code n'autorise que OWNER — trancher l'intention et aligner
+- [ ] Couverture manquante : community-referentiels.ts (édition des référentiels au niveau communauté) n'a aucun test
 
 ### Didacticiels / aide contextuelle
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide

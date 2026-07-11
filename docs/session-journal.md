@@ -15,8 +15,10 @@
 - Skills corrigées : spok-tnr (vitest EST installé), spok-rebuild + spok-deploy + CLAUDE.md (pnpm typecheck ne vérifie rien → npx tsc --noEmit par app), spok-menu (pas de table MenuItem → MENU_REGISTRY + AppConfig menu_overrides), spok-start (noms outils claude-in-chrome)
 - Nettoyage + skills commités/poussés (f1605ec, f6a9752, fd7d7b6) — repo public propre à HEAD
 - spok-tnr enrichie : section "Check santé post-modification" + script permanent `apps/api/scripts/health-check.ts` (API/Web/DB locale, DB prod, R2 en une passe) — testée en réel : infra tout vert, typecheck OK
-- TNR : 47/414 tests en échec — dérive antérieure (tests jamais maintenus depuis ee2359f), ajouté au TODO
-- RESTE : commit de health-check.ts + skill spok-tnr + TODO/journal ; purge historique git (optionnel)
+- TNR : 47 tests en échec réparés → 422/422 verts. Causes : dérive depuis ee2359f — description obligatoire + workflow pendingPublic (communities), invitations par token (communities/spaces), multi-OWNER, visibilité effective OPEN→MEMBER, plus de bypass admin (user-tasks/search), référentiels au niveau communauté (referentiels + admin), titre optionnel + reactionSummary (items), sémantique depends (pert-utils), dép @testing-library/react manquante (useSort)
+- helpers.ts : MockPrisma modernisé (factory uniforme, tous les modèles dont invitation/itemView, findMany→[] par défaut)
+- Bugs routes corrigés : graph /spaces/:id/graph et search / crashaient (500) pour un anonyme (request.user sans garde) → 403 / résultats vides. Autres handlers graph.ts encore concernés → TODO
+- RESTE : commit des réparations TNR ; purge historique git (optionnel)
 
 ### Diagnostic doc "Fonctionnement structurel" + corrections — 2026-07-11
 - Doc SPOK Modèle de données : ItemView créé (tables techniques), MenuItem requalifié (stocké via AppConfig, pas une table), ItemType sorti des tables (enum, à la racine), doublon PasswordResetToken (Autres fonctionnalités) → cancelled
