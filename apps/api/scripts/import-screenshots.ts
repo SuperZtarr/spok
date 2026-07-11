@@ -14,7 +14,7 @@ function env(key: string): string {
   return (process.env[key] || '').replace(/^["']|["']$/g, '');
 }
 
-const PROD_DATABASE_URL = 'postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway';
+const PROD_DATABASE_URL = env('PROD_DATABASE_URL');
 const SOURCE_DIR = 'C:\\Users\\Admin\\OneDrive\\Images\\Screenshots';
 const USER_EMAIL = 'superztarr@gmail.com';
 const SPACE_NAME = 'Captures d\u2019\u00e9cran';

@@ -73,25 +73,25 @@ def login(email='admin@spok.app', password='admin1234', base='http://localhost:3
 
 ## Credentials
 
-| Env | URL | Email | Password |
-|-----|-----|-------|----------|
-| Local | `http://localhost:3001` | `admin@spok.app` | `admin1234` |
-| Prod | `https://api.spok.space` | `superztarr@gmail.com` | `1234azerQSDFwxcv` |
+**JAMAIS de secret en dur dans un fichier tracké** — ce repo est public (fuite corrigée le 2026-07-11, tout a été roté).
+
+| Env | URL | Où sont les credentials |
+|-----|-----|------------------------|
+| Local | `http://localhost:3001` | `admin@spok.app` / `admin1234` (compte de dev, non secret) |
+| Prod | `https://api.spok.space` | `.env` racine (gitignoré) : `SPOK_EMAIL`, `SPOK_PASSWORD` |
+
+Rappel CLAUDE.md : ne jamais appeler `api.spok.space` directement — les opérations prod passent par le MCP ou par Prisma direct (ci-dessous) sur demande explicite.
 
 ## Accès Prisma direct (sans serveur)
 
-Pour les scripts de sync ou migration :
+Pour les scripts de sync ou migration, utiliser le helper `_env.ts` qui charge le `.env` racine (`PROD_DATABASE_URL`, `DATABASE_URL`) :
 
 ```typescript
 // apps/api/scripts/mon-script.ts
-import { PrismaClient } from '@spok/database';
+import { prodPrisma, localPrisma, ENV } from './_env';
 
-const dev = new PrismaClient({
-  datasources: { db: { url: 'postgresql://spok:spok@localhost:25432/spok?schema=public' } },
-});
-const prod = new PrismaClient({
-  datasources: { db: { url: 'postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway' } },
-});
+const dev = localPrisma();    // postgresql://spok:spok@localhost:5433/spok
+const prod = prodPrisma();    // lit PROD_DATABASE_URL depuis .env
 
 // Exécuter : cd C:/_dev/spok && npx tsx apps/api/scripts/mon-script.ts
 ```

@@ -10,11 +10,10 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-
-const PROD_DATABASE_URL = 'postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway';
+import { ENV } from './_env';
 
 const prisma = new PrismaClient({
-  datasources: { db: { url: PROD_DATABASE_URL } }
+  datasources: { db: { url: ENV.PROD_DB_URL } }
 });
 
 const isDryRun = process.argv.includes('--dry-run');

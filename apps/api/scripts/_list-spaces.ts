@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient({ datasources: { db: { url: 'postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway' } } })
+import { ENV } from './_env'
+const prisma = new PrismaClient({ datasources: { db: { url: ENV.PROD_DB_URL } } })
 
 async function main() {
   const memberships = await prisma.spaceMembership.findMany({

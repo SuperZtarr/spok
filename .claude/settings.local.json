@@ -168,7 +168,6 @@
       "Bash(Select-String --line-buffered \"ready|Local:|VITE|error|Error|failed\")",
       "mcp__Claude_in_Chrome__resize_window",
       "Bash(npx --prefix apps/web tsc --noEmit)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway\" npx prisma db execute --stdin)",
       "PowerShell(Stop-Process -Id 23104 -Force)",
       "PowerShell(Stop-Process -Id 3464 -Force)",
       "Bash(pnpm db:migrate)",
@@ -208,7 +207,20 @@
       "Bash(pnpm db:up)",
       "Skill(remember)",
       "Skill(remember:*)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(grep -r \"tab\" C:/Users/Admin/.claude/settings.json C:/_dev/spok/.claude/settings.local.json 2>/dev/null | head -30)",
+      "Bash(grep -r \"chrome\\\\|Chrome\\\\|tab\\\\|group\\\\|createIfEmpty\\\\|Demarre\" C:/Users/Admin/.claude/settings.json 2>/dev/null | head -20)",
+      "PowerShell(Start-Process powershell -ArgumentList @\\(\"-NoProfile\", \"-NonInteractive\", \"-WindowStyle\", \"Hidden\", \"-Command\", \"cd C:\\\\_dev\\\\spok; pnpm dev:start\"\\) -WindowStyle Hidden)",
+      "PowerShell(cmd /c del /f \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Docker\\\\run\\\\dockerInference\" 2>&1; echo \"exit: $LastExitCode\")",
+      "mcp__spok__get_item",
+      "Bash(ls C:/_dev/spok/.claude/skills/ && echo \"---USER---\" && ls C:/Users/Admin/.claude/skills/ 2>/dev/null)",
+      "Bash(gh repo *)",
+      "Bash(export MSYS_NO_PATHCONV=1)",
+      "Bash(openssl rand *)",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__navigate",
+      "mcp__claude-in-chrome__computer",
+      "Bash(awk '{print $1}')"
     ]
   },
   "hooks": {

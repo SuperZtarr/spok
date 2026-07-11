@@ -1,7 +1,8 @@
 import { PrismaClient } from '@spok/database';
+import { ENV } from './_env';
 
-const LOCAL_URL = process.env.DATABASE_URL!;
-const PROD_URL = 'postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway';
+const LOCAL_URL = ENV.LOCAL_DB_URL;
+const PROD_URL = ENV.PROD_DB_URL;
 
 const COMMUNITY_ID = 'cmmtheuzn0005f03nqjf8p238';
 // ztarr user in prod

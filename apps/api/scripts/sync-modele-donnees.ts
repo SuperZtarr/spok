@@ -3,14 +3,10 @@
  * Usage : SPACE_NAME="Interface utilisateur" DEV_SPACE_ID="..." npx tsx ...
  * Ou modifier les constantes ci-dessous directement.
  */
-import { PrismaClient } from '@spok/database';
+import { prodPrisma, localPrisma } from './_env';
 
-const prod = new PrismaClient({
-  datasources: { db: { url: 'postgresql://postgres:GSpgpyKTewWFHHkmYtgsxwCmdbBIYiZW@ballast.proxy.rlwy.net:31323/railway' } },
-});
-const dev = new PrismaClient({
-  datasources: { db: { url: 'postgresql://spok:spok@localhost:25432/spok?schema=public' } },
-});
+const prod = prodPrisma();
+const dev = localPrisma();
 
 const DEV_ADMIN_ID = 'cmlup9ug40000n86xjf96ej3f';
 
