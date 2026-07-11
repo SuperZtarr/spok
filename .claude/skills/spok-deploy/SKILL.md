@@ -55,8 +55,8 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
 
 ## CI — règles
 
-- Les commits ne touchant que `docs/**`, `*.md`, `.claude/**`, `_old/**` ne déclenchent pas la CI → déploiement direct
-- `[skip ci]` dans le message de commit = contourner les tests (micro-correction urgente) — **exceptionnel**, jamais par confort
+- La CI tourne sur **chaque push** (pas de paths-ignore : un push multi-commits finissant par un commit docs sautait la CI — constaté 2026-07-12)
+- `[skip ci]` dans le message de commit = contourner les tests (micro-correction urgente ou mep purement docs) — **exceptionnel**, jamais par confort
 - Relance manuelle possible : `gh workflow run test.yml`
 
 ## Points d'attention
