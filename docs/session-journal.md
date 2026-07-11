@@ -11,6 +11,8 @@
 - Dockerfile.web : ARG/ENV VITE_SENTRY_DSN ; .env.example : les 2 clés
 - No-op tant que les DSN ne sont pas posés — RESTE (Thomas) : compte sentry.io, 2 projets (node + react), DSN dans Railway (SENTRY_DSN sur spok-api, VITE_SENTRY_DSN sur spok-web) 
 - Vérifié : typecheck 5/5, 426/426 TNR, front OK sans DSN — commité et poussé (mep 2026-07-11)
+- ACTIVÉ (2026-07-11) : org sentry `roedel`, projets spok-api (Fastify) + spok-web (React), DSN posés dans Railway, services redéployés
+- Vérif front de bout en bout OK : 2 erreurs de test remontées dans le dashboard (SPOK-WEB-1 handler global, SPOK-WEB-2 captureException) — côté API, rien à vérifier tant qu'aucune vraie 500 (config = 500 inconnues uniquement)
 
 
 ### Scripts typecheck réels — 2026-07-13
@@ -45,7 +47,7 @@
 - Bugs routes corrigés : graph /spaces/:id/graph et search / crashaient (500) pour un anonyme (request.user sans garde) → 403 / résultats vides. Autres handlers graph.ts encore concernés → TODO
 - Réparations TNR commitées/poussées (f3b4947, e49723d, b731088)
 - Anti-tunnel renforcé (2026-07-12) : CLAUDE.md global (« Enchaîner avec contrôle » : traiter immédiatement tout message en cours de route + points d'étape sur longues séquences + recadrage si élargissement de périmètre), skills spok-deploy/rebuild/tnr (encart anti-tunnel), mémoire feedback_runaway_coding mise à jour
-- CI GitHub Actions (2026-07-12) : `.github/workflows/test.yml` — typecheck web/api + 422 TNR sur chaque push master (f0648cc, 9e77a39), premier run vert en 55 s ; paths-ignore docs/.claude/md, `[skip ci]` en soupape — RESTE : cocher "Wait for CI" sur les services Railway (Thomas)
+- CI GitHub Actions (2026-07-12) : `.github/workflows/test.yml` — typecheck web/api + 422 TNR sur chaque push master (f0648cc, 9e77a39), premier run vert en 55 s ; paths-ignore docs/.claude/md, `[skip ci]` en soupape — "Wait for CI" coché sur les deux services Railway spok-web et spok-api (2026-07-11)
 - Backup R2 réparé : le secret GitHub DATABASE_URL avait encore l'ancien mot de passe (échec du run du 11/07 04:48) → secret mis à jour via gh, run manuel vert
 - RESTE : purge historique git (optionnel) ; redémarrer Claude pour recharger les skills modifiées
 

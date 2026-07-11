@@ -229,7 +229,8 @@
       "PowerShell(\"Docker Desktop lanc�\")",
       "mcp__Claude_Browser__preview_start",
       "Bash(pnpm --filter @spok/api add @sentry/node)",
-      "Bash(node scripts/check-doc-headers.mjs)"
+      "Bash(node scripts/check-doc-headers.mjs)",
+      "mcp__claude-in-chrome__get_page_text"
     ]
   },
   "hooks": {
