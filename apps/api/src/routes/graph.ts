@@ -229,45 +229,37 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
     '/spaces/:spaceId/graph',
     async (request, reply) => {
       const { spaceId } = request.params;
-      // optionalAuthenticate : sans utilisateur, pas d'accès au graphe (évite un crash sur request.user)
-      if (!request.user?.userId) {
-        return reply.forbidden('Access denied');
-      }
+      const userId = request.user?.userId;
       const linkTypes = parseLinkTypes(request.query.linkTypes);
       const additionalSpaceIds = request.query.additionalSpaceIds
         ? request.query.additionalSpaceIds.split(',').map(id => id.trim()).filter(Boolean)
         : [];
 
-      // Check membership
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId,
-          },
-        },
-      });
+      // Accès : membre direct, membre de la communauté, ou visiteur (connecté ou anonyme)
+      // si la communauté est publique et l'espace non privé (visitorPreview, cf. doc Matrice des droits)
+      const membership = userId
+        ? await fastify.prisma.spaceMembership.findUnique({
+            where: { userId_spaceId: { userId, spaceId } },
+          })
+        : null;
 
       if (!membership) {
-        // Check community-based access
         const space = await fastify.prisma.space.findUnique({
           where: { id: spaceId },
-          select: { communityId: true },
+          select: { communityId: true, visibility: true, community: { select: { isPublic: true, visibility: true } } },
         });
 
-        if (space?.communityId) {
-          const communityMembership = await fastify.prisma.communityMembership.findUnique({
-            where: {
-              userId_communityId: {
-                userId: request.user.userId,
-                communityId: space.communityId,
-              },
-            },
-          });
-          if (!communityMembership) {
-            return reply.forbidden('Access denied');
-          }
-        } else {
+        if (!space?.communityId) {
+          return reply.forbidden('Access denied');
+        }
+        const communityMembership = userId
+          ? await fastify.prisma.communityMembership.findUnique({
+              where: { userId_communityId: { userId, communityId: space.communityId } },
+            })
+          : null;
+        const publicOk = (space.community?.isPublic || space.community?.visibility !== 'PRIVATE')
+          && space.visibility !== 'PRIVATE';
+        if (!communityMembership && !publicOk) {
           return reply.forbidden('Access denied');
         }
       }
@@ -366,19 +358,25 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const { communityId } = request.params;
       const linkTypes = parseLinkTypes(request.query.linkTypes);
+      const userId = request.user?.userId;
 
-      // Check community membership
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId,
-          },
-        },
-      });
+      // Membre de la communauté → accès complet ; sinon (connecté non-membre ou anonyme)
+      // → accès visitorPreview si la communauté est publique (cf. doc Matrice des droits)
+      const membership = userId
+        ? await fastify.prisma.communityMembership.findUnique({
+            where: { userId_communityId: { userId, communityId } },
+          })
+        : null;
 
       if (!membership) {
-        return reply.forbidden('Access denied');
+        const communityAccess = await fastify.prisma.community.findUnique({
+          where: { id: communityId },
+          select: { isPublic: true, visibility: true },
+        });
+        const isPublicCommunity = !!communityAccess && (communityAccess.isPublic || communityAccess.visibility !== 'PRIVATE');
+        if (!isPublicCommunity) {
+          return reply.forbidden('Access denied');
+        }
       }
 
       // Get community name for the spaceCommunityMap
@@ -392,6 +390,8 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           space: {
             communityId,
             type: 'GROUP',
+            // Visiteur (non-membre) : exclure les espaces explicitement privés
+            ...(membership ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
           },
         },
         select: {
@@ -429,23 +429,35 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
     '/graph/global',
     async (request) => {
       const linkTypes = parseLinkTypes(request.query.linkTypes);
+      const userId = request.user?.userId;
       const filterCommunityIds = request.query.communityIds
         ? request.query.communityIds.split(',').map(id => id.trim()).filter(Boolean)
         : null; // null = no filter (show all)
 
-      // 1. Spaces where user is a direct member
-      const directMemberships = await fastify.prisma.spaceMembership.findMany({
-        where: { userId: request.user.userId },
-        select: { spaceId: true },
-      });
+      // 1. Spaces where user is a direct member (anonyme : aucun)
+      const directMemberships = userId
+        ? await fastify.prisma.spaceMembership.findMany({
+            where: { userId },
+            select: { spaceId: true },
+          })
+        : [];
       const directSpaceIds = directMemberships.map(m => m.spaceId);
 
-      // 2. Community memberships → all GROUP spaces of those communities
-      const communityMemberships = await fastify.prisma.communityMembership.findMany({
-        where: { userId: request.user.userId },
-        select: { communityId: true },
-      });
-      const allUserCommunityIds = communityMemberships.map(m => m.communityId);
+      // 2. Communautés : memberships pour un connecté, communautés publiques pour un anonyme
+      let allUserCommunityIds: string[];
+      if (userId) {
+        const communityMemberships = await fastify.prisma.communityMembership.findMany({
+          where: { userId },
+          select: { communityId: true },
+        });
+        allUserCommunityIds = communityMemberships.map(m => m.communityId);
+      } else {
+        const publicCommunities = await fastify.prisma.community.findMany({
+          where: { isPublic: true, visibility: { not: 'PRIVATE' } },
+          select: { id: true },
+        });
+        allUserCommunityIds = publicCommunities.map(c => c.id);
+      }
 
       // Apply community filter if provided
       const activeCommunityIds = filterCommunityIds
@@ -457,6 +469,8 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
             where: {
               communityId: { in: activeCommunityIds },
               type: 'GROUP',
+              // Anonyme : exclure les espaces explicitement privés
+              ...(userId ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
             },
             select: { id: true },
           })
@@ -535,23 +549,32 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         ? request.query.communityIds.split(',').map(id => id.trim()).filter(Boolean)
         : null;
 
+      const userId = request.user?.userId;
+
       // Space-scoped mode: return item hierarchy for a single space
       if (filterSpaceId) {
-        // Verify access
-        const membership = await fastify.prisma.spaceMembership.findUnique({
-          where: { userId_spaceId: { userId: request.user.userId, spaceId: filterSpaceId } },
-        });
+        // Verify access : membre direct, membre de la communauté, ou visiteur si public
+        const membership = userId
+          ? await fastify.prisma.spaceMembership.findUnique({
+              where: { userId_spaceId: { userId, spaceId: filterSpaceId } },
+            })
+          : null;
         if (!membership) {
           const spaceCheck = await fastify.prisma.space.findUnique({
             where: { id: filterSpaceId },
-            select: { communityId: true },
+            select: { communityId: true, visibility: true, community: { select: { isPublic: true, visibility: true } } },
           });
-          if (spaceCheck?.communityId) {
-            const communityMembership = await fastify.prisma.communityMembership.findUnique({
-              where: { userId_communityId: { userId: request.user.userId, communityId: spaceCheck.communityId } },
-            });
-            if (!communityMembership) return reply.code(403).send({ error: 'Access denied' });
-          } else {
+          if (!spaceCheck?.communityId) {
+            return reply.code(403).send({ error: 'Access denied' });
+          }
+          const communityMembership = userId
+            ? await fastify.prisma.communityMembership.findUnique({
+                where: { userId_communityId: { userId, communityId: spaceCheck.communityId } },
+              })
+            : null;
+          const publicOk = (spaceCheck.community?.isPublic || spaceCheck.community?.visibility !== 'PRIVATE')
+            && spaceCheck.visibility !== 'PRIVATE';
+          if (!communityMembership && !publicOk) {
             return reply.code(403).send({ error: 'Access denied' });
           }
         }
@@ -626,19 +649,30 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         return root;
       }
 
-      // 1. Spaces where user is a direct member
-      const directMemberships = await fastify.prisma.spaceMembership.findMany({
-        where: { userId: request.user.userId },
-        select: { spaceId: true },
-      });
+      // 1. Spaces where user is a direct member (anonyme : aucun)
+      const directMemberships = userId
+        ? await fastify.prisma.spaceMembership.findMany({
+            where: { userId },
+            select: { spaceId: true },
+          })
+        : [];
       const directSpaceIds = directMemberships.map(m => m.spaceId);
 
-      // 2. Community memberships → all GROUP spaces
-      const communityMemberships = await fastify.prisma.communityMembership.findMany({
-        where: { userId: request.user.userId },
-        select: { communityId: true },
-      });
-      const allUserCommunityIds = communityMemberships.map(m => m.communityId);
+      // 2. Communautés : memberships pour un connecté, communautés publiques pour un anonyme
+      let allUserCommunityIds: string[];
+      if (userId) {
+        const communityMemberships = await fastify.prisma.communityMembership.findMany({
+          where: { userId },
+          select: { communityId: true },
+        });
+        allUserCommunityIds = communityMemberships.map(m => m.communityId);
+      } else {
+        const publicCommunities = await fastify.prisma.community.findMany({
+          where: { isPublic: true, visibility: { not: 'PRIVATE' } },
+          select: { id: true },
+        });
+        allUserCommunityIds = publicCommunities.map(c => c.id);
+      }
 
       const activeCommunityIds = filterCommunityIds
         ? allUserCommunityIds.filter(id => filterCommunityIds.includes(id))
@@ -646,7 +680,12 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
 
       const communitySpaces = activeCommunityIds.length > 0
         ? await fastify.prisma.space.findMany({
-            where: { communityId: { in: activeCommunityIds }, type: 'GROUP' },
+            where: {
+              communityId: { in: activeCommunityIds },
+              type: 'GROUP',
+              // Anonyme : exclure les espaces explicitement privés
+              ...(userId ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
+            },
             select: { id: true, name: true, communityId: true },
           })
         : [];

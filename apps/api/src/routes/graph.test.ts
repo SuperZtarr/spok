@@ -188,8 +188,24 @@ describe('Graph routes', () => {
       expect(spaceNodes.length).toBe(2) // main + portal
     })
 
-    // Route en optionalAuthenticate : un anonyme est refusé proprement (403), pas de 401
-    it('should return 403 for anonymous', async () => {
+    // Accès public (visitorPreview) : un anonyme voit le graphe d'un espace non privé
+    // d'une communauté publique ; refus propre (403) sinon — jamais de 500.
+    it('should return graph for anonymous on public-community space', async () => {
+      prisma.space.findUnique
+        .mockResolvedValueOnce({ communityId: 'com-1', visibility: null, community: { isPublic: true, visibility: 'OPEN' } }) // access check
+        .mockResolvedValueOnce({ name: 'Space 1' }) // spaceInfo
+      prisma.item.findMany.mockResolvedValue([mockItem()])
+      prisma.itemRelation.findMany.mockResolvedValue([])
+
+      const res = await app.inject({ method: 'GET', url: '/spaces/space-1/graph' })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().nodes.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('should return 403 for anonymous on private space', async () => {
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1', visibility: 'PRIVATE', community: { isPublic: true, visibility: 'OPEN' } })
+
       const res = await app.inject({ method: 'GET', url: '/spaces/space-1/graph' })
       expect(res.statusCode).toBe(403)
     })
@@ -218,8 +234,38 @@ describe('Graph routes', () => {
       expect(body.nodes.some((n: any) => n.type === 'COMMUNITY')).toBe(true)
     })
 
-    it('should return 403 for non-member', async () => {
+    // Accès public : un non-membre (connecté ou anonyme) voit le graphe d'une communauté publique
+    it('should return graph for non-member on public community', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.community.findUnique
+        .mockResolvedValueOnce({ isPublic: true, visibility: 'OPEN' }) // access check
+        .mockResolvedValueOnce({ name: 'Community 1' }) // name
+      prisma.item.findMany.mockResolvedValue([mockItem({ space: { name: 'Space 1', communityId: 'com-1' } })])
+      prisma.itemRelation.findMany.mockResolvedValue([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/communities/com-1/graph',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should return graph for anonymous on public community', async () => {
+      prisma.community.findUnique
+        .mockResolvedValueOnce({ isPublic: true, visibility: 'OPEN' })
+        .mockResolvedValueOnce({ name: 'Community 1' })
+      prisma.item.findMany.mockResolvedValue([mockItem({ space: { name: 'Space 1', communityId: 'com-1' } })])
+      prisma.itemRelation.findMany.mockResolvedValue([])
+
+      const res = await app.inject({ method: 'GET', url: '/communities/com-1/graph' })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should return 403 for non-member on private community', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.community.findUnique.mockResolvedValue({ isPublic: false, visibility: 'PRIVATE' })
 
       const res = await app.inject({
         method: 'GET', url: '/communities/com-1/graph',
@@ -268,6 +314,21 @@ describe('Graph routes', () => {
       expect(res.statusCode).toBe(200)
       const body = res.json()
       expect(body.nodes.some((n: any) => n.type === 'COMMUNITY')).toBe(true)
+    })
+
+    // Anonyme : le graphe global couvre les communautés publiques (espaces non privés)
+    it('should return public-communities graph for anonymous', async () => {
+      prisma.community.findMany.mockResolvedValue([{ id: 'com-1', name: 'Com 1' }]) // publiques puis noms
+      prisma.space.findMany.mockResolvedValue([{ id: 'space-c1' }])
+      prisma.item.findMany.mockResolvedValue([
+        mockItem({ id: 'item-1', spaceId: 'space-c1', space: { name: 'Com Space', communityId: 'com-1' } }),
+      ])
+      prisma.itemRelation.findMany.mockResolvedValue([])
+
+      const res = await app.inject({ method: 'GET', url: '/graph/global' })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().nodes.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should filter by communityIds param', async () => {
