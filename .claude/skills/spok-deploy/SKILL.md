@@ -31,21 +31,30 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
    - Mettre à jour la section **EN COURS** avec le contexte exact pour reprendre
    - Une ligne par action
 
-5. **Commiter**
+5. **Contrôle documentation** — bloquant
+   ```bash
+   node scripts/check-doc-headers.mjs        # en-têtes des fichiers source du diff à pousser
+   ```
+   - Échec → ajouter les en-têtes manquants (raison d'être, params clés, règles d'usage) avant de commiter
+   - Checklist complémentaire (non scriptable) :
+     - Comportement documenté modifié ? → item SPOK à jour (status `to_validate`)
+     - Nouveau composant/route/script ? → l'item SPOK existe ou a été signalé comme absent
+
+6. **Commiter**
    ```bash
    git -C C:/_dev/spok add <fichiers pertinents>
    git -C C:/_dev/spok commit -m "type: description courte"
    ```
    Format commit : `feat|fix|refactor|docs|style|test|chore: description`
 
-6. **Pusher vers origin/master**
+7. **Pusher vers origin/master**
    ```bash
    git -C C:/_dev/spok push origin master
    ```
    Le push déclenche la CI (`.github/workflows/test.yml` : typecheck web/api + TNR, ~1 min).
    Railway est en « Wait for CI » : le déploiement ne part que si la CI est verte.
 
-7. **Vérifier la CI et confirmer**
+8. **Vérifier la CI et confirmer**
    ```bash
    gh run list --workflow=test.yml --limit 1        # état du run
    gh run watch <run-id> --exit-status              # attendre le verdict si besoin
