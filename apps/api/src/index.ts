@@ -3,8 +3,19 @@
  * et de toutes les routes avec leurs préfixes. Gestion d'erreurs Zod → 400 structuré.
  */
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+
+// Sentry : actif uniquement si SENTRY_DSN est défini (no-op sinon).
+// Erreurs seulement (tracesSampleRate 0) pour rester dans le tier gratuit.
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0,
+  });
+}
 import sensible from '@fastify/sensible';
 import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
@@ -216,7 +227,12 @@ async function buildApp() {
       });
     }
 
-    // Erreur inconnue
+    // Erreur inconnue → remontée à Sentry (les 4xx attendues ci-dessus n'y vont pas)
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(error, {
+        extra: { method: request.method, url: request.url, userId: (request as any).user?.userId },
+      });
+    }
     const statusCode = 500;
     const message =
       process.env.NODE_ENV === 'development'

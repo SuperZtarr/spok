@@ -1,10 +1,21 @@
-/* Point d'entrée React : providers (Router, QueryClient, thème) + montage de <App/>. */
+/* Point d'entrée React : Sentry (si VITE_SENTRY_DSN au build), providers (Router, QueryClient, thème) + montage de <App/>. */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import * as Sentry from '@sentry/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
+
+// Sentry : actif uniquement si VITE_SENTRY_DSN est défini au moment du build (no-op sinon).
+// Erreurs seulement (pas de tracing) pour rester dans le tier gratuit.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    tracesSampleRate: 0,
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

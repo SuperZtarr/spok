@@ -6,6 +6,19 @@
 
 ## EN COURS
 
+### Sentry (code prêt, activation en attente des DSN) — 2026-07-13
+- @sentry/node (API : init si SENTRY_DSN, capture des 500 inconnues uniquement) + @sentry/react (web : init si VITE_SENTRY_DSN au build, tracesSampleRate 0)
+- Dockerfile.web : ARG/ENV VITE_SENTRY_DSN ; .env.example : les 2 clés
+- No-op tant que les DSN ne sont pas posés — RESTE (Thomas) : compte sentry.io, 2 projets (node + react), DSN dans Railway (SENTRY_DSN sur spok-api, VITE_SENTRY_DSN sur spok-web) 
+- Vérifié : typecheck 5/5, 426/426 TNR, front OK sans DSN — commité et poussé (mep 2026-07-11)
+
+
+### Scripts typecheck réels — 2026-07-13
+- script typecheck (tsc --noEmit) ajouté aux 5 packages → pnpm typecheck fonctionne enfin
+- CI simplifiée (une étape typecheck), avertissements retirés de CLAUDE.md + skills rebuild/deploy
+- Commité et poussé (4ff8e87, mep 2026-07-11)
+
+
 
 ### Rattrapage documentation code — 2026-07-12
 - Passe complète sur le repo : 293 fichiers source sans commentaire d’en-tête → 0 restant (vagues : stores/hooks/lib 41, routes/plugins/utils 53, pages/constants/scripts/packages 80, composants 115, reliquat 4)

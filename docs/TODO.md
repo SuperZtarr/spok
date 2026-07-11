@@ -54,7 +54,7 @@
 ## Idées (à explorer)
 
 ### Monitoring (priorité basse)
-- [ ] Sentry — error tracking + performance monitoring (traces API, temps de rendu React) — tier gratuit suffisant, ~30min à mettre en place (Fastify + React)
+- [x] Sentry — error tracking : code en place API + web, no-op sans DSN — reste (Thomas) : compte sentry.io + DSN dans Railway — 2026-07-11
 
 ### Libs à intégrer (priorité haute)
 - [ ] cmdk — palette de commandes (Ctrl+K) : navigation rapide, recherche, actions
