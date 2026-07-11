@@ -14,7 +14,7 @@
 
 ### Tests / qualité
 - [x] Réparer les TNR : 47 tests en échec réalignés sur les comportements actuels des routes — 422/422 verts — 2026-07-11
-- [ ] Routes graph.ts : plusieurs handlers sous `optionalAuthenticate` crashent (500) pour un visiteur anonyme (`request.user.userId` sans garde, ~8 occurrences hors `/spaces/:spaceId/graph` qui est corrigé) — clarifier l'intention d'accès public puis corriger
+- [x] Routes graph.ts : accès public (visitorPreview) implémenté sur les 4 routes graphe/sunburst — anonyme et non-membre voient les communautés publiques, 403 propre sinon, plus aucun crash 500 — 2026-07-12
 - [ ] spaces.ts DELETE /:id : le commentaire dit "Community OWNER or ADMIN can delete" mais le code n'autorise que OWNER — trancher l'intention et aligner
 - [ ] Couverture manquante : community-referentiels.ts (édition des référentiels au niveau communauté) n'a aucun test
 

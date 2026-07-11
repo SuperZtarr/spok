@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+### Accès public graph.ts (option 2) — 2026-07-12
+- `graph.ts` : les 4 routes (space graph, community graph, global, sunburst) gèrent l'anonyme et le non-membre selon la Matrice des droits (visitorPreview) — communautés publiques visibles, espaces PRIVATE exclus, 403 propre sinon
+- `graph.test.ts` : +5 tests (anonyme public/privé, non-membre public/privé, global anonyme) — 426/426 verts
+- Doc SPOK "Visualisations globales" mise à jour (to_validate) via script direct (MCP en anciens credentials jusqu'au redémarrage)
+- Non commité — prochain mep
+
 ### SÉCURITÉ — fuite de secrets repo public + rotation — 2026-07-11
 - Fuite détectée : DB prod Railway, mots de passe admin, clés R2 en clair dans fichiers trackés (repo PUBLIC depuis ~avril)
 - Rotés : mot de passe Postgres prod (ALTER USER + variables Railway), JWT_SECRET/JWT_REFRESH_SECRET + NODE_ENV=production (Thomas), mot de passe admin superztarr@gmail.com (402 refresh tokens purgés)
@@ -18,7 +24,11 @@
 - TNR : 47 tests en échec réparés → 422/422 verts. Causes : dérive depuis ee2359f — description obligatoire + workflow pendingPublic (communities), invitations par token (communities/spaces), multi-OWNER, visibilité effective OPEN→MEMBER, plus de bypass admin (user-tasks/search), référentiels au niveau communauté (referentiels + admin), titre optionnel + reactionSummary (items), sémantique depends (pert-utils), dép @testing-library/react manquante (useSort)
 - helpers.ts : MockPrisma modernisé (factory uniforme, tous les modèles dont invitation/itemView, findMany→[] par défaut)
 - Bugs routes corrigés : graph /spaces/:id/graph et search / crashaient (500) pour un anonyme (request.user sans garde) → 403 / résultats vides. Autres handlers graph.ts encore concernés → TODO
-- RESTE : commit des réparations TNR ; purge historique git (optionnel)
+- Réparations TNR commitées/poussées (f3b4947, e49723d, b731088)
+- Anti-tunnel renforcé (2026-07-12) : CLAUDE.md global (« Enchaîner avec contrôle » : traiter immédiatement tout message en cours de route + points d'étape sur longues séquences + recadrage si élargissement de périmètre), skills spok-deploy/rebuild/tnr (encart anti-tunnel), mémoire feedback_runaway_coding mise à jour
+- CI GitHub Actions (2026-07-12) : `.github/workflows/test.yml` — typecheck web/api + 422 TNR sur chaque push master (f0648cc, 9e77a39), premier run vert en 55 s ; paths-ignore docs/.claude/md, `[skip ci]` en soupape — RESTE : cocher "Wait for CI" sur les services Railway (Thomas)
+- Backup R2 réparé : le secret GitHub DATABASE_URL avait encore l'ancien mot de passe (échec du run du 11/07 04:48) → secret mis à jour via gh, run manuel vert
+- RESTE : purge historique git (optionnel) ; redémarrer Claude pour recharger les skills modifiées
 
 ### Diagnostic doc "Fonctionnement structurel" + corrections — 2026-07-11
 - Doc SPOK Modèle de données : ItemView créé (tables techniques), MenuItem requalifié (stocké via AppConfig, pas une table), ItemType sorti des tables (enum, à la racine), doublon PasswordResetToken (Autres fonctionnalités) → cancelled

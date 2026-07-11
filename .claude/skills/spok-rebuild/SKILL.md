@@ -5,6 +5,8 @@ description: Rebuilder l'environnement SPOK après un changement de schéma Pris
 
 # spok-rebuild — Rebuild et réinitialisation SPOK
 
+> **Anti-tunnel** : entre chaque étape, si un message de l'utilisateur est arrivé, l'intégrer avant de poursuivre — il prime sur le déroulé de la skill.
+
 ## Choisir le bon niveau
 
 | Situation | Niveau |
