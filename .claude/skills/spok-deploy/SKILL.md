@@ -55,8 +55,10 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
 
 ## CI — règles
 
-- La CI tourne sur **chaque push** (pas de paths-ignore : un push multi-commits finissant par un commit docs sautait la CI — constaté 2026-07-12)
-- `[skip ci]` dans le message de commit = contourner les tests (micro-correction urgente ou mep purement docs) — **exceptionnel**, jamais par confort
+- Les commits ne touchant que `docs/**`, `*.md`, `.claude/**`, `_old/**` ne déclenchent pas la CI → déploiement direct
+- La directive skip-ci de GitHub (entre crochets dans le message de commit) contourne les tests (micro-correction urgente) — **exceptionnel**, jamais par confort
+- **PIÈGE** : GitHub scanne TOUT le message du commit de tête (titre + corps) — ne jamais écrire la chaîne `[skip` + `ci]` dans un message de commit (même pour en parler), ça saute la CI silencieusement (vécu le 2026-07-12, deux pushes sautés)
+- Si un push avec du code n'a pas déclenché la CI : vérifier le message de commit, puis `gh workflow run test.yml` pour un run manuel
 - Relance manuelle possible : `gh workflow run test.yml`
 
 ## Points d'attention

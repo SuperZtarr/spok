@@ -1,13 +1,19 @@
 # CI bloquante : typecheck + TNR sur chaque push master (et PR).
 # Railway est configuré en "Wait for CI" — si ce workflow échoue, pas de déploiement.
-# Pas de paths-ignore : constaté le 2026-07-12 qu'un push multi-commits se terminant
-# par un commit docs sautait la CI malgré du code dans le push. Échappatoire : [skip ci]
-# dans le message de commit (micro-correction ou docs pur) — à garder exceptionnel.
+# Échappatoires : commits docs/skills seuls (paths-ignore ci-dessous), et la directive
+# skip-ci de GitHub dans le message de commit — ATTENTION : GitHub scanne TOUT le
+# message (titre + corps) du commit de tête ; ne jamais MENTIONNER cette directive
+# entre crochets dans un message de commit sans vouloir sauter la CI (piège du 2026-07-12).
 name: Tests
 
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.claude/**'
+      - '_old/**'
   pull_request:
     branches: [master]
   workflow_dispatch:      # déclenchement manuel possible
