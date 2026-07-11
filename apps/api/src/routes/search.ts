@@ -288,6 +288,11 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     const pageSize = Math.min(50, Math.max(1, parseInt(pageSizeStr || '20', 10)));
     const skip = (page - 1) * pageSize;
 
+    // optionalAuthenticate : un anonyme n'a accès à aucun espace → résultats vides (évite un crash sur request.user)
+    if (!request.user?.userId) {
+      return { items: [], contributions: [], totalItems: 0, totalContributions: 0 };
+    }
+
     // Determine accessible space IDs based on user role
     const user = await fastify.prisma.user.findUnique({
       where: { id: request.user.userId },

@@ -229,6 +229,10 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
     '/spaces/:spaceId/graph',
     async (request, reply) => {
       const { spaceId } = request.params;
+      // optionalAuthenticate : sans utilisateur, pas d'accès au graphe (évite un crash sur request.user)
+      if (!request.user?.userId) {
+        return reply.forbidden('Access denied');
+      }
       const linkTypes = parseLinkTypes(request.query.linkTypes);
       const additionalSpaceIds = request.query.additionalSpaceIds
         ? request.query.additionalSpaceIds.split(',').map(id => id.trim()).filter(Boolean)
