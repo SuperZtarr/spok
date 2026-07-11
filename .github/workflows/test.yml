@@ -1,0 +1,49 @@
+# CI bloquante : typecheck + TNR sur chaque push master (et PR).
+# Railway est configuré en "Wait for CI" — si ce workflow échoue, pas de déploiement.
+# Échappatoires : commits docs/skills seuls (paths-ignore ci-dessous) et [skip ci]
+# dans le message de commit pour les micro-corrections urgentes (à garder exceptionnel).
+name: Tests
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.claude/**'
+      - '_old/**'
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Build shared packages
+        run: pnpm build:packages
+
+      - name: Typecheck web
+        run: npx tsc --noEmit
+        working-directory: apps/web
+
+      - name: Typecheck api
+        run: npx tsc --noEmit
+        working-directory: apps/api
+
+      - name: TNR (Vitest)
+        run: pnpm exec vitest run
