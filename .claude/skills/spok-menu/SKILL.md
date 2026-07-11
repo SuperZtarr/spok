@@ -16,12 +16,11 @@ Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que
 
 ## Architecture réelle
 
-Le menu de navigation est piloté par la table **`MenuItem`** (base de données), via `DEFAULT_MENU_ITEMS` dans `@spok/shared` comme fallback.
+Il n'y a **pas de table MenuItem** en base. Le menu est défini en code par **`MENU_REGISTRY`** (`@spok/shared`), avec des overrides (visible/access) stockés en JSON dans **`AppConfig`** (clé `menu_overrides`).
 
 ```
-DEFAULT_MENU_ITEMS (shared/constants/menuDefaults.ts)
-    ↓ (fallback si pas en DB)
-Table MenuItem (PostgreSQL)
+MENU_REGISTRY (shared/constants/menuDefaults.ts, généré depuis VIEW_REGISTRY)
+    + overrides AppConfig "menu_overrides" (routes/admin/menu.ts)
     ↓ GET /menu-items
 useMenuItems() hook
     ↓
@@ -70,7 +69,7 @@ Hors espace (homepage, etc.) : les sections `basic`, `itemTypes`, `planning`, `e
 ### 1. Shared — déclarer le menu item
 
 ```ts
-// packages/shared/src/constants/menuDefaults.ts
+// packages/shared/src/constants/menuDefaults.ts (MENU_REGISTRY) — ou viewRegistry.ts si c'est une vue
 { id: '', key: 'ma-vue', label: 'Ma Vue', icon: 'IconName',
   section: 'basic',           // basic | itemTypes | planning | exploration
   sectionLabel: 'Basique',
@@ -138,7 +137,7 @@ cd apps/web && npx tsc --noEmit
 
 **Via l'admin UI** : `/admin/menu` — interface graphique.
 
-**Via le code** : modifier `DEFAULT_MENU_ITEMS` dans `menuDefaults.ts`. Ne s'applique qu'aux nouvelles installations ou si la DB est vide.
+**Via le code** : modifier `MENU_REGISTRY` dans `menuDefaults.ts` (ou `VIEW_REGISTRY` dans `viewRegistry.ts` pour les vues). S'applique partout, sauf si un override AppConfig `menu_overrides` (posé via /admin/menu) écrase visible/access pour cette clé.
 
 ---
 

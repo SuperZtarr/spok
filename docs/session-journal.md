@@ -6,6 +6,23 @@
 
 ## EN COURS
 
+### SÉCURITÉ — fuite de secrets repo public + rotation — 2026-07-11
+- Fuite détectée : DB prod Railway, mots de passe admin, clés R2 en clair dans fichiers trackés (repo PUBLIC depuis ~avril)
+- Rotés : mot de passe Postgres prod (ALTER USER + variables Railway), JWT_SECRET/JWT_REFRESH_SECRET + NODE_ENV=production (Thomas), mot de passe admin superztarr@gmail.com (402 refresh tokens purgés)
+- spok-api Railway : DATABASE_URL était en dur avec l'ancien mot de passe → corrigée ; déploiements OK
+- Nettoyage repo : `_env.ts` lit le .env racine (nouvelles clés PROD_DATABASE_URL, SPOK_EMAIL, SPOK_PASSWORD), 6 scripts + MCP (launch.mjs, start-prod.bat) + skill spok-api + settings.local.json purgés — plus aucun secret dans les fichiers trackés (vérifié)
+- Clés R2 rotées (Roll du token, secret = SHA-256 du token value) : .env local à jour, accès bucket testé OK — Thomas colle le secret dans Railway + GitHub Actions
+- Skills corrigées : spok-tnr (vitest EST installé), spok-rebuild + spok-deploy + CLAUDE.md (pnpm typecheck ne vérifie rien → npx tsc --noEmit par app), spok-menu (pas de table MenuItem → MENU_REGISTRY + AppConfig menu_overrides), spok-start (noms outils claude-in-chrome)
+- RESTE : commit/push du nettoyage (feu vert Thomas) ; purge historique git (optionnel)
+
+### Diagnostic doc "Fonctionnement structurel" + corrections — 2026-07-11
+- Doc SPOK Modèle de données : ItemView créé (tables techniques), MenuItem requalifié (stocké via AppConfig, pas une table), ItemType sorti des tables (enum, à la racine), doublon PasswordResetToken (Autres fonctionnalités) → cancelled
+- Doc SPOK Système : notes Architecture API/Web rafraîchies (39 routes, 41 pages, 41 vues, 15 stores, 20 hooks, tailles fichiers), Dettes techniques : section "Vérification 2026-07-11" (checkSpaceAccess/gros fichiers non traités, constants/ui.ts traité 7967L→181L), statuts passés à to_validate
+- Port Postgres dev : réalité = 5433 (conteneur + .env) — corrigé dans .env.example, CLAUDE.md, mémoire (procedures, reference_config)
+- TODO.md : ligne notifications corrigée (table ItemView existe déjà)
+- Skill spok-doc : compteurs tables corrigés (13 fonctionnelles / 12 techniques)
+- Items SPOK en attente de validation par Thomas (to_validate → done)
+
 ### À faire ensuite
 - Affiner specs mode Forum/Projet/Exploration (étapes 3-5)
 - Didacticiels : thread (pas de tour), text (tour vide)

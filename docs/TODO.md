@@ -29,7 +29,7 @@
 - [ ] Réduction de données
 - [ ] Identification d'élément
 - [ ] Notifications : suivi de lecture / marqué comme non lue
-- [ ] Notifications : impliquerait d'ajouter un suivi des vues par utilisateur
+- [ ] Notifications : exploiter la table `ItemView` (item_views) — le suivi des vues par utilisateur existe déjà dans le schéma Prisma (constaté 2026-07-11), reste à l'exploiter côté notifications
 
 ### IA / Résumés
 - [ ] Résumé de conversations avec identification des consensus (style Reddit TL;DR)

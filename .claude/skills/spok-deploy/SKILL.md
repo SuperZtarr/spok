@@ -53,4 +53,4 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
 - Ne **jamais** pusher sans accord explicite de l'utilisateur (sauf si "commit et push" ou "deploy" est dit explicitement)
 - Si des migrations Prisma sont incluses : vérifier que `db:migrate` a été fait et que le fichier migration est dans le commit
 - Si `packages/shared/` a changé : `pnpm build:packages` est **obligatoire** avant commit
-- Le push sur `master` = déploiement prod immédiat — vérifier que le code compile (`pnpm typecheck`) si doute
+- Le push sur `master` = déploiement prod immédiat — vérifier que le code compile si doute : `cd apps/web && npx tsc --noEmit` (le script racine `pnpm typecheck` ne vérifie rien, aucun package n'a de script typecheck)

@@ -241,8 +241,9 @@ apps/web/src/... ou apps/api/src/...
 ### Modèle de données `cmnq9c4x8000o5yz2xrlcel81`
 | ID | Item |
 |----|------|
-| `cmnq9chmk005e5yz2ss5q7l1c` | Tables fonctionnelles (15) |
-| `cmnq9chdh005c5yz2560eetsp` | Tables techniques (11) |
+| `cmnq9chmk005e5yz2ss5q7l1c` | Tables fonctionnelles (13) |
+| `cmnq9chdh005c5yz2560eetsp` | Tables techniques (12, dont ItemView ; MenuItem = concept AppConfig, pas une table) |
+| `cmnq9cdtl003s5yz293mlb05a` | Types d'items [enum ItemType] (à la racine, pas une table) |
 
 ### Système `cmmthmtr7000mf03nkqrv7a3z`
 | ID | Item |

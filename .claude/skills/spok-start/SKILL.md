@@ -28,10 +28,9 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
    ```
    (Lance PostgreSQL Docker + API port 3001 + Web port 3000)
 
-3. **Ouvrir le navigateur avec le plugin Chrome** :
-   - Vérifier si Chrome est déjà ouvert : `mcp__Claude_in_Chrome__list_connected_browsers`
-   - Si aucun browser connecté : `Start-Process "chrome.exe"` puis attendre quelques secondes
-   - Naviguer directement vers `http://localhost:3000` via `mcp__Claude_in_Chrome__navigate` — c'est suffisant
+3. **Ouvrir le navigateur avec le plugin Chrome** (serveur MCP `claude-in-chrome`, outils `mcp__claude-in-chrome__*`) :
+   - Vérifier si Chrome tourne : `tasklist //FI "IMAGENAME eq chrome.exe"` ; sinon `Start-Process "chrome.exe"` puis attendre quelques secondes
+   - Naviguer directement vers `http://localhost:3000` via `mcp__claude-in-chrome__navigate` — c'est suffisant
    - **INTERDIT** : `tabs_context_mcp` avec `createIfEmpty`, `tabs_create_mcp` avec un groupe, ou tout paramètre qui crée un groupe Chrome — chaque appel crée un nouveau groupe "Démarre" qui s'accumule à l'infini
 
 4. **Lire le contexte de session** (en parallèle) :

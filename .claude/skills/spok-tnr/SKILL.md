@@ -7,9 +7,7 @@ description: Lancer et maintenir les tests non régressifs SPOK (Vitest). Utilis
 
 ## État actuel
 
-Vitest **n'est pas installé** dans le projet (retiré à un moment). Les fichiers de test existent mais le runner est absent.
-
-Pour réinstaller :
+Vitest **est installé** (vérifié 2026-07-11) : root et `@spok/api` en ^4.x, `@spok/web` en ^2.x, config `vitest.config.ts` à la racine. Si le runner venait à manquer :
 ```bash
 cd C:/_dev/spok
 pnpm add -D -w vitest @vitest/coverage-v8

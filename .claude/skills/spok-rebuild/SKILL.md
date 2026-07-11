@@ -44,8 +44,11 @@ Utiliser `pnpm db:migrate` à la place de `db:push` si on veut garder un histori
 ```bash
 cd C:/_dev/spok
 pnpm build:packages     # shared + database
-pnpm typecheck          # vérification TypeScript complète
+cd apps/web && npx tsc --noEmit   # typecheck web
+cd ../api && npx tsc --noEmit     # typecheck api
 ```
+
+⚠️ `pnpm typecheck` (script racine) ne vérifie RIEN : aucun package n'a de script `typecheck`. Utiliser `npx tsc --noEmit` par app.
 
 Si des erreurs de module persistent après ça :
 
