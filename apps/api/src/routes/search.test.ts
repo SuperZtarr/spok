@@ -148,9 +148,12 @@ describe('Search routes', () => {
       expect(itemArgs.take).toBe(5)
     })
 
-    it('should return 401 without token', async () => {
+    // Route en optionalAuthenticate : un anonyme reçoit des résultats vides
+    it('should return empty results for anonymous', async () => {
       const res = await app.inject({ method: 'GET', url: '/search?q=test' })
-      expect(res.statusCode).toBe(401)
+      expect(res.statusCode).toBe(200)
+      expect(res.json().items).toHaveLength(0)
+      expect(res.json().totalItems).toBe(0)
     })
   })
 })

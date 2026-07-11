@@ -188,9 +188,10 @@ describe('Graph routes', () => {
       expect(spaceNodes.length).toBe(2) // main + portal
     })
 
-    it('should return 401 without token', async () => {
+    // Route en optionalAuthenticate : un anonyme est refusé proprement (403), pas de 401
+    it('should return 403 for anonymous', async () => {
       const res = await app.inject({ method: 'GET', url: '/spaces/space-1/graph' })
-      expect(res.statusCode).toBe(401)
+      expect(res.statusCode).toBe(403)
     })
   })
 

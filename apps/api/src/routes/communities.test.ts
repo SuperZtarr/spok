@@ -31,6 +31,9 @@ function mockCommunity(overrides: Record<string, unknown> = {}) {
     name: 'Test Community',
     description: null,
     isPublic: false,
+    visibility: 'PRIVATE',
+    pendingPublic: false,
+    pendingVisibility: null,
     avatarUrl: null,
     coverUrl: null,
     createdAt: new Date(),
@@ -73,7 +76,7 @@ describe('Communities routes', () => {
         method: 'POST',
         url: '/communities',
         headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'Test Community' },
+        payload: { name: 'Test Community', description: 'Une communauté de test' },
       })
 
       expect(res.statusCode).toBe(201)
@@ -84,19 +87,23 @@ describe('Communities routes', () => {
       expect(arg.data.memberships.create.role).toBe('OWNER')
     })
 
-    it('should create a public community', async () => {
-      prisma.community.create.mockResolvedValue(mockCommunity({ isPublic: true }))
+    // Depuis le workflow d'approbation : une communauté "publique" est créée PRIVATE
+    // avec pendingPublic=true — un admin global doit valider le passage en public.
+    it('should create a public community as pending approval', async () => {
+      prisma.community.create.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'OPEN' }))
 
       const res = await app.inject({
         method: 'POST',
         url: '/communities',
         headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'Public Com', isPublic: true },
+        payload: { name: 'Public Com', description: 'Desc', isPublic: true },
       })
 
       expect(res.statusCode).toBe(201)
       const arg = prisma.community.create.mock.calls[0][0]
-      expect(arg.data.isPublic).toBe(true)
+      expect(arg.data.isPublic).toBe(false)
+      expect(arg.data.pendingPublic).toBe(true)
+      expect(arg.data.pendingVisibility).toBe('OPEN')
     })
 
     it('should reject missing name', async () => {
@@ -104,7 +111,18 @@ describe('Communities routes', () => {
         method: 'POST',
         url: '/communities',
         headers: { authorization: `Bearer ${token}` },
-        payload: {},
+        payload: { description: 'Desc sans nom' },
+      })
+
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('should reject missing description', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/communities',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Sans description' },
       })
 
       expect(res.statusCode).toBe(400)
@@ -128,6 +146,10 @@ describe('Communities routes', () => {
       prisma.communityMembership.findMany.mockResolvedValue([
         { ...mockComMembership(), community: mockCommunity() },
       ])
+      // La route ajoute aussi : communautés publiques non rejointes + invitations en attente
+      prisma.community.findMany.mockResolvedValue([])
+      prisma.user.findUnique.mockResolvedValue({ email: 'test@test.com', globalRole: 'USER' })
+      prisma.invitation.findMany.mockResolvedValue([])
 
       const res = await app.inject({
         method: 'GET',
@@ -229,28 +251,15 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(200)
     })
 
-    it('should update name as ADMIN', async () => {
+    // Depuis 817927f : seul le OWNER peut modifier la communauté (plus les ADMIN)
+    it('should reject update by community ADMIN', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'ADMIN' }))
-      prisma.community.update.mockResolvedValue(mockCommunity({ name: 'Admin Renamed' }))
 
       const res = await app.inject({
         method: 'PATCH',
         url: `/communities/${COM_ID}`,
         headers: { authorization: `Bearer ${token}` },
         payload: { name: 'Admin Renamed' },
-      })
-
-      expect(res.statusCode).toBe(200)
-    })
-
-    it('should reject visibility change by ADMIN', async () => {
-      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'ADMIN' }))
-
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/communities/${COM_ID}`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { isPublic: true },
       })
 
       expect(res.statusCode).toBe(403)
@@ -354,9 +363,10 @@ describe('Communities routes', () => {
 
   describe('POST /communities/:id/join', () => {
     it('should join a public community', async () => {
-      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true }))
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true, visibility: 'OPEN' }))
       prisma.communityMembership.findUnique.mockResolvedValue(null)
       prisma.communityMembership.create.mockResolvedValue(mockComMembership({ role: 'MEMBER' }))
+      prisma.space.findMany.mockResolvedValue([]) // auto-join des espaces à defaultRole
 
       const res = await app.inject({
         method: 'POST',
@@ -381,7 +391,7 @@ describe('Communities routes', () => {
     })
 
     it('should reject if already a member', async () => {
-      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true }))
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true, visibility: 'OPEN' }))
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership())
 
       const res = await app.inject({
@@ -457,6 +467,8 @@ describe('Communities routes', () => {
   describe('GET /communities/:id/members', () => {
     it('should list members', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership())
+      prisma.community.findUnique.mockResolvedValue(mockCommunity())
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
       prisma.communityMembership.findMany.mockResolvedValue([
         {
           id: 'cmem-1',
@@ -495,18 +507,23 @@ describe('Communities routes', () => {
   // ─── INVITE MEMBER ────────────────────────────────────────────
 
   describe('POST /communities/:id/invite', () => {
+    // Depuis le système d'invitations : POST /invite crée une Invitation (token + email),
+    // plus une adhésion directe.
     it('should invite a user as OWNER', async () => {
       prisma.communityMembership.findUnique
-        .mockResolvedValueOnce(mockComMembership({ role: 'OWNER' })) // caller
+        .mockResolvedValueOnce({ ...mockComMembership({ role: 'OWNER' }), community: { name: 'Test Community' } }) // caller
         .mockResolvedValueOnce(null) // invited not already member
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'new@test.com', name: 'New' })
-      prisma.communityMembership.create.mockResolvedValue({
-        id: 'cmem-2',
-        userId: 'user-2',
-        communityId: COM_ID,
+      prisma.user.findUnique
+        .mockResolvedValueOnce({ id: 'user-2', email: 'new@test.com', name: 'New' }) // invited lookup
+        .mockResolvedValueOnce({ name: 'Test' }) // inviter name
+      prisma.invitation.findFirst.mockResolvedValue(null)
+      prisma.invitation.create.mockResolvedValue({
+        id: 'inv-1',
+        email: 'new@test.com',
         role: 'MEMBER',
-        joinedAt: new Date(),
-        user: { id: 'user-2', email: 'new@test.com', name: 'New' },
+        communityId: COM_ID,
+        token: 'tok-123',
+        status: 'PENDING',
       })
 
       const res = await app.inject({
@@ -518,6 +535,7 @@ describe('Communities routes', () => {
 
       expect(res.statusCode).toBe(201)
       expect(res.json().email).toBe('new@test.com')
+      expect(prisma.invitation.create).toHaveBeenCalledOnce()
     })
 
     it('should reject invite by MEMBER', async () => {
@@ -533,9 +551,20 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(403)
     })
 
-    it('should reject invite for unknown user', async () => {
-      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+    // Un email inconnu n'est plus une erreur : l'invitation par token permet
+    // d'inviter quelqu'un qui n'a pas encore de compte.
+    it('should invite an unknown email (no account yet)', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ ...mockComMembership({ role: 'OWNER' }), community: { name: 'Test Community' } })
       prisma.user.findUnique.mockResolvedValue(null)
+      prisma.invitation.findFirst.mockResolvedValue(null)
+      prisma.invitation.create.mockResolvedValue({
+        id: 'inv-2',
+        email: 'ghost@test.com',
+        role: 'MEMBER',
+        communityId: COM_ID,
+        token: 'tok-456',
+        status: 'PENDING',
+      })
 
       const res = await app.inject({
         method: 'POST',
@@ -544,7 +573,8 @@ describe('Communities routes', () => {
         payload: { email: 'ghost@test.com', role: 'MEMBER' },
       })
 
-      expect(res.statusCode).toBe(404)
+      expect(res.statusCode).toBe(201)
+      expect(res.json().email).toBe('ghost@test.com')
     })
 
     it('should reject invite for already-member', async () => {
@@ -651,10 +681,12 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(403)
     })
 
-    it('should reject changing OWNER role', async () => {
+    // Multi-OWNER autorisé : rétrograder un OWNER n'est refusé que s'il est le dernier.
+    it('should reject demoting the last OWNER', async () => {
       prisma.communityMembership.findUnique
         .mockResolvedValueOnce(mockComMembership({ role: 'OWNER' }))
         .mockResolvedValueOnce({ id: 'cmem-owner', userId: 'owner', communityId: COM_ID, role: 'OWNER' })
+      prisma.communityMembership.count.mockResolvedValue(1) // dernier owner
 
       const res = await app.inject({
         method: 'PATCH',
@@ -666,10 +698,17 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(403)
     })
 
-    it('should reject promotion to OWNER', async () => {
+    it('should allow promoting a member to OWNER (multi-owner)', async () => {
       prisma.communityMembership.findUnique
         .mockResolvedValueOnce(mockComMembership({ role: 'OWNER' }))
         .mockResolvedValueOnce({ id: 'cmem-2', userId: 'user-2', communityId: COM_ID, role: 'MEMBER' })
+      prisma.communityMembership.update.mockResolvedValue({
+        id: 'cmem-2',
+        userId: 'user-2',
+        role: 'OWNER',
+        joinedAt: new Date(),
+        user: { id: 'user-2', email: 'u2@test.com', name: 'User 2' },
+      })
 
       const res = await app.inject({
         method: 'PATCH',
@@ -678,7 +717,8 @@ describe('Communities routes', () => {
         payload: { role: 'OWNER' },
       })
 
-      expect(res.statusCode).toBe(403)
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('OWNER')
     })
   })
 })

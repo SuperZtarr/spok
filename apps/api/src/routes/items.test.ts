@@ -77,10 +77,13 @@ describe('Items routes', () => {
     prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership(role))
   }
 
-  // Helper: mock space access via community (VIEWER)
+  // Helper: mock space access via community — la visibilité effective (space → parent →
+  // community) doit être résolue : community OPEN → rôle implicite MEMBER
   function allowCommunityAccess() {
     prisma.spaceMembership.findUnique.mockResolvedValue(null)
-    prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'community-1' })
+    prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+    prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'community-1', visibility: null, parentId: null, community: { visibility: 'OPEN', isPublic: false } })
+    prisma.community.findUnique.mockResolvedValue({ visibility: 'OPEN' })
     prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'community-1' })
   }
 
@@ -229,8 +232,10 @@ describe('Items routes', () => {
       expect(res.statusCode).toBe(400)
     })
 
-    it('should reject missing title', async () => {
+    // Le titre est désormais optionnel (défaut '') — création rapide sans titre autorisée
+    it('should create with empty title by default', async () => {
       allowSpaceAccess()
+      prisma.item.create.mockResolvedValue(mockItem({ title: '', tags: [] }))
 
       const res = await app.inject({
         method: 'POST',
@@ -239,7 +244,9 @@ describe('Items routes', () => {
         payload: { type: 'NOTE' },
       })
 
-      expect(res.statusCode).toBe(400)
+      expect(res.statusCode).toBe(201)
+      const arg = prisma.item.create.mock.calls[0][0]
+      expect(arg.data.title).toBe('')
     })
   })
 
@@ -254,6 +261,7 @@ describe('Items routes', () => {
         parent: null,
         createdBy: { id: USER_ID, name: 'Test', email: 'test@test.com' },
         contributions: [],
+        reactions: [], // le handler construit un reactionSummary depuis item.reactions
       })
       prisma.item.findFirst.mockResolvedValue(item)
 

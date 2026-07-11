@@ -119,12 +119,13 @@ describe('Spaces routes', () => {
       expect(res.json()).toEqual([])
     })
 
-    it('should return 401 without token', async () => {
+    // Route en optionalAuthenticate : un anonyme voit les espaces publics (liste vide ici)
+    it('should return public spaces for anonymous', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/spaces',
       })
-      expect(res.statusCode).toBe(401)
+      expect(res.statusCode).toBe(200)
     })
   })
 
@@ -259,7 +260,7 @@ describe('Spaces routes', () => {
       expect(res.json().memberCount).toBe(1)
     })
 
-    it('should return space for community member as VIEWER', async () => {
+    it('should return space for community member with implicit MEMBER role (OPEN)', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
       prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
@@ -271,7 +272,8 @@ describe('Spaces routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
-      expect(res.json().role).toBe('VIEWER')
+      // Visibilité effective OPEN → rôle implicite MEMBER (VIEWER réservé à READONLY)
+      expect(res.json().role).toBe('MEMBER')
     })
 
     it('should return 404 when no access', async () => {
@@ -420,10 +422,11 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(200)
     })
 
-    it('should allow community ADMIN to delete', async () => {
+    // Seul le OWNER de la communauté peut supprimer un espace communautaire (plus l'ADMIN)
+    it('should allow community OWNER to delete', async () => {
       prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
       prisma.spaceMembership.findUnique.mockResolvedValue(null) // not space member
-      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'ADMIN' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'OWNER' })
       prisma.space.findMany.mockResolvedValue([]) // no descendants
       prisma.item.findMany.mockResolvedValue([])
       prisma.spaceMembership.deleteMany.mockResolvedValue({ count: 0 })
@@ -436,6 +439,20 @@ describe('Spaces routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
+    })
+
+    it('should reject delete by community ADMIN', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'ADMIN' })
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(403)
     })
 
     it('should reject delete by MEMBER', async () => {
@@ -628,14 +645,12 @@ describe('Spaces routes', () => {
       prisma.spaceMembership.findUnique
         .mockResolvedValueOnce({ ...mockMembership({ role: 'OWNER' }), space: mockSpace() }) // caller check
         .mockResolvedValueOnce(null) // invited user not already member
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'new@test.com', name: 'New User' })
-      prisma.spaceMembership.create.mockResolvedValue({
-        id: 'mem-2',
-        userId: 'user-2',
-        spaceId: SPACE_ID,
-        role: 'MEMBER',
-        joinedAt: new Date(),
-        user: { id: 'user-2', email: 'new@test.com', name: 'New User' },
+      prisma.user.findUnique
+        .mockResolvedValueOnce({ id: 'user-2', email: 'new@test.com', name: 'New User' }) // invited lookup
+        .mockResolvedValueOnce({ name: 'Test' }) // inviter name
+      prisma.invitation.findFirst.mockResolvedValue(null)
+      prisma.invitation.create.mockResolvedValue({
+        id: 'inv-1', email: 'new@test.com', role: 'MEMBER', spaceId: SPACE_ID, token: 'tok-123', status: 'PENDING',
       })
 
       const res = await app.inject({
@@ -647,6 +662,7 @@ describe('Spaces routes', () => {
 
       expect(res.statusCode).toBe(201)
       expect(res.json().email).toBe('new@test.com')
+      expect(prisma.invitation.create).toHaveBeenCalledOnce()
     })
 
     it('should reject invite by MEMBER', async () => {
@@ -681,12 +697,17 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(403)
     })
 
-    it('should reject invite for unknown user', async () => {
+    // Un email inconnu n'est plus une erreur : invitation par token possible sans compte
+    it('should invite an unknown email (no account yet)', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue({
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace(),
       })
       prisma.user.findUnique.mockResolvedValue(null)
+      prisma.invitation.findFirst.mockResolvedValue(null)
+      prisma.invitation.create.mockResolvedValue({
+        id: 'inv-2', email: 'ghost@test.com', role: 'MEMBER', spaceId: SPACE_ID, token: 'tok-456', status: 'PENDING',
+      })
 
       const res = await app.inject({
         method: 'POST',
@@ -695,7 +716,8 @@ describe('Spaces routes', () => {
         payload: { email: 'ghost@test.com', role: 'MEMBER' },
       })
 
-      expect(res.statusCode).toBe(404)
+      expect(res.statusCode).toBe(201)
+      expect(res.json().email).toBe('ghost@test.com')
     })
 
     it('should reject invite for already-member', async () => {
@@ -802,10 +824,12 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(403)
     })
 
-    it('should reject changing OWNER role', async () => {
+    // Multi-OWNER autorisé : rétrograder un OWNER n'est refusé que s'il est le dernier
+    it('should reject demoting the last OWNER', async () => {
       prisma.spaceMembership.findUnique
         .mockResolvedValueOnce(mockMembership({ role: 'OWNER' })) // caller
         .mockResolvedValueOnce({ id: 'mem-owner', userId: 'owner-id', spaceId: SPACE_ID, role: 'OWNER' }) // target
+      prisma.spaceMembership.count.mockResolvedValue(1) // dernier owner
 
       const res = await app.inject({
         method: 'PATCH',
@@ -817,10 +841,14 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(403)
     })
 
-    it('should reject promotion to OWNER', async () => {
+    it('should allow promoting a member to OWNER (multi-owner)', async () => {
       prisma.spaceMembership.findUnique
         .mockResolvedValueOnce(mockMembership({ role: 'OWNER' })) // caller
         .mockResolvedValueOnce({ id: 'mem-2', userId: 'user-2', spaceId: SPACE_ID, role: 'MEMBER' }) // target
+      prisma.spaceMembership.update.mockResolvedValue({
+        id: 'mem-2', userId: 'user-2', role: 'OWNER', joinedAt: new Date(),
+        user: { id: 'user-2', email: 'u2@test.com', name: 'User 2' },
+      })
 
       const res = await app.inject({
         method: 'PATCH',
@@ -829,7 +857,8 @@ describe('Spaces routes', () => {
         payload: { role: 'OWNER' },
       })
 
-      expect(res.statusCode).toBe(403)
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('OWNER')
     })
   })
 })

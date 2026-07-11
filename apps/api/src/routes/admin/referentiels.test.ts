@@ -46,15 +46,17 @@ describe('Admin Referentiels routes', () => {
     prisma.user.findUnique.mockResolvedValueOnce({ globalRole: 'ADMIN' })
   }
 
+  // Depuis la centralisation des référentiels : les personnalisations sont portées
+  // par les communautés (community.referentiels), plus par les SpaceModule.
   describe('GET /admin/referentiels', () => {
-    it('should return defaults and customized spaces', async () => {
+    it('should return defaults and customized communities', async () => {
       allowAdmin()
-      prisma.spaceModule.findMany.mockResolvedValue([{
-        id: 'mod-1', moduleKey: 'referentiels', enabled: true,
-        config: { statuses: [{ id: 's1' }], typeLabels: { NOTE: 'Custom' } },
-        space: { id: 'sp1', name: 'Space 1', type: 'GROUP' },
+      prisma.community.findMany.mockResolvedValue([{
+        id: 'com-1', name: 'Com 1',
+        referentiels: { statuses: [{ id: 's1' }], typeLabels: { NOTE: 'Custom' } },
+        _count: { spaces: 3 },
       }])
-      prisma.space.count.mockResolvedValue(10)
+      prisma.community.count.mockResolvedValue(10)
 
       const res = await app.inject({
         method: 'GET', url: '/admin/referentiels',
@@ -64,15 +66,16 @@ describe('Admin Referentiels routes', () => {
       expect(res.statusCode).toBe(200)
       const body = res.json()
       expect(body.defaults).toBeDefined()
-      expect(body.customizedSpaces).toHaveLength(1)
-      expect(body.totalSpaces).toBe(10)
+      expect(body.customizedCommunities).toHaveLength(1)
+      expect(body.customizedCommunities[0].customStatusCount).toBe(1)
+      expect(body.totalCommunities).toBe(10)
       expect(body.customizedCount).toBe(1)
     })
 
     it('should return empty customizations when none exist', async () => {
       allowAdmin()
-      prisma.spaceModule.findMany.mockResolvedValue([])
-      prisma.space.count.mockResolvedValue(5)
+      prisma.community.findMany.mockResolvedValue([])
+      prisma.community.count.mockResolvedValue(5)
 
       const res = await app.inject({
         method: 'GET', url: '/admin/referentiels',
@@ -80,7 +83,7 @@ describe('Admin Referentiels routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
-      expect(res.json().customizedSpaces).toHaveLength(0)
+      expect(res.json().customizedCommunities).toHaveLength(0)
     })
 
     it('should return 401 without token', async () => {

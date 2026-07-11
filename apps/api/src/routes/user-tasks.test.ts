@@ -64,8 +64,10 @@ describe('User Tasks routes', () => {
   })
 
   describe('GET /user/tasks', () => {
-    it('should return tasks for admin (all spaces)', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+    // Depuis la refonte : plus de bypass admin — tout le monde (y compris les admins)
+    // ne voit que les tâches de ses espaces accessibles (membership direct ou communauté).
+    it('should return tasks from accessible spaces', async () => {
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([mockTask()])
       prisma.item.count.mockResolvedValue(1)
 
@@ -130,7 +132,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should default to type=TASK when no type filter', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -144,7 +146,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support multi-value type filter', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -158,7 +160,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support status filter with none (null)', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -177,7 +179,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support priority filter', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -191,7 +193,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support noDueDate filter', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -205,7 +207,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support due date range filter', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -220,7 +222,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support text search', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -237,7 +239,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support sort by spaceName', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -251,7 +253,7 @@ describe('User Tasks routes', () => {
     })
 
     it('should support pagination', async () => {
-      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(50)
 

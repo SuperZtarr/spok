@@ -7,7 +7,7 @@ function makeItem(id: string): Item {
   return { id, title: id } as Item;
 }
 
-function makeRel(fromItemId: string, toItemId: string, type: 'blocks' | 'depends'): ItemRelation {
+function makeRel(fromItemId: string, toItemId: string, type: 'blocks' | 'depends' | 'implements'): ItemRelation {
   return { id: `${fromItemId}-${toItemId}`, fromItemId, toItemId, type } as ItemRelation;
 }
 
@@ -24,11 +24,21 @@ describe('buildPertGraph', () => {
     expect(predecessors.get('A')).toEqual([]);
   });
 
-  it('interprets depends relation: from depends on to → to is predecessor of from', () => {
+  // Spec 2026-06-11 (pert-relation-types) : seuls blocks et implements créent des arêtes
+  // de séquencement ; depends = dépendance fonctionnelle, avancement en parallèle possible.
+  it('interprets implements relation: from → to means from precedes to', () => {
     const items = [makeItem('X'), makeItem('Y')];
-    const rels = [makeRel('X', 'Y', 'depends')]; // X depends on Y → Y precedes X
+    const rels = [makeRel('X', 'Y', 'implements')];
     const { predecessors } = buildPertGraph(items, rels);
-    expect(predecessors.get('X')).toEqual(['Y']);
+    expect(predecessors.get('Y')).toEqual(['X']);
+    expect(predecessors.get('X')).toEqual([]);
+  });
+
+  it('ignores depends relations for graph ordering (parallel work allowed)', () => {
+    const items = [makeItem('X'), makeItem('Y')];
+    const rels = [makeRel('X', 'Y', 'depends')];
+    const { predecessors } = buildPertGraph(items, rels);
+    expect(predecessors.get('X')).toEqual([]);
     expect(predecessors.get('Y')).toEqual([]);
   });
 
