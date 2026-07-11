@@ -99,7 +99,7 @@ pnpm db:seed              # Seed database with initial data
 ### Build & Quality
 ```bash
 pnpm build                # Build all packages
-cd apps/web && npx tsc --noEmit   # Typecheck web (le script racine "pnpm typecheck" ne vérifie rien)
+pnpm typecheck            # Typecheck des 5 packages (web, api, mcp, shared, database)
 pnpm clean                # Remove all dist folders and node_modules
 ```
 

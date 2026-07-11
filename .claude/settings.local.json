@@ -225,7 +225,11 @@
       "Bash(gh run *)",
       "Bash(gh workflow *)",
       "Bash(gh api *)",
-      "Bash(node scripts/check-doc-headers.mjs 7880966)"
+      "Bash(node scripts/check-doc-headers.mjs 7880966)",
+      "PowerShell(\"Docker Desktop lanc�\")",
+      "mcp__Claude_Browser__preview_start",
+      "Bash(pnpm --filter @spok/api add @sentry/node)",
+      "Bash(node scripts/check-doc-headers.mjs)"
     ]
   },
   "hooks": {

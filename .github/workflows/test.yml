@@ -40,13 +40,8 @@ jobs:
       - name: Build shared packages
         run: pnpm build:packages
 
-      - name: Typecheck web
-        run: npx tsc --noEmit
-        working-directory: apps/web
-
-      - name: Typecheck api
-        run: npx tsc --noEmit
-        working-directory: apps/api
+      - name: Typecheck (tous les packages)
+        run: pnpm typecheck
 
       - name: TNR (Vitest)
         run: pnpm exec vitest run

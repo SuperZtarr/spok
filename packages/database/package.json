@@ -18,7 +18,8 @@
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
     "build": "tsc",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
