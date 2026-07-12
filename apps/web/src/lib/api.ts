@@ -298,6 +298,11 @@ async function fetchApi<T>(
     );
   }
 
+  // 204 No Content (DELETE) : pas de corps à parser
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   // Vérifier que la réponse réussie est bien du JSON
   if (!isJsonResponse(response)) {
     const text = await response.text().catch(() => '');
