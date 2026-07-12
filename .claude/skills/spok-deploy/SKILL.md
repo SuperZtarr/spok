@@ -6,6 +6,7 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
 # spok-deploy — Déploiement en production
 
 > **Anti-tunnel** : entre chaque étape, si un message de l'utilisateur est arrivé, l'intégrer avant de poursuivre — il prime sur le déroulé de la skill.
+> **Exécution non bloquante** : `pnpm exec vitest run` et `gh run watch` tournent en arrière-plan (`run_in_background: true`), jamais en foreground — un message de Thomas doit pouvoir arriver pendant l'attente.
 
 ## Séquence de déploiement
 

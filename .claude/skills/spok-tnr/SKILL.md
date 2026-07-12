@@ -6,6 +6,7 @@ description: Lancer et maintenir les tests non régressifs SPOK (Vitest). Utilis
 # spok-tnr — Tests Non Régressifs SPOK
 
 > **Anti-tunnel** : entre chaque étape (fichier de tests réparé, suite exécutée), si un message de l'utilisateur est arrivé, l'intégrer avant de poursuivre — il prime sur le déroulé de la skill. Baliser le fil d'un point d'étape court par fichier traité.
+> **Exécution non bloquante** : `pnpm exec vitest run` (suite complète) tourne en arrière-plan (`run_in_background: true`) — jamais en foreground bloquant. Un message de Thomas doit pouvoir arriver pendant l'exécution.
 
 ## État actuel
 

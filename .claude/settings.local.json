@@ -239,7 +239,16 @@
       "Bash(sed -i \"s|import { GlobalTasksPage } from './pages/GlobalTasksPage';|import { GlobalTasksPage } from './pages/GlobalTasksPage';\\\\nimport { TodayPage } from './pages/TodayPage';|\" apps/web/src/App.tsx)",
       "Bash(sed -i \"s|  \\\\[/\\\\^\\\\\\\\\\\\\\\\/tasks\\\\$/, 'pages/GlobalTasksPage.tsx'\\\\],|  [/^\\\\\\\\\\\\\\\\/tasks$/, 'pages/GlobalTasksPage.tsx'],\\\\n  [/^\\\\\\\\\\\\\\\\/today$/, 'pages/TodayPage.tsx'],|\" apps/web/src/App.tsx)",
       "PowerShell(& \"C:\\\\_dev\\\\spok\\\\scripts\\\\restart-dev.ps1\")",
-      "Bash(python -c \"import sys,json;print\\('feed test:',json.load\\(sys.stdin\\)['id']\\)\")"
+      "Bash(python -c \"import sys,json;print\\('feed test:',json.load\\(sys.stdin\\)['id']\\)\")",
+      "Bash(tail -15 /tmp/tnr_out.txt)",
+      "Skill(fewer-permission-prompts)",
+      "Skill(fewer-permission-prompts:*)",
+      "Bash(ls -t /c/Users/Admin/.claude/projects/*/*.jsonl 2>/dev/null | head -50 | wc -l)",
+      "Bash(cat /c/Users/Admin/.claude/settings.json 2>/dev/null | head -60)",
+      "Bash(node \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C---dev-spok\\\\481dedf6-e41b-4e57-93b0-c543d92747ee\\\\scratchpad\\\\scan-transcripts.mjs\")",
+      "Bash(python -c \"import json; json.load\\(open\\('C:/_dev/spok/.claude/settings.json', encoding='utf-8'\\)\\); print\\('JSON OK'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(t['id'], t['spaceId']\\) for t in d['data']]\")",
+      "Bash(tail -10 /tmp/tnr_final.txt)"
     ]
   },
   "hooks": {

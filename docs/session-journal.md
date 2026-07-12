@@ -36,7 +36,40 @@
 - Liste du jour + suggestions en cartes flex-wrap (largeur fixe 256px) au lieu d'une colonne empilée — plus d'éléments visibles sans long scroll
 - Suggestions groupées en arbre repliable par espace (chevron + nom + compteur) — répond au besoin d'identifier de quel projet vient chaque suggestion (nom d'espace retiré des cartes individuelles, redondant avec le groupe)
 - Largeur page : plafond max-w-7xl remis (repéré trop large en grand écran), ratio grille/liste 3fr/2fr (était 2fr/1fr, jugé trop étroit pour la liste)
-- Vérifié : typecheck 5/5 après chaque itération — NON COMMITÉ
+- Largeur : plafond max-w-7xl retiré (blanc à droite sur grand écran) ; ratio grille/liste ajusté à 3fr/7fr (grille Agenda+Tâches réduite, liste élargie) après essais 6fr/2fr puis 3fr/2fr
+- Vérifié : typecheck 5/5 après chaque itération
+
+### Filtre communauté (contexte de travail) — 2026-07-12
+- Besoin : « je m'organise selon des activités d'un contexte » → la coche Communauté de GlobalTaskFilterBar existait dans l'UI mais n'était jamais sérialisée en paramètre API — bug identifié plus tôt dans la session, corrigé maintenant
+- API : `communityId` (multi-valeurs) sur /user/tasks (narrows accessibleSpaceIds AVANT le filtre spaceId — bug annexe corrigé au passage : un spaceId filtré n'était plus jamais intersecté avec les espaces accessibles pour une sélection à 1 seul espace) et /user/agenda (même traitement que spaceId/status/priority : suggestions uniquement)
+- useGlobalTaskFilters.ts : `selectedCommunities` enfin sérialisé dans queryParams — bénéficie automatiquement à /today, /tasks (GlobalTasksPage) et Tableau de bord (MyDashboardView), qui passent déjà l'objet queryParams complet
+- 4 nouveaux tests (2 user-tasks, 2 agenda) — 465/465 TNR, typecheck 5/5
+
+### Suggestions /today — tous les éléments, plus de filtre d'urgence — 2026-07-12
+- Besoin : « je ne vois pas tous les éléments » → deux mécanismes masquaient : (1) filtre d'urgence codé en dur dans la requête (dueDate<to OU in_progress/late OU priorité≥3), indépendant des statuts choisis dans la barre ; (2) plafond SUGGESTION_CAP=50
+- agenda.ts : filtre d'urgence retiré de la clause WHERE (ne sert plus qu'au TRI via rank(), plus à l'exclusion) ; défaut type passe de TASK-only à tous types (la barre restreint depuis ce défaut) ; plafond supprimé (take:100→500 en sécurité + orderBy dueDate/priority pour un cap sûr) ; TodayPage : useGlobalTaskFilters({ defaultTypes: [] })
+- Note : la pioche (PickTasksModal → /user/tasks) garde son défaut TASK-only, cohérent avec la page Tâches globales — pas touché (hors périmètre de la demande)
+- 2 tests retirés (obsolètes, testaient le mécanisme retiré) + 3 nouveaux (défaut sans type, pas de plafond, item calme sans échéance/priorité suggéré) — 466/466 TNR, typecheck 5/5
+- Doc SPOK TodayPage mise à jour (défaut de page + comportement suggestions, to_validate)
+- MCP SPOK toujours en 401 — script Prisma direct utilisé
+
+### D&D événement→liste (dernier item du backlog /today) — 2026-07-12
+- POST /user/day-plan/from-event : crée une TASK (titre + échéance de l'événement) dans l'espace personnel (résolu via SpaceMembership OWNER + Space type PERSONAL, le plus ancien — cohérent avec la garantie posée à l'inscription/connexion dans auth.ts) et l'engage (source manual, non placée)
+- Front : bandeau journée entière + blocs de la colonne Agenda (DayTimeGrid) draggables (dataTransfer {kind:'event', title, start}) ; DayPlanList cible de drop (surbrillance ring pendant le survol)
+- N'altère jamais l'événement source (feed ICS lecture seule, ou item MEETING existant)
+- 3 nouveaux tests API — 469/469 TNR, typecheck 5/5, smoke test réel (création + nettoyage entry + item)
+- Doc SPOK TodayPage mise à jour (to_validate) ; TODO.md ligne D&D événement→liste cochée
+- Backlog /today du 2026-07-12 entièrement traité (filtre global, filtre types, filtre communauté, D&D dans les deux sens, menu contextuel, zoom multi-années Gantt)
+
+### Fix bug filtres échéances (GlobalTaskFilterBar) — 2026-07-12
+- Cause réelle (tracée précisément, corrige ma note approximative de tout à l'heure) : useGlobalTaskFilters.ts dueDateParams testait `minFrom === undefined` alors que minFrom vaut `null` — condition toujours vraie. Effet concret : "En retard" combiné à Aujourd'hui/Semaine/Mois se voyait réimposer un plancher "aujourd'hui" SI un preset borné était traité après "En retard" dans l'ordre de sélection → les tâches en retard étaient exclues à tort, de façon dépendante de l'ordre de clic
+- Fix : calcul réécrit indépendant de l'ordre (hasOverdue précalculé ; plancher "aujourd'hui" posé seulement si un preset borné est choisi SANS overdue)
+- 5 nouveaux tests (useGlobalTaskFilters.test.ts, nouveau fichier, renderHook + vi.useFakeTimers) — vérifiés isolément (règle : TNR complète réservée au mep, pas en intermédiaire), typecheck web scopé OK
+
+### Couverture community-referentiels.ts — 2026-07-12
+- Nouveau fichier community-referentiels.test.ts : 13 tests — GET public (optionalAuthenticate, comme referentiels.ts), PUT/reset réservés au OWNER (401 sans token, 403 si MEMBER/aucune adhésion), fusion partielle statuses/typeLabels, validation Zod (400), check-status-usage (comptage sur les espaces de la communauté, statusId='undefined' → status null)
+- Vérifiés isolément (fichier seul) + typecheck api scopé OK
+- NON COMMITÉ
 
 ### Zoom Gantt — niveau Multi-années — 2026-07-12
 - Besoin : dépasser la vision Année sur le Gantt (`TimelineView.tsx`)
