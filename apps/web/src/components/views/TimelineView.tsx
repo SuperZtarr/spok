@@ -470,6 +470,43 @@ treeSort: treeSortProp,
     return result;
   }, [days]);
 
+  // Group days by quarter (T1-T4) — utilisé pour l'entête et les lignes de grille en zoom Multi-années
+  const quarters = useMemo(() => {
+    const result: { quarter: number; year: number; days: Date[] }[] = [];
+    let current: { quarter: number; year: number; days: Date[] } | null = null;
+
+    days.forEach(day => {
+      const quarter = Math.floor(day.getMonth() / 3) + 1;
+      const year = day.getFullYear();
+
+      if (!current || current.quarter !== quarter || current.year !== year) {
+        current = { quarter, year, days: [] };
+        result.push(current);
+      }
+      current.days.push(day);
+    });
+
+    return result;
+  }, [days]);
+
+  // Group days by year — entête du zoom Multi-années
+  const years = useMemo(() => {
+    const result: { year: number; days: Date[] }[] = [];
+    let current: { year: number; days: Date[] } | null = null;
+
+    days.forEach(day => {
+      const year = day.getFullYear();
+
+      if (!current || current.year !== year) {
+        current = { year, days: [] };
+        result.push(current);
+      }
+      current.days.push(day);
+    });
+
+    return result;
+  }, [days]);
+
   const dayWidth = zoomConfig.dayWidth;
 
   // Navigation — déplace centerDate, visibleStartDate se recalcule
@@ -477,7 +514,7 @@ treeSort: treeSortProp,
   const goToNext = () => setCenterDate(prev => addDays(prev, zoomConfig.navStep));
 
   // Scrollbar horizontale — plage ±3 ans autour d'aujourd'hui
-  const SCROLL_RANGE_DAYS = 365 * 6;
+  const SCROLL_RANGE_DAYS = 365 * 8;
   const scrollRangeStart = useMemo(() => startOfDay(addDays(new Date(), -SCROLL_RANGE_DAYS / 2)), []);
   const scrollValue = differenceInDays(centerDate, scrollRangeStart);
   const handleScrollbarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -872,7 +909,9 @@ treeSort: treeSortProp,
   }, [relations, flatItems, itemYOffset, visibleStartDate, zoomConfig, dayWidth]);
 
   // Determine which header rows to show based on zoom level
-  const showMonthRow = true; // Toujours afficher les mois
+  const showYearRow = zoomLevel === 'multiyear';
+  const showQuarterRow = zoomLevel === 'multiyear' || zoomLevel === 'year';
+  const showMonthRow = zoomLevel !== 'multiyear'; // Année : Trimestre + Mois ; Multi-années : Année + Trimestre
   const showWeekRow = zoomLevel === 'day' || zoomLevel === 'week' || zoomLevel === 'month' || zoomLevel === 'quarter';
 
   return (
@@ -947,6 +986,7 @@ treeSort: treeSortProp,
             <option value="month">Mois</option>
             <option value="quarter">Trimestre</option>
             <option value="year">Année</option>
+            <option value="multiyear">Multi-années</option>
           </select>
           <Button variant="ghost" size="sm" onClick={zoomOut} disabled={!canZoomOut} title="Zoom arrière" className="h-8 px-2">
             <ZoomOut className="w-4 h-4" />
@@ -975,7 +1015,47 @@ treeSort: treeSortProp,
         <div>
           {/* Header */}
           <div className="sticky top-0 bg-background z-10 border-b">
-            {/* Month row (for quarter/year zoom) */}
+            {/* Year row (multiyear zoom) */}
+            {showYearRow && (
+              <div className="flex border-b">
+                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
+                  Année
+                </div>
+                <div className="flex">
+                  {years.map((y, idx) => (
+                    <div
+                      key={`${y.year}-${idx}`}
+                      className="text-xs font-semibold text-center py-1 border-r bg-muted/30"
+                      style={{ width: y.days.length * dayWidth }}
+                    >
+                      {y.year}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quarter row (multiyear zoom) */}
+            {showQuarterRow && (
+              <div className="flex border-b">
+                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
+                  Trimestre
+                </div>
+                <div className="flex">
+                  {quarters.map((q, idx) => (
+                    <div
+                      key={`${q.year}-${q.quarter}-${idx}`}
+                      className="text-xs font-medium text-center py-1 border-r bg-muted/30"
+                      style={{ width: q.days.length * dayWidth }}
+                    >
+                      T{q.quarter}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Month row (for month/quarter/year zoom) */}
             {showMonthRow && (
               <div className="flex border-b">
                 <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
@@ -1154,6 +1234,10 @@ treeSort: treeSortProp,
                       ) : zoomLevel === 'quarter' ? (
                         weeks.map((week, idx) => (
                           <div key={idx} className="border-r border-muted/50" style={{ width: week.days.length * dayWidth }} />
+                        ))
+                      ) : zoomLevel === 'multiyear' ? (
+                        quarters.map((q, idx) => (
+                          <div key={idx} className="border-r border-muted/50" style={{ width: q.days.length * dayWidth }} />
                         ))
                       ) : (
                         months.map((month, idx) => (

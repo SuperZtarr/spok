@@ -2,7 +2,7 @@
 import { Link2, Ban, ArrowRight, type LucideIcon } from 'lucide-react';
 
 // Zoom level configuration
-export type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year';
+export type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'multiyear';
 
 export interface ZoomConfig {
   label: string;
@@ -20,9 +20,10 @@ export const ZOOM_CONFIGS: Record<ZoomLevel, ZoomConfig> = {
   month:   { label: 'Mois',      days: 90,  dayWidth: 20, navStep: 7,  showDayNumbers: true,  showWeekdays: false, snapDays: 1  },
   quarter: { label: 'Trimestre', days: 180, dayWidth: 8,  navStep: 7,  showDayNumbers: false, showWeekdays: false, snapDays: 7  },
   year:    { label: 'Année',     days: 365, dayWidth: 4,  navStep: 30, showDayNumbers: false, showWeekdays: false, snapDays: 30 },
+  multiyear: { label: 'Multi-années', days: 1095, dayWidth: 2, navStep: 90, showDayNumbers: false, showWeekdays: false, snapDays: 90 },
 };
 
-export const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];
+export const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year', 'multiyear'];
 
 // Relation types (same as MindMapView)
 export const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
