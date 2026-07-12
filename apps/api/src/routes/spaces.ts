@@ -770,7 +770,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       canDelete = true;
     }
 
-    // Community OWNER or ADMIN can delete community spaces
+    // Community OWNER can delete community spaces (CommunityRole n'a que OWNER/MEMBER —
+    // pas de rôle ADMIN au niveau communauté ; l'admin site suit /admin/* sans bypass ici)
     if (!canDelete && space.communityId) {
       const communityMembership = await fastify.prisma.communityMembership.findUnique({
         where: {

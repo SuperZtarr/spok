@@ -6,6 +6,11 @@
 
 ## EN COURS
 
+### Fix commentaire spaces.ts DELETE /:id — 2026-07-12
+- CommunityRole n'a que OWNER/MEMBER (pas d'ADMIN au niveau communauté) — le commentaire "Community OWNER or ADMIN" était obsolète, le code (OWNER only) était déjà correct. Commentaire aligné sur la réalité du schéma
+- Dernier item ouvert du TODO "Tests / qualité" — section entièrement traitée
+- Vérifié : 487/487 TNR, typecheck 5/5, check-doc-headers OK
+
 ### Page « Ma journée » (/today) — 2026-07-12
 - Besoin (brainstorming) : « je ne sais plus ce que je dois faire » → réunions Outlook (client + Hotmail) hors SPOK → page /today = réunions ICS + liste du jour mixte (suggestions serveur + pioche manuelle, persistée par date)
 - Spec docs/superpowers/specs/2026-07-11-today-page-design.md, plan docs/superpowers/plans/2026-07-12-today-page.md — exécution inline complète (9 tâches)

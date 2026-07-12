@@ -16,7 +16,7 @@
 - [x] BUG filtres échéances (GlobalTaskFilterBar) : corrigé — 2026-07-12
 - [x] Réparer les TNR : 47 tests en échec réalignés sur les comportements actuels des routes — 422/422 verts — 2026-07-11
 - [x] Routes graph.ts : accès public (visitorPreview) implémenté sur les 4 routes graphe/sunburst — anonyme et non-membre voient les communautés publiques, 403 propre sinon, plus aucun crash 500 — 2026-07-12
-- [ ] spaces.ts DELETE /:id : le commentaire dit "Community OWNER or ADMIN can delete" mais le code n'autorise que OWNER — trancher l'intention et aligner
+- [x] spaces.ts DELETE /:id : commentaire corrigé — CommunityRole n'a que OWNER/MEMBER, pas d'ADMIN au niveau communauté, le code était déjà correct — 2026-07-12
 - [x] Couverture community-referentiels.ts : 13 tests (GET public, PUT/reset réservés OWNER, check-status-usage) — 2026-07-12
 
 ### Didacticiels / aide contextuelle
