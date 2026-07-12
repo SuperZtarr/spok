@@ -3,8 +3,11 @@
  * Après login réussi : si `spok_session_expired` est présent (expiration forcée),
  * promeut `spok_last_location` en `spok_resume` pour que GlobalNavBar affiche
  * le bouton "Retourner à". Ne redirige jamais automatiquement — toujours vers `/`.
+ * Auto-login dev : build dev + VITE_DEV_AUTOLOGIN=1 → soumet le compte de seed
+ * (admin@spok.app), une seule tentative par session navigateur (sessionStorage) pour
+ * que la déconnexion volontaire reste possible. Jamais actif sur un build prod.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -53,6 +56,15 @@ export function LoginPage() {
       }
     },
   });
+
+  // Auto-login dev (navigateur intégré Claude, contexte vierge à chaque session)
+  useEffect(() => {
+    if (!import.meta.env.DEV || import.meta.env.VITE_DEV_AUTOLOGIN !== '1') return;
+    if (sessionStorage.getItem('spok_autologin_done')) return;
+    sessionStorage.setItem('spok_autologin_done', '1');
+    loginMutation.mutate({ email: 'admin@spok.app', password: 'admin1234' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleDevMode = () => {
     const newValue = !devMode;
