@@ -10,7 +10,9 @@ import { useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAgenda, useAgendaMutations, todayKey } from '@/hooks/useAgenda';
-import { itemsApi, type DayPlanEntryDto, type DayPlanItemDto } from '@/lib/api';
+import { useGlobalTaskFilters } from '@/hooks/useGlobalTaskFilters';
+import { GlobalTaskFilterBar } from '@/components/GlobalTaskFilterBar';
+import { itemsApi, type AgendaFilters, type DayPlanEntryDto, type DayPlanItemDto } from '@/lib/api';
 import { findFreeSlot, type BusyInterval } from '@/lib/timeblock';
 import { DayTimeGrid } from '@/components/today/DayTimeGrid';
 import { DayPlanList } from '@/components/today/DayPlanList';
@@ -27,7 +29,16 @@ export function TodayPage() {
   const [date, setDate] = useState(todayKey());
   const [feedsOpen, setFeedsOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
-  const { data, isLoading } = useAgenda(date);
+  // Filtre global (même barre que Tableau de bord / Tâches) : n'agit que sur les
+  // suggestions et la pioche — jamais sur le plan engagé ni la grille.
+  const filters = useGlobalTaskFilters();
+  const agendaFilters: AgendaFilters = {
+    spaceId: filters.queryParams.spaceId,
+    status: filters.queryParams.status,
+    priority: filters.queryParams.priority,
+    search: filters.queryParams.search,
+  };
+  const { data, isLoading } = useAgenda(date, agendaFilters);
   const { addToPlan, removeFromPlan, updateEntry } = useAgendaMutations(date);
   const queryClient = useQueryClient();
 
@@ -76,6 +87,10 @@ export function TodayPage() {
         </button>
       </div>
 
+      <div className="px-3 py-1 border-b border-border">
+        <GlobalTaskFilterBar filters={filters} />
+      </div>
+
       <div className="flex-1 overflow-auto p-4">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement…</p>
@@ -122,6 +137,7 @@ export function TodayPage() {
         open={pickOpen} onClose={() => setPickOpen(false)}
         plannedItemIds={new Set((data?.plan ?? []).map((p) => p.itemId))}
         onPick={(itemId) => addToPlan.mutate({ itemId, source: 'manual' })}
+        extraFilters={agendaFilters}
       />
     </div>
   );

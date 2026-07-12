@@ -4,7 +4,7 @@
  * navigateur — ne jamais déplacer ce calcul côté serveur.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { agendaApi } from '@/lib/api';
+import { agendaApi, type AgendaFilters } from '@/lib/api';
 
 /** Bornes [minuit local, minuit local +1j[ pour une date YYYY-MM-DD, en ISO UTC. */
 export function dayBounds(date: string): { from: string; to: string } {
@@ -20,11 +20,11 @@ export function todayKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-export function useAgenda(date: string) {
+export function useAgenda(date: string, filters?: AgendaFilters) {
   const { from, to } = dayBounds(date);
   return useQuery({
-    queryKey: ['agenda', date],
-    queryFn: () => agendaApi.get(date, from, to),
+    queryKey: ['agenda', date, filters ?? {}],
+    queryFn: () => agendaApi.get(date, from, to, filters),
     enabled: !!date,
     staleTime: 60_000,
   });

@@ -238,7 +238,8 @@
       "Bash(sed -i \"s|await app.register\\(agendaRoutes, { prefix: '/user' }\\);|await app.register\\(agendaRoutes, { prefix: '/user' }\\);\\\\n  await app.register\\(dayPlanRoutes, { prefix: '/user' }\\);|\" apps/api/src/index.ts)",
       "Bash(sed -i \"s|import { GlobalTasksPage } from './pages/GlobalTasksPage';|import { GlobalTasksPage } from './pages/GlobalTasksPage';\\\\nimport { TodayPage } from './pages/TodayPage';|\" apps/web/src/App.tsx)",
       "Bash(sed -i \"s|  \\\\[/\\\\^\\\\\\\\\\\\\\\\/tasks\\\\$/, 'pages/GlobalTasksPage.tsx'\\\\],|  [/^\\\\\\\\\\\\\\\\/tasks$/, 'pages/GlobalTasksPage.tsx'],\\\\n  [/^\\\\\\\\\\\\\\\\/today$/, 'pages/TodayPage.tsx'],|\" apps/web/src/App.tsx)",
-      "PowerShell(& \"C:\\\\_dev\\\\spok\\\\scripts\\\\restart-dev.ps1\")"
+      "PowerShell(& \"C:\\\\_dev\\\\spok\\\\scripts\\\\restart-dev.ps1\")",
+      "Bash(python -c \"import sys,json;print\\('feed test:',json.load\\(sys.stdin\\)['id']\\)\")"
     ]
   },
   "hooks": {

@@ -122,6 +122,53 @@ describe('GET /user/agenda', () => {
     expect(ids).toEqual(['retard', 'aujourdhui', 'encours', 'prio'])
   })
 
+  it('filtre les suggestions par espace (intersection avec les espaces accessibles)', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }, { spaceId: 'space-2' }])
+    prisma.item.findMany
+      .mockResolvedValueOnce([]) // meetings
+      .mockResolvedValueOnce([mockItem({ id: 't1', spaceId: 'space-2' })])
+    const res = await app.inject({
+      method: 'GET', url: `${URL_OK}&spaceId=space-2,space-inaccessible`,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(res.statusCode).toBe(200)
+    // 2e appel item.findMany = suggestions : le where doit être restreint à space-2 uniquement
+    const suggestionsCall = prisma.item.findMany.mock.calls[1][0]
+    expect(suggestionsCall.where.spaceId).toEqual({ in: ['space-2'] })
+  })
+
+  it('filtre les suggestions par statut et priorité (contraintes additionnelles)', async () => {
+    prisma.item.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+    await app.inject({
+      method: 'GET', url: `${URL_OK}&status=in_progress&priority=3,4`,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    const and = prisma.item.findMany.mock.calls[1][0].where.AND
+    expect(and).toEqual(expect.arrayContaining([
+      { status: { in: ['in_progress'] } },
+      { priority: { in: [3, 4] } },
+    ]))
+  })
+
+  it('filtre les suggestions par recherche texte', async () => {
+    prisma.item.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+    await app.inject({
+      method: 'GET', url: `${URL_OK}&search=roadmap`,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    const and = prisma.item.findMany.mock.calls[1][0].where.AND
+    expect(and).toEqual(expect.arrayContaining([
+      { OR: [
+        { title: { contains: 'roadmap', mode: 'insensitive' } },
+        { description: { contains: 'roadmap', mode: 'insensitive' } },
+      ] },
+    ]))
+  })
+
   it('exclut des suggestions les items déjà au plan', async () => {
     prisma.dayPlanEntry.findMany.mockResolvedValue([
       { id: 'p1', userId: USER_ID, date: new Date(DATE), itemId: 'retard', position: 0, source: 'auto', item: mockItem({ id: 'retard' }) },

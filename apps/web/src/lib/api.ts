@@ -518,9 +518,23 @@ export interface AgendaResponse {
   suggestions: DayPlanItemDto[];
 }
 
+/** Filtres appliqués aux suggestions de l'agenda (sous-ensemble de GlobalTaskFilters). */
+export interface AgendaFilters {
+  spaceId?: string;
+  status?: string;
+  priority?: string;
+  search?: string;
+}
+
 export const agendaApi = {
-  get: (date: string, from: string, to: string) =>
-    fetchApi<AgendaResponse>(`/user/agenda?date=${date}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  get: (date: string, from: string, to: string, filters?: AgendaFilters) => {
+    const sp = new URLSearchParams({ date, from, to });
+    if (filters?.spaceId) sp.set('spaceId', filters.spaceId);
+    if (filters?.status) sp.set('status', filters.status);
+    if (filters?.priority) sp.set('priority', filters.priority);
+    if (filters?.search) sp.set('search', filters.search);
+    return fetchApi<AgendaResponse>(`/user/agenda?${sp.toString()}`);
+  },
   listFeeds: () => fetchApi<CalendarFeedDto[]>('/user/calendar-feeds'),
   createFeed: (data: { name: string; url: string; color?: string }) =>
     fetchApi<CalendarFeedDto>('/user/calendar-feeds', { method: 'POST', body: JSON.stringify(data) }),

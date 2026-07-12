@@ -1,24 +1,33 @@
 /*
  * Modale « Piocher » de la page Ma journée : vivier de mes tâches ouvertes
  * (réutilise userTasksApi — même source que la page Tâches globales), recherche texte,
- * clic = ajout au plan du jour. Ne pas réimplémenter de filtres avancés ici : pour
- * du tri fin, la page /tasks reste l'outil.
+ * clic = ajout au plan du jour. Hérite du filtre global de la page via extraFilters
+ * (espaces, statuts, priorités) ; la recherche locale prime sur celle du filtre.
+ * Ne pas réimplémenter de filtres avancés ici : pour du tri fin, la page /tasks reste l'outil.
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
-import { userTasksApi } from '@/lib/api';
+import { userTasksApi, type AgendaFilters } from '@/lib/api';
 
-export function PickTasksModal({ open, onClose, plannedItemIds, onPick }: {
+export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFilters }: {
   open: boolean;
   onClose: () => void;
   plannedItemIds: Set<string>;
   onPick: (itemId: string) => void;
+  extraFilters?: AgendaFilters;
 }) {
   const [search, setSearch] = useState('');
   const { data, isLoading } = useQuery({
-    queryKey: ['pick-tasks', search],
-    queryFn: () => userTasksApi.list({ myTasks: true, search: search || undefined, sortBy: 'dueDate', sortDir: 'asc', pageSize: 50 }),
+    queryKey: ['pick-tasks', search, extraFilters ?? {}],
+    queryFn: () => userTasksApi.list({
+      myTasks: true,
+      spaceId: extraFilters?.spaceId,
+      status: extraFilters?.status,
+      priority: extraFilters?.priority,
+      search: search || extraFilters?.search || undefined,
+      sortBy: 'dueDate', sortDir: 'asc', pageSize: 50,
+    }),
     enabled: open,
   });
   if (!open) return null;

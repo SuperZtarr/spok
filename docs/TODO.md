@@ -13,6 +13,7 @@
 - [ ] **Étape 5 — Mode Exploration** : tout exposé, à affiner
 
 ### Tests / qualité
+- [ ] BUG filtres échéances (GlobalTaskFilterBar — Tableau de bord / Tâches globales) : comportement incorrect des filtres En retard/Aujourd'hui/Cette semaine/… signalé par Thomas le 2026-07-12 — cause probable identifiée : useGlobalTaskFilters.ts dueDateParams, `if (minFrom === undefined)` alors que minFrom est initialisé à `null` → dueDateFrom jamais posé pour today/week/month (le retard est inclus à tort)
 - [x] Réparer les TNR : 47 tests en échec réalignés sur les comportements actuels des routes — 422/422 verts — 2026-07-11
 - [x] Routes graph.ts : accès public (visitorPreview) implémenté sur les 4 routes graphe/sunburst — anonyme et non-membre voient les communautés publiques, 403 propre sinon, plus aucun crash 500 — 2026-07-12
 - [ ] spaces.ts DELETE /:id : le commentaire dit "Community OWNER or ADMIN can delete" mais le code n'autorise que OWNER — trancher l'intention et aligner
@@ -22,6 +23,8 @@
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide
 
 ### UX & formulaires
+- [ ] /today — D&D tâche→grille : glisser une tâche de la liste directement sur un créneau (placement à l'heure du drop, complète le bouton « Placer »)
+- [ ] /today — D&D événement→liste : glisser une réunion sur la liste du jour crée une TASK (titre + échéance de l'événement) et l'engage — question ouverte : espace cible (personnel / choix au drop / espace de capture configurable)
 - [ ] Vue Tableau croisé : export dédié (CSV ou Excel avec lignes/colonnes du tableau)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)

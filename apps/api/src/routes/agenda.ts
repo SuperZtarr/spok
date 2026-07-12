@@ -4,6 +4,8 @@
  * (retard → échéance du jour → in_progress → priorité, plafond 10, moins le plan).
  * from/to = bornes de la journée calculées PAR LE CLIENT dans son fuseau — le serveur
  * ne fait aucune conversion de fuseau. date (YYYY-MM-DD) = clé du plan.
+ * Filtres optionnels (mêmes formats multi-valeurs que /user/tasks : spaceId, status,
+ * priority, search) — ils restreignent UNIQUEMENT les suggestions, jamais events/plan.
  * Un feed en erreur est signalé (feedErrors + lastError) mais ne bloque jamais la réponse.
  */
 import { FastifyInstance, FastifyPluginAsync } from 'fastify'
@@ -29,10 +31,10 @@ async function accessibleSpaceIds(fastify: FastifyInstance, userId: string): Pro
 export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate)
 
-  fastify.get<{ Querystring: { date?: string; from?: string; to?: string } }>(
+  fastify.get<{ Querystring: { date?: string; from?: string; to?: string; spaceId?: string; status?: string; priority?: string; search?: string } }>(
     '/agenda',
     async (request, reply) => {
-      const { date, from: fromStr, to: toStr } = request.query
+      const { date, from: fromStr, to: toStr, spaceId: spaceIdFilter, status: statusFilter, priority: priorityFilter, search } = request.query
       if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return reply.status(400).send({ error: 'date=YYYY-MM-DD requis' })
       }
@@ -127,15 +129,39 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
       // 4. Suggestions — mes TASK ouvertes : en retard, du jour, en cours ou prioritaires
       type Candidate = { id: string; dueDate: Date | null; status: string | null; priority: number | null }
       let suggestions: Candidate[] = []
-      if (spaceIds.length > 0) {
+      // Filtres utilisateur (barre de filtre globale) — contraintes ADDITIONNELLES sur les suggestions
+      let suggestionSpaceIds = spaceIds
+      if (spaceIdFilter) {
+        const wanted = new Set(spaceIdFilter.split(',').filter(Boolean))
+        suggestionSpaceIds = spaceIds.filter((id) => wanted.has(id))
+      }
+      const extraAnd: Record<string, unknown>[] = []
+      if (statusFilter) {
+        const statuses = statusFilter.split(',').filter(Boolean)
+        if (statuses.length > 0) extraAnd.push({ status: { in: statuses } })
+      }
+      if (priorityFilter) {
+        const priorities = priorityFilter.split(',').map((p) => parseInt(p, 10)).filter((p) => p >= 1 && p <= 4)
+        if (priorities.length > 0) extraAnd.push({ priority: { in: priorities } })
+      }
+      if (search) {
+        extraAnd.push({
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        })
+      }
+      if (suggestionSpaceIds.length > 0) {
         const candidates = await fastify.prisma.item.findMany({
           where: {
             type: 'TASK',
-            spaceId: { in: spaceIds },
+            spaceId: { in: suggestionSpaceIds },
             AND: [
               { OR: [{ assignedToId: userId }, { assignedToId: null, createdById: userId }] },
               { OR: [{ status: null }, { status: { notIn: CLOSED_STATUSES } }] },
               { OR: [{ dueDate: { lt: to } }, { status: 'in_progress' }, { priority: { gte: 3 } }] },
+              ...extraAnd,
             ],
           },
           select: {
