@@ -19,9 +19,9 @@
 - Vérifié time-blocking : 455/455 TNR (9 nouveaux), typecheck 5/5, smoke test PATCH placement réel OK
 - Doc SPOK TodayPage mise à jour (time-blocking ajouté, to_validate)
 - Commité et poussé (mep 2026-07-12, e6af61e) — le schéma prod s'applique au déploiement (start-api.sh db push)
-- Post-mep : auto-login dev (LoginPage, build dev + VITE_DEV_AUTOLOGIN=1 dans apps/web/.env — navigateur intégré Claude au contexte vierge) ; fix fetchApi 204 No Content (DELETE calendar-feed ne rafraîchissait pas la liste) — vérifié en réel, suppression OK — NON COMMITÉ
+- Post-mep : auto-login dev (LoginPage, build dev + VITE_DEV_AUTOLOGIN=1 dans apps/web/.env — navigateur intégré Claude au contexte vierge) ; fix fetchApi 204 No Content (DELETE calendar-feed ne rafraîchissait pas la liste) — vérifié en réel, suppression OK — commités (3f08e19, c7b40c9)
 - Feed « Matthias » en erreur chez Thomas : lien Outlook généré avec GUID nul (00000000-…) → 500 côté Microsoft — dépublier/republier le calendrier dans Outlook
-- Filtre global sur /today (2026-07-12) : GlobalTaskFilterBar + useGlobalTaskFilters réutilisés tels quels ; /user/agenda accepte spaceId/status/priority/search (contraintes ADDITIONNELLES sur les suggestions uniquement — plan et grille jamais filtrés) ; la pioche hérite des critères (extraFilters). 458/458 TNR (3 nouveaux), typecheck 5/5, vérifié en réel (recherche non-matchante → suggestions vides, Effacer → retour) — NON COMMITÉ
+- Filtre global sur /today (2026-07-12) : GlobalTaskFilterBar + useGlobalTaskFilters réutilisés tels quels ; /user/agenda accepte spaceId/status/priority/search (contraintes ADDITIONNELLES sur les suggestions uniquement — plan et grille jamais filtrés) ; la pioche hérite des critères (extraFilters). 458/458 TNR (3 nouveaux), typecheck 5/5, vérifié en réel (recherche non-matchante → suggestions vides, Effacer → retour) — commité (5f03b93)
 - Doc SPOK TodayPage : filtre global ajouté aux comportements (to_validate)
 - Backlog acté avec Thomas : D&D tâche→grille (placement au drop) et événement→liste (création de tâche — question ouverte : espace cible) — reportés, le filtre passait d'abord
 - RESTE (Thomas) : vérifier que le tenant client autorise « Publier un calendrier » ; tester la page en réel (feed ICS + drag des blocs)
