@@ -6,6 +6,21 @@
 
 ## EN COURS
 
+### Page « Ma journée » (/today) — 2026-07-12
+- Besoin (brainstorming) : « je ne sais plus ce que je dois faire » → réunions Outlook (client + Hotmail) hors SPOK → page /today = réunions ICS + liste du jour mixte (suggestions serveur + pioche manuelle, persistée par date)
+- Spec docs/superpowers/specs/2026-07-11-today-page-design.md, plan docs/superpowers/plans/2026-07-12-today-page.md — exécution inline complète (9 tâches)
+- Backend : tables CalendarFeed + DayPlanEntry (db push local, prod suivra au deploy via start-api.sh), utils/calendar-source.ts (node-ical, RRULE, cache 15 min), routes /user/calendar-feeds + /user/agenda + /user/day-plan — 15 nouveaux tests
+- Front : TodayPage + components/today/* (AgendaTimeline, DayPlanList, CalendarFeedsModal, PickTasksModal), hooks/useAgenda.ts (bornes de journée calculées côté client), route /today, entrée menu « Ma journée » (Personnel, icône Sun, masquée modes forum/exploration)
+- Vérifié : 446/446 TNR, typecheck 5/5, check-doc-headers OK, smoke test API local vert (suggestions réelles) — vérif visuelle À FAIRE par Thomas (feed ICS réel à ajouter)
+- Doc SPOK : item « Ma journée [TodayPage] » créé (cmrgzj9lj0001335i00ab6rpf, to_validate) via Prisma direct
+- Divergence constatée : MainMenu.tsx n'existe plus → GlobalNavBar.tsx (+ SpaceToolbar pour les vues) — skill spok-menu annotée, à réécrire proprement un jour
+- Fix annexe : scripts/restart-dev.ps1 ($pid réservé → $procId)
+- Time-blocking (2026-07-12, spec 2026-07-12-today-timeblocking-design.md, plan 2026-07-12-today-timeblocking.md) : DayPlanEntry.plannedStart/plannedDuration, PATCH day-plan étendu (null dé-place et efface la durée), lib/timeblock.ts (findFreeSlot pur, testé), DayTimeGrid (grille 7h-20h, drag/resize pointer events snap 15 min, chevauchements côte à côte), bouton « Placer » (premier créneau libre), TodayPage réorganisée (grille 2/3 + liste 1/3, allDay en bandeau) — AgendaTimeline plus utilisée par la page (conservée)
+- Vérifié time-blocking : 455/455 TNR (9 nouveaux), typecheck 5/5, smoke test PATCH placement réel OK
+- Doc SPOK TodayPage mise à jour (time-blocking ajouté, to_validate)
+- Commité et poussé (mep 2026-07-12) — le schéma prod s'applique au déploiement (start-api.sh db push)
+- RESTE (Thomas) : vérifier que le tenant client autorise « Publier un calendrier » ; tester la page en réel (feed ICS + drag des blocs)
+
 ### Sentry (code prêt, activation en attente des DSN) — 2026-07-13
 - @sentry/node (API : init si SENTRY_DSN, capture des 500 inconnues uniquement) + @sentry/react (web : init si VITE_SENTRY_DSN au build, tracesSampleRate 0)
 - Dockerfile.web : ARG/ENV VITE_SENTRY_DSN ; .env.example : les 2 clés
@@ -13,6 +28,8 @@
 - Vérifié : typecheck 5/5, 426/426 TNR, front OK sans DSN — commité et poussé (mep 2026-07-11)
 - ACTIVÉ (2026-07-11) : org sentry `roedel`, projets spok-api (Fastify) + spok-web (React), DSN posés dans Railway, services redéployés
 - Vérif front de bout en bout OK : 2 erreurs de test remontées dans le dashboard (SPOK-WEB-1 handler global, SPOK-WEB-2 captureException) — côté API, rien à vérifier tant qu'aucune vraie 500 (config = 500 inconnues uniquement)
+- Doc fonctionnelle : 2 items créés sous Système > PROD en to_validate — "Monitoring d'erreurs [Sentry]" (cmrgtiq8t0001nbhnchmj0ao1) et "Chaîne de déploiement [CI + Wait for CI]" (cmrgtiqim0003nbhn718tobtw) — via Prisma direct (scripts tmp_create_system_doc.ts)
+- MCP SPOK HS : 401 au login (SPOK_EMAIL/SPOK_PASSWORD du .env ≠ mot de passe roté) — RESTE (Thomas) : mettre le bon mot de passe dans .env puis redémarrer Claude
 
 
 ### Scripts typecheck réels — 2026-07-13

@@ -50,6 +50,8 @@ model User {
   bookmarkedItems            ItemBookmark[]
   updatedItems               Item[]  @relation("ItemUpdatedBy")
   itemViews                  ItemView[]
+  calendarFeeds              CalendarFeed[]
+  dayPlanEntries             DayPlanEntry[]
 
   @@map("users")
 }
@@ -307,6 +309,7 @@ model Item {
   reactions     Reaction[]
   bookmarkedBy  ItemBookmark[]
   views         ItemView[]
+  dayPlanEntries DayPlanEntry[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -534,4 +537,45 @@ model Reaction {
   @@index([itemId])
   @@index([contributionId])
   @@map("reactions")
+}
+
+// Abonnement ICS d'un utilisateur — calendriers externes de la page Ma journée.
+// L'url est un lien ICS privé : secret utilisateur, ne jamais la loguer.
+model CalendarFeed {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  url           String
+  color         String    @default("#3b82f6")
+  enabled       Boolean   @default(true)
+  lastFetchedAt DateTime?
+  lastError     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("calendar_feeds")
+}
+
+// Engagement du jour : tâche sélectionnée pour une date donnée (page Ma journée).
+// L'état "fait" reste porté par Item.status — pas de deuxième vérité ici.
+model DayPlanEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  itemId    String
+  position  Int      @default(0)
+  source    String   @default("manual") // 'auto' (suggestion acceptée) | 'manual' (pioche)
+  plannedStart    DateTime? // début du bloc sur la grille du jour (brouillon perso — jamais les dates de l'item)
+  plannedDuration Int?      // durée en minutes (15–720), null si non placé
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, itemId])
+  @@index([userId, date])
+  @@map("day_plan_entries")
 }

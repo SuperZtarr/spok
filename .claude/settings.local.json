@@ -230,7 +230,15 @@
       "mcp__Claude_Browser__preview_start",
       "Bash(pnpm --filter @spok/api add @sentry/node)",
       "Bash(node scripts/check-doc-headers.mjs)",
-      "mcp__claude-in-chrome__get_page_text"
+      "mcp__claude-in-chrome__get_page_text",
+      "Bash(pnpm --filter @spok/api add node-ical)",
+      "Bash(sed -i \"s|import { calendarFeedsRoutes } from './routes/calendar-feeds.js';|import { calendarFeedsRoutes } from './routes/calendar-feeds.js';\\\\nimport { agendaRoutes } from './routes/agenda.js';|\" apps/api/src/index.ts)",
+      "Bash(sed -i \"s|await app.register\\(calendarFeedsRoutes, { prefix: '/user' }\\);|await app.register\\(calendarFeedsRoutes, { prefix: '/user' }\\);\\\\n  await app.register\\(agendaRoutes, { prefix: '/user' }\\);|\" apps/api/src/index.ts)",
+      "Bash(sed -i \"s|import { agendaRoutes } from './routes/agenda.js';|import { agendaRoutes } from './routes/agenda.js';\\\\nimport { dayPlanRoutes } from './routes/day-plan.js';|\" apps/api/src/index.ts)",
+      "Bash(sed -i \"s|await app.register\\(agendaRoutes, { prefix: '/user' }\\);|await app.register\\(agendaRoutes, { prefix: '/user' }\\);\\\\n  await app.register\\(dayPlanRoutes, { prefix: '/user' }\\);|\" apps/api/src/index.ts)",
+      "Bash(sed -i \"s|import { GlobalTasksPage } from './pages/GlobalTasksPage';|import { GlobalTasksPage } from './pages/GlobalTasksPage';\\\\nimport { TodayPage } from './pages/TodayPage';|\" apps/web/src/App.tsx)",
+      "Bash(sed -i \"s|  \\\\[/\\\\^\\\\\\\\\\\\\\\\/tasks\\\\$/, 'pages/GlobalTasksPage.tsx'\\\\],|  [/^\\\\\\\\\\\\\\\\/tasks$/, 'pages/GlobalTasksPage.tsx'],\\\\n  [/^\\\\\\\\\\\\\\\\/today$/, 'pages/TodayPage.tsx'],|\" apps/web/src/App.tsx)",
+      "PowerShell(& \"C:\\\\_dev\\\\spok\\\\scripts\\\\restart-dev.ps1\")"
     ]
   },
   "hooks": {

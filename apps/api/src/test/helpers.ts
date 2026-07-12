@@ -33,6 +33,7 @@ function mockModel() {
     deleteMany: vi.fn(),
     count: vi.fn(),
     groupBy: vi.fn().mockResolvedValue([]),
+    aggregate: vi.fn(),
   }
 }
 
@@ -62,6 +63,8 @@ export function createMockPrisma() {
     emailVerificationToken: mockModel(),
     notification: mockModel(),
     appConfig: mockModel(),
+    calendarFeed: mockModel(),
+    dayPlanEntry: mockModel(),
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn().mockImplementation((arg: unknown) => {

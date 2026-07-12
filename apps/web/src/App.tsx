@@ -22,6 +22,7 @@ import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GlobalTasksPage } from './pages/GlobalTasksPage';
+import { TodayPage } from './pages/TodayPage';
 import { GlobalLinksPage } from './pages/GlobalLinksPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { Layout } from './components/Layout';
@@ -97,6 +98,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/sunburst$/, 'pages/SunburstPage.tsx'],
   [/^\/mindmap$/, 'pages/MindMapPage.tsx'],
   [/^\/tasks$/, 'pages/GlobalTasksPage.tsx'],
+  [/^\/today$/, 'pages/TodayPage.tsx'],
   [/^\/links$/, 'pages/GlobalLinksPage.tsx'],
   [/^\/bookmarks$/, 'pages/BookmarksPage.tsx'],
   [/^\/search$/, 'pages/SearchPage.tsx'],
@@ -191,6 +193,7 @@ export default function App() {
         <Route path="sunburst" element={<SunburstPage />} />
         <Route path="mindmap" element={<MindMapPage />} />
         <Route path="tasks" element={<GlobalTasksPage />} />
+        <Route path="today" element={<TodayPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="links" element={<GlobalLinksPage />} />
         <Route path="search" element={<SearchPage />} />

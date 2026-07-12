@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
-  LayoutDashboard, ClipboardList, Activity,
+  LayoutDashboard, ClipboardList, Activity, Sun,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
   MessageSquare, Map as MapIconLucide, Copy, LogOut, Search, RotateCcw,
   type LucideIcon,
@@ -22,15 +22,15 @@ import { AdminModeToggle } from './DevDbStatus';
 import type { MenuItemConfig } from '@spok/shared';
 
 const MODE_GLOBAL_EXCLUDED: Record<string, Set<string>> = {
-  forum:       new Set(['global-graph', 'global-sunburst', 'global-links', 'global-mindmap', 'dashboard', 'tasks', 'activity']),
+  forum:       new Set(['global-graph', 'global-sunburst', 'global-links', 'global-mindmap', 'dashboard', 'tasks', 'activity', 'today']),
   projet:      new Set(['global-sunburst', 'global-mindmap', 'global-graph', 'global-links']),
-  exploration: new Set(['dashboard', 'tasks', 'activity']),
+  exploration: new Set(['dashboard', 'tasks', 'activity', 'today']),
   tous:        new Set(),
 };
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
-  LayoutDashboard, ClipboardList, Activity,
+  LayoutDashboard, ClipboardList, Activity, Sun,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
   MessageSquare, MapIcon: MapIconLucide, Copy, LogOut, Search,
 };

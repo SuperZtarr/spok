@@ -35,10 +35,11 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'global-links',   label: 'Liens',          icon: 'ExternalLink',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/links',               viewMode: null, order: 6, visible: true, access: 'admin'   },
 
   // ── personal ──
-  { id: '', key: 'dashboard', label: 'Tableau de bord', icon: 'LayoutDashboard', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/dashboard', viewMode: null, order: 0, visible: true, access: 'user' },
-  { id: '', key: 'tasks',     label: 'Tâches',          icon: 'ClipboardList',   section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/tasks',     viewMode: null, order: 1, visible: true, access: 'user' },
-  { id: '', key: 'activity',  label: 'Activité',        icon: 'Activity',        section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/activity',  viewMode: null, order: 2, visible: true, access: 'user' },
-  { id: '', key: 'profile',   label: 'Profil',          icon: 'User',            section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: null,         viewMode: null, order: 3, visible: true, access: 'user' },
+  { id: '', key: 'today',     label: 'Ma journée',      icon: 'Sun',             section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/today',     viewMode: null, order: 0, visible: true, access: 'user' },
+  { id: '', key: 'dashboard', label: 'Tableau de bord', icon: 'LayoutDashboard', section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/dashboard', viewMode: null, order: 1, visible: true, access: 'user' },
+  { id: '', key: 'tasks',     label: 'Tâches',          icon: 'ClipboardList',   section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/tasks',     viewMode: null, order: 2, visible: true, access: 'user' },
+  { id: '', key: 'activity',  label: 'Activité',        icon: 'Activity',        section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/activity',  viewMode: null, order: 3, visible: true, access: 'user' },
+  { id: '', key: 'profile',   label: 'Profil',          icon: 'User',            section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: null,         viewMode: null, order: 4, visible: true, access: 'user' },
 
   // ── space views (generated from VIEW_REGISTRY) ──
   ...VIEW_MENU_ITEMS,

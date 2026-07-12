@@ -24,10 +24,13 @@ MENU_REGISTRY (shared/constants/menuDefaults.ts, généré depuis VIEW_REGISTRY)
     ↓ GET /menu-items
 useMenuItems() hook
     ↓
-MainMenu.tsx → menu affiché dans le Layout
+GlobalNavBar.tsx → bandeau de navigation (sections global/personal/admin/misc)
+SpaceToolbar    → sélecteur de vues d'espace (sections basic/itemTypes/planning/exploration)
 ```
 
-⚠️ `ViewModeSelector.tsx` existe mais est **inutilisé** (remplacé par `MainMenu`). Ne pas toucher.
+⚠️ **Constaté 2026-07-12** : `MainMenu.tsx` n'existe plus — remplacé par `GlobalNavBar.tsx` (bandeau, map d'icônes `NAV_ICONS`, masquage par mode d'interface via `MODE_GLOBAL_EXCLUDED`). Les sections d'espace (`basic`/`itemTypes`/`planning`/`exploration`) sont rendues par SpaceToolbar, plus par le menu. Les mentions `MainMenu.tsx` plus bas dans cette skill (structure `__espaces__`, dropdown multi-colonnes) décrivent l'ancienne architecture — à vérifier contre le code avant usage.
+
+⚠️ `ViewModeSelector.tsx` existe mais est **inutilisé**. Ne pas toucher.
 ⚠️ `viewDefaults.ts` / `useViewConfig()` / `AppConfig` sont un système **parallèle et séparé** — il sert au composant ViewModeSelector qui n'est pas rendu.
 
 ## Fichiers clés
@@ -36,7 +39,7 @@ MainMenu.tsx → menu affiché dans le Layout
 |------|---------|
 | Items de menu par défaut | `packages/shared/src/constants/menuDefaults.ts` |
 | Types MenuItem | `packages/shared/src/types/menuItem.ts` |
-| Rendu du menu principal | `apps/web/src/components/MainMenu.tsx` |
+| Rendu du menu principal | `apps/web/src/components/GlobalNavBar.tsx` (icônes : map `NAV_ICONS`) |
 | Hook de chargement | `apps/web/src/hooks/useMenuItems.ts` |
 | Rendu de la vue dans l'espace | `apps/web/src/pages/SpacePage.tsx` |
 | Type `ViewMode` | `apps/web/src/stores/viewMode.ts` |

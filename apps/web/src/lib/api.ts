@@ -483,6 +483,52 @@ export const userTasksApi = {
   },
 };
 
+// --- Ma journée (/today) ---
+export interface CalendarFeedDto {
+  id: string; name: string; url: string; color: string; enabled: boolean;
+  lastFetchedAt: string | null; lastError: string | null;
+}
+export interface AgendaEventSource {
+  kind: 'feed' | 'spok';
+  feedId?: string; name?: string; color?: string;
+  spaceId?: string; spaceName?: string;
+}
+export interface AgendaEvent {
+  id: string; title: string; start: string; end: string | null; allDay: boolean;
+  location?: string; source: AgendaEventSource;
+}
+export interface DayPlanItemDto {
+  id: string; title: string; type: string; status: string | null; priority: number | null;
+  dueDate: string | null; spaceId: string; space: { id: string; name: string };
+}
+export interface DayPlanEntryDto {
+  id: string; date: string; itemId: string; position: number; source: 'auto' | 'manual';
+  plannedStart: string | null; plannedDuration: number | null;
+  item: DayPlanItemDto;
+}
+export interface AgendaResponse {
+  events: AgendaEvent[];
+  feedErrors: { feedId: string; name: string }[];
+  plan: DayPlanEntryDto[];
+  suggestions: DayPlanItemDto[];
+}
+
+export const agendaApi = {
+  get: (date: string, from: string, to: string) =>
+    fetchApi<AgendaResponse>(`/user/agenda?date=${date}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  listFeeds: () => fetchApi<CalendarFeedDto[]>('/user/calendar-feeds'),
+  createFeed: (data: { name: string; url: string; color?: string }) =>
+    fetchApi<CalendarFeedDto>('/user/calendar-feeds', { method: 'POST', body: JSON.stringify(data) }),
+  updateFeed: (id: string, data: Partial<Pick<CalendarFeedDto, 'name' | 'url' | 'color' | 'enabled'>>) =>
+    fetchApi<CalendarFeedDto>(`/user/calendar-feeds/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteFeed: (id: string) => fetchApi<void>(`/user/calendar-feeds/${id}`, { method: 'DELETE' }),
+  addToPlan: (data: { date: string; itemId: string; source: 'auto' | 'manual' }) =>
+    fetchApi<DayPlanEntryDto>('/user/day-plan', { method: 'POST', body: JSON.stringify(data) }),
+  removeFromPlan: (id: string) => fetchApi<void>(`/user/day-plan/${id}`, { method: 'DELETE' }),
+  updatePlanEntry: (id: string, data: { position?: number; plannedStart?: string | null; plannedDuration?: number }) =>
+    fetchApi<DayPlanEntryDto>(`/user/day-plan/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+};
+
 // Spaces
 export const spacesApi = {
   list: (communityId?: string, parentId?: string) => {
