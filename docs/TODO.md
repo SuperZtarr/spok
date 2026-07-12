@@ -23,7 +23,7 @@
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide
 
 ### UX & formulaires
-- [ ] /today — D&D tâche→grille : glisser une tâche de la liste directement sur un créneau (placement à l'heure du drop, complète le bouton « Placer »)
+- [x] /today — D&D tâche→grille : glisser une tâche ou une suggestion de la liste sur la colonne Tâches (placement à l'heure du drop, snap 15 min) + grille en 2 colonnes Agenda/Tâches — 2026-07-12
 - [ ] /today — D&D événement→liste : glisser une réunion sur la liste du jour crée une TASK (titre + échéance de l'événement) et l'engage — question ouverte : espace cible (personnel / choix au drop / espace de capture configurable)
 - [ ] Vue Tableau croisé : export dédié (CSV ou Excel avec lignes/colonnes du tableau)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)

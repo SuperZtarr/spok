@@ -22,6 +22,7 @@ export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFil
     queryKey: ['pick-tasks', search, extraFilters ?? {}],
     queryFn: () => userTasksApi.list({
       myTasks: true,
+      type: extraFilters?.type,
       spaceId: extraFilters?.spaceId,
       status: extraFilters?.status,
       priority: extraFilters?.priority,

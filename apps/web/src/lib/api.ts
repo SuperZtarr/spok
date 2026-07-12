@@ -520,6 +520,7 @@ export interface AgendaResponse {
 
 /** Filtres appliqués aux suggestions de l'agenda (sous-ensemble de GlobalTaskFilters). */
 export interface AgendaFilters {
+  type?: string;
   spaceId?: string;
   status?: string;
   priority?: string;
@@ -529,6 +530,7 @@ export interface AgendaFilters {
 export const agendaApi = {
   get: (date: string, from: string, to: string, filters?: AgendaFilters) => {
     const sp = new URLSearchParams({ date, from, to });
+    if (filters?.type) sp.set('type', filters.type);
     if (filters?.spaceId) sp.set('spaceId', filters.spaceId);
     if (filters?.status) sp.set('status', filters.status);
     if (filters?.priority) sp.set('priority', filters.priority);
@@ -541,7 +543,7 @@ export const agendaApi = {
   updateFeed: (id: string, data: Partial<Pick<CalendarFeedDto, 'name' | 'url' | 'color' | 'enabled'>>) =>
     fetchApi<CalendarFeedDto>(`/user/calendar-feeds/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteFeed: (id: string) => fetchApi<void>(`/user/calendar-feeds/${id}`, { method: 'DELETE' }),
-  addToPlan: (data: { date: string; itemId: string; source: 'auto' | 'manual' }) =>
+  addToPlan: (data: { date: string; itemId: string; source: 'auto' | 'manual'; plannedStart?: string; plannedDuration?: number }) =>
     fetchApi<DayPlanEntryDto>('/user/day-plan', { method: 'POST', body: JSON.stringify(data) }),
   removeFromPlan: (id: string) => fetchApi<void>(`/user/day-plan/${id}`, { method: 'DELETE' }),
   updatePlanEntry: (id: string, data: { position?: number; plannedStart?: string | null; plannedDuration?: number }) =>

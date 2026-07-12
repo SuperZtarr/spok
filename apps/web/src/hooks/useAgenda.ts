@@ -34,7 +34,8 @@ export function useAgendaMutations(date: string) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['agenda', date] });
   const addToPlan = useMutation({
-    mutationFn: (p: { itemId: string; source: 'auto' | 'manual' }) => agendaApi.addToPlan({ date, ...p }),
+    mutationFn: (p: { itemId: string; source: 'auto' | 'manual'; plannedStart?: string; plannedDuration?: number }) =>
+      agendaApi.addToPlan({ date, ...p }),
     onSuccess: invalidate,
   });
   const removeFromPlan = useMutation({ mutationFn: agendaApi.removeFromPlan, onSuccess: invalidate });

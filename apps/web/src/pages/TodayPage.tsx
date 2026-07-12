@@ -8,13 +8,17 @@
  */
 import { useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Item } from '@spok/shared';
+import { ItemEditModal } from '@/components/ItemEditModal';
+import { buildItemMenuGroups } from '@/lib/itemMenuGroups';
+import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
 import { useAgenda, useAgendaMutations, todayKey } from '@/hooks/useAgenda';
 import { useGlobalTaskFilters } from '@/hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '@/components/GlobalTaskFilterBar';
 import { itemsApi, type AgendaFilters, type DayPlanEntryDto, type DayPlanItemDto } from '@/lib/api';
 import { findFreeSlot, type BusyInterval } from '@/lib/timeblock';
-import { DayTimeGrid } from '@/components/today/DayTimeGrid';
+import { DayTimeGrid, type DropPayload } from '@/components/today/DayTimeGrid';
 import { DayPlanList } from '@/components/today/DayPlanList';
 import { CalendarFeedsModal } from '@/components/today/CalendarFeedsModal';
 import { PickTasksModal } from '@/components/today/PickTasksModal';
@@ -33,6 +37,7 @@ export function TodayPage() {
   // suggestions et la pioche — jamais sur le plan engagé ni la grille.
   const filters = useGlobalTaskFilters();
   const agendaFilters: AgendaFilters = {
+    type: filters.queryParams.type,
     spaceId: filters.queryParams.spaceId,
     status: filters.queryParams.status,
     priority: filters.queryParams.priority,
@@ -49,6 +54,35 @@ export function TodayPage() {
       end: new Date(new Date(p.plannedStart!).getTime() + (p.plannedDuration ?? 30) * 60000),
     })),
   ];
+  // Menu contextuel des items (liste, suggestions, blocs de grille) + modale d'édition
+  const [editingItem, setEditingItem] = useState<{ spaceId: string; itemId: string } | null>(null);
+  const { data: spaceItemsData } = useQuery({
+    queryKey: ['items', editingItem?.spaceId, { pageSize: 5000 }],
+    queryFn: () => itemsApi.list(editingItem!.spaceId, { pageSize: 5000 }),
+    enabled: !!editingItem,
+  });
+  const invalidateAgenda = () => queryClient.invalidateQueries({ queryKey: ['agenda', date] });
+  const menuGroupsFor = (item: DayPlanItemDto): ItemActionGroup[] =>
+    buildItemMenuGroups(item.id, {
+      onOpen: () => setEditingItem({ spaceId: item.spaceId, itemId: item.id }),
+      onOpenInNewTab: () => window.open(`/spaces/${item.spaceId}/content?item=${item.id}`, '_blank'),
+      onEdit: () => setEditingItem({ spaceId: item.spaceId, itemId: item.id }),
+      onDelete: async () => {
+        if (!window.confirm(`Supprimer « ${item.title} » ?`)) return;
+        await itemsApi.delete(item.spaceId, item.id);
+        invalidateAgenda();
+      },
+    }, { canEdit: true, itemSpaceId: item.spaceId });
+
+  // Drop depuis la liste : une tâche engagée est placée, une suggestion est engagée + placée
+  const handleDropAt = (payload: DropPayload, startIso: string, durationMin: number) => {
+    if (payload.kind === 'entry') {
+      updateEntry.mutate({ id: payload.id, plannedStart: startIso, plannedDuration: durationMin });
+    } else {
+      addToPlan.mutate({ itemId: payload.id, source: 'auto', plannedStart: startIso, plannedDuration: durationMin });
+    }
+  };
+
   const placeEntry = (entry: DayPlanEntryDto) => {
     const dayStart = new Date(`${date}T07:00:00`);
     const dayEnd = new Date(`${date}T20:00:00`);
@@ -95,7 +129,7 @@ export function TodayPage() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement…</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
             <div className="min-w-0">
               {(data?.feedErrors?.length ?? 0) > 0 && (
                 <p className="mb-2 inline-flex items-center gap-1 text-xs text-amber-600">
@@ -117,6 +151,8 @@ export function TodayPage() {
                 onMove={(id, startIso) => updateEntry.mutate({ id, plannedStart: startIso })}
                 onResize={(id, durationMin) => updateEntry.mutate({ id, plannedDuration: durationMin })}
                 onUnplace={(id) => updateEntry.mutate({ id, plannedStart: null })}
+                onDropAt={handleDropAt}
+                menuGroupsFor={menuGroupsFor}
               />
             </div>
             <DayPlanList
@@ -127,10 +163,26 @@ export function TodayPage() {
               onToggleDone={toggleDone}
               onPick={() => setPickOpen(true)}
               onPlace={placeEntry}
+              menuGroupsFor={menuGroupsFor}
             />
           </div>
         )}
       </div>
+
+      {editingItem && (
+        <ItemEditModal
+          isOpen={!!editingItem}
+          onClose={() => {
+            setEditingItem(null);
+            invalidateAgenda();
+          }}
+          spaceId={editingItem.spaceId}
+          itemId={editingItem.itemId}
+          allItems={(spaceItemsData?.data as Item[]) || []}
+          canEdit={true}
+          onNavigate={(newItemId) => setEditingItem({ ...editingItem, itemId: newItemId })}
+        />
+      )}
 
       <CalendarFeedsModal open={feedsOpen} onClose={() => setFeedsOpen(false)} />
       <PickTasksModal

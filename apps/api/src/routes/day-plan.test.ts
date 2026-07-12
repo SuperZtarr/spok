@@ -84,6 +84,32 @@ describe('Day plan routes', () => {
     expect(res.statusCode).toBe(200)
   })
 
+  it('POST avec placement direct (drop d\'une suggestion sur la grille)', async () => {
+    prisma.item.findUnique.mockResolvedValue({ id: 'task-1', spaceId: 'space-1' })
+    prisma.spaceMembership.findUnique.mockResolvedValue({ spaceId: 'space-1', userId: USER_ID })
+    prisma.dayPlanEntry.aggregate.mockResolvedValue({ _max: { position: null } })
+    prisma.dayPlanEntry.upsert.mockImplementation((args: { create: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'p1', ...args.create }))
+
+    const res = await app.inject({
+      method: 'POST', url: '/user/day-plan', headers: { authorization: `Bearer ${token}` },
+      payload: { date: DATE, itemId: 'task-1', source: 'auto', plannedStart: '2026-07-15T09:00:00.000Z', plannedDuration: 45 },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(prisma.dayPlanEntry.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ plannedStart: new Date('2026-07-15T09:00:00.000Z'), plannedDuration: 45 }),
+      update: expect.objectContaining({ plannedStart: new Date('2026-07-15T09:00:00.000Z') }),
+    }))
+  })
+
+  it('POST rejette un placement invalide', async () => {
+    const res = await app.inject({
+      method: 'POST', url: '/user/day-plan', headers: { authorization: `Bearer ${token}` },
+      payload: { date: DATE, itemId: 'task-1', source: 'auto', plannedStart: 'tantôt' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
   describe('PATCH placement (time-blocking)', () => {
     beforeEach(() => {
       prisma.dayPlanEntry.findUnique.mockResolvedValue({ id: 'p1', userId: USER_ID })

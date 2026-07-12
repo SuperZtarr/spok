@@ -4,12 +4,16 @@
  * libre), puis les suggestions acceptables d'un clic. Les tâches placées vivent dans
  * DayTimeGrid — ici seulement un compteur.
  * Props : plan complet (filtré ici), suggestions, callbacks accept/remove/toggleDone/pick/place.
+ * Tâches non placées et suggestions sont draggables (HTML5, dataTransfer JSON
+ * {kind:'entry'|'suggestion', id}) vers la colonne Tâches de DayTimeGrid.
  * Ne pas dupliquer ici la logique de tri des suggestions — elle vit côté serveur.
  */
 import { Check, Plus, X, ListTodo, CalendarClock } from 'lucide-react';
+import { ItemActionMenu } from '@/components/ui/ItemActionMenu';
+import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
 import type { DayPlanEntryDto, DayPlanItemDto } from '@/lib/api';
 
-export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDone, onPick, onPlace }: {
+export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDone, onPick, onPlace, menuGroupsFor }: {
   plan: DayPlanEntryDto[];
   suggestions: DayPlanItemDto[];
   onAccept: (itemId: string) => void;
@@ -17,6 +21,7 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
   onToggleDone: (item: DayPlanItemDto) => void;
   onPick: () => void;
   onPlace: (entry: DayPlanEntryDto) => void;
+  menuGroupsFor: (item: DayPlanItemDto) => ItemActionGroup[];
 }) {
   const unplaced = plan.filter((p) => !p.plannedStart);
   const placedCount = plan.length - unplaced.length;
@@ -42,7 +47,12 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
       {unplaced.map((entry) => {
         const done = entry.item.status === 'done';
         return (
-          <div key={entry.id} className="group flex items-center gap-2 rounded border border-border px-2 py-1.5 text-sm">
+          <div
+            key={entry.id}
+            className="group flex items-center gap-2 rounded border border-border px-2 py-1.5 text-sm cursor-grab active:cursor-grabbing"
+            draggable
+            onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'entry', id: entry.id }))}
+          >
             <button
               onClick={() => onToggleDone(entry.item)}
               className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${done ? 'bg-primary border-primary text-primary-foreground' : 'border-input'}`}
@@ -62,6 +72,7 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
             <button onClick={() => onRemove(entry.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground" aria-label="Retirer">
               <X className="w-3.5 h-3.5" />
             </button>
+            <ItemActionMenu groups={menuGroupsFor(entry.item)} />
           </div>
         );
       })}
@@ -70,7 +81,12 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
         <>
           <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">Suggestions</div>
           {suggestions.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 rounded border border-dashed border-border px-2 py-1.5 text-sm">
+            <div
+              key={s.id}
+              className="flex items-center gap-2 rounded border border-dashed border-border px-2 py-1.5 text-sm cursor-grab active:cursor-grabbing"
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'suggestion', id: s.id }))}
+            >
               <span className="truncate">{s.title}</span>
               {s.dueDate && <span className="text-xs text-muted-foreground flex-shrink-0">{new Date(s.dueDate).toLocaleDateString('fr-FR')}</span>}
               <button
@@ -79,6 +95,7 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
               >
                 <Plus className="w-3.5 h-3.5" /> Ajouter
               </button>
+              <ItemActionMenu groups={menuGroupsFor(s)} />
             </div>
           ))}
         </>

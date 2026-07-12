@@ -11,12 +11,22 @@ import { FastifyPluginAsync } from 'fastify'
 export const dayPlanRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate)
 
-  fastify.post<{ Body: { date?: string; itemId?: string; source?: string } }>(
+  fastify.post<{ Body: { date?: string; itemId?: string; source?: string; plannedStart?: string; plannedDuration?: number } }>(
     '/day-plan',
     async (request, reply) => {
-      const { date, itemId, source } = request.body ?? {}
+      const { date, itemId, source, plannedStart, plannedDuration } = request.body ?? {}
       if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !itemId || !['auto', 'manual'].includes(source ?? '')) {
         return reply.status(400).send({ error: 'date (YYYY-MM-DD), itemId et source (auto|manual) requis' })
+      }
+      // Placement optionnel dès la création (drop direct d'une suggestion sur la grille)
+      let placement: { plannedStart: Date; plannedDuration: number } | undefined
+      if (plannedStart !== undefined) {
+        const start = new Date(plannedStart)
+        const duration = plannedDuration ?? 30
+        if (isNaN(start.getTime()) || typeof duration !== 'number' || duration < 15 || duration > 720) {
+          return reply.status(400).send({ error: 'plannedStart ISO et plannedDuration 15–720 requis' })
+        }
+        placement = { plannedStart: start, plannedDuration: duration }
       }
       const userId = request.user.userId
 
@@ -43,8 +53,8 @@ export const dayPlanRoutes: FastifyPluginAsync = async (fastify) => {
       })
       const entry = await fastify.prisma.dayPlanEntry.upsert({
         where: { userId_date_itemId: { userId, date: new Date(date), itemId } },
-        create: { userId, date: new Date(date), itemId, source, position: (max._max.position ?? -1) + 1 },
-        update: {},
+        create: { userId, date: new Date(date), itemId, source, position: (max._max.position ?? -1) + 1, ...placement },
+        update: { ...placement },
       })
       return reply.status(201).send(entry)
     }
