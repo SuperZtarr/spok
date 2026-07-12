@@ -422,6 +422,7 @@ export interface GlobalTaskFilters {
   status?: string;
   priority?: string;
   spaceId?: string;
+  communityId?: string;
   search?: string;
   dueDateFrom?: string;
   dueDateTo?: string;
@@ -472,6 +473,7 @@ export const userTasksApi = {
     if (params?.status) sp.set('status', params.status);
     if (params?.priority) sp.set('priority', params.priority);
     if (params?.spaceId) sp.set('spaceId', params.spaceId);
+    if (params?.communityId) sp.set('communityId', params.communityId);
     if (params?.search) sp.set('search', params.search);
     if (params?.dueDateFrom) sp.set('dueDateFrom', params.dueDateFrom);
     if (params?.dueDateTo) sp.set('dueDateTo', params.dueDateTo);
@@ -522,6 +524,7 @@ export interface AgendaResponse {
 export interface AgendaFilters {
   type?: string;
   spaceId?: string;
+  communityId?: string;
   status?: string;
   priority?: string;
   search?: string;
@@ -532,6 +535,7 @@ export const agendaApi = {
     const sp = new URLSearchParams({ date, from, to });
     if (filters?.type) sp.set('type', filters.type);
     if (filters?.spaceId) sp.set('spaceId', filters.spaceId);
+    if (filters?.communityId) sp.set('communityId', filters.communityId);
     if (filters?.status) sp.set('status', filters.status);
     if (filters?.priority) sp.set('priority', filters.priority);
     if (filters?.search) sp.set('search', filters.search);
@@ -548,6 +552,8 @@ export const agendaApi = {
   removeFromPlan: (id: string) => fetchApi<void>(`/user/day-plan/${id}`, { method: 'DELETE' }),
   updatePlanEntry: (id: string, data: { position?: number; plannedStart?: string | null; plannedDuration?: number }) =>
     fetchApi<DayPlanEntryDto>(`/user/day-plan/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  createFromEvent: (data: { date: string; title: string; dueDate?: string }) =>
+    fetchApi<DayPlanEntryDto>('/user/day-plan/from-event', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // Spaces

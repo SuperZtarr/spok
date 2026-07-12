@@ -123,7 +123,7 @@ describe('GET /user/agenda', () => {
     expect(ids).toEqual(['retard', 'retard-statut', 'aujourdhui', 'encours', 'prio'])
   })
 
-  it('honore le filtre de types (TASK par défaut, élargi via ?type=)', async () => {
+  it('honore le filtre de types (tous par défaut, restreint via ?type=)', async () => {
     prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
     await app.inject({ method: 'GET', url: `${URL_OK}&type=TASK,BUG`, headers: { authorization: `Bearer ${token}` } })
     expect(prisma.item.findMany.mock.calls[1][0].where.type).toEqual({ in: ['TASK', 'BUG'] })
@@ -131,16 +131,37 @@ describe('GET /user/agenda', () => {
     prisma.item.findMany.mockClear()
     prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
     await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
-    expect(prisma.item.findMany.mock.calls[1][0].where.type).toBe('TASK')
+    expect(prisma.item.findMany.mock.calls[1][0].where.type).toBeUndefined()
   })
 
-  it('inclut le statut late dans les critères de candidature (même sans échéance)', async () => {
+  it('ne plafonne plus les suggestions (toutes renvoyées)', async () => {
+    const many = Array.from({ length: 60 }, (_, i) => mockItem({ id: `t${i}`, priority: 1 }))
+    prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(many)
+    const res = await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
+    expect(res.json().suggestions).toHaveLength(60)
+  })
+
+  it("suggère un item ouvert sans échéance ni priorité (plus de filtre d'urgence)", async () => {
     prisma.item.findMany
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-    await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
-    const and = prisma.item.findMany.mock.calls[1][0].where.AND
-    expect(JSON.stringify(and)).toContain('"late"')
+      .mockResolvedValueOnce([mockItem({ id: 'calme', status: 'todo', priority: null, dueDate: null })])
+    const res = await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
+    expect(res.json().suggestions.map((s: { id: string }) => s.id)).toContain('calme')
+  })
+
+  it('filtre les suggestions par communauté (contexte de travail)', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }, { spaceId: 'space-2' }])
+    prisma.space.findMany.mockResolvedValue([{ id: 'space-1' }]) // espaces de la communauté choisie
+    prisma.item.findMany
+      .mockResolvedValueOnce([]) // meetings
+      .mockResolvedValueOnce([mockItem({ id: 't1', spaceId: 'space-1' })])
+    const res = await app.inject({
+      method: 'GET', url: `${URL_OK}&communityId=com-perso`,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(res.statusCode).toBe(200)
+    const suggestionsCall = prisma.item.findMany.mock.calls[1][0]
+    expect(suggestionsCall.where.spaceId).toEqual({ in: ['space-1'] })
   })
 
   it('filtre les suggestions par espace (intersection avec les espaces accessibles)', async () => {

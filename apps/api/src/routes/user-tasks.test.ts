@@ -120,6 +120,36 @@ describe('User Tasks routes', () => {
       expect(where.spaceId.in).toContain('s-com')
     })
 
+    it('should narrow to spaces of the selected community (communityId filter)', async () => {
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }, { spaceId: 's2' }])
+      prisma.communityMembership.findMany.mockResolvedValue([])
+      prisma.space.findMany.mockResolvedValue([{ id: 's1' }]) // spaces de la communauté choisie
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+
+      await app.inject({
+        method: 'GET', url: '/user/tasks?communityId=com-perso',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      const where = prisma.item.findMany.mock.calls[0][0].where
+      expect(where.spaceId).toEqual({ in: ['s1'] }) // s2 exclu — hors communauté sélectionnée
+    })
+
+    it('should return empty when the selected community has no accessible space', async () => {
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }])
+      prisma.communityMembership.findMany.mockResolvedValue([])
+      prisma.space.findMany.mockResolvedValue([]) // aucun espace accessible dans cette communauté
+
+      const res = await app.inject({
+        method: 'GET', url: '/user/tasks?communityId=com-autre',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().data).toHaveLength(0)
+    })
+
     it('should return empty for user with no accessible spaces', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
       prisma.spaceMembership.findMany.mockResolvedValue([])

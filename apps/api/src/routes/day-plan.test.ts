@@ -68,6 +68,44 @@ describe('Day plan routes', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  describe('POST /day-plan/from-event', () => {
+    it("crée une TASK dans l'espace personnel et l'engage", async () => {
+      prisma.spaceMembership.findFirst.mockResolvedValue({ spaceId: 'personal-space' })
+      prisma.item.create.mockResolvedValue({ id: 'task-new', spaceId: 'personal-space' })
+      prisma.dayPlanEntry.aggregate.mockResolvedValue({ _max: { position: 0 } })
+      prisma.dayPlanEntry.create.mockResolvedValue({ id: 'p1', itemId: 'task-new', date: new Date(DATE), position: 1, source: 'manual' })
+
+      const res = await app.inject({
+        method: 'POST', url: '/user/day-plan/from-event', headers: { authorization: `Bearer ${token}` },
+        payload: { date: DATE, title: 'Point client', dueDate: '2026-07-15T09:00:00.000Z' },
+      })
+      expect(res.statusCode).toBe(201)
+      expect(prisma.item.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ type: 'TASK', title: 'Point client', spaceId: 'personal-space', createdById: USER_ID }),
+      }))
+      expect(prisma.dayPlanEntry.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ itemId: 'task-new', source: 'manual' }),
+      }))
+    })
+
+    it('valide date et title', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/user/day-plan/from-event', headers: { authorization: `Bearer ${token}` },
+        payload: { date: DATE, title: '' },
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('500 si aucun espace personnel trouvé', async () => {
+      prisma.spaceMembership.findFirst.mockResolvedValue(null)
+      const res = await app.inject({
+        method: 'POST', url: '/user/day-plan/from-event', headers: { authorization: `Bearer ${token}` },
+        payload: { date: DATE, title: 'Point client' },
+      })
+      expect(res.statusCode).toBe(500)
+    })
+  })
+
   it("DELETE refuse l'entrée d'un autre utilisateur", async () => {
     prisma.dayPlanEntry.findUnique.mockResolvedValue({ id: 'p1', userId: 'autre' })
     const res = await app.inject({ method: 'DELETE', url: '/user/day-plan/p1', headers: { authorization: `Bearer ${token}` } })

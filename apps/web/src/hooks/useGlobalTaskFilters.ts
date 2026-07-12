@@ -88,42 +88,39 @@ export function useGlobalTaskFilters(options?: {
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    let minFrom: Date | null = null;
-    let maxTo: Date | null = null;
-    let hasNone = false;
 
-    for (const preset of selectedDueDates) {
-      if (preset === 'none') { hasNone = true; continue; }
-      switch (preset) {
-        case 'overdue': {
-          const yesterday = new Date(today.getTime() - 1);
-          if (!maxTo || yesterday > maxTo) maxTo = yesterday;
-          minFrom = null;
-          break;
-        }
-        case 'today': {
-          const endOfDay = new Date(today);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (minFrom === undefined) minFrom = new Date(today);
-          if (!maxTo || endOfDay > maxTo) maxTo = endOfDay;
-          break;
-        }
-        case 'week': {
-          const endOfWeek = new Date(today);
-          endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
-          endOfWeek.setHours(23, 59, 59, 999);
-          if (minFrom === undefined) minFrom = new Date(today);
-          if (!maxTo || endOfWeek > maxTo) maxTo = endOfWeek;
-          break;
-        }
-        case 'month': {
-          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-          if (minFrom === undefined) minFrom = new Date(today);
-          if (!maxTo || endOfMonth > maxTo) maxTo = endOfMonth;
-          break;
-        }
-      }
+    // Calcul indépendant de l'ordre de sélection (bug corrigé 2026-07-12 : l'ancien code
+    // testait `minFrom === undefined` alors que minFrom vaut `null`, condition toujours
+    // vraie — "En retard" combiné à Aujourd'hui/Semaine/Mois pouvait selon l'ordre de clic
+    // se voir réimposer un plancher "aujourd'hui", excluant à tort les tâches en retard).
+    const hasOverdue = selectedDueDates.includes('overdue');
+    const hasNone = selectedDueDates.includes('none');
+    const boundedPresets = selectedDueDates.filter((p) => p !== 'none' && p !== 'overdue');
+
+    let maxTo: Date | null = null;
+    if (hasOverdue) {
+      maxTo = new Date(today.getTime() - 1); // fin d'hier
     }
+    for (const preset of boundedPresets) {
+      let endOfRange: Date;
+      if (preset === 'today') {
+        endOfRange = new Date(today);
+        endOfRange.setHours(23, 59, 59, 999);
+      } else if (preset === 'week') {
+        endOfRange = new Date(today);
+        endOfRange.setDate(today.getDate() + (7 - today.getDay()));
+        endOfRange.setHours(23, 59, 59, 999);
+      } else if (preset === 'month') {
+        endOfRange = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+      } else {
+        continue;
+      }
+      if (!maxTo || endOfRange > maxTo) maxTo = endOfRange;
+    }
+
+    // Plancher "aujourd'hui" uniquement si un preset borné est choisi SANS "En retard" —
+    // "En retard" doit toujours inclure tout ce qui précède, quelle que soit la combinaison.
+    const minFrom: Date | null = (boundedPresets.length > 0 && !hasOverdue) ? new Date(today) : null;
 
     const result: { dueDateFrom?: string; dueDateTo?: string; noDueDate?: boolean } = {};
     if (minFrom) result.dueDateFrom = minFrom.toISOString();
@@ -183,6 +180,7 @@ export function useGlobalTaskFilters(options?: {
   const statusParam = selectedStatuses.join(',') || undefined;
   const priorityParam = selectedPriorities.join(',') || undefined;
   const spaceParam = selectedSpaces.join(',') || undefined;
+  const communityParam = selectedCommunities.join(',') || undefined;
 
   const queryParams: GlobalTaskFilters = {
     search: debouncedSearch || undefined,
@@ -190,6 +188,7 @@ export function useGlobalTaskFilters(options?: {
     status: statusParam,
     priority: priorityParam,
     spaceId: spaceParam,
+    communityId: communityParam,
     ...dueDateParams,
     assignedToMe: assignedToMe || undefined,
     myTasks: myTasks || undefined,

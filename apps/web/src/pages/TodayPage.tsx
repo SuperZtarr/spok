@@ -18,7 +18,7 @@ import { useGlobalTaskFilters } from '@/hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '@/components/GlobalTaskFilterBar';
 import { itemsApi, type AgendaFilters, type DayPlanEntryDto, type DayPlanItemDto } from '@/lib/api';
 import { findFreeSlot, type BusyInterval } from '@/lib/timeblock';
-import { DayTimeGrid, type DropPayload } from '@/components/today/DayTimeGrid';
+import { DayTimeGrid, type DropPayload, type EventDropPayload } from '@/components/today/DayTimeGrid';
 import { DayPlanList } from '@/components/today/DayPlanList';
 import { CalendarFeedsModal } from '@/components/today/CalendarFeedsModal';
 import { PickTasksModal } from '@/components/today/PickTasksModal';
@@ -35,16 +35,19 @@ export function TodayPage() {
   const [pickOpen, setPickOpen] = useState(false);
   // Filtre global (même barre que Tableau de bord / Tâches) : n'agit que sur les
   // suggestions et la pioche — jamais sur le plan engagé ni la grille.
-  const filters = useGlobalTaskFilters();
+  // defaultTypes: [] — /today veut voir tous les types par défaut (pas seulement TASK,
+  // contrairement à la page Tâches globales).
+  const filters = useGlobalTaskFilters({ defaultTypes: [] });
   const agendaFilters: AgendaFilters = {
     type: filters.queryParams.type,
     spaceId: filters.queryParams.spaceId,
+    communityId: filters.queryParams.communityId,
     status: filters.queryParams.status,
     priority: filters.queryParams.priority,
     search: filters.queryParams.search,
   };
   const { data, isLoading } = useAgenda(date, agendaFilters);
-  const { addToPlan, removeFromPlan, updateEntry } = useAgendaMutations(date);
+  const { addToPlan, removeFromPlan, updateEntry, createFromEvent } = useAgendaMutations(date);
   const queryClient = useQueryClient();
 
   const busy: BusyInterval[] = [
@@ -81,6 +84,12 @@ export function TodayPage() {
     } else {
       addToPlan.mutate({ itemId: payload.id, source: 'auto', plannedStart: startIso, plannedDuration: durationMin });
     }
+  };
+
+  // Drop d'un événement (réunion) sur la liste du jour : crée une TASK (titre + échéance
+  // de l'événement) dans l'espace personnel et l'engage — n'altère jamais l'événement source.
+  const handleDropEvent = (payload: EventDropPayload) => {
+    createFromEvent.mutate({ title: payload.title, dueDate: payload.start });
   };
 
   const placeEntry = (entry: DayPlanEntryDto) => {
@@ -129,7 +138,7 @@ export function TodayPage() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement…</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-6">
             <div className="min-w-0">
               {(data?.feedErrors?.length ?? 0) > 0 && (
                 <p className="mb-2 inline-flex items-center gap-1 text-xs text-amber-600">
@@ -138,7 +147,13 @@ export function TodayPage() {
                 </p>
               )}
               {(data?.events ?? []).filter((e) => e.allDay).map((e) => (
-                <div key={e.id} className="mb-1 flex items-center gap-2 rounded border border-border bg-accent/40 px-2 py-1 text-sm">
+                <div
+                  key={e.id}
+                  className="mb-1 flex items-center gap-2 rounded border border-border bg-accent/40 px-2 py-1 text-sm cursor-grab active:cursor-grabbing"
+                  draggable
+                  onDragStart={(ev) => ev.dataTransfer.setData('application/json', JSON.stringify({ kind: 'event', title: e.title, start: e.start } satisfies EventDropPayload))}
+                  title="Glisser vers la liste du jour pour créer une tâche"
+                >
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.source.color ?? 'var(--muted-foreground)' }} />
                   <span className="truncate">{e.title}</span>
                   <span className="ml-auto text-xs text-muted-foreground">journée</span>
@@ -164,6 +179,7 @@ export function TodayPage() {
               onPick={() => setPickOpen(true)}
               onPlace={placeEntry}
               menuGroupsFor={menuGroupsFor}
+              onDropEvent={handleDropEvent}
             />
           </div>
         )}

@@ -46,7 +46,11 @@ export function useAgendaMutations(date: string) {
     },
     onSuccess: invalidate,
   });
-  return { addToPlan, removeFromPlan, updateEntry };
+  const createFromEvent = useMutation({
+    mutationFn: (p: { title: string; dueDate?: string }) => agendaApi.createFromEvent({ date, ...p }),
+    onSuccess: invalidate,
+  });
+  return { addToPlan, removeFromPlan, updateEntry, createFromEvent };
 }
 
 export function useCalendarFeeds() {

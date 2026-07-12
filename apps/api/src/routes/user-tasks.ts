@@ -10,13 +10,16 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /user/tasks — List items across user's accessible spaces
   // Supports multi-value filters via comma-separated strings:
-  //   type=TASK,PROJECT  status=todo,in_progress  priority=1,2  spaceId=id1,id2
+  //   type=TASK,PROJECT  status=todo,in_progress  priority=1,2  spaceId=id1,id2  communityId=id1,id2
+  // communityId restreint le périmètre accessible AVANT spaceId (contexte de travail : une
+  // communauté = un ensemble d'activités, ex. "Thomas Travail" vs "Thomas Perso").
   fastify.get<{
     Querystring: {
       type?: string;
       status?: string;
       priority?: string;
       spaceId?: string;
+      communityId?: string;
       search?: string;
       dueDateFrom?: string;
       dueDateTo?: string;
@@ -35,6 +38,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       status,
       priority: priorityStr,
       spaceId: filterSpaceId,
+      communityId,
       search,
       dueDateFrom,
       dueDateTo,
@@ -81,6 +85,24 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       return { data: [], total: 0, page, pageSize, totalPages: 0 };
     }
 
+    // Optional community filter (supports multiple comma-separated IDs) — narrows
+    // accessibleSpaceIds to the espaces of the selected communities (contexte de travail)
+    let scopedSpaceIds = accessibleSpaceIds;
+    if (communityId) {
+      const communityIdList = communityId.split(',').filter(Boolean);
+      if (communityIdList.length > 0) {
+        const communityScopedSpaces = await fastify.prisma.space.findMany({
+          where: { communityId: { in: communityIdList } },
+          select: { id: true },
+        });
+        const communityScopedSet = new Set(communityScopedSpaces.map((s) => s.id));
+        scopedSpaceIds = accessibleSpaceIds.filter((id) => communityScopedSet.has(id));
+      }
+    }
+    if (scopedSpaceIds.length === 0) {
+      return { data: [], total: 0, page, pageSize, totalPages: 0 };
+    }
+
     // 2. Build where clause
     const where: Record<string, unknown> = {};
 
@@ -99,27 +121,16 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       where.type = 'TASK';
     }
 
-    // Space access filter
-    if (accessibleSpaceIds) {
-      where.spaceId = { in: accessibleSpaceIds };
-    }
+    // Space access filter (déjà restreint aux communautés sélectionnées le cas échéant)
+    where.spaceId = { in: scopedSpaceIds };
 
-    // Optional space filter (supports multiple comma-separated IDs)
+    // Optional space filter (supports multiple comma-separated IDs) — toujours
+    // intersecté avec scopedSpaceIds (jamais de bypass d'accès via un ID choisi)
     if (filterSpaceId) {
       const spaceIdList = filterSpaceId.split(',').filter(Boolean);
-      if (spaceIdList.length === 1) {
-        // Single space — also intersect with accessible spaces
-        where.spaceId = spaceIdList[0];
-      } else if (spaceIdList.length > 1) {
-        // Multiple spaces — intersect with accessible ones
-        if (accessibleSpaceIds) {
-          const accessibleSet = new Set(accessibleSpaceIds);
-          const filtered = spaceIdList.filter((id) => accessibleSet.has(id));
-          where.spaceId = { in: filtered };
-        } else {
-          where.spaceId = { in: spaceIdList };
-        }
-      }
+      const scopedSet = new Set(scopedSpaceIds);
+      const filtered = spaceIdList.filter((id) => scopedSet.has(id));
+      where.spaceId = filtered.length === 1 ? filtered[0] : { in: filtered };
     }
 
     // Status filter (supports multiple comma-separated values, 'none' = null)

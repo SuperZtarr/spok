@@ -3,8 +3,10 @@
  * — « Agenda » (réunions ICS + MEETING SPOK, lecture seule) et « Tâches » (blocs SPOK :
  * drag vertical snap 15 min, poignée basse pour la durée, ✕ pour dé-placer). La colonne
  * Tâches est aussi cible de drop HTML5 (dataTransfer JSON {kind:'entry'|'suggestion', id})
- * depuis la liste du jour. Ligne rouge « maintenant » sur le jour courant, rafraîchie
- * chaque minute. Chevauchements rendus côte à côte au sein de chaque colonne.
+ * depuis la liste du jour. Les blocs Agenda sont eux-mêmes draggables vers la liste du jour
+ * (dataTransfer JSON {kind:'event', title, start}) — DayPlanList/TodayPage gèrent le drop.
+ * Ligne rouge « maintenant » sur le jour courant, rafraîchie chaque minute. Chevauchements
+ * rendus côte à côte au sein de chaque colonne.
  */
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
@@ -21,6 +23,7 @@ const GRID_MIN = (DAY_END_H - DAY_START_H) * 60;
 const DROP_DEFAULT_DUR = 30;
 
 export type DropPayload = { kind: 'entry' | 'suggestion'; id: string };
+export type EventDropPayload = { kind: 'event'; title: string; start: string };
 
 interface Block {
   key: string;
@@ -31,6 +34,7 @@ interface Block {
   done?: boolean;
   entryId?: string;
   meta?: string;
+  startIso?: string; // événements uniquement — pour le drag vers la liste
 }
 
 /** Minutes locales depuis le début de grille. */
@@ -119,6 +123,7 @@ export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace
       meta: e.source.kind === 'spok' ? e.source.spaceName : e.source.name,
       startMin: toGridMin(e.start),
       durMin: e.end ? Math.max(15, (new Date(e.end).getTime() - new Date(e.start).getTime()) / 60000) : 60,
+      startIso: e.start,
     }))
     .filter((b) => b.startMin + b.durMin > 0 && b.startMin < GRID_MIN);
 
@@ -200,7 +205,14 @@ export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace
           <div className="relative flex-1 border-l border-border" style={{ height: GRID_MIN * PX_PER_MIN }}>
             {hourLines}
             {eventBlocks.map((b) => (
-              <div key={b.key} className="absolute rounded border border-border bg-accent/60 px-1.5 py-0.5 overflow-hidden" style={blockStyle(b, eventCols.get(b.key)!)}>
+              <div
+                key={b.key}
+                className="absolute rounded border border-border bg-accent/60 px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing"
+                style={blockStyle(b, eventCols.get(b.key)!)}
+                draggable
+                onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'event', title: b.title, start: b.startIso! } satisfies EventDropPayload))}
+                title="Glisser vers la liste du jour pour créer une tâche"
+              >
                 <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: b.color ?? 'var(--muted-foreground)' }} />
                 <span className="text-xs font-medium">{b.title}</span>
                 {b.meta && <span className="text-xs text-muted-foreground"> · {b.meta}</span>}

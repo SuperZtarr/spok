@@ -3,10 +3,22 @@
  * POST (upsert idempotent : re-poster le même item le même jour ne duplique pas),
  * DELETE, PATCH (position et/ou placement time-blocking : plannedStart ISO ou null
  * pour dé-placer — null efface aussi la durée —, plannedDuration 15–720 min).
+ * POST /day-plan/from-event : D&D d'un événement (réunion) vers la liste du jour — crée
+ * une TASK (titre + échéance de l'événement) dans l'espace personnel de l'utilisateur et
+ * l'engage. Ne modifie jamais l'événement source (feed ICS en lecture seule, ou item MEETING).
  * Scope utilisateur strict ; l'item ajouté doit appartenir à un espace accessible
  * (membership direct ou via communauté). Le placement ne touche JAMAIS les dates de l'item.
  */
 import { FastifyPluginAsync } from 'fastify'
+
+async function resolvePersonalSpaceId(fastify: Parameters<FastifyPluginAsync>[0], userId: string): Promise<string | null> {
+  const membership = await fastify.prisma.spaceMembership.findFirst({
+    where: { userId, role: 'OWNER', space: { type: 'PERSONAL' } },
+    orderBy: { space: { createdAt: 'asc' } },
+    select: { spaceId: true },
+  })
+  return membership?.spaceId ?? null
+}
 
 export const dayPlanRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate)
@@ -55,6 +67,45 @@ export const dayPlanRoutes: FastifyPluginAsync = async (fastify) => {
         where: { userId_date_itemId: { userId, date: new Date(date), itemId } },
         create: { userId, date: new Date(date), itemId, source, position: (max._max.position ?? -1) + 1, ...placement },
         update: { ...placement },
+      })
+      return reply.status(201).send(entry)
+    }
+  )
+
+  fastify.post<{ Body: { date?: string; title?: string; dueDate?: string } }>(
+    '/day-plan/from-event',
+    async (request, reply) => {
+      const { date, title, dueDate } = request.body ?? {}
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !title?.trim()) {
+        return reply.status(400).send({ error: 'date (YYYY-MM-DD) et title requis' })
+      }
+      let due: Date | undefined
+      if (dueDate !== undefined) {
+        due = new Date(dueDate)
+        if (isNaN(due.getTime())) return reply.status(400).send({ error: 'dueDate ISO invalide' })
+      }
+      const userId = request.user.userId
+
+      const personalSpaceId = await resolvePersonalSpaceId(fastify, userId)
+      if (!personalSpaceId) return reply.status(500).send({ error: 'Espace personnel introuvable' })
+
+      const item = await fastify.prisma.item.create({
+        data: {
+          type: 'TASK',
+          title: title.trim(),
+          status: 'todo',
+          dueDate: due,
+          spaceId: personalSpaceId,
+          createdById: userId,
+        },
+      })
+
+      const max = await fastify.prisma.dayPlanEntry.aggregate({
+        where: { userId, date: new Date(date) },
+        _max: { position: true },
+      })
+      const entry = await fastify.prisma.dayPlanEntry.create({
+        data: { userId, date: new Date(date), itemId: item.id, source: 'manual', position: (max._max.position ?? -1) + 1 },
       })
       return reply.status(201).send(entry)
     }

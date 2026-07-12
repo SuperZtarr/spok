@@ -24,6 +24,7 @@ export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFil
       myTasks: true,
       type: extraFilters?.type,
       spaceId: extraFilters?.spaceId,
+      communityId: extraFilters?.communityId,
       status: extraFilters?.status,
       priority: extraFilters?.priority,
       search: search || extraFilters?.search || undefined,

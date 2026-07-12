@@ -11,11 +11,14 @@
  * beaucoup d'éléments elles s'enchaînent sur plusieurs colonnes au lieu d'un long scroll.
  * Les suggestions sont groupées en arbre simple par espace (repliable) — identifier
  * de quel projet vient une suggestion est plus important qu'un flux plat de titres.
+ * Cible de drop pour un événement de l'agenda (dataTransfer JSON {kind:'event', title, start})
+ * glissé depuis DayTimeGrid/le bandeau journée entière — onDropEvent crée la TASK associée.
  */
 import { useState } from 'react';
 import { Check, ChevronDown, ChevronRight, Plus, X, ListTodo, CalendarClock } from 'lucide-react';
 import { ItemActionMenu } from '@/components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
+import type { EventDropPayload } from '@/components/today/DayTimeGrid';
 import type { DayPlanEntryDto, DayPlanItemDto } from '@/lib/api';
 
 function groupBySpace(items: DayPlanItemDto[]): { spaceId: string; spaceName: string; items: DayPlanItemDto[] }[] {
@@ -28,7 +31,7 @@ function groupBySpace(items: DayPlanItemDto[]): { spaceId: string; spaceName: st
   return [...groups.values()].sort((a, b) => a.spaceName.localeCompare(b.spaceName));
 }
 
-export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDone, onPick, onPlace, menuGroupsFor }: {
+export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDone, onPick, onPlace, menuGroupsFor, onDropEvent }: {
   plan: DayPlanEntryDto[];
   suggestions: DayPlanItemDto[];
   onAccept: (itemId: string) => void;
@@ -37,11 +40,13 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
   onPick: () => void;
   onPlace: (entry: DayPlanEntryDto) => void;
   menuGroupsFor: (item: DayPlanItemDto) => ItemActionGroup[];
+  onDropEvent: (payload: EventDropPayload) => void;
 }) {
   const unplaced = plan.filter((p) => !p.plannedStart);
   const placedCount = plan.length - unplaced.length;
   const suggestionGroups = groupBySpace(suggestions);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [dragOverList, setDragOverList] = useState(false);
   const toggleGroup = (spaceId: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -49,7 +54,20 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
       return next;
     });
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className={`flex flex-col gap-3 rounded-lg transition-colors ${dragOverList ? 'ring-2 ring-primary/60 bg-primary/5' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setDragOverList(true); }}
+      onDragLeave={() => setDragOverList(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOverList(false);
+        try {
+          const payload = JSON.parse(e.dataTransfer.getData('application/json')) as EventDropPayload;
+          if (payload.kind !== 'event') return;
+          onDropEvent(payload);
+        } catch { /* drop étranger — ignoré */ }
+      }}
+    >
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <ListTodo className="w-4 h-4" /> Ma liste du jour
         <button
