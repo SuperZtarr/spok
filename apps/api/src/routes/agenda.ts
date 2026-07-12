@@ -9,6 +9,7 @@
  * Un feed en erreur est signalé (feedErrors + lastError) mais ne bloque jamais la réponse.
  */
 import { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import type { ItemType } from '@spok/database'
 import { IcsFeedSource } from '../utils/calendar-source.js'
 
 const SUGGESTION_CAP = 10
@@ -31,10 +32,10 @@ async function accessibleSpaceIds(fastify: FastifyInstance, userId: string): Pro
 export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate)
 
-  fastify.get<{ Querystring: { date?: string; from?: string; to?: string; spaceId?: string; status?: string; priority?: string; search?: string } }>(
+  fastify.get<{ Querystring: { date?: string; from?: string; to?: string; type?: string; spaceId?: string; status?: string; priority?: string; search?: string } }>(
     '/agenda',
     async (request, reply) => {
-      const { date, from: fromStr, to: toStr, spaceId: spaceIdFilter, status: statusFilter, priority: priorityFilter, search } = request.query
+      const { date, from: fromStr, to: toStr, type: typeFilter, spaceId: spaceIdFilter, status: statusFilter, priority: priorityFilter, search } = request.query
       if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return reply.status(400).send({ error: 'date=YYYY-MM-DD requis' })
       }
@@ -135,6 +136,10 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
         const wanted = new Set(spaceIdFilter.split(',').filter(Boolean))
         suggestionSpaceIds = spaceIds.filter((id) => wanted.has(id))
       }
+      // Types suggérés : TASK par défaut, la barre de filtre peut élargir (BUG, PROJECT…)
+      const VALID_TYPES = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']
+      const suggestionTypes = (typeFilter ?? '').split(',').filter((t) => VALID_TYPES.includes(t)) as ItemType[]
+      if (suggestionTypes.length === 0) suggestionTypes.push('TASK')
       const extraAnd: Record<string, unknown>[] = []
       if (statusFilter) {
         const statuses = statusFilter.split(',').filter(Boolean)
@@ -155,12 +160,12 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
       if (suggestionSpaceIds.length > 0) {
         const candidates = await fastify.prisma.item.findMany({
           where: {
-            type: 'TASK',
+            type: suggestionTypes.length === 1 ? suggestionTypes[0] : { in: suggestionTypes },
             spaceId: { in: suggestionSpaceIds },
             AND: [
               { OR: [{ assignedToId: userId }, { assignedToId: null, createdById: userId }] },
               { OR: [{ status: null }, { status: { notIn: CLOSED_STATUSES } }] },
-              { OR: [{ dueDate: { lt: to } }, { status: 'in_progress' }, { priority: { gte: 3 } }] },
+              { OR: [{ dueDate: { lt: to } }, { status: { in: ['in_progress', 'late'] } }, { priority: { gte: 3 } }] },
               ...extraAnd,
             ],
           },
@@ -171,7 +176,7 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
           take: 100,
         })
         const rank = (c: Candidate): number => {
-          if (c.dueDate && c.dueDate < from) return 0 // en retard
+          if (c.status === 'late' || (c.dueDate && c.dueDate < from)) return 0 // en retard (statut ou date)
           if (c.dueDate && c.dueDate < to) return 1 // échéance du jour
           if (c.status === 'in_progress') return 2 // en cours
           return 3 // priorité haute

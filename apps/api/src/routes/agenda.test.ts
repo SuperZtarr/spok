@@ -108,18 +108,39 @@ describe('GET /user/agenda', () => {
     }))
   })
 
-  it('trie les suggestions : retard → échéance du jour → in_progress → priorité', async () => {
+  it('trie les suggestions : retard (date OU statut late) → échéance du jour → in_progress → priorité', async () => {
     prisma.item.findMany
       .mockResolvedValueOnce([]) // meetings
       .mockResolvedValueOnce([
         mockItem({ id: 'prio', priority: 4 }),
         mockItem({ id: 'encours', status: 'in_progress' }),
-        mockItem({ id: 'retard', dueDate: new Date('2026-07-10T12:00:00.000Z') }),
+        mockItem({ id: 'retard-statut', status: 'late', priority: 1 }),
+        mockItem({ id: 'retard', dueDate: new Date('2026-07-10T12:00:00.000Z'), priority: 2 }),
         mockItem({ id: 'aujourdhui', dueDate: new Date('2026-07-15T08:00:00.000Z') }),
       ])
     const res = await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
     const ids = res.json().suggestions.map((s: { id: string }) => s.id)
-    expect(ids).toEqual(['retard', 'aujourdhui', 'encours', 'prio'])
+    expect(ids).toEqual(['retard', 'retard-statut', 'aujourdhui', 'encours', 'prio'])
+  })
+
+  it('honore le filtre de types (TASK par défaut, élargi via ?type=)', async () => {
+    prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    await app.inject({ method: 'GET', url: `${URL_OK}&type=TASK,BUG`, headers: { authorization: `Bearer ${token}` } })
+    expect(prisma.item.findMany.mock.calls[1][0].where.type).toEqual({ in: ['TASK', 'BUG'] })
+
+    prisma.item.findMany.mockClear()
+    prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
+    expect(prisma.item.findMany.mock.calls[1][0].where.type).toBe('TASK')
+  })
+
+  it('inclut le statut late dans les critères de candidature (même sans échéance)', async () => {
+    prisma.item.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+    await app.inject({ method: 'GET', url: URL_OK, headers: { authorization: `Bearer ${token}` } })
+    const and = prisma.item.findMany.mock.calls[1][0].where.AND
+    expect(JSON.stringify(and)).toContain('"late"')
   })
 
   it('filtre les suggestions par espace (intersection avec les espaces accessibles)', async () => {

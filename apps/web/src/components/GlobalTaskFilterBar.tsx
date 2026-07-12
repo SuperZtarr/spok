@@ -1,7 +1,7 @@
 /* Barre de filtres de la page Tâches globales : types, statuts, priorités, dates, mes tâches. */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { Check, Search, X, SlidersHorizontal } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { Input } from './ui/Input';
 import { TYPE_LABELS } from '../constants/ui';
@@ -34,12 +34,13 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium border transition-all whitespace-nowrap ${
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] border transition-all whitespace-nowrap ${
         active
-          ? color || 'bg-primary/15 text-primary border-primary/40'
-          : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground/40 hover:text-foreground'
+          ? `font-semibold ring-1 ring-current ${color || 'bg-primary/15 text-primary border-primary/40'}`
+          : 'font-medium bg-transparent text-muted-foreground border-border hover:border-muted-foreground/40 hover:text-foreground'
       }`}
     >
+      {active && <Check className="w-3 h-3 flex-shrink-0" />}
       {label}
     </button>
   );
