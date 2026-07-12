@@ -12,7 +12,7 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { ItemType } from '@spok/database'
 import { IcsFeedSource } from '../utils/calendar-source.js'
 
-const SUGGESTION_CAP = 10
+const SUGGESTION_CAP = 50
 const CLOSED_STATUSES = ['done', 'cancelled']
 
 async function accessibleSpaceIds(fastify: FastifyInstance, userId: string): Promise<string[]> {

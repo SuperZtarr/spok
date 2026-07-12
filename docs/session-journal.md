@@ -32,6 +32,18 @@
 - UX case/croix vérifiée avec Thomas : case = done/rouvrir (l'entrée reste, barrée) ; ✕ = dés-engager/dé-placer — confusion levée, comportement nominal confirmé en réel
 - Fix lisibilité FilterChip (GlobalTaskFilterBar, composant partagé) : puce active = coche ✓ + gras + ring-1 (le pastel seul était illisible, remontée Thomas) — typecheck OK, vérif visuelle Thomas — commité (mep 2026-07-12 soir)
 - RESTE (Thomas) : vérifier que le tenant client autorise « Publier un calendrier » ; tester la page en réel (feed ICS + drag des blocs)
+- Suggestions : plafond remonté 10→50 (Thomas avait beaucoup d'éléments matchant les critères)
+- Liste du jour + suggestions en cartes flex-wrap (largeur fixe 256px) au lieu d'une colonne empilée — plus d'éléments visibles sans long scroll
+- Suggestions groupées en arbre repliable par espace (chevron + nom + compteur) — répond au besoin d'identifier de quel projet vient chaque suggestion (nom d'espace retiré des cartes individuelles, redondant avec le groupe)
+- Largeur page : plafond max-w-7xl remis (repéré trop large en grand écran), ratio grille/liste 3fr/2fr (était 2fr/1fr, jugé trop étroit pour la liste)
+- Vérifié : typecheck 5/5 après chaque itération — NON COMMITÉ
+
+### Zoom Gantt — niveau Multi-années — 2026-07-12
+- Besoin : dépasser la vision Année sur le Gantt (`TimelineView.tsx`)
+- timeline-constants.ts : ZoomLevel + 'multiyear' (1095 j ≈ 3 ans, dayWidth 2, navStep/snapDays 90) — mécanisme Record+tableau ordonné, extensible sans casser day/week/month/quarter/year
+- Entête réorganisée : niveau Année → lignes Trimestre + Mois ; niveau Multi-années → lignes Année + Trimestre (nouveaux regroupements `quarters`/`years`, réutilisent le pattern `months`/`weeks` existant) ; lignes de grille des barres suivent trimestres/mois selon le niveau
+- SCROLL_RANGE_DAYS 6→8 ans (marge de défilement pour le nouveau niveau)
+- Vérifié : typecheck 5/5 — NON COMMITÉ
 
 ### Sentry (code prêt, activation en attente des DSN) — 2026-07-13
 - @sentry/node (API : init si SENTRY_DSN, capture des 500 inconnues uniquement) + @sentry/react (web : init si VITE_SENTRY_DSN au build, tracesSampleRate 0)

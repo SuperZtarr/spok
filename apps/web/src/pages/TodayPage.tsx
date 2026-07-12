@@ -129,7 +129,7 @@ export function TodayPage() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement…</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6 max-w-7xl mx-auto">
             <div className="min-w-0">
               {(data?.feedErrors?.length ?? 0) > 0 && (
                 <p className="mb-2 inline-flex items-center gap-1 text-xs text-amber-600">
