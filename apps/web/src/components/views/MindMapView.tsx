@@ -909,11 +909,58 @@ function MindMapViewInner({
         }
       }
 
+      // Reparentage : le rayon/angle radial de CHAQUE ancêtre dépend de son propre nombre
+      // total de descendants (cf. calculateLayout) — retirer ou ajouter un item peut donc
+      // décaler la branche entière jusqu'à sa racine, pas seulement le parent direct. Les
+      // enfants de ces ancêtres qui ont une position sauvegardée (drag manuel antérieur)
+      // restent figés à l'ancien emplacement → traits qui traversent tout le canevas.
+      // Fix : effacer les positions sauvegardées de TOUTE la branche racine affectée (ancien
+      // ET nouveau parent), hors le sous-arbre du nœud déplacé qui voyage avec lui — les nœuds
+      // réinitialisés retombent sur le calcul radial automatique, cohérent entre eux.
+      const movedSubtreeIds = (movedItemId: string): Set<string> => {
+        const ids = new Set([movedItemId]);
+        const movedTreeNode = findTreeNode(fullTree, movedItemId);
+        if (movedTreeNode) {
+          for (const id of collectVisibleDescendantIds(movedTreeNode, collapsedIds)) ids.add(id);
+        }
+        return ids;
+      };
+      const findRootBranch = (itemId: string): { id: string } | null => {
+        for (const rootItem of fullTree) {
+          if (findTreeNode([rootItem], itemId)) return rootItem;
+        }
+        return null;
+      };
+      const clearBranchPositions = (rootBranchId: string, excludeIds: Set<string>) => {
+        const rootBranchNode = findTreeNode(fullTree, rootBranchId);
+        if (!rootBranchNode) return;
+        const idsToReset = [rootBranchId, ...collectVisibleDescendantIds(rootBranchNode, collapsedIds)]
+          .filter(id => !excludeIds.has(id));
+        for (const id of idsToReset) delete savedPositions.current[id];
+      };
+      const clearAffectedBranches = (movedItemId: string, newParentId: string | null) => {
+        const draggedItem = items.find(i => i.id === movedItemId);
+        const excludeIds = movedSubtreeIds(movedItemId);
+        const oldParentId = draggedItem?.parentId;
+        if (oldParentId) {
+          const oldRootBranch = findRootBranch(oldParentId);
+          if (oldRootBranch) clearBranchPositions(oldRootBranch.id, excludeIds);
+        }
+        if (newParentId) {
+          const newRootBranch = findRootBranch(newParentId);
+          if (newRootBranch && newRootBranch.id !== oldParentId) clearBranchPositions(newRootBranch.id, excludeIds);
+        }
+        savePositions();
+      };
+
       const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
       if (target && onMove && canEdit !== false) {
         if (target.id === '__space__') {
           const draggedItem = items.find(i => i.id === draggedNode.id);
-          if (draggedItem?.parentId) onMove(draggedNode.id, null, 0);
+          if (draggedItem?.parentId) {
+            clearAffectedBranches(draggedNode.id, null);
+            onMove(draggedNode.id, null, 0);
+          }
         } else {
           const isDescendant = (parentId: string, childId: string): boolean => {
             const child = items.find(i => i.id === childId);
@@ -921,7 +968,10 @@ function MindMapViewInner({
             if (child.parentId === parentId) return true;
             return isDescendant(parentId, child.parentId);
           };
-          if (!isDescendant(draggedNode.id, target.id)) onMove(draggedNode.id, target.id, 0);
+          if (!isDescendant(draggedNode.id, target.id)) {
+            clearAffectedBranches(draggedNode.id, target.id);
+            onMove(draggedNode.id, target.id, 0);
+          }
         }
       } else {
         setNodes(currentNodes => {
