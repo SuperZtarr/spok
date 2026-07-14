@@ -24,8 +24,7 @@ Lorsqu'une solution est convenue, proposer un plan a valider avant de coder
 
 ### Zones fragiles
 - **MindMap** : edges recalculés via `onInit`, portails placement fixe — ne pas modifier sans vérifier les edges
-- **MainMenu** : Bootstrap plein hauteur, pas de hamburger, jamais de logique `layoutMode` avec mesure de largeur
-- **Sidebar** : style Notion/Linear — ne pas réintroduire de sidebar compacte non demandée
+- **Navigation globale / Sidebar** : `GlobalNavBar.tsx` et `Layout.tsx` (les anciens noms `MainMenu.tsx`/`Sidebar.tsx` n'existent plus) — bandeau Bootstrap plein hauteur sans hamburger, jamais de logique `layoutMode` avec mesure de largeur, style Notion/Linear pour la sidebar — lire le skill `spok-layout` avant toute modification
 - **Auth/Token** : logique refresh proactive — ne pas simplifier sans comprendre pourquoi
 
 ### Référence technique obligatoire

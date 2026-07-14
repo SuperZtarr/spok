@@ -9,8 +9,8 @@
 | Zone | Fichier | Invariant critique |
 |------|---------|-------------------|
 | **MindMap** | `MindMapView.tsx` | Edges recalculés via `onInit` ; portails à placement fixe. Ne pas modifier le cycle de layout sans vérifier les edges et portails. |
-| **MainMenu** | `MainMenu.tsx` | Bandeau Bootstrap plein hauteur. Jamais de hamburger. Jamais de logique `layoutMode` avec mesure de largeur. |
-| **Sidebar** | `Sidebar.tsx` | Style Notion/Linear. Ne pas réintroduire de sidebar compacte. |
+| **Navigation globale** | `GlobalNavBar.tsx` (remplace l'ancien `MainMenu.tsx`, supprimé) | Bandeau Bootstrap plein hauteur. Jamais de hamburger/dropdown. Jamais de logique `layoutMode` avec mesure de largeur (CSS `md:` uniquement). Détail complet : skill `spok-layout`. |
+| **Sidebar / Layout** | `Layout.tsx` (remplace l'ancien `Sidebar.tsx`, supprimé) | Style Notion/Linear. Ne pas réintroduire de sidebar compacte. 3 mécanismes de collapse indépendants (collapsed/width/mobile-open) + zone z-index fragile (pas d'`overflow-hidden` sur le header). Détail complet : skill `spok-layout`. |
 | **Auth/Token** | `lib/api.ts`, `AuthProvider.tsx` | Refresh proactif avant expiration. Ne pas simplifier sans comprendre le cycle complet. |
 
 ---

@@ -1,5 +1,5 @@
 /*
- * Layout principal connecté : header (MainMenu, recherche, notifications, profil) + zone de contenu.
+ * Layout principal connecté : header (GlobalNavBar, recherche, notifications, profil) + zone de contenu.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
