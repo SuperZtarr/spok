@@ -35,7 +35,7 @@
 - [ ] ajouter un correcteur d'orthographe dans les zones de textes
 
 ### Evolutions (backlog récupéré depuis Projet SPOK)
-- [ ] Organigramme à revoir
+- [x] Organigramme à revoir : `OrgChartView` (membres/rôles d'un espace) faisait doublon avec `SpaceMembersManager` sur `SpaceSettingsPage` — moteur de layout extrait en composant partagé `BoxTreeDiagram` ; nouvelle vue admin `/admin/users/:userId/access` (arbre communautés→espaces avec accès effectif d'un utilisateur : direct/hérité de la visibilité/aucun) répond au vrai besoin identifié (voir qui a/pourrait avoir accès à quoi) — 2026-07-14
 - [ ] Recherche dans la vue
 - [ ] Réduction de données
 - [ ] Identification d'élément
@@ -55,7 +55,7 @@
 
 ### Outillage Claude
 
-- [ ] Skill `spok-layout` : documenter Sidebar + MainMenu (invariants, ce qui a régressé, fichiers clés) — enrichir aussi ARCHITECTURE.md avec le détail
+- [x] Skill `spok-layout` : documente Layout.tsx/GlobalNavBar.tsx (anciens MainMenu.tsx/Sidebar.tsx, supprimés) — invariants, régressions passées (z-index, overflow-hidden, polling sidebar, largeur toggle), fichiers clés — ARCHITECTURE.md et CLAUDE.md mis à jour avec les noms de fichiers réels — 2026-07-14
 
 ## Idées (à explorer)
 

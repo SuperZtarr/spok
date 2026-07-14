@@ -6,6 +6,16 @@
 
 ## EN COURS
 
+### Skill spok-layout + vue admin Accès utilisateur — 2026-07-14
+- Suite de "Organigramme à revoir" (backlog) : Thomas a précisé qu'il existe plusieurs interfaces montrant les accès utilisateurs. Investigation : `OrgChartView` (membres/rôles d'un espace) fait doublon avec `SpaceMembersManager` sur `SpaceSettingsPage` — même query, même donnée, juste une visualisation en plus sans valeur ajoutée
+- Besoin réel exprimé : une vue (admin) montrant pour UN utilisateur ce à quoi il a droit d'accès (adhésion directe + accès implicite via visibilité OPEN/READONLY héritée) ET ce à quoi il pourrait avoir accès (aucun accès actuel, un admin pourrait lui en accorder un)
+- Backend : `GET /admin/users/:id/access-tree` (`admin/users.ts`) — même sémantique que `checkSpaceAccess`/`getEffectiveVisibility` (items.ts) mais chargée en masse (pas de N+1), calcul en mémoire sur tout l'arbre communautés→espaces GROUP. Types partagés `AccessTreeNode`/`AccessRole`/`AccessSource` (`@spok/shared`). 5 nouveaux tests (direct, implicite via communauté, PRIVATE sans accès, bypass ADMIN global, 404) — 29/29 users.test.ts
+- Frontend : moteur de layout+SVG extrait de `OrgChartView.tsx` en composant partagé `components/ui/BoxTreeDiagram.tsx` (accepte une forêt de racines, pas juste un arbre) — `OrgChartView` réécrit pour le consommer (comportement visuel identique, code réduit). Nouvelle page `pages/admin/UserAccessPage.tsx` (route `/admin/users/:userId/access`), lien "Voir l'accès" dans `UsersPage.tsx`
+- Vérifié en réel (navigateur intégré, admin mode via `spok-admin-mode` localStorage) : Alice Martin (membre direct des 4 espaces) → tout en vert MEMBER ; Charlie Durand (membre de 2 des 4 espaces seulement) → 2 espaces verts + 2 gris "aucun accès", exactement conforme aux memberships réels vérifiés via l'API admin
+- Effet de bord découvert et corrigé : skill `spok-layout` (écrite plus tôt dans la session) affirmait à tort que `AdminLayout.tsx` était utilisé pour `/admin/*` — vérifié via `App.tsx` que ce fichier est mort (commentaire "AdminLayout removed"), skill corrigée
+- Typecheck web+api scopés OK, check-doc-headers OK
+- NON COMMITÉ
+
 ### Export PDF Vue Texte — aligné sur les données affichées — 2026-07-14
 - Demande : « il faudrait modifier l'export pdf pour que ce soit à l'image des données affichées dans la vue »
 - Cause : le bouton PDF de TextView passait par `exportDataPDF` générique (tableau Titre/Type/Statut/..., items bruts, sans tri ni filtre) — ne correspondait ni au contenu (document hiérarchique) ni à l'ordre/filtre affichés
