@@ -10,6 +10,8 @@ interface SpaceExportButtonProps {
   spaceName: string;
   viewMode?: ViewMode;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
+  /** Remplace l'export PDF par défaut (table de données) par un export propre à la vue appelante. */
+  pdfExport?: () => void | Promise<void>;
 }
 
 type FormatSet = { csv: boolean; excel: boolean; json: boolean; pdf: boolean; png: boolean };
@@ -20,7 +22,7 @@ function getFormats(viewMode?: ViewMode): FormatSet {
   return                              { csv: true,  excel: true,  json: true,  pdf: true,  png: false };
 }
 
-export function SpaceExportButton({ items, spaceName, viewMode, viewContainerRef }: SpaceExportButtonProps) {
+export function SpaceExportButton({ items, spaceName, viewMode, viewContainerRef, pdfExport }: SpaceExportButtonProps) {
   const filename = buildExportFilename(spaceName, viewMode);
   const fmt = getFormats(viewMode);
 
@@ -31,7 +33,7 @@ export function SpaceExportButton({ items, spaceName, viewMode, viewContainerRef
     ...(fmt.excel? [{ label: 'Excel (.xlsx)', onClick: () => exportExcel(items, filename) }] : []),
     ...(fmt.json ? [{ label: 'JSON (.json)',  onClick: () => exportJSON(items, filename, spaceName) }] : []),
   ];
-  const pdfOptions = fmt.pdf ? [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] : [];
+  const pdfOptions = fmt.pdf ? [{ label: 'PDF — données (.pdf)', onClick: pdfExport ?? (() => exportDataPDF(items, filename, spaceName)) }] : [];
   const pngOptions = fmt.png && viewContainerRef ? [{ label: 'PNG — vue actuelle (.png)', onClick: () => viewContainerRef.current ? exportContainerPNG(viewContainerRef.current, filename) : Promise.resolve() }] : [];
 
   const groups: ExportOptionGroup[] = [

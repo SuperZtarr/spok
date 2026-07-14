@@ -6,6 +6,7 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { exportTextDocumentPDF, buildExportFilename } from '../../lib/exportUtils';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -72,6 +73,14 @@ function formatDate(dateString: string | null | undefined): string | null {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function matchesQuery(item: ItemWithContributions, query: string): boolean {
+  return (
+    item.title.toLowerCase().includes(query) ||
+    stripMarkup(item.description || '').toLowerCase().includes(query) ||
+    (item.contributions || []).some((c) => stripMarkup(c.content || '').toLowerCase().includes(query))
+  );
 }
 
 function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
@@ -150,14 +159,20 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return orderedItems;
     const query = searchQuery.toLowerCase();
-    return orderedItems.filter((item) =>
-      item.title.toLowerCase().includes(query) ||
-      stripMarkup(item.description || '').toLowerCase().includes(query) ||
-      (item.contributions || []).some((c) =>
-        stripMarkup(c.content || '').toLowerCase().includes(query)
-      )
-    );
+    return orderedItems.filter((item) => matchesQuery(item, query));
   }, [orderedItems, searchQuery]);
+
+  // Même arbre + filtre que le rendu des sections portails, réutilisé aussi par l'export PDF
+  const portalItemGroupsFiltered = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return portalItemGroups
+      .map((group) => {
+        const ordered = buildTree(group.items);
+        const filtered = query ? ordered.filter((item) => matchesQuery(item, query)) : ordered;
+        return { ...group, items: filtered };
+      })
+      .filter((g) => g.items.length > 0);
+  }, [portalItemGroups, searchQuery]);
 
   return (
     <div className="flex flex-col h-full">
@@ -172,7 +187,21 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
         <div className="flex-1" />
         <ViewHelpButton viewMode="text" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (
-          <SpaceExportButton items={items} spaceName={spaceName} viewMode="text" viewContainerRef={viewContainerRef} />
+          <SpaceExportButton
+            items={items}
+            spaceName={spaceName}
+            viewMode="text"
+            viewContainerRef={viewContainerRef}
+            pdfExport={() =>
+              exportTextDocumentPDF(
+                filteredItems,
+                portalItemGroupsFiltered,
+                buildExportFilename(spaceName, 'text'),
+                spaceName,
+                statusLabels
+              )
+            }
+          />
         )}
       </div>
       {/* Search bar */}
@@ -247,18 +276,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           ))}
 
           {/* Portal sections for items from checked child spaces */}
-          {portalItemGroups.map((group) => {
-            const groupOrdered = buildTree(group.items);
-            const groupFiltered = searchQuery.trim()
-              ? groupOrdered.filter((item) =>
-                  item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  stripMarkup(item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (item.contributions || []).some((c) =>
-                    stripMarkup(c.content || '').toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                )
-              : groupOrdered;
-            if (groupFiltered.length === 0) return null;
+          {portalItemGroupsFiltered.map((group) => {
             return (
               <div key={`portal-${group.spaceId}`} className="mt-6">
                 <Link
@@ -267,10 +285,10 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                 >
                   <FolderKanban className="w-4 h-4 text-primary" />
                   <span>{group.spaceName}</span>
-                  <span className="text-xs text-muted-foreground/60">({groupFiltered.length})</span>
+                  <span className="text-xs text-muted-foreground/60">({group.items.length})</span>
                   <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
                 </Link>
-                {groupFiltered.map((item) => (
+                {group.items.map((item) => (
                   <TextItem
                     key={item.id}
                     item={item}

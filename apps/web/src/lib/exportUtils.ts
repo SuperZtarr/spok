@@ -153,6 +153,129 @@ export function exportDataPDF(items: Item[], filename: string, spaceName: string
   doc.save(`${filename}.pdf`);
 }
 
+interface TextDocContribution {
+  content: string;
+  createdAt: string;
+  author: { name: string };
+}
+
+interface TextDocItem {
+  id: string;
+  title: string;
+  status?: string | null;
+  description?: string | null;
+  _depth?: number;
+  contributions?: TextDocContribution[];
+}
+
+interface TextDocPortalGroup {
+  spaceId: string;
+  spaceName: string;
+  items: TextDocItem[];
+}
+
+/**
+ * Export PDF de la Vue Texte : reproduit le document affiché à l'écran (arbre, titres,
+ * descriptions, contributions) plutôt que le tableau générique d'`exportDataPDF` — on reçoit
+ * donc les items déjà triés/filtrés par TextView (recherche en cours, groupes portails inclus),
+ * pas la liste brute de l'espace.
+ */
+export function exportTextDocumentPDF(
+  mainItems: TextDocItem[],
+  portalGroups: TextDocPortalGroup[],
+  filename: string,
+  spaceName: string,
+  statusLabels: Record<string, string>,
+) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageHeight = 297;
+  const marginX = 14;
+  const marginBottom = 15;
+  const maxWidth = 210 - marginX * 2;
+  let y = 15;
+
+  doc.setFontSize(16);
+  doc.text(spaceName, marginX, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')}`, marginX, y);
+  doc.setTextColor(0);
+  y += 8;
+
+  const ensureSpace = (needed: number) => {
+    if (y + needed > pageHeight - marginBottom) {
+      doc.addPage();
+      y = 15;
+    }
+  };
+
+  const writeLines = (text: string, x: number, width: number, fontSize: number, lineHeight: number) => {
+    if (!text) return;
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(text, width);
+    for (const line of lines) {
+      ensureSpace(lineHeight);
+      doc.text(line, x, y);
+      y += lineHeight;
+    }
+  };
+
+  const writeItem = (item: TextDocItem) => {
+    const depth = item._depth || 0;
+    const indent = marginX + depth * 6;
+    const width = maxWidth - depth * 6;
+
+    doc.setFontSize(depth === 0 ? 13 : 11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    const statusLabel = statusLabels[item.status || ''] || '';
+    const titleLine = statusLabel ? `${item.title}  [${statusLabel}]` : item.title;
+    for (const line of doc.splitTextToSize(titleLine, width)) {
+      ensureSpace(6);
+      doc.text(line, indent, y);
+      y += 6;
+    }
+    doc.setFont('helvetica', 'normal');
+
+    const description = stripHtmlSafe(item.description || '').trim();
+    if (description) {
+      doc.setTextColor(60);
+      writeLines(description, indent, width, 9, 4.5);
+      doc.setTextColor(0);
+    }
+
+    for (const c of item.contributions || []) {
+      ensureSpace(5);
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text(`${c.author.name} — ${formatDate(c.createdAt)}`, indent + 3, y);
+      y += 4.5;
+      doc.setTextColor(40);
+      writeLines(stripHtmlSafe(c.content || '').trim(), indent + 3, width - 3, 8.5, 4.2);
+      doc.setTextColor(0);
+    }
+    y += 3;
+  };
+
+  for (const item of mainItems) writeItem(item);
+
+  for (const group of portalGroups) {
+    ensureSpace(11);
+    y += 4;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80);
+    doc.text(group.spaceName, marginX, y);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'normal');
+    y += 7;
+    for (const item of group.items) writeItem(item);
+  }
+
+  doc.save(`${filename}.pdf`);
+}
+
 function prepareSvgForExport(original: SVGSVGElement): SVGSVGElement {
   const clone = original.cloneNode(true) as SVGSVGElement;
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
