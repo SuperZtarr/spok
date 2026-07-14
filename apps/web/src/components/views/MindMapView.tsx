@@ -166,7 +166,10 @@ function MindMapViewInner({
   const { setDropTargetId: setSidebarDropTargetId } = useContext(SidebarDropContext);
 
   // Helper: trouve l'espace sidebar sous les coordonnées écran
+  // Number.isFinite : elementsFromPoint lève une exception sur une coordonnée non finie
+  // (NaN/Infinity) — vu en prod sur un drag annulé/tactile (Sentry, Chrome OS).
   const getSidebarSpaceAtPoint = useCallback((x: number, y: number): string | null => {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
     const els = document.elementsFromPoint(x, y);
     for (const el of els) {
       const spaceId = (el as HTMLElement).dataset?.sidebarSpaceId;

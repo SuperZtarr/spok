@@ -258,7 +258,11 @@ export function MindMapNode({ data }: MindMapNodeProps) {
             lastPosRef.current = null;
           }}
           onDrag={(e) => {
-            if (!dragStartRef.current || (e.clientX === 0 && e.clientY === 0)) return;
+            // Un dragend/drag annulé (drop hors cible, ou geste tactile Chrome OS) renvoie
+            // clientX/Y à 0 — et parfois NaN sur certains navigateurs : elementsFromPoint()
+            // lève une exception sur une coordonnée non finie (vu en prod, Sentry, Chrome OS).
+            const dragCancelled = !Number.isFinite(e.clientX) || !Number.isFinite(e.clientY) || (e.clientX === 0 && e.clientY === 0);
+            if (!dragStartRef.current || dragCancelled) return;
             const startFlow = screenToFlowPosition({ x: dragStartRef.current.screenX, y: dragStartRef.current.screenY });
             const currFlow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
             const newPos = {
@@ -274,7 +278,8 @@ export function MindMapNode({ data }: MindMapNodeProps) {
             lastPosRef.current = null;
             if (!pos) return;
             // Si lâché sur la sidebar → le drop HTML5 a déjà géré le déplacement, ne pas sauvegarder
-            const isOnSidebar = (e.clientX !== 0 || e.clientY !== 0) &&
+            const dragCancelled = !Number.isFinite(e.clientX) || !Number.isFinite(e.clientY) || (e.clientX === 0 && e.clientY === 0);
+            const isOnSidebar = !dragCancelled &&
               document.elementsFromPoint(e.clientX, e.clientY).some(el => !!(el as HTMLElement).dataset?.sidebarSpaceId);
             if (!isOnSidebar) {
               onSavePosition?.(item.id, pos);
