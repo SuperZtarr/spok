@@ -248,7 +248,11 @@
       "Bash(node \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C---dev-spok\\\\481dedf6-e41b-4e57-93b0-c543d92747ee\\\\scratchpad\\\\scan-transcripts.mjs\")",
       "Bash(python -c \"import json; json.load\\(open\\('C:/_dev/spok/.claude/settings.json', encoding='utf-8'\\)\\); print\\('JSON OK'\\)\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(t['id'], t['spaceId']\\) for t in d['data']]\")",
-      "Bash(tail -10 /tmp/tnr_final.txt)"
+      "Bash(tail -10 /tmp/tnr_final.txt)",
+      "Bash(cat /tmp/ci_result.txt 2>&1)",
+      "Bash(tail -6 /tmp/tnr_mep2.txt)",
+      "Bash(grep -E \"Test Files|Tests |FAIL\" /tmp/tnr_mep2.txt)",
+      "Bash(cat /tmp/ci_result2.txt 2>&1)"
     ]
   },
   "hooks": {
