@@ -447,4 +447,114 @@ describe('Admin Users routes', () => {
       expect(res.statusCode).toBe(400)
     })
   })
+
+  describe('GET /admin/users/:id/access-tree', () => {
+    it('should mark direct memberships (community and space)', async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ globalRole: 'USER' })
+      prisma.community.findMany.mockResolvedValueOnce([
+        { id: 'c1', name: 'Communauté A', visibility: 'PRIVATE', isPublic: false },
+      ])
+      prisma.space.findMany.mockResolvedValueOnce([
+        { id: 's1', name: 'Espace A', communityId: 'c1', parentId: null, visibility: null },
+      ])
+      prisma.communityMembership.findMany.mockResolvedValueOnce([{ communityId: 'c1', role: 'MEMBER' }])
+      prisma.spaceMembership.findMany.mockResolvedValueOnce([{ spaceId: 's1', role: 'OWNER' }])
+
+      const res = await app.inject({
+        method: 'GET', url: '/admin/users/u1/access-tree',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().tree).toEqual([
+        {
+          id: 'c1', name: 'Communauté A', kind: 'community', role: 'MEMBER', source: 'direct',
+          children: [
+            { id: 's1', name: 'Espace A', kind: 'space', role: 'OWNER', source: 'direct', children: [] },
+          ],
+        },
+      ])
+    })
+
+    it('should mark implicit access via visibility OPEN inherited from the community', async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ globalRole: 'USER' })
+      prisma.community.findMany.mockResolvedValueOnce([
+        { id: 'c1', name: 'Communauté A', visibility: 'OPEN', isPublic: false },
+      ])
+      prisma.space.findMany.mockResolvedValueOnce([
+        { id: 's1', name: 'Espace A', communityId: 'c1', parentId: null, visibility: null },
+      ])
+      prisma.communityMembership.findMany.mockResolvedValueOnce([{ communityId: 'c1', role: 'MEMBER' }])
+      prisma.spaceMembership.findMany.mockResolvedValueOnce([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/admin/users/u1/access-tree',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.json().tree[0].children[0]).toEqual({
+        id: 's1', name: 'Espace A', kind: 'space', role: 'MEMBER', source: 'community', children: [],
+      })
+    })
+
+    it('should return no access for a PRIVATE space/community without membership', async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ globalRole: 'USER' })
+      prisma.community.findMany.mockResolvedValueOnce([
+        { id: 'c1', name: 'Communauté A', visibility: 'PRIVATE', isPublic: false },
+      ])
+      prisma.space.findMany.mockResolvedValueOnce([
+        { id: 's1', name: 'Espace A', communityId: 'c1', parentId: null, visibility: null },
+      ])
+      prisma.communityMembership.findMany.mockResolvedValueOnce([])
+      prisma.spaceMembership.findMany.mockResolvedValueOnce([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/admin/users/u1/access-tree',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      const { tree } = res.json()
+      expect(tree[0].role).toBe(null)
+      expect(tree[0].children[0]).toEqual({
+        id: 's1', name: 'Espace A', kind: 'space', role: null, source: null, children: [],
+      })
+    })
+
+    it('should grant ADMIN role everywhere when the target user is a global admin', async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ globalRole: 'ADMIN' })
+      prisma.community.findMany.mockResolvedValueOnce([
+        { id: 'c1', name: 'Communauté A', visibility: 'PRIVATE', isPublic: false },
+      ])
+      prisma.space.findMany.mockResolvedValueOnce([
+        { id: 's1', name: 'Espace A', communityId: 'c1', parentId: null, visibility: null },
+      ])
+      prisma.communityMembership.findMany.mockResolvedValueOnce([])
+      prisma.spaceMembership.findMany.mockResolvedValueOnce([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/admin/users/u1/access-tree',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      const { tree } = res.json()
+      expect(tree[0].role).toBe('ADMIN')
+      expect(tree[0].children[0].role).toBe('ADMIN')
+    })
+
+    it('should return 404 for an unknown user', async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce(null)
+
+      const res = await app.inject({
+        method: 'GET', url: '/admin/users/unknown/access-tree',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(404)
+    })
+  })
 })

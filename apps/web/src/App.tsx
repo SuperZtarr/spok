@@ -29,6 +29,7 @@ import { Layout } from './components/Layout';
 // AdminLayout removed — admin pages now inside main Layout
 import { AdminRoute } from './components/AdminRoute';
 import { UsersPage } from './pages/admin/UsersPage';
+import { UserAccessPage } from './pages/admin/UserAccessPage';
 import { SpacesPage } from './pages/admin/SpacesPage';
 import { CommunitiesPage } from './pages/admin/CommunitiesPage';
 import { AnomaliesPage } from './pages/admin/AnomaliesPage';
@@ -109,6 +110,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/communities\/[^/]+\/settings$/, 'pages/CommunitySettingsPage.tsx'],
   [/^\/communities\/[^/]+$/, 'pages/CommunityPage.tsx'],
   [/^\/admin\/users$/, 'pages/admin/UsersPage.tsx'],
+  [/^\/admin\/users\/[^/]+\/access$/, 'pages/admin/UserAccessPage.tsx'],
   [/^\/admin\/spaces$/, 'pages/admin/SpacesPage.tsx'],
   [/^\/admin\/communities$/, 'pages/admin/CommunitiesPage.tsx'],
   [/^\/admin\/anomalies$/, 'pages/admin/AnomaliesPage.tsx'],
@@ -208,6 +210,7 @@ export default function App() {
         <Route path="communities/:communityId/settings" element={<CommunitySettingsPage />} />
         <Route path="admin" element={<AdminRoute><Navigate to="/admin/users" replace /></AdminRoute>} />
         <Route path="admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+        <Route path="admin/users/:userId/access" element={<AdminRoute><UserAccessPage /></AdminRoute>} />
         <Route path="admin/spaces" element={<AdminRoute><SpacesPage /></AdminRoute>} />
         <Route path="admin/communities" element={<AdminRoute><CommunitiesPage /></AdminRoute>} />
         <Route path="admin/anomalies" element={<AdminRoute><AnomaliesPage /></AdminRoute>} />

@@ -1,10 +1,11 @@
 /*
  * Administration des utilisateurs : liste, détail, création, rôle global, activation/désactivation,
- * suppression avec réassignation des contenus.
+ * suppression avec réassignation des contenus. Inclut /:id/access-tree (arbre communautés/espaces
+ * avec l'accès effectif de l'utilisateur — direct, hérité de la visibilité, ou aucun).
  */
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
-import type { CreateUserInput, UpdateUserInput, AdminUser } from '@spok/shared';
+import type { CreateUserInput, UpdateUserInput, AdminUser, AccessTreeNode, AccessRole, AccessSource } from '@spok/shared';
 
 interface ListUsersQuery {
   page?: number;
@@ -527,4 +528,94 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
       return { success: true };
     }
   );
+
+  // GET /admin/users/:id/access-tree - Arbre communautés → espaces (GROUP) avec l'accès effectif
+  // de cet utilisateur sur chaque nœud (direct, hérité de la visibilité, ou aucun). Même sémantique
+  // que checkSpaceAccess/getEffectiveVisibility (items.ts) mais chargée en masse (pas de N+1) puisque
+  // calculée sur tout l'arbre en une fois.
+  fastify.get<{ Params: UserParams }>('/:id/access-tree', async (request, reply) => {
+    const { id } = request.params;
+
+    const user = await fastify.prisma.user.findUnique({ where: { id }, select: { globalRole: true } });
+    if (!user) return reply.notFound('User not found');
+    const isAdmin = user.globalRole === 'ADMIN';
+
+    const [communities, spaces, communityMemberships, spaceMemberships] = await Promise.all([
+      fastify.prisma.community.findMany({
+        select: { id: true, name: true, visibility: true, isPublic: true },
+      }),
+      fastify.prisma.space.findMany({
+        where: { type: 'GROUP' },
+        select: { id: true, name: true, communityId: true, parentId: true, visibility: true },
+      }),
+      fastify.prisma.communityMembership.findMany({ where: { userId: id }, select: { communityId: true, role: true } }),
+      fastify.prisma.spaceMembership.findMany({ where: { userId: id }, select: { spaceId: true, role: true } }),
+    ]);
+
+    const communityMembershipMap = new Map(communityMemberships.map((m) => [m.communityId, m.role]));
+    const spaceMembershipMap = new Map(spaceMemberships.map((m) => [m.spaceId, m.role]));
+    const spaceById = new Map(spaces.map((s) => [s.id, s]));
+    const communityById = new Map(communities.map((c) => [c.id, c]));
+
+    // Visibilité effective : espace → espace parent → communauté (même ordre que getEffectiveVisibility)
+    function getEffectiveVisibility(spaceId: string): string {
+      const space = spaceById.get(spaceId);
+      if (!space) return 'PRIVATE';
+      if (space.visibility) return space.visibility;
+      if (space.parentId) return getEffectiveVisibility(space.parentId);
+      const community = space.communityId ? communityById.get(space.communityId) : undefined;
+      return community?.visibility || 'PRIVATE';
+    }
+
+    function computeSpaceAccess(spaceId: string): { role: AccessRole; source: AccessSource } {
+      if (isAdmin) return { role: 'ADMIN', source: 'admin' };
+      const directRole = spaceMembershipMap.get(spaceId);
+      if (directRole) return { role: directRole as AccessRole, source: 'direct' };
+
+      const space = spaceById.get(spaceId)!;
+      const visibility = getEffectiveVisibility(spaceId);
+      if (visibility === 'PRIVATE') return { role: null, source: null };
+      const implicitRole: AccessRole = visibility === 'OPEN' ? 'MEMBER' : 'VIEWER';
+
+      if (space.communityId && communityMembershipMap.has(space.communityId)) {
+        return { role: implicitRole, source: 'community' };
+      }
+      const community = space.communityId ? communityById.get(space.communityId) : undefined;
+      const communityIsPublic = !!community && (community.isPublic || community.visibility !== 'PRIVATE');
+      if (communityIsPublic) return { role: implicitRole, source: 'public' };
+      return { role: null, source: null };
+    }
+
+    function computeCommunityAccess(communityId: string): { role: AccessRole; source: AccessSource } {
+      if (isAdmin) return { role: 'ADMIN', source: 'admin' };
+      const directRole = communityMembershipMap.get(communityId);
+      if (directRole) return { role: directRole as AccessRole, source: 'direct' };
+
+      const community = communityById.get(communityId)!;
+      if (!community.isPublic && community.visibility === 'PRIVATE') return { role: null, source: null };
+      const implicitRole: AccessRole = community.visibility === 'OPEN' ? 'MEMBER' : 'VIEWER';
+      return { role: implicitRole, source: 'public' };
+    }
+
+    function buildSpaceNode(space: (typeof spaces)[number]): AccessTreeNode {
+      const { role, source } = computeSpaceAccess(space.id);
+      const children = spaces.filter((s) => s.parentId === space.id).map(buildSpaceNode);
+      return { id: space.id, name: space.name, kind: 'space', role, source, children };
+    }
+
+    const tree: AccessTreeNode[] = communities.map((c) => {
+      const { role, source } = computeCommunityAccess(c.id);
+      const rootSpaces = spaces.filter((s) => s.communityId === c.id && !s.parentId);
+      return {
+        id: c.id,
+        name: c.name,
+        kind: 'community' as const,
+        role,
+        source,
+        children: rootSpaces.map(buildSpaceNode),
+      };
+    });
+
+    return { tree };
+  });
 };

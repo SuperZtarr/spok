@@ -22,6 +22,7 @@ import type {
   CreateRelationInput,
   AdminUser,
   AdminUserDetail,
+  AccessTreeNode,
   CreateUserInput,
   UpdateUserInput,
   GlobalRole,
@@ -1393,6 +1394,9 @@ export const adminApi = {
       fetchApi<{ success: boolean }>(`/admin/users/${userId}/spaces/${spaceId}`, {
         method: 'DELETE',
       }),
+
+    accessTree: (userId: string) =>
+      fetchApi<{ tree: AccessTreeNode[] }>(`/admin/users/${userId}/access-tree`),
   },
 
   spaces: {

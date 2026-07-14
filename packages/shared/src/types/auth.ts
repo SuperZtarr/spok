@@ -106,3 +106,17 @@ export interface AdminUserDetail extends AdminUser {
   communityMemberships: AdminUserCommunityMembership[];
   memberships: AdminUserSpaceMembership[];
 }
+
+/** Rôle effectif d'un utilisateur sur un nœud de l'arbre d'accès (admin/users/:id/access-tree). */
+export type AccessRole = 'OWNER' | 'MEMBER' | 'VIEWER' | 'ADMIN' | null;
+/** D'où vient l'accès : membership directe, héritée de la communauté, communauté publique, bypass admin global, ou aucun. */
+export type AccessSource = 'direct' | 'community' | 'public' | 'admin' | null;
+
+export interface AccessTreeNode {
+  id: string;
+  name: string;
+  kind: 'community' | 'space';
+  role: AccessRole;
+  source: AccessSource;
+  children: AccessTreeNode[];
+}

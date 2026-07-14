@@ -1,8 +1,8 @@
 /* Admin utilisateurs (/admin/users) : liste, création, rôles, activation, suppression. */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download, Ban, CheckCircle } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download, Ban, CheckCircle, Network } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -75,6 +75,7 @@ function UserAvatar({ user, size = 'sm' }: { user: AdminUser; size?: 'sm' | 'md'
 
 export function UsersPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const anomaly = searchParams.get('anomaly') || undefined;
   const [search, setSearch] = useState('');
@@ -241,6 +242,15 @@ export function UsersPage() {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${user.id}/access`); }}
+            title="Voir l'accès (communautés/espaces)"
+            className="h-7 w-7 p-0"
+          >
+            <Network className="w-3.5 h-3.5 text-muted-foreground" />
+          </Button>
           {(user as any).disabledAt ? (
             <Button
               variant="ghost"
