@@ -1146,8 +1146,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Dates — masqué en mode Forum et types media */}
-              {!isForumMode && !isExclusiveType && <div data-tour="item-dates" className="space-y-3">
+              {/* Dates — masqué en mode Forum uniquement (types media : vides par défaut, rien ne les préremplit) */}
+              {!isForumMode && <div data-tour="item-dates" className="space-y-3">
                 {/* Toggle Jours pleins / Heures — pleine largeur */}
                 {canEdit && (
                   <div className="flex items-center gap-3">

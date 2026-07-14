@@ -6,6 +6,15 @@
 
 ## EN COURS
 
+### Fix dates masquées ItemEditModal pour types media — 2026-07-14
+- Signalé par Thomas : dans la modale item, types Lien/Doc/Image/Diagramme, les dates (Début/Fin/Échéance) devaient être réaffichées, vides par défaut
+- Cause : `isExclusiveType` (LINK/DIAGRAM/IMAGE/DOCUMENT) masquait le bloc dates en plus du reste — contraire à l'intention du refactor ItemEditModal (base uniforme, tous champs visibles), resté non traité pour ce bloc précis
+- Fix : condition du bloc dates réduite à `!isForumMode` seul, `isExclusiveType` retiré de cette seule condition (les autres blocs qui l'utilisent restent inchangés, hors périmètre de la demande)
+- Vérifié : aucune logique de valeur par défaut par type ne s'applique à ces 4 types (les handlers de duration auto ne matchent que MEETING/TASK/PROJECT/PERIOD) — donc "vides par défaut" est déjà le comportement naturel, pas de code supplémentaire nécessaire
+- Vérifié en réel (navigateur intégré, item type Lien "Maquettes Figma") : Début/Fin/Échéance affichés avec "Choisir une date" (vide), aucune erreur console
+- Typecheck web scopé OK, check-doc-headers OK
+- Commité (à mep)
+
 ### Skill spok-layout + vue admin Accès utilisateur — 2026-07-14
 - Suite de "Organigramme à revoir" (backlog) : Thomas a précisé qu'il existe plusieurs interfaces montrant les accès utilisateurs. Investigation : `OrgChartView` (membres/rôles d'un espace) fait doublon avec `SpaceMembersManager` sur `SpaceSettingsPage` — même query, même donnée, juste une visualisation en plus sans valeur ajoutée
 - Besoin réel exprimé : une vue (admin) montrant pour UN utilisateur ce à quoi il a droit d'accès (adhésion directe + accès implicite via visibilité OPEN/READONLY héritée) ET ce à quoi il pourrait avoir accès (aucun accès actuel, un admin pourrait lui en accorder un)
