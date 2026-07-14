@@ -55,13 +55,14 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
    Le push déclenche la CI (`.github/workflows/test.yml` : typecheck web/api + TNR, ~1 min).
    Railway est en « Wait for CI » : le déploiement ne part que si la CI est verte.
 
-8. **Vérifier la CI et confirmer**
+8. **Vérifier la CI — en tâche de fond, sans narrer**
    ```bash
    gh run list --workflow=test.yml --limit 1        # état du run
-   gh run watch <run-id> --exit-status              # attendre le verdict si besoin
+   gh run watch <run-id> --exit-status              # TOUJOURS en run_in_background: true
    ```
-   - CI verte → Railway déploie (~2-3 min après le vert) — afficher le hash + https://spok.space
-   - CI rouge → **la prod n'a PAS été déployée** : lire `gh run view <run-id> --log-failed`, corriger, recommiter — ne jamais annoncer un déploiement sans CI verte
+   - Lancer le watch en arrière-plan puis rendre la main (fin de tour ou tâche suivante) — ne pas rester à dire « je surveille la CI », ne pas sonder en direct
+   - **CI verte → silence.** Ne pas déranger Thomas pour confirmer que tout va bien ; mentionner le hash + https://spok.space seulement s'il redemande ou dans le prochain message naturel
+   - **CI rouge → alerte immédiate**, sans attendre qu'il demande : la prod n'a **pas** été déployée, lire `gh run view <run-id> --log-failed`, corriger, recommiter — ne jamais annoncer un déploiement sans CI verte
 
 ## CI — règles
 
