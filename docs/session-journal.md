@@ -6,26 +6,41 @@
 
 ## EN COURS
 
+### Export PDF Vue Texte — aligné sur les données affichées — 2026-07-14
+- Demande : « il faudrait modifier l'export pdf pour que ce soit à l'image des données affichées dans la vue »
+- Cause : le bouton PDF de TextView passait par `exportDataPDF` générique (tableau Titre/Type/Statut/..., items bruts, sans tri ni filtre) — ne correspondait ni au contenu (document hiérarchique) ni à l'ordre/filtre affichés
+- Fix : nouvelle fonction `exportTextDocumentPDF` (exportUtils.ts) — PDF multi-pages en flux de texte reproduisant l'arbre affiché (indentation, titre, statut, description, contributions), alimentée par les mêmes `filteredItems`/`portalItemGroupsFiltered` que le rendu écran (recherche en cours + groupes portails inclus). `SpaceExportButton` reçoit un override `pdfExport` pour cette vue uniquement (CSV/Excel/JSON inchangés)
+- Vérifié en réel (navigateur intégré, espace 30 items, avec et sans filtre de recherche) : export déclenché sans erreur console dans les deux cas ; typecheck web OK
+- Commité (71071f0)
+
+### Fix layout MindMap — reparentage décale des branches entières — 2026-07-13
+- Signalé par Thomas (2 captures prod) : déplacer un item (vers la racine, ou dans un autre nœud) désynchronise le parent (recalculé par le layout radial car son nombre de descendants change) de ses enfants restants (positions sauvegardées figées) → traits qui traversent tout le canevas
+- 1er correctif (ancien parent direct uniquement) insuffisant : `calculateLayout` calcule le rayon/angle de CHAQUE ancêtre en fonction de son propre nombre total de descendants — un reparentage peut donc décaler toute une branche jusqu'à sa racine, pas juste le parent direct. La 2e capture montrait deux nœuds intermédiaires distincts recalculés, chacun avec ses enfants éparpillés — cohérent avec cette explication plus large
+- Fix élargi (MindMapView.tsx, onNodeDragStop) : remonte à la racine de la branche affectée des DEUX côtés du déplacement (ancien ET nouveau parent) et efface les positions sauvegardées de toute la branche, hors le sous-arbre du nœud déplacé
+- Vérification par navigateur bloquée (timeout outil `computer`) et données dev insuffisantes pour reproduire — vérification reportée en prod après mep (fix purement client, aucune donnée/migration touchée)
+- Typecheck web scopé OK, check-doc-headers OK
+- Commité (e85c56d) — RESTE (Thomas) : vérifier en prod sur le cas réel signalé
+
 ### Fix crash MindMap — elementsFromPoint sur coordonnée non finie — 2026-07-13
 - Remonté par Sentry (prod, spok-web, Chrome OS) : TypeError "Failed to execute 'elementsFromPoint' ... non-finite" sur /spaces/:id?view=mindmap
 - Cause tracée précisément : poignée de drag native HTML5 (GripVertical, mindmap-nodes.tsx) — le garde-fou existant ne détectait que clientX/Y=0 (annulation standard HTML5) mais pas NaN, produit par un drag tactile annulé sur Chrome OS → elementsFromPoint(NaN, NaN) lève une exception
 - Fix : garde Number.isFinite en plus du test =0, à la fois dans mindmap-nodes.tsx (onDrag/onDragEnd) et dans MindMapView.tsx (getSidebarSpaceAtPoint, protégée à la frontière de l'API navigateur pour couvrir tous les appelants)
 - Pas de test dédié écrit (composants de vue non couverts par des tests unitaires dans ce repo, cohérent avec la convention existante) — typecheck web scopé OK, check-doc-headers OK
-- NON COMMITÉ
+- Commité (6935063)
 
 ### Fix accès menu Carte mentale/Graphe global/Liens — 2026-07-12
 - Signalé par Thomas : "Carte mentale globale" invisible, quel que soit le mode d'interface
 - Cause tracée : commit f5d6d69 (20 mai, refactor menu MenuItem→MENU_REGISTRY) avait basculé global-mindmap/global-graph/global-links de access:'user' à access:'admin' — invisibles pour tout compte non-admin depuis, effet de bord passé inaperçu 2 mois
 - Remis à access:'user' (cohérent avec global-sunburst resté 'public') — confirmé par Thomas
 - pnpm build:packages + redémarrage dev (HMR ne recharge pas shared compilé)
-- NON COMMITÉ
+- Commité (bf8d8b1)
 
 ### Cascade communityId aux espaces enfants (déplacement vers une autre communauté) — 2026-07-12
 - Besoin : « lors du déplacement d'un espace dans une autre communauté, il faudrait que cela embarque les espaces enfants »
 - Bug confirmé : PATCH /spaces/:id ne mettait à jour QUE le communityId de l'espace déplacé — les descendants restaient rattachés à l'ancienne communauté, arbre incohérent
 - Fix : si communityId change réellement (comparé à l'existant), collecte récursive des descendants (même pattern que le DELETE, dupliqué localement — convention déjà en place 6x dans ce fichier, pas d'extraction) puis space.updateMany sur tous les descendants avec le nouveau communityId — séquentiel (pas de $transaction : le mock helpers.ts ne déroule pas les promesses d'un tableau, cohérent avec l'unique autre usage de $transaction du fichier qui ignore déjà la valeur de retour)
 - 2 nouveaux tests (cascade sur 2 niveaux, pas de cascade si communityId inchangé) — 50/50 spaces.test.ts, typecheck api scopé OK
-- NON COMMITÉ
+- Commité (adff75f)
 
 ### Fix commentaire spaces.ts DELETE /:id — 2026-07-12
 - CommunityRole n'a que OWNER/MEMBER (pas d'ADMIN au niveau communauté) — le commentaire "Community OWNER or ADMIN" était obsolète, le code (OWNER only) était déjà correct. Commentaire aligné sur la réalité du schéma
