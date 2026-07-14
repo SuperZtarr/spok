@@ -366,6 +366,54 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(400)
     })
 
+    it('should cascade communityId to descendant spaces when moving to another community', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({
+        ...mockMembership({ role: 'OWNER' }),
+        space: mockSpace({ communityId: 'com-old', parentId: null }),
+      })
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-new' })
+      // Arbre : SPACE_ID -> child-1 -> grandchild-1
+      prisma.space.findMany
+        .mockResolvedValueOnce([{ id: 'child-1' }])
+        .mockResolvedValueOnce([{ id: 'grandchild-1' }])
+        .mockResolvedValueOnce([])
+      prisma.space.update.mockResolvedValue(mockSpace({ communityId: 'com-new' }))
+      prisma.space.updateMany.mockResolvedValue({ count: 2 })
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { communityId: 'com-new' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.space.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['child-1', 'grandchild-1'] } },
+        data: { communityId: 'com-new' },
+      })
+    })
+
+    it('ne touche pas les descendants si communityId ne change pas', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({
+        ...mockMembership({ role: 'OWNER' }),
+        space: mockSpace({ communityId: 'com-1', parentId: null }),
+      })
+      prisma.space.update.mockResolvedValue(mockSpace({ name: 'Renamed' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Renamed' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.space.updateMany).not.toHaveBeenCalled()
+    })
+
     it('should reject community on PERSONAL space', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
       prisma.spaceMembership.findUnique.mockResolvedValue({

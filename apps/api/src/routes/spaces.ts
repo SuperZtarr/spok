@@ -622,6 +622,26 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.coverZoom !== undefined) updateData.coverZoom = body.coverZoom;
       if (body.defaultView !== undefined) updateData.defaultView = body.defaultView;
 
+      // Si la communauté change réellement, embarquer tous les sous-espaces descendants —
+      // sinon un enfant reste rattaché à l'ancienne communauté alors que son parent a bougé.
+      const communityIsChanging = communityIdOverride !== undefined && communityIdOverride !== (space.communityId ?? null);
+      let descendantIds: string[] = [];
+      if (communityIsChanging) {
+        async function collectDescendantSpaces(parentId: string): Promise<string[]> {
+          const children = await fastify.prisma.space.findMany({
+            where: { parentId },
+            select: { id: true },
+          });
+          const ids: string[] = [];
+          for (const child of children) {
+            ids.push(child.id);
+            ids.push(...(await collectDescendantSpaces(child.id)));
+          }
+          return ids;
+        }
+        descendantIds = await collectDescendantSpaces(request.params.id);
+      }
+
       const updatedSpace = await fastify.prisma.space.update({
         where: { id: request.params.id },
         data: updateData,
@@ -640,6 +660,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       });
+
+      if (descendantIds.length > 0) {
+        await fastify.prisma.space.updateMany({
+          where: { id: { in: descendantIds } },
+          data: { communityId: communityIdOverride },
+        });
+      }
 
       return updatedSpace;
     }
