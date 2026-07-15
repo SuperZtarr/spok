@@ -860,8 +860,8 @@ export function ItemEditModal({
           {/* === LEFT COLUMN: description + contributions === */}
           <div className="space-y-6 min-w-0">
 
-              {/* Description */}
-              {!isExclusiveType && <div className="space-y-2" data-tour="item-description">
+              {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
+              <div className="space-y-2" data-tour="item-description">
                 <label className="text-sm font-medium">Description</label>
                 <RichTextEditor
                   key={itemId}
@@ -872,7 +872,7 @@ export function ItemEditModal({
                   minHeight={240}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
-              </div>}
+              </div>
 
               {/* Reactions + Contributions */}
               {!isExclusiveType && <div className="space-y-3" data-tour="item-reactions">
