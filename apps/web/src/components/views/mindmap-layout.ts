@@ -81,6 +81,118 @@ export interface MindMapLayoutOptions {
   portalSpaceNames?: Map<string, string>;
 }
 
+/** Fabrique un nœud mindmap ReactFlow pour un item — utilisée par calculateLayout ET le chemin incrémental de MindMapView (les deux doivent produire des data identiques). `position` est la position déjà ajustée (coin haut-gauche). */
+export function buildMindmapNode(
+  item: TreeItem,
+  position: { x: number; y: number },
+  statuses: StatusConfig[],
+  collapsedIds: Set<string>,
+  callbacks: MindMapCallbacks,
+  options: MindMapLayoutOptions,
+  isRoot: boolean,
+): Node {
+  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onTogglePin, onSavePosition } = callbacks;
+  const { hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
+  const statusColor = getStatusColor(item.status, statuses);
+  const hexColor = tailwindBgToHex(statusColor);
+  return {
+    id: item.id,
+    type: 'mindmap',
+    position,
+    data: {
+      label: item.title,
+      item,
+      statusColor,
+      hexColor,
+      textColor: getContrastTextColor(hexColor),
+      onEdit,
+      onDelete,
+      onUpdateStatus,
+      onAddChild,
+      onAddPortal,
+      onToggleCollapse,
+      onReorganizeChildren,
+      onMoveToSpace,
+      onDuplicateToSpace,
+      onConvertToSpace,
+      onSelfAssign,
+      onMerge,
+      onAbsorbChildren,
+      onSplitDescription,
+      onOpenInNewTab,
+      statusOptions,
+      isRoot,
+      hasChildren: item.children.length > 0,
+      isCollapsed: collapsedIds.has(item.id),
+      childCount: countDescendants(item),
+      hasPortalSupport,
+      isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
+      isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
+      isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
+      isDropTarget: false,
+      canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
+      isPinned: pinnedIdsSet?.has(item.id) || false,
+      onTogglePin: onTogglePin || (() => {}),
+      onSavePosition,
+      isPortal: !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
+      portalSpaceName: (currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId) ? portalSpaceNames?.get(item.spaceId) : undefined,
+    },
+  };
+}
+
+/** Arête hiérarchique parent→enfant, style dégressif selon la profondeur du sous-arbre. Utilisée par calculateLayout ET le chemin incrémental. Les positions sont les positions ajustées des nœuds. */
+export function buildTreeEdge(
+  effectiveParentId: string,
+  item: TreeItem,
+  parentPos: { x: number; y: number },
+  childPos: { x: number; y: number },
+): Edge {
+  const { sourceHandle, targetHandle } = getBestHandles(parentPos, childPos);
+  const depth = maxDepth(item);
+  const isRootEdge = effectiveParentId === SPACE_NODE_ID;
+  return {
+    id: `${effectiveParentId}-${item.id}`,
+    source: effectiveParentId,
+    target: item.id,
+    sourceHandle,
+    targetHandle,
+    type: 'default',
+    style: {
+      stroke: isRootEdge ? 'hsl(var(--primary))' : '#94a3b8',
+      strokeWidth: isRootEdge ? 4 : Math.max(1.5, Math.min(4, 1.5 + depth * 0.8)),
+      opacity: isRootEdge ? 0.9 : Math.max(0.5, Math.min(0.9, 0.5 + depth * 0.15)),
+    },
+  };
+}
+
+/** Arête de relation (pointillé violet). `handles` optionnels — recalculés ensuite par recalculateEdgeHandles. */
+export function buildRelationEdge(
+  relation: { id: string; type: string; label?: string | null; fromItemId: string; toItemId: string; fromItem?: { title?: string }; toItem?: { title?: string } },
+  handles: { sourceHandle: string; targetHandle: string } = { sourceHandle: 'right-source', targetHandle: 'left' },
+): Edge {
+  return {
+    id: `relation-${relation.id}`,
+    source: relation.fromItemId,
+    target: relation.toItemId,
+    ...handles,
+    type: 'relation',
+    animated: true,
+    style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
+    data: {
+      relationId: relation.id,
+      type: relation.type,
+      label: relation.label || '',
+      fromItemId: relation.fromItemId,
+      fromTitle: relation.fromItem?.title || relation.fromItemId,
+      toTitle: relation.toItem?.title || relation.toItemId,
+    },
+    label: relation.label ? undefined : relationEdgeLabel(relation.type, relation.label),
+    labelStyle: { fontSize: 10, fill: '#8b5cf6' },
+    labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+  };
+}
+
 // Calculate node positions using radial tree layout
 export function calculateLayout(
   tree: TreeItem[],
@@ -92,9 +204,6 @@ export function calculateLayout(
   callbacks: MindMapCallbacks,
   options: MindMapLayoutOptions,
 ): { nodes: Node[]; edges: Edge[]; relationEdges: Edge[]; rootArcEnd: number; arcStart: number } {
-  const { onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpenInNewTab, onTogglePin, onSavePosition } = callbacks;
-  const { hasPortalSupport, statusOptions, highlightType, highlightStatus, searchMatchIds, canEdit, canEditItem, pinnedIdsSet, currentSpaceId, portalSpaceNames } = options;
-
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -236,57 +345,9 @@ export function calculateLayout(
     const pos = nodePositionMap.get(datum.id);
     if (!pos) return;
 
-    const statusColor = getStatusColor(item.status, statuses);
-    const hexColor = tailwindBgToHex(statusColor);
-    const hasChildren = item.children.length > 0;
-    const isCollapsed = collapsedIds.has(item.id);
-    const childCount = countDescendants(item);
     const isRoot = !item.parentId || !nodePositionMap.has(item.parentId);
     const adjustedPos = { x: pos.x - 75, y: pos.y - 20 };
-
-    nodes.push({
-      id: item.id,
-      type: 'mindmap',
-      position: adjustedPos,
-      data: {
-        label: item.title,
-        item,
-        statusColor,
-        hexColor,
-        textColor: getContrastTextColor(hexColor),
-        onEdit,
-        onDelete,
-        onUpdateStatus,
-        onAddChild,
-        onAddPortal,
-        onToggleCollapse,
-        onReorganizeChildren,
-        onMoveToSpace,
-        onDuplicateToSpace,
-        onConvertToSpace,
-        onSelfAssign,
-        onMerge,
-        onAbsorbChildren,
-        onSplitDescription,
-        onOpenInNewTab,
-        statusOptions,
-        isRoot,
-        hasChildren,
-        isCollapsed,
-        childCount,
-        hasPortalSupport,
-        isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
-        isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
-        isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
-        isDropTarget: false,
-        canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
-        isPinned: pinnedIdsSet?.has(item.id) || false,
-        onTogglePin: onTogglePin || (() => {}),
-        onSavePosition,
-        isPortal: !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId),
-        portalSpaceName: (currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId) ? portalSpaceNames?.get(item.spaceId) : undefined,
-      },
-    });
+    nodes.push(buildMindmapNode(item, adjustedPos, statuses, collapsedIds, callbacks, options, isRoot));
 
     // Edge from parent — fall back to __space__ if parentId not in layout (orphaned item)
     const effectiveParentId = (item.parentId && nodePositionMap.has(item.parentId))
@@ -294,29 +355,11 @@ export function calculateLayout(
       : SPACE_NODE_ID;
     const parentPos = nodePositionMap.get(effectiveParentId);
     if (parentPos) {
-      const parentAdjusted = { x: parentPos.x - 75, y: parentPos.y - 20 };
-      const { sourceHandle, targetHandle } = getBestHandles(parentAdjusted, adjustedPos);
-      const depth = maxDepth(item);
-      const edgeWidth = effectiveParentId === SPACE_NODE_ID
-        ? 4
-        : Math.max(1.5, Math.min(4, 1.5 + depth * 0.8));
-      const edgeOpacity = effectiveParentId === SPACE_NODE_ID
-        ? 0.9
-        : Math.max(0.5, Math.min(0.9, 0.5 + depth * 0.15));
-
-      edges.push({
-        id: `${effectiveParentId}-${item.id}`,
-        source: effectiveParentId,
-        target: item.id,
-        sourceHandle,
-        targetHandle,
-        type: 'default',
-        style: {
-          stroke: effectiveParentId === SPACE_NODE_ID ? 'hsl(var(--primary))' : '#94a3b8',
-          strokeWidth: edgeWidth,
-          opacity: edgeOpacity,
-        },
-      });
+      edges.push(buildTreeEdge(
+        effectiveParentId, item,
+        { x: parentPos.x - 75, y: parentPos.y - 20 },
+        adjustedPos,
+      ));
     }
   });
 
@@ -331,29 +374,8 @@ export function calculateLayout(
         const targetPos = nodePositionMap.get(relation.toItemId);
         const handles = sourcePos && targetPos
           ? getBestHandles(sourcePos, targetPos)
-          : { sourceHandle: 'right-source', targetHandle: 'left' };
-
-        relationEdges.push({
-          id: `relation-${relation.id}`,
-          source: relation.fromItemId,
-          target: relation.toItemId,
-          ...handles,
-          type: 'relation',
-          animated: true,
-          style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
-          data: {
-            relationId: relation.id,
-            type: relation.type,
-            label: relation.label || '',
-            fromItemId: relation.fromItemId,
-            fromTitle: (relation as any).fromItem?.title || relation.fromItemId,
-            toTitle: (relation as any).toItem?.title || relation.toItemId,
-          },
-          label: relation.label ? undefined : relationEdgeLabel(relation.type, relation.label),
-          labelStyle: { fontSize: 10, fill: '#8b5cf6' },
-          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
-        });
+          : undefined;
+        relationEdges.push(buildRelationEdge(relation as any, handles));
       }
     });
   });

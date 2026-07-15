@@ -2,6 +2,10 @@
  * Vue Carte mentale (React Flow + d3 radial tree).
  * Invariants critiques : savedPositions.current persiste les positions manuelles entre
  * recalculs ; reorganizeRef.current capture le closure courant (pattern obligatoire).
+ * Layout incrémental (spec 2026-07-15) : le layout complet ne s'exécute qu'au premier
+ * rendu, sur changement de deps (repli/portails/focus) et au bouton « Réorganiser » ;
+ * tout changement structurel (ajout/suppression/reparentage) est traité par diff
+ * (mindmap-incremental.ts) + ré-éventail local des seuls parents affectés.
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
@@ -48,6 +52,7 @@ import {
   getAbsolutePositions,
   recalculateEdgeHandles,
   countVisible,
+  countDescendants,
   findTreeNode,
   RADIAL_STEP,
   getStatusColor,
@@ -55,7 +60,8 @@ import {
   getContrastTextColor,
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
-import { calculateLayout, buildPortalNodesAndEdges, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+import { calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
 
 const edgeTypes = { relation: RelationEdge };
@@ -145,9 +151,9 @@ function MindMapViewInner({
   const userHasInteracted = useRef(false);
   useEffect(() => { userHasInteracted.current = false; }, [spaceId]);
   const prevStructureRef = useRef<string>('');
+  const prevRelationsRef = useRef<string>('');
   const prevDepsRef = useRef<string>('');
-  const prevItemIdsRef = useRef<Set<string>>(new Set());
-  const prevItemSigsRef = useRef<Map<string, string>>(new Map());
+  const prevItemsRef = useRef<ItemWithRelations[]>([]);
 
   const { collapsedIds, setCollapsedIds } = useCollapsedIds(spaceId ?? '');
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
@@ -554,46 +560,68 @@ function MindMapViewInner({
     }
   }, [onNodesChangeBase, setNodes, setEdges]);
 
-  // Compute structural signature: ids, parentIds, relations, children count
-  const structureSignature = useMemo(() => {
-    const parts = items.map(i => {
-      const relIds = (i.relationsFrom?.map((r: { id: string }) => r.id) || [])
-        .concat(i.relationsTo?.map((r: { id: string }) => r.id) || [])
-        .sort()
-        .join(',');
-      return `${i.id}:${i.parentId || ''}:${i.children?.length || 0}:${relIds}`;
-    }).sort();
-    return parts.join('|');
-  }, [items]);
+  // Signature structurelle : id + parentId suffisent (les relations ont leur propre signature,
+  // le nombre d'enfants est couvert par les ids des enfants eux-mêmes).
+  const structureSignature = useMemo(
+    () => items.map(i => `${i.id}:${i.parentId || ''}`).sort().join('|'),
+    [items]
+  );
 
-  // Deps signature for non-item dependencies that require full layout
-  const depsSignature = `${[...collapsedIds].sort().join(',')}|${displayName}|${portals.map(p => p.id).join(',')}|${items.length}`;
+  // Relations à part : leur changement ne touche que les arêtes, jamais le layout.
+  const relationsSignature = useMemo(
+    () => items
+      .flatMap(i => (i.relationsFrom || []).map(r => `${r.id}:${r.type}:${r.label || ''}`))
+      .sort().join('|'),
+    [items]
+  );
 
-  // Update nodes when items, collapsed state, or portals change
+  // Deps nécessitant un recalcul complet : repli/dépli, focus, portails.
+  // items.length en est RETIRÉ : ajout/suppression passe par le chemin incrémental.
+  const depsSignature = `${[...collapsedIds].sort().join(',')}|${displayName}|${portals.map(p => p.id).join(',')}`;
+
+  // Mise à jour des nœuds. Quatre chemins (spec 2026-07-15-mindmap-incremental-layout) :
+  //  1. premier rendu OU deps (repli, focus, portails) → layout complet + applyPositions
+  //  2. changement structurel (ajout/suppression/reparentage) → INCRÉMENTAL : diff + ré-éventail
+  //     local des seuls parents affectés — la carte ne bouge jamais globalement
+  //  3. changement de relations seules → arêtes seules
+  //  4. contenu seul → patch data en place
   useEffect(() => {
-    const prevSignature = prevStructureRef.current;
-    const prevDeps = prevDepsRef.current;
-    const isFirstRender = prevSignature === '';
-    const isStructuralChange = prevSignature !== structureSignature;
-    const isDepsChange = prevDeps !== depsSignature;
+    const isFirstRender = prevStructureRef.current === '';
+    const isStructuralChange = prevStructureRef.current !== structureSignature;
+    const isRelationChange = prevRelationsRef.current !== relationsSignature;
+    const isDepsChange = prevDepsRef.current !== depsSignature;
     prevStructureRef.current = structureSignature;
+    prevRelationsRef.current = relationsSignature;
     prevDepsRef.current = depsSignature;
+    const prevItems = prevItemsRef.current;
+    prevItemsRef.current = items;
 
-    // Detect pure deletion (no additions, no reparenting of remaining items)
-    const newItemIds = new Set(items.map(i => i.id));
-    const newItemSigs = new Map(items.map(i => [i.id, `${i.parentId || ''}:${i.children?.length || 0}`]));
-    const prevItemIds = prevItemIdsRef.current;
-    const prevItemSigs = prevItemSigsRef.current;
-    const addedIds = [...newItemIds].filter(id => !prevItemIds.has(id));
-    const deletedIds = [...prevItemIds].filter(id => !newItemIds.has(id));
-    const changedIds = [...newItemIds].filter(id => prevItemIds.has(id) && newItemSigs.get(id) !== prevItemSigs.get(id));
-    const isPureDeletion = !isFirstRender && isStructuralChange && addedIds.length === 0 && changedIds.length === 0 && deletedIds.length > 0;
-    prevItemIdsRef.current = newItemIds;
-    prevItemSigsRef.current = newItemSigs;
+    // --- Chemin 1 : layout complet (premier rendu, repli/dépli, portails, focus) ---
+    if (isFirstRender || isDepsChange) {
+      const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd, arcStart } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
+      const positionedNodes = applyPositions(newNodes);
 
-    if (!isFirstRender && !isStructuralChange && !isDepsChange) {
-      // Content-only change: patch node data in place, keep positions
-      const itemMap = new Map(items.map(i => [i.id, i]));
+      const { portalNodes, portalEdges, portalRelationEdges } = buildPortalNodesAndEdges({
+        positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces,
+        portalSpaceNames, statuses, collapsedIds, items, callbacks: layoutCallbacks,
+        options: layoutOptions, removePortal, savedPositions: savedPositions.current, rootArcEnd, arcStart,
+      }, relationEdges);
+
+      const allNodes = [...positionedNodes, ...portalNodes];
+      const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
+      const currentRelationEdges = [...relationEdges, ...portalRelationEdges];
+      lastRelationEdgesRef.current = recalculateEdgeHandles(currentRelationEdges, edgePosMap);
+      const allEdges = recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], edgePosMap);
+      setNodes(allNodes);
+      setEdges(allEdges);
+      if (!userHasInteracted.current) setTimeout(() => fitView({ padding: 0.1 }), 50);
+      return;
+    }
+
+    const itemMap = new Map(items.map(i => [i.id, i]));
+
+    // --- Chemin 4 : contenu seul (patch en place, positions conservées) ---
+    if (!isStructuralChange && !isRelationChange) {
       setNodes(nds => nds.map(n => {
         if (n.type !== 'mindmap') return n;
         const item = itemMap.get(n.id);
@@ -618,33 +646,163 @@ function MindMapViewInner({
       return;
     }
 
-    if (isPureDeletion) {
-      // Suppression seule : retirer les nœuds et arêtes sans recalculer le layout
-      const deletedSet = new Set(deletedIds);
-      setNodes(nds => nds.filter(n => !deletedSet.has(n.id)));
-      setEdges(eds => eds.filter(e => !deletedSet.has(e.source) && !deletedSet.has(e.target)));
+    // --- Chemins 2 et 3 : incrémental ---
+    const relDiff = diffRelations(prevItems, items);
+
+    // Résolution d'un TreeItem dans l'arbre de l'espace courant OU dans les arbres de portail
+    // (les badges hasChildren/childCount des items de portail doivent rester corrects).
+    const portalTrees = new Map<string, TreeItem[]>();
+    for (const [psId, pItems] of portalItemsBySpace.entries()) portalTrees.set(psId, buildTree(pItems));
+    const findAnyTreeNode = (id: string): TreeItem | null => {
+      const item = itemMap.get(id);
+      if (item && item.spaceId && item.spaceId !== spaceId) {
+        const t = portalTrees.get(item.spaceId);
+        return t ? findTreeNode(t, id) : null;
+      }
+      return findTreeNode(fullTree, id);
+    };
+
+    if (isStructuralChange) {
+      const diff = diffItems(prevItems, items, spaceId);
+      const deletedSet = new Set(diff.deletedIds);
+
+      // Purge des positions sauvegardées des items supprimés
+      let positionsDirty = false;
+      for (const id of diff.deletedIds) {
+        if (savedPositions.current[id]) { delete savedPositions.current[id]; positionsDirty = true; }
+      }
+      if (positionsDirty) savePositions();
+
+      setNodes(currentNodes => {
+        const absPositions = getAbsolutePositions(currentNodes);
+        const existingIds = new Set(currentNodes.map(n => n.id));
+
+        // 1. Retirer les nœuds supprimés
+        let nextNodes = currentNodes.filter(n => !deletedSet.has(n.id));
+
+        // 2. Créer les nœuds ajoutés (si visibles : parent présent et non replié)
+        const rootCount = fullTree.length;
+        const addedNodes: Node[] = [];
+        for (const id of diff.addedIds) {
+          if (existingIds.has(id)) continue;
+          const item = itemMap.get(id);
+          if (!item) continue;
+          if (item.parentId && collapsedIds.has(item.parentId)) continue; // caché sous un repli
+          const treeNode = findAnyTreeNode(id);
+          if (!treeNode) continue;
+          const parentNodeId = item.parentId
+            || (item.spaceId && item.spaceId !== spaceId ? `child-space-${item.spaceId}` : '__space__');
+          if (parentNodeId !== '__space__' && !absPositions.has(parentNodeId)) continue; // parent hors canevas
+          const siblingIndex = fullTree.findIndex(r => r.id === id);
+          const pos = initialPositionForNew(parentNodeId, absPositions.get(parentNodeId), Math.max(siblingIndex, 0), Math.max(rootCount, 1));
+          addedNodes.push(buildMindmapNode(treeNode, pos, statuses, collapsedIds, layoutCallbacks, layoutOptions, parentNodeId === '__space__'));
+        }
+        nextNodes = [...nextNodes, ...addedNodes];
+
+        // 3. Rafraîchir les data de tous les nœuds (item à jour, badges enfants…)
+        nextNodes = nextNodes.map(n => {
+          if (n.type === 'space') {
+            return n.data?.itemCount === items.length ? n : { ...n, data: { ...n.data, itemCount: items.length } };
+          }
+          if (n.type !== 'mindmap') return n;
+          const item = itemMap.get(n.id);
+          if (!item) return n;
+          const treeNode = findAnyTreeNode(n.id);
+          const statusColor = getStatusColor(item.status, statuses);
+          const hexColor = tailwindBgToHex(statusColor);
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              label: item.title,
+              item: treeNode ?? item,
+              statusColor,
+              hexColor,
+              textColor: getContrastTextColor(hexColor),
+              hasChildren: treeNode ? treeNode.children.length > 0 : false,
+              childCount: treeNode ? countDescendants(treeNode) : 0,
+              isCollapsed: collapsedIds.has(item.id),
+              isHighlighted: (layoutOptions.highlightType ? item.type === layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !item.status : item.status === layoutOptions.highlightStatus) : false),
+              isDimmed: (layoutOptions.highlightType ? item.type !== layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !!item.status : item.status !== layoutOptions.highlightStatus) : false) || (layoutOptions.searchMatchIds ? !layoutOptions.searchMatchIds.has(item.id) : false),
+              isSearchMatch: !!(layoutOptions.searchMatchIds && layoutOptions.searchMatchIds.has(item.id)),
+            },
+          };
+        });
+
+        // 4. Arêtes : supprimées, reparentées, ajoutées, relations
+        const newAbsPositions = getAbsolutePositions(nextNodes);
+        setEdges(currentEdges => {
+          let nextEdges = currentEdges.filter(e =>
+            !deletedSet.has(e.source) && !deletedSet.has(e.target)
+            && !relDiff.removedIds.some(rid => e.data?.relationId === rid));
+
+          // Reparentés : l'id d'arête encode le parent → retirer l'ancienne, créer la nouvelle
+          for (const r of diff.reparented) {
+            nextEdges = nextEdges.filter(e => !(e.target === r.id && !e.data?.relationId));
+            const treeNode = findAnyTreeNode(r.id);
+            const childPos = newAbsPositions.get(r.id);
+            if (!treeNode || !childPos) continue;
+            const parentNodeId = r.newParentId && newAbsPositions.has(r.newParentId) ? r.newParentId : '__space__';
+            const parentPos = newAbsPositions.get(parentNodeId);
+            if (parentPos) nextEdges.push(buildTreeEdge(parentNodeId, treeNode, parentPos, childPos));
+          }
+
+          // Ajoutés : arête depuis le parent
+          for (const n of addedNodes) {
+            const treeNode = findAnyTreeNode(n.id);
+            if (!treeNode) continue;
+            const item = itemMap.get(n.id)!;
+            const parentNodeId = item.parentId
+              || (item.spaceId && item.spaceId !== spaceId ? `child-space-${item.spaceId}` : '__space__');
+            const parentPos = newAbsPositions.get(parentNodeId);
+            const childPos = newAbsPositions.get(n.id);
+            if (parentPos && childPos) nextEdges.push(buildTreeEdge(parentNodeId, treeNode, parentPos, childPos));
+          }
+
+          // Relations ajoutées + mise à jour du cache du toggle Relations
+          const relationEdgesToAdd = relDiff.added
+            .filter(rel => newAbsPositions.has(rel.fromItemId) && newAbsPositions.has(rel.toItemId))
+            .map(rel => buildRelationEdge(rel));
+          lastRelationEdgesRef.current = recalculateEdgeHandles(
+            [...lastRelationEdgesRef.current.filter(e => !relDiff.removedIds.includes(e.data?.relationId as string)
+              && !deletedSet.has(e.source) && !deletedSet.has(e.target)), ...relationEdgesToAdd],
+            newAbsPositions,
+          );
+          if (showRelations) nextEdges = [...nextEdges, ...relationEdgesToAdd];
+
+          return recalculateEdgeHandles(nextEdges, newAbsPositions);
+        });
+        return nextNodes;
+      });
+
+      // 5. Ré-éventail local différé des parents affectés (après commit du state,
+      //    reorganizeRef lit getNodes() — pattern closure courant obligatoire)
+      if (diff.affectedParentIds.length > 0) {
+        setTimeout(() => {
+          for (const pid of diff.affectedParentIds) reorganizeRef.current(pid);
+        }, 0);
+      }
       return;
     }
 
-    // Structural change: full layout recalculation
-    const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd, arcStart } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
-    const positionedNodes = applyPositions(newNodes);
-
-    const { portalNodes, portalEdges, portalRelationEdges } = buildPortalNodesAndEdges({
-      positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces,
-      portalSpaceNames, statuses, collapsedIds, items, callbacks: layoutCallbacks,
-      options: layoutOptions, removePortal, savedPositions: savedPositions.current, rootArcEnd, arcStart,
-    }, relationEdges);
-
-    const allNodes = [...positionedNodes, ...portalNodes];
-    const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
-    const currentRelationEdges = [...relationEdges, ...portalRelationEdges];
-    lastRelationEdgesRef.current = recalculateEdgeHandles(currentRelationEdges, edgePosMap);
-    const allEdges = recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], edgePosMap);
-    setNodes(allNodes);
-    setEdges(allEdges);
-    if (!userHasInteracted.current) setTimeout(() => fitView({ padding: 0.1 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, structureSignature, depsSignature]);
+    // --- Chemin 3 : relations seules ---
+    setNodes(currentNodes => {
+      const absPositions = getAbsolutePositions(currentNodes);
+      const relationEdgesToAdd = relDiff.added
+        .filter(rel => absPositions.has(rel.fromItemId) && absPositions.has(rel.toItemId))
+        .map(rel => buildRelationEdge(rel));
+      lastRelationEdgesRef.current = recalculateEdgeHandles(
+        [...lastRelationEdgesRef.current.filter(e => !relDiff.removedIds.includes(e.data?.relationId as string)), ...relationEdgesToAdd],
+        absPositions,
+      );
+      setEdges(currentEdges => {
+        let nextEdges = currentEdges.filter(e => !relDiff.removedIds.some(rid => e.data?.relationId === rid));
+        if (showRelations) nextEdges = [...nextEdges, ...recalculateEdgeHandles(relationEdgesToAdd, absPositions)];
+        return nextEdges;
+      });
+      return currentNodes;
+    });
+  }, [tree, items, statuses, collapsedIds, displayName, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, structureSignature, relationsSignature, depsSignature, fullTree, showRelations, savePositions]);
 
   // Toggle relation edges without full layout recalculation
   useEffect(() => {
@@ -909,56 +1067,14 @@ function MindMapViewInner({
         }
       }
 
-      // Reparentage : le rayon/angle radial de CHAQUE ancêtre dépend de son propre nombre
-      // total de descendants (cf. calculateLayout) — retirer ou ajouter un item peut donc
-      // décaler la branche entière jusqu'à sa racine, pas seulement le parent direct. Les
-      // enfants de ces ancêtres qui ont une position sauvegardée (drag manuel antérieur)
-      // restent figés à l'ancien emplacement → traits qui traversent tout le canevas.
-      // Fix : effacer les positions sauvegardées de TOUTE la branche racine affectée (ancien
-      // ET nouveau parent), hors le sous-arbre du nœud déplacé qui voyage avec lui — les nœuds
-      // réinitialisés retombent sur le calcul radial automatique, cohérent entre eux.
-      const movedSubtreeIds = (movedItemId: string): Set<string> => {
-        const ids = new Set([movedItemId]);
-        const movedTreeNode = findTreeNode(fullTree, movedItemId);
-        if (movedTreeNode) {
-          for (const id of collectVisibleDescendantIds(movedTreeNode, collapsedIds)) ids.add(id);
-        }
-        return ids;
-      };
-      const findRootBranch = (itemId: string): { id: string } | null => {
-        for (const rootItem of fullTree) {
-          if (findTreeNode([rootItem], itemId)) return rootItem;
-        }
-        return null;
-      };
-      const clearBranchPositions = (rootBranchId: string, excludeIds: Set<string>) => {
-        const rootBranchNode = findTreeNode(fullTree, rootBranchId);
-        if (!rootBranchNode) return;
-        const idsToReset = [rootBranchId, ...collectVisibleDescendantIds(rootBranchNode, collapsedIds)]
-          .filter(id => !excludeIds.has(id));
-        for (const id of idsToReset) delete savedPositions.current[id];
-      };
-      const clearAffectedBranches = (movedItemId: string, newParentId: string | null) => {
-        const draggedItem = items.find(i => i.id === movedItemId);
-        const excludeIds = movedSubtreeIds(movedItemId);
-        const oldParentId = draggedItem?.parentId;
-        if (oldParentId) {
-          const oldRootBranch = findRootBranch(oldParentId);
-          if (oldRootBranch) clearBranchPositions(oldRootBranch.id, excludeIds);
-        }
-        if (newParentId) {
-          const newRootBranch = findRootBranch(newParentId);
-          if (newRootBranch && newRootBranch.id !== oldParentId) clearBranchPositions(newRootBranch.id, excludeIds);
-        }
-        savePositions();
-      };
-
+      // Reparentage : plus AUCUN effacement de positions de branches (spec 2026-07-15) —
+      // le diff structurel de l'effect déclenche un ré-éventail local de l'ancien et du
+      // nouveau parent quand les items reviennent du serveur.
       const target = intersecting.find(n => n.type !== 'portal' && n.id !== draggedNode.id);
       if (target && onMove && canEdit !== false) {
         if (target.id === '__space__') {
           const draggedItem = items.find(i => i.id === draggedNode.id);
           if (draggedItem?.parentId) {
-            clearAffectedBranches(draggedNode.id, null);
             onMove(draggedNode.id, null, 0);
           }
         } else {
@@ -969,7 +1085,6 @@ function MindMapViewInner({
             return isDescendant(parentId, child.parentId);
           };
           if (!isDescendant(draggedNode.id, target.id)) {
-            clearAffectedBranches(draggedNode.id, target.id);
             onMove(draggedNode.id, target.id, 0);
           }
         }
