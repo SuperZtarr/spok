@@ -6,6 +6,25 @@
 
 ## EN COURS
 
+### Description visible pour tous les types + allowlist permissions — 2026-07-15
+- Demande Thomas : dans ItemEditModal, afficher la description quel que soit le type — même famille que le fix dates du 14/07 (`isExclusiveType` masquait le bloc description pour LINK/DIAGRAM/IMAGE/DOCUMENT)
+- Fix : gate `!isExclusiveType` retiré du seul bloc Description (l.864) ; les autres blocs gates (réactions, statut, relations, tags) non touchés, hors périmètre. Sauvegarde déjà générique. Typecheck web OK
+- Doc SPOK non consultable ni mise à jour (MCP login 401) — à faire quand le MCP sera réparé
+- Permissions : règles préfixe `PowerShell(pnpm:*)`, `PowerShell(git:*)`, `PowerShell(npx tsc/vitest:*)`, check-doc-headers ajoutées à `.claude/settings.local.json` (les 5 règles exactes de la session supprimées) — miroir des règles Bash existantes, moins de prompts
+- MEP 2026-07-15 : typecheck 5 paquets OK, TNR 506/506 (⚠️ invocation correcte = `pnpm exec vitest run` à la RACINE, pas `--filter @spok/web` qui perd la config jsdom), check-doc-headers OK — commits 13e7083 (mindmap) + c43ccdf (description) — les scénarios navigateur mindmap restent à valider par Thomas en prod
+
+### MindMap layout incrémental — spec + plan — 2026-07-15
+- Demande Thomas : tempérer la réorganisation de la MindMap après suppression/déplacement (branches qui sautent à l'autre bout de l'écran), prise en compte locale des modifications, + suggestions lisibilité espaces denses
+- Diagnostic : le chemin « suppression pure » ne se déclenche presque jamais (children.length du parent survivant change → recalcul complet) ; le reparentage efface les positions de branches ENTIÈRES (clearAffectedBranches)
+- Décidé : modèle incrémental — layout complet seulement au premier rendu + bouton Réorganiser ; tout changement structurel = ré-éventail LOCAL du/des parent(s) affecté(s) via reorganizeRef existant ; à la suppression les frères se resserrent (choix Thomas) ; racine de l'espace jamais ré-éventaillée ; relations = arêtes seules
+- Spec : `docs/superpowers/specs/2026-07-15-mindmap-incremental-layout-design.md` ; plan : `docs/superpowers/plans/2026-07-15-mindmap-incremental-layout.md` — validés par Thomas ("go")
+- IMPLÉMENTÉ (Tasks 1-4) : `mindmap-incremental.ts` (diffItems/diffRelations/initialPositionForNew, 12 tests Vitest verts) ; fabriques `buildMindmapNode`/`buildTreeEdge`/`buildRelationEdge` extraites de calculateLayout (placePortalItem non touché) ; effect structurel réécrit en 4 chemins (complet / incrémental structurel / relations seules / contenu seul) ; `clearAffectedBranches` supprimé de onNodeDragStop. Typecheck web OK
+- Ajustement vs plan : `findAnyTreeNode` (fullTree + arbres de portail) pour les badges hasChildren/childCount des items de portail
+- Vérification navigateur intégré IMPOSSIBLE : le pane ne produit aucune frame (rAF jamais déclenché) → screenshots timeout, fitView inerte, arêtes non rendues (préexistant, vérifié identique sur baseline via git stash). Les 9 scénarios du plan (Task 5) sont à faire par Thomas dans son navigateur
+- NON COMMITÉ
+- Suggestions lisibilité notées hors périmètre dans la spec (repli auto gros espaces, zoom sémantique, focus généralisé, agrégation feuilles)
+- ⚠️ MCP SPOK : login 401 (doc MindMapView non consultable) — signalé à Thomas
+
 ### Fix dates masquées ItemEditModal pour types media — 2026-07-14
 - Signalé par Thomas : dans la modale item, types Lien/Doc/Image/Diagramme, les dates (Début/Fin/Échéance) devaient être réaffichées, vides par défaut
 - Cause : `isExclusiveType` (LINK/DIAGRAM/IMAGE/DOCUMENT) masquait le bloc dates en plus du reste — contraire à l'intention du refactor ItemEditModal (base uniforme, tous champs visibles), resté non traité pour ce bloc précis
