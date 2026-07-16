@@ -110,6 +110,49 @@ describe('Communities routes', () => {
       expect(arg.data.pendingVisibility).toBe('OPEN')
     })
 
+    // Depuis la spec 2026-07-15-community-context-mode : contexte d'usage FORUM/PROJECT,
+    // null = neutre. Le mode d'interface front se dérive de ce champ.
+    it('should create a community with a context', async () => {
+      prisma.community.create.mockResolvedValue(mockCommunity({ context: 'FORUM' }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/communities',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Mon forum', description: 'Desc', context: 'FORUM' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      const arg = prisma.community.create.mock.calls[0][0]
+      expect(arg.data.context).toBe('FORUM')
+    })
+
+    it('should default context to null when omitted', async () => {
+      prisma.community.create.mockResolvedValue(mockCommunity())
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/communities',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Neutre', description: 'Desc' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      const arg = prisma.community.create.mock.calls[0][0]
+      expect(arg.data.context).toBeNull()
+    })
+
+    it('should reject an invalid context', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/communities',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Bad', description: 'Desc', context: 'WIKI' },
+      })
+
+      expect(res.statusCode).toBe(400)
+    })
+
     it('should reject missing name', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -253,6 +296,33 @@ describe('Communities routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
+    })
+
+    // Contexte d'usage : modifiable par le OWNER, null remet le neutre
+    it('should update context as OWNER and allow resetting it to null', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity({ context: 'PROJECT' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { context: 'PROJECT' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.community.update.mock.calls[0][0].data.context).toBe('PROJECT')
+
+      prisma.community.update.mockResolvedValue(mockCommunity({ context: null }))
+      const reset = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { context: null },
+      })
+
+      expect(reset.statusCode).toBe(200)
+      expect(prisma.community.update.mock.calls[1][0].data.context).toBeNull()
     })
 
     // Depuis 817927f : seul le OWNER peut modifier la communauté (plus les ADMIN)

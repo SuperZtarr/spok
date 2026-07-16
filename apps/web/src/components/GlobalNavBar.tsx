@@ -17,16 +17,9 @@ import {
 import { activityApi, authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useMenuItems } from '../hooks/useMenuItems';
-import { useInterfaceModeStore } from '../stores/interfaceMode';
+import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED } from '../stores/interfaceMode';
 import { AdminModeToggle } from './DevDbStatus';
 import type { MenuItemConfig } from '@spok/shared';
-
-const MODE_GLOBAL_EXCLUDED: Record<string, Set<string>> = {
-  forum:       new Set(['global-graph', 'global-sunburst', 'global-links', 'global-mindmap', 'dashboard', 'tasks', 'activity', 'today']),
-  projet:      new Set(['global-sunburst', 'global-mindmap', 'global-graph', 'global-links']),
-  exploration: new Set(['dashboard', 'tasks', 'activity', 'today']),
-  tous:        new Set(),
-};
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,

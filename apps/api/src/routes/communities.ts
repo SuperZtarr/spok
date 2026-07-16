@@ -21,6 +21,7 @@ const createCommunitySchema = z.object({
   description: z.string().min(1),
   isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
+  context: z.enum(['FORUM', 'PROJECT']).nullable().optional(), // contexte d'usage, null = neutre
 });
 
 const updateCommunitySchema = z.object({
@@ -28,6 +29,7 @@ const updateCommunitySchema = z.object({
   description: z.string().optional(),
   isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
+  context: z.enum(['FORUM', 'PROJECT']).nullable().optional(), // contexte d'usage, null = neutre
   coverPosition: z.number().int().min(0).max(100).optional(),
   coverPositionX: z.number().int().min(0).max(100).optional(),
   coverZoom: z.number().int().min(100).max(300).optional(),
@@ -68,6 +70,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         pendingVisibility: wantsPublic ? requestedVisibility : null,
         isPublic: false,
         pendingPublic: wantsPublic,
+        context: body.context ?? null,
         memberships: {
           create: {
             userId: request.user.userId,
@@ -358,6 +361,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         updateData.isPublic = body.isPublic;
         updateData.visibility = body.isPublic ? 'OPEN' : 'PRIVATE';
       }
+      if (body.context !== undefined) updateData.context = body.context;
       if (body.coverPosition !== undefined) updateData.coverPosition = body.coverPosition;
       if (body.coverPositionX !== undefined) updateData.coverPositionX = body.coverPositionX;
       if (body.coverZoom !== undefined) updateData.coverZoom = body.coverZoom;

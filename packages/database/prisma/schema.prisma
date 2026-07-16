@@ -125,6 +125,13 @@ enum SpaceVisibility {
   PRIVATE  // Only explicit members can access
 }
 
+// Contexte d'usage d'une communauté : dicte le mode d'interface dérivé
+// (FORUM → vues discussion, PROJECT → outillage projet, null → neutre « tous »).
+enum CommunityContext {
+  FORUM
+  PROJECT
+}
+
 enum SpaceType {
   PERSONAL
   GROUP
@@ -144,6 +151,7 @@ model Community {
   pendingPublic Boolean  @default(false)   // @deprecated — use pendingVisibility instead
   visibility         SpaceVisibility @default(PRIVATE)
   pendingVisibility  SpaceVisibility? // Requested visibility awaiting admin approval
+  context       CommunityContext?    // Contexte d'usage (FORUM/PROJECT), null = neutre « tous »
   avatarUrl     String?
   coverUrl      String?
   coverPosition  Int       @default(50)

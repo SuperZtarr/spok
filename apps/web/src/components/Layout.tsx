@@ -24,21 +24,13 @@ import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
 import { UserProfileModal } from './UserProfileModal';
-import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { GlobalNavBar } from './GlobalNavBar';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { getViewIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
-import { useInterfaceModeStore, type InterfaceMode } from '../stores/interfaceMode';
-
-const INTERFACE_MODES: { value: InterfaceMode; label: string }[] = [
-  { value: 'forum',       label: 'Forum' },
-  { value: 'projet',      label: 'Projet' },
-  { value: 'exploration', label: 'Exploration' },
-  { value: 'tous',        label: 'Tous' },
-];
+import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, type InterfaceMode } from '../stores/interfaceMode';
 import type { SpaceWithRole } from '@spok/shared';
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -300,6 +292,7 @@ export function Layout() {
   const { user, updateUser } = useAuthStore();
   const { initTheme } = useThemeStore();
   const { spaceViews, sections: menuSections, visibleItems } = useMenuItems();
+  const interfaceMode = useInterfaceModeStore(s => s.mode);
   const adminMenuItems = visibleItems.filter(item => item.section === 'admin');
   const adminMode = useAdminMode();
   const { clearIncludeChildren } = useSpaceStore();
@@ -575,6 +568,18 @@ export function Layout() {
     return communityGroups.find(g => g.community.id === currentCommunityId) || null;
   }, [currentCommunityId, communityGroups]);
 
+  // Dérivation du mode d'interface depuis le contexte de la communauté visitée
+  // (spec 2026-07-15-community-context-mode) : FORUM → forum, PROJECT → projet,
+  // hors communauté ou contexte neutre → tous. Seul écrivain du store interfaceMode.
+  useEffect(() => {
+    const derived: InterfaceMode = currentCommunity?.context === 'FORUM' ? 'forum'
+      : currentCommunity?.context === 'PROJECT' ? 'projet'
+      : 'tous';
+    if (useInterfaceModeStore.getState().mode !== derived) {
+      useInterfaceModeStore.getState().setMode(derived);
+    }
+  }, [currentCommunity]);
+
   const communityFavoriteSpaces = useMemo(() => {
     if (!currentCommunityId) return favoriteSpaces;
     return favoriteSpaces.filter(s => s.communityId === currentCommunityId);
@@ -626,7 +631,6 @@ export function Layout() {
   // Current view/function name helpers
   const { mode } = useViewModeStore();
   const { tab } = useDashboardTabStore();
-  const { mode: interfaceMode, setMode: setInterfaceMode } = useInterfaceModeStore();
 
   const getCurrentFunctionLabel = () => {
     const path = location.pathname;
@@ -768,7 +772,9 @@ export function Layout() {
           {menuSections
             .filter(s => !['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id))
             .flatMap(section => section.items.filter(
+              // Même filtrage par mode que le bandeau desktop (MODE_GLOBAL_EXCLUDED partagé)
               item => item.key !== 'logout' && item.key !== 'profile' && (item.route || item.viewMode)
+                && !MODE_GLOBAL_EXCLUDED[interfaceMode].has(item.key)
             ))
             .map(item => {
               const Icon = getNavIcon(item.icon);
@@ -1169,10 +1175,24 @@ export function Layout() {
               </>
             )}
             <div className="min-w-0">
-              <h2
-                className="text-sm md:text-base font-semibold text-foreground truncate"
-                title={currentSpace?.description || undefined}
-              >{getPageTitle()}</h2>
+              <div className="flex items-center gap-2 min-w-0">
+                <h2
+                  className="text-sm md:text-base font-semibold text-foreground truncate"
+                  title={currentSpace?.description || undefined}
+                >{getPageTitle()}</h2>
+                {/* Badge du contexte de communauté : seul indicateur du mode d'interface
+                    dérivé depuis la suppression du sélecteur (décision 2026-07-15) */}
+                {currentCommunity?.context && (
+                  <span
+                    className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border bg-accent text-muted-foreground"
+                    title={currentCommunity.context === 'FORUM'
+                      ? 'Communauté en contexte Forum : interface axée sujets et discussions'
+                      : 'Communauté en contexte Projet : interface de pilotage complète'}
+                  >
+                    {currentCommunity.context === 'FORUM' ? 'Forum' : 'Projet'}
+                  </span>
+                )}
+              </div>
               {currentSpace && (
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   {currentSpace.community && (
@@ -1216,23 +1236,10 @@ export function Layout() {
                 <span className="hidden sm:inline">Nouvel item</span>
               </button>
             )}
-            {/* Sélecteur de mode d'interface */}
-            <div className="hidden sm:flex items-center gap-0.5 rounded-md border border-border p-0.5 flex-shrink-0">
-              {INTERFACE_MODES.map(m => (
-                <button
-                  key={m.value}
-                  onClick={() => setInterfaceMode(m.value)}
-                  className={`h-6 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
-                    interfaceMode === m.value
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <div id="header-global-search" className="hidden sm:block"><GlobalSearch /></div>
+            {/* Sélecteur de mode retiré (décision 2026-07-15) : le mode d'interface est dérivé
+                du contexte de la communauté visitée (Community.context), plus une bascule utilisateur.
+                Champ de recherche global également retiré : la page /search (bouton Recherche
+                du bandeau) est l'unique point d'entrée, avec ses filtres. */}
             {user ? (
               <>
                 <NotificationBell />

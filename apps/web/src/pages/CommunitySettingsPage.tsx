@@ -255,6 +255,8 @@ export function CommunitySettingsPage() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editVisibility, setEditVisibility] = useState<string>('PRIVATE');
+  // Contexte d'usage (spec 2026-07-15-community-context-mode) : 'NONE' = neutre (null en base)
+  const [editContext, setEditContext] = useState<'NONE' | 'FORUM' | 'PROJECT'>('NONE');
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
@@ -294,6 +296,7 @@ export function CommunitySettingsPage() {
       setEditName(community.name);
       setEditDescription(community.description || '');
       setEditVisibility((community as any).visibility || (community.isPublic ? 'OPEN' : 'PRIVATE'));
+      setEditContext(community.context || 'NONE');
     }
   }, [community]);
 
@@ -368,7 +371,7 @@ export function CommunitySettingsPage() {
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean }) =>
+    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean; visibility?: string; context?: 'FORUM' | 'PROJECT' | null }) =>
       communitiesApi.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
@@ -489,15 +492,19 @@ export function CommunitySettingsPage() {
   const hasInfoChanges = community && (
     editName !== community.name ||
     editDescription !== (community.description || '') ||
-    editVisibility !== ((community as any)?.visibility || (community.isPublic ? 'OPEN' : 'PRIVATE'))
+    editVisibility !== ((community as any)?.visibility || (community.isPublic ? 'OPEN' : 'PRIVATE')) ||
+    editContext !== (community.context || 'NONE')
   );
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string; visibility?: string } = {};
+    const updates: { name?: string; description?: string; visibility?: string; context?: 'FORUM' | 'PROJECT' | null } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
     const currentVisibility = (community as any)?.visibility || (community?.isPublic ? 'OPEN' : 'PRIVATE');
     if (editVisibility !== currentVisibility && community?.role === 'OWNER') updates.visibility = editVisibility;
+    if (editContext !== (community?.context || 'NONE') && community?.role === 'OWNER') {
+      updates.context = editContext === 'NONE' ? null : editContext;
+    }
     if (Object.keys(updates).length > 0) {
       updateCommunityMutation.mutate(updates);
     }
@@ -632,6 +639,33 @@ export function CommunitySettingsPage() {
                       </div>
                     </div>
                   )}
+                  {community?.role === 'OWNER' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Contexte</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { value: 'NONE', label: 'Neutre', description: 'Toutes les vues et tous les champs disponibles' },
+                          { value: 'FORUM', label: 'Forum', description: 'Sujets et discussions — vues et champs axés échange' },
+                          { value: 'PROJECT', label: 'Projet', description: 'Sous-projets et pilotage — tout l\'outillage projet' },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setEditContext(opt.value)}
+                            className={`text-left p-3 rounded-lg border-2 transition-colors ${
+                              editContext === opt.value
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-muted-foreground/50'
+                            }`}
+                          >
+                            <div className="font-medium text-sm">{opt.label}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{opt.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Le contexte adapte automatiquement l'interface (vues, champs) pour tous les visiteurs de la communauté.</p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                     <div>Rôle : <span className="font-medium text-foreground">
                       {community.role === 'OWNER' ? 'Propriétaire' : 'Membre'}
@@ -664,6 +698,9 @@ export function CommunitySettingsPage() {
                   <div><span className="text-muted-foreground">Espaces:</span> <span className="font-medium">{communitySpaces.length}</span></div>
                   <div><span className="text-muted-foreground">Visibilité:</span> <span className={`font-medium ${(community as any).visibility !== 'PRIVATE' ? 'text-green-600' : ''}`}>
                     {(community as any).visibility === 'OPEN' ? 'Ouverte' : (community as any).visibility === 'READONLY' ? 'Lecture seule' : 'Privée'}
+                  </span></div>
+                  <div><span className="text-muted-foreground">Contexte:</span> <span className="font-medium">
+                    {community.context === 'FORUM' ? 'Forum' : community.context === 'PROJECT' ? 'Projet' : 'Neutre'}
                   </span></div>
                 </div>
               )}

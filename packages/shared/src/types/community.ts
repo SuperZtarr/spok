@@ -1,10 +1,14 @@
 /* Types communauté : Community, memberships, rôles, visibilité, admin. */
 export type CommunityRole = 'OWNER' | 'MEMBER';
 
+/** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »). */
+export type CommunityContext = 'FORUM' | 'PROJECT';
+
 export interface Community {
   id: string;
   name: string;
   description?: string;
+  context?: CommunityContext | null;
   isPublic: boolean;
   pendingPublic: boolean;
   avatarUrl?: string | null;
@@ -44,12 +48,14 @@ export interface CreateCommunityInput {
   name: string;
   description?: string;
   isPublic?: boolean;
+  context?: CommunityContext | null;
 }
 
 export interface UpdateCommunityInput {
   name?: string;
   description?: string;
   isPublic?: boolean;
+  context?: CommunityContext | null;
 }
 
 export interface InviteCommunityMemberInput {
