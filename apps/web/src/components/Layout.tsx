@@ -1049,9 +1049,14 @@ export function Layout() {
     </>
   ) : visitorSidebarContent;
 
-  // Hide sidebar on auth/public pages and landing page (non-authenticated)
-  const noSidebarRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/invitation', '/sitemap', '/contact'];
-  const isAuthPage = noSidebarRoutes.includes(location.pathname) || (!user && location.pathname === '/');
+  // Flux d'authentification : toujours sans chrome (login, inscription...), qu'on soit connecté ou non.
+  const authFlowRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/invitation'];
+  // Pages aussi accessibles aux visiteurs anonymes : sans chrome pour eux, mais chrome complet
+  // (sidebar + bandeau) une fois connecté — sinon un utilisateur qui clique "Contact"/"Plan du site"
+  // depuis le bandeau se retrouve bloqué sans nav pour en repartir (régression constatée 2026-07-15).
+  const publicStandaloneRoutes = ['/sitemap', '/contact'];
+  const isAuthPage = authFlowRoutes.includes(location.pathname)
+    || (!user && (location.pathname === '/' || publicStandaloneRoutes.includes(location.pathname)));
 
   return (
     <div className="h-screen flex overflow-hidden relative">
