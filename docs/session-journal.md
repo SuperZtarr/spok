@@ -6,6 +6,21 @@
 
 ## EN COURS
 
+### Contexte de communauté (Forum/Projet) — IMPLÉMENTÉ — 2026-07-15
+- Décision Thomas : le mode d'interface devient une propriété de la COMMUNAUTÉ (forum = sujets/discussions, projet = sous-projets/pilotage), dérivé automatiquement ; hors communauté = « tous » ; Exploration à déterminer plus tard (hors périmètre)
+- Spec : `docs/superpowers/specs/2026-07-15-community-context-mode-design.md`
+- Fait : enum Prisma `CommunityContext` + `Community.context` (nullable, db:push OK) ; types partagés + inputs ; zod create/update + handlers API ; store `interfaceMode` devenu dérivé (plus de localStorage, défaut 'tous', seul écrivain = Layout) ; effect de dérivation dans Layout (currentCommunity.context) ; sélecteur 4 boutons du header SUPPRIMÉ ; sélecteur « Contexte » (Neutre/Forum/Projet) dans CommunitySettingsPage (OWNER)
+- Écart spec assumé : pas de choix à la création (la création redirige déjà vers la page réglages où vit le sélecteur)
+- Tests : +4 tests communities (context create/défaut null/invalide/patch+reset) → 42/42 ; typecheck web+api OK
+- Vérifié en réel (DOM, navigateur intégré toujours sans frames) : header sans boutons de mode ni champ recherche ; bandeau complet en 'tous' hors communauté ; communauté passée en FORUM (SQL dev) → bandeau filtré (plus de Sunburst/Carte mentale/Graphe/Liens/Ma journée/Dashboard/Tâches/Activité) et sélecteur de vues d'espace réduit à Discussions/Récents/Texte (Kanban/Gantt absents) ; donnée de test remise à NULL après vérif
+- Compléments (demande « y a pas des choses à ajouter ? ») : badge Forum/Projet à côté du titre dans le header (avec tooltip explicatif) + contexte affiché dans le bloc lecture seule des réglages ; nav mobile alignée sur le bandeau (`MODE_GLOBAL_EXCLUDED` déplacé dans le store interfaceMode, importé par GlobalNavBar ET Layout — fin de la divergence desktop/mobile) ; TODO étapes 3-5 recadrées (affiner FORUM/PROJECT, Exploration = loupe). Vérifié en réel : badge présent avec tooltip, grille mobile filtrée en FORUM (6 items au lieu de ~14), donnée de test remise à NULL. Typecheck web OK
+- MEP 2026-07-15 : typecheck 5 paquets OK, TNR 510/510 (1re passe : crash d'un worker vitest sans échec de test, relance propre OK), commit d44ca99 (contexte communauté + retrait champ recherche header — Layout.tsx partagé entre les deux, séparation impossible au fichier). Prod : le schéma s'applique au démarrage du conteneur (start-api.sh → prisma db push)
+
+### Revue ergonomique interface — arbitrages Thomas — 2026-07-15
+- Revue générale (menus, sidebar) livrée : 6 propositions. Arbitrages reçus : point 2 inversé — c'est le CHAMP de recherche du header qui saute, le bouton Recherche du bandeau (page /search + filtres) devient l'unique entrée → FAIT (Layout.tsx, import GlobalSearch retiré, composant conservé pour SitemapPage ; champ était hidden sm:block donc mobile inchangé). Typecheck web OK, NON COMMITÉ
+- Point 3 (sélecteur de vues) : en discussion — modes = filtre grossier (seul Forum restreint réellement, MODE_ALLOWED null en Projet/Exploration), épinglage par espace recommandé, question posée à Thomas (épinglage / affinage modes / les deux)
+- Points 1 (dégraisser bandeau), 4 (header compact au scroll), 5 (filtre+favoris sidebar), 6 (modes compacts) : en attente d'arbitrage
+
 ### Description visible pour tous les types + allowlist permissions — 2026-07-15
 - Demande Thomas : dans ItemEditModal, afficher la description quel que soit le type — même famille que le fix dates du 14/07 (`isExclusiveType` masquait le bloc description pour LINK/DIAGRAM/IMAGE/DOCUMENT)
 - Fix : gate `!isExclusiveType` retiré du seul bloc Description (l.864) ; les autres blocs gates (réactions, statut, relations, tags) non touchés, hors périmètre. Sauvegarde déjà générique. Typecheck web OK

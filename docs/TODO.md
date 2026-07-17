@@ -8,9 +8,12 @@
 
 - [x] **Étape 1 — Refactor ItemEditModal** : supprimer toutes les conditions d'affichage par type d'item (`if item.type === X`), repartir d'une base uniforme tous champs visibles — 2026-06-14
 - [x] **Étape 2 — Implémenter le système de modes** : sélecteur global dans la navigation, stockage localStorage, store Zustand, filtres vues (SpaceToolbar + GlobalNavBar) et champs (ItemEditModal) — 2026-06-14
-- [ ] **Étape 3 — Mode Forum** : affiner spec vues/champs
-- [ ] **Étape 4 — Mode Projet** : affiner spec vues/champs
-- [ ] **Étape 5 — Mode Exploration** : tout exposé, à affiner
+> Recadrage 2026-07-15 : le mode n'est plus une bascule utilisateur — il est dérivé du champ `Community.context` (FORUM/PROJECT, null = neutre « tous »), choisi par le propriétaire dans les réglages de la communauté. Sélecteur 4 boutons du header supprimé.
+
+- [x] **Contexte de communauté** : champ `Community.context` + dérivation automatique du mode (Layout), sélecteur Contexte dans les réglages (OWNER), badge Forum/Projet dans le header, filtrage de la nav mobile aligné sur le bandeau desktop (`MODE_GLOBAL_EXCLUDED` partagé via le store) — 2026-07-15 (d44ca99)
+- [ ] **Étape 3 — Affiner le contexte FORUM** : vues/champs autorisés (aujourd'hui : thread/recent/text + exclusions bandeau)
+- [ ] **Étape 4 — Affiner le contexte PROJECT** : aujourd'hui aucune restriction (MODE_ALLOWED null) — définir ce qui est réellement utile en pilotage
+- [ ] **Étape 5 — Exploration** : à repenser en « loupe » utilisateur activable partout (pas un contexte de contenu), spec à faire
 
 ### Tests / qualité
 - [x] BUG filtres échéances (GlobalTaskFilterBar) : corrigé — 2026-07-12
