@@ -6,6 +6,14 @@
 
 ## EN COURS
 
+### Fix /contact et /sitemap sans menus pour utilisateur connecté — 2026-07-15
+- Signalé par Thomas : "/contact est moisie, il n'y a pas les menus"
+- Cause : `noSidebarRoutes` de Layout.tsx traitait `/contact` (et `/sitemap`, même défaut, non signalé mais identique) comme les pages d'auth (login/register...) — masquait sidebar ET bandeau MÊME utilisateur connecté. Un utilisateur qui clique "Contact"/"Plan du site" depuis le bandeau se retrouvait bloqué sans nav pour repartir
+- Fix : séparation `authFlowRoutes` (toujours sans chrome) vs `publicStandaloneRoutes` = `/sitemap`+`/contact` (sans chrome seulement si NON connecté ; chrome complet si connecté)
+- Vérifié en réel (navigateur intégré, 4 scénarios) : /contact connecté → sidebar+bandeau présents (régression corrigée) ; /contact anonyme → inchangé (formulaire seul, Connexion/Inscription) ; /sitemap connecté → sidebar+bandeau présents ; /sitemap anonyme → inchangé
+- Typecheck web OK, check-doc-headers OK, typecheck 5 paquets OK
+- MEP 2026-07-15 : commit e8230cf (2 tentatives ratées avant : message copié par erreur d'un commit précédent — annulées via `git reset --soft` avant push, aucune perte)
+
 ### Contexte de communauté (Forum/Projet) — IMPLÉMENTÉ — 2026-07-15
 - Décision Thomas : le mode d'interface devient une propriété de la COMMUNAUTÉ (forum = sujets/discussions, projet = sous-projets/pilotage), dérivé automatiquement ; hors communauté = « tous » ; Exploration à déterminer plus tard (hors périmètre)
 - Spec : `docs/superpowers/specs/2026-07-15-community-context-mode-design.md`
