@@ -185,7 +185,9 @@ export function TodayPage() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement…</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-6">
+          /* Grille = toute la largeur disponible ; liste du jour = colonne fixe compacte
+             (retour Thomas 2026-07-18 : liste trop large, colonnes d'agenda trop étroites). */
+          <div className="grid grid-cols-1 md:[grid-template-columns:minmax(0,1fr)_minmax(300px,380px)] gap-6">
             <div className="min-w-0">
               {(data?.feedErrors?.length ?? 0) > 0 && (
                 <p className="mb-2 inline-flex items-center gap-1 text-xs text-amber-600">

@@ -196,17 +196,20 @@ export function DayTimeGrid({ date, sources, events, entries, onMove, onResize, 
   ));
 
   return (
-    <div className="flex flex-col text-sm select-none">
+    // overflow-x-auto englobe en-têtes ET corps : ils défilent ensemble. Chaque colonne a une
+    // largeur minimale lisible (LANE_MIN) — au-delà de la place disponible, la grille défile
+    // horizontalement au lieu d'écraser les colonnes (retour Thomas 2026-07-18 sur 8 colonnes).
+    <div className="flex flex-col text-sm select-none overflow-x-auto">
       {/* en-têtes de colonnes : une par source visible + Tâches */}
       <div className="flex mb-1">
         <div className="w-12 flex-shrink-0" />
         {sources.map((s) => (
-          <div key={s.key} className="flex-1 min-w-0 flex items-center gap-1 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1" title={s.name}>
+          <div key={s.key} className="flex-1 min-w-[110px] flex items-center gap-1 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1" title={s.name}>
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color ?? 'var(--muted-foreground)' }} />
             <span className="truncate">{s.name}</span>
           </div>
         ))}
-        <div className="flex-1 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">Tâches</div>
+        <div className="flex-1 min-w-[110px] text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">Tâches</div>
       </div>
       <div className="flex">
         {/* étiquettes heures */}
@@ -231,7 +234,7 @@ export function DayTimeGrid({ date, sources, events, entries, onMove, onResize, 
             const laneBlocks = blocksBySource.get(s.key) ?? [];
             const laneCols = layoutColumns(laneBlocks);
             return (
-              <div key={s.key} className="relative flex-1 min-w-0 border-l border-border" style={{ height: GRID_MIN * PX_PER_MIN }}>
+              <div key={s.key} className="relative flex-1 min-w-[110px] border-l border-border" style={{ height: GRID_MIN * PX_PER_MIN }}>
                 {hourLines}
                 {laneBlocks.map((b) => (
                   <div
@@ -254,7 +257,7 @@ export function DayTimeGrid({ date, sources, events, entries, onMove, onResize, 
           {/* colonne Tâches (drag interne + cible de drop) */}
           <div
             ref={taskLaneRef}
-            className="relative flex-1 border-l border-border"
+            className="relative flex-1 min-w-[110px] border-l border-border"
             style={{ height: GRID_MIN * PX_PER_MIN }}
             onDragOver={(e) => { e.preventDefault(); setHoverMin(dropMinFromEvent(e)); }}
             onDragLeave={() => setHoverMin(null)}
