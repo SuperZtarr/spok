@@ -6,6 +6,16 @@
 
 ## EN COURS
 
+### /today — colonnes par agenda (chantier 0) — IMPLÉMENTÉ — 2026-07-18
+- Contexte : réflexion de fond avec Thomas sur la surcharge multi-contextes → 4 chantiers proposés (0: colonnes par agenda ; 1: horizons+revue ; 2: fenêtres de faisabilité ; 3: placement contraint). Chantier 0 validé et fait, spec `docs/superpowers/specs/2026-07-18-today-columns-per-agenda-design.md` (commit bd0bd49)
+- `DayTimeGrid.tsx` : colonne Agenda unique → une lane par source (`AgendaSourceCol`, clé `feed:<id>`/`spok` via `agendaSourceKey`), chacune avec son propre layout de chevauchements ; en-têtes avec pastille couleur ; ligne « maintenant » traverse tout ; colonne Tâches inchangée
+- `TodayPage.tsx` : pastilles de visibilité au-dessus de la grille (toutes sources, couleur du feed, SPOK en dernier), état `spok-today-visible-sources` en localStorage (clé absente = visible), indépendant du `enabled` des feeds ; meta des blocs feed retiré (redondant avec l'en-tête), conservé pour SPOK (nom d'espace)
+- Vérifié en réel (navigateur intégré, DOM, 2 feeds factices) : colonnes Hotmail/TestA/TestB/SPOK/Tâches rendues, clic pastille → colonne retirée + localStorage écrit, persistance après rechargement OK, feeds de test supprimés et localStorage nettoyé
+- Typecheck web OK, check-doc-headers OK
+- Menu contextuel /today enrichi (demande Thomas « pourquoi limité ») : cause = seuls 4 callbacks câblés (les actions à contexte d'espace jamais branchées sur cette page multi-espaces). Ajouté : M'assigner (assignedToId = user courant) + Modifier le statut (sous-menu, référentiels PAR DÉFAUT — même compromis que /tasks, statuts personnalisés d'espace non chargés). Resté hors périmètre : Déplacer/Dupliquer/Fusionner/Ajouter un enfant/Convertir (modales de sélection d'espace de SpacePage à extraire — le signaler si demandé). Typecheck OK
+- MEP 2026-07-18 : TNR 510/510 + typecheck 5 paquets verts, commit 093631b (colonnes + menu, TodayPage partagé). ⚠️ Incident évité : TODO.md corrompu par un remplacement Get-Content/Set-Content (mojibake UTF-8→1252) — restauré via git checkout puis ré-édité avec l'outil Edit ; ne JAMAIS modifier un fichier via Get-Content/Set-Content
+- Chantiers 1-3 (horizons+revue, fenêtres de faisabilité, placement contraint) : en attente d'arbitrage de Thomas sur l'ordre — synthèse complète faite dans la conversation
+
 ### Fix /contact et /sitemap sans menus pour utilisateur connecté — 2026-07-15
 - Signalé par Thomas : "/contact est moisie, il n'y a pas les menus"
 - Cause : `noSidebarRoutes` de Layout.tsx traitait `/contact` (et `/sitemap`, même défaut, non signalé mais identique) comme les pages d'auth (login/register...) — masquait sidebar ET bandeau MÊME utilisateur connecté. Un utilisateur qui clique "Contact"/"Plan du site" depuis le bandeau se retrouvait bloqué sans nav pour repartir

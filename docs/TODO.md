@@ -34,6 +34,9 @@
 - [x] ItemEditModal : dates (Début/Fin/Échéance) réaffichées pour les types Lien/Doc/Image/Diagramme (masquées à tort par `isExclusiveType`) — vides par défaut, rien ne les préremplit — 2026-07-14
 - [x] ItemEditModal : description visible pour tous les types (gate `isExclusiveType` retiré du bloc Description) — 2026-07-15 (c43ccdf)
 - [x] Fix /contact et /sitemap sans sidebar/bandeau pour un utilisateur connecté (isAuthPage traitait ces pages publiques comme les pages d'auth) — 2026-07-15 (e8230cf)
+- [x] /today — colonnes par agenda : une colonne par feed ICS + colonne SPOK dédiée + Tâches unique, pastilles de visibilité persistées (localStorage) indépendantes du `enabled` des feeds — spec docs/superpowers/specs/2026-07-18 (chantier 0 de la réflexion multi-contextes ; chantiers 1-3 : horizons+revue, fenêtres de faisabilité, placement contraint — à arbitrer) — 2026-07-18 (093631b)
+- [x] /today — menu contextuel enrichi : M'assigner + Modifier le statut (référentiels par défaut, compromis /tasks) ; Déplacer/Dupliquer/Fusionner/Ajouter un enfant restent non câblés (modales d'espace à extraire de SpacePage si besoin) — 2026-07-18 (093631b)
+- [ ] Vue Gantt : ajout rapide d'une échéance via clic droit sur une barre (raccourci, pas besoin d'ouvrir la modale complète)
 - [ ] Vue Tableau croisé : export dédié (CSV ou Excel avec lignes/colonnes du tableau)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
@@ -59,6 +62,7 @@
 ### Intégrations externes
 - [x] Lecture des calendriers externes (Outlook/Hotmail) par abonnement ICS — page « Ma journée » (/today) : réunions + liste du jour persistée + time-blocking (grille 7h-20h) — 2026-07-12
 - [ ] Connexion calendrier messagerie (suite) : pousser des RDV (items MEETING) vers Outlook via Microsoft Graph API / Google Calendar API — l'ingestion est derrière l'interface CalendarSource, prête pour Graph
+- [x] Limite connue : abonnement ICS (« Publier ce calendrier ») indisponible sur comptes employeur/client de Thomas — option de publication absente d'Outlook, probable politique RSSI. Pas un bug SPOK. Comptes perso connectés en live (Hotmail, roedelthomas, Travail, domestique, divers) ; agenda « Matthias » cassé côté Microsoft (500 sur ce flux précis), contournement : export .ics → nouvel agenda → republier (manip Thomas) — 2026-07-18
 
 ### Outillage Claude
 
