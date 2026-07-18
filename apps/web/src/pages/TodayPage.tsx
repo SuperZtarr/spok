@@ -2,23 +2,27 @@
  * Page /today « Ma journée » — écran d'atterrissage du matin : grille horaire 7h-20h
  * (réunions ICS/MEETING fixes + blocs de tâches déplaçables, time-blocking) à gauche,
  * liste du jour (tâches non placées + suggestions) à droite.
- * État local uniquement (date affichée, modales) — pas de store Zustand.
+ * Colonnes d'agenda (spec 2026-07-18) : une par feed ICS + une « SPOK », visibilité
+ * choisie par pastilles au-dessus de la grille, persistée en localStorage
+ * (spok-today-visible-sources) — indépendante du `enabled` des feeds.
+ * État local uniquement (date affichée, modales, visibilité colonnes) — pas de store Zustand.
  * Le marquage « fait » passe par itemsApi.update (status done) : une seule vérité, l'item.
  * Le placement (plannedStart/plannedDuration) vit sur DayPlanEntry, jamais sur l'item.
  */
 import { useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, type Item } from '@spok/shared';
+import { useAuthStore } from '@/stores/auth';
 import { ItemEditModal } from '@/components/ItemEditModal';
 import { buildItemMenuGroups } from '@/lib/itemMenuGroups';
 import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
-import { useAgenda, useAgendaMutations, todayKey } from '@/hooks/useAgenda';
+import { useAgenda, useAgendaMutations, useCalendarFeeds, todayKey } from '@/hooks/useAgenda';
 import { useGlobalTaskFilters } from '@/hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '@/components/GlobalTaskFilterBar';
 import { itemsApi, type AgendaFilters, type DayPlanEntryDto, type DayPlanItemDto } from '@/lib/api';
 import { findFreeSlot, type BusyInterval } from '@/lib/timeblock';
-import { DayTimeGrid, type DropPayload, type EventDropPayload } from '@/components/today/DayTimeGrid';
+import { DayTimeGrid, type AgendaSourceCol, type DropPayload, type EventDropPayload } from '@/components/today/DayTimeGrid';
 import { DayPlanList } from '@/components/today/DayPlanList';
 import { CalendarFeedsModal } from '@/components/today/CalendarFeedsModal';
 import { PickTasksModal } from '@/components/today/PickTasksModal';
@@ -27,6 +31,15 @@ function shiftDate(date: string, days: number): string {
   const [y, m, d] = date.split('-').map(Number);
   const dt = new Date(y, m - 1, d + days);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+// Visibilité des colonnes d'agenda (spec 2026-07-18-today-columns-per-agenda) :
+// clé absente = visible par défaut. Indépendant du `enabled` des feeds (qui coupe la
+// récupération serveur) — ici on ne joue que sur l'affichage des colonnes.
+const VISIBLE_SOURCES_KEY = 'spok-today-visible-sources';
+
+function loadVisibleSources(): Record<string, boolean> {
+  try { return JSON.parse(localStorage.getItem(VISIBLE_SOURCES_KEY) || '{}'); } catch { return {}; }
 }
 
 export function TodayPage() {
@@ -50,6 +63,23 @@ export function TodayPage() {
   const { addToPlan, removeFromPlan, updateEntry, createFromEvent } = useAgendaMutations(date);
   const queryClient = useQueryClient();
 
+  // Colonnes d'agenda : un feed ICS = une colonne + une colonne SPOK dédiée, dans cet
+  // ordre (spec 2026-07-18). Visibilité indépendante du `enabled` des feeds.
+  const { data: feeds = [] } = useCalendarFeeds();
+  const allSources: AgendaSourceCol[] = [
+    ...feeds.map((f) => ({ key: `feed:${f.id}`, name: f.name, color: f.color })),
+    { key: 'spok', name: 'SPOK', color: 'var(--primary)' },
+  ];
+  const [visibleSources, setVisibleSources] = useState<Record<string, boolean>>(loadVisibleSources);
+  const toggleSource = (key: string) => {
+    setVisibleSources((prev) => {
+      const next = { ...prev, [key]: !(prev[key] ?? true) };
+      localStorage.setItem(VISIBLE_SOURCES_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+  const visibleSourceList = allSources.filter((s) => visibleSources[s.key] ?? true);
+
   const busy: BusyInterval[] = [
     ...(data?.events ?? []).filter((e) => !e.allDay && e.end).map((e) => ({ start: new Date(e.start), end: new Date(e.end!) })),
     ...(data?.plan ?? []).filter((p) => p.plannedStart).map((p) => ({
@@ -65,17 +95,34 @@ export function TodayPage() {
     enabled: !!editingItem,
   });
   const invalidateAgenda = () => queryClient.invalidateQueries({ queryKey: ['agenda', date] });
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  // Statuts proposés dans le menu : référentiels PAR DÉFAUT — page multi-espaces, on ne
+  // charge pas les référentiels personnalisés de chaque espace (même compromis que /tasks).
+  const statusOptions = DEFAULT_REFERENTIELS.statuses
+    .filter((s) => s.visible)
+    .sort((a, b) => a.order - b.order)
+    .map((s) => ({ id: s.id, label: s.label }));
   const menuGroupsFor = (item: DayPlanItemDto): ItemActionGroup[] =>
     buildItemMenuGroups(item.id, {
       onOpen: () => setEditingItem({ spaceId: item.spaceId, itemId: item.id }),
       onOpenInNewTab: () => window.open(`/spaces/${item.spaceId}/content?item=${item.id}`, '_blank'),
       onEdit: () => setEditingItem({ spaceId: item.spaceId, itemId: item.id }),
+      onUpdateStatus: async (_id, status) => {
+        await itemsApi.update(item.spaceId, item.id, { status });
+        invalidateAgenda();
+        queryClient.invalidateQueries({ queryKey: ['items', item.spaceId] });
+      },
+      onSelfAssign: currentUserId ? async () => {
+        await itemsApi.update(item.spaceId, item.id, { assignedToId: currentUserId });
+        invalidateAgenda();
+        queryClient.invalidateQueries({ queryKey: ['items', item.spaceId] });
+      } : undefined,
       onDelete: async () => {
         if (!window.confirm(`Supprimer « ${item.title} » ?`)) return;
         await itemsApi.delete(item.spaceId, item.id);
         invalidateAgenda();
       },
-    }, { canEdit: true, itemSpaceId: item.spaceId });
+    }, { canEdit: true, itemSpaceId: item.spaceId, statusOptions, currentStatusId: item.status ?? undefined });
 
   // Drop depuis la liste : une tâche engagée est placée, une suggestion est engagée + placée
   const handleDropAt = (payload: DropPayload, startIso: string, durationMin: number) => {
@@ -159,8 +206,34 @@ export function TodayPage() {
                   <span className="ml-auto text-xs text-muted-foreground">journée</span>
                 </div>
               ))}
+              {/* Choix des colonnes d'agenda affichées — indépendant de l'activation des
+                  feeds (icône réglages) : ici on ne joue que sur l'affichage. */}
+              <div className="flex flex-wrap gap-1 mb-2">
+                {allSources.map((s) => {
+                  const visible = visibleSources[s.key] ?? true;
+                  return (
+                    <button
+                      key={s.key}
+                      onClick={() => toggleSource(s.key)}
+                      className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-xs font-medium border transition-colors ${
+                        visible
+                          ? 'border-border bg-accent text-foreground'
+                          : 'border-border/50 text-muted-foreground/60 hover:text-muted-foreground'
+                      }`}
+                      title={visible ? `Masquer la colonne ${s.name}` : `Afficher la colonne ${s.name}`}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: s.color ?? 'var(--muted-foreground)', opacity: visible ? 1 : 0.4 }}
+                      />
+                      {s.name}
+                    </button>
+                  );
+                })}
+              </div>
               <DayTimeGrid
                 date={date}
+                sources={visibleSourceList}
                 events={data?.events ?? []}
                 entries={data?.plan ?? []}
                 onMove={(id, startIso) => updateEntry.mutate({ id, plannedStart: startIso })}

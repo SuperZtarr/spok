@@ -1,11 +1,15 @@
 /*
- * Grille horaire de la page Ma journée (time-blocking) : DEUX colonnes sur le même axe
- * — « Agenda » (réunions ICS + MEETING SPOK, lecture seule) et « Tâches » (blocs SPOK :
- * drag vertical snap 15 min, poignée basse pour la durée, ✕ pour dé-placer). La colonne
- * Tâches est aussi cible de drop HTML5 (dataTransfer JSON {kind:'entry'|'suggestion', id})
- * depuis la liste du jour. Les blocs Agenda sont eux-mêmes draggables vers la liste du jour
- * (dataTransfer JSON {kind:'event', title, start}) — DayPlanList/TodayPage gèrent le drop.
- * Ligne rouge « maintenant » sur le jour courant, rafraîchie chaque minute. Chevauchements
+ * Grille horaire de la page Ma journée (time-blocking) : une colonne PAR SOURCE d'agenda
+ * (spec 2026-07-18-today-columns-per-agenda) — un feed ICS = une colonne, plus une colonne
+ * « SPOK » (réunions MEETING créées dans l'app), toutes en lecture seule — et la colonne
+ * « Tâches » unique tout à droite (blocs SPOK : drag vertical snap 15 min, poignée basse
+ * pour la durée, ✕ pour dé-placer). Le choix des colonnes visibles appartient à TodayPage
+ * (prop `sources` : seules les sources listées sont rendues, à parts égales).
+ * La colonne Tâches est aussi cible de drop HTML5 (dataTransfer JSON
+ * {kind:'entry'|'suggestion', id}) depuis la liste du jour. Les blocs d'agenda sont
+ * eux-mêmes draggables vers la liste du jour (dataTransfer JSON {kind:'event', title,
+ * start}) — DayPlanList/TodayPage gèrent le drop. Ligne rouge « maintenant » sur le jour
+ * courant, rafraîchie chaque minute, traversant toutes les colonnes. Chevauchements
  * rendus côte à côte au sein de chaque colonne.
  */
 import { useEffect, useRef, useState } from 'react';
@@ -24,6 +28,14 @@ const DROP_DEFAULT_DUR = 30;
 
 export type DropPayload = { kind: 'entry' | 'suggestion'; id: string };
 export type EventDropPayload = { kind: 'event'; title: string; start: string };
+
+/** Colonne d'agenda affichée : `feed:<feedId>` ou `spok`. L'ordre du tableau = ordre des colonnes. */
+export interface AgendaSourceCol { key: string; name: string; color?: string }
+
+/** Clé de colonne d'un événement — doit rester alignée avec la construction des sources dans TodayPage. */
+export function agendaSourceKey(e: AgendaEvent): string {
+  return e.source.kind === 'feed' ? `feed:${e.source.feedId}` : 'spok';
+}
 
 interface Block {
   key: string;
@@ -93,8 +105,9 @@ function blockStyle(b: Block, lay: { col: number; cols: number }) {
   } as const;
 }
 
-export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace, onDropAt, menuGroupsFor }: {
+export function DayTimeGrid({ date, sources, events, entries, onMove, onResize, onUnplace, onDropAt, menuGroupsFor }: {
   date: string;
+  sources: AgendaSourceCol[];
   events: AgendaEvent[];
   entries: DayPlanEntryDto[];
   onMove: (entryId: string, startIso: string) => void;
@@ -116,16 +129,24 @@ export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace
   }, []);
   const showNowLine = date === todayKey() && nowMin >= 0 && nowMin < GRID_MIN;
 
-  const eventBlocks: Block[] = events
-    .filter((e) => !e.allDay)
-    .map((e) => ({
+  // Blocs d'événements groupés par colonne source — un événement dont la source
+  // n'est pas dans `sources` (colonne masquée) n'est simplement pas rendu.
+  const blocksBySource = new Map<string, Block[]>(sources.map((s) => [s.key, []]));
+  for (const e of events) {
+    if (e.allDay) continue;
+    const lane = blocksBySource.get(agendaSourceKey(e));
+    if (!lane) continue;
+    const b: Block = {
       key: `ev-${e.id}`, title: e.title, color: e.source.color,
-      meta: e.source.kind === 'spok' ? e.source.spaceName : e.source.name,
+      // Le nom du feed est déjà dans l'en-tête de sa colonne ; seule la colonne SPOK
+      // (multi-espaces) garde un meta : le nom de l'espace d'origine.
+      meta: e.source.kind === 'spok' ? e.source.spaceName : undefined,
       startMin: toGridMin(e.start),
       durMin: e.end ? Math.max(15, (new Date(e.end).getTime() - new Date(e.start).getTime()) / 60000) : 60,
       startIso: e.start,
-    }))
-    .filter((b) => b.startMin + b.durMin > 0 && b.startMin < GRID_MIN);
+    };
+    if (b.startMin + b.durMin > 0 && b.startMin < GRID_MIN) lane.push(b);
+  }
 
   const taskBlocks: Block[] = entries
     .filter((p) => p.plannedStart)
@@ -137,7 +158,6 @@ export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace
     }))
     .filter((b) => b.startMin + b.durMin > 0 && b.startMin < GRID_MIN);
 
-  const eventCols = layoutColumns(eventBlocks);
   const taskCols = layoutColumns(taskBlocks);
 
   const startDrag = (e: React.PointerEvent, entryId: string, mode: 'move' | 'resize', startMin: number, durMin: number) => {
@@ -177,10 +197,15 @@ export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace
 
   return (
     <div className="flex flex-col text-sm select-none">
-      {/* en-têtes de colonnes */}
+      {/* en-têtes de colonnes : une par source visible + Tâches */}
       <div className="flex mb-1">
         <div className="w-12 flex-shrink-0" />
-        <div className="flex-1 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">Agenda</div>
+        {sources.map((s) => (
+          <div key={s.key} className="flex-1 min-w-0 flex items-center gap-1 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1" title={s.name}>
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color ?? 'var(--muted-foreground)' }} />
+            <span className="truncate">{s.name}</span>
+          </div>
+        ))}
         <div className="flex-1 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">Tâches</div>
       </div>
       <div className="flex">
@@ -201,24 +226,30 @@ export function DayTimeGrid({ date, events, entries, onMove, onResize, onUnplace
             </div>
           )}
 
-          {/* colonne Agenda (lecture seule) */}
-          <div className="relative flex-1 border-l border-border" style={{ height: GRID_MIN * PX_PER_MIN }}>
-            {hourLines}
-            {eventBlocks.map((b) => (
-              <div
-                key={b.key}
-                className="absolute rounded border border-border bg-accent/60 px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing"
-                style={blockStyle(b, eventCols.get(b.key)!)}
-                draggable
-                onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'event', title: b.title, start: b.startIso! } satisfies EventDropPayload))}
-                title="Glisser vers la liste du jour pour créer une tâche"
-              >
-                <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: b.color ?? 'var(--muted-foreground)' }} />
-                <span className="text-xs font-medium">{b.title}</span>
-                {b.meta && <span className="text-xs text-muted-foreground"> · {b.meta}</span>}
+          {/* colonnes d'agenda, une par source visible (lecture seule) */}
+          {sources.map((s) => {
+            const laneBlocks = blocksBySource.get(s.key) ?? [];
+            const laneCols = layoutColumns(laneBlocks);
+            return (
+              <div key={s.key} className="relative flex-1 min-w-0 border-l border-border" style={{ height: GRID_MIN * PX_PER_MIN }}>
+                {hourLines}
+                {laneBlocks.map((b) => (
+                  <div
+                    key={b.key}
+                    className="absolute rounded border border-border bg-accent/60 px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing"
+                    style={blockStyle(b, laneCols.get(b.key)!)}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'event', title: b.title, start: b.startIso! } satisfies EventDropPayload))}
+                    title="Glisser vers la liste du jour pour créer une tâche"
+                  >
+                    <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: b.color ?? 'var(--muted-foreground)' }} />
+                    <span className="text-xs font-medium">{b.title}</span>
+                    {b.meta && <span className="text-xs text-muted-foreground"> · {b.meta}</span>}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })}
 
           {/* colonne Tâches (drag interne + cible de drop) */}
           <div
