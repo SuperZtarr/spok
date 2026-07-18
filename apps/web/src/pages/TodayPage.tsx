@@ -1,5 +1,5 @@
 /*
- * Page /today « Ma journée » — écran d'atterrissage du matin : grille horaire 7h-20h
+ * Page /today « Ma journée » — écran d'atterrissage du matin : grille horaire 7h-minuit
  * (réunions ICS/MEETING fixes + blocs de tâches déplaçables, time-blocking) à gauche,
  * liste du jour (tâches non placées + suggestions) à droite.
  * Colonnes d'agenda (spec 2026-07-18) : une par feed ICS + une « SPOK », visibilité
@@ -141,7 +141,7 @@ export function TodayPage() {
 
   const placeEntry = (entry: DayPlanEntryDto) => {
     const dayStart = new Date(`${date}T07:00:00`);
-    const dayEnd = new Date(`${date}T20:00:00`);
+    const dayEnd = new Date(`${date}T23:59:00`);
     const slot = findFreeSlot(busy, 30, new Date(), dayStart, dayEnd);
     if (!slot) return; // journée pleine — la tâche reste dans la liste
     updateEntry.mutate({ id: entry.id, plannedStart: slot.toISOString(), plannedDuration: 30 });

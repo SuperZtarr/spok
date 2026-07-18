@@ -20,7 +20,7 @@ import type { AgendaEvent, DayPlanEntryDto, DayPlanItemDto } from '@/lib/api';
 import { todayKey } from '@/hooks/useAgenda';
 
 const DAY_START_H = 7;
-const DAY_END_H = 20;
+const DAY_END_H = 24;
 const PX_PER_MIN = 1;
 const SNAP_MIN = 15;
 const GRID_MIN = (DAY_END_H - DAY_START_H) * 60;
