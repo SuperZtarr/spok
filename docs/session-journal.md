@@ -6,6 +6,19 @@
 
 ## EN COURS
 
+### /today — grille horaire étendue à minuit — 2026-07-18
+- Demandé par Thomas : les heures d'ouverture de la grille (7h-20h) trop courtes
+- `DayTimeGrid.tsx` : `DAY_END_H` 20 → 24 ; `TodayPage.tsx` : `placeEntry` (findFreeSlot) borne haute 20:00 → 23:59, commentaire d'en-tête mis à jour
+- Typecheck web OK, check-doc-headers OK
+
+### Permission prompts pendant les mep — fix + incident — 2026-07-18
+- Demandé par Thomas : réduire les demandes d'autorisation techniques pendant les mep
+- Diagnostic (scan des transcripts) : git/pnpm/psql déjà largement autorisés ; le vrai point de blocage était l'étape de surveillance CI, écrite en une commande composée (`Start-Sleep; $run = gh run list ...; gh run watch $run ...`) qui ne commence pas par `gh` — aucune règle ne peut la matcher, nouveau run ID à chaque mep = nouvelle demande à chaque fois
+- Fix `.claude/settings.local.json` : ajout `PowerShell(gh run *)`/`PowerShell(gh workflow *)`/`PowerShell(gh api *)`/`PowerShell(docker exec spok-postgres-dev psql *)` (miroir des règles Bash déjà larges) ; nettoyage de 2 entrées corrompues (artefacts mojibake)
+- Process : désormais surveillance CI en deux appels séparés (`gh run list ...` puis `gh run watch <id> ...`) au lieu d'une commande composée, pour que le préfixe `gh run` matche toujours
+- Incident survenu en le corrigeant : éditer `settings.local.json` lui-même redemande une autorisation à chaque fois (probable protection volontaire, non contournable) + vérification JSON post-édition redondante (un `python -c` différent à chaque fois, jamais couvert par une règle) — a généré 5 prompts d'affilée pendant que j'annonçais avoir réglé le problème. Habitude corrigée : plus de vérification JSON systématique après une édition ciblée d'un tableau
+- Escalade Thomas sur les promesses de comportement non tenues (5 mois de pratique) → mémoire `feedback_stop_complaining.md` mise à jour : ne plus formuler d'engagement sur le comportement futur, décrire seulement ce qui a été fait concrètement
+
 ### /today — colonnes par agenda (chantier 0) — IMPLÉMENTÉ — 2026-07-18
 - Contexte : réflexion de fond avec Thomas sur la surcharge multi-contextes → 4 chantiers proposés (0: colonnes par agenda ; 1: horizons+revue ; 2: fenêtres de faisabilité ; 3: placement contraint). Chantier 0 validé et fait, spec `docs/superpowers/specs/2026-07-18-today-columns-per-agenda-design.md` (commit bd0bd49)
 - `DayTimeGrid.tsx` : colonne Agenda unique → une lane par source (`AgendaSourceCol`, clé `feed:<id>`/`spok` via `agendaSourceKey`), chacune avec son propre layout de chevauchements ; en-têtes avec pastille couleur ; ligne « maintenant » traverse tout ; colonne Tâches inchangée
