@@ -1,6 +1,7 @@
 /* Types item : Item, ItemType, relations, inputs de création/déplacement. */
 import type { ContributionWithAuthor } from './contribution.js';
 import type { ReactionSummary } from './reaction.js';
+import type { HorizonBucket } from '../utils/horizon.js';
 
 export type ItemType = 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM';
 
@@ -17,6 +18,8 @@ export interface Item {
   dueDate?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  manualHorizon?: HorizonBucket | null;
+  horizonSetAt?: string | null;
   createdAt: string;
   updatedAt: string;
   spaceId: string;
@@ -82,6 +85,7 @@ export interface UpdateItemInput {
   dueDate?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  manualHorizon?: HorizonBucket | null;
   parentId?: string | null;
   assignedToId?: string | null;
   tagIds?: string[];

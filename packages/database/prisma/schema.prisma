@@ -132,6 +132,16 @@ enum CommunityContext {
   PROJECT
 }
 
+// Horizon temporel manuel d'un item sans échéance — dérive automatiquement de dueDate
+// quand elle existe (voir packages/shared/src/utils/horizon.ts). null = bac à trier.
+enum HorizonBucket {
+  NOW    // Maintenant
+  TODAY  // Aujourd'hui
+  WEEK   // Cette semaine
+  MONTH  // Ce mois
+  LATER  // Plus tard — horizon de repos, ne remonte jamais automatiquement en revue
+}
+
 enum SpaceType {
   PERSONAL
   GROUP
@@ -291,6 +301,8 @@ model Item {
   dueDate     DateTime?
   startDate   DateTime?
   endDate     DateTime?
+  manualHorizon HorizonBucket?
+  horizonSetAt  DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

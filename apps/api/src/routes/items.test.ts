@@ -315,6 +315,59 @@ describe('Items routes', () => {
       expect(prisma.item.update).toHaveBeenCalledOnce()
     })
 
+    it('should set horizonSetAt when manualHorizon changes', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem({ manualHorizon: null, horizonSetAt: null }))
+      prisma.item.update.mockResolvedValue(mockItem({ manualHorizon: 'WEEK' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { manualHorizon: 'WEEK' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const updateArg = prisma.item.update.mock.calls[0][0]
+      expect(updateArg.data.manualHorizon).toBe('WEEK')
+      expect(updateArg.data.horizonSetAt).toBeInstanceOf(Date)
+    })
+
+    it('should set horizonSetAt when manualHorizon is explicitly cleared to null', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem({ manualHorizon: 'WEEK', horizonSetAt: new Date('2026-01-01') }))
+      prisma.item.update.mockResolvedValue(mockItem({ manualHorizon: null }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { manualHorizon: null },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const updateArg = prisma.item.update.mock.calls[0][0]
+      expect(updateArg.data.manualHorizon).toBeNull()
+      expect(updateArg.data.horizonSetAt).toBeInstanceOf(Date)
+    })
+
+    it('should not touch horizonSetAt when manualHorizon is not in the payload', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem())
+      prisma.item.update.mockResolvedValue(mockItem({ title: 'Updated' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { title: 'Updated' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const updateArg = prisma.item.update.mock.calls[0][0]
+      expect(updateArg.data.horizonSetAt).toBeUndefined()
+    })
+
     it('should update tags (delete old + create new)', async () => {
       allowSpaceAccess()
       prisma.item.findFirst.mockResolvedValue(mockItem())

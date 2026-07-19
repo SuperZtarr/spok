@@ -50,6 +50,7 @@ import type {
   Notification,
   NotificationPreferences,
   Invitation,
+  HorizonBucket,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -446,6 +447,8 @@ export interface GlobalTask {
   dueDate: string | null;
   startDate: string | null;
   endDate: string | null;
+  manualHorizon: HorizonBucket | null;
+  horizonSetAt: string | null;
   createdAt: string;
   updatedAt: string;
   spaceId: string;
@@ -555,6 +558,21 @@ export const agendaApi = {
     fetchApi<DayPlanEntryDto>(`/user/day-plan/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   createFromEvent: (data: { date: string; title: string; dueDate?: string }) =>
     fetchApi<DayPlanEntryDto>('/user/day-plan/from-event', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+/*
+ * File d'attente de revue (horizons temporels) : items sans horizon manuel (toTriage)
+ * et items en retard de revue (overdue). Consommé par la vue de revue de rattrapage.
+ */
+export interface ReviewQueueItem {
+  id: string; title: string; type: string; status: string | null; priority: number | null;
+  manualHorizon: HorizonBucket | null; horizonSetAt: string | null; createdAt: string;
+  spaceId: string; space: { id: string; name: string };
+}
+export interface ReviewQueueResponse { toTriage: ReviewQueueItem[]; overdue: ReviewQueueItem[] }
+
+export const reviewQueueApi = {
+  get: () => fetchApi<ReviewQueueResponse>('/user/review-queue'),
 };
 
 // Spaces

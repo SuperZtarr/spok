@@ -246,6 +246,8 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
           dueDate: true,
           startDate: true,
           endDate: true,
+          manualHorizon: true,
+          horizonSetAt: true,
           createdAt: true,
           updatedAt: true,
           spaceId: true,

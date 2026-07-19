@@ -1,4 +1,4 @@
-/* Tâches globales (/tasks) : tableau paginé multi-espaces sur /user/tasks, filtres et tri par colonne. */
+/* Tâches globales (/tasks) : tableau multi-espaces sur /user/tasks, regroupé par horizon temporel (Maintenant/Aujourd'hui/Semaine/Mois/Plus tard/À trier), filtres et tri par colonne. */
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -7,19 +7,17 @@ import {
   ArrowDown,
   FolderKanban,
   CheckSquare,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
 } from 'lucide-react';
 import { userTasksApi, itemsApi } from '../lib/api';
 import type { GlobalTask, GlobalTaskFilters } from '../lib/api';
 import type { Item } from '@spok/shared';
-import { Button } from '../components/ui/Button';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { TYPE_LABELS } from '../constants/ui';
-import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
+import { buildStatusColorMap, buildStatusLabelMap, effectiveHorizon, HORIZON_LABELS, HORIZON_ORDER } from '@spok/shared';
 import { useGlobalTaskFilters, type GlobalTaskFilterState } from '../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../components/GlobalTaskFilterBar';
+import { HorizonGroup } from '../components/HorizonGroup';
 
 const STATUS_COLOR_MAP = buildStatusColorMap();
 const STATUS_LABEL_MAP = buildStatusLabelMap();
@@ -64,7 +62,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const internalFilters = useGlobalTaskFilters({ defaultMyTasks: true });
+  const internalFilters = useGlobalTaskFilters({ defaultMyTasks: true, pageSize: 2000 });
   const filters = externalFilters || internalFilters;
   const embedded = !!externalFilters;
 
@@ -89,7 +87,16 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
 
   const tasks = tasksData?.data || [];
   const total = tasksData?.total || 0;
-  const totalPages = tasksData?.totalPages || 0;
+
+  const horizonGroups = HORIZON_ORDER.map((h) => ({
+    horizon: h,
+    label: HORIZON_LABELS[h],
+    items: tasks.filter((t: GlobalTask) => effectiveHorizon(t) === h),
+  })).concat([{
+    horizon: null as never,
+    label: 'À trier',
+    items: tasks.filter((t: GlobalTask) => effectiveHorizon(t) === null),
+  }]);
 
   const SortHeader = ({
     label,
@@ -112,6 +119,95 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
           <ArrowDown className="w-3 h-3" />
         ))}
     </button>
+  );
+
+  const renderDesktopRow = (task: GlobalTask) => (
+    <div
+      className="grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-3 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
+      onClick={() =>
+        setEditingTask({ itemId: task.id, spaceId: task.spaceId })
+      }
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        {(filters.selectedTypes.length !== 1) && (
+          <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+            typeOptions.find((t) => t.id === task.type)?.color || 'bg-gray-100 text-gray-600'
+          }`}>
+            {TYPE_LABELS[task.type] || task.type}
+          </span>
+        )}
+        <span className="truncate font-medium text-sm">
+          {task.title}
+        </span>
+        {task.parent && (
+          <span className="text-xs text-muted-foreground truncate flex-shrink-0">
+            ← {task.parent.title}
+          </span>
+        )}
+      </div>
+      <div>
+        <button
+          className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-full"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/spaces/${task.spaceId}`);
+          }}
+          title={task.spaceName}
+        >
+          <FolderKanban className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">{task.spaceName}</span>
+        </button>
+      </div>
+      <div>
+        {task.status ? (
+          <span
+            className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+              STATUS_COLOR_MAP[task.status] || 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {STATUS_LABEL_MAP[task.status] || task.status}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/50">-</span>
+        )}
+      </div>
+      <div>
+        {task.priority ? (
+          <span
+            className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+              PRIORITY_LABELS[task.priority]?.color ||
+              'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {PRIORITY_LABELS[task.priority]?.label || `P${task.priority}`}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/50">-</span>
+        )}
+      </div>
+      <div>
+        {task.dueDate ? (
+          <span
+            className={`inline-flex items-center gap-1 text-xs ${
+              isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
+                ? 'text-red-600 font-medium'
+                : 'text-muted-foreground'
+            }`}
+          >
+            {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
+              <AlertCircle className="w-3 h-3" />
+            )}
+            {formatDate(task.dueDate)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/50">-</span>
+        )}
+      </div>
+      <div className="text-xs text-muted-foreground">
+        {formatDate(task.createdAt)}
+      </div>
+    </div>
   );
 
   return (
@@ -183,94 +279,8 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
           <>
             {/* Desktop table rows */}
             <div className="hidden md:block">
-              {tasks.map((task: GlobalTask) => (
-                <div
-                  key={task.id}
-                  className="grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-3 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() =>
-                    setEditingTask({ itemId: task.id, spaceId: task.spaceId })
-                  }
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    {(filters.selectedTypes.length !== 1) && (
-                      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                        typeOptions.find((t) => t.id === task.type)?.color || 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {TYPE_LABELS[task.type] || task.type}
-                      </span>
-                    )}
-                    <span className="truncate font-medium text-sm">
-                      {task.title}
-                    </span>
-                    {task.parent && (
-                      <span className="text-xs text-muted-foreground truncate flex-shrink-0">
-                        ← {task.parent.title}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <button
-                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors truncate max-w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/spaces/${task.spaceId}`);
-                      }}
-                      title={task.spaceName}
-                    >
-                      <FolderKanban className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{task.spaceName}</span>
-                    </button>
-                  </div>
-                  <div>
-                    {task.status ? (
-                      <span
-                        className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                          STATUS_COLOR_MAP[task.status] || 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {STATUS_LABEL_MAP[task.status] || task.status}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/50">-</span>
-                    )}
-                  </div>
-                  <div>
-                    {task.priority ? (
-                      <span
-                        className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                          PRIORITY_LABELS[task.priority]?.color ||
-                          'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {PRIORITY_LABELS[task.priority]?.label || `P${task.priority}`}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/50">-</span>
-                    )}
-                  </div>
-                  <div>
-                    {task.dueDate ? (
-                      <span
-                        className={`inline-flex items-center gap-1 text-xs ${
-                          isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
-                            ? 'text-red-600 font-medium'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
-                          <AlertCircle className="w-3 h-3" />
-                        )}
-                        {formatDate(task.dueDate)}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/50">-</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatDate(task.createdAt)}
-                  </div>
-                </div>
+              {horizonGroups.map((g) => (
+                <HorizonGroup key={g.label} title={g.label} items={g.items} renderItem={renderDesktopRow} getKey={(t: GlobalTask) => t.id} />
               ))}
             </div>
 
@@ -339,33 +349,6 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
           </>
         )}
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="border-t border-border px-4 sm:px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <span className="text-xs sm:text-sm text-muted-foreground">
-            {filters.page} / {totalPages}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="bordered"
-              size="sm"
-              disabled={filters.page <= 1}
-              onClick={() => filters.setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="bordered"
-              size="sm"
-              disabled={filters.page >= totalPages}
-              onClick={() => filters.setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Edit modal */}
       {editingTask && (

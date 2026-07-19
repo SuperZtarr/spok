@@ -46,6 +46,7 @@ import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
 import { calendarFeedsRoutes } from './routes/calendar-feeds.js';
 import { agendaRoutes } from './routes/agenda.js';
+import { reviewQueueRoutes } from './routes/review-queue.js';
 import { dayPlanRoutes } from './routes/day-plan.js';
 import { graphRoutes } from './routes/graph.js';
 import { notificationsRoutes } from './routes/notifications.js';
@@ -301,6 +302,7 @@ async function buildApp() {
   await app.register(userTasksRoutes, { prefix: '/user' });
   await app.register(calendarFeedsRoutes, { prefix: '/user' });
   await app.register(agendaRoutes, { prefix: '/user' });
+  await app.register(reviewQueueRoutes, { prefix: '/user' });
   await app.register(dayPlanRoutes, { prefix: '/user' });
   await app.register(graphRoutes);
   await app.register(notificationsRoutes, { prefix: '/notifications' });

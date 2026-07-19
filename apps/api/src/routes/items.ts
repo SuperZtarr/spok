@@ -45,6 +45,7 @@ const updateItemSchema = z.object({
   dueDate: z.string().datetime().nullable().optional(),
   startDate: z.string().datetime().nullable().optional(),
   endDate: z.string().datetime().nullable().optional(),
+  manualHorizon: z.enum(['NOW', 'TODAY', 'WEEK', 'MONTH', 'LATER']).nullable().optional(),
   parentId: z.string().nullable().optional(),
   assignedToId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
@@ -455,6 +456,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             endDate: 'Date de fin',
             parentId: 'Parent',
             assignedToId: 'Assigné à',
+            manualHorizon: 'Horizon',
           };
 
           const conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }> = [];
@@ -512,6 +514,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         ? new Date()
         : undefined;
 
+      // Auto-set horizonSetAt à chaque changement de manualHorizon — jamais fourni par le
+      // client, c'est lui qui mesure le dépassement de grâce (isOverdueForReview), pas updatedAt.
+      const autoHorizonSetAt = updateData.manualHorizon !== undefined ? new Date() : undefined;
+
       const item = await fastify.prisma.item.update({
         where: { id: request.params.id },
         data: {
@@ -520,6 +526,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
           startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : undefined,
           endDate: updateData.endDate === null ? null : updateData.endDate ? new Date(updateData.endDate) : (autoEndDate || undefined),
+          horizonSetAt: autoHorizonSetAt,
           tags: tagIds
             ? {
                 create: tagIds.map((tagId) => ({ tagId })),

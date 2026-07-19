@@ -6,6 +6,14 @@
 
 ## EN COURS
 
+### Horizons temporels + revue de rattrapage (chantier 1) — IMPLÉMENTÉ, vérifié — 2026-07-19
+- Suite des chantiers 0-3 issus de la réflexion multi-contextes sur /today (chantier 0 fait le 2026-07-18) — chantier 1 arbitré et implémenté en 9 tâches (spec `docs/superpowers/specs/2026-07-19-horizons-revue-design.md`, plan `docs/superpowers/plans/2026-07-19-horizons-revue.md`)
+- Tasks 1-8 (implémentation, revues qualité + spec passées) : enum Prisma `HorizonBucket` + `Item.manualHorizon`/`Item.horizonSetAt` ; `packages/shared/src/utils/horizon.ts` (`effectiveHorizon`, `isOverdueForReview`, `HORIZON_LABELS`, `HORIZON_ORDER`) ; PATCH `items.ts` accepte `manualHorizon` ; `GET /user/review-queue` (`review-queue.ts`) ; select étendu `user-tasks.ts` ; `reviewQueueApi` + types dans `apps/web/src/lib/api.ts` ; composant générique `HorizonGroup.tsx` (section repliable, prop `getKey` ajoutée après revue qualité, absente du plan initial) ; `/tasks` (`GlobalTasksPage.tsx`) regroupé par horizon, pagination serveur supprimée ; section « À réviser » dans /today (`ReviewQueueSection.tsx` + `TodayPage.tsx`)
+- Task 9 (vérification globale, aucun code touché) : `pnpm exec vitest run` → 538/538 tests verts (39 fichiers, y compris `horizon.test.ts`/`review-queue.test.ts`/`items.test.ts` étendu) ; `pnpm typecheck` → 0 erreur sur les 5 paquets (web/api/mcp/shared/database) ; `node scripts/check-doc-headers.mjs` → ✅ OK (11 fichiers vérifiés)
+- Retours UI Thomas après Task 9 sur `/today` : `ReviewQueueSection` étirait la colonne "Ma liste du jour" à sa hauteur (bug CSS Grid `align-items:stretch`, page devenue "inexploitable") — sortie du grid 2 colonnes, largeur plafonnée (`max-w-xl`) et hauteur plafonnée avec scroll interne (`max-h-64`) ; grille `/today` repassée en 2 colonnes agendas (2/3) / listes (1/3), `À réviser` et `Ma liste du jour` côte à côte sur le tiers restant (retours itératifs, cf. mémoire `feedback_ui_layout_debug_approach`)
+- TODO.md et ce journal mis à jour en conséquence
+- MEP en cours (commit + push demandés par Thomas)
+
 ### /today — grille horaire étendue à minuit — 2026-07-18
 - Demandé par Thomas : les heures d'ouverture de la grille (7h-20h) trop courtes
 - `DayTimeGrid.tsx` : `DAY_END_H` 20 → 24 ; `TodayPage.tsx` : `placeEntry` (findFreeSlot) borne haute 20:00 → 23:59, commentaire d'en-tête mis à jour

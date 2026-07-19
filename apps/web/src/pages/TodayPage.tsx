@@ -8,11 +8,12 @@
  * État local uniquement (date affichée, modales, visibilité colonnes) — pas de store Zustand.
  * Le marquage « fait » passe par itemsApi.update (status done) : une seule vérité, l'item.
  * Le placement (plannedStart/plannedDuration) vit sur DayPlanEntry, jamais sur l'item.
+ * Section « À réviser » (spec 2026-07-19) : bac à trier + horizons dépassés, cf. ReviewQueueSection.
  */
 import { useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { DEFAULT_REFERENTIELS, type Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, type HorizonBucket, type Item } from '@spok/shared';
 import { useAuthStore } from '@/stores/auth';
 import { ItemEditModal } from '@/components/ItemEditModal';
 import { buildItemMenuGroups } from '@/lib/itemMenuGroups';
@@ -20,12 +21,13 @@ import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
 import { useAgenda, useAgendaMutations, useCalendarFeeds, todayKey } from '@/hooks/useAgenda';
 import { useGlobalTaskFilters } from '@/hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '@/components/GlobalTaskFilterBar';
-import { itemsApi, type AgendaFilters, type DayPlanEntryDto, type DayPlanItemDto } from '@/lib/api';
+import { itemsApi, reviewQueueApi, type AgendaFilters, type DayPlanEntryDto, type DayPlanItemDto, type ReviewQueueItem } from '@/lib/api';
 import { findFreeSlot, type BusyInterval } from '@/lib/timeblock';
 import { DayTimeGrid, type AgendaSourceCol, type DropPayload, type EventDropPayload } from '@/components/today/DayTimeGrid';
 import { DayPlanList } from '@/components/today/DayPlanList';
 import { CalendarFeedsModal } from '@/components/today/CalendarFeedsModal';
 import { PickTasksModal } from '@/components/today/PickTasksModal';
+import { ReviewQueueSection } from '@/components/today/ReviewQueueSection';
 
 function shiftDate(date: string, days: number): string {
   const [y, m, d] = date.split('-').map(Number);
@@ -87,6 +89,36 @@ export function TodayPage() {
       end: new Date(new Date(p.plannedStart!).getTime() + (p.plannedDuration ?? 30) * 60000),
     })),
   ];
+
+  // Bac à trier + horizons dépassés (spec 2026-07-19-horizons-revue-design) : la file de
+  // revue est indépendante de l'agenda du jour, invalidée séparément après chaque action.
+  const { data: reviewData } = useQuery({
+    queryKey: ['review-queue'],
+    queryFn: reviewQueueApi.get,
+  });
+  const invalidateReviewQueue = () => queryClient.invalidateQueries({ queryKey: ['review-queue'] });
+
+  const handleReviewDone = async (item: ReviewQueueItem) => {
+    await itemsApi.update(item.spaceId, item.id, { status: 'done' });
+    invalidateReviewQueue();
+  };
+  const handleReviewDismiss = async (item: ReviewQueueItem) => {
+    await itemsApi.update(item.spaceId, item.id, { status: 'cancelled' });
+    invalidateReviewQueue();
+  };
+  const handleReviewSetHorizon = async (item: ReviewQueueItem, horizon: HorizonBucket) => {
+    await itemsApi.update(item.spaceId, item.id, { manualHorizon: horizon });
+    invalidateReviewQueue();
+  };
+  const handleReviewPlanNow = async (item: ReviewQueueItem) => {
+    const dayStart = new Date(`${date}T07:00:00`);
+    const dayEnd = new Date(`${date}T23:59:00`);
+    const slot = findFreeSlot(busy, 30, new Date(), dayStart, dayEnd);
+    if (!slot) return;
+    await addToPlan.mutateAsync({ itemId: item.id, source: 'manual', plannedStart: slot.toISOString(), plannedDuration: 30 });
+    invalidateReviewQueue();
+  };
+
   // Menu contextuel des items (liste, suggestions, blocs de grille) + modale d'édition
   const [editingItem, setEditingItem] = useState<{ spaceId: string; itemId: string } | null>(null);
   const { data: spaceItemsData } = useQuery({
@@ -185,11 +217,13 @@ export function TodayPage() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement…</p>
         ) : (
-          /* Grille = toute la largeur disponible ; liste du jour = colonne fixe compacte
-             (retour Thomas 2026-07-18 : liste trop large, colonnes d'agenda trop étroites). */
-          <div className="grid grid-cols-1 md:[grid-template-columns:minmax(0,1fr)_minmax(300px,380px)] gap-6">
-            <div className="min-w-0">
-              {(data?.feedErrors?.length ?? 0) > 0 && (
+          /* Grille agendas = 2/3 de la largeur, colonne listes (À réviser + Ma liste du jour) =
+             1/3 (retour Thomas 2026-07-19). À réviser reste plafonnée en hauteur avec scroll
+             interne (cf. ReviewQueueSection) pour ne pas pousser Ma liste du jour hors champ
+             au sein de la même colonne. */
+            <div className="grid grid-cols-1 md:[grid-template-columns:minmax(0,2fr)_minmax(280px,1fr)] gap-6">
+              <div className="min-w-0">
+                {(data?.feedErrors?.length ?? 0) > 0 && (
                 <p className="mb-2 inline-flex items-center gap-1 text-xs text-amber-600">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   Calendrier(s) injoignable(s) : {data!.feedErrors.map((f) => f.name).join(', ')}
@@ -245,18 +279,32 @@ export function TodayPage() {
                 menuGroupsFor={menuGroupsFor}
               />
             </div>
-            <DayPlanList
-              plan={data?.plan ?? []}
-              suggestions={data?.suggestions ?? []}
-              onAccept={(itemId) => addToPlan.mutate({ itemId, source: 'auto' })}
-              onRemove={(entryId) => removeFromPlan.mutate(entryId)}
-              onToggleDone={toggleDone}
-              onPick={() => setPickOpen(true)}
-              onPlace={placeEntry}
-              menuGroupsFor={menuGroupsFor}
-              onDropEvent={handleDropEvent}
-            />
-          </div>
+              <div className="flex flex-row gap-3">
+                <div className="flex-1 min-w-0">
+                  <ReviewQueueSection
+                    toTriage={reviewData?.toTriage ?? []}
+                    overdue={reviewData?.overdue ?? []}
+                    onDone={handleReviewDone}
+                    onDismiss={handleReviewDismiss}
+                    onSetHorizon={handleReviewSetHorizon}
+                    onPlanNow={handleReviewPlanNow}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <DayPlanList
+                    plan={data?.plan ?? []}
+                    suggestions={data?.suggestions ?? []}
+                    onAccept={(itemId) => addToPlan.mutate({ itemId, source: 'auto' })}
+                    onRemove={(entryId) => removeFromPlan.mutate(entryId)}
+                    onToggleDone={toggleDone}
+                    onPick={() => setPickOpen(true)}
+                    onPlace={placeEntry}
+                    menuGroupsFor={menuGroupsFor}
+                    onDropEvent={handleDropEvent}
+                  />
+                </div>
+              </div>
+            </div>
         )}
       </div>
 

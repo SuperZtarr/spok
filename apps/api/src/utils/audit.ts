@@ -51,6 +51,8 @@ export function serializeItemForAudit(item: Record<string, unknown>): Record<str
     startDate: item.startDate,
     endDate: item.endDate,
     parentId: item.parentId,
+    manualHorizon: item.manualHorizon,
+    horizonSetAt: item.horizonSetAt,
     spaceId: item.spaceId,
     createdById: item.createdById,
     createdAt: item.createdAt,

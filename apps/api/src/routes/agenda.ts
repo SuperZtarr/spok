@@ -18,7 +18,7 @@ import { IcsFeedSource } from '../utils/calendar-source.js'
 
 const CLOSED_STATUSES = ['done', 'cancelled']
 
-async function accessibleSpaceIds(fastify: FastifyInstance, userId: string): Promise<string[]> {
+export async function accessibleSpaceIds(fastify: FastifyInstance, userId: string): Promise<string[]> {
   const direct = await fastify.prisma.spaceMembership.findMany({ where: { userId }, select: { spaceId: true } })
   const communities = await fastify.prisma.communityMembership.findMany({ where: { userId }, select: { communityId: true } })
   let communitySpaceIds: string[] = []

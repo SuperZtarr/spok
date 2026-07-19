@@ -279,7 +279,23 @@
       "Bash(python -c \"import json; d=json.load\\(open\\('C:/_dev/spok/.claude/settings.local.json', encoding='utf-8'\\)\\); print\\('JSON OK'\\); print\\(len\\(d['permissions']['allow']\\)\\)\")",
       "Bash(python -c \"import json; d=json.load\\(open\\('C:/_dev/spok/.claude/settings.local.json', encoding='utf-8'\\)\\); print\\('JSON OK', len\\(d['permissions']['allow']\\)\\)\")",
       "Bash(pnpm exec vitest run > /tmp/tnr_out.txt 2>&1 & *)",
-      "Bash(grep -E \"Test Files|Tests \" \"/c/Users/Admin/AppData/Local/Temp/claude/C---dev-spok/00705fe4-f084-436e-aa39-1f402fbb2cb9/tasks/b9vkinebj.output\")"
+      "Bash(grep -E \"Test Files|Tests \" \"/c/Users/Admin/AppData/Local/Temp/claude/C---dev-spok/00705fe4-f084-436e-aa39-1f402fbb2cb9/tasks/b9vkinebj.output\")",
+      "PowerShell(Get-Process | Where-Object { $_.ProcessName -match 'docker|com.docker' } | Select-Object ProcessName, Id, StartTime | Format-Table -AutoSize)",
+      "PowerShell(fsutil reparsepoint query \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Docker\\\\run\\\\dockerInference\")",
+      "PowerShell(Get-Service | Where-Object { $_.Name -match 'docker' } | Select-Object Name, Status, DisplayName)",
+      "PowerShell($settingsPath = \"$env:APPDATA\\\\Docker\\\\settings-store.json\"; if \\(-not \\(Test-Path $settingsPath\\)\\) { $settingsPath = \"$env:APPDATA\\\\Docker\\\\settings.json\" }; Test-Path $settingsPath; $settingsPath)",
+      "Read(//c/Users/Admin/AppData/Roaming/Docker/**)",
+      "PowerShell(docker version --format '{{.Server.Version}}' 2>&1)",
+      "Bash(pnpm --filter @spok/shared typecheck)",
+      "Bash(pnpm --filter @spok/shared exec tsc --noEmit)",
+      "Bash(find packages/database -iname \"*.prisma\" -o -iname \"index.d.ts\" 2>&1 | grep -v node_modules/.pnpm | head -20 *)",
+      "Bash(pnpm --filter @spok/api exec tsc --noEmit)",
+      "Bash(xargs -I{} sh -c 'echo ==={}===; cat {}')",
+      "Bash(pnpm --filter @spok/api exec vitest run src/routes/items.test.ts)",
+      "Bash(awk 'NR>=650 && NR<=730' \"docs/superpowers/plans/2026-07-19-horizons-revue.md\")",
+      "Bash(PGPASSWORD=spok psql -h localhost -p 5433 -U spok -d spok -c \"SELECT id, title, \\\\\"manualHorizon\\\\\", \\\\\"horizonSetAt\\\\\", status, \\\\\"updatedAt\\\\\" FROM \\\\\"Item\\\\\" WHERE title ILIKE '%Refonte authentification%';\")",
+      "Bash(awk 'NR==954,NR==1027' docs/superpowers/plans/2026-07-19-horizons-revue.md)",
+      "Bash(sed -n '954,1027p' docs/superpowers/plans/2026-07-19-horizons-revue.md)"
     ]
   },
   "hooks": {
