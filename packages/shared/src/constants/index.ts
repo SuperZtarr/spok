@@ -1,5 +1,6 @@
 /* Constantes partagées : types d'items, types d'espaces, types de relations, alias. */
 export const ITEM_TYPES = [
+  'UNDEFINED',
   'NOTE',
   'PROJECT',
   'TASK',

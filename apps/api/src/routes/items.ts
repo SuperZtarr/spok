@@ -19,7 +19,7 @@ import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
 
 const createItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']),
   title: z.string().default(''),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
@@ -35,7 +35,7 @@ const createItemSchema = z.object({
 });
 
 const updateItemSchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']).optional(),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
@@ -54,7 +54,7 @@ const updateItemSchema = z.object({
 });
 
 const querySchema = z.object({
-  type: z.enum(['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']).optional(),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']).optional(),
   status: z.string().optional(),
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
@@ -288,7 +288,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           ...itemData,
           dueDate: itemData.dueDate ? new Date(itemData.dueDate) : undefined,
-          startDate: itemData.startDate ? new Date(itemData.startDate) : new Date(),
+          startDate: itemData.startDate ? new Date(itemData.startDate) : undefined,
           endDate: itemData.endDate ? new Date(itemData.endDate) : undefined,
           spaceId: request.params.spaceId,
           createdById: request.user.userId,

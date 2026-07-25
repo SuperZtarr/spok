@@ -109,7 +109,7 @@ export function DeadlinesView({ embedded, filters: externalFilters }: { embedded
   const [showDone, setShowDone] = useState(false);
 
   const internalFilters = useGlobalTaskFilters({
-    defaultTypes: ['NOTE', 'TASK', 'PROJECT', 'MEETING', 'PERIOD', 'LINK', 'DOCUMENT', 'IMAGE', 'BUG'],
+    defaultTypes: ['UNDEFINED', 'NOTE', 'TASK', 'PROJECT', 'MEETING', 'PERIOD', 'LINK', 'DOCUMENT', 'IMAGE', 'BUG'],
     defaultSortBy: 'dueDate',
     defaultSortDir: 'asc',
     pageSize: 500,

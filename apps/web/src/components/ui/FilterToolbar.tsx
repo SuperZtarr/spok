@@ -80,7 +80,7 @@ export function FilterToolbar({
               </button>
               {typeOpen && (
                 <div className="absolute top-full left-0 mt-1 z-50 bg-card border rounded-lg shadow-xl py-1 min-w-[160px]">
-                  {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map(t => (
+                  {(['ALL', 'UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map(t => (
                     <button key={t} onClick={() => { onFilterChange(t); setTypeOpen(false); }}
                       className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${filter === t ? 'bg-accent font-medium' : 'text-foreground/80 hover:bg-accent'}`}>
                       {t !== 'ALL' && <span className={`w-2 h-2 rounded-full ${getTypeColor(t, referentiels?.typeLabels).bgHover}`} />}

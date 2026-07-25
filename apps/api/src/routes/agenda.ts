@@ -151,7 +151,7 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
         suggestionSpaceIds = spaceIds.filter((id) => wanted.has(id))
       }
       // Types suggérés : tous par défaut — la barre de filtre peut restreindre
-      const VALID_TYPES = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']
+      const VALID_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']
       const suggestionTypes = (typeFilter ?? '').split(',').filter((t) => VALID_TYPES.includes(t)) as ItemType[]
       const extraAnd: Record<string, unknown>[] = []
       if (statusFilter) {

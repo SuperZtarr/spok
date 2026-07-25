@@ -108,7 +108,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Type filter (supports multiple comma-separated values, defaults to TASK)
     if (typeFilter) {
-      const validTypes = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'];
+      const validTypes = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'];
       const typeList = typeFilter.split(',').filter((t) => validTypes.includes(t));
       if (typeList.length === 1) {
         where.type = typeList[0];

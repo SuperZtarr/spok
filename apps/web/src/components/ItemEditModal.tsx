@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
-import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag } from '@spok/shared';
+import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag, TypeLabelConfig } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { ConfirmModal } from './ConfirmModal';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -26,7 +26,8 @@ import { ReactionBar } from './ReactionBar';
 import { ITEM_MODAL_TOUR } from '../hooks/viewTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
-import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES } from '../constants/ui';
+import { RuleHint } from './ui/RuleHint';
+import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES, TYPE_GROUPS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
 import { useAdminMode } from './DevDbStatus';
@@ -180,7 +181,6 @@ export function ItemEditModal({
   const [status, setStatus] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
   const [type, setType] = useState<ItemType>('NOTE');
-  const isExclusiveType = type === 'DIAGRAM' || type === 'IMAGE' || type === 'DOCUMENT' || type === 'LINK';
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -317,11 +317,10 @@ export function ItemEditModal({
     }
     if (item.startDate) {
       setStartDate(toDatetimeLocal(new Date(item.startDate)));
-      setAllDay(true);
     } else {
       setStartDate('');
-      setAllDay(true);
     }
+    setAllDay(item.type !== 'MEETING');
     if (item.endDate) {
       setEndDate(toDatetimeLocal(new Date(item.endDate)));
     } else {
@@ -875,7 +874,7 @@ export function ItemEditModal({
               </div>
 
               {/* Reactions + Contributions */}
-              {!isExclusiveType && <div className="space-y-3" data-tour="item-reactions">
+              <div className="space-y-3" data-tour="item-reactions">
                 {/* Reaction bar on item */}
                 {item && (
                   <ReactionBar
@@ -998,7 +997,7 @@ export function ItemEditModal({
                     </div>
                   );
                 })()}
-              </div>}
+              </div>
 
           </div>{/* end left column */}
 
@@ -1014,31 +1013,51 @@ export function ItemEditModal({
                     <div className="sm:hidden">
                       <Select
                         value={type}
-                        onChange={(e) => setType(e.target.value as ItemType)}
+                        onChange={(e) => { setType(e.target.value as ItemType); if (e.target.value === 'MEETING') setAllDay(false); }}
                         options={(Object.entries(referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels))
                           .filter(([, c]) => c.visible)
                           .sort(([, a], [, b]) => a.order - b.order)
                           .map(([key, c]) => ({ value: key, label: c.labelShort }))}
                       />
                     </div>
-                    {/* Desktop: buttons */}
-                    <div className="hidden sm:flex flex-wrap gap-2">
+                    {/* Desktop: buttons, groupés par TYPE_GROUPS (Défaut/Activités/Livrables) */}
+                    <div className="hidden sm:flex flex-col gap-1.5">
                       {(() => {
                         const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
-                        return Object.entries(typeLabels)
-                          .filter(([, config]) => config.visible)
-                          .sort(([, a], [, b]) => a.order - b.order)
-                          .map(([key, config]) => {
-                            const Icon = TYPE_ICONS[key];
-                            const isSelected = type === key;
-                            return (
-                              <button key={key} type="button" onClick={() => setType(key as ItemType)}
-                                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${isSelected ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current text-gray-900` : 'opacity-60 hover:opacity-100'}`}>
-                                {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
-                                {config.labelShort}
-                              </button>
-                            );
-                          });
+                        const renderButton = (key: string, config: TypeLabelConfig) => {
+                          const Icon = TYPE_ICONS[key];
+                          const isSelected = type === key;
+                          return (
+                            <button key={key} type="button" onClick={() => { setType(key as ItemType); if (key === 'MEETING') setAllDay(false); }}
+                              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${isSelected ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current text-gray-900` : 'opacity-60 hover:opacity-100'}`}>
+                              {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                              {config.labelShort}
+                              <RuleHint category="type" value={key} />
+                            </button>
+                          );
+                        };
+                        const groupedKeys = new Set(TYPE_GROUPS.flatMap((g) => g.types));
+                        const groups = TYPE_GROUPS.map((g) => ({
+                          ...g,
+                          entries: g.types
+                            .map((key): [string, TypeLabelConfig] => [key, typeLabels[key]])
+                            .filter(([, config]) => config?.visible)
+                            .sort(([, a], [, b]) => a.order - b.order),
+                        }));
+                        const ungrouped = Object.entries(typeLabels)
+                          .filter(([key, config]) => config.visible && !groupedKeys.has(key as ItemType))
+                          .sort(([, a], [, b]) => a.order - b.order);
+                        if (ungrouped.length > 0) {
+                          groups.push({ id: 'other', label: 'Autres', types: [], entries: ungrouped });
+                        }
+                        return groups
+                          .filter((g) => g.entries.length > 0)
+                          .map((g) => (
+                            <div key={g.id} className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground w-16 flex-shrink-0">{g.label}</span>
+                              {g.entries.map(([key, config]) => renderButton(key, config))}
+                            </div>
+                          ));
                       })()}
                     </div>
                   </>
@@ -1051,7 +1070,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Statut — masqué en mode Forum et types media */}
-              {!isForumMode && !isExclusiveType && <div className="space-y-2" data-tour="item-status">
+              {!isForumMode && <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1088,8 +1107,9 @@ export function ItemEditModal({
                                 if (!startDate) { const now = new Date(); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(now)); }
                               }
                             }}
-                            className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${isSelected ? `${s.borderColor} font-semibold shadow-sm` : `${s.borderColor} opacity-60 hover:opacity-100`}`}>
+                            className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${isSelected ? `${s.borderColor} font-semibold shadow-sm ring-2 ring-offset-1 ring-current` : `${s.borderColor} opacity-60 hover:opacity-100`}`}>
                             {s.label}
+                            <RuleHint category="status" value={s.id} />
                           </button>
                         );
                       })}
@@ -1107,7 +1127,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Priorité — masqué en mode Forum et types media */}
-              {!isForumMode && !isExclusiveType && <div className="space-y-2">
+              {!isForumMode && <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
                 {canEdit ? (
                   <>
@@ -1125,12 +1145,12 @@ export function ItemEditModal({
                     {/* Desktop: buttons */}
                     <div className="hidden sm:flex flex-wrap gap-2">
                       <button type="button" onClick={() => setPriority(null)}
-                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
+                        className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${priority === null ? 'border-gray-400 bg-gray-100 font-semibold shadow-sm ring-2 ring-offset-1 ring-current' : 'border-gray-200 opacity-60 hover:opacity-100'}`}>
                         Aucune
                       </button>
                       {PRIORITIES.map((p) => (
                         <button key={p.value} type="button" onClick={() => setPriority(p.value)}
-                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm` : 'opacity-60 hover:opacity-100'}`}>
+                          className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${p.color} ${priority === p.value ? `${p.bgColor} font-semibold shadow-sm ring-2 ring-offset-1 ring-current` : 'opacity-60 hover:opacity-100'}`}>
                           {p.label}
                         </button>
                       ))}
@@ -1326,7 +1346,7 @@ export function ItemEditModal({
               </div>
 
               {/* Parent (hidden in viewer mode et types media) */}
-              {canEdit && !isExclusiveType && (
+              {canEdit && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent</label>
@@ -1341,7 +1361,7 @@ export function ItemEditModal({
               )}
 
               {/* Assigné à — masqué en mode Forum et types media */}
-              {!isForumMode && !isExclusiveType && spaceMembers && spaceMembers.length > 0 && (
+              {!isForumMode && spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
                   {canEdit ? (
@@ -1365,7 +1385,7 @@ export function ItemEditModal({
               )}
 
               {/* Dépendances — masqué en mode Forum et types media */}
-              {!isForumMode && !isExclusiveType && <div className="space-y-3" data-tour="item-relations">
+              {!isForumMode && <div className="space-y-3" data-tour="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -1453,7 +1473,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Tags — masqué pour types media */}
-              {!isExclusiveType && <div className="space-y-3" data-tour="item-tags">
+              <div className="space-y-3" data-tour="item-tags">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <TagIcon className="w-4 h-4" />
                   Tags
@@ -1469,7 +1489,7 @@ export function ItemEditModal({
                     )}
                   </div>
                 )}
-              </div>}
+              </div>
 
               {/* Children items */}
               {item && (() => {

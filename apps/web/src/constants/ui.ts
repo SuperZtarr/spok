@@ -18,6 +18,7 @@ import {
   FileVideo,
   FileAudio,
   Presentation,
+  HelpCircle,
 } from 'lucide-react';
 import type { SVGProps } from 'react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
@@ -58,6 +59,7 @@ export function getTypeIcon(type: string, url?: string | null): IconComponent {
 }
 
 export const TYPE_ICONS: Record<string, IconComponent> = {
+  UNDEFINED: HelpCircle,
   NOTE: FileText,
   PROJECT: FolderKanban,
   TASK: CheckSquare,
@@ -77,6 +79,7 @@ export const TYPE_ICONS: Record<string, IconComponent> = {
 // TYPE LABELS - Libellés des types d'items
 // =============================================================================
 export const TYPE_LABELS: Record<string, string> = {
+  UNDEFINED: 'Non défini',
   NOTE: 'Note',
   PROJECT: 'Projet',
   TASK: 'Tâche',
@@ -94,6 +97,7 @@ export const TYPE_LABELS: Record<string, string> = {
 
 // Version courte pour les espaces restreints
 export const TYPE_LABELS_SHORT: Record<string, string> = {
+  UNDEFINED: 'Non défini',
   NOTE: 'Note',
   PROJECT: 'Projet',
   TASK: 'Tâche',
@@ -108,6 +112,15 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   // Legacy fallback
   APPOINTMENT: 'RDV',
 };
+
+// =============================================================================
+// TYPE GROUPS - Regroupement visuel des types (sélecteur de type de la modale)
+// =============================================================================
+export const TYPE_GROUPS: { id: string; label: string; types: ItemType[] }[] = [
+  { id: 'default', label: 'Défaut', types: ['UNDEFINED', 'NOTE'] },
+  { id: 'activities', label: 'Activités', types: ['PROJECT', 'TASK', 'MEETING', 'PERIOD', 'BUG'] },
+  { id: 'deliverables', label: 'Livrables', types: ['LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'DIAGRAM'] },
+];
 
 // =============================================================================
 // TYPE COLUMNS - Configuration des colonnes Types (par type d'item)

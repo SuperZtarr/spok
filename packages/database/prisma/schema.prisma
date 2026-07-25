@@ -339,6 +339,7 @@ model Item {
 }
 
 enum ItemType {
+  UNDEFINED
   NOTE
   PROJECT
   TASK

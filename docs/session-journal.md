@@ -6,6 +6,18 @@
 
 ## EN COURS
 
+### Type UNDEFINED + indices de règles de gestion (RuleHint) — 2026-07-25
+- Type "Non défini" (`UNDEFINED`) ajouté à l'enum Prisma `ItemType` : nouveau type par défaut à la création (remplace `NOTE`), propagé dans tous les schémas Zod (API, MCP) et listes de filtre/sélection web
+- Fix API : `startDate` n'est plus forcé à `new Date()` à la création si absent (`items.ts`) — dates vides par défaut, comme `dueDate`/`endDate`
+- Accentuation visuelle (ring) des boutons sélectionnés statut/priorité dans `ItemEditModal`, alignée sur le style déjà utilisé pour le sélecteur de type
+- Nouveau registre de règles de gestion `apps/web/src/lib/businessRules.ts` + composant `RuleHint` (icône d'indice en mode dev uniquement `import.meta.env.DEV`, tooltip en portail pour échapper à l'opacité du bouton parent) sur les boutons type/statut de la modale — doc vivante consultée par Claude et affichée à l'utilisateur, à tenir à jour à chaque nouvelle règle de comportement (mémoire `feedback_business_rules_doc`)
+- Sélecteur de type regroupé visuellement en 3 sections (`TYPE_GROUPS` dans `constants/ui.ts`) : Défaut (Non défini/Note), Activités (Projet/Tâche/Réunion/Période/Bug), Livrables (Lien/Config/Document/Image/Diagramme) — section "Autres" de secours si l'enum évolue sans mise à jour du groupe
+- Type Réunion : bascule automatique en mode "Heures" (au lieu de jours pleins) à la création/sélection
+- `isExclusiveType` entièrement retiré d'`ItemEditModal` (masquait statut/priorité/parent/assignation/commentaires/relations/tags pour Diagramme/Image/Document/Lien) — tous les champs sont désormais visibles pour tous les types, retiré section par section sur demande de Thomas après vérifications itératives
+- Process : accord explicite pour exécution inline par défaut (plus de choix subagent/inline à chaque plan) et arrêt de la rédaction de fichiers spec après brainstorming (résumé en chat suffisant) — mémoires `feedback_execution_inline_default`, `feedback_no_spec_docs`
+- Specs/plans de cette session : `docs/superpowers/specs/2026-07-25-business-rules-hints-design.md`, `docs/superpowers/plans/2026-07-25-business-rules-hints.md`
+- Typecheck 3 paquets (web/api/mcp) vert après chaque étape ; MEP en cours
+
 ### Horizons temporels + revue de rattrapage (chantier 1) — IMPLÉMENTÉ, vérifié — 2026-07-19
 - Suite des chantiers 0-3 issus de la réflexion multi-contextes sur /today (chantier 0 fait le 2026-07-18) — chantier 1 arbitré et implémenté en 9 tâches (spec `docs/superpowers/specs/2026-07-19-horizons-revue-design.md`, plan `docs/superpowers/plans/2026-07-19-horizons-revue.md`)
 - Tasks 1-8 (implémentation, revues qualité + spec passées) : enum Prisma `HorizonBucket` + `Item.manualHorizon`/`Item.horizonSetAt` ; `packages/shared/src/utils/horizon.ts` (`effectiveHorizon`, `isOverdueForReview`, `HORIZON_LABELS`, `HORIZON_ORDER`) ; PATCH `items.ts` accepte `manualHorizon` ; `GET /user/review-queue` (`review-queue.ts`) ; select étendu `user-tasks.ts` ; `reviewQueueApi` + types dans `apps/web/src/lib/api.ts` ; composant générique `HorizonGroup.tsx` (section repliable, prop `getKey` ajoutée après revue qualité, absente du plan initial) ; `/tasks` (`GlobalTasksPage.tsx`) regroupé par horizon, pagination serveur supprimée ; section « À réviser » dans /today (`ReviewQueueSection.tsx` + `TodayPage.tsx`)

@@ -303,7 +303,7 @@ export function SpaceToolbar({
                         </button>
                         {typeDropdownOpen && (
                           <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
-                            {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
+                            {(['ALL', 'UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
                               const isActive = filter === t;
                               const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
                               return (
@@ -399,7 +399,7 @@ export function SpaceToolbar({
                         </button>
                         {hlTypeDropdownOpen && (
                           <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
-                            {(['ALL', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
+                            {(['ALL', 'UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const).map((t) => {
                               const isActive = highlightFilter === t;
                               const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
                               return (

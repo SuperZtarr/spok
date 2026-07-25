@@ -19,7 +19,7 @@ const ENTITY_TYPES = [
 
 type EntityType = typeof ENTITY_TYPES[number]['key'];
 
-const ITEM_TYPES = ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'];
+const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'];
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);

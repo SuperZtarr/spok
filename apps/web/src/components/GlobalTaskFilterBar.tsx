@@ -81,6 +81,7 @@ function FilterRow({
 }
 
 const typeOptions = [
+  { id: 'UNDEFINED', label: TYPE_LABELS['UNDEFINED'] || 'Non défini', color: 'bg-slate-100 text-slate-600 border-slate-300' },
   { id: 'TASK', label: TYPE_LABELS['TASK'] || 'Tâche', color: 'bg-green-100 text-green-800 border-green-300' },
   { id: 'PROJECT', label: TYPE_LABELS['PROJECT'] || 'Projet', color: 'bg-purple-100 text-purple-800 border-purple-300' },
   { id: 'NOTE', label: TYPE_LABELS['NOTE'] || 'Note', color: 'bg-blue-100 text-blue-800 border-blue-300' },

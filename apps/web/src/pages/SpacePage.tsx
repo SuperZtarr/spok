@@ -467,7 +467,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const handleAddChild = (parentId: string, parentSpaceId?: string) => {
     const targetSpaceId = parentSpaceId || allItems.find((i: Item) => i.id === parentId)?.spaceId || spaceId!;
     createItemMutation.mutate(
-      { type: 'NOTE', title: '', status: '', parentId, targetSpaceId },
+      { type: 'UNDEFINED', title: '', status: '', parentId, targetSpaceId },
       { onSuccess: (created: any) => {
         setEditingItemId(created.id);
         setExpandedItems((prev) => new Set([...prev, parentId]));
@@ -499,7 +499,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
 
   const handleNewItem = useCallback(() => {
-    const type = filter === 'ALL' ? 'NOTE' : filter;
+    const type = filter === 'ALL' ? 'UNDEFINED' : filter;
     createItemMutation.mutate(
       { type, title: '', status: '' },
       { onSuccess: (created: any) => { setEditingItemId(created.id); } },
@@ -514,7 +514,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
       setSearchParams(prev => { prev.delete('newItem'); return prev; }, { replace: true });
       setTimeout(() => {
         createItemMutation.mutate(
-          { type: 'NOTE', title: '', status: '' },
+          { type: 'UNDEFINED', title: '', status: '' },
           { onSuccess: (created: any) => { setEditingItemId(created.id); } }
         );
       }, 100);

@@ -107,7 +107,7 @@ const STATUS_BAR_COLORS: Record<string, string> = {
 };
 
 const TYPE_BAR_COLORS: Record<string, string> = {
-  NOTE: '#3b82f6', PROJECT: '#a855f7', TASK: '#22c55e', MEETING: '#f97316',
+  UNDEFINED: '#94a3b8', NOTE: '#3b82f6', PROJECT: '#a855f7', TASK: '#22c55e', MEETING: '#f97316',
   PERIOD: '#14b8a6', LINK: '#06b6d4', CONFIG: '#6b7280', DOCUMENT: '#f59e0b',
   IMAGE: '#ec4899', BUG: '#ef4444', DIAGRAM: '#6366f1',
 };
@@ -262,7 +262,7 @@ export function MyDashboardView() {
   );
 
   const filters = useGlobalTaskFilters({
-    defaultTypes: ['NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'],
+    defaultTypes: ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'],
     defaultSortBy: 'priority',
     defaultSortDir: 'desc',
     pageSize: 2000,
@@ -287,7 +287,7 @@ export function MyDashboardView() {
   const { data: doneData } = useQuery({
     queryKey: ['my-organization-done', localDateKey(weekStart)],
     queryFn: () => userTasksApi.list({
-      type: 'NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
+      type: 'UNDEFINED,NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
       status: 'done',
       pageSize: 2000,
       myTasks: true,

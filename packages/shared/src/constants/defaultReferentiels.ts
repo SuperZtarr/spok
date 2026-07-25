@@ -78,6 +78,14 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
 // =============================================================================
 
 export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
+  UNDEFINED: {
+    label: 'Non défini',
+    labelShort: 'Non défini',
+    color: 'border-slate-400',
+    bgHover: 'bg-slate-50',
+    visible: true,
+    order: -1,
+  },
   NOTE: {
     label: 'Notes',
     labelShort: 'Note',
