@@ -6,6 +6,13 @@
 
 ## EN COURS
 
+### Fix clic résultat recherche n'ouvrait pas la modale item — 2026-08-11
+- `SearchPage.tsx` (items + contributions) passait `openItemId` via `state` du router React (`navigate(..., { state })`) — jamais lu nulle part, la modale ne s'ouvrait pas
+- `SpacePage.tsx` ne lit que le param d'URL `?item=id` pour déclencher l'ouverture — pattern déjà utilisé et fonctionnel dans `GlobalSearch.tsx`
+- Même bug trouvé et corrigé sur le clic nœud graphe : `DashboardPage.tsx` (onglet Graphe) et `GraphPage.tsx`
+- Vérifié en navigateur (preview local) : clic sur un résultat de recherche ouvre bien la modale du bon item dans le bon espace
+- Typecheck web vert — MEP en cours
+
 ### Type UNDEFINED + indices de règles de gestion (RuleHint) — 2026-07-25
 - Type "Non défini" (`UNDEFINED`) ajouté à l'enum Prisma `ItemType` : nouveau type par défaut à la création (remplace `NOTE`), propagé dans tous les schémas Zod (API, MCP) et listes de filtre/sélection web
 - Fix API : `startDate` n'est plus forcé à `new Date()` à la création si absent (`items.ts`) — dates vides par défaut, comme `dueDate`/`endDate`

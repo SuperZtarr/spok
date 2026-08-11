@@ -23,6 +23,7 @@
 - [x] Couverture community-referentiels.ts : 13 tests (GET public, PUT/reset réservés OWNER, check-status-usage) — 2026-07-12
 - [x] Fix layout MindMap : reparentage décalant des branches entières — reset des positions sauvegardées sur toute la branche racine affectée (ancien ET nouveau parent), pas seulement le parent direct — 2026-07-14 (e85c56d)
 - [x] MindMap layout incrémental : la carte ne bouge plus globalement — layout complet seulement au premier rendu/repli/portails/bouton Réorganiser ; ajout/suppression/reparentage = ré-éventail local du/des parent(s) affecté(s) (module pur `mindmap-incremental.ts`, 12 tests), relations = arêtes seules, `clearAffectedBranches` supprimé — spec/plan docs/superpowers 2026-07-15 — 2026-07-15 (13e7083)
+- [x] BUG clic résultat recherche (SearchPage) : le lien ouvrait l'espace mais pas la modale item — passait `openItemId` en `state` du router, jamais lu (SpacePage ne lit que le param d'URL `?item=`) — corrigé (+ même bug sur clic nœud graphe dans DashboardPage/GraphPage) en alignant sur le pattern `?item=id` déjà utilisé par GlobalSearch — 2026-08-11
 
 ### Didacticiels / aide contextuelle
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide

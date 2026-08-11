@@ -339,7 +339,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.items.map(item => (
-                  <Link key={item.id} to={`/spaces/${item.spaceId}`} state={{ openItemId: item.id }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
+                  <Link key={item.id} to={`/spaces/${item.spaceId}?item=${item.id}`} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>
                       <span className="font-medium text-sm"><Highlight text={item.title} query={qParam} /></span>
@@ -411,7 +411,7 @@ export function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {data.contributions.map(c => (
-                  <Link key={c.id} to={`/spaces/${c.spaceId}`} state={{ openItemId: c.itemId }} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
+                  <Link key={c.id} to={`/spaces/${c.spaceId}?item=${c.itemId}`} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     {c.content && (
                       <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={qParam} /></p>
                     )}
