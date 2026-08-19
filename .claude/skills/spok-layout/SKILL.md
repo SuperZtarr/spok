@@ -20,7 +20,8 @@ description: Use when adding, modifying or understanding the global app shell �
 Ces deux refontes ont explicitement remplacé des patterns identifiés comme sources de bugs récurrents. Ne pas revenir en arrière sans le savoir :
 
 - **GlobalNavBar — commit `518657a`** : remplace l'ancien `MainMenu.tsx` (dropdowns/hamburger/panneaux expand) par un bandeau plein hauteur de boutons plats, message de commit explicite : *« Suppression logique hamburger/dropdowns/expanded (source de régression) »*. → **Ne jamais réintroduire de dropdown/hamburger pour la nav globale.**
-- **Sidebar — commit `9088d3e`** : style Notion/Linear — logo toujours visible (même en mode communauté immersif), fond blanc, titres de section sans majuscules forcées, en-têtes de communauté sans bordure (icône réglages seulement au hover), padding compact, séparateurs `/50` discrets, communautés repliées par défaut avec auto-expand/collapse sur navigation. → **Ne pas réintroduire de bordures autour des lignes d'espace, ni un auto-expand-all des communautés.**
+- **Sidebar — commit `9088d3e`** : style Notion/Linear — logo toujours visible (même en mode communauté immersif), titres de section sans majuscules forcées, en-têtes de communauté sans bordure (icône réglages seulement au hover), padding compact, séparateurs `/50` discrets, communautés repliées par défaut avec auto-expand/collapse sur navigation. → **Ne pas réintroduire de bordures autour des lignes d'espace, ni un auto-expand-all des communautés.**
+  - ⚠️ **Fond sidebar changé le 2026-08-19** (refonte esthétique "Dense technique", décision explicite de Thomas, pas une régression) : le fond blanc d'origine de ce commit a été remplacé par `bg-muted` — voir "Fond chrome (sidebar/header/toolbar)" ci-dessous. Les autres points de ce commit (pas de bordures, pas d'auto-expand-all, logo visible) restent valables tels quels.
 
 ## Sidebar (Layout.tsx) — 3 mécanismes de collapse indépendants, ne pas les confondre
 
@@ -52,6 +53,15 @@ Piles de contexte actuelles (ne pas modifier sans comprendre l'empilement comple
 - `<header>` : `relative z-30` (ajouté par `630ac21` — sans ça, le header perd sa priorité d'empilement quand un ancêtre est `overflow-auto`, du contenu de page peut passer devant)
 - Row 1 du header (titre) : `relative isolate` + image de cover `-z-10` (calé par `015eb92` — **`isolate` piège les enfants dans un nouveau stacking context : un dropdown absolu à l'intérieur peut se faire passer devant par un sibling avec son propre z-index**, piège récurrent sur ce fichier)
 
+## Fond chrome (sidebar/header/toolbar) — refonte esthétique 2026-08-19
+
+Piste "Dense technique" choisie par Thomas via mockups Claude Design : la "chrome" de l'app (sidebar + header + `SpaceToolbar`) doit visuellement se distinguer du contenu (blanc/quasi-noir).
+
+- `<aside>` (Layout.tsx) et `<header>` (Layout.tsx) : `bg-muted`, **sans variante `dark:`** — laisser la cascade CSS faire le travail via `--muted` qui est déjà défini différemment dans `:root` et `.dark` (`index.css`). Ne pas réintroduire un `dark:bg-background` sur l'`<aside>` : ça désassortit la sidebar du header en mode sombre (vécu le 2026-08-19, corrigé).
+- `SpaceToolbar.tsx` (conteneur racine) : `bg-muted/60`, même logique.
+- Le corps de page/contenu (`bg-background`) reste plus clair (clair) / plus sombre (sombre) que `--muted` dans les deux thèmes — c'est ce contraste qui crée la distinction chrome/contenu. Si un futur ajustement de palette change `--muted` ou `--background`, vérifier les DEUX thèmes (le mode par défaut suit `prefers-color-scheme`, donc un simple rechargement peut faire basculer le thème testé sans qu'on s'en aperçoive — forcer explicitement la classe `dark` sur `<html>` pour comparer, ne pas se fier à l'état "tel que chargé").
+- Police globale : `IBM Plex Sans` (UI, `font-sans`) + `IBM Plex Mono` (métadonnées/badges, `font-mono`) — chargées via Google Fonts dans `index.html`, déclarées dans `tailwind.config.js` (`theme.extend.fontFamily`). `--radius` réduit à `0.25rem` (coins plus nets, cohérent avec la piste dense).
+
 ## Autres invariants vécus
 
 - **Logo** : importé depuis `src/assets/logo.png` (pas `public/`) — `834ae71` a déplacé le fichier pour que Vite hash le nom au build et invalide le cache navigateur au déploiement. Ne pas repasser par `/public`.
@@ -79,3 +89,4 @@ Une section qui n'a plus aucun item après filtrage ne rend rien (`return null`)
 | Sidebar qui flickers / liste d'espaces qui se recharge sans raison | Polling ou refetch keyé sur la route réintroduit | `staleTime: Infinity`, compter sur l'invalidation des mutations |
 | Icône absente dans un seul des deux emplacements (sidebar mobile vs bandeau desktop) | `NAV_ICONS` mis à jour d'un seul côté | Ajouter l'entrée dans les deux maps (`Layout.tsx` ET `GlobalNavBar.tsx`) |
 | Fix appliqué à Layout/GlobalNavBar ne s'applique pas à `/admin/*` | `AdminLayout.tsx` est indépendant, ne partage aucune logique | Reporter le fix manuellement si le même bug s'y produit |
+| Sidebar et header pas assortis en mode sombre alors qu'ils le sont en clair | Classe `dark:` explicite sur un seul des deux éléments qui override la cascade normale | Retirer les overrides `dark:` ponctuels sur `bg-*`, laisser `--muted`/`--background` (`index.css`) porter la différence entre thèmes |

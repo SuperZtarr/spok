@@ -1071,7 +1071,7 @@ export function Layout() {
       {/* Sidebar - desktop: static resizable + collapsible, mobile: slide-over (hidden on auth pages) */}
       {!isAuthPage && <aside
         className={`
-          bg-white dark:bg-background border-r border-border flex flex-col flex-shrink-0 h-full
+          bg-muted border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
           transition-transform duration-200 md:transition-[width] md:duration-200
           w-[85vw] max-w-[320px] md:max-w-none
@@ -1124,7 +1124,7 @@ export function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Top header */}
-        <header className="border-b border-border bg-card flex flex-col flex-shrink-0 relative z-30">
+        <header className="border-b border-border bg-muted flex flex-col flex-shrink-0 relative z-30">
           {/* Row 1: title + right controls */}
           <div
             className="flex items-stretch h-12 relative isolate"

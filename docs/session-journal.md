@@ -6,6 +6,16 @@
 
 ## EN COURS
 
+### Refonte esthétique SPOK — piste "Dense technique" (chantier en cours) — 2026-08-19
+- Demande Thomas : revoir l'esthétique globale de SPOK, carte blanche
+- Exploré 3 directions via Claude Design (canvas) sur un écran représentatif (sidebar + bandeau + toolbar de vues + liste) : A "Éditorial neutre" (Newsreader/Manrope, indigo), B "Dense technique" (IBM Plex, cyan, coins nets), C "Chaleureux structuré" (Bricolage Grotesque, terracotta, cartes arrondies) — canvas : https://claude.ai/code/artifact/d1831e3a-8133-4f3d-a1e2-ea9beb71dba7
+- Thomas choisit B, inversé (sidebar+bandeau gris clair / zone de contenu blanche) + barres d'outils de la vue (`SpaceToolbar`) également en gris clair
+- **Phase 1 (tokens globaux, fait)** : `index.css` (variables HSL recalibrées gris-bleu froid, `--radius` 0.5rem→0.25rem), `tailwind.config.js` (fontFamily sans=IBM Plex Sans, mono=IBM Plex Mono), `index.html` (lien Google Fonts), `SpaceToolbar.tsx` (conteneur `bg-background`→`bg-muted/60`)
+- **Phase 2 (fond gris sidebar/bandeau, fait)** : zone fragile, skill `spok-layout` relu avant modif — `Layout.tsx` : `<aside>` `bg-white`→`bg-muted` (dark mode inchangé), `<header>` `bg-card`→`bg-muted`. Décision "sidebar fond blanc" du commit `9088d3e` sciemment changée à la demande explicite de Thomas (pas une régression accidentelle) — bordures autour des lignes d'espace et auto-expand restent, eux, inchangés (invariants non touchés)
+- Vérifié en réel (JS exec sur le DOM, pas de screenshot possible dans cet environnement) : `aside`/`header` en `rgb(240,242,245)`, contenu en `rgb(252,252,253)`, police IBM Plex Sans appliquée, `--radius` à 0.25rem, toolbar en `rgba(240,242,245,0.6)`
+- Typecheck web OK, check-doc-headers OK
+- NON COMMITÉ — dark mode et densité des composants (paddings/tailles par vue) volontairement non touchés, hors périmètre pour l'instant
+
 ### Sélecteur de vues à 3 familles (Discussion/Pilotage/Exploration) — 2026-08-19
 - Chantiers 3/4 en attente (TODO) : Thomas veut qu'en FORUM, les vues hors discussion restent accessibles via un menu déroulant (idem PROJET à l'inverse) au lieu d'être masquées
 - Découverte en creusant le code : `VIEW_REGISTRY` (`packages/shared/src/constants/viewRegistry.ts`) classe déjà chaque vue en 4 catégories `basic/itemTypes/planning/exploration` — TODO.md était périmé (« PROJECT aucune restriction » alors que `MODE_EXCLUDED.projet` masquait déjà une longue liste, y compris la vue Liste)

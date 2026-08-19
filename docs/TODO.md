@@ -2,6 +2,10 @@
 
 ## À faire
 
+### Refonte esthétique
+- [x] Piste "Dense technique" choisie (canvas Claude Design, 3 directions explorées) : tokens globaux (IBM Plex Sans/Mono, palette gris-bleu froid, radius réduit), fond gris clair sidebar/header/toolbar de vue vs contenu blanc, cohérent clair/sombre — 2026-08-19
+- [ ] Densité des composants (paddings/tailles par vue) — volontairement non touchée, à faire au cas par cas si besoin
+
 ### Modes d'interface (Forum / Projet / Exploration)
 
 > Prérequis absolu avant de coder les modes : refactoriser ItemEditModal
