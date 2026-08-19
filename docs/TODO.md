@@ -11,8 +11,8 @@
 > Recadrage 2026-07-15 : le mode n'est plus une bascule utilisateur — il est dérivé du champ `Community.context` (FORUM/PROJECT, null = neutre « tous »), choisi par le propriétaire dans les réglages de la communauté. Sélecteur 4 boutons du header supprimé.
 
 - [x] **Contexte de communauté** : champ `Community.context` + dérivation automatique du mode (Layout), sélecteur Contexte dans les réglages (OWNER), badge Forum/Projet dans le header, filtrage de la nav mobile aligné sur le bandeau desktop (`MODE_GLOBAL_EXCLUDED` partagé via le store) — 2026-07-15 (d44ca99)
-- [ ] **Étape 3 — Affiner le contexte FORUM** : vues/champs autorisés (aujourd'hui : thread/recent/text + exclusions bandeau)
-- [ ] **Étape 4 — Affiner le contexte PROJECT** : aujourd'hui aucune restriction (MODE_ALLOWED null) — définir ce qui est réellement utile en pilotage
+- [x] **Étapes 3+4 (partiel) — Sélecteur de vues à 3 familles** : `MODE_ALLOWED`/`MODE_EXCLUDED` (blocage dur) remplacés par 3 familles fixes Discussion/Pilotage/Exploration (`SpaceToolbar.tsx`, `exploration` reprend la catégorie `VIEW_REGISTRY`) — le mode choisit la famille en boutons directs (FORUM→Discussion, PROJET→Pilotage), les 2 autres restent accessibles via dropdowns "Autres vues", plus rien n'est masqué. Vérifié en réel (communauté test, FORUM et PROJET) — 2026-08-19
+- [ ] **Étape 3/4 (reste)** : affiner les CHAMPS autorisés par contexte (au-delà des vues, déjà fait ci-dessus)
 - [ ] **Étape 5 — Exploration** : à repenser en « loupe » utilisateur activable partout (pas un contexte de contenu), spec à faire
 
 ### Tests / qualité

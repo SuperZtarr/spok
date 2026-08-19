@@ -1,9 +1,12 @@
 /*
- * Barre d'outils d'espace : sélecteur de vues (sections filtrées par mode d'interface
- * forum/projet/exploration via MODE_ALLOWED/MODE_EXCLUDED), filtres, highlight, tri, création.
- * Les vues affichées = spaceViews (useMenuItems, niveau d'accès) ∩ règles du mode courant.
+ * Barre d'outils d'espace : sélecteur de vues, filtres, highlight, tri, création.
+ * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
+ * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
+ * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ;
+ * les 2 autres familles restent accessibles via le dropdown "Autres vues", jamais masquées.
  */
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   ChevronDown,
@@ -42,30 +45,52 @@ import {
   MessageSquare,
   Clock,
   ArrowUpDown,
+  GitMerge,
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, VIEW_REGISTRY } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import type { ViewMode } from '../stores/viewMode';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
 import type { TreeSort } from '../lib/treeSort';
 
-/** Vues autorisées par mode (liste blanche) — null = toutes */
-const MODE_ALLOWED: Record<string, Set<string> | null> = {
-  forum:       new Set(['thread', 'recent', 'text']),
-  projet:      null,
-  exploration: null,
-  tous:        null,
+/**
+ * Vues d'espace groupées en 3 familles fixes (Discussion/Pilotage/Exploration).
+ * Le mode d'interface (forum/projet/tous) choisit quelle famille s'affiche en boutons directs —
+ * les 2 autres passent dans des menus déroulants repliés (voir MODE_PRIMARY_GROUP ci-dessous).
+ * `exploration` reprend telle quelle la catégorie `exploration` de VIEW_REGISTRY.
+ */
+type ViewGroupKey = 'discussion' | 'pilotage' | 'exploration';
+
+const DISCUSSION_VIEWS = new Set(['thread', 'recent', 'text']);
+const EXPLORATION_VIEWS = new Set(VIEW_REGISTRY.filter((v) => v.category === 'exploration').map((v) => v.id));
+
+function getViewGroup(viewMode: string): ViewGroupKey {
+  if (DISCUSSION_VIEWS.has(viewMode)) return 'discussion';
+  if (EXPLORATION_VIEWS.has(viewMode)) return 'exploration';
+  return 'pilotage';
+}
+
+const VIEW_GROUP_LABELS: Record<ViewGroupKey, string> = {
+  discussion: 'Discussion',
+  pilotage: 'Pilotage',
+  exploration: 'Exploration',
 };
 
-/** Vues masquées par mode (liste noire) */
-const MODE_EXCLUDED: Record<string, Set<string>> = {
-  forum:       new Set(),
-  projet:      new Set(['thread', 'text', 'tree', 'crossTable', 'links', 'images', 'documents', 'list', 'sunburst', 'relations', 'cfd', 'ego', 'heatmap', 'chord', 'treemap', 'radialTree', 'bubble', 'graph']),
-  exploration: new Set(['thread', 'text', 'kanban', 'timeline', 'pert', 'calendar', 'planning', 'priority', 'recent', 'bugs', 'todo']),
-  tous:        new Set(),
+const VIEW_GROUP_ICONS: Record<ViewGroupKey, LucideIcon> = {
+  discussion: MessageSquare,
+  pilotage: LayoutGrid,
+  exploration: Network,
+};
+
+/** Famille affichée en direct par mode — null = aucune restriction (toutes les vues à plat, comme aujourd'hui) */
+const MODE_PRIMARY_GROUP: Record<string, ViewGroupKey | null> = {
+  forum:       'discussion',
+  projet:      'pilotage',
+  exploration: null,
+  tous:        null,
 };
 
 const MOBILE_HIDDEN_VIEWS = new Set([
@@ -79,7 +104,7 @@ const VIEW_ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
   LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
   Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
+  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock, GitMerge,
 };
 
 export interface SpaceToolbarProps {
@@ -156,10 +181,25 @@ export function SpaceToolbar({
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [filtreOpen, setFiltreOpen] = useState(false);
   const [aperçuOpen, setAperçuOpen] = useState(false);
+  const [otherGroupOpen, setOtherGroupOpen] = useState<ViewGroupKey | null>(null);
+  const [otherGroupPos, setOtherGroupPos] = useState<{ top: number; left: number } | null>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const hlTypeDropdownRef = useRef<HTMLDivElement>(null);
   const hlStatusDropdownRef = useRef<HTMLDivElement>(null);
+  const otherGroupsRef = useRef<HTMLDivElement>(null);
+  const otherGroupPanelRef = useRef<HTMLDivElement>(null);
+  const otherGroupBtnRefs = useRef<Partial<Record<ViewGroupKey, HTMLButtonElement | null>>>({});
+
+  const toggleOtherGroup = (key: ViewGroupKey) => {
+    if (otherGroupOpen === key) { setOtherGroupOpen(null); setOtherGroupPos(null); return; }
+    const btn = otherGroupBtnRefs.current[key];
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      setOtherGroupPos({ top: r.bottom + 4, left: r.left });
+    }
+    setOtherGroupOpen(key);
+  };
 
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
@@ -170,20 +210,25 @@ export function SpaceToolbar({
 
   // Close all dropdowns on click outside or Escape
   useEffect(() => {
-    if (!typeDropdownOpen && !statusDropdownOpen && !hlTypeDropdownOpen && !hlStatusDropdownOpen) return;
+    if (!typeDropdownOpen && !statusDropdownOpen && !hlTypeDropdownOpen && !hlStatusDropdownOpen && !otherGroupOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) setTypeDropdownOpen(false);
       if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) setStatusDropdownOpen(false);
       if (hlTypeDropdownOpen && hlTypeDropdownRef.current && !hlTypeDropdownRef.current.contains(e.target as Node)) setHlTypeDropdownOpen(false);
       if (hlStatusDropdownOpen && hlStatusDropdownRef.current && !hlStatusDropdownRef.current.contains(e.target as Node)) setHlStatusDropdownOpen(false);
+      if (
+        otherGroupOpen
+        && otherGroupsRef.current && !otherGroupsRef.current.contains(e.target as Node)
+        && otherGroupPanelRef.current && !otherGroupPanelRef.current.contains(e.target as Node)
+      ) { setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setHlTypeDropdownOpen(false); setHlStatusDropdownOpen(false); }
+      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setHlTypeDropdownOpen(false); setHlStatusDropdownOpen(false); setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [typeDropdownOpen, statusDropdownOpen, hlTypeDropdownOpen, hlStatusDropdownOpen]);
+  }, [typeDropdownOpen, statusDropdownOpen, hlTypeDropdownOpen, hlStatusDropdownOpen, otherGroupOpen]);
 
 
   return (
@@ -191,23 +236,31 @@ export function SpaceToolbar({
 
       {/* View mode buttons row */}
       {(() => {
-        const modeAllowed = MODE_ALLOWED[interfaceMode];
-        const modeExcluded = MODE_EXCLUDED[interfaceMode];
-        const filteredViews = spaceViews.filter(
-          (v) => v.viewMode
-            && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
-            && (modeAllowed === null || modeAllowed.has(v.viewMode))
-            && !modeExcluded?.has(v.viewMode)
+        const baseViews = spaceViews.filter(
+          (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
         );
-        const sectionMap = new Map<string, { sectionOrder: number; views: typeof filteredViews }>();
-        for (const v of filteredViews) {
+        const primaryGroup = MODE_PRIMARY_GROUP[interfaceMode] ?? null;
+        const primaryViews = primaryGroup
+          ? baseViews.filter((v) => getViewGroup(v.viewMode!) === primaryGroup)
+          : baseViews;
+
+        const sectionMap = new Map<string, { sectionOrder: number; views: typeof primaryViews }>();
+        for (const v of primaryViews) {
           if (!sectionMap.has(v.section)) {
             sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
           }
           sectionMap.get(v.section)!.views.push(v);
         }
         const sections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
-        if (sections.length === 0) return null;
+
+        const secondaryGroups = primaryGroup
+          ? (['discussion', 'pilotage', 'exploration'] as ViewGroupKey[])
+              .filter((g) => g !== primaryGroup)
+              .map((g) => ({ key: g, views: baseViews.filter((v) => getViewGroup(v.viewMode!) === g) }))
+              .filter((g) => g.views.length > 0)
+          : [];
+
+        if (sections.length === 0 && secondaryGroups.length === 0) return null;
         return (
           <div className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
             {sections.map((section, idx) => (
@@ -243,7 +296,87 @@ export function SpaceToolbar({
                 </div>
               </div>
             ))}
+
+            {secondaryGroups.length > 0 && (
+              <div className="flex flex-col gap-0.5 flex-shrink-0">
+                <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
+                  Autres vues
+                </span>
+                <div ref={otherGroupsRef} className="flex items-center gap-1">
+                {secondaryGroups.map((group) => {
+                  const GroupIcon = VIEW_GROUP_ICONS[group.key];
+                  const isOpen = otherGroupOpen === group.key;
+                  const containsActive = group.views.some((v) => v.viewMode === viewMode);
+                  return (
+                    <button
+                      key={group.key}
+                      ref={(el) => { otherGroupBtnRefs.current[group.key] = el; }}
+                      onClick={() => toggleOtherGroup(group.key)}
+                      title={`Autres vues — ${VIEW_GROUP_LABELS[group.key]}`}
+                      className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                        containsActive ? 'bg-accent text-foreground font-semibold' : isOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      <GroupIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="hidden sm:inline">{VIEW_GROUP_LABELS[group.key]}</span>
+                      <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  );
+                })}
+                </div>
+              </div>
+            )}
           </div>
+        );
+      })()}
+
+      {/* Panneau "Autres vues" — en portal (fixed) pour échapper au overflow-x-auto de la barre de vues */}
+      {otherGroupOpen && otherGroupPos && (() => {
+        const group = (['discussion', 'pilotage', 'exploration'] as ViewGroupKey[])
+          .map((g) => ({ key: g, views: spaceViews.filter((v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode)) && getViewGroup(v.viewMode) === g) }))
+          .find((g) => g.key === otherGroupOpen);
+        if (!group) return null;
+
+        const sectionMap = new Map<string, { sectionOrder: number; sectionLabel: string; views: typeof group.views }>();
+        for (const v of group.views) {
+          if (!sectionMap.has(v.section)) {
+            sectionMap.set(v.section, { sectionOrder: v.sectionOrder, sectionLabel: v.sectionLabel, views: [] });
+          }
+          sectionMap.get(v.section)!.views.push(v);
+        }
+        const panelSections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
+
+        return createPortal(
+          <div
+            ref={otherGroupPanelRef}
+            className="fixed bg-card border border-border rounded-md shadow-xl py-1 w-[190px]"
+            style={{ top: otherGroupPos.top, left: otherGroupPos.left, zIndex: 9999 }}
+          >
+            {panelSections.map((section, idx) => (
+              <div key={section.sectionLabel}>
+                {idx > 0 && <div className="h-px bg-border mx-2 my-1" />}
+                <div className="px-3 pt-1 pb-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  {section.sectionLabel}
+                </div>
+                {section.views.map((v) => {
+                  const Icon = VIEW_ICON_MAP[v.icon];
+                  const isActive = viewMode === v.viewMode;
+                  return (
+                    <button
+                      key={v.key}
+                      onClick={() => { onSetMode(v.viewMode as ViewMode); setOtherGroupOpen(null); setOtherGroupPos(null); }}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}
+                    >
+                      {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                      <span className="flex-1 text-left">{v.label}</span>
+                      {isActive && <span className="text-primary text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>,
+          document.body
         );
       })()}
 

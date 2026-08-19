@@ -6,6 +6,21 @@
 
 ## EN COURS
 
+### Sélecteur de vues à 3 familles (Discussion/Pilotage/Exploration) — 2026-08-19
+- Chantiers 3/4 en attente (TODO) : Thomas veut qu'en FORUM, les vues hors discussion restent accessibles via un menu déroulant (idem PROJET à l'inverse) au lieu d'être masquées
+- Découverte en creusant le code : `VIEW_REGISTRY` (`packages/shared/src/constants/viewRegistry.ts`) classe déjà chaque vue en 4 catégories `basic/itemTypes/planning/exploration` — TODO.md était périmé (« PROJECT aucune restriction » alors que `MODE_EXCLUDED.projet` masquait déjà une longue liste, y compris la vue Liste)
+- Design validé (question posée, réponse « 3 groupes toujours visibles ») : 3 familles fixes — Discussion (thread/recent/text), Pilotage (le reste hors exploration), Exploration (catégorie `exploration` de VIEW_REGISTRY réutilisée telle quelle) — le mode choisit la famille en boutons directs, les 2 autres passent en dropdowns "Autres vues" jamais masqués
+- Implémenté dans `SpaceToolbar.tsx` : `MODE_ALLOWED`/`MODE_EXCLUDED` (blocage dur) supprimés, remplacés par `getViewGroup`/`MODE_PRIMARY_GROUP` ; dropdowns réutilisent le pattern Filtre/Aperçu déjà présent (state + ref + fermeture clic extérieur/Echap)
+- Vérifié en réel (navigateur intégré, communauté "Test SPOK" basculée FORUM puis PROJET puis remise Neutre) : FORUM → Discussions/Texte/Récents en direct + dropdowns Pilotage (14 vues, filtrées par accès) et Exploration ; PROJET → Pilotage en direct (regroupé par sous-sections Basique/Types/Planification) + dropdowns Discussion/Exploration ; clic sur une vue du dropdown change bien la vue active
+- Bug signalé par Thomas après 1re vérif : dropdowns vides au clic — cause = panneau en `absolute` piégé par le `overflow-x-auto` de la barre de vues (règle CSS : un axe non-`visible` force l'autre à `auto`, donc le panneau qui dépasse verticalement était clippé par le scroll horizontal). Fix : passage en portal `fixed` positionné via `getBoundingClientRect()`, même pattern que `ExportDropdownButton.tsx` déjà dans le code. Revérifié en réel : contenu visible, clic fonctionnel
+- Demandes complémentaires de Thomas : (1) regrouper les vues du panneau "Autres vues" par sous-catégorie comme la barre principale (2) icône manquante sur PERT
+- (1) Panneau "Autres vues" : sous-groupé par section (Basique/Types/Planification) avec en-têtes, même logique `sectionMap` que la barre principale
+- (2) Bug trouvé au passage : l'icône `GitMerge` de PERT (`viewRegistry.ts`) n'était ni importée ni dans `VIEW_ICON_MAP` de `SpaceToolbar.tsx` — PERT n'a jamais eu d'icône dans la barre de vues (bug préexistant, pas introduit par ce chantier). Fix : import + ajout à la map
+- Vérifié en réel (JS exec sur le DOM, panel en portal non lu par get_page_text) : panneau Pilotage affiche bien BASIQUE/TYPES/PLANIFICATION en en-têtes, PERT a désormais une icône svg
+- Typecheck web OK, check-doc-headers OK, en-tête du fichier mis à jour
+- Reste ouvert (Étape 3/4) : affiner les CHAMPS autorisés par contexte (hors périmètre de cette session, seules les vues étaient demandées) ; Étape 5 (mode Exploration) toujours en attente de spec
+- NON COMMITÉ — à MEP sur demande
+
 ### Fix clic résultat recherche n'ouvrait pas la modale item — 2026-08-11
 - `SearchPage.tsx` (items + contributions) passait `openItemId` via `state` du router React (`navigate(..., { state })`) — jamais lu nulle part, la modale ne s'ouvrait pas
 - `SpacePage.tsx` ne lit que le param d'URL `?item=id` pour déclencher l'ouverture — pattern déjà utilisé et fonctionnel dans `GlobalSearch.tsx`
