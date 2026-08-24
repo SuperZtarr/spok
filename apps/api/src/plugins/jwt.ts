@@ -25,8 +25,12 @@ declare module '@fastify/jwt' {
 }
 
 const jwtPluginAsync: FastifyPluginAsync = async (fastify) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET doit être défini');
+  }
+
   await fastify.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET || 'super-secret-key-change-in-production',
+    secret: process.env.JWT_SECRET,
     sign: {
       expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     },

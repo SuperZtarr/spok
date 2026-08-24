@@ -6,6 +6,18 @@
 
 ## EN COURS
 
+### Audit sécurité API — 2026-08-24
+- Demande Thomas : état de la sécurité de SPOK
+- Audité : auth/JWT, CORS, upload fichiers, requêtes SQL brutes ($queryRawUnsafe), tokens
+- 4 correctifs appliqués (`apps/api`) :
+  - `@fastify/rate-limit` : 100 req/min/IP global, 5 req/min/IP sur `/auth/register`, `/login`, `/forgot-password`, `/reset-password` (`strictRateLimit` dans `auth.ts`)
+  - `JWT_SECRET` : suppression du fallback en dur `'super-secret-key-change-in-production'` (`jwt.ts`), l'API refuse de démarrer si absent — vérifié avec Thomas que la valeur en prod Railway est déjà un vrai secret, pas le fallback
+  - Refresh token stocké en base sous forme de hash SHA-256 (`hashRefreshToken`, `auth.ts`) au lieu du token en clair — impact : sessions actives invalidées au déploiement (reconnexion nécessaire après expiration de l'access token, 15 min)
+  - `@fastify/helmet` enregistré (headers de sécurité)
+- Non modifiés (jugés non exploitables ou hors périmètre) : `$queryRawUnsafe` dans `anomalies.ts`/`duplicates.ts` (params bindés ou constante fixe, pas d'injection possible), blocklist extensions sur upload documents (whitelist MIME déjà en place pour images)
+- Typecheck `api` OK, `auth.test.ts` 29/29 (1 test ajusté pour le hash)
+- MEP en cours
+
 ### Refonte esthétique SPOK — piste "Dense technique" (chantier en cours) — 2026-08-19
 - Demande Thomas : revoir l'esthétique globale de SPOK, carte blanche
 - Exploré 3 directions via Claude Design (canvas) sur un écran représentatif (sidebar + bandeau + toolbar de vues + liste) : A "Éditorial neutre" (Newsreader/Manrope, indigo), B "Dense technique" (IBM Plex, cyan, coins nets), C "Chaleureux structuré" (Bricolage Grotesque, terracotta, cartes arrondies) — canvas : https://claude.ai/code/artifact/d1831e3a-8133-4f3d-a1e2-ea9beb71dba7

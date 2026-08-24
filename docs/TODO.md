@@ -19,6 +19,9 @@
 - [ ] **Étape 3/4 (reste)** : affiner les CHAMPS autorisés par contexte (au-delà des vues, déjà fait ci-dessus)
 - [ ] **Étape 5 — Exploration** : à repenser en « loupe » utilisateur activable partout (pas un contexte de contenu), spec à faire
 
+### Sécurité API
+- [x] Audit sécurité API (auth/JWT/CORS/upload/SQL) : rate limiting sur `/auth/*` (5 req/min/IP), `JWT_SECRET` sans fallback en dur (échec au démarrage si absent), refresh token hashé SHA-256 en base, `@fastify/helmet` — 2026-08-24
+
 ### Tests / qualité
 - [x] BUG filtres échéances (GlobalTaskFilterBar) : corrigé — 2026-07-12
 - [x] Réparer les TNR : 47 tests en échec réalignés sur les comportements actuels des routes — 422/422 verts — 2026-07-11

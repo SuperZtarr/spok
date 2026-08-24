@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { FastifyInstance } from 'fastify'
 import { buildTestApp, MockPrisma, getTestToken } from '../test/helpers.js'
+import { hashRefreshToken } from './auth.js'
 
 // Mock bcrypt for fast tests
 vi.mock('bcrypt', () => ({
@@ -296,7 +297,7 @@ describe('POST /auth/logout', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().success).toBe(true)
     expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
-      where: { token: 'token-to-delete' },
+      where: { token: hashRefreshToken('token-to-delete') },
     })
   })
 })

@@ -1,11 +1,14 @@
 /*
- * Point d'entrée de l'API Fastify : enregistrement des plugins (prisma, jwt, sensible, multipart)
- * et de toutes les routes avec leurs préfixes. Gestion d'erreurs Zod → 400 structuré.
+ * Point d'entrée de l'API Fastify : enregistrement des plugins (prisma, jwt, sensible, multipart,
+ * helmet, rate-limit) et de toutes les routes avec leurs préfixes. Gestion d'erreurs Zod → 400 structuré.
+ * rate-limit : 100 req/min/IP par défaut globalement, routes auth sensibles surchargées à 5/min (voir auth.ts).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 
 // Sentry : actif uniquement si SENTRY_DSN est défini (no-op sinon).
 // Erreurs seulement (tracesSampleRate 0) pour rester dans le tier gratuit.
@@ -267,6 +270,12 @@ async function buildApp() {
   await app.register(cors, {
     origin: allowedOrigins,
     credentials: true,
+  });
+
+  await app.register(helmet);
+  await app.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
   });
 
   await app.register(sensible);

@@ -1,11 +1,14 @@
 /*
  * Authentification : register (vérification email via Resend), login, refresh, logout,
  * reset/forgot password. Tokens JWT (access 15 min / refresh 7 j) — hash bcrypt cost 10.
+ * Refresh token stocké en base sous forme de hash SHA-256 (hashRefreshToken), jamais en clair.
+ * Routes sensibles (register/login/forgot-password/reset-password) limitées à 5 req/min/IP
+ * via strictRateLimit (le plugin @fastify/rate-limit global est enregistré dans index.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { hash, compare } from 'bcrypt';
 import { z } from 'zod';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { Resend } from 'resend';
 import type { AuthResponse, AuthTokens, AuthUser } from '@spok/shared';
 import { createNotification } from '../utils/notifications.js';
@@ -36,9 +39,11 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8),
 });
 
+const strictRateLimit = { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } };
+
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Register
-  fastify.post<{ Body: z.infer<typeof registerSchema> }>('/register', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof registerSchema> }>('/register', strictRateLimit, async (request, reply) => {
     const body = registerSchema.parse(request.body);
 
     // Check if email already used
@@ -125,7 +130,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Login
-  fastify.post<{ Body: z.infer<typeof loginSchema> }>('/login', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof loginSchema> }>('/login', strictRateLimit, async (request, reply) => {
     const body = loginSchema.parse(request.body);
 
     const user = await fastify.prisma.user.findUnique({
@@ -220,7 +225,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const { refreshToken } = refreshSchema.parse(request.body);
 
     const storedToken = await fastify.prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
+      where: { token: hashRefreshToken(refreshToken) },
     });
 
     if (!storedToken) {
@@ -278,14 +283,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const { refreshToken } = refreshSchema.parse(request.body);
 
     await fastify.prisma.refreshToken.deleteMany({
-      where: { token: refreshToken },
+      where: { token: hashRefreshToken(refreshToken) },
     });
 
     return { success: true };
   });
 
   // Forgot password
-  fastify.post<{ Body: z.infer<typeof forgotPasswordSchema> }>('/forgot-password', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof forgotPasswordSchema> }>('/forgot-password', strictRateLimit, async (request, reply) => {
     const { email } = forgotPasswordSchema.parse(request.body);
 
     const user = await fastify.prisma.user.findUnique({
@@ -351,7 +356,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Reset password
-  fastify.post<{ Body: z.infer<typeof resetPasswordSchema> }>('/reset-password', async (request, reply) => {
+  fastify.post<{ Body: z.infer<typeof resetPasswordSchema> }>('/reset-password', strictRateLimit, async (request, reply) => {
     const { token, password } = resetPasswordSchema.parse(request.body);
 
     const resetToken = await fastify.prisma.passwordResetToken.findUnique({
@@ -538,6 +543,10 @@ export async function sendVerificationEmail(
   fastify.log.info({ emailId: data?.id, to: email }, 'Verification email sent successfully');
 }
 
+export function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 export async function generateTokens(
   fastify: any,
   userId: string,
@@ -551,7 +560,7 @@ export async function generateTokens(
 
   await fastify.prisma.refreshToken.create({
     data: {
-      token: refreshToken,
+      token: hashRefreshToken(refreshToken),
       userId,
       expiresAt,
     },
