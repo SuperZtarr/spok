@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spok-v3';
+const CACHE_NAME = 'spok-v4';
 
 // Install: cache app shell
 self.addEventListener('install', (event) => {

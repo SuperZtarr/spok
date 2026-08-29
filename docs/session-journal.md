@@ -6,6 +6,17 @@
 
 ## EN COURS
 
+### Fix cache PWA (interface figée sur d'anciennes versions) — 2026-08-24
+- Signalé par Thomas : des utilisateurs avaient une interface vieille de plusieurs mois malgré les MEP successives
+- Cause : `sw.js` (service worker PWA) matchait la règle nginx `\.(js|...)$` en `immutable, expires 1y` au lieu du `no-cache` prévu pour l'app shell — retardait la détection de mise à jour côté navigateur
+- Cause principale : aucun mécanisme ne rechargeait un onglet déjà ouvert (PWA installée, onglet épinglé) quand une nouvelle version du SW s'activait — l'app tournait indéfiniment sur le bundle chargé en mémoire au premier chargement
+- Corrigé :
+  - `nginx.conf` : ajout `location = /sw.js` en `no-cache` (précédence exacte sur la règle regex des assets)
+  - `sw.js` : `CACHE_NAME` `spok-v3` → `spok-v4` pour purger le cache applicatif existant chez les utilisateurs
+  - `main.tsx` : écoute `controllerchange` sur le service worker → rechargement automatique de la page quand une nouvelle version prend le contrôle
+- Typecheck web OK, check-doc-headers OK
+- NON COMMITÉ — à MEP sur demande
+
 ### Audit sécurité API — 2026-08-24
 - Demande Thomas : état de la sécurité de SPOK
 - Audité : auth/JWT, CORS, upload fichiers, requêtes SQL brutes ($queryRawUnsafe), tokens

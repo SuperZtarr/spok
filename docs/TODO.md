@@ -19,6 +19,9 @@
 - [ ] **Étape 3/4 (reste)** : affiner les CHAMPS autorisés par contexte (au-delà des vues, déjà fait ci-dessus)
 - [ ] **Étape 5 — Exploration** : à repenser en « loupe » utilisateur activable partout (pas un contexte de contenu), spec à faire
 
+### Cache PWA
+- [x] Interface figée sur d'anciennes versions chez certains utilisateurs : `sw.js` caché à tort en `immutable 1y` par nginx (règle regex assets), aucun rechargement auto d'un onglet déjà ouvert à l'activation d'une nouvelle version — corrigé (`location = /sw.js` no-cache, `CACHE_NAME` bumpé, reload sur `controllerchange`) — 2026-08-24
+
 ### Sécurité API
 - [x] Audit sécurité API (auth/JWT/CORS/upload/SQL) : rate limiting sur `/auth/*` (5 req/min/IP), `JWT_SECRET` sans fallback en dur (échec au démarrage si absent), refresh token hashé SHA-256 en base, `@fastify/helmet` — 2026-08-24
 

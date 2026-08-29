@@ -28,10 +28,21 @@ const queryClient = new QueryClient({
   },
 });
 
-// Register service worker for PWA installability (prod only)
+// Register service worker for PWA installability (prod only).
+// Le SW fait skipWaiting()/clients.claim() dès qu'une nouvelle version est activée,
+// ce qui déclenche 'controllerchange' ici : on recharge la page pour qu'un onglet
+// resté ouvert (PWA, onglet épinglé) ne tourne pas indéfiniment sur un vieux bundle
+// (bug constaté 2026-08-24 : utilisateurs sur une interface vieille de plusieurs mois).
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
   });
 }
 
