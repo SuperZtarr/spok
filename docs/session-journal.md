@@ -6,6 +6,15 @@
 
 ## EN COURS
 
+### Script de démarrage dev — readiness + ouverture navigateur — 2026-08-31
+- Demande Thomas : scripter ce que je faisais à la main au démarrage (attendre que la stack serve du 200, ouvrir le navigateur) plutôt que des actions manuelles
+- Constat : la chaîne existe déjà (hook `session-start-hook.ps1` → `dev-autostart.ps1` → `pnpm dev:start`). Manquaient : l'attente readiness (le hook disait juste « ~60s ») et l'ouverture navigateur
+- Choix : étendre `dev-autostart.ps1` (pas de nouveau fichier, éviter un 2e poller). Cas « dev déjà lancé » non traité (Thomas : aucun besoin, l'onglet est déjà là)
+- `dev-autostart.ps1` réécrit : attente Docker (inchangée) → `Start-Process pnpm dev:start` non bloquant → poll `:3000` + `:3001/health` toutes les 3s jusqu'à 200/200 (timeout 180s) → `Start-Process chrome.exe http://localhost:3000` inconditionnel (résolution chemin Program Files / (x86), sinon message, aucun fallback en cascade)
+- Effet de bord : `pnpm dev` se détache de la fenêtre PowerShell du watcher — `pnpm dev:stop` tue node par port, sans impact
+- Vérifié : parse PS OK, poll readiness OK sur stack en cours (200/200), résolution Chrome OK (`C:\Program Files\Google\Chrome\Application\chrome.exe`). Chemin cold-start complet (attente Docker + détachement dev) non testé (nécessiterait de tout arrêter)
+- NON COMMITÉ
+
 ### Fix cache PWA (interface figée sur d'anciennes versions) — 2026-08-24
 - Signalé par Thomas : des utilisateurs avaient une interface vieille de plusieurs mois malgré les MEP successives
 - Cause : `sw.js` (service worker PWA) matchait la règle nginx `\.(js|...)$` en `immutable, expires 1y` au lieu du `no-cache` prévu pour l'app shell — retardait la détection de mise à jour côté navigateur
