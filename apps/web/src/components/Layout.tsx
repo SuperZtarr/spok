@@ -1,5 +1,6 @@
 /*
- * Layout principal connecté : header (GlobalNavBar, recherche, notifications, profil) + zone de contenu.
+ * Layout principal connecté : header (row 1 : notifications, mode admin/dev compact, déconnexion,
+ * "Retourner à", vignette profil ; row 2 : GlobalNavBar) + zone de contenu.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
@@ -11,7 +12,7 @@ import {
   HelpCircle, Clock, Star, Plus, ArrowLeft,
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide, Copy,
+  Map as MapIconLucide, Copy, LogOut, RotateCcw,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -19,11 +20,12 @@ import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, itemsApi } from '../lib/api';
 
-import { useAdminMode } from './DevDbStatus';
+import { useAdminMode, AdminModeToggle, DevModeToggle } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
 import { UserProfileModal } from './UserProfileModal';
+import { DevZoneInspector } from './DevZoneInspector';
 import { NotificationBell } from './NotificationBell';
 import { GlobalNavBar } from './GlobalNavBar';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
@@ -89,7 +91,7 @@ function CommunitySection({
 }) {
   const adminMode = useAdminMode();
   return (
-    <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} className="pt-2 pb-1.5 border-b border-border/50">
+    <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} data-devzone="sidebar-communaute" className="pt-2 pb-1.5 border-b border-border/50">
       <div
         className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-accent/50 cursor-pointer group"
         onClick={() => onToggleExpand(community.id)}
@@ -289,7 +291,7 @@ function SpaceTreeItem({
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, logout, refreshToken } = useAuthStore();
   const { initTheme } = useThemeStore();
   const { spaceViews, sections: menuSections, visibleItems } = useMenuItems();
   const interfaceMode = useInterfaceModeStore(s => s.mode);
@@ -299,6 +301,34 @@ export function Layout() {
   const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Déconnexion + reprise de session (raccourcis row 1 du header, déplacés depuis GlobalNavBar
+  // le 2026-08-31). Le bouton "Retourner à" n'apparaît qu'après une expiration forcée
+  // (spok_resume posé par l'intercepteur d'auth) ; la déconnexion volontaire l'efface.
+  const [resumeInfo, setResumeInfo] = useState<{ url: string; label: string } | null>(null);
+
+  useEffect(() => {
+    if (!user) { setResumeInfo(null); return; }
+    const raw = sessionStorage.getItem('spok_resume');
+    if (raw) {
+      try { setResumeInfo(JSON.parse(raw)); } catch { /* ignore */ }
+    }
+  }, [user]);
+
+  const handleResume = () => {
+    if (!resumeInfo) return;
+    sessionStorage.removeItem('spok_resume');
+    setResumeInfo(null);
+    navigate(resumeInfo.url);
+  };
+
+  const handleLogout = async () => {
+    try { if (refreshToken) await authApi.logout(refreshToken); } catch { /* ignore */ }
+    sessionStorage.removeItem('spok_last_location');
+    sessionStorage.removeItem('spok_resume');
+    logout();
+    navigate('/');
+  };
 
 
   // Expand/collapse state for space tree (persisted in localStorage)
@@ -745,12 +775,12 @@ export function Layout() {
   const sidebarContent = user ? (
     <>
       {/* Logo always visible */}
-      <div id="sidebar-logo" className="px-1 border-border flex-shrink-0 overflow-hidden">
+      <div id="sidebar-logo" data-devzone="sidebar-logo" className="px-1 border-border flex-shrink-0 overflow-hidden">
         <a href="/" className="block"><img src={logoUrl} alt="SPOK" className="w-full h-auto object-contain py-2" /></a>
       </div>
 
       {/* Guide de démarrage — sous le logo */}
-      <div className="px-2 pb-2 border-b border-border flex-shrink-0">
+      <div data-devzone="sidebar-guide" className="px-2 pb-2 border-b border-border flex-shrink-0">
         <button
           id="sidebar-help-button-top"
           onClick={() => startTour()}
@@ -794,12 +824,12 @@ export function Layout() {
       </div>
 
       {/* Navigation - scrollable */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
+      <nav data-devzone="sidebar-nav" className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {currentCommunity && currentCommunityGroup ? (
           <>
             {/* Immersive community mode: favorites + space tree only */}
             {communityFavoriteSpaces.length > 0 && (
-              <div className="pt-1.5 pb-1.5 border-b border-border/50">
+              <div data-devzone="sidebar-favoris" className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center px-2 mb-1">
                   <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
                   <span className="text-base font-bold text-foreground">Favoris</span>
@@ -834,7 +864,7 @@ export function Layout() {
             )}
 
             {/* Community spaces tree */}
-            <div className="pt-1.5">
+            <div data-devzone="sidebar-arbre" className="pt-1.5">
               <button
                 onClick={() => navigate('/')}
                 className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground mb-1.5 transition-colors px-2"
@@ -875,7 +905,7 @@ export function Layout() {
             {/* Global mode: full sidebar */}
             {/* Favorites */}
             {favoriteSpaces.length > 0 && (
-              <div id="sidebar-favorites" className="pt-1.5 pb-1.5 border-b border-border/50">
+              <div id="sidebar-favorites" data-devzone="sidebar-favoris" className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center px-2 mb-1">
                   <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
                   <span className="text-base font-bold text-foreground">Favoris</span>
@@ -907,7 +937,7 @@ export function Layout() {
 
             {/* Recents */}
             {user && recentSpaces.length > 0 && (
-              <div id="sidebar-recents" className="pt-1.5 pb-1.5 border-b border-border/50">
+              <div id="sidebar-recents" data-devzone="sidebar-recents" className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center px-2 mb-1">
                   <Clock className="w-3 h-3 text-muted-foreground/60 mr-1.5 flex-shrink-0" />
                   <span className="text-base font-bold text-foreground">Récents</span>
@@ -939,7 +969,7 @@ export function Layout() {
 
             {/* Personal spaces (authenticated only) */}
             {user && mySpaces.length > 0 && (
-              <div className="pt-1.5 pb-1.5 border-b border-border/50">
+              <div data-devzone="sidebar-mes-espaces" className="pt-1.5 pb-1.5 border-b border-border/50">
                 <div className="flex items-center justify-between px-2 mb-1">
                   <span className="text-base font-bold text-foreground">Mes espaces</span>
                 </div>
@@ -987,7 +1017,7 @@ export function Layout() {
 
             {/* Independent group spaces (no community) */}
             {independentSpaces.length > 0 && (
-              <div className="pt-1.5">
+              <div data-devzone="sidebar-autres-espaces" className="pt-1.5">
                 <div className="flex items-center justify-between px-2 mb-1">
                   <span className="text-base font-bold text-foreground">Autres espaces</span>
                 </div>
@@ -1010,7 +1040,7 @@ export function Layout() {
       </nav>
 
       {/* Footer sidebar */}
-      <div className="border-t border-border flex-shrink-0">
+      <div data-devzone="sidebar-footer" className="border-t border-border flex-shrink-0">
         {adminMode && adminMenuItems.length > 0 && (
           <div className="px-2 py-2 border-b border-border/50">
             <div className="flex items-center px-1 mb-1">
@@ -1060,6 +1090,7 @@ export function Layout() {
 
   return (
     <div className="h-screen flex overflow-hidden relative">
+      <DevZoneInspector />
       {/* Mobile overlay */}
       {sidebarOpen && !isAuthPage && (
         <div
@@ -1070,6 +1101,7 @@ export function Layout() {
 
       {/* Sidebar - desktop: static resizable + collapsible, mobile: slide-over (hidden on auth pages) */}
       {!isAuthPage && <aside
+        data-devzone="sidebar"
         className={`
           bg-muted border-r border-border flex flex-col flex-shrink-0 h-full
           fixed md:relative z-50 md:z-auto
@@ -1127,6 +1159,7 @@ export function Layout() {
         <header className="border-b border-border bg-muted flex flex-col flex-shrink-0 relative z-30">
           {/* Row 1: title + right controls */}
           <div
+            data-devzone="header"
             className="flex items-stretch h-12 relative isolate"
           >
             {/* Cover image background */}
@@ -1248,6 +1281,31 @@ export function Layout() {
             {user ? (
               <>
                 <NotificationBell />
+                {/* Raccourcis déplacés depuis le bandeau (GlobalNavBar) le 2026-08-31 :
+                    Mode admin / Mode dev (compact, gatés admin), Déconnexion, puis "Retourner à"
+                    éventuel — desktop uniquement, mobile inchangé (grille sidebar + modale profil). */}
+                <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
+                  <AdminModeToggle variant="compact" />
+                  <DevModeToggle variant="compact" />
+                  <button
+                    onClick={handleLogout}
+                    title="Déconnexion"
+                    className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 text-destructive hover:bg-accent/60"
+                  >
+                    <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="hidden lg:inline">Déconnexion</span>
+                  </button>
+                  {resumeInfo && (
+                    <button
+                      onClick={handleResume}
+                      title={`Retourner à ${resumeInfo.label}`}
+                      className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 animate-pulse"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="hidden lg:inline">Retourner à {resumeInfo.label}</span>
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsProfileOpen(true)}
                   title="Profil"
@@ -1277,7 +1335,7 @@ export function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 flex flex-col min-h-0 overflow-auto">
+        <main data-devzone="contenu" className="flex-1 flex flex-col min-h-0 overflow-auto">
           <Outlet />
         </main>
       </div>

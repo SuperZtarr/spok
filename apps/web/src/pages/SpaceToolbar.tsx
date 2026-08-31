@@ -232,7 +232,7 @@ export function SpaceToolbar({
 
 
   return (
-    <div className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','priority','mindmap'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
+    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','priority','mindmap'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
 
       {/* View mode buttons row */}
       {(() => {

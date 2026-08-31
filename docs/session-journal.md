@@ -6,6 +6,31 @@
 
 ## EN COURS
 
+### Déplacement boutons Déconnexion / Mode admin / Mode dev vers la row 1 du header — 2026-08-31
+- Demande Thomas : sortir Déconnexion + Mode admin (puis Mode dev, puis "Retourner à") de la section « Divers » du bandeau (GlobalNavBar) et les placer à gauche de la vignette utilisateur dans la row 1 du header
+- MCP SPOK toujours 401 — doc non consultable
+- `DevDbStatus.tsx` : `AdminModeToggle` et `DevModeToggle` reçoivent `variant?: 'full' | 'compact'` (défaut `full` → `UserProfileModal` inchangé ; `compact` = h-7 aligné row 1, label `hidden lg:inline`)
+- `GlobalNavBar.tsx` : retiré `<AdminModeToggle />`, le bouton "Retourner à" + tout son état (`resumeInfo`/`useEffect spok_resume`/`handleResume`), `handleLogout`, la clé `logout` ajoutée à `EXCLUDED_KEYS`. Imports nettoyés (`useAuthStore`, `authApi`, `useState`/`useEffect`, `LogOut`/`RotateCcw`). « Divers » garde Recherche/Contact/Plan du site
+- `Layout.tsx` : `handleLogout` complet (authApi.logout + purge `spok_last_location`/`spok_resume` + `logout()` + `navigate('/')`) + état/effect/handler de reprise déplacés ici ; row 1, avant la vignette, `<div hidden md:flex>` = `[Mode admin][Mode dev][Déconnexion][Retourner à ?]` — mobile inchangé (grille sidebar + modale profil)
+- Typecheck web OK, check-doc-headers OK (3 fichiers), en-têtes MAJ
+- Vérifié visuellement par Thomas (« très bien »)
+- MEP 2026-08-31
+
+### Overlay dev : noms + encadrés colorés des zones du layout — 2026-08-31
+- Demande Thomas (en cours de route sur le chantier ci-dessus) : en mode dev, afficher le nom des zones avec un encadrement de couleur par zone, pour se donner un vocabulaire commun. Découpe validée : « on verra si ça suffit » sur un 1er jet à 5 zones
+- `DevDbStatus.tsx` : nouveau hook exporté `useDevMode()` (localStorage `spok-dev-mode` + événement `spok:devmode`, même pattern que `useAdminMode`)
+- Nouveau `apps/web/src/components/DevZoneStyles.tsx` : monté 1× dans `Layout`, si `useDevMode()` injecte un `<style>` global — `outline: 2px dashed <couleur>` + libellé `::before` = `attr(data-devzone)`. Mode dev OFF → rien monté, attributs inertes. Couleur par zone dans `ZONE_COLORS`
+- Attributs `data-devzone` posés sur les éléments réels (aucun wrapper) : premier niveau `sidebar` (`<aside>`), `header` (row 1), `bandeau` (`GlobalNavBar`), `toolbar` (`SpaceToolbar`), `contenu` (`<main>`)
+- Approfondissement sidebar (demande Thomas) : sous-zones `sidebar-logo`, `sidebar-guide`, `sidebar-nav` (`<nav>` scrollable), `sidebar-footer`
+- Approfondissement `sidebar-nav` : sections internes `sidebar-favoris`, `sidebar-recents`, `sidebar-mes-espaces`, `sidebar-communaute` (racine de `CommunitySection`, répétée), `sidebar-autres-espaces`, `sidebar-arbre` (mode communauté immersif)
+- 1re version : libellés opaques permanents en haut de chaque zone → retour Thomas « peu lisible dans certains cas » (masquaient le contenu : Backend API, ADMINISTRATION, ACCUEIL…)
+- 2e version (libellé au survol de la zone + légende) : encore rejetée par Thomas
+- 3e version : pastilles de couleur au bord droit de chaque zone + infobulle → rejetée (« pas toujours dans le coin », « pas vraiment mieux »)
+- 4e version (inspecteur pur : rien en permanence, survol → encadré + nom) : proposée, puis Thomas tranche l'inverse
+- Version retenue (`DevZoneInspector.tsx`, renommé depuis `DevZoneStyles.tsx`) : `<style>` global = encadré `outline 1px dashed` permanent sur CHAQUE zone (toutes visibles en continu) + overlay JS `position: fixed` qui, au survol, met en évidence la zone `data-devzone` la plus interne sous le curseur (encadré plein + fond léger) et affiche son nom en badge à son coin haut-droit — un seul nom à la fois (`closest('[data-devzone]')` sur `mousemove`, recalcul rAF sur scroll/resize). Zéro impact layout (aucun `position: relative` injecté)
+- Typecheck 5/5 OK, TNR 538/538 OK, check-doc-headers OK (4 fichiers)
+- MEP 2026-08-31
+
 ### Script de démarrage dev — readiness + ouverture navigateur — 2026-08-31
 - Demande Thomas : scripter ce que je faisais à la main au démarrage (attendre que la stack serve du 200, ouvrir le navigateur) plutôt que des actions manuelles
 - Constat : la chaîne existe déjà (hook `session-start-hook.ps1` → `dev-autostart.ps1` → `pnpm dev:start`). Manquaient : l'attente readiness (le hook disait juste « ~60s ») et l'ouverture navigateur

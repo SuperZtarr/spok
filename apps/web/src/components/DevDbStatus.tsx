@@ -1,6 +1,8 @@
 /*
- * Indicateur d'environnement (dev/DB) + toggle du mode admin (useAdminMode) — le mode admin
- * conditionne l'accès aux items de menu et vues access:'admin'.
+ * Indicateur d'environnement (dev/DB) + toggles mode admin / mode visiteur / mode dev.
+ * Le mode admin (useAdminMode) conditionne l'accès aux items de menu et vues access:'admin'.
+ * AdminModeToggle / DevModeToggle acceptent variant 'full' (modale profil) ou 'compact'
+ * (row 1 du header, Layout.tsx).
  */
 import { useEffect, useState } from 'react';
 import { healthApi, ApiError } from '../lib/api';
@@ -19,7 +21,13 @@ const DEV_MODE_KEY = 'spok-dev-mode';
 const ADMIN_MODE_KEY = 'spok-admin-mode';
 const VISITOR_MODE_KEY = 'spok-visitor-mode';
 
-export function AdminModeToggle() {
+/**
+ * Toggle du mode admin.
+ * - `variant="full"` (défaut) : bouton pleine largeur, pour la modale profil.
+ * - `variant="compact"` : bouton à hauteur h-7 aligné sur les boutons de la row 1 du header.
+ * Rend `null` si l'utilisateur n'est pas ADMIN global.
+ */
+export function AdminModeToggle({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
   const [adminModeEnabled, setAdminModeEnabled] = useState(() => {
     return localStorage.getItem(ADMIN_MODE_KEY) === 'true';
   });
@@ -37,6 +45,23 @@ export function AdminModeToggle() {
 
   if (!isAdmin) return null;
 
+  if (variant === 'compact') {
+    return (
+      <button
+        onClick={toggleAdminMode}
+        title={`Mode admin ${adminModeEnabled ? 'activé' : 'désactivé'}`}
+        className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+          adminModeEnabled
+            ? 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50'
+            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+        }`}
+      >
+        <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="hidden lg:inline">Admin {adminModeEnabled ? 'activé' : 'désactivé'}</span>
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={toggleAdminMode}
@@ -50,6 +75,19 @@ export function AdminModeToggle() {
       <span>Mode admin {adminModeEnabled ? 'activé' : 'désactivé'}</span>
     </button>
   );
+}
+
+/** Mode dev actif (localStorage `spok-dev-mode` + événement `spok:devmode`). Partagé. */
+export function useDevMode(): boolean {
+  const [enabled, setEnabled] = useState(() => localStorage.getItem(DEV_MODE_KEY) === 'true');
+
+  useEffect(() => {
+    const handler = (e: Event) => setEnabled((e as CustomEvent).detail);
+    window.addEventListener('spok:devmode', handler);
+    return () => window.removeEventListener('spok:devmode', handler);
+  }, []);
+
+  return enabled;
 }
 
 export function useAdminMode(): boolean {
@@ -108,7 +146,11 @@ export function useVisitorMode(): boolean {
   return enabled && !!user;
 }
 
-export function DevModeToggle() {
+/**
+ * Toggle du mode dev (affiche l'indicateur DevDbStatus). Même variantes que AdminModeToggle.
+ * Rend `null` hors mode admin (gate useAdminMode).
+ */
+export function DevModeToggle({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
   const [devModeEnabled, setDevModeEnabled] = useState(() => {
     return localStorage.getItem(DEV_MODE_KEY) === 'true';
   });
@@ -123,6 +165,23 @@ export function DevModeToggle() {
   const adminMode = useAdminMode();
 
   if (!adminMode) return null;
+
+  if (variant === 'compact') {
+    return (
+      <button
+        onClick={toggleDevMode}
+        title={`Mode dev ${devModeEnabled ? 'activé' : 'désactivé'}`}
+        className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+          devModeEnabled
+            ? 'bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:hover:bg-purple-900/50'
+            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+        }`}
+      >
+        <Bug className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="hidden lg:inline">Dev {devModeEnabled ? 'activé' : 'désactivé'}</span>
+      </button>
+    );
+  }
 
   return (
     <button
