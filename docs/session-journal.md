@@ -24,6 +24,15 @@
 - Connu, non traité (mineur) : `doSubmit` a la même troncature minute → un save déclenché par un autre champ réécrit `startDate` en perdant les secondes. Self-heal au prochain save
 - MEP 2026-09-07 (abfd068) — CI verte, avec le chantier Forum
 
+### Modale Forum : toggle « Plus de champs » (option B) — 2026-09-07
+- Demande Thomas : en Forum, pouvoir créer des items d'autres types + accéder aux autres champs, mais en affichage optionnel (toggle). Option B validée = tout sous le toggle, y compris Parent + Tags
+- `ItemEditModal.tsx` : `forumExpanded` state + `showAll = !isForumMode || forumExpanded`. Bouton « Plus de champs / Moins de champs » (ChevronDown/Up) dans le header, visible seulement en Forum. Tous les `!isForumMode` des sections (Type/Statut/Priorité/Dates/Assigné/Dépendances) → `showAll` ; Parent/Tags/Enfants (avant inconditionnels) → `{showAll && …}`. Grille : `showAll ? 3-col : 1-col`. `fillHeight 80vh` sur description quand `!showAll`. mediaSection sous la description quand `!showAll`, sinon colonne centrale
+- Auto-ouverture si l'item porte des données avancées : type ≠ NOTE/UNDEFINED, priorité, dates, assigné, ou relations. **Statut volontairement exclu** (quasi toujours renseigné → sinon ça s'ouvre tout le temps)
+- Reset `forumExpanded` à false au changement d'item
+- Vérifié au dev (communauté Test SPOK = Forum) : modal réduit = titre + description(80vh) + contributions + ID + toggle ; déplié = modal 3-col complet ; toggle OK dans les 2 sens ; auto-ouverture OK sur item daté / Réunion
+- Typecheck web OK, check-doc-headers OK
+- Reste : contrôle Thomas, puis MEP sur demande
+
 ### Dashboard : filtre non appliqué aux répartitions + fenêtres trop étroites — 2026-09-07
 - Signalé par Thomas : dans `MyDashboardView` (onglet Tableau de bord), filtre pas appliqué sur tous les panneaux + fenêtres trop petites
 - Fix filtre : `doneData` (`MyDashboardView.tsx:~290`) hardcodait type/status/pageSize → ignorait la barre de filtres. Passé en `...filters.queryParams` + `status:'done'` forcé (comme `allData`) ; queryKey inclut `filters.queryParams`. Vérifié au dev : « Par statut »/« Par type » passent de 13 à 0 en filtrant Priorité=Haute (avant : restaient ≥ terminés)

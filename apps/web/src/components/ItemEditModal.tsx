@@ -4,10 +4,11 @@
  * assignation, tags, dates (début/fin/échéance), URL, relations, contributions (thread).
  * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state.
  * Les dates sont lues/écrites en heure locale via toDatetimeLocal() — ne jamais utiliser toISOString() pour afficher.
- * Modes d'interface (Forum/Projet/Exploration/Tous) masquent certaines sections via isForumMode etc.
- * En mode Forum : la colonne centrale (Type/Statut/Priorité/Dates) est entièrement supprimée,
- * la grille passe à 2 colonnes [1fr, sidebar], la Description remplit ~80vh, et les blocs media
- * (mediaSection) sont rendus sous la Description dans la colonne principale.
+ * Modes d'interface (Forum/Projet/Exploration/Tous). En mode Forum, le modal est réduit à
+ * Titre + Description (~80vh) + blocs media + Réactions/Contributions ; un toggle « Plus de champs »
+ * (forumExpanded → showAll) révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants
+ * et repasse en layout 3 colonnes. Auto-ouvert si l'item porte déjà des données avancées.
+ * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
  * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -22,7 +23,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, Plus, ExternalLink, ChevronRight, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -174,6 +175,9 @@ export function ItemEditModal({
   const adminMode = useAdminMode();
   const { mode: interfaceMode } = useInterfaceModeStore();
   const isForumMode = interfaceMode === 'forum';
+  // Mode Forum : modal réduit (titre + description + contributions) ; toggle « Plus de champs »
+  // pour révéler Type / Statut / Priorité / Dates / Assigné / Dépendances / Parent / Tags / Enfants.
+  const [forumExpanded, setForumExpanded] = useState(false);
   const [visitorPreview, setVisitorPreview] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -294,7 +298,22 @@ export function ItemEditModal({
   // Reset the tracker whenever the requested item changes
   useEffect(() => {
     initializedItemIdRef.current = null;
+    setForumExpanded(false);
   }, [itemId]);
+
+  // Forum : si l'item porte déjà des données « avancées » (type non-Note, pilotage, relations),
+  // ouvrir le modal complet d'emblée pour que la sélection courante reste visible.
+  useEffect(() => {
+    if (!item || !isForumMode) return;
+    // Volontairement strict : le statut est ignoré (quasi toujours renseigné, même par défaut).
+    const hasAdvanced =
+      (item.type !== 'NOTE' && item.type !== 'UNDEFINED') ||
+      item.priority != null ||
+      !!item.dueDate || !!item.startDate || !!item.endDate ||
+      !!item.assignedToId ||
+      ((item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0)) > 0;
+    if (hasAdvanced) setForumExpanded(true);
+  }, [item, isForumMode]);
 
   // Populate the form once the correct item data has arrived
   useEffect(() => {
@@ -770,6 +789,8 @@ export function ItemEditModal({
   const TypeIcon = TYPE_ICONS[type];
   const typeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[type];
   const contributionCount = item?.contributions?.length || 0;
+  // Hors Forum : tout est affiché. En Forum : seulement si le toggle est ouvert.
+  const showAll = !isForumMode || forumExpanded;
 
   // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
   // Hors Forum : rendus dans la colonne centrale. En Forum (colonne centrale supprimée) :
@@ -930,6 +951,17 @@ export function ItemEditModal({
                 <span className="hidden sm:inline">{visitorPreview ? 'Vue visiteur' : 'Voir comme visiteur'}</span>
               </button>
             )}
+            {isForumMode && (
+              <button
+                type="button"
+                onClick={() => setForumExpanded(v => !v)}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
+                title={forumExpanded ? 'Masquer les champs avancés' : 'Afficher tous les champs (type, statut, dates, tags…)'}
+              >
+                {forumExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <span className="hidden sm:inline">{forumExpanded ? 'Moins de champs' : 'Plus de champs'}</span>
+              </button>
+            )}
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
                 <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -947,7 +979,7 @@ export function ItemEditModal({
           <div className="flex-1 overflow-y-auto pr-1">
 
             {/* Layout : 3 colonnes hors Forum, 2 colonnes en Forum (colonne centrale supprimée) */}
-            <div className={`grid grid-cols-1 gap-6 ${isForumMode ? 'lg:grid-cols-[1fr,380px]' : 'lg:grid-cols-[1fr,0.85fr,380px]'}`}>
+            <div className={`grid grid-cols-1 gap-6 ${showAll ? 'lg:grid-cols-[1fr,0.85fr,380px]' : ''}`}>
 
           {/* === LEFT COLUMN: description + contributions === */}
           <div className="space-y-6 min-w-0">
@@ -962,13 +994,13 @@ export function ItemEditModal({
                   editable={canEdit}
                   spaceId={spaceId}
                   minHeight={240}
-                  fillHeight={isForumMode ? '80vh' : undefined}
+                  fillHeight={!showAll ? '80vh' : undefined}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
               </div>
 
-              {/* Mode Forum : blocs media sous la Description (colonne centrale supprimée) */}
-              {isForumMode && mediaSection}
+              {/* Modal réduit (Forum non déplié) : blocs media sous la Description */}
+              {!showAll && mediaSection}
 
               {/* Reactions + Contributions */}
               <div className="space-y-3" data-tour="item-reactions">
@@ -1098,11 +1130,11 @@ export function ItemEditModal({
 
           </div>{/* end left column */}
 
-          {/* === CENTER COLUMN === supprimée en mode Forum (mediaSection déplacée sous la Description) */}
-          {!isForumMode && <div className="space-y-6 min-w-0">
+          {/* === CENTER COLUMN === — Forum non déplié : supprimée (mediaSection sous la Description) */}
+          {showAll && <div className="space-y-6 min-w-0">
 
-              {/* Type — masqué en mode Forum */}
-              {!isForumMode && <div className="space-y-2" data-tour="item-type-selector">
+              {/* Type */}
+              {showAll && <div className="space-y-2" data-tour="item-type-selector">
                 <label className="text-sm font-medium">Type</label>
                 {canEdit ? (
                   <>
@@ -1166,8 +1198,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Statut — masqué en mode Forum et types media */}
-              {!isForumMode && <div className="space-y-2" data-tour="item-status">
+              {/* Statut */}
+              {showAll && <div className="space-y-2" data-tour="item-status">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1223,8 +1255,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Priorité — masqué en mode Forum et types media */}
-              {!isForumMode && <div className="space-y-2">
+              {/* Priorité */}
+              {showAll && <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
                 {canEdit ? (
                   <>
@@ -1263,8 +1295,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Dates — masqué en mode Forum uniquement (types media : vides par défaut, rien ne les préremplit) */}
-              {!isForumMode && <div data-tour="item-dates" className="space-y-3">
+              {/* Dates */}
+              {showAll && <div data-tour="item-dates" className="space-y-3">
                 {/* Toggle Jours pleins / Heures — pleine largeur */}
                 {canEdit && (
                   <div className="flex items-center gap-3">
@@ -1368,8 +1400,8 @@ export function ItemEditModal({
                 <span className="text-xs text-muted-foreground font-mono select-all">{item.id}</span>
               </div>
 
-              {/* Parent (hidden in viewer mode et types media) */}
-              {canEdit && (
+              {/* Parent (hidden in viewer mode ; Forum : sous le toggle « Plus de champs ») */}
+              {showAll && canEdit && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Parent</label>
@@ -1383,8 +1415,8 @@ export function ItemEditModal({
               </div>
               )}
 
-              {/* Assigné à — masqué en mode Forum et types media */}
-              {!isForumMode && spaceMembers && spaceMembers.length > 0 && (
+              {/* Assigné à */}
+              {showAll && spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
                   {canEdit ? (
@@ -1407,8 +1439,8 @@ export function ItemEditModal({
                 </div>
               )}
 
-              {/* Dépendances — masqué en mode Forum et types media */}
-              {!isForumMode && <div className="space-y-3" data-tour="item-relations">
+              {/* Dépendances */}
+              {showAll && <div className="space-y-3" data-tour="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -1495,7 +1527,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Tags — masqué pour types media */}
+              {/* Tags — Forum : sous le toggle « Plus de champs » */}
+              {showAll && (
               <div className="space-y-3" data-tour="item-tags">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <TagIcon className="w-4 h-4" />
@@ -1513,9 +1546,10 @@ export function ItemEditModal({
                   </div>
                 )}
               </div>
+              )}
 
               {/* Children items */}
-              {item && (() => {
+              {showAll && item && (() => {
                 const children = allItems.filter(i => i.parentId === item.id);
                 if (children.length === 0) return null;
                 return (
