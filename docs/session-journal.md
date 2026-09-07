@@ -24,6 +24,16 @@
 - Connu, non traité (mineur) : `doSubmit` a la même troncature minute → un save déclenché par un autre champ réécrit `startDate` en perdant les secondes. Self-heal au prochain save
 - MEP 2026-09-07 (abfd068) — CI verte, avec le chantier Forum
 
+### Accueil : « Échéances proches » vide alors que le détail en a plein — 2026-09-07
+- Root cause : `GET /user/tasks` retombait sur `where.type = 'TASK'` quand aucun `type` n'était passé. HomeView (`HomeView.tsx:241`) appelle sans `type` → ne voyait que les Tâches. Dashboard/DeadlinesView passent les types explicitement → voient tout
+- Fix racine (demande Thomas : éviter régressions futures) : `user-tasks.ts` — suppression du défaut TASK. Type filtré uniquement si `type=` fourni avec ≥1 valeur valide, sinon tous types. Commentaires MAJ
+- `user-tasks.test.ts` : test `'should default to type=TASK'` → `'ne filtre pas par type sans param'` (`where.type` undefined). 16/16 verts
+- `ApiDocPage.tsx:63` : desc MAJ
+- Non touché : `useGlobalTaskFilters` garde `defaultTypes:['TASK']` (page /tasks reste « Tâches »). Autres appelants sans type : `PickTasksModal` (voit tous types si contexte agenda sans type — OK)
+- Vérifié au dev : « TODO assignés » de l'accueil affiche désormais MEETING/PERIOD/DOCUMENT/CONFIG (avant : Tâches seules) ; « En retard » inclut un item CONFIG. « Échéances proches » reste vide en local (dataset Admin sans échéance à J+7) mais le mécanisme est bon
+- Typecheck api+web OK
+- Reste : contrôle Thomas sur son dataset, puis MEP
+
 ### Modale Forum : toggle « Plus de champs » (option B) — 2026-09-07
 - Demande Thomas : en Forum, pouvoir créer des items d'autres types + accéder aux autres champs, mais en affichage optionnel (toggle). Option B validée = tout sous le toggle, y compris Parent + Tags
 - `ItemEditModal.tsx` : `forumExpanded` state + `showAll = !isForumMode || forumExpanded`. Bouton « Plus de champs / Moins de champs » (ChevronDown/Up) dans le header, visible seulement en Forum. Tous les `!isForumMode` des sections (Type/Statut/Priorité/Dates/Assigné/Dépendances) → `showAll` ; Parent/Tags/Enfants (avant inconditionnels) → `{showAll && …}`. Grille : `showAll ? 3-col : 1-col`. `fillHeight 80vh` sur description quand `!showAll`. mediaSection sous la description quand `!showAll`, sinon colonne centrale

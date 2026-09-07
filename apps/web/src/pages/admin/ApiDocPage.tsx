@@ -60,7 +60,7 @@ export function ApiDocPage() {
         <Row method="GET" path="/auth/me" auth="user" desc="Profil de l'utilisateur connecte" />
         <Row method="GET" path="/user/preferences" auth="user" desc="Preferences utilisateur (theme, etc.)" />
         <Row method="GET" path="/user/notification-preferences" auth="user" desc="Preferences de notifications" />
-        <Row method="GET" path="/user/tasks" auth="user" desc="Taches assignees a l'utilisateur" />
+        <Row method="GET" path="/user/tasks" auth="user" desc="Items multi-espaces de l'utilisateur (tous types, filtres multi-valeurs)" />
         <Row method="GET" path="/invitations/my" auth="user" desc="Invitations en attente de l'utilisateur" />
         <Row method="GET" path="/spaces/favorites" auth="user" desc="Espaces favoris de l'utilisateur" />
         <Row method="GET" path="/notifications/unread-count" auth="user" desc="Nombre de notifications non lues" />

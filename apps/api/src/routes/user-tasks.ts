@@ -1,7 +1,11 @@
 /*
- * GET /user/tasks : items multi-espaces de l'utilisateur (dashboards, page Tâches) — filtres
- * multi-valeurs, tri, pagination. Périmètre borné aux espaces accessibles, y compris pour les
- * admins (pas de bypass — les pages admin ont leurs propres endpoints).
+ * GET /user/tasks : items multi-espaces de l'utilisateur (dashboards, accueil, page Tâches) —
+ * filtres multi-valeurs, tri, pagination. Périmètre borné aux espaces accessibles, y compris
+ * pour les admins (pas de bypass — les pages admin ont leurs propres endpoints).
+ *
+ * `type` : si absent (ou aucune valeur valide) → AUCUN filtre de type, tous les types remontent.
+ * Les appelants qui veulent uniquement les tâches passent `type=TASK` explicitement
+ * (ex. useGlobalTaskFilters avec defaultTypes:['TASK'] pour la page /tasks).
  */
 import { FastifyPluginAsync } from 'fastify';
 
@@ -11,6 +15,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /user/tasks — List items across user's accessible spaces
   // Supports multi-value filters via comma-separated strings:
   //   type=TASK,PROJECT  status=todo,in_progress  priority=1,2  spaceId=id1,id2  communityId=id1,id2
+  // type omis → tous les types (pas de défaut TASK).
   // communityId restreint le périmètre accessible AVANT spaceId (contexte de travail : une
   // communauté = un ensemble d'activités, ex. "Thomas Travail" vs "Thomas Perso").
   fastify.get<{
@@ -106,7 +111,8 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     // 2. Build where clause
     const where: Record<string, unknown> = {};
 
-    // Type filter (supports multiple comma-separated values, defaults to TASK)
+    // Type filter (supports multiple comma-separated values).
+    // Absent ou aucune valeur valide → pas de filtre : tous les types remontent.
     if (typeFilter) {
       const validTypes = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'];
       const typeList = typeFilter.split(',').filter((t) => validTypes.includes(t));
@@ -114,11 +120,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
         where.type = typeList[0];
       } else if (typeList.length > 1) {
         where.type = { in: typeList };
-      } else {
-        where.type = 'TASK';
       }
-    } else {
-      where.type = 'TASK';
     }
 
     // Space access filter (déjà restreint aux communautés sélectionnées le cas échéant)

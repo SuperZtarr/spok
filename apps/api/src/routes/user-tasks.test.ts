@@ -165,7 +165,7 @@ describe('User Tasks routes', () => {
       expect(res.json().total).toBe(0)
     })
 
-    it('should default to type=TASK when no type filter', async () => {
+    it('should not filter by type when no type param (tous les types)', async () => {
       prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
@@ -176,7 +176,7 @@ describe('User Tasks routes', () => {
       })
 
       const where = prisma.item.findMany.mock.calls[0][0].where
-      expect(where.type).toBe('TASK')
+      expect(where.type).toBeUndefined()
     })
 
     it('should support multi-value type filter', async () => {
