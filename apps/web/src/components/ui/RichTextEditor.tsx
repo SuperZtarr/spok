@@ -1,6 +1,11 @@
 /*
  * Éditeur riche TipTap : gras/listes/titres/liens/images (upload R2), @mentions, collage d'images.
  * Utilisé pour descriptions d'items et contributions.
+ *
+ * Dimensionnement vertical (priorité décroissante) :
+ *   1. editorHeight (state) — resize manuel via la poignée
+ *   2. fillHeight — hauteur fixe imposée par le parent (ex. "80vh" en mode Forum), sans plafond
+ *   3. minHeight / defaultMaxHeight — comportement par défaut (zone qui grandit jusqu'à un plafond puis scrolle)
  */
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent, ReactRenderer, useEditorState, type Editor } from '@tiptap/react';
@@ -51,6 +56,8 @@ interface RichTextEditorProps {
   resizable?: boolean;
   minHeight?: number;
   defaultMaxHeight?: number;
+  /** Hauteur fixe imposée (ex. "80vh") : l'éditeur remplit cette hauteur, sans plafond. Surchargée par un resize manuel. */
+  fillHeight?: string;
   spaceId?: string;
   mentionableItems?: Array<{ id: string; title: string; type: string; spaceName?: string }>;
   autoFocus?: boolean;
@@ -235,7 +242,7 @@ function createSlashCommandSuggestion() {
 // Slash command extension using Mention mechanism
 const SlashCommand = Mention.extend({ name: 'slashCommand' });
 
-export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, spaceId, mentionableItems, autoFocus }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder, editable = true, resizable = true, minHeight = 120, defaultMaxHeight = 300, fillHeight, spaceId, mentionableItems, autoFocus }: RichTextEditorProps) {
   const isUpdatingFromProp = useRef(false);
   const [editorHeight, setEditorHeight] = useState<number | null>(null);
   const isDragging = useRef(false);
@@ -605,6 +612,8 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
         ref={editorContainerRef}
         style={editorHeight != null
           ? { height: `${editorHeight}px` }
+          : fillHeight != null
+          ? { height: fillHeight }
           : { minHeight: `${minHeight}px`, maxHeight: `${defaultMaxHeight}px` }
         }
         className="overflow-y-auto"

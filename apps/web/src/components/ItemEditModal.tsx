@@ -5,6 +5,9 @@
  * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state.
  * Les dates sont lues/écrites en heure locale via toDatetimeLocal() — ne jamais utiliser toISOString() pour afficher.
  * Modes d'interface (Forum/Projet/Exploration/Tous) masquent certaines sections via isForumMode etc.
+ * En mode Forum : la colonne centrale (Type/Statut/Priorité/Dates) est entièrement supprimée,
+ * la grille passe à 2 colonnes [1fr, sidebar], la Description remplit ~80vh, et les blocs media
+ * (mediaSection) sont rendus sous la Description dans la colonne principale.
  * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -584,11 +587,18 @@ export function ItemEditModal({
     if (status !== (item.status || '')) return true;
     if (priority !== (item.priority ?? null)) return true;
     if ((assignedToId || null) !== (item.assignedToId || null)) return true;
-    // Compare dates using the same format as initialization (ISO slice 0-16)
-    const formatDateForCompare = (d: string | null | undefined) => d ? new Date(d).toISOString().slice(0, 16) : null;
-    if ((dueDate || null) !== formatDateForCompare(item.dueDate)) return true;
-    if ((startDate || null) !== formatDateForCompare(item.startDate)) return true;
-    if ((endDate || null) !== formatDateForCompare(item.endDate)) return true;
+    // Dates : le state (startDate/endDate/dueDate) est en heure locale via toDatetimeLocal()
+    // ET tronqué à la minute ; item.xxxDate est en ISO UTC et peut porter des secondes/ms.
+    // → normaliser LES DEUX côtés au même instant tronqué à la minute (sinon faux positif
+    //   permanent : décalage UTC/local, ou secondes non nulles en base).
+    const toMinuteISO = (d: string | null | undefined) => {
+      if (!d) return null;
+      const t = new Date(d);
+      return isNaN(t.getTime()) ? null : t.toISOString().slice(0, 16);
+    };
+    if (toMinuteISO(dueDate) !== toMinuteISO(item.dueDate)) return true;
+    if (toMinuteISO(startDate) !== toMinuteISO(item.startDate)) return true;
+    if (toMinuteISO(endDate) !== toMinuteISO(item.endDate)) return true;
     const sortedCurrent = [...selectedTagIds].sort();
     const sortedOriginal = [...originalTagIds].sort();
     if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) return true;
@@ -761,6 +771,89 @@ export function ItemEditModal({
   const typeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[type];
   const contributionCount = item?.contributions?.length || 0;
 
+  // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
+  // Hors Forum : rendus dans la colonne centrale. En Forum (colonne centrale supprimée) :
+  // rendus sous la Description dans la colonne principale.
+  const mediaSection = (
+    <>
+      {/* URL — seulement pour le type LINK */}
+      {type === 'LINK' && <div className="space-y-2">
+        <label className="text-sm font-medium">URL</label>
+        {canEdit ? (
+          <Input type="url" value={url}
+            onChange={(e) => { setUrl(e.target.value); const extracted = urlToTitle(e.target.value); if (extracted) autoFillTitle(extracted); }}
+            placeholder="https://..." />
+        ) : null}
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+            <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
+          </a>
+        ) : null}
+      </div>}
+
+      {/* Diagramme — seulement pour le type DIAGRAM */}
+      {type === 'DIAGRAM' && <div className="space-y-2">
+        <label className="text-sm font-medium">Diagramme</label>
+        <DrawioEditor
+          xml={diagramXml}
+          onChange={setDiagramXml}
+          onSaveAndClose={async (savedXml, pngBlob) => {
+            if (!itemId) return;
+            await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
+            setDiagramXml(savedXml);
+            const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
+            await uploadImageMutation.mutateAsync(file);
+            queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+          }}
+          previewUrl={url || undefined}
+          editable={canEdit}
+        />
+      </div>}
+
+      {/* Image — seulement pour le type IMAGE */}
+      {type === 'IMAGE' && <div className="space-y-2">
+        <label className="text-sm font-medium">Image</label>
+        {canEdit ? (
+          <>
+            <ImageUploadZone currentUrl={url || null}
+              onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
+              onRemove={() => setUrl('')} isUploading={uploadImageMutation.isPending} />
+            {uploadImageMutation.isError && <p className="text-sm text-destructive">{(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
+          </>
+        ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
+          <>
+            <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
+            {imageExpanded && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
+                <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">Aucune image</p>
+        )}
+      </div>}
+
+      {/* Fichier — seulement pour le type DOCUMENT */}
+      {type === 'DOCUMENT' && <div className="space-y-2">
+        <label className="text-sm font-medium">Fichier</label>
+        {canEdit ? (
+          <>
+            <FileUploadZone currentUrl={url || null}
+              onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
+              onRemove={() => setUrl('')} isUploading={uploadDocumentMutation.isPending} />
+            {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
+          </>
+        ) : url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+            <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
+          </a>
+        ) : (
+          <p className="text-sm text-muted-foreground">Aucun fichier</p>
+        )}
+      </div>}
+    </>
+  );
 
   return (<>
     <Modal
@@ -853,8 +946,8 @@ export function ItemEditModal({
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto pr-1">
 
-            {/* Three-column layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr,0.85fr,380px] gap-6">
+            {/* Layout : 3 colonnes hors Forum, 2 colonnes en Forum (colonne centrale supprimée) */}
+            <div className={`grid grid-cols-1 gap-6 ${isForumMode ? 'lg:grid-cols-[1fr,380px]' : 'lg:grid-cols-[1fr,0.85fr,380px]'}`}>
 
           {/* === LEFT COLUMN: description + contributions === */}
           <div className="space-y-6 min-w-0">
@@ -869,9 +962,13 @@ export function ItemEditModal({
                   editable={canEdit}
                   spaceId={spaceId}
                   minHeight={240}
+                  fillHeight={isForumMode ? '80vh' : undefined}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
               </div>
+
+              {/* Mode Forum : blocs media sous la Description (colonne centrale supprimée) */}
+              {isForumMode && mediaSection}
 
               {/* Reactions + Contributions */}
               <div className="space-y-3" data-tour="item-reactions">
@@ -1001,8 +1098,8 @@ export function ItemEditModal({
 
           </div>{/* end left column */}
 
-          {/* === CENTER COLUMN === */}
-          <div className="space-y-6 min-w-0">
+          {/* === CENTER COLUMN === supprimée en mode Forum (mediaSection déplacée sous la Description) */}
+          {!isForumMode && <div className="space-y-6 min-w-0">
 
               {/* Type — masqué en mode Forum */}
               {!isForumMode && <div className="space-y-2" data-tour="item-type-selector">
@@ -1257,84 +1354,10 @@ export function ItemEditModal({
                 </div>
               </div>}
 
-              {/* URL — seulement pour le type LINK */}
-              {type === 'LINK' && <div className="space-y-2">
-                <label className="text-sm font-medium">URL</label>
-                {canEdit ? (
-                  <Input type="url" value={url}
-                    onChange={(e) => { setUrl(e.target.value); const extracted = urlToTitle(e.target.value); if (extracted) autoFillTitle(extracted); }}
-                    placeholder="https://..." />
-                ) : null}
-                {url ? (
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
-                    <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
-                  </a>
-                ) : null}
-              </div>}
+              {/* Blocs media (URL/Diagramme/Image/Fichier) — hors Forum uniquement (en Forum : rendus sous la Description) */}
+              {mediaSection}
 
-              {/* Diagramme — seulement pour le type DIAGRAM */}
-              {type === 'DIAGRAM' && <div className="space-y-2">
-                <label className="text-sm font-medium">Diagramme</label>
-                <DrawioEditor
-                  xml={diagramXml}
-                  onChange={setDiagramXml}
-                  onSaveAndClose={async (savedXml, pngBlob) => {
-                    if (!itemId) return;
-                    await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
-                    setDiagramXml(savedXml);
-                    const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
-                    await uploadImageMutation.mutateAsync(file);
-                    queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-                  }}
-                  previewUrl={url || undefined}
-                  editable={canEdit}
-                />
-              </div>}
-
-              {/* Image — seulement pour le type IMAGE */}
-              {type === 'IMAGE' && <div className="space-y-2">
-                <label className="text-sm font-medium">Image</label>
-                {canEdit ? (
-                  <>
-                    <ImageUploadZone currentUrl={url || null}
-                      onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
-                      onRemove={() => setUrl('')} isUploading={uploadImageMutation.isPending} />
-                    {uploadImageMutation.isError && <p className="text-sm text-destructive">{(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
-                  </>
-                ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
-                  <>
-                    <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
-                    {imageExpanded && (
-                      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
-                        <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Aucune image</p>
-                )}
-              </div>}
-
-              {/* Fichier — seulement pour le type DOCUMENT */}
-              {type === 'DOCUMENT' && <div className="space-y-2">
-                <label className="text-sm font-medium">Fichier</label>
-                {canEdit ? (
-                  <>
-                    <FileUploadZone currentUrl={url || null}
-                      onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
-                      onRemove={() => setUrl('')} isUploading={uploadDocumentMutation.isPending} />
-                    {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
-                  </>
-                ) : url ? (
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
-                    <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
-                  </a>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Aucun fichier</p>
-                )}
-              </div>}
-
-          </div>{/* end center column */}
+          </div>}{/* end center column */}
 
           {/* === RIGHT COLUMN === */}
           <div className="space-y-6" data-tour="item-details">

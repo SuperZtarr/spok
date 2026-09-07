@@ -6,6 +6,24 @@
 
 ## EN COURS
 
+### Modale item mode Forum : Description pleine largeur/hauteur — 2026-09-07
+- Demande Thomas : en mode Forum, la zone Description de `ItemEditModal` doit occuper toute la place dispo. Validé : hauteur 80vh, largeur = grille 2 colonnes
+- MCP SPOK toujours 401 — item de doc non consultable ni à mettre à jour
+- `RichTextEditor.tsx` : nouveau prop `fillHeight?: string` — si fourni (et pas de resize manuel), conteneur = `height: fillHeight` sans plafond. Priorité : editorHeight > fillHeight > minHeight/maxHeight
+- `ItemEditModal.tsx` : blocs media (URL/Diagramme/Image/Fichier) extraits dans const `mediaSection`. Grille = `isForumMode ? [1fr,380px] : [1fr,0.85fr,380px]`. Colonne centrale rendue seulement `!isForumMode`. En Forum : `mediaSection` sous la Description dans la colonne principale + `fillHeight="80vh"` sur le `RichTextEditor` de description. En-têtes MAJ
+- Typecheck web OK
+- Reste : contrôle visuel Thomas (item NOTE + item LINK en mode Forum), puis MEP sur demande
+
+### Fix faux positif hasChanges sur items datés — 2026-09-07
+- Signalé par Thomas en testant la modale Forum : guard "quitter sans sauvegarder" se déclenche sans modification
+- Root cause (pré-existant, pas lié au chantier Forum) : `hasChanges` comparait le state date (heure locale, `toDatetimeLocal`) à `new Date(item.xxxDate).toISOString().slice(0,16)` (UTC) → mismatch permanent en TZ non-UTC pour tout item ayant startDate/endDate/dueDate. Items sans date OK → « parfois »
+- Régression : commit `5c5389c` (31/03) avait corrigé, puis init dates repassée en `toDatetimeLocal` le 17/06 (`01a7a3b0`) sans réaligner `hasChanges`
+- 1re passe (`isoOrNull` pleine précision) : insuffisante. Item test `cmoe26n14002xzcddhmyo2szm` (IMAGE) a `startDate=2026-07-12T17:39:05.874Z` → secondes/ms non nulles, alors que `toDatetimeLocal` à l'init tronque à la minute → mismatch persistant
+- Fix retenu `ItemEditModal.tsx:590` : `toMinuteISO(d) = new Date(d).toISOString().slice(0,16)` (gère NaN) appliqué aux DEUX côtés (state local tronqué minute + item ISO UTC)
+- Typecheck web OK
+- Connu, non traité (mineur) : `doSubmit` a la même troncature minute → un save déclenché par un autre champ réécrit `startDate` en perdant les secondes. Self-heal au prochain save
+- Reste : contrôle Thomas (item `cmoe26n14002xzcddhmyo2szm`, fermer sans rien toucher → plus de prompt ; puis modifier une date → prompt bien présent)
+
 ### Déplacement boutons Déconnexion / Mode admin / Mode dev vers la row 1 du header — 2026-08-31
 - Demande Thomas : sortir Déconnexion + Mode admin (puis Mode dev, puis "Retourner à") de la section « Divers » du bandeau (GlobalNavBar) et les placer à gauche de la vignette utilisateur dans la row 1 du header
 - MCP SPOK toujours 401 — doc non consultable
