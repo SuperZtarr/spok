@@ -1,4 +1,9 @@
-/* Tableau de bord personnel : aujourd'hui, échéances (DeadlinesView embedded), assignés à moi. */
+/*
+ * Tableau de bord personnel : aujourd'hui, échéances (DeadlinesView embedded), assignés à moi.
+ * Deux requêtes (allData non terminés / doneData terminés) suivent toutes deux filters.queryParams.
+ * Layout : ligne A = Échéances + colonne de listes (Priorités/En retard/Aujourd'hui/Assignés) ;
+ * ligne B pleine largeur = répartitions (Par statut / Par type / Progression) en grille.
+ */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -142,7 +147,7 @@ function SpaceProgressBar({ name, done, total }: { name: string; done: number; t
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
     <div className="flex items-center gap-3 px-3 py-1.5">
-      <span className="text-sm truncate min-w-0 flex-1">{name}</span>
+      <span className="text-sm truncate min-w-[120px] flex-1">{name}</span>
       <div className="w-32 h-2 bg-muted rounded-full overflow-hidden flex-shrink-0">
         <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
@@ -171,7 +176,7 @@ function TaskRowContent({ task, isOverdue, showGrip }: { task: GlobalTask; isOve
           {pConfig.shortLabel}
         </span>
       )}
-      <Badge variant="outline" className="text-[10px] flex-shrink-0">
+      <Badge variant="outline" className="text-[10px] flex-shrink-0 max-w-[130px] truncate">
         {task.spaceName}
       </Badge>
       {task.dueDate && (
@@ -282,12 +287,16 @@ export function MyDashboardView() {
     }),
   });
 
-  // Fetch done items for KPIs (created by or assigned to me)
+  // Fetch done items for KPIs (created by or assigned to me).
+  // Reprend filters.queryParams (type/espace/priorité/recherche/échéances/communauté) — comme allData —
+  // en forçant status:'done' : ces panneaux (répartitions, progression, KPI terminés) ne montrent
+  // que les terminés, mais doivent suivre les autres filtres. Le filtre statut de la barre reste
+  // volontairement sans effet ici.
   const weekStart = getMonday(addDays(today, weekOffset * 7));
   const { data: doneData } = useQuery({
-    queryKey: ['my-organization-done', localDateKey(weekStart)],
+    queryKey: ['my-organization-done', filters.queryParams, localDateKey(weekStart)],
     queryFn: () => userTasksApi.list({
-      type: 'UNDEFINED,NOTE,PROJECT,TASK,MEETING,PERIOD,LINK,CONFIG,DOCUMENT,IMAGE,BUG,DIAGRAM',
+      ...filters.queryParams,
       status: 'done',
       pageSize: 2000,
       myTasks: true,
@@ -508,16 +517,16 @@ export function MyDashboardView() {
         <GlobalTaskFilterBar filters={filters} />
       </div>
 
-      {/* Échéances + panneaux droite */}
+      {/* Ligne A : Échéances + colonne de listes */}
       <div className="flex flex-wrap gap-4 items-start" data-tour="org-priorities">
 
-        {/* Échéances */}
-        <div className="bg-card border rounded-lg p-4 max-w-4xl flex-1 min-w-[320px]">
+        {/* Échéances — plancher à 672px, grandit avec l'espace dispo (pas de max) */}
+        <div className="bg-card border rounded-lg p-4 flex-[2] min-w-[672px]">
           <DeadlinesView embedded filters={filters} />
         </div>
 
-        {/* Priorités + En retard + Aujourd'hui */}
-        <div className="flex flex-col gap-4 w-72 flex-shrink-0">
+        {/* Priorités + En retard + Aujourd'hui + Assignés */}
+        <div className="flex flex-col gap-4 flex-1 min-w-[320px] max-w-[560px]">
 
           {/* Priorités */}
           <div className="bg-card border rounded-lg p-4 space-y-2">
@@ -528,7 +537,7 @@ export function MyDashboardView() {
             >
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePriorityDragEnd}>
                 <SortableContext items={priorityTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto overflow-x-hidden">
                     {priorityTasks.map(t => <SortableTaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
                   </div>
                 </SortableContext>
@@ -547,7 +556,7 @@ export function MyDashboardView() {
               count={overdueTasks.length}
               variant="danger"
             >
-              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              <div className="space-y-0.5 max-h-48 overflow-y-auto overflow-x-hidden">
                 {overdueTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
               </div>
             </Section>
@@ -563,7 +572,7 @@ export function MyDashboardView() {
               icon={<Clock className="w-4 h-4 text-blue-500" />}
               count={todayTasks.length}
             >
-              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              <div className="space-y-0.5 max-h-48 overflow-y-auto overflow-x-hidden">
                 {todayTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
               </div>
             </Section>
@@ -579,7 +588,7 @@ export function MyDashboardView() {
               icon={<UserCheck className="w-4 h-4 text-teal-500" />}
               count={assignedTasks.length}
             >
-              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              <div className="space-y-0.5 max-h-48 overflow-y-auto overflow-x-hidden">
                 {assignedTasks.map(t => <TaskRow key={t.id} task={t} onEdit={setEditingItemId} />)}
               </div>
             </Section>
@@ -590,8 +599,10 @@ export function MyDashboardView() {
 
         </div>
 
-        {/* Répartitions + Progression */}
-        <div className="flex flex-col gap-4 w-64 flex-shrink-0">
+      </div>
+
+      {/* Ligne B : répartitions pleine largeur */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-tour="org-distributions">
           <div className="bg-card border rounded-lg">
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               <Target className="w-4 h-4 text-violet-500" />
@@ -623,8 +634,6 @@ export function MyDashboardView() {
               }
             </div>
           </div>
-        </div>
-
       </div>
 
       {/* Semaine */}

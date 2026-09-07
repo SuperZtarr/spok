@@ -22,7 +22,16 @@
 - Fix retenu `ItemEditModal.tsx:590` : `toMinuteISO(d) = new Date(d).toISOString().slice(0,16)` (gère NaN) appliqué aux DEUX côtés (state local tronqué minute + item ISO UTC)
 - Typecheck web OK
 - Connu, non traité (mineur) : `doSubmit` a la même troncature minute → un save déclenché par un autre champ réécrit `startDate` en perdant les secondes. Self-heal au prochain save
-- Reste : contrôle Thomas (item `cmoe26n14002xzcddhmyo2szm`, fermer sans rien toucher → plus de prompt ; puis modifier une date → prompt bien présent)
+- MEP 2026-09-07 (abfd068) — CI verte, avec le chantier Forum
+
+### Dashboard : filtre non appliqué aux répartitions + fenêtres trop étroites — 2026-09-07
+- Signalé par Thomas : dans `MyDashboardView` (onglet Tableau de bord), filtre pas appliqué sur tous les panneaux + fenêtres trop petites
+- Fix filtre : `doneData` (`MyDashboardView.tsx:~290`) hardcodait type/status/pageSize → ignorait la barre de filtres. Passé en `...filters.queryParams` + `status:'done'` forcé (comme `allData`) ; queryKey inclut `filters.queryParams`. Vérifié au dev : « Par statut »/« Par type » passent de 13 à 0 en filtrant Priorité=Haute (avant : restaient ≥ terminés)
+- Réagencement : `flex flex-wrap` scindé en 2 lignes. Ligne B nouvelle = répartitions en `grid sm:grid-cols-2 xl:grid-cols-3` pleine largeur (au lieu de `w-64`). Badge `spaceName` → `max-w-[130px] truncate` ; `SpaceProgressBar` nom → `min-w-[120px]` ; `overflow-x-hidden` sur les 4 listes
+- Ligne A, itérations largeur (retours Thomas) : « trop large » puis « 672px = mini, grandir si place dispo ; colonne suivante plus large ». État final : Échéances `flex-[2] min-w-[672px]` (pas de max → absorbe l'espace en trop) ; colonne listes `flex-1 min-w-[320px] max-w-[560px]`. Vérifié au dev 1280/1440/1680 : à 1680 Échéances s'étale et les titres ne tronquent plus, colonne listes à 560 ; à 1280 les deux tiennent côte à côte (troncatures serrées, OK)
+- Observé pendant le test (PRÉ-EXISTANT, hors périmètre, NON corrigé) : `DeadlinesView` embarqué n'applique pas le filtre Priorité comme les panneaux `allData` (avec Priorité=Haute : items « Moyenne » encore listés, « 2 en retard » alors que le panneau « En retard » disait « Rien »). Filtrages divergents DeadlinesView ↔ MyDashboardView
+- Typecheck web OK
+- Reste : contrôle Thomas, puis MEP sur demande
 
 ### Déplacement boutons Déconnexion / Mode admin / Mode dev vers la row 1 du header — 2026-08-31
 - Demande Thomas : sortir Déconnexion + Mode admin (puis Mode dev, puis "Retourner à") de la section « Divers » du bandeau (GlobalNavBar) et les placer à gauche de la vignette utilisateur dans la row 1 du header
