@@ -1384,29 +1384,16 @@ Ajouter, à côté de `handleNewItem` (ligne ~501) :
 
 (Vérifier que `useState`/`useCallback` sont déjà importés en tête de fichier — c'est le cas, `SpacePage.tsx` les utilise déjà abondamment.)
 
-Brancher le prop sur les 20 instances de `<SpaceToolbar>` via deux remplacements globaux (les deux variantes littérales déjà présentes dans le fichier) :
+**Correction découverte à l'exécution** : `<SpaceToolbar>` n'est en réalité rendu **qu'une seule fois** dans `SpacePage.tsx` (ligne ~588, au-dessus de la zone Items/Views commune à tous les `viewMode`). Les 19 autres occurrences de `onNewItem={canEdit ? handleNewItem : undefined}` grep-matchées lors de la planification appartiennent à des props similaires sur d'autres composants de vue (`TypesView`, `PlanningView`, `CalendarView`, etc.), pas à `SpaceToolbar` — un remplacement global aveugle les aurait cassés (`onInsertTemplate` n'existe pas sur ces vues). Un seul ajout ciblé suffit :
 
 ```ts
-onNewItem={handleNewItem}
-```
-→
-```ts
-onNewItem={handleNewItem}
-          onInsertTemplate={handleInsertTemplate}
-```
-
-et
-
-```ts
-onNewItem={canEdit ? handleNewItem : undefined}
-```
-→
-```ts
-onNewItem={canEdit ? handleNewItem : undefined}
+          canEdit={canEdit}
+          onNewItem={handleNewItem}
           onInsertTemplate={canEdit ? handleInsertTemplate : undefined}
+          spaceId={spaceId}
+          spaceRole={space?.role}
+        />
 ```
-
-Utiliser l'outil d'édition en mode "remplacer toutes les occurrences" pour ces deux chaînes exactes (respectivement 1 et 19 occurrences dans le fichier — 20 au total, une par vue).
 
 Rendre la modale une seule fois, à un endroit central du JSX de `SpacePage` (par exemple à côté du rendu de `MoveToSpaceModal`/`DuplicateToSpaceModal` si `SpacePage` en a, sinon juste avant la fermeture du composant racine) :
 

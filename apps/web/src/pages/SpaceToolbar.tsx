@@ -46,6 +46,7 @@ import {
   Clock,
   ArrowUpDown,
   GitMerge,
+  LayoutTemplate,
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig } from '@spok/shared';
@@ -140,6 +141,7 @@ export interface SpaceToolbarProps {
   // Actions
   canEdit: boolean;
   onNewItem?: () => void;
+  onInsertTemplate?: () => void;
   // Space
   spaceId?: string;
   spaceRole?: string;
@@ -170,6 +172,7 @@ export function SpaceToolbar({
   treeSort,
   onTreeSortChange,
   canEdit,
+  onInsertTemplate,
   spaceId,
   spaceRole,
 }: SpaceToolbarProps) {
@@ -628,6 +631,11 @@ export function SpaceToolbar({
             <SlidersHorizontal className="w-4 h-4" />
             {(activeTypeFilter || activeStatusFilter) && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />}
           </button>
+          {canEdit && onInsertTemplate && (
+            <Button variant="ghost" size="sm" title="Insérer un modèle" onClick={onInsertTemplate}>
+              <LayoutTemplate className="w-4 h-4" />
+            </Button>
+          )}
           {canEdit && (
             <Link to={`/spaces/${spaceId}/history`}>
               <Button variant="ghost" size="sm" title="Historique des modifications">

@@ -47,6 +47,7 @@ import { PlanningView } from '../components/views/PlanningView';
 import { CalendarView } from '../components/views/CalendarView';
 import { MoveToSpaceModal } from '../components/MoveToSpaceModal';
 import { DuplicateToSpaceModal } from '../components/DuplicateToSpaceModal';
+import { InsertTemplateModal } from '../components/InsertTemplateModal';
 import { GraphView } from '../components/views/GraphView';
 import { TextView } from '../components/views/TextView';
 import { ThreadView } from '../components/views/ThreadView';
@@ -506,6 +507,16 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     );
   }, [filter, createItemMutation]);
 
+  const [showInsertTemplateModal, setShowInsertTemplateModal] = useState(false);
+
+  const handleInsertTemplateCreated = useCallback((rootItemId: string) => {
+    setEditingItemId(rootItemId);
+  }, []);
+
+  const handleInsertTemplate = useCallback(() => {
+    setShowInsertTemplateModal(true);
+  }, []);
+
   // Déclencher la création si ?newItem=true (venant du bouton header)
   const newItemHandledRef = useRef(false);
   useEffect(() => {
@@ -600,6 +611,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           onTreeSortChange={setTreeSort}
           canEdit={canEdit}
           onNewItem={handleNewItem}
+          onInsertTemplate={canEdit ? handleInsertTemplate : undefined}
           spaceId={spaceId}
           spaceRole={space?.role}
         />
@@ -1658,6 +1670,15 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
           {/* Duplicate to space modal (single item) */}
           <DuplicateToSpaceModal isOpen={!!duplicateItemId} onClose={() => setDuplicateItemId(null)} currentSpaceId={spaceId!} itemIds={duplicateItemId ? [duplicateItemId] : undefined} />
+
+          {/* Insert item template modal (root-level, from toolbar) */}
+          <InsertTemplateModal
+            isOpen={showInsertTemplateModal}
+            onClose={() => setShowInsertTemplateModal(false)}
+            spaceId={spaceId!}
+            allItems={allItems}
+            onCreated={handleInsertTemplateCreated}
+          />
         </>
       )}
 
