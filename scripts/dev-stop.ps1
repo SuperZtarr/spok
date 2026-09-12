@@ -8,12 +8,12 @@ $freed = 0
 foreach ($port in @(3000, 3001)) {
     $connections = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
     if ($connections) {
-        $pids = $connections | Select-Object -ExpandProperty OwningProcess -Unique
-        foreach ($pid in $pids) {
-            $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+        $procIds = $connections | Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($procId in $procIds) {
+            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
             if ($proc -and $proc.ProcessName -eq "node") {
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-                Write-Host "  Port ${port}: PID $pid (node) arrete" -ForegroundColor Yellow
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                Write-Host "  Port ${port}: PID $procId (node) arrete" -ForegroundColor Yellow
                 $freed++
             }
         }
