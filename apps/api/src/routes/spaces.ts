@@ -17,6 +17,7 @@ import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { createInvitation as createInvitationHelper } from './invitations.js';
+import { createItemTree } from '../utils/itemTree.js';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -355,25 +356,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Create template items
       if (template.items && template.items.length > 0) {
-        const createItems = async (items: SpaceTemplateItem[], parentId: string | null) => {
-          for (let i = 0; i < items.length; i++) {
-            const tplItem = items[i];
-            const item = await fastify.prisma.item.create({
-              data: {
-                title: tplItem.title,
-                type: tplItem.type,
-                spaceId: space.id,
-                createdById: request.user.userId,
-                parentId,
-                position: i,
-              },
-            });
-            if (tplItem.children && tplItem.children.length > 0) {
-              await createItems(tplItem.children, item.id);
-            }
-          }
-        };
-        await createItems(template.items, null);
+        await createItemTree(fastify.prisma, template.items, {
+          spaceId: space.id,
+          createdById: request.user.userId,
+          parentId: null,
+        });
       }
     }
 
