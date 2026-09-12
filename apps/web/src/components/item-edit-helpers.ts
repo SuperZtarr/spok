@@ -1,5 +1,5 @@
 /* Helpers d'ItemEditModal : préparation des payloads, diff des champs modifiés. */
-import type { Item } from '@spok/shared';
+import type { Item, ItemTemplateNode } from '@spok/shared';
 
 /** Extract a clean name from a filename (remove extension) */
 export function fileNameToTitle(filename: string): string {
@@ -21,6 +21,21 @@ export function urlToTitle(rawUrl: string): string {
   } catch {
     return '';
   }
+}
+
+/** Capture récursivement un item et ses descendants en structure de modèle (titre+type). */
+export function buildItemTemplateStructure(id: string, allItems: Item[]): ItemTemplateNode {
+  const item = allItems.find((i) => i.id === id);
+  const children = allItems
+    .filter((i) => i.parentId === id)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((child) => buildItemTemplateStructure(child.id, allItems));
+  return { title: item?.title ?? '', type: (item?.type ?? 'NOTE') as ItemTemplateNode['type'], children };
+}
+
+/** Compte le nombre total de nœuds (racine incluse) d'une structure de modèle. */
+export function countTemplateNodes(node: ItemTemplateNode): number {
+  return 1 + node.children.reduce((sum, child) => sum + countTemplateNodes(child), 0);
 }
 
 /** Get all descendants of an item to prevent circular references */
