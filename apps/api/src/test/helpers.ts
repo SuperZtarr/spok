@@ -65,6 +65,7 @@ export function createMockPrisma() {
     appConfig: mockModel(),
     calendarFeed: mockModel(),
     dayPlanEntry: mockModel(),
+    itemTemplate: mockModel(),
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn().mockImplementation((arg: unknown) => {
