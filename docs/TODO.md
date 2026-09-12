@@ -2,6 +2,12 @@
 
 ## À faire
 
+### BUG découvert (session 2026-09-12, hors périmètre templates) : clés React dupliquées dans ItemEditModal
+- [ ] `ItemEditModal.tsx` (section « Éléments enfants », `key={child.id}` ~ligne 1572) déclenche en continu (rafale, dizaines de fois/s) le warning React "Encountered two children with the same key" pour certains items (observé sur "Refonte authentification" et un item créé depuis un modèle avec les mêmes titres d'enfants). Suggère que `allItems`/`allItemsData` contient des doublons d'id quelque part en amont (cache query, fusion de pages, ou opti-update). À investiguer séparément — non lié au chantier templates, pas introduit par lui (aucune modification de la logique de fetch/cache des items dans ce chantier). Rend l'observation de l'UI peu fiable pendant l'investigation (re-renders en boucle)
+
+### Groupes d'items liés par la date (déplacer toute une grappe)
+- [ ] Lien permanent entre items (ancre + décalage en jours) : déplacer la date d'un item déplace automatiquement ses items liés (ex. réunion + tâches satellites avant/après). Hors périmètre du projet "templates de structures d'items" (2026-09-12) — chantier séparé à spécifier : modèle de données du lien, interaction avec Gantt/Timeline (aucun cascade de date au drag aujourd'hui) et `ItemRelation`, UX de rupture du lien
+
 ### Refonte esthétique
 - [x] Piste "Dense technique" choisie (canvas Claude Design, 3 directions explorées) : tokens globaux (IBM Plex Sans/Mono, palette gris-bleu froid, radius réduit), fond gris clair sidebar/header/toolbar de vue vs contenu blanc, cohérent clair/sombre — 2026-08-19
 - [ ] Densité des composants (paddings/tailles par vue) — volontairement non touchée, à faire au cas par cas si besoin

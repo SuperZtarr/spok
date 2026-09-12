@@ -1830,6 +1830,7 @@ export function ItemEditModal({
       )}
       {itemId && (
         <SaveAsTemplateModal
+          key={itemId}
           isOpen={showSaveAsTemplateModal}
           onClose={() => setShowSaveAsTemplateModal(false)}
           itemId={itemId}
@@ -1838,6 +1839,7 @@ export function ItemEditModal({
       )}
       {itemId && (
         <InsertTemplateModal
+          key={itemId}
           isOpen={showInsertTemplateModal}
           onClose={() => setShowInsertTemplateModal(false)}
           spaceId={spaceId}

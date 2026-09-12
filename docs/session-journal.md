@@ -6,13 +6,24 @@
 
 ## EN COURS
 
+### Modèles de structures d'items (Item Templates) — 2026-09-12
+- Demande Thomas : pouvoir créer une "grappe" (ex. Réunion + tâches de prep/ODJ/CR) réutilisable, dans un espace déjà existant (pas seulement à la création d'espace comme `SPACE_TEMPLATES` actuel). Décisions brainstorming : B (définissable par l'utilisateur, pas figé dans le code), D (portée globale, partagé avec tout le monde pour le moment). Dates/décalages relatifs et lien permanent "déplacer toute la grappe" → hors périmètre, ajoutés au TODO séparément
+- Brainstorming → design (résumé chat, pas de fichier spec par préférence Thomas du 25/07) → plan écrit `docs/superpowers/plans/2026-09-12-item-templates.md` → exécution inline, 13 tâches TDD
+- **Backend** : modèle Prisma `ItemTemplate` (portée globale, `structure: Json` = arbre récursif titre+type). Helper `apps/api/src/utils/itemTree.ts` (`createItemTree`) extrait de la logique déjà existante dans `spaces.ts` (création d'items depuis `SPACE_TEMPLATES`, DRY). Routes `item-templates.ts` (GET liste/POST création/DELETE créateur-only) + `POST /spaces/:id/items/from-template` dans `items.ts` (crée toute l'arborescence en une fois). 27 tests ajoutés, 394/394 api verts
+- **Web** : types partagés `ItemTemplate`/`ItemTemplateNode`, client `itemTemplatesApi`, helpers `buildItemTemplateStructure`/`countTemplateNodes` (4 tests), modales `SaveAsTemplateModal` (capture item+descendants) et `InsertTemplateModal` (picker + recherche + sélecteur de parent + suppression créateur-only). Branché : `ItemEditModal` (boutons "Enregistrer comme modèle" LayoutTemplate / "Ajouter une structure" ListTree dans la barre d'actions) + `SpaceToolbar` (bouton "Insérer un modèle", un seul rendu dans `SpacePage` — pas 20 comme supposé en planification, corrigé à l'exécution)
+- Bug trouvé et corrigé en vérifiant manuellement : `SaveAsTemplateModal`/`InsertTemplateModal` restaient montés d'un item à l'autre dans `ItemEditModal`, leur `useState` (nom pré-rempli / parent par défaut) ne se réinitialisait qu'au premier montage → `key={itemId}` sur les deux (même pattern que `RichTextEditor` dans le même fichier)
+- Vérifié au dev via network/DB (pas seulement l'UI, cf. bug ci-dessous) : capture "Refonte authentification" (Projet + 5 tâches) → POST /item-templates avec la structure exacte ; insertion → POST /spaces/.../items/from-template crée bien les 6 items liés (racine + 5 enfants), visibles dans la liste, comptage 30→36
+- **Découverte séparée, hors périmètre** (ajoutée au TODO) : `ItemEditModal` boucle en re-render continu (warning React "two children with the same key" en rafale) sur les items dont les enfants ont des ids dupliqués côté cache — rend l'observation UI peu fiable pendant les tests, mais n'affecte pas les données (vérifiées correctes via network/DB). Pas introduit par ce chantier (aucune modif de la logique de fetch/cache items)
+- Typecheck api+web OK, check-doc-headers OK (19 fichiers)
+- Reste : contrôle Thomas, puis MEP sur demande. Investiguer séparément le bug de clés dupliquées
+
 ### Modale item mode Forum : Description pleine largeur/hauteur — 2026-09-07
 - Demande Thomas : en mode Forum, la zone Description de `ItemEditModal` doit occuper toute la place dispo. Validé : hauteur 80vh, largeur = grille 2 colonnes
 - MCP SPOK toujours 401 — item de doc non consultable ni à mettre à jour
 - `RichTextEditor.tsx` : nouveau prop `fillHeight?: string` — si fourni (et pas de resize manuel), conteneur = `height: fillHeight` sans plafond. Priorité : editorHeight > fillHeight > minHeight/maxHeight
 - `ItemEditModal.tsx` : blocs media (URL/Diagramme/Image/Fichier) extraits dans const `mediaSection`. Grille = `isForumMode ? [1fr,380px] : [1fr,0.85fr,380px]`. Colonne centrale rendue seulement `!isForumMode`. En Forum : `mediaSection` sous la Description dans la colonne principale + `fillHeight="80vh"` sur le `RichTextEditor` de description. En-têtes MAJ
 - Typecheck web OK
-- Reste : contrôle visuel Thomas (item NOTE + item LINK en mode Forum), puis MEP sur demande
+- Vérifié par Thomas puis MEP 2026-09-07 (abfd068)
 
 ### Fix faux positif hasChanges sur items datés — 2026-09-07
 - Signalé par Thomas en testant la modale Forum : guard "quitter sans sauvegarder" se déclenche sans modification
@@ -32,7 +43,7 @@
 - Non touché : `useGlobalTaskFilters` garde `defaultTypes:['TASK']` (page /tasks reste « Tâches »). Autres appelants sans type : `PickTasksModal` (voit tous types si contexte agenda sans type — OK)
 - Vérifié au dev : « TODO assignés » de l'accueil affiche désormais MEETING/PERIOD/DOCUMENT/CONFIG (avant : Tâches seules) ; « En retard » inclut un item CONFIG. « Échéances proches » reste vide en local (dataset Admin sans échéance à J+7) mais le mécanisme est bon
 - Typecheck api+web OK
-- Reste : contrôle Thomas sur son dataset, puis MEP
+- MEP 2026-09-07 (a9b0df6) — CI verte
 
 ### Modale Forum : toggle « Plus de champs » (option B) — 2026-09-07
 - Demande Thomas : en Forum, pouvoir créer des items d'autres types + accéder aux autres champs, mais en affichage optionnel (toggle). Option B validée = tout sous le toggle, y compris Parent + Tags
@@ -41,7 +52,7 @@
 - Reset `forumExpanded` à false au changement d'item
 - Vérifié au dev (communauté Test SPOK = Forum) : modal réduit = titre + description(80vh) + contributions + ID + toggle ; déplié = modal 3-col complet ; toggle OK dans les 2 sens ; auto-ouverture OK sur item daté / Réunion
 - Typecheck web OK, check-doc-headers OK
-- Reste : contrôle Thomas, puis MEP sur demande
+- MEP 2026-09-07 (55dc5f7) — CI verte
 
 ### Dashboard : filtre non appliqué aux répartitions + fenêtres trop étroites — 2026-09-07
 - Signalé par Thomas : dans `MyDashboardView` (onglet Tableau de bord), filtre pas appliqué sur tous les panneaux + fenêtres trop petites
@@ -50,7 +61,8 @@
 - Ligne A, itérations largeur (retours Thomas) : « trop large » puis « 672px = mini, grandir si place dispo ; colonne suivante plus large ». État final : Échéances `flex-[2] min-w-[672px]` (pas de max → absorbe l'espace en trop) ; colonne listes `flex-1 min-w-[320px] max-w-[560px]`. Vérifié au dev 1280/1440/1680 : à 1680 Échéances s'étale et les titres ne tronquent plus, colonne listes à 560 ; à 1280 les deux tiennent côte à côte (troncatures serrées, OK)
 - Observé pendant le test (PRÉ-EXISTANT, hors périmètre, NON corrigé) : `DeadlinesView` embarqué n'applique pas le filtre Priorité comme les panneaux `allData` (avec Priorité=Haute : items « Moyenne » encore listés, « 2 en retard » alors que le panneau « En retard » disait « Rien »). Filtrages divergents DeadlinesView ↔ MyDashboardView
 - Typecheck web OK
-- Reste : contrôle Thomas, puis MEP sur demande
+- MEP 2026-09-07 (4360314) — CI verte
+- **Reste ouvert (TODO)** : `DeadlinesView` embarqué qui ne filtre pas la priorité comme les autres panneaux — non traité
 
 ### Déplacement boutons Déconnexion / Mode admin / Mode dev vers la row 1 du header — 2026-08-31
 - Demande Thomas : sortir Déconnexion + Mode admin (puis Mode dev, puis "Retourner à") de la section « Divers » du bandeau (GlobalNavBar) et les placer à gauche de la vignette utilisateur dans la row 1 du header
