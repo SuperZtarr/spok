@@ -51,6 +51,8 @@ import type {
   NotificationPreferences,
   Invitation,
   HorizonBucket,
+  ItemTemplate,
+  ItemTemplateNode,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -1121,6 +1123,26 @@ export const itemsApi = {
 
     return response.json();
   },
+};
+
+// Modèles de structures d'items (portée globale)
+export const itemTemplatesApi = {
+  list: () => fetchApi<ItemTemplate[]>('/item-templates'),
+
+  create: (data: { name: string; description?: string; structure: ItemTemplateNode }) =>
+    fetchApi<ItemTemplate>('/item-templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    fetchApi<{ success: boolean }>(`/item-templates/${id}`, { method: 'DELETE' }),
+
+  createFromTemplate: (spaceId: string, data: { templateId: string; parentId?: string }) =>
+    fetchApi<Item>(`/spaces/${spaceId}/items/from-template`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Tags
