@@ -7,6 +7,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
+import { createItemTree } from '../utils/itemTree.js';
 import { createNotification } from '../utils/notifications.js';
 import { notifyMentionedUsers } from '../utils/mentions.js';
 import { itemRelationsRoutes } from './item-relations.js';
@@ -325,6 +326,45 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         ...item,
         tags: item.tags.map((t) => t.tag),
       });
+    }
+  );
+
+  // Create an item + its full sub-tree from a saved template
+  fastify.post<{ Params: { spaceId: string }; Body: { templateId: string; parentId?: string } }>(
+    '/from-template',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      if (!membership) {
+        return reply.notFound('Space not found');
+      }
+      if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
+        return reply.forbidden('Viewers cannot create items');
+      }
+
+      const { templateId, parentId } = request.body;
+      const template = await fastify.prisma.itemTemplate.findUnique({ where: { id: templateId } });
+      if (!template) {
+        return reply.notFound('Template not found');
+      }
+
+      const structure = template.structure as unknown as { title: string; type: string; children: any[] };
+      const [rootItem] = await createItemTree(fastify.prisma, [structure as any], {
+        spaceId: request.params.spaceId,
+        createdById: request.user.userId,
+        parentId: parentId ?? null,
+      });
+
+      await createAuditLog(fastify.prisma, {
+        action: 'CREATE',
+        entity: 'Item',
+        entityId: rootItem.id,
+        userId: request.user.userId,
+        spaceId: request.params.spaceId,
+        changes: { after: { ...serializeItemForAudit(rootItem), fromTemplateId: templateId } },
+      });
+
+      return reply.status(201).send(rootItem);
     }
   );
 
