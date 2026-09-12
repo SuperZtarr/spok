@@ -8,7 +8,41 @@ const bulkDuplicateSchema = z.object({
   itemIds: z.array(z.string()).min(1),
   targetSpaceId: z.string(),
   includeChildren: z.boolean().default(true),
+  iterations: z.number().int().min(1).max(365).default(1),
+  offsetUnit: z.enum(['day', 'week', 'month', 'year']).optional(),
 });
+
+// Décalage calendaire (pas une approximation en jours fixes) : +1 mois sur le 31 janvier
+// donne le dernier jour de février (clampé), jamais un débordement type "31 jan + 30 jours"
+// qui roulerait sur début mars (comportement par défaut de Date#setMonth).
+function shiftDate(date: Date, unit: 'day' | 'week' | 'month' | 'year', amount: number): Date {
+  const d = new Date(date);
+  if (unit === 'day') { d.setDate(d.getDate() + amount); return d; }
+  if (unit === 'week') { d.setDate(d.getDate() + amount * 7); return d; }
+  // month/year : clamper au dernier jour valide du mois cible (setFullYear(y, m, day) atomique
+  // évite tout débordement intermédiaire).
+  const originalDay = d.getDate();
+  const targetMonth = unit === 'month' ? d.getMonth() + amount : d.getMonth();
+  const targetYear = unit === 'year' ? d.getFullYear() + amount : d.getFullYear();
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  d.setFullYear(targetYear, targetMonth, Math.min(originalDay, daysInTargetMonth));
+  return d;
+}
+
+function shiftItemDates<T extends { dueDate: Date | null; startDate: Date | null; endDate: Date | null }>(
+  item: T,
+  unit: 'day' | 'week' | 'month' | 'year' | undefined,
+  amount: number
+): { dueDate: Date | null; startDate: Date | null; endDate: Date | null } {
+  if (!unit || amount === 0) {
+    return { dueDate: item.dueDate, startDate: item.startDate, endDate: item.endDate };
+  }
+  return {
+    dueDate: item.dueDate ? shiftDate(item.dueDate, unit, amount) : null,
+    startDate: item.startDate ? shiftDate(item.startDate, unit, amount) : null,
+    endDate: item.endDate ? shiftDate(item.endDate, unit, amount) : null,
+  };
+}
 
 export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
   // Bulk duplicate items to another space (or same space)
@@ -26,7 +60,7 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const body = bulkDuplicateSchema.parse(request.body);
-    const { itemIds, targetSpaceId, includeChildren } = body;
+    const { itemIds, targetSpaceId, includeChildren, iterations, offsetUnit } = body;
 
     // Check access to target space
     const targetMembership = await checkSpaceAccess(fastify.prisma, request.user.userId, targetSpaceId);
@@ -117,105 +151,116 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // Create a mapping from old IDs to new IDs
-    const oldIdToNewId = new Map<string, string>();
+    const allCreatedItems: any[] = [];
 
-    // First pass: create all items without parent relationships
-    const createdItems: any[] = [];
-    for (const item of allItems) {
-      const newItem = await fastify.prisma.item.create({
-        data: {
-          type: item.type,
-          title: item.title,
-          description: item.description,
-          content: item.content as any,
-          url: item.url,
-          status: item.status,
-          priority: item.priority,
-          position: item.position,
-          dueDate: item.dueDate,
-          spaceId: targetSpaceId,
-          createdById: request.user.userId,
-          parentId: null, // Will be set in second pass
+    for (let iteration = 1; iteration <= iterations; iteration++) {
+      const shiftAmount = iteration - 1; // copie 1 = +0, copie 2 = +1 unité, copie 3 = +2 unités...
+
+      // Mapping from old IDs to new IDs — local à cette itération
+      const oldIdToNewId = new Map<string, string>();
+      const createdItems: any[] = [];
+
+      // First pass: create all items without parent relationships
+      for (const item of allItems) {
+        const shiftedDates = shiftItemDates(item, offsetUnit, shiftAmount);
+        const newItem = await fastify.prisma.item.create({
+          data: {
+            type: item.type,
+            title: item.title,
+            description: item.description,
+            content: item.content as any,
+            url: item.url,
+            status: item.status,
+            priority: item.priority,
+            position: item.position,
+            dueDate: shiftedDates.dueDate,
+            startDate: shiftedDates.startDate,
+            endDate: shiftedDates.endDate,
+            spaceId: targetSpaceId,
+            createdById: request.user.userId,
+            parentId: null, // Will be set in second pass
+          },
+        });
+
+        oldIdToNewId.set(item.id, newItem.id);
+        createdItems.push({ oldItem: item, newItem });
+
+        // Create tag associations
+        if (item.tags.length > 0) {
+          const newTagMappings = item.tags
+            .map((t) => sourceTagIdToTargetId.get(t.tagId))
+            .filter((id): id is string => id !== undefined);
+
+          if (newTagMappings.length > 0) {
+            await fastify.prisma.itemTag.createMany({
+              data: newTagMappings.map((tagId) => ({
+                itemId: newItem.id,
+                tagId: tagId,
+              })),
+            });
+          }
+        }
+      }
+
+      // Second pass: update parent relationships
+      for (const { oldItem, newItem } of createdItems) {
+        if (oldItem.parentId) {
+          // If parent was also duplicated, use the new parent ID
+          // If same space and parent exists, keep original parentId
+          const newParentId = oldIdToNewId.get(oldItem.parentId)
+            || (targetSpaceId === request.params.spaceId ? oldItem.parentId : null);
+          if (newParentId) {
+            await fastify.prisma.item.update({
+              where: { id: newItem.id },
+              data: { parentId: newParentId },
+            });
+          }
+        }
+      }
+
+      // Duplicate relations between duplicated items (this iteration only)
+      const relations = await fastify.prisma.itemRelation.findMany({
+        where: {
+          fromItemId: { in: allItemIds },
+          toItemId: { in: allItemIds },
         },
       });
 
-      oldIdToNewId.set(item.id, newItem.id);
-      createdItems.push({ oldItem: item, newItem });
-
-      // Create tag associations
-      if (item.tags.length > 0) {
-        const newTagMappings = item.tags
-          .map((t) => sourceTagIdToTargetId.get(t.tagId))
-          .filter((id): id is string => id !== undefined);
-
-        if (newTagMappings.length > 0) {
-          await fastify.prisma.itemTag.createMany({
-            data: newTagMappings.map((tagId) => ({
-              itemId: newItem.id,
-              tagId: tagId,
-            })),
+      for (const relation of relations) {
+        const newFromId = oldIdToNewId.get(relation.fromItemId);
+        const newToId = oldIdToNewId.get(relation.toItemId);
+        if (newFromId && newToId) {
+          await fastify.prisma.itemRelation.create({
+            data: {
+              fromItemId: newFromId,
+              toItemId: newToId,
+              type: relation.type,
+            },
           });
         }
       }
-    }
 
-    // Second pass: update parent relationships
-    for (const { oldItem, newItem } of createdItems) {
-      if (oldItem.parentId) {
-        // If parent was also duplicated, use the new parent ID
-        // If same space and parent exists, keep original parentId
-        const newParentId = oldIdToNewId.get(oldItem.parentId)
-          || (targetSpaceId === request.params.spaceId ? oldItem.parentId : null);
-        if (newParentId) {
-          await fastify.prisma.item.update({
-            where: { id: newItem.id },
-            data: { parentId: newParentId },
-          });
-        }
-      }
-    }
-
-    // Duplicate relations between duplicated items
-    const relations = await fastify.prisma.itemRelation.findMany({
-      where: {
-        fromItemId: { in: allItemIds },
-        toItemId: { in: allItemIds },
-      },
-    });
-
-    for (const relation of relations) {
-      const newFromId = oldIdToNewId.get(relation.fromItemId);
-      const newToId = oldIdToNewId.get(relation.toItemId);
-      if (newFromId && newToId) {
-        await fastify.prisma.itemRelation.create({
-          data: {
-            fromItemId: newFromId,
-            toItemId: newToId,
-            type: relation.type,
-          },
+      // Audit log for duplication
+      for (const { oldItem, newItem } of createdItems) {
+        await createAuditLog(fastify.prisma, {
+          action: 'CREATE',
+          entity: 'Item',
+          entityId: newItem.id,
+          userId: request.user.userId,
+          spaceId: targetSpaceId,
+          changes: {
+            after: serializeItemForAudit(newItem),
+            duplicatedFrom: oldItem.id,
+          } as any,
         });
       }
-    }
 
-    // Audit log for duplication
-    for (const { oldItem, newItem } of createdItems) {
-      await createAuditLog(fastify.prisma, {
-        action: 'CREATE',
-        entity: 'Item',
-        entityId: newItem.id,
-        userId: request.user.userId,
-        spaceId: targetSpaceId,
-        changes: {
-          after: serializeItemForAudit(newItem),
-          duplicatedFrom: oldItem.id,
-        } as any,
-      });
+      allCreatedItems.push(...createdItems);
     }
 
     return {
       success: true,
-      duplicatedCount: createdItems.length,
+      duplicatedCount: allCreatedItems.length,
       targetSpaceId,
     };
   });
