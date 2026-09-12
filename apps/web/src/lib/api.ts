@@ -1015,7 +1015,7 @@ export const itemsApi = {
 
   bulkDuplicate: (
     spaceId: string,
-    data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean }
+    data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean; iterations?: number; offsetUnit?: 'day' | 'week' | 'month' | 'year' }
   ) =>
     fetchApi<{ success: boolean; duplicatedCount: number; targetSpaceId: string }>(
       `/spaces/${spaceId}/items/bulk-duplicate`,
