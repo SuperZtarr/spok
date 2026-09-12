@@ -52,6 +52,7 @@ model User {
   itemViews                  ItemView[]
   calendarFeeds              CalendarFeed[]
   dayPlanEntries             DayPlanEntry[]
+  itemTemplates               ItemTemplate[]
 
   @@map("users")
 }
@@ -599,4 +600,23 @@ model DayPlanEntry {
   @@unique([userId, date, itemId])
   @@index([userId, date])
   @@map("day_plan_entries")
+}
+
+// Modèle de structure d'items (titre+type, récursif) — capturé depuis un item existant,
+// réutilisable pour créer d'un coup un item + toute son arborescence de sous-items dans
+// n'importe quel espace existant. Portée globale (pas de spaceId/communityId) : partagé
+// par tous les utilisateurs, pour le moment (2026-09-12).
+model ItemTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  // Arbre récursif { title: string, type: ItemType, children: [...] } — un seul nœud racine.
+  structure   Json
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdById])
+  @@map("item_templates")
 }
