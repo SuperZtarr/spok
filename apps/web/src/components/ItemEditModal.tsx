@@ -23,7 +23,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -49,6 +49,8 @@ import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpe
 import { printItem, exportItemPDF } from '../lib/itemExport';
 import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
+import { SaveAsTemplateModal } from './SaveAsTemplateModal';
+import { InsertTemplateModal } from './InsertTemplateModal';
 import { hasHeadings } from '../lib/itemMenuGroups';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
 
@@ -221,6 +223,8 @@ export function ItemEditModal({
   // Internal move/duplicate modals
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showSaveAsTemplateModal, setShowSaveAsTemplateModal] = useState(false);
+  const [showInsertTemplateModal, setShowInsertTemplateModal] = useState(false);
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
@@ -1665,6 +1669,14 @@ export function ItemEditModal({
                     <Merge className="w-4 h-4" />
                   </Button>
                 )}
+                <Button type="button" variant="ghost" size="sm" title="Enregistrer comme modèle"
+                  onClick={() => setShowSaveAsTemplateModal(true)}>
+                  <LayoutTemplate className="w-4 h-4" />
+                </Button>
+                <Button type="button" variant="ghost" size="sm" title="Ajouter une structure"
+                  onClick={() => setShowInsertTemplateModal(true)}>
+                  <ListTree className="w-4 h-4" />
+                </Button>
                 <Button type="button" variant="ghost" size="sm" title="Dupliquer vers un espace"
                   onClick={() => setShowDuplicateModal(true)}>
                   <Copy className="w-4 h-4" />
@@ -1814,6 +1826,24 @@ export function ItemEditModal({
           onClose={() => setShowDuplicateModal(false)}
           currentSpaceId={spaceId}
           itemIds={[itemId]}
+        />
+      )}
+      {itemId && (
+        <SaveAsTemplateModal
+          isOpen={showSaveAsTemplateModal}
+          onClose={() => setShowSaveAsTemplateModal(false)}
+          itemId={itemId}
+          allItems={allItems}
+        />
+      )}
+      {itemId && (
+        <InsertTemplateModal
+          isOpen={showInsertTemplateModal}
+          onClose={() => setShowInsertTemplateModal(false)}
+          spaceId={spaceId}
+          allItems={allItems}
+          defaultParentId={itemId}
+          onCreated={(rootId) => onNavigate?.(rootId)}
         />
       )}
     </Modal>
