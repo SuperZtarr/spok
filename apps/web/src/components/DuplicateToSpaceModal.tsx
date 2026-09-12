@@ -1,5 +1,9 @@
-/* Duplication d'un item (et enfants) vers un autre espace. */
-import { useState, useMemo } from 'react';
+/*
+ * Duplication d'un item (et enfants) vers un autre espace, en N itérations optionnelles
+ * décalées cumulativement d'une unité de temps (jour/semaine/mois/an) — pratique pour créer
+ * une série récurrente. iterations=1 (défaut) = comportement classique, pas de décalage.
+ */
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Copy, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
@@ -18,6 +22,17 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>(currentSpaceId);
   const [includeChildren, setIncludeChildren] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [iterations, setIterations] = useState(1);
+  const [offsetUnit, setOffsetUnit] = useState<'day' | 'week' | 'month' | 'year'>('week');
+
+  // Réinitialise les contrôles d'itération à chaque fermeture (évite de garder N=12
+  // pour la prochaine ouverture sur un autre item).
+  useEffect(() => {
+    if (!isOpen) {
+      setIterations(1);
+      setOffsetUnit('week');
+    }
+  }, [isOpen]);
 
   const effectiveIds = itemIds || [];
 
@@ -33,6 +48,8 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
         itemIds: effectiveIds,
         targetSpaceId: selectedSpaceId,
         includeChildren,
+        iterations,
+        offsetUnit: iterations > 1 ? offsetUnit : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items', currentSpaceId] });
@@ -155,7 +172,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
             </div>
             )}
 
-            <label className="flex items-center gap-2 mb-6 text-sm">
+            <label className="flex items-center gap-2 mb-4 text-sm">
               <input
                 type="checkbox"
                 checked={includeChildren}
@@ -164,6 +181,44 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
               />
               <span>Inclure les éléments enfants</span>
             </label>
+
+            <div className="space-y-2 mb-6">
+              <label className="flex items-center gap-2 text-sm">
+                <span>Nombre d'itérations</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={iterations}
+                  onChange={(e) => setIterations(Math.max(1, Math.min(365, parseInt(e.target.value, 10) || 1)))}
+                  className="w-16 px-2 py-1 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              {iterations > 1 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Décalage entre chaque copie (dates conservées, décalées cumulativement)</p>
+                  <div className="flex gap-1.5">
+                    {([
+                      { value: 'day', label: '1 jour' },
+                      { value: 'week', label: '1 semaine' },
+                      { value: 'month', label: '1 mois' },
+                      { value: 'year', label: '1 an' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setOffsetUnit(opt.value)}
+                        className={`px-2.5 py-1 text-xs rounded-md border transition-all ${
+                          offsetUnit === opt.value ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -183,7 +238,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
             ) : (
               <>
                 <Copy className="w-4 h-4 mr-2" />
-                Dupliquer
+                {iterations > 1 ? `Dupliquer ×${iterations}` : 'Dupliquer'}
               </>
             )}
           </Button>
