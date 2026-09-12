@@ -6,6 +6,15 @@
 
 ## EN COURS
 
+### Duplication répétée avec décalage de dates — 2026-09-12
+- Demande Thomas : étendre `DuplicateToSpaceModal` (nombre d'itérations + décalage jour/semaine/mois/an + inclure ou non les enfants, ce dernier déjà existant)
+- Backend `item-bulk.ts` : `iterations` (1-365, défaut 1) + `offsetUnit` optionnel dans le schéma. Boucle sur les itérations (copie 1 = +0, copie 2 = +1 unité, etc. — confirmé avec Thomas). `shiftDate()` calendaire (pas une approximation en jours fixes) : bug trouvé et corrigé pendant l'implémentation — `setMonth` seul fait déborder "31 jan +1 mois" sur le 3 mars au lieu de clamper au 28 fév ; fixé avec `setFullYear(y, m, jour clampé)` atomique. Fix au passage : `startDate`/`endDate` n'étaient pas copiés du tout par la duplication (seul `dueDate` l'était) — corrigé, prérequis direct du décalage
+- Aucun test n'existait sur `item-bulk.ts` — nouveau fichier complet (7 tests : régression 1x, fix startDate/endDate, décalage cumulatif x3, arrondi calendaire fin de mois, item sans date, validation iterations>365)
+- Web : `itemsApi.bulkDuplicate` + UI (input itérations, chips jour/semaine/mois/an affichées si N>1, libellé bouton "Dupliquer ×N", reset à la fermeture)
+- Vérifié en conditions réelles au dev : item daté (12 sept 2026) dupliqué ×3 semaine → copies à 12/19/26 sept exactement
+- Typecheck 5 packages OK, 561/561 tests verts, check-doc-headers OK
+- Reste : contrôle Thomas, puis MEP sur demande
+
 ### Modèles de structures d'items (Item Templates) — 2026-09-12
 - Demande Thomas : pouvoir créer une "grappe" (ex. Réunion + tâches de prep/ODJ/CR) réutilisable, dans un espace déjà existant (pas seulement à la création d'espace comme `SPACE_TEMPLATES` actuel). Décisions brainstorming : B (définissable par l'utilisateur, pas figé dans le code), D (portée globale, partagé avec tout le monde pour le moment). Dates/décalages relatifs et lien permanent "déplacer toute la grappe" → hors périmètre, ajoutés au TODO séparément
 - Brainstorming → design (résumé chat, pas de fichier spec par préférence Thomas du 25/07) → plan écrit `docs/superpowers/plans/2026-09-12-item-templates.md` → exécution inline, 13 tâches TDD
