@@ -53,6 +53,7 @@ import { reviewQueueRoutes } from './routes/review-queue.js';
 import { dayPlanRoutes } from './routes/day-plan.js';
 import { graphRoutes } from './routes/graph.js';
 import { notificationsRoutes } from './routes/notifications.js';
+import { itemTemplatesRoutes } from './routes/item-templates.js';
 import { activityRoutes } from './routes/activity.js';
 import { urlMetaRoutes } from './routes/url-meta.js';
 import { spacePreferencesRoutes } from './routes/space-preferences.js';
@@ -315,6 +316,7 @@ async function buildApp() {
   await app.register(dayPlanRoutes, { prefix: '/user' });
   await app.register(graphRoutes);
   await app.register(notificationsRoutes, { prefix: '/notifications' });
+  await app.register(itemTemplatesRoutes, { prefix: '/item-templates' });
   await app.register(activityRoutes, { prefix: '/activity' });
   await app.register(urlMetaRoutes);
 
