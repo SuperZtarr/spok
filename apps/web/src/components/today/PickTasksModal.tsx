@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
 import { userTasksApi, type AgendaFilters } from '@/lib/api';
+import { DevModalBadge } from '../ui/DevModalBadge';
 
 export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFilters }: {
   open: boolean;
@@ -38,7 +39,7 @@ export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFil
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div className="w-full max-w-lg max-h-[70vh] flex flex-col rounded-lg border border-border bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">Piocher dans mes tâches</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2">Piocher dans mes tâches <DevModalBadge name="PickTasksModal" /></h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground" aria-label="Fermer"><X className="w-4 h-4" /></button>
         </div>
         <input

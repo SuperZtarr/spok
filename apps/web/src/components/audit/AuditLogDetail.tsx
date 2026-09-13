@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { AuditLog, AuditAction } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { DevModalBadge } from '../ui/DevModalBadge';
 import { X, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface AuditLogDetailProps {
@@ -165,7 +166,7 @@ export function AuditLogDetail({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div>
-            <h2 className="text-lg font-semibold">Détails de l'audit</h2>
+            <h2 className="text-lg font-semibold flex items-center gap-2">Détails de l'audit <DevModalBadge name="AuditLogDetail" /></h2>
             <p className="text-sm text-muted-foreground">{formatDate(log.createdAt)}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>

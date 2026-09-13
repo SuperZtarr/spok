@@ -4,6 +4,7 @@ import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } fro
 import type { StatusConfig } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { DevModalBadge } from '../ui/DevModalBadge';
 import { BadgeColorPicker } from './ColorPicker';
 import { BADGE_COLOR_OPTIONS } from '@spok/shared';
 
@@ -106,7 +107,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
             <div className="flex items-start gap-3 mb-4">
               <AlertTriangle className="w-6 h-6 text-yellow-500 flex-shrink-0" />
               <div>
-                <h4 className="font-medium">Statut en cours d'utilisation</h4>
+                <h4 className="font-medium flex items-center gap-2">Statut en cours d'utilisation <DevModalBadge name="StatusManager (confirmation)" /></h4>
                 <p className="text-sm text-muted-foreground mt-1">
                   Ce statut est utilisé par {deleteWarning.count} élément(s).
                   La suppression ne changera pas les éléments existants, mais le statut ne sera plus

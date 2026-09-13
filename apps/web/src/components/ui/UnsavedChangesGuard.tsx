@@ -1,6 +1,7 @@
 /* Garde de navigation : confirme si modifications non enregistrées (useFormChanges). */
 import { useEffect, useState } from 'react';
 import { Button } from './Button';
+import { DevModalBadge } from './DevModalBadge';
 
 interface UnsavedChangesGuardProps {
   hasChanges: boolean;
@@ -57,7 +58,7 @@ export function useUnsavedGuard(hasChanges: boolean) {
   const ConfirmDialog = showConfirm ? (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={cancel}>
       <div className="bg-card border rounded-lg shadow-xl p-6 max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold mb-2">Modifications non enregistrees</h3>
+        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifications non enregistrees <DevModalBadge name="UnsavedChangesGuard" /></h3>
         <p className="text-sm text-muted-foreground mb-4">
           Vous avez des modifications non enregistrees. Voulez-vous quitter sans sauvegarder ?
         </p>

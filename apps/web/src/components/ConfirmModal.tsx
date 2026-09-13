@@ -31,7 +31,7 @@ export function ConfirmModal({
   const IconComponent = icon === 'leave' ? LogOut : AlertTriangle;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="small" devName="ConfirmModal">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-muted rounded-md">
           <IconComponent className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />

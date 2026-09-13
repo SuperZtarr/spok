@@ -6,6 +6,7 @@ import { Users, Globe, Lock, Crown, User, Eye, X, AlertTriangle, Search, ArrowRi
 import { communitiesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { CommunityCard } from '../ui/CommunityCard';
+import { DevModalBadge } from '../ui/DevModalBadge';
 
 type CreateStep = 'awareness' | 'form';
 
@@ -215,8 +216,9 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeCreate}>
           <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
                 {step === 'awareness' ? 'Créer une communauté' : 'Informations'}
+                <DevModalBadge name="CommunityListView (création)" />
               </h2>
               <button onClick={closeCreate} className="p-1 rounded-md hover:bg-accent">
                 <X className="w-5 h-5" />

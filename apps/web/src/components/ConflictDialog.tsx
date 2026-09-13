@@ -84,7 +84,7 @@ export function ConflictDialog({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Conflit de modification">
+    <Modal isOpen={isOpen} onClose={onClose} title="Conflit de modification" devName="ConflictDialog">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />

@@ -13,6 +13,7 @@
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
+import { DevModalBadge } from '../ui/DevModalBadge';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import {
   ReactFlow,
@@ -1493,7 +1494,7 @@ function MindMapViewInner({
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Type de relation</h3>
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Type de relation <DevModalBadge name="MindMapView (créer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{pendingSourceItem?.title}</span>
               {' → '}
@@ -1547,7 +1548,7 @@ function MindMapViewInner({
       {editingEdge && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Modifier la relation</h3>
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifier la relation <DevModalBadge name="MindMapView (éditer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{editingEdge.sourceName}</span>
               {' → '}

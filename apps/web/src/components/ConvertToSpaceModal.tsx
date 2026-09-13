@@ -34,7 +34,7 @@ export function ConvertToSpaceModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Convertir en espace" size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title="Convertir en espace" size="small" devName="ConvertToSpaceModal">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-muted rounded-md">
           <FolderPlus className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />

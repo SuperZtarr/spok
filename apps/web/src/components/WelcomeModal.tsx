@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import logoUrl from '../assets/logo.png';
 import { Users, FolderKanban, LayoutGrid, GitBranch, BarChart3, Search, Bell, ArrowRight } from 'lucide-react';
+import { DevModalBadge } from './ui/DevModalBadge';
 
 const FEATURES = [
   {
@@ -79,7 +80,7 @@ export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps
         {/* Header */}
         <div className="px-8 pt-8 pb-4 text-center">
           <img src={logoUrl} alt="SPOK" className="h-12 mx-auto mb-3" />
-          <h2 className="text-xl font-bold">Bienvenue sur SPOK !</h2>
+          <h2 className="text-xl font-bold flex items-center justify-center gap-2">Bienvenue sur SPOK ! <DevModalBadge name="WelcomeModal" /></h2>
           <p className="text-sm text-muted-foreground mt-1">
             Single Point Of Knowledge — Structurez, reliez, évaluez et planifiez.
           </p>

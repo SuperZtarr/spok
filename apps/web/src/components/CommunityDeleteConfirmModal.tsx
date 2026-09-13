@@ -49,7 +49,7 @@ export function CommunityDeleteConfirmModal({
   }, [isOpen, communityId, isAdmin]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Supprimer la communaut\u00e9 "${communityName}"`} size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Supprimer la communaut\u00e9 "${communityName}"`} size="small" devName="CommunityDeleteConfirmModal">
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-8">

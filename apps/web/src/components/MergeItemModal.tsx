@@ -154,7 +154,7 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
   const TargetIcon = targetItem ? (TYPE_ICONS[targetItem.type] || TYPE_ICONS.NOTE) : null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Fusionner avec..." size={step === 'compare' ? 'large' : 'default'}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Fusionner avec..." size={step === 'compare' ? 'large' : 'default'} devName="MergeItemModal">
       {step === 'pick' && (
         <div className="space-y-3">
           {/* Source item display */}

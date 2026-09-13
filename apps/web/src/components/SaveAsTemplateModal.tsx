@@ -10,6 +10,7 @@ import { itemTemplatesApi } from '../lib/api';
 import { buildItemTemplateStructure, countTemplateNodes } from './item-edit-helpers';
 import type { Item } from '@spok/shared';
 import { Button } from './ui/Button';
+import { DevModalBadge } from './ui/DevModalBadge';
 
 interface SaveAsTemplateModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export function SaveAsTemplateModal({ isOpen, onClose, itemId, allItems }: SaveA
           <h3 className="flex items-center gap-2 text-base font-semibold">
             <LayoutTemplate className="w-4 h-4" />
             Enregistrer comme modèle
+            <DevModalBadge name="SaveAsTemplateModal" />
           </h3>
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground">
             <X className="w-4 h-4" />

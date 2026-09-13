@@ -156,7 +156,7 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
   }, [availableSpaces]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" size="xl" devName="UserProfileModal">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
       ) : user ? (
@@ -487,7 +487,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
   const avatarSrc = user.avatarUrl || null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur">
+    <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" devName="UserProfileModal">
       <div className="space-y-4">
         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
           <div className="relative group">

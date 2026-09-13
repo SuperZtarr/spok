@@ -11,6 +11,7 @@ import { countTemplateNodes } from './item-edit-helpers';
 import { useAuthStore } from '../stores/auth';
 import type { Item } from '@spok/shared';
 import { Button } from './ui/Button';
+import { DevModalBadge } from './ui/DevModalBadge';
 import { Select } from './ui/Select';
 
 interface InsertTemplateModalProps {
@@ -70,6 +71,7 @@ export function InsertTemplateModal({ isOpen, onClose, spaceId, allItems, defaul
           <h3 className="flex items-center gap-2 text-base font-semibold">
             <LayoutTemplate className="w-4 h-4" />
             Insérer un modèle
+            <DevModalBadge name="InsertTemplateModal" />
           </h3>
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground">
             <X className="w-4 h-4" />

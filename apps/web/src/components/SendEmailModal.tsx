@@ -85,7 +85,7 @@ export function SendEmailModal({ isOpen, onClose, members, target }: SendEmailMo
 
   if (result) {
     return (
-      <Modal isOpen={isOpen} onClose={handleClose} title={<span className="text-lg font-semibold">Email envoyé</span>}>
+      <Modal isOpen={isOpen} onClose={handleClose} title={<span className="text-lg font-semibold">Email envoyé</span>} devName="SendEmailModal">
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -103,7 +103,7 @@ export function SendEmailModal({ isOpen, onClose, members, target }: SendEmailMo
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={<span className="text-lg font-semibold">Envoyer un email — {target.name}</span>}>
+    <Modal isOpen={isOpen} onClose={handleClose} title={<span className="text-lg font-semibold">Envoyer un email — {target.name}</span>} devName="SendEmailModal">
       <div className="space-y-4">
         {/* Subject */}
         <div>

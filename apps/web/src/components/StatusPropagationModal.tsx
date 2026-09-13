@@ -21,7 +21,7 @@ export function StatusPropagationModal({
   onCancel,
 }: StatusPropagationModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onKeepOnly} title="Propager le statut ?" size="small">
+    <Modal isOpen={isOpen} onClose={onKeepOnly} title="Propager le statut ?" size="small" devName="StatusPropagationModal">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-muted rounded-md">
           <GitBranch className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />

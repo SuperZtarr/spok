@@ -5,6 +5,7 @@ import { X, FolderInput, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
+import { DevModalBadge } from './ui/DevModalBadge';
 
 interface MoveToSpaceModalProps {
   isOpen: boolean;
@@ -75,6 +76,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
           <h2 className="text-xl font-semibold">
             Déplacer vers un autre espace
           </h2>
+          <DevModalBadge name="MoveToSpaceModal" />
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">

@@ -158,7 +158,7 @@ export function DeleteConfirmModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Supprimer cet element ?" size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title="Supprimer cet element ?" size="small" devName="DeleteConfirmModal">
       <div className="space-y-4">
         {/* Item info */}
         <div className="flex items-center gap-2 p-3 bg-muted rounded-md">

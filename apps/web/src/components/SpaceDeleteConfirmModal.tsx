@@ -50,7 +50,7 @@ export function SpaceDeleteConfirmModal({
   }, [isOpen, spaceId, isAdmin]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Supprimer l'espace "${spaceName}"`} size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Supprimer l'espace "${spaceName}"`} size="small" devName="SpaceDeleteConfirmModal">
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-8">

@@ -9,6 +9,7 @@ import { X, Copy, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
+import { DevModalBadge } from './ui/DevModalBadge';
 
 interface DuplicateToSpaceModalProps {
   isOpen: boolean;
@@ -96,6 +97,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
           <h2 className="text-xl font-semibold">
             Dupliquer vers un espace
           </h2>
+          <DevModalBadge name="DuplicateToSpaceModal" />
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">

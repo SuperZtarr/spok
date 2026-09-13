@@ -1,6 +1,7 @@
 /* Zone de dépôt d'images avec aperçu et upload R2. */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, ClipboardPaste } from 'lucide-react';
+import { DevModalBadge } from './DevModalBadge';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
@@ -137,6 +138,7 @@ export function ImageUploadZone({
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer"
             onClick={() => setExpanded(false)}
           >
+            <div className="absolute top-4 left-4 z-10"><DevModalBadge name="ImageUploadZone (aperçu)" /></div>
             <img
               src={currentUrl}
               alt="Image"

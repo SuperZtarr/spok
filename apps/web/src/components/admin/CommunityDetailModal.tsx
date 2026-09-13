@@ -213,7 +213,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
   // Creation form
   if (isCreating) {
     return (
-      <Modal isOpen={true} onClose={onClose} title="Nouvelle communaute" size="xl">
+      <Modal isOpen={true} onClose={onClose} title="Nouvelle communaute" size="xl" devName="CommunityDetailModal">
         <form onSubmit={handleCreate} className="space-y-4">
           {createMutation.error && (
             <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
@@ -284,7 +284,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   // Detail/edit view
   return (
-    <Modal isOpen={true} onClose={onClose} title="Details de la communaute" size="xl">
+    <Modal isOpen={true} onClose={onClose} title="Details de la communaute" size="xl" devName="CommunityDetailModal">
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : community ? (

@@ -2,6 +2,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useDevMode } from '../DevDbStatus';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -10,9 +11,12 @@ export interface ModalProps {
   children: ReactNode;
   className?: string;
   size?: 'small' | 'default' | 'large' | 'xl' | 'fullscreen';
+  /** Nom dev-only affiché en badge quand le mode dev est actif — vocabulaire commun pour désigner les modales (cf. DevZoneInspector). */
+  devName?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, className, size = 'default' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, size = 'default', devName }: ModalProps) {
+  const devMode = useDevMode();
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -66,7 +70,12 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0 gap-3">
-          <div id="modal-title" className="flex-1 min-w-0">
+          <div id="modal-title" className="flex-1 min-w-0 flex items-center gap-2">
+            {devMode && devName && (
+              <span className="shrink-0 text-[10px] font-mono uppercase tracking-wide bg-black/80 text-white px-1.5 py-0.5 rounded">
+                {devName}
+              </span>
+            )}
             {title}
           </div>
           <button

@@ -7,6 +7,7 @@ import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
+import { DevModalBadge } from '../ui/DevModalBadge';
 import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
 
 const ZOOM_LEVELS = [
@@ -60,6 +61,7 @@ function Lightbox({ images, index, onClose, onNavigate }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute top-4 left-4 z-10"><DevModalBadge name="ImagesView (lightbox)" /></div>
       <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
         <X className="w-8 h-8" />
       </button>
