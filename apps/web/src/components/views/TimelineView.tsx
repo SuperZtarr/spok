@@ -4,7 +4,7 @@
  * Gère : zoom (jour/semaine/mois/trimestre/année), navigation centerDate, DnD repositionnement dates,
  * DnD réordonnancement arborescence panneau gauche (RootDropZone pour remonter un item à la racine),
  * création de relations par glisser-déposer, chemin critique, export, scrollbar de navigation temporelle en bas de vue.
- * Props clés : items, relations, onUpdateDates, onCreateRelation, onDeleteRelation, spaceId.
+ * Props clés : items, relations, onUpdateDates, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
@@ -25,6 +25,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
+import { computeCascadeDependents, type CascadeDependent } from '../../lib/cascadeShift';
+import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
+import { DevModalBadge } from '../ui/DevModalBadge';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
@@ -53,6 +56,7 @@ interface TimelineViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
+  onCascadeShift?: (id: string, deltaDays: number, dependentIds: string[]) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string, label?: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
   onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
@@ -84,7 +88,7 @@ interface TimelineViewProps {
 }
 
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '',
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCascadeShift, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '',
 onNewItem, onStartTour, pulseHelp,
 treeSort: treeSortProp,
 }: TimelineViewProps) {
@@ -130,14 +134,25 @@ treeSort: treeSortProp,
     });
   }, []);
 
-  // Drag state for resizing
+  // Drag state for resizing (start/end) et de déplacement du corps de barre (move)
   const [dragging, setDragging] = useState<{
     itemId: string;
-    type: 'start' | 'end';
+    type: 'start' | 'end' | 'move';
     initialX: number;
-    initialDate: Date;
+    initialDate: Date;       // start/end : la date du champ concerné. move : startDate (ou dueDate/aujourd'hui à défaut) au début du drag
+    initialEndDate?: Date;   // move uniquement : endDate au début du drag
     lastDeltaDays: number;
   } | null>(null);
+
+  // Cascade "Entraîne" en attente de confirmation après un drag de déplacement (type 'move')
+  const [pendingCascade, setPendingCascade] = useState<{
+    itemId: string;
+    startDate: string | null;
+    endDate: string | null;
+    deltaDays: number;
+    dependents: CascadeDependent[];
+  } | null>(null);
+  const dragMovedRef = useRef(false);
 
   // Preview local pendant le drag (aucun appel API) + confirmation après save
   const [dragPreview, setDragPreview] = useState<{ itemId: string; startDate: string | null; endDate: string | null } | null>(null);
@@ -594,6 +609,33 @@ treeSort: treeSortProp,
     });
   }, []);
 
+  // Mousedown sur le corps de la barre : clic simple = ouvrir la modale (comportement existant),
+  // mouvement > 4px = démarre un drag de déplacement (type 'move'), distinct du resize des poignées.
+  const handleBodyMouseDown = useCallback((e: React.MouseEvent, itemId: string) => {
+    if (!canEdit || !onUpdateDates) return;
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    dragMovedRef.current = false;
+
+    const initialDate = item.startDate ? new Date(item.startDate) : (item.dueDate ? new Date(item.dueDate) : new Date());
+    const initialEndDate = item.endDate ? new Date(item.endDate) : undefined;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragMovedRef.current && (Math.abs(ev.clientX - startX) > 4 || Math.abs(ev.clientY - startY) > 4)) {
+        dragMovedRef.current = true;
+        setDragging({ itemId, type: 'move', initialX: startX, initialDate, initialEndDate, lastDeltaDays: 0 });
+      }
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [canEdit, onUpdateDates, items]);
+
   // Handle drag move — mise à jour visuelle locale uniquement, pas d'appel API
   const handleDragMove = useCallback((e: MouseEvent) => {
     if (!dragging) return;
@@ -657,7 +699,7 @@ treeSort: treeSortProp,
         });
         setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
       }
-    } else {
+    } else if (dragging.type === 'end') {
       if (!hasExistingDates || newDate >= currentStart) {
         setDragPreview({
           itemId: dragging.itemId,
@@ -666,21 +708,56 @@ treeSort: treeSortProp,
         });
         setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
       }
+    } else {
+      // type === 'move' : translation du corps de barre, start et end décalés du même delta
+      const movedStart = addDays(dragging.initialDate, deltaDays);
+      const movedEnd = addDays(dragging.initialEndDate ?? dragging.initialDate, deltaDays);
+      setDragPreview({
+        itemId: dragging.itemId,
+        startDate: movedStart.toISOString(),
+        endDate: movedEnd.toISOString(),
+      });
+      setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
     }
   }, [dragging, dragPreview, dayWidth, items]);
 
   // Handle drag end — un seul appel API avec la position finale
   const handleDragEnd = useCallback(() => {
     const preview = dragPreview;
+    const dragType = dragging?.type;
+    const deltaDays = dragging?.lastDeltaDays ?? 0;
     setDragging(null);
     setDragPreview(null);
-    if (preview && onUpdateDates) {
+    if (!preview) return;
+
+    if (dragType === 'move' && deltaDays !== 0 && onCascadeShift) {
+      const dependents = computeCascadeDependents(preview.itemId, deltaDays, items);
+      if (dependents.length > 0) {
+        setPendingCascade({ itemId: preview.itemId, startDate: preview.startDate, endDate: preview.endDate, deltaDays, dependents });
+        return; // attend la confirmation avant d'appeler onUpdateDates
+      }
+    }
+
+    if (onUpdateDates) {
       onUpdateDates(preview.itemId, preview.startDate, preview.endDate);
       const itemId = preview.itemId;
       setSavedItemId(itemId);
       setTimeout(() => setSavedItemId(prev => prev === itemId ? null : prev), 1500);
     }
-  }, [dragPreview, onUpdateDates]);
+  }, [dragPreview, dragging, onUpdateDates, onCascadeShift, items]);
+
+  const confirmTimelineCascade = useCallback((applyCascade: boolean) => {
+    if (!pendingCascade) return;
+    if (onUpdateDates) {
+      onUpdateDates(pendingCascade.itemId, pendingCascade.startDate, pendingCascade.endDate);
+      setSavedItemId(pendingCascade.itemId);
+      setTimeout(() => setSavedItemId(prev => prev === pendingCascade.itemId ? null : prev), 1500);
+    }
+    if (applyCascade && onCascadeShift) {
+      onCascadeShift(pendingCascade.itemId, pendingCascade.deltaDays, pendingCascade.dependents.map(d => d.id));
+    }
+    setPendingCascade(null);
+  }, [pendingCascade, onUpdateDates, onCascadeShift]);
 
   // Effect for drag listeners
   useEffect(() => {
@@ -1300,7 +1377,11 @@ treeSort: treeSortProp,
                         {!derived && (
                           <div
                             className="h-full flex items-center cursor-pointer px-1 min-w-0"
-                            onClick={() => onEdit(item.id)}
+                            onMouseDown={(e) => handleBodyMouseDown(e, item.id)}
+                            onClick={() => {
+                              if (dragMovedRef.current) { dragMovedRef.current = false; return; }
+                              onEdit(item.id);
+                            }}
                           >
                             {barStyle.width > 50 && (
                               <span className="text-xs truncate font-semibold">
@@ -1408,11 +1489,12 @@ treeSort: treeSortProp,
                 <defs>
                   <marker id="arrowhead-blocks"     markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ef4444" opacity="0.8" /></marker>
                   <marker id="arrowhead-implements" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#22c55e" opacity="0.8" /></marker>
+                  <marker id="arrowhead-drives"     markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a855f7" opacity="0.8" /></marker>
                   <marker id="arrowhead-relates"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3b82f6" opacity="0.8" /></marker>
                 </defs>
                 {dependencyArrows.map((arrow, idx) => {
-                  const color = arrow.type === 'blocks' ? '#ef4444' : arrow.type === 'implements' ? '#22c55e' : '#3b82f6';
-                  const markerId = `arrowhead-${arrow.type === 'blocks' ? 'blocks' : arrow.type === 'implements' ? 'implements' : 'relates'}`;
+                  const color = arrow.type === 'blocks' ? '#ef4444' : arrow.type === 'implements' ? '#22c55e' : arrow.type === 'drives' ? '#a855f7' : '#3b82f6';
+                  const markerId = `arrowhead-${arrow.type === 'blocks' ? 'blocks' : arrow.type === 'implements' ? 'implements' : arrow.type === 'drives' ? 'drives' : 'relates'}`;
                   const relType = RELATION_TYPES.find(t => t.id === arrow.type);
                   const relLabel = relType?.label || arrow.type;
 
@@ -1564,7 +1646,7 @@ treeSort: treeSortProp,
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Type de relation</h3>
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Type de relation <DevModalBadge name="TimelineView (créer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{pendingSourceItem?.title}</span>
               {' → '}
@@ -1613,11 +1695,24 @@ treeSort: treeSortProp,
           </div>
         </div>
       )}
+      {pendingCascade && (() => {
+        const anchorItem = items.find(i => i.id === pendingCascade.itemId);
+        return (
+          <CascadeShiftConfirmModal
+            anchorTitle={anchorItem?.title || ''}
+            deltaDays={pendingCascade.deltaDays}
+            dependents={pendingCascade.dependents}
+            onConfirm={() => confirmTimelineCascade(true)}
+            onCancel={() => confirmTimelineCascade(false)}
+          />
+        );
+      })()}
+
       {/* Edit relation dialog */}
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Modifier la relation</h3>
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifier la relation <DevModalBadge name="TimelineView (éditer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{editingRelation.sourceName}</span>
               {' → '}

@@ -873,6 +873,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => actions.handleInlineUpdate(id, { startDate, endDate })}
+              onCascadeShift={actions.handleCascadeShift}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
               onUpdateRelation={actions.handleUpdateRelation}
@@ -1727,6 +1728,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
         onClose={() => actions.setPendingCrossSpaceMove(null)}
         title="Déplacer vers un autre espace"
         size="small"
+        devName="CrossSpaceMoveModal"
       >
         {actions.pendingCrossSpaceMove && (
           <div className="space-y-4">

@@ -6,6 +6,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeRelationForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
+import { getDrivesReachableIds } from '../utils/drivesGraph.js';
 
 const createRelationSchema = z.object({
   toItemId: z.string(),
@@ -34,6 +35,18 @@ export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const body = createRelationSchema.parse(request.body);
+
+    // Cascade "Entraîne" : une relation drives A→B doit rester acyclique, sinon décaler A
+    // en cascade finirait par redécaler A lui-même via la boucle.
+    if (body.type === 'drives') {
+      if (body.toItemId === request.params.id) {
+        return reply.badRequest("Un item ne peut pas s'entraîner lui-même");
+      }
+      const reachableFromTarget = await getDrivesReachableIds(fastify.prisma, body.toItemId);
+      if (reachableFromTarget.has(request.params.id)) {
+        return reply.badRequest('Ce lien créerait une boucle entre les items');
+      }
+    }
 
     // Verify both items exist (fromItem must be in the request space, toItem can be cross-space)
     const [fromItem, toItem] = await Promise.all([

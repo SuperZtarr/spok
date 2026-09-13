@@ -5,10 +5,11 @@
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Ban, ArrowRight, Link2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Ban, ArrowRight, Link2, FastForward, ChevronDown, ChevronRight } from 'lucide-react';
 import { PertToolbar } from './PertToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
+import { DevModalBadge } from '../ui/DevModalBadge';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig, StatusConfig } from '@spok/shared';
 import type { ViewMode } from '../../stores/viewMode';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -37,14 +38,16 @@ const SPACE_COLORS = [
 ];
 
 const PERT_RELATION_TYPES = [
-  { id: 'blocks',     label: 'Bloque',  Icon: Ban,        hexColor: '#ef4444', tailwindColor: 'text-red-500',   selectedClass: 'bg-red-50   border-red-400   dark:bg-red-950/30',   hoverClass: 'hover:bg-red-50   hover:border-red-300'   },
-  { id: 'implements', label: 'Permet',  Icon: ArrowRight, hexColor: '#22c55e', tailwindColor: 'text-green-500', selectedClass: 'bg-green-50 border-green-400 dark:bg-green-950/30', hoverClass: 'hover:bg-green-50 hover:border-green-300' },
-  { id: 'relates',    label: 'Lié à',   Icon: Link2,      hexColor: '#3b82f6', tailwindColor: 'text-blue-500',  selectedClass: 'bg-blue-50  border-blue-400  dark:bg-blue-950/30',  hoverClass: 'hover:bg-blue-50  hover:border-blue-300'  },
+  { id: 'blocks',     label: 'Bloque',   Icon: Ban,         hexColor: '#ef4444', tailwindColor: 'text-red-500',    selectedClass: 'bg-red-50    border-red-400    dark:bg-red-950/30',    hoverClass: 'hover:bg-red-50    hover:border-red-300'    },
+  { id: 'implements', label: 'Permet',   Icon: ArrowRight,  hexColor: '#22c55e', tailwindColor: 'text-green-500',  selectedClass: 'bg-green-50  border-green-400  dark:bg-green-950/30',  hoverClass: 'hover:bg-green-50  hover:border-green-300'  },
+  { id: 'drives',     label: 'Entraîne', Icon: FastForward, hexColor: '#a855f7', tailwindColor: 'text-purple-500', selectedClass: 'bg-purple-50 border-purple-400 dark:bg-purple-950/30', hoverClass: 'hover:bg-purple-50 hover:border-purple-300' },
+  { id: 'relates',    label: 'Lié à',    Icon: Link2,       hexColor: '#3b82f6', tailwindColor: 'text-blue-500',   selectedClass: 'bg-blue-50   border-blue-400   dark:bg-blue-950/30',   hoverClass: 'hover:bg-blue-50   hover:border-blue-300'   },
 ] as const;
 
 const RELATION_HEX: Record<string, string> = {
   blocks: '#ef4444',
   implements: '#22c55e',
+  drives: '#a855f7',
   relates: '#3b82f6',
 };
 function getRelationColor(type: string): string {
@@ -79,6 +82,7 @@ function RelationRow({ typeId, sourceName, targetName, sourceStatus, targetStatu
     switch (typeId) {
       case 'blocks':     return [sourceName, 'bloque',    targetName, sourceStatus, targetStatus];
       case 'implements': return [sourceName, 'permet',    targetName, sourceStatus, targetStatus];
+      case 'drives':     return [sourceName, 'entraîne',  targetName, sourceStatus, targetStatus];
       case 'relates':    return [sourceName, 'est lié à', targetName, sourceStatus, targetStatus];
       default:           return [sourceName, '→',         targetName, sourceStatus, targetStatus];
     }
@@ -867,6 +871,7 @@ export function PertView({
               <marker id="arrow-normal"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
               <marker id="arrow-blocks"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef4444" /></marker>
               <marker id="arrow-implements" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#22c55e" /></marker>
+              <marker id="arrow-drives"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#a855f7" /></marker>
               <marker id="arrow-relates"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3b82f6" /></marker>
             </defs>
 
@@ -913,6 +918,7 @@ export function PertView({
                 if (nodeRels.some(r => r.type === 'blocks' && r.fromItemId === item.id)) return '#ef4444'; // bloque → rouge
                 if (nodeRels.some(r => r.type === 'blocks' && r.toItemId   === item.id)) return '#fb923c'; // est bloqué → orange clair
                 if (nodeRels.some(r => r.type === 'implements')) return RELATION_HEX.implements;
+                if (nodeRels.some(r => r.type === 'drives'))     return RELATION_HEX.drives;
                 if (nodeRels.some(r => r.type === 'relates'))    return null;
                 return null;
               })();
@@ -989,7 +995,7 @@ export function PertView({
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
-            <h3 className="text-base font-semibold mb-1">Modifier la relation</h3>
+            <h3 className="text-base font-semibold mb-1 flex items-center gap-2">Modifier la relation <DevModalBadge name="PertView (éditer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{editingRelation.sourceName}</span>
               {' → '}
@@ -1061,7 +1067,7 @@ export function PertView({
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
-            <h3 className="text-base font-semibold mb-1">Type de relation</h3>
+            <h3 className="text-base font-semibold mb-1 flex items-center gap-2">Type de relation <DevModalBadge name="PertView (créer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{pendingSourceItem?.title}</span>
               {' → '}

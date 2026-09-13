@@ -1,5 +1,5 @@
 /* Constantes du Gantt : hauteurs de lignes, largeurs de colonnes, niveaux de zoom. */
-import { Link2, Ban, ArrowRight, type LucideIcon } from 'lucide-react';
+import { Link2, Ban, ArrowRight, FastForward, type LucideIcon } from 'lucide-react';
 
 // Zoom level configuration
 export type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'multiyear';
@@ -27,7 +27,8 @@ export const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year
 
 // Relation types (same as MindMapView)
 export const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
-  { id: 'blocks',     label: 'Bloque',  Icon: Ban,        description: 'Contrainte dure — B ne peut démarrer avant la fin de A', color: 'text-red-500'   },
-  { id: 'implements', label: 'Permet',  Icon: ArrowRight, description: 'A permet/rend possible B',                                color: 'text-green-500' },
-  { id: 'relates',    label: 'Lié à',   Icon: Link2,      description: 'A et B doivent être traités ensemble',                   color: 'text-blue-500'  },
+  { id: 'blocks',     label: 'Bloque',   Icon: Ban,         description: 'Contrainte dure — B ne peut démarrer avant la fin de A',        color: 'text-red-500'    },
+  { id: 'implements', label: 'Permet',   Icon: ArrowRight,  description: 'A permet/rend possible B',                                       color: 'text-green-500'  },
+  { id: 'drives',     label: 'Entraîne', Icon: FastForward, description: 'Déplacer A décale B du même nombre de jours',                    color: 'text-purple-500' },
+  { id: 'relates',    label: 'Lié à',    Icon: Link2,       description: 'A et B doivent être traités ensemble',                            color: 'text-blue-500'   },
 ];

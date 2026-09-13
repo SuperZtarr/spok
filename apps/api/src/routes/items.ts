@@ -11,6 +11,7 @@ import { createItemTree } from '../utils/itemTree.js';
 import { createNotification } from '../utils/notifications.js';
 import { notifyMentionedUsers } from '../utils/mentions.js';
 import { itemRelationsRoutes } from './item-relations.js';
+import { itemCascadeShiftRoutes } from './item-cascade-shift.js';
 import { itemMoveRoutes } from './item-move.js';
 import { itemBulkRoutes } from './item-bulk.js';
 import { itemUploadRoutes } from './item-uploads.js';
@@ -150,6 +151,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(async function (authInstance) {
     authInstance.addHook('preHandler', authInstance.authenticate);
     await authInstance.register(itemRelationsRoutes);
+    await authInstance.register(itemCascadeShiftRoutes);
     await authInstance.register(itemMoveRoutes);
     await authInstance.register(itemBulkRoutes);
     await authInstance.register(itemUploadRoutes);

@@ -23,7 +23,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, FastForward, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -43,6 +43,9 @@ import { FileUploadZone } from './ui/FileUploadZone';
 import { DateTimeField } from './ui/DateTimeField';
 import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
+import { computeCascadeDependents, type CascadeDependent } from '../lib/cascadeShift';
+import { CascadeShiftConfirmModal } from './CascadeShiftConfirmModal';
+import { DevModalBadge } from './ui/DevModalBadge';
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
@@ -228,7 +231,7 @@ export function ItemEditModal({
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
-  const [newRelationType, setNewRelationType] = useState<'blocks' | 'relates' | 'implements'>('implements');
+  const [newRelationType, setNewRelationType] = useState<'blocks' | 'relates' | 'implements' | 'drives'>('implements');
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
   const [newRelationLabel, setNewRelationLabel] = useState('');
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
@@ -322,7 +325,7 @@ export function ItemEditModal({
   // Populate the form once the correct item data has arrived
   useEffect(() => {
     if (!item) return;
-    const initKey = `${item.id}::${item.startDate ?? ''}::${item.endDate ?? ''}`;
+    const initKey = `${item.id}::${item.dueDate ?? ''}::${item.startDate ?? ''}::${item.endDate ?? ''}`;
     if (initializedItemIdRef.current === initKey) return; // already initialised for this item+dates
     initializedItemIdRef.current = initKey;
 
@@ -374,6 +377,25 @@ export function ItemEditModal({
       }
     },
   });
+
+  const cascadeShiftMutation = useMutation({
+    mutationFn: (data: { deltaDays: number; dependentIds: string[] }) =>
+      itemsApi.cascadeShift(spaceId, itemId!, data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      // Un dépendant peut être dans un autre espace (relation drives cross-space) — invalider
+      // sa requête ['item', <son espace>, id] sans connaître cet espace à l'avance.
+      for (const dependentId of variables.dependentIds) {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'item' && query.queryKey[2] === dependentId });
+      }
+    },
+  });
+
+  const [pendingCascade, setPendingCascade] = useState<{
+    updates: Parameters<typeof updateMutation.mutate>[0];
+    deltaDays: number;
+    dependents: CascadeDependent[];
+  } | null>(null);
 
   const autoSaveDiagramMutation = useMutation({
     mutationFn: (xml: string) =>
@@ -710,11 +732,37 @@ export function ItemEditModal({
       updates.tagIds = selectedTagIds;
     }
 
+    // Cascade "Entraîne" : référence dueDate > startDate > endDate parmi les champs modifiés
+    // (uniquement quand l'ancienne ET la nouvelle valeur existent — un champ qui apparaît/disparaît
+    // n'est pas un déplacement dans le temps, pas de delta calculable).
+    let cascadeDeltaDays = 0;
+    if (updates.dueDate !== undefined && currentDueDate && newDueDate) {
+      cascadeDeltaDays = Math.round((new Date(newDueDate).getTime() - new Date(currentDueDate).getTime()) / 86400000);
+    } else if (updates.startDate !== undefined && currentStartDate && newStartDate) {
+      cascadeDeltaDays = Math.round((new Date(newStartDate).getTime() - new Date(currentStartDate).getTime()) / 86400000);
+    } else if (updates.endDate !== undefined && currentEndDate && newEndDate) {
+      cascadeDeltaDays = Math.round((new Date(newEndDate).getTime() - new Date(currentEndDate).getTime()) / 86400000);
+    }
+    const cascadeDependents = cascadeDeltaDays !== 0 ? computeCascadeDependents(itemId!, cascadeDeltaDays, allItems) : [];
+
     if (Object.keys(updates).length > 0) {
-      updateMutation.mutate(updates);
+      if (cascadeDependents.length > 0) {
+        setPendingCascade({ updates, deltaDays: cascadeDeltaDays, dependents: cascadeDependents });
+      } else {
+        updateMutation.mutate(updates);
+      }
     } else {
       onClose();
     }
+  };
+
+  const confirmCascade = (applyCascade: boolean) => {
+    if (!pendingCascade) return;
+    updateMutation.mutate(pendingCascade.updates);
+    if (applyCascade) {
+      cascadeShiftMutation.mutate({ deltaDays: pendingCascade.deltaDays, dependentIds: pendingCascade.dependents.map((d) => d.id) });
+    }
+    setPendingCascade(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -886,6 +934,7 @@ export function ItemEditModal({
       onClose={onClose}
       title=""
       size="fullscreen"
+      devName="ItemEditModal"
     >
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
@@ -1462,11 +1511,12 @@ export function ItemEditModal({
                     <div className="space-y-2">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Type</label>
-                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as 'blocks' | 'relates' | 'implements')}
+                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as 'blocks' | 'relates' | 'implements' | 'drives')}
                           options={[
-                            { value: 'blocks',     label: 'Bloque...'  },
-                            { value: 'implements', label: 'Permet...'  },
-                            { value: 'relates',    label: 'Lié à...'   },
+                            { value: 'blocks',     label: 'Bloque...'   },
+                            { value: 'implements', label: 'Permet...'   },
+                            { value: 'drives',     label: 'Entraîne...' },
+                            { value: 'relates',    label: 'Lié à...'    },
                           ]} />
                       </div>
                       <div className="space-y-1">
@@ -1496,8 +1546,8 @@ export function ItemEditModal({
                 {((item.relationsFrom && item.relationsFrom.length > 0) || (item.relationsTo && item.relationsTo.length > 0)) ? (
                   <div className="space-y-2">
                     {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => {
-                      const typeLabel = relation.type === 'blocks' ? 'Bloque' : relation.type === 'implements' ? 'Permet' : 'Lié à';
-                      const typeClass = relation.type === 'blocks' ? 'bg-red-100 text-red-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+                      const typeLabel = relation.type === 'blocks' ? 'Bloque' : relation.type === 'implements' ? 'Permet' : relation.type === 'drives' ? 'Entraîne' : 'Lié à';
+                      const typeClass = relation.type === 'blocks' ? 'bg-red-100 text-red-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : relation.type === 'drives' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
                       const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: item.title, targetName: relation.toItem?.title || '' }); } : undefined;
                       return (
                         <div key={relation.id}
@@ -1511,8 +1561,8 @@ export function ItemEditModal({
                       );
                     })}
                     {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => {
-                      const typeLabel = relation.type === 'blocks' ? 'Bloqué par' : relation.type === 'implements' ? 'Permis par' : 'Lié à';
-                      const typeClass = relation.type === 'blocks' ? 'bg-orange-100 text-orange-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+                      const typeLabel = relation.type === 'blocks' ? 'Bloqué par' : relation.type === 'implements' ? 'Permis par' : relation.type === 'drives' ? 'Entraîné par' : 'Lié à';
+                      const typeClass = relation.type === 'blocks' ? 'bg-orange-100 text-orange-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : relation.type === 'drives' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
                       const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: relation.fromItem?.title || '', targetName: item.title }); } : undefined;
                       return (
                         <div key={relation.id}
@@ -1725,19 +1775,31 @@ export function ItemEditModal({
           }}
         />
       )}
+      {pendingCascade && createPortal(
+        <CascadeShiftConfirmModal
+          anchorTitle={item?.title || ''}
+          deltaDays={pendingCascade.deltaDays}
+          dependents={pendingCascade.dependents}
+          onConfirm={() => confirmCascade(true)}
+          onCancel={() => confirmCascade(false)}
+        />,
+        document.body
+      )}
+
       {/* Relation edit modal */}
       {editingRelationId && editingRelationMeta && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setEditingRelationId(null)} />
           <div className="relative bg-background rounded-xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">Modifier la relation</h3>
+              <h3 className="text-base font-semibold flex items-center gap-2">Modifier la relation <DevModalBadge name="ItemEditModal (éditer relation)" /></h3>
               <button type="button" onClick={() => setEditingRelationId(null)} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
             <div className="flex flex-col gap-2">
               {([
                 { id: 'blocks',     label: 'bloque',    Icon: Ban,        hex: '#ef4444', sel: 'bg-red-50 border-red-400',   hov: 'hover:bg-red-50 hover:border-red-300'   },
                 { id: 'implements', label: 'permet',    Icon: ArrowRight, hex: '#22c55e', sel: 'bg-green-50 border-green-400', hov: 'hover:bg-green-50 hover:border-green-300' },
+                { id: 'drives',     label: 'entraîne',  Icon: FastForward, hex: '#a855f7', sel: 'bg-purple-50 border-purple-400', hov: 'hover:bg-purple-50 hover:border-purple-300' },
                 { id: 'relates',    label: 'est lié à', Icon: Link2,      hex: '#3b82f6', sel: 'bg-blue-50 border-blue-400',  hov: 'hover:bg-blue-50 hover:border-blue-300'  },
               ] as const).map(type => (
                 <button key={type.id} type="button"

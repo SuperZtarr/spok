@@ -966,6 +966,12 @@ export const itemsApi = {
       method: 'DELETE',
     }),
 
+  cascadeShift: (spaceId: string, itemId: string, data: { deltaDays: number; dependentIds: string[] }) =>
+    fetchApi<{ success: boolean; shiftedCount: number }>(`/spaces/${spaceId}/items/${itemId}/cascade-shift`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Reactions
   react: (spaceId: string, itemId: string, reactionType: string) =>
     fetchApi<{ reaction: any; summary: import('@spok/shared').ReactionSummary[] }>(`/spaces/${spaceId}/items/${itemId}/reactions`, {

@@ -175,6 +175,19 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     },
   });
 
+  const cascadeShiftMutation = useMutation({
+    mutationFn: ({ itemId, itemSpaceId, deltaDays, dependentIds }: { itemId: string; itemSpaceId: string; deltaDays: number; dependentIds: string[] }) =>
+      itemsApi.cascadeShift(itemSpaceId, itemId, { deltaDays, dependentIds }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      // Un dépendant peut être dans un autre espace (relation drives cross-space) — invalider
+      // sa requête ['item', <son espace>, id] sans connaître cet espace à l'avance.
+      for (const dependentId of variables.dependentIds) {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'item' && query.queryKey[2] === dependentId });
+      }
+    },
+  });
+
   const updateRelationMutation = useMutation({
     mutationFn: ({ itemId, itemSpaceId, relationId, data }: { itemId: string; itemSpaceId: string; relationId: string; data: { type?: string; label?: string | null } }) =>
       itemsApi.updateRelation(itemSpaceId, itemId, relationId, data),
@@ -360,6 +373,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     deleteRelationMutation.mutate({ itemId, itemSpaceId, relationId });
   }, [resolveItemSpaceId, deleteRelationMutation]);
 
+  const handleCascadeShift = useCallback((itemId: string, deltaDays: number, dependentIds: string[]) => {
+    const itemSpaceId = resolveItemSpaceId(itemId);
+    cascadeShiftMutation.mutate({ itemId, itemSpaceId, deltaDays, dependentIds });
+  }, [resolveItemSpaceId, cascadeShiftMutation]);
+
   const handleUpdateRelation = useCallback((itemId: string, relationId: string, data: { type?: string; label?: string | null }) => {
     const itemSpaceId = resolveItemSpaceId(itemId);
     updateRelationMutation.mutate({ itemId, itemSpaceId, relationId, data });
@@ -474,6 +492,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     handleCreateRelation,
     handleDeleteRelation,
     handleUpdateRelation,
+    handleCascadeShift,
     // Status propagation
     pendingStatusPropagation,
     setPendingStatusPropagation,
