@@ -6,7 +6,7 @@
 - [ ] `ItemEditModal.tsx` (section « Éléments enfants », `key={child.id}` ~ligne 1572) déclenche en continu (rafale, dizaines de fois/s) le warning React "Encountered two children with the same key" pour certains items (observé sur "Refonte authentification" et un item créé depuis un modèle avec les mêmes titres d'enfants). Suggère que `allItems`/`allItemsData` contient des doublons d'id quelque part en amont (cache query, fusion de pages, ou opti-update). À investiguer séparément — non lié au chantier templates, pas introduit par lui (aucune modification de la logique de fetch/cache des items dans ce chantier). Rend l'observation de l'UI peu fiable pendant l'investigation (re-renders en boucle)
 
 ### Groupes d'items liés par la date (déplacer toute une grappe)
-- [ ] Lien permanent entre items (ancre + décalage en jours) : déplacer la date d'un item déplace automatiquement ses items liés (ex. réunion + tâches satellites avant/après). Hors périmètre du projet "templates de structures d'items" (2026-09-12) — chantier séparé à spécifier : modèle de données du lien, interaction avec Gantt/Timeline (aucun cascade de date au drag aujourd'hui) et `ItemRelation`, UX de rupture du lien
+- [x] Nouveau type de relation `drives` ("Entraîne", sens unique, écart déduit dynamiquement, chaîne transitive, détection de cycle) — spec `docs/superpowers/specs/2026-09-13-cascade-date-relation-design.md`, plan `docs/superpowers/plans/2026-09-13-cascade-date-relation.md`. Backend : `item-cascade-shift.ts` + `drivesGraph.ts` (revalidation serveur). Frontend : `lib/cascadeShift.ts`, `CascadeShiftConfirmModal`, branché dans ItemEditModal (sauvegarde) et nouveau drag de déplacement du corps de barre dans TimelineView ; type `drives` ajouté partout où les relations existent (ItemEditModal, PertView, TimelineView, MindMapView) — 2026-09-14 (4eae01d)
 
 ### Refonte esthétique
 - [x] Piste "Dense technique" choisie (canvas Claude Design, 3 directions explorées) : tokens globaux (IBM Plex Sans/Mono, palette gris-bleu froid, radius réduit), fond gris clair sidebar/header/toolbar de vue vs contenu blanc, cohérent clair/sombre — 2026-08-19
@@ -96,6 +96,7 @@
 - [x] `dev-autostart.ps1` : attend la readiness (`:3000` + `:3001/health` = 200) puis ouvre Chrome sur localhost:3000 — plus d'actions manuelles au démarrage — 2026-08-31 (bea0bcd)
 - [x] Boutons Déconnexion / Mode admin / Mode dev (compact) + « Retourner à » déplacés de la section « Divers » du bandeau vers la row 1 du header, avant la vignette utilisateur (desktop uniquement, mobile inchangé) — 2026-08-31
 - [x] `DevZoneInspector` : inspecteur de zones dev-only — encadrés colorés permanents (`data-devzone`) sur sidebar/header/bandeau/toolbar/contenu + sous-zones sidebar, nom de la zone au survol, piloté par le mode dev — 2026-08-31
+- [x] Badges de nom de modale en mode dev : nouveau `DevModalBadge` (+ prop `devName` sur `Modal.tsx`), posé sur les 16 modales basées sur `Modal.tsx` et sur la quinzaine de modales maison (overlay fait main) — 2026-09-14 (e1f83e4)
 
 ## Idées (à explorer)
 
