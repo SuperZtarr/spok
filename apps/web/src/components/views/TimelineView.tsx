@@ -25,7 +25,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
-import { computeCascadeDependents, type CascadeDependent } from '../../lib/cascadeShift';
+import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../../lib/cascadeShift';
 import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { Button } from '../ui/Button';
@@ -151,6 +151,7 @@ treeSort: treeSortProp,
     endDate: string | null;
     deltaDays: number;
     dependents: CascadeDependent[];
+    descendants: CascadeDependent[];
   } | null>(null);
   const dragMovedRef = useRef(false);
 
@@ -732,8 +733,9 @@ treeSort: treeSortProp,
 
     if (dragType === 'move' && deltaDays !== 0 && onCascadeShift) {
       const dependents = computeCascadeDependents(preview.itemId, deltaDays, items);
-      if (dependents.length > 0) {
-        setPendingCascade({ itemId: preview.itemId, startDate: preview.startDate, endDate: preview.endDate, deltaDays, dependents });
+      const descendants = computeCascadeDescendants(preview.itemId, deltaDays, items);
+      if (dependents.length > 0 || descendants.length > 0) {
+        setPendingCascade({ itemId: preview.itemId, startDate: preview.startDate, endDate: preview.endDate, deltaDays, dependents, descendants });
         return; // attend la confirmation avant d'appeler onUpdateDates
       }
     }
@@ -746,18 +748,32 @@ treeSort: treeSortProp,
     }
   }, [dragPreview, dragging, onUpdateDates, onCascadeShift, items]);
 
-  const confirmTimelineCascade = useCallback((applyCascade: boolean) => {
+  const applyTimelineCascade = useCallback((includeDescendants: boolean) => {
     if (!pendingCascade) return;
     if (onUpdateDates) {
       onUpdateDates(pendingCascade.itemId, pendingCascade.startDate, pendingCascade.endDate);
       setSavedItemId(pendingCascade.itemId);
       setTimeout(() => setSavedItemId(prev => prev === pendingCascade.itemId ? null : prev), 1500);
     }
-    if (applyCascade && onCascadeShift) {
-      onCascadeShift(pendingCascade.itemId, pendingCascade.deltaDays, pendingCascade.dependents.map(d => d.id));
+    const ids = [
+      ...pendingCascade.dependents.map(d => d.id),
+      ...(includeDescendants ? pendingCascade.descendants.map(d => d.id) : []),
+    ];
+    if (ids.length > 0 && onCascadeShift) {
+      onCascadeShift(pendingCascade.itemId, pendingCascade.deltaDays, ids);
     }
     setPendingCascade(null);
   }, [pendingCascade, onUpdateDates, onCascadeShift]);
+
+  const skipTimelineCascade = useCallback(() => {
+    if (!pendingCascade) return;
+    if (onUpdateDates) {
+      onUpdateDates(pendingCascade.itemId, pendingCascade.startDate, pendingCascade.endDate);
+      setSavedItemId(pendingCascade.itemId);
+      setTimeout(() => setSavedItemId(prev => prev === pendingCascade.itemId ? null : prev), 1500);
+    }
+    setPendingCascade(null);
+  }, [pendingCascade, onUpdateDates]);
 
   // Effect for drag listeners
   useEffect(() => {
@@ -1702,8 +1718,9 @@ treeSort: treeSortProp,
             anchorTitle={anchorItem?.title || ''}
             deltaDays={pendingCascade.deltaDays}
             dependents={pendingCascade.dependents}
-            onConfirm={() => confirmTimelineCascade(true)}
-            onCancel={() => confirmTimelineCascade(false)}
+            descendants={pendingCascade.descendants}
+            onConfirm={(includeDescendants) => applyTimelineCascade(includeDescendants)}
+            onCancel={skipTimelineCascade}
           />
         );
       })()}

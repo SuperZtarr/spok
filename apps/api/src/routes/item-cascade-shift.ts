@@ -1,14 +1,16 @@
-/* Décalage en cascade des dates des dépendants d'un item ancre via une relation 'drives'
- * ("Entraîne"). Le client (ItemEditModal, TimelineView) calcule et affiche la liste des
- * dépendants affectés pour confirmation ; cette route revalide côté serveur que chaque id
- * confirmé est bien atteignable depuis l'ancre avant d'appliquer le décalage — ne fait jamais
- * confiance à la liste envoyée par le client seule (TOCTOU entre la prévisualisation et l'envoi). */
+/* Décalage en cascade des dates des dépendants d'un item ancre, via une relation 'drives'
+ * ("Entraîne") et/ou la hiérarchie parent/enfant (case "aussi décaler les enfants" côté client).
+ * Le client (ItemEditModal, TimelineView) calcule et affiche la liste des éléments affectés pour
+ * confirmation ; cette route revalide côté serveur que chaque id confirmé est bien atteignable
+ * depuis l'ancre (drives OU descendant) avant d'appliquer le décalage — ne fait jamais confiance
+ * à la liste envoyée par le client seule (TOCTOU entre la prévisualisation et l'envoi). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { shiftItemDates } from '../utils/dateShift.js';
 import { getDrivesReachableIds } from '../utils/drivesGraph.js';
+import { getDescendantIds } from '../utils/itemDescendants.js';
 
 const cascadeShiftSchema = z.object({
   deltaDays: z.number().int(),
@@ -37,10 +39,14 @@ export const itemCascadeShiftRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Anchor item not found');
     }
 
-    const reachable = await getDrivesReachableIds(fastify.prisma, anchor.id);
+    const [drivesReachable, descendantIds] = await Promise.all([
+      getDrivesReachableIds(fastify.prisma, anchor.id),
+      getDescendantIds(fastify.prisma, anchor.id),
+    ]);
+    const reachable = new Set([...drivesReachable, ...descendantIds]);
     const invalidIds = body.dependentIds.filter((id) => !reachable.has(id));
     if (invalidIds.length > 0) {
-      return reply.badRequest(`Éléments non atteignables via une relation "drives" depuis l'ancre : ${invalidIds.join(', ')}`);
+      return reply.badRequest(`Éléments non atteignables (ni relation "drives" ni descendant) depuis l'ancre : ${invalidIds.join(', ')}`);
     }
 
     const dependents = await fastify.prisma.item.findMany({

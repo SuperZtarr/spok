@@ -1,5 +1,6 @@
 /* TNR de POST /spaces/:spaceId/items/:id/cascade-shift : décalage en cascade des dépendants
- * confirmés d'une ancre via la relation 'drives' — revalidation serveur de la reachability. */
+ * confirmés d'une ancre via la relation 'drives' et/ou la hiérarchie parent/enfant — revalidation
+ * serveur de la reachability (drives ∪ descendants). */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -47,6 +48,23 @@ function mockDependent(id: string, overrides: Record<string, unknown> = {}) {
   }
 }
 
+/** Configure item.findMany pour distinguer le parcours des descendants (where.parentId) de la
+ * récupération finale des items confirmés (where.id). childrenByParent mappe un id -> ses enfants
+ * directs (ids) ; finalItems est la liste renvoyée pour la récupération finale. */
+function mockItemFindMany(prisma: MockPrisma, childrenByParent: Record<string, string[]>, finalItems: unknown[]) {
+  prisma.item.findMany.mockImplementation(({ where }: any) => {
+    if (where?.parentId?.in) {
+      const ids: string[] = where.parentId.in
+      const childIds = ids.flatMap((id) => childrenByParent[id] ?? [])
+      return Promise.resolve(childIds.map((id) => ({ id })))
+    }
+    if (where?.id?.in) {
+      return Promise.resolve(finalItems)
+    }
+    return Promise.resolve([])
+  })
+}
+
 describe('POST /spaces/:spaceId/items/:id/cascade-shift', () => {
   let app: FastifyInstance
   let prisma: MockPrisma
@@ -60,13 +78,14 @@ describe('POST /spaces/:spaceId/items/:id/cascade-shift', () => {
     prisma.spaceMembership.findUnique.mockResolvedValue({ userId: USER_ID, spaceId: 'space-1', role: 'MEMBER' })
     prisma.item.findFirst.mockResolvedValue({ id: 'anchor-1', spaceId: 'space-1' })
     prisma.item.update.mockImplementation(({ where, data }: any) => Promise.resolve({ id: where.id, spaceId: 'space-1', ...data }))
+    prisma.itemRelation.findMany.mockResolvedValue([]) // pas de relation drives par défaut
   })
 
   it('décale les dépendants confirmés et atteignables via drives', async () => {
     prisma.itemRelation.findMany
-      .mockResolvedValueOnce([{ toItemId: 'dep-1' }]) // BFS frontier [anchor-1]
+      .mockResolvedValueOnce([{ toItemId: 'dep-1' }]) // BFS drives frontier [anchor-1]
       .mockResolvedValueOnce([])                       // frontier [dep-1]
-    prisma.item.findMany.mockResolvedValueOnce([mockDependent('dep-1')])
+    mockItemFindMany(prisma, {}, [mockDependent('dep-1')])
 
     const res = await app.inject({
       method: 'POST', url: '/spaces/space-1/items/anchor-1/cascade-shift',
@@ -81,15 +100,38 @@ describe('POST /spaces/:spaceId/items/:id/cascade-shift', () => {
     expect(updateCall.data.dueDate.toISOString()).toBe('2026-01-18T00:00:00.000Z')
   })
 
-  it('rejette un dependentId non atteignable via drives depuis l\'ancre', async () => {
-    prisma.itemRelation.findMany
-      .mockResolvedValueOnce([{ toItemId: 'dep-1' }])
-      .mockResolvedValueOnce([])
+  it('décale un enfant confirmé et atteignable via parentId (sans relation drives)', async () => {
+    mockItemFindMany(prisma, { 'anchor-1': ['child-1'] }, [mockDependent('child-1')])
 
     const res = await app.inject({
       method: 'POST', url: '/spaces/space-1/items/anchor-1/cascade-shift',
       headers: { authorization: `Bearer ${token}` },
-      payload: { deltaDays: 5, dependentIds: ['dep-1', 'not-reachable'] },
+      payload: { deltaDays: 5, dependentIds: ['child-1'] },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().shiftedCount).toBe(1)
+  })
+
+  it('décale un petit-enfant confirmé (parentId transitif)', async () => {
+    mockItemFindMany(prisma, { 'anchor-1': ['child-1'], 'child-1': ['grandchild-1'] }, [mockDependent('grandchild-1')])
+
+    const res = await app.inject({
+      method: 'POST', url: '/spaces/space-1/items/anchor-1/cascade-shift',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { deltaDays: 5, dependentIds: ['grandchild-1'] },
+    })
+
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('rejette un dependentId non atteignable ni via drives ni via parentId depuis l\'ancre', async () => {
+    mockItemFindMany(prisma, {}, [])
+
+    const res = await app.inject({
+      method: 'POST', url: '/spaces/space-1/items/anchor-1/cascade-shift',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { deltaDays: 5, dependentIds: ['not-reachable'] },
     })
 
     expect(res.statusCode).toBe(400)
@@ -124,7 +166,7 @@ describe('POST /spaces/:spaceId/items/:id/cascade-shift', () => {
     prisma.itemRelation.findMany
       .mockResolvedValueOnce([{ toItemId: 'dep-1' }])
       .mockResolvedValueOnce([])
-    prisma.item.findMany.mockResolvedValueOnce([mockDependent('dep-1', { spaceId: 'space-2' })])
+    mockItemFindMany(prisma, {}, [mockDependent('dep-1', { spaceId: 'space-2' })])
     prisma.spaceMembership.findUnique.mockImplementation(({ where }: any) => {
       if (where.userId_spaceId.spaceId === 'space-2') return Promise.resolve(null)
       return Promise.resolve({ userId: USER_ID, spaceId: 'space-1', role: 'MEMBER' })
@@ -144,7 +186,7 @@ describe('POST /spaces/:spaceId/items/:id/cascade-shift', () => {
     prisma.itemRelation.findMany
       .mockResolvedValueOnce([{ toItemId: 'dep-1' }])
       .mockResolvedValueOnce([])
-    prisma.item.findMany.mockResolvedValueOnce([mockDependent('dep-1')])
+    mockItemFindMany(prisma, {}, [mockDependent('dep-1')])
 
     await app.inject({
       method: 'POST', url: '/spaces/space-1/items/anchor-1/cascade-shift',

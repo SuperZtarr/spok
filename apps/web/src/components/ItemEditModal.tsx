@@ -43,7 +43,7 @@ import { FileUploadZone } from './ui/FileUploadZone';
 import { DateTimeField } from './ui/DateTimeField';
 import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
-import { computeCascadeDependents, type CascadeDependent } from '../lib/cascadeShift';
+import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../lib/cascadeShift';
 import { CascadeShiftConfirmModal } from './CascadeShiftConfirmModal';
 import { DevModalBadge } from './ui/DevModalBadge';
 import { formatDate, formatDateTime } from '../lib/utils';
@@ -395,6 +395,7 @@ export function ItemEditModal({
     updates: Parameters<typeof updateMutation.mutate>[0];
     deltaDays: number;
     dependents: CascadeDependent[];
+    descendants: CascadeDependent[];
   } | null>(null);
 
   const autoSaveDiagramMutation = useMutation({
@@ -744,10 +745,11 @@ export function ItemEditModal({
       cascadeDeltaDays = Math.round((new Date(newEndDate).getTime() - new Date(currentEndDate).getTime()) / 86400000);
     }
     const cascadeDependents = cascadeDeltaDays !== 0 ? computeCascadeDependents(itemId!, cascadeDeltaDays, allItems) : [];
+    const cascadeDescendants = cascadeDeltaDays !== 0 ? computeCascadeDescendants(itemId!, cascadeDeltaDays, allItems) : [];
 
     if (Object.keys(updates).length > 0) {
-      if (cascadeDependents.length > 0) {
-        setPendingCascade({ updates, deltaDays: cascadeDeltaDays, dependents: cascadeDependents });
+      if (cascadeDependents.length > 0 || cascadeDescendants.length > 0) {
+        setPendingCascade({ updates, deltaDays: cascadeDeltaDays, dependents: cascadeDependents, descendants: cascadeDescendants });
       } else {
         updateMutation.mutate(updates);
       }
@@ -756,12 +758,22 @@ export function ItemEditModal({
     }
   };
 
-  const confirmCascade = (applyCascade: boolean) => {
+  const confirmCascade = (includeDescendants: boolean) => {
     if (!pendingCascade) return;
     updateMutation.mutate(pendingCascade.updates);
-    if (applyCascade) {
-      cascadeShiftMutation.mutate({ deltaDays: pendingCascade.deltaDays, dependentIds: pendingCascade.dependents.map((d) => d.id) });
+    const ids = [
+      ...pendingCascade.dependents.map((d) => d.id),
+      ...(includeDescendants ? pendingCascade.descendants.map((d) => d.id) : []),
+    ];
+    if (ids.length > 0) {
+      cascadeShiftMutation.mutate({ deltaDays: pendingCascade.deltaDays, dependentIds: ids });
     }
+    setPendingCascade(null);
+  };
+
+  const skipCascade = () => {
+    if (!pendingCascade) return;
+    updateMutation.mutate(pendingCascade.updates);
     setPendingCascade(null);
   };
 
@@ -1780,8 +1792,9 @@ export function ItemEditModal({
           anchorTitle={item?.title || ''}
           deltaDays={pendingCascade.deltaDays}
           dependents={pendingCascade.dependents}
-          onConfirm={() => confirmCascade(true)}
-          onCancel={() => confirmCascade(false)}
+          descendants={pendingCascade.descendants}
+          onConfirm={(includeDescendants) => confirmCascade(includeDescendants)}
+          onCancel={skipCascade}
         />,
         document.body
       )}

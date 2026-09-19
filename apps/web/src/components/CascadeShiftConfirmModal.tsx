@@ -1,6 +1,10 @@
-/* Modale de confirmation avant d'appliquer un décalage en cascade aux dépendants d'un item ancre
- * (relation 'drives' — "Entraîne"). Appelée depuis ItemEditModal (sauvegarde) et TimelineView
- * (drag du corps de barre) avec la liste déjà calculée par computeCascadeDependents. */
+/* Modale de confirmation avant d'appliquer un décalage en cascade aux éléments liés à un item
+ * ancre : dépendants via la relation 'drives' ("Entraîne", toujours proposés d'un bloc avec
+ * "Oui, déplacer") et/ou enfants via la hiérarchie parent/enfant (proposés séparément, case à
+ * cocher décochée par défaut — la hiérarchie reste structurelle, ce n'est jamais automatique).
+ * Appelée depuis ItemEditModal (sauvegarde) et TimelineView (drag du corps de barre) avec les
+ * listes déjà calculées par computeCascadeDependents / computeCascadeDescendants. */
+import { useState } from 'react';
 import type { CascadeDependent } from '../lib/cascadeShift';
 import { Button } from './ui/Button';
 import { DevModalBadge } from './ui/DevModalBadge';
@@ -9,13 +13,29 @@ interface CascadeShiftConfirmModalProps {
   anchorTitle: string;
   deltaDays: number;
   dependents: CascadeDependent[];
-  onConfirm: () => void;
+  descendants: CascadeDependent[];
+  onConfirm: (includeDescendants: boolean) => void;
   onCancel: () => void;
 }
 
-export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, onConfirm, onCancel }: CascadeShiftConfirmModalProps) {
+function CascadeList({ items }: { items: CascadeDependent[] }) {
+  return (
+    <ul className="text-sm space-y-1 max-h-40 overflow-y-auto">
+      {items.map((d) => (
+        <li key={d.id} className="flex justify-between gap-2">
+          <span className="truncate">{d.title}</span>
+          <span className="text-muted-foreground whitespace-nowrap">{d.beforeLabel} → {d.afterLabel}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, descendants, onConfirm, onCancel }: CascadeShiftConfirmModalProps) {
+  const [includeDescendants, setIncludeDescendants] = useState(false);
   const sign = deltaDays > 0 ? '+' : '';
   const plural = dependents.length > 1;
+  const descendantsPlural = descendants.length > 1;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={onCancel}>
@@ -26,27 +46,44 @@ export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, o
         </div>
         <p className="text-sm text-muted-foreground mb-3">
           «{anchorTitle}» passe de {sign}{deltaDays} jour{Math.abs(deltaDays) > 1 ? 's' : ''}.
-          {' '}{dependents.length} élément{plural ? 's' : ''} lié{plural ? 's' : ''} {plural ? 'seront' : 'sera'} décalé{plural ? 's' : ''} :
         </p>
-        <ul className="text-sm mb-4 space-y-1 max-h-48 overflow-y-auto">
-          {dependents.map((d) => (
-            <li key={d.id} className="flex justify-between gap-2">
-              <span className="truncate">{d.title}</span>
-              <span className="text-muted-foreground whitespace-nowrap">{d.beforeLabel} → {d.afterLabel}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-col gap-3">
+
+        {dependents.length > 0 && (
+          <div className="mb-3">
+            <p className="text-sm text-muted-foreground mb-1">
+              {dependents.length} élément{plural ? 's' : ''} entraîné{plural ? 's' : ''} (relation "Entraîne") :
+            </p>
+            <CascadeList items={dependents} />
+          </div>
+        )}
+
+        {descendants.length > 0 && (
+          <div className="mb-3 border-t pt-3">
+            <label className="flex items-center gap-2 text-sm cursor-pointer mb-1">
+              <input
+                type="checkbox"
+                checked={includeDescendants}
+                onChange={(e) => setIncludeDescendants(e.target.checked)}
+              />
+              Décaler aussi les {descendants.length} enfant{descendantsPlural ? 's' : ''}
+            </label>
+            {includeDescendants && <CascadeList items={descendants} />}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 mt-1">
           <div className="flex flex-col items-end gap-1">
             <Button variant="bordered" size="sm" onClick={onCancel} className="w-full justify-center">Non, seul</Button>
             <p className="text-xs text-muted-foreground text-right">
-              Seul «{anchorTitle}» sera déplacé. Le lien "Entraîne" reste actif pour la prochaine fois.
+              Seul «{anchorTitle}» sera déplacé. Les liens restent actifs pour la prochaine fois.
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <Button size="sm" onClick={onConfirm} className="w-full justify-center">Oui, déplacer</Button>
+            <Button size="sm" onClick={() => onConfirm(includeDescendants)} className="w-full justify-center">Oui, déplacer</Button>
             <p className="text-xs text-muted-foreground text-right">
-              «{anchorTitle}» et {plural ? `les ${dependents.length} éléments entraînés` : "l'élément entraîné"} (directement ou en chaîne) seront décalés du même nombre de jours.
+              «{anchorTitle}»{dependents.length > 0 ? ` et ${plural ? `les ${dependents.length} éléments entraînés` : "l'élément entraîné"} (directement ou en chaîne)` : ''}
+              {includeDescendants && descendants.length > 0 ? `${dependents.length > 0 ? ' ainsi que' : ' et'} les ${descendants.length} enfant${descendantsPlural ? 's' : ''} coché${descendantsPlural ? 's' : ''}` : ''}
+              {' '}seront décalés du même nombre de jours.
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 /* TNR de computeCascadeDependents : parcours transitif du graphe de relations 'drives'
  * ("Entraîne") pour construire l'aperçu de la modale de confirmation de cascade. */
 import { describe, it, expect } from 'vitest'
-import { computeCascadeDependents } from './cascadeShift'
+import { computeCascadeDependents, computeCascadeDescendants } from './cascadeShift'
 import type { ItemWithRelations } from '@spok/shared'
 
 function mockItem(overrides: Partial<ItemWithRelations> & { id: string }): ItemWithRelations {
@@ -69,5 +69,54 @@ describe('computeCascadeDependents', () => {
     ]
     const result = computeCascadeDependents('A', 5, items)
     expect(result.map(d => d.id)).toEqual(['Y'])
+  })
+})
+
+describe('computeCascadeDescendants', () => {
+  it('retourne vide si deltaDays est 0', () => {
+    const items = [mockItem({ id: 'A' })]
+    expect(computeCascadeDescendants('A', 0, items)).toEqual([])
+  })
+
+  it('retourne vide si aucun enfant', () => {
+    const items = [mockItem({ id: 'A' })]
+    expect(computeCascadeDescendants('A', 5, items)).toEqual([])
+  })
+
+  it('trouve un enfant direct date', () => {
+    const items = [
+      mockItem({ id: 'A' }),
+      mockItem({ id: 'B', title: 'Tâche enfant', parentId: 'A', dueDate: '2026-01-13T00:00:00.000Z' as any }),
+    ]
+    const result = computeCascadeDescendants('A', 5, items)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('B')
+    expect(result[0].title).toBe('Tâche enfant')
+  })
+
+  it('parcourt les petits-enfants (A -> B -> C)', () => {
+    const items = [
+      mockItem({ id: 'A' }),
+      mockItem({ id: 'B', parentId: 'A', dueDate: '2026-01-13T00:00:00.000Z' as any }),
+      mockItem({ id: 'C', parentId: 'B', dueDate: '2026-01-14T00:00:00.000Z' as any }),
+    ]
+    const result = computeCascadeDescendants('A', 5, items)
+    expect(result.map(d => d.id).sort()).toEqual(['B', 'C'])
+  })
+
+  it('un enfant sans date est absent du resultat', () => {
+    const items = [
+      mockItem({ id: 'A' }),
+      mockItem({ id: 'B', parentId: 'A' }),
+    ]
+    expect(computeCascadeDescendants('A', 5, items)).toEqual([])
+  })
+
+  it('un item lie par drives mais pas enfant est ignore', () => {
+    const items = [
+      mockItem({ id: 'A', relationsFrom: [{ id: 'r1', fromItemId: 'A', toItemId: 'B', type: 'drives' }] }),
+      mockItem({ id: 'B', dueDate: '2026-01-13T00:00:00.000Z' as any }),
+    ]
+    expect(computeCascadeDescendants('A', 5, items)).toEqual([])
   })
 })

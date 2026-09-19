@@ -7,6 +7,7 @@
 
 ### Groupes d'items liés par la date (déplacer toute une grappe)
 - [x] Nouveau type de relation `drives` ("Entraîne", sens unique, écart déduit dynamiquement, chaîne transitive, détection de cycle) — spec `docs/superpowers/specs/2026-09-13-cascade-date-relation-design.md`, plan `docs/superpowers/plans/2026-09-13-cascade-date-relation.md`. Backend : `item-cascade-shift.ts` + `drivesGraph.ts` (revalidation serveur). Frontend : `lib/cascadeShift.ts`, `CascadeShiftConfirmModal`, branché dans ItemEditModal (sauvegarde) et nouveau drag de déplacement du corps de barre dans TimelineView ; type `drives` ajouté partout où les relations existent (ItemEditModal, PertView, TimelineView, MindMapView) — 2026-09-14 (4eae01d)
+- [x] Extension enfants : la modale de confirmation propose aussi, séparément (case décochée par défaut), de décaler les enfants (`parentId`) de l'ancre — `utils/itemDescendants.ts` (backend, revalidation `drives ∪ descendants`), `computeCascadeDescendants` (frontend). La hiérarchie parent/enfant reste structurelle : ce n'est jamais automatique, toujours une proposition explicite — 2026-09-19
 
 ### Refonte esthétique
 - [x] Piste "Dense technique" choisie (canvas Claude Design, 3 directions explorées) : tokens globaux (IBM Plex Sans/Mono, palette gris-bleu froid, radius réduit), fond gris clair sidebar/header/toolbar de vue vs contenu blanc, cohérent clair/sombre — 2026-08-19
