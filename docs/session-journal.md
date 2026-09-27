@@ -6,6 +6,20 @@
 
 ## EN COURS
 
+### Gantt : décaler un parent sans dates (barre pointillée) — 2026-09-28
+- Demande Thomas : pas de « main » sur un item sans dates mais avec enfants. Option A retenue : glisser la barre pointillée = décaler ses enfants (et liés « Entraîne »), le parent reste sans dates
+- `TimelineView` : `handleBodyMouseDown(e, id, derivedRange)` (dates initiales = période dérivée), flag `anchorWithoutDates` dans `dragging`/`pendingCascade`, `handleDragEnd` → toujours la modale (jamais `onUpdateDates` sur l'ancre, ni à l'application ni à l'annulation), barre pointillée avec zone de prise `cursor-grab` + clic = ouvrir l'item. `CascadeShiftConfirmModal` : prop `anchorWithoutDates` (titre « Décaler le groupe ? », enfants cochés par défaut, « Annuler »/« Décaler », bouton désactivé si rien de coché). 2 règles businessRules (barre sans fin, parent sans dates)
+- Vérifié au dev (« Déconnexion aléatoire après 30 minutes », 3 enfants) : modale correcte, « Décaler » → 3 enfants +9 j (start/end/due), parent NULL ; « Annuler » → rien. Données restaurées. Typecheck web OK
+- Faux négatif pendant les tests expliqué : en zoom trimestre, snap au 1er du mois → petit glisser = delta 0 (ajouté au TODO)
+- MEP 2026-09-28 (acfeb0f fix barre sans fin, fdb9873 parent sans dates) — typecheck 5 packages OK, 616/616 tests verts
+
+### Fix Gantt : barre qui « disparaît » au glisser — 2026-09-28
+- Signalé par Thomas pendant la MEP échéance. Cause (préexistante, drag 'move' du 13/09) : item avec début sans fin = barre dessinée jusqu'à aujourd'hui, mais le déplacement prenait fin = début + delta → barre d'1 jour près du début (ex. OWASP : start=end=31 juil.), hors période visible
+- Décision Thomas (option A) : la barre se déplace telle qu'affichée, une date de fin est enregistrée. `moveInitialEnd` (timeline-utils, +5 tests : fin existante / sans fin → maintenant / début futur → début / échéance seule / aucune date) branché dans `handleBodyMouseDown`
+- Vérifié au dev (séquence souris simulée en plusieurs mousemove, le glisser natif de l'outil ne déclenche pas le drag) : OWASP 12 juil.→aujourd'hui devient 31 juil.→17 oct., barre visible pendant et après. Item restauré. Typecheck web OK
+- Noté : en zoom trimestre, le déplacement est aimanté au 1er du mois (40px ≈ +19 j) — comportement de snap existant, non modifié
+- MEP 2026-09-28 (acfeb0f)
+
 ### Gantt : échéance au clic droit, déplaçable et supprimable — 2026-09-28
 - Demande Thomas : ajout rapide d'échéance par clic droit (option A : jour sous le curseur, sans menu), puis complément en cours de design : pouvoir la déplacer et la supprimer aisément
 - `lib/timelineDueDate.ts` (+8 tests) : `dayAtLaneX`, `dueDateForDay` (heure existante conservée, sinon midi local). `TimelineView` : prop `onUpdateDueDate(id, iso|null)`, clic droit sur la zone chronologique, losange interactif (zone 16px, glisser seuil 4px avec aperçu, clic droit = suppression). `SpacePage` branché sur `handleInlineUpdate`. Écart au plan : `useSpaceActions` étendu (`dueDate` dans le type + mise à jour optimiste, sinon le losange revenait en arrière pendant la requête). Règle `gantt-due-date-gestures` dans businessRules
