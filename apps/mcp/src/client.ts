@@ -1,4 +1,7 @@
-// Charger .env local si les vars ne sont pas déjà set (indépendant du shell)
+// Client HTTP du MCP SPOK : login SPOK_EMAIL/SPOK_PASSWORD puis appels REST sur SPOK_API_URL.
+// Source des credentials : launch.mjs (charge le .env racine) — le .env local apps/mcp/.env n'est
+// qu'un repli et ne doit JAMAIS écraser une variable déjà définie (sinon une copie périmée du mot
+// de passe masque le .env racine : 401 constaté de 09/2026, après la rotation du 2026-07-11).
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
@@ -10,7 +13,7 @@ try {
     if (eq > 0) {
       const key = line.slice(0, eq).trim();
       const val = line.slice(eq + 1).trim();
-      if (key) process.env[key] = val;
+      if (key && process.env[key] === undefined) process.env[key] = val;
     }
   }
 } catch { /* .env optionnel */ }
