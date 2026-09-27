@@ -5,7 +5,8 @@
  * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state.
  * Les dates sont lues/écrites en heure locale via toDatetimeLocal() — ne jamais utiliser toISOString() pour afficher.
  * Modes d'interface (Forum/Projet/Exploration/Tous). En mode Forum, le modal est réduit à
- * Titre + Description (~80vh) + blocs media + Réactions/Contributions ; un toggle « Plus de champs »
+ * Titre + Description (hauteur adaptée au contenu, 240px min / 40vh max, pour que les contributions
+ * restent visibles juste dessous) + blocs media + Réactions/Contributions ; un toggle « Plus de champs »
  * (forumExpanded → showAll) révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants
  * et repasse en layout 3 colonnes. Auto-ouvert si l'item porte déjà des données avancées.
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
@@ -1059,7 +1060,7 @@ export function ItemEditModal({
                   editable={canEdit}
                   spaceId={spaceId}
                   minHeight={240}
-                  fillHeight={!showAll ? '80vh' : undefined}
+                  defaultMaxHeight={!showAll ? '40vh' : undefined}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
               </div>
