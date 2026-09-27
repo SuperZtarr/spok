@@ -2,8 +2,9 @@
 
 ## À faire
 
-### BUG découvert (session 2026-09-12, hors périmètre templates) : clés React dupliquées dans ItemEditModal
-- [ ] `ItemEditModal.tsx` (section « Éléments enfants », `key={child.id}` ~ligne 1572) déclenche en continu (rafale, dizaines de fois/s) le warning React "Encountered two children with the same key" pour certains items (observé sur "Refonte authentification" et un item créé depuis un modèle avec les mêmes titres d'enfants). Suggère que `allItems`/`allItemsData` contient des doublons d'id quelque part en amont (cache query, fusion de pages, ou opti-update). À investiguer séparément — non lié au chantier templates, pas introduit par lui (aucune modification de la logique de fetch/cache des items dans ce chantier). Rend l'observation de l'UI peu fiable pendant l'investigation (re-renders en boucle)
+### BUG clés React dupliquées dans ItemEditModal
+- [x] Warning "Encountered two children with the same key" à chaque rendu de la modale, sur TOUS les items. Diagnostic initial (doublons d'ids dans le cache, boucle de re-renders) erroné : `SaveAsTemplateModal` et `InsertTemplateModal`, enfants frères de `<Modal>`, portaient tous deux `key={itemId}` (posé le 2026-09-12 pour reset leur state). Pas de boucle — un warning par rendu, nombreux au chargement/à la saisie. Clés préfixées `save-tpl-`/`insert-tpl-` — 2026-09-27 (615b5af)
+- [ ] `SaveAsTemplateModal` : nom du modèle vide quand l'item est ouvert par lien direct après rechargement — `useState(item?.title)` évalué au montage (modale montée fermée) alors que `allItems` n'est pas encore chargé. OK si ouvert depuis l'app (cache chaud). Libellé « 1 élément seront capturés » (accord)
 
 ### Groupes d'items liés par la date (déplacer toute une grappe)
 - [x] Nouveau type de relation `drives` ("Entraîne", sens unique, écart déduit dynamiquement, chaîne transitive, détection de cycle) — spec `docs/superpowers/specs/2026-09-13-cascade-date-relation-design.md`, plan `docs/superpowers/plans/2026-09-13-cascade-date-relation.md`. Backend : `item-cascade-shift.ts` + `drivesGraph.ts` (revalidation serveur). Frontend : `lib/cascadeShift.ts`, `CascadeShiftConfirmModal`, branché dans ItemEditModal (sauvegarde) et nouveau drag de déplacement du corps de barre dans TimelineView ; type `drives` ajouté partout où les relations existent (ItemEditModal, PertView, TimelineView, MindMapView) — 2026-09-14 (4eae01d)
@@ -56,7 +57,7 @@
 - [x] BUG ItemEditModal : faux positif `hasChanges` sur tout item daté (guard « quitter sans sauvegarder » sans modification) — comparaison de dates state (heure locale, tronquée minute) vs `item.xxxDate` (ISO UTC + secondes) ; `toMinuteISO()` sur les deux côtés — 2026-09-07 (abfd068)
 - [x] MyDashboardView (onglet Tableau de bord) : `doneData` reprend `filters.queryParams` (au lieu de hardcoder type/status) → répartitions « Par statut/type », « Progression », KPI « terminés » suivent la barre de filtres. Réagencement : répartitions en bande pleine largeur `grid` (au lieu de colonne 256px), Échéances `flex-[2] min-w-[672px]` sans max, colonne listes `max-w-[560px]`, badges d'espace tronqués — 2026-09-07
 - [x] ItemEditModal mode Forum : description à hauteur adaptée au contenu (240px min, plafond 40vh puis scroll interne) au lieu de 80vh fixe — les contributions restent visibles dessous. Prop `fillHeight` de `RichTextEditor` supprimée, `defaultMaxHeight` accepte une valeur CSS — 2026-09-27 (3553c56)
-- [ ] ItemEditModal : barre de défilement horizontale parasite en bas de la zone de contenu (observée 2026-09-26, non investiguée)
+- [x] ItemEditModal : barre de défilement horizontale parasite — surlignage des contributions non lues en `px-2 -mx-2` (marge négative de 8px) dépassant du conteneur scrollable (`pr-1` = 4px) ; `px-2` appliqué à toutes les contributions, plus de marge négative — 2026-09-27 (3e5401c)
 - [ ] BUG dashboard : `DeadlinesView` embarqué ne filtre pas la priorité comme les panneaux `allData` de MyDashboardView (divergence de logique de filtrage) — signalé 2026-09-07
 - [x] `DuplicateToSpaceModal`/`bulk-duplicate` : itérations (1-365) + décalage calendaire jour/semaine/mois/an cumulatif, fix copie startDate/endDate (auparavant seul dueDate copié) — 2026-09-12
 - [x] Modale Forum : toggle « Plus de champs » (`forumExpanded`/`showAll`) — modal réduit (titre/description 80vh/contributions) par défaut, déplié = modal 3-col complet (Type tous groupes, Statut, Priorité, Dates, Assigné, Dépendances, Parent, Tags, Enfants). Auto-ouvert si type≠Note / priorité / dates / assigné / relations — 2026-09-07
@@ -95,6 +96,8 @@
 - [x] Limite connue : abonnement ICS (« Publier ce calendrier ») indisponible sur comptes employeur/client de Thomas — option de publication absente d'Outlook, probable politique RSSI. Pas un bug SPOK. Comptes perso connectés en live (Hotmail, roedelthomas, Travail, domestique, divers) ; agenda « Matthias » cassé côté Microsoft (500 sur ce flux précis), contournement : export .ics → nouvel agenda → republier (manip Thomas) — 2026-07-18
 
 ### Outillage Claude
+
+- [x] MCP SPOK 401 : `apps/mcp/src/client.ts` écrasait les credentials par ceux de `apps/mcp/.env` (copie d'avant la rotation 2026-07-11) — ne remplace plus une variable déjà définie ; config user refaite via `claude mcp add` → `launch.mjs` (.env racine, plus de mot de passe en clair) — 2026-09-27 (9c5cb31). Reste (Thomas) : redémarrer Claude pour valider, supprimer `apps/mcp/.env`
 
 - [x] Skill `spok-layout` : documente Layout.tsx/GlobalNavBar.tsx (anciens MainMenu.tsx/Sidebar.tsx, supprimés) — invariants, régressions passées (z-index, overflow-hidden, polling sidebar, largeur toggle), fichiers clés — ARCHITECTURE.md et CLAUDE.md mis à jour avec les noms de fichiers réels — 2026-07-14
 - [x] `dev-autostart.ps1` : attend la readiness (`:3000` + `:3001/health` = 200) puis ouvre Chrome sur localhost:3000 — plus d'actions manuelles au démarrage — 2026-08-31 (bea0bcd)

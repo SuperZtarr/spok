@@ -6,6 +6,23 @@
 
 ## EN COURS
 
+### Fix MCP SPOK 401 — 2026-09-27
+- Cause : `apps/mcp/src/client.ts` chargeait `apps/mcp/.env` (copie d'avril, mot de passe d'avant la rotation 2026-07-11) en écrasant les variables déjà définies → 401 quelle que soit la config. Config active (`~/.claude.json`) = ancienne entrée locale `dist/index.js` + mot de passe en clair ; l'entrée `launch.mjs` était dans `~/.claude/settings.local.json`, non lu pour les MCP
+- Fix : client.ts n'écrase plus une variable déjà set (dist recompilé) ; entrée user remplacée via `claude mcp add spok -s user -- node .../launch.mjs` (plus de mot de passe en clair) ; entrée morte retirée de settings.local.json ; mémoire project_mcp_prod réécrite
+- Suppression de `apps/mcp/.env` refusée par le classifieur auto-mode → à faire par Thomas (plus bloquant après le fix)
+- MEP 2026-09-27 (9c5cb31). Reste : redémarrage de Claude par Thomas, puis test `search_items` ; si 401 → mot de passe du .env racine à mettre à jour (Thomas)
+
+### Fix barre de défilement horizontale dans ItemEditModal — 2026-09-27
+- Cause (préexistante) : contributions non lues surlignées en `px-2 -mx-2`, la marge négative dépassait de 4px à droite du conteneur scrollable (`pr-1`) et était rognée de 8px à gauche. N'apparaissait que sur les items avec contributions non lues
+- Fix : `px-2` sur toutes les contributions, fond bleu seul conditionnel. Vérifié (Réunion hebdo S8) : scrollWidth = clientWidth (603), surlignage entier. Typecheck web OK
+- MEP 2026-09-27
+
+### Fix clés React dupliquées dans ItemEditModal — 2026-09-27
+- Reproduit sur tous les items (pas seulement ceux avec enfants) : la clé dupliquée = id de l'item ouvert. Inspection des fibers React → aucun élément DOM de la modale ne la porte → composants sans DOM : `SaveAsTemplateModal` + `InsertTemplateModal` frères avec `key={itemId}` (ajout du 12/09). Pas de boucle de rendu (0 warning en 5 s au repos), un warning par rendu
+- Fix : clés `save-tpl-${itemId}` / `insert-tpl-${itemId}`. Vérifié : 0 warning au chargement et à la saisie, reset de la modale de modèle d'un item à l'autre OK (nom = titre de l'enfant). Typecheck web OK
+- Découvert, non corrigé (TODO) : nom de modèle vide si item ouvert par lien direct après reload (`useState` initialisé avant chargement de `allItems`)
+- MEP 2026-09-27
+
 ### Bascule manuelle du mode d'interface (boutons Forum/Projet/Tous) — 2026-09-27
 - Demande Thomas : pouvoir switcher de mode dans l'interface générale via des boutons d'option. Revient sur la décision 2026-07-15 (sélecteur retiré, mode 100 % dérivé du contexte). Option A retenue : contexte = défaut, surcharge manuelle tenue tant qu'on reste dans la même communauté, non persistée. Exploration non proposé (réservé)
 - `stores/interfaceMode.ts` : `contextMode` + `applyContextMode` (Layout seul) / `chooseMode` (boutons). `Layout.tsx` : boutons à la place du badge de contexte (hidden sm:flex), effet de dérivation keyé sur la paire communauté+contexte avec ref du dernier appliqué + garde d'état transitoire. `businessRules.ts` : règle `interface-mode-context-override`
