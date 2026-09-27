@@ -8,6 +8,8 @@
  * sous le curseur ; glisser le losange = déplacer ; clic droit sur le losange = supprimer (onUpdateDueDate,
  * helpers lib/timelineDueDate.ts). Jamais de cascade "Entraîne" sur l'échéance. Inactif sur les lignes
  * à dates dérivées des enfants et sans droit d'édition.
+ * Barre pointillée (parent sans dates, période dérivée des enfants) : glisser = décaler le groupe via
+ * CascadeShiftConfirmModal (anchorWithoutDates, enfants cochés par défaut) — le parent n'est jamais daté.
  * Barre d'un item sans endDate : se déplace telle qu'affichée (fin = aujourd'hui, cf. moveInitialEnd).
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
@@ -150,6 +152,7 @@ treeSort: treeSortProp,
     initialDate: Date;       // start/end : la date du champ concerné. move : startDate (ou dueDate/aujourd'hui à défaut) au début du drag
     initialEndDate?: Date;   // move uniquement : endDate au début du drag
     lastDeltaDays: number;
+    anchorWithoutDates?: boolean; // move d'une barre pointillée (parent sans dates) : seuls enfants/liés bougent
   } | null>(null);
 
   // Cascade "Entraîne" en attente de confirmation après un drag de déplacement (type 'move')
@@ -160,6 +163,7 @@ treeSort: treeSortProp,
     deltaDays: number;
     dependents: CascadeDependent[];
     descendants: CascadeDependent[];
+    anchorWithoutDates?: boolean; // ancre jamais datée : ni onUpdateDates à l'application, ni à l'annulation
   } | null>(null);
   const dragMovedRef = useRef(false);
 
@@ -623,22 +627,26 @@ treeSort: treeSortProp,
 
   // Mousedown sur le corps de la barre : clic simple = ouvrir la modale (comportement existant),
   // mouvement > 4px = démarre un drag de déplacement (type 'move'), distinct du resize des poignées.
-  const handleBodyMouseDown = useCallback((e: React.MouseEvent, itemId: string) => {
-    if (!canEdit || !onUpdateDates) return;
+  // derivedRange : barre pointillée d'un parent sans dates (période de ses enfants) — le glisser
+  // décale alors ses enfants/liés via la cascade, le parent n'est jamais daté (décision 2026-09-28).
+  const handleBodyMouseDown = useCallback((e: React.MouseEvent, itemId: string, derivedRange?: { start: string; end: string }) => {
+    if (!canEdit || (derivedRange ? !onCascadeShift : !onUpdateDates)) return;
     const item = items.find(i => i.id === itemId);
     if (!item) return;
     const startX = e.clientX;
     const startY = e.clientY;
     dragMovedRef.current = false;
 
-    const initialDate = item.startDate ? new Date(item.startDate) : (item.dueDate ? new Date(item.dueDate) : new Date());
+    const initialDate = derivedRange
+      ? new Date(derivedRange.start)
+      : item.startDate ? new Date(item.startDate) : (item.dueDate ? new Date(item.dueDate) : new Date());
     // Fin AFFICHÉE (aujourd'hui si pas de endDate) : la barre se déplace telle qu'on la voit
-    const initialEndDate = moveInitialEnd(item);
+    const initialEndDate = derivedRange ? new Date(derivedRange.end) : moveInitialEnd(item);
 
     const onMove = (ev: MouseEvent) => {
       if (!dragMovedRef.current && (Math.abs(ev.clientX - startX) > 4 || Math.abs(ev.clientY - startY) > 4)) {
         dragMovedRef.current = true;
-        setDragging({ itemId, type: 'move', initialX: startX, initialDate, initialEndDate, lastDeltaDays: 0 });
+        setDragging({ itemId, type: 'move', initialX: startX, initialDate, initialEndDate, lastDeltaDays: 0, anchorWithoutDates: !!derivedRange });
       }
     };
     const onUp = () => {
@@ -647,7 +655,7 @@ treeSort: treeSortProp,
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [canEdit, onUpdateDates, items]);
+  }, [canEdit, onUpdateDates, onCascadeShift, items]);
 
   // ── Échéance : clic droit sur la ligne (poser/déplacer), glisser ou clic droit sur le losange ──
   // Jamais de cascade "Entraîne" : poser une échéance n'est pas un déplacement de l'item.
@@ -791,9 +799,22 @@ treeSort: treeSortProp,
     const preview = dragPreview;
     const dragType = dragging?.type;
     const deltaDays = dragging?.lastDeltaDays ?? 0;
+    const anchorWithoutDates = !!dragging?.anchorWithoutDates;
     setDragging(null);
     setDragPreview(null);
     if (!preview) return;
+
+    // Barre pointillée (parent sans dates) : on ne date jamais l'ancre, on propose toujours le
+    // décalage du groupe (enfants cochés par défaut dans la modale). Rien à décaler → rien.
+    if (anchorWithoutDates) {
+      if (deltaDays === 0 || !onCascadeShift) return;
+      const dependents = computeCascadeDependents(preview.itemId, deltaDays, items);
+      const descendants = computeCascadeDescendants(preview.itemId, deltaDays, items);
+      if (dependents.length > 0 || descendants.length > 0) {
+        setPendingCascade({ itemId: preview.itemId, startDate: null, endDate: null, deltaDays, dependents, descendants, anchorWithoutDates: true });
+      }
+      return;
+    }
 
     if (dragType === 'move' && deltaDays !== 0 && onCascadeShift) {
       const dependents = computeCascadeDependents(preview.itemId, deltaDays, items);
@@ -814,7 +835,7 @@ treeSort: treeSortProp,
 
   const applyTimelineCascade = useCallback((includeDescendants: boolean) => {
     if (!pendingCascade) return;
-    if (onUpdateDates) {
+    if (onUpdateDates && !pendingCascade.anchorWithoutDates) {
       onUpdateDates(pendingCascade.itemId, pendingCascade.startDate, pendingCascade.endDate);
       setSavedItemId(pendingCascade.itemId);
       setTimeout(() => setSavedItemId(prev => prev === pendingCascade.itemId ? null : prev), 1500);
@@ -831,7 +852,7 @@ treeSort: treeSortProp,
 
   const skipTimelineCascade = useCallback(() => {
     if (!pendingCascade) return;
-    if (onUpdateDates) {
+    if (onUpdateDates && !pendingCascade.anchorWithoutDates) { // ancre sans dates : « Annuler » = rien
       onUpdateDates(pendingCascade.itemId, pendingCascade.startDate, pendingCascade.endDate);
       setSavedItemId(pendingCascade.itemId);
       setTimeout(() => setSavedItemId(prev => prev === pendingCascade.itemId ? null : prev), 1500);
@@ -1434,7 +1455,7 @@ treeSort: treeSortProp,
                           width: barStyle.width,
                         }}
                         title={derived
-                          ? `${item.title}\n${formatDateShort(new Date(derived.start))} - ${formatDateShort(new Date(derived.end))} (étendue des enfants)`
+                          ? `${item.title}\n${formatDateShort(new Date(derived.start))} - ${formatDateShort(new Date(derived.end))} (étendue des enfants)${canEdit && onCascadeShift ? ' — glisser pour décaler le groupe' : ''}`
                           : barStyle.hasDate
                             ? `${item.title}${isPortal && portalSpaceName ? ` (${portalSpaceName})` : ''}\n${formatDateShort(new Date(item.startDate || item.dueDate!))} - ${item.endDate ? formatDateShort(new Date(item.endDate)) : "aujourd'hui"}`
                             : `${item.title}\n(Sans date - cliquer pour définir)`
@@ -1458,11 +1479,11 @@ treeSort: treeSortProp,
                           </div>
                         )}
 
-                        {/* Content - clickable */}
-                        {!derived && (
+                        {/* Content - clickable. Barre pointillée (derived) : glisser = décaler le groupe */}
+                        {(
                           <div
-                            className="h-full flex items-center cursor-pointer px-1 min-w-0"
-                            onMouseDown={(e) => handleBodyMouseDown(e, item.id)}
+                            className={`h-full flex items-center px-1 min-w-0 ${derived && canEdit && onCascadeShift ? 'cursor-grab' : 'cursor-pointer'}`}
+                            onMouseDown={(e) => handleBodyMouseDown(e, item.id, derived)}
                             onClick={() => {
                               if (dragMovedRef.current) { dragMovedRef.current = false; return; }
                               onEdit(item.id);
@@ -1798,6 +1819,7 @@ treeSort: treeSortProp,
             descendants={pendingCascade.descendants}
             onConfirm={(includeDescendants) => applyTimelineCascade(includeDescendants)}
             onCancel={skipTimelineCascade}
+            anchorWithoutDates={pendingCascade.anchorWithoutDates}
           />
         );
       })()}

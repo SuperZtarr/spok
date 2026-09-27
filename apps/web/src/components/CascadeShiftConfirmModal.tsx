@@ -3,7 +3,10 @@
  * "Oui, déplacer") et/ou enfants via la hiérarchie parent/enfant (proposés séparément, case à
  * cocher décochée par défaut — la hiérarchie reste structurelle, ce n'est jamais automatique).
  * Appelée depuis ItemEditModal (sauvegarde) et TimelineView (drag du corps de barre) avec les
- * listes déjà calculées par computeCascadeDependents / computeCascadeDescendants. */
+ * listes déjà calculées par computeCascadeDependents / computeCascadeDescendants.
+ * anchorWithoutDates (TimelineView, glisser d'une barre pointillée = parent sans dates propres) :
+ * seul le groupe bouge — enfants cochés par défaut, « Non, seul » devient « Annuler » (rien n'est
+ * modifié), l'ancre n'est jamais datée. */
 import { useState } from 'react';
 import type { CascadeDependent } from '../lib/cascadeShift';
 import { Button } from './ui/Button';
@@ -16,6 +19,8 @@ interface CascadeShiftConfirmModalProps {
   descendants: CascadeDependent[];
   onConfirm: (includeDescendants: boolean) => void;
   onCancel: () => void;
+  /** Ancre sans dates propres : on ne décale que ses liés/enfants (voir en-tête). */
+  anchorWithoutDates?: boolean;
 }
 
 function CascadeList({ items }: { items: CascadeDependent[] }) {
@@ -31,8 +36,9 @@ function CascadeList({ items }: { items: CascadeDependent[] }) {
   );
 }
 
-export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, descendants, onConfirm, onCancel }: CascadeShiftConfirmModalProps) {
-  const [includeDescendants, setIncludeDescendants] = useState(false);
+export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, descendants, onConfirm, onCancel, anchorWithoutDates = false }: CascadeShiftConfirmModalProps) {
+  const [includeDescendants, setIncludeDescendants] = useState(anchorWithoutDates);
+  const nothingToShift = anchorWithoutDates && dependents.length === 0 && !includeDescendants;
   const sign = deltaDays > 0 ? '+' : '';
   const plural = dependents.length > 1;
   const descendantsPlural = descendants.length > 1;
@@ -42,10 +48,12 @@ export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, d
       <div className="bg-card border rounded-lg shadow-xl p-6 max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 mb-2">
           <DevModalBadge name="CascadeShiftConfirmModal" />
-          <h3 className="text-lg font-semibold">Déplacer aussi les éléments liés ?</h3>
+          <h3 className="text-lg font-semibold">{anchorWithoutDates ? 'Décaler le groupe ?' : 'Déplacer aussi les éléments liés ?'}</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-3">
-          «{anchorTitle}» passe de {sign}{deltaDays} jour{Math.abs(deltaDays) > 1 ? 's' : ''}.
+          {anchorWithoutDates
+            ? `«${anchorTitle}» n'a pas de dates propres : décaler ses éléments de ${sign}${deltaDays} jour${Math.abs(deltaDays) > 1 ? 's' : ''}.`
+            : `«${anchorTitle}» passe de ${sign}${deltaDays} jour${Math.abs(deltaDays) > 1 ? 's' : ''}.`}
         </p>
 
         {dependents.length > 0 && (
@@ -73,18 +81,31 @@ export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, d
 
         <div className="flex flex-col gap-3 mt-1">
           <div className="flex flex-col items-end gap-1">
-            <Button variant="bordered" size="sm" onClick={onCancel} className="w-full justify-center">Non, seul</Button>
+            <Button variant="bordered" size="sm" onClick={onCancel} className="w-full justify-center">{anchorWithoutDates ? 'Annuler' : 'Non, seul'}</Button>
             <p className="text-xs text-muted-foreground text-right">
-              Seul «{anchorTitle}» sera déplacé. Les liens restent actifs pour la prochaine fois.
+              {anchorWithoutDates
+                ? 'Rien ne sera modifié.'
+                : `Seul «${anchorTitle}» sera déplacé. Les liens restent actifs pour la prochaine fois.`}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <Button size="sm" onClick={() => onConfirm(includeDescendants)} className="w-full justify-center">Oui, déplacer</Button>
-            <p className="text-xs text-muted-foreground text-right">
-              «{anchorTitle}»{dependents.length > 0 ? ` et ${plural ? `les ${dependents.length} éléments entraînés` : "l'élément entraîné"} (directement ou en chaîne)` : ''}
-              {includeDescendants && descendants.length > 0 ? `${dependents.length > 0 ? ' ainsi que' : ' et'} les ${descendants.length} enfant${descendantsPlural ? 's' : ''} coché${descendantsPlural ? 's' : ''}` : ''}
-              {' '}seront décalés du même nombre de jours.
-            </p>
+            <Button size="sm" onClick={() => onConfirm(includeDescendants)} disabled={nothingToShift} className="w-full justify-center">{anchorWithoutDates ? 'Décaler' : 'Oui, déplacer'}</Button>
+            {anchorWithoutDates ? (
+              <p className="text-xs text-muted-foreground text-right">
+                {nothingToShift
+                  ? 'Cochez les enfants pour décaler le groupe.'
+                  : `${[
+                      includeDescendants && descendants.length > 0 ? `Les ${descendants.length} enfant${descendantsPlural ? 's' : ''} daté${descendantsPlural ? 's' : ''}` : null,
+                      dependents.length > 0 ? `${plural ? `les ${dependents.length} éléments entraînés` : "l'élément entraîné"} (directement ou en chaîne)` : null,
+                    ].filter(Boolean).join(' et ').replace(/^l/, 'L')} seront décalés du même nombre de jours. «${anchorTitle}» reste sans dates.`}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground text-right">
+                «{anchorTitle}»{dependents.length > 0 ? ` et ${plural ? `les ${dependents.length} éléments entraînés` : "l'élément entraîné"} (directement ou en chaîne)` : ''}
+                {includeDescendants && descendants.length > 0 ? `${dependents.length > 0 ? ' ainsi que' : ' et'} les ${descendants.length} enfant${descendantsPlural ? 's' : ''} coché${descendantsPlural ? 's' : ''}` : ''}
+                {' '}seront décalés du même nombre de jours.
+              </p>
+            )}
           </div>
         </div>
       </div>

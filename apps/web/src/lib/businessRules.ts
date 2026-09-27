@@ -138,4 +138,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "La barre (dessinée jusqu'à aujourd'hui) se déplace telle qu'affichée : début et fin décalés du même delta, une date de fin est enregistrée",
     location: 'apps/web/src/components/views/timeline-utils.ts (moveInitialEnd), TimelineView.tsx (handleBodyMouseDown)',
   },
+  {
+    id: 'gantt-move-dateless-parent',
+    page: 'Vue Gantt (TimelineView)',
+    trigger: "Glisser la barre pointillée d'un parent sans dates propres (période dérivée des enfants)",
+    effect: "Propose de décaler le groupe (CascadeShiftConfirmModal, enfants cochés par défaut, liés « Entraîne » inclus) ; « Annuler » ne modifie rien ; le parent n'est jamais daté",
+    location: 'apps/web/src/components/views/TimelineView.tsx (handleDragEnd, anchorWithoutDates), apps/web/src/components/CascadeShiftConfirmModal.tsx',
+  },
 ];
