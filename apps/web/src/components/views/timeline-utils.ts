@@ -3,6 +3,26 @@ import type { StatusConfig } from '@spok/shared';
 import type { Item, ItemRelation } from '@spok/shared';
 
 /**
+ * Fin de référence d'un déplacement du corps de barre (TimelineView, drag 'move') : la fin
+ * AFFICHÉE, pour que la barre se déplace telle qu'on la voit (décision Thomas 2026-09-28).
+ * - endDate enregistrée → elle-même
+ * - début (ou échéance servant de début) sans fin → la barre est dessinée jusqu'à aujourd'hui :
+ *   fin = maintenant, jamais avant le début. Sans ça, fin = début + delta et la barre se réduisait
+ *   à un jour près de son début, souvent hors de la période affichée (« elle disparaît »).
+ * - aucune date → undefined (inchangé : barre fantôme d'un jour).
+ */
+export function moveInitialEnd(
+  item: { startDate?: string | Date | null; endDate?: string | Date | null; dueDate?: string | Date | null },
+  now: Date = new Date(),
+): Date | undefined {
+  if (item.endDate) return new Date(item.endDate);
+  const start = item.startDate || item.dueDate;
+  if (!start) return undefined;
+  const startDate = new Date(start);
+  return startDate > now ? startDate : now;
+}
+
+/**
  * CPM — retourne l'ensemble des IDs d'items sur le chemin critique.
  * Retourne un Set vide si le graphe contient un cycle.
  *

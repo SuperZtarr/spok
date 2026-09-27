@@ -8,6 +8,7 @@
  * sous le curseur ; glisser le losange = déplacer ; clic droit sur le losange = supprimer (onUpdateDueDate,
  * helpers lib/timelineDueDate.ts). Jamais de cascade "Entraîne" sur l'échéance. Inactif sur les lignes
  * à dates dérivées des enfants et sans droit d'édition.
+ * Barre d'un item sans endDate : se déplace telle qu'affichée (fin = aujourd'hui, cf. moveInitialEnd).
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  */
@@ -35,7 +36,7 @@ import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
-import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath } from './timeline-utils';
+import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -631,7 +632,8 @@ treeSort: treeSortProp,
     dragMovedRef.current = false;
 
     const initialDate = item.startDate ? new Date(item.startDate) : (item.dueDate ? new Date(item.dueDate) : new Date());
-    const initialEndDate = item.endDate ? new Date(item.endDate) : undefined;
+    // Fin AFFICHÉE (aujourd'hui si pas de endDate) : la barre se déplace telle qu'on la voit
+    const initialEndDate = moveInitialEnd(item);
 
     const onMove = (ev: MouseEvent) => {
       if (!dragMovedRef.current && (Math.abs(ev.clientX - startX) > 4 || Math.abs(ev.clientY - startY) > 4)) {

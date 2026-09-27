@@ -131,4 +131,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "Pose ou déplace l'échéance au jour visé (heure de l'ancienne échéance conservée, sinon 12:00 local) / la déplace au jour près / la supprime. Sans confirmation, sans cascade « Entraîne ». Inactif sur les lignes à dates dérivées des enfants et sans droit d'édition",
     location: 'apps/web/src/components/views/TimelineView.tsx (handleLaneContextMenu, handleDueMouseDown), apps/web/src/lib/timelineDueDate.ts',
   },
+  {
+    id: 'gantt-move-bar-without-end',
+    page: 'Vue Gantt (TimelineView)',
+    trigger: "Glisser le corps de barre d'un item avec début mais sans date de fin",
+    effect: "La barre (dessinée jusqu'à aujourd'hui) se déplace telle qu'affichée : début et fin décalés du même delta, une date de fin est enregistrée",
+    location: 'apps/web/src/components/views/timeline-utils.ts (moveInitialEnd), TimelineView.tsx (handleBodyMouseDown)',
+  },
 ];
