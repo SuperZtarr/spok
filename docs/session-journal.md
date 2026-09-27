@@ -6,6 +6,21 @@
 
 ## EN COURS
 
+### Bascule manuelle du mode d'interface (boutons Forum/Projet/Tous) — 2026-09-27
+- Demande Thomas : pouvoir switcher de mode dans l'interface générale via des boutons d'option. Revient sur la décision 2026-07-15 (sélecteur retiré, mode 100 % dérivé du contexte). Option A retenue : contexte = défaut, surcharge manuelle tenue tant qu'on reste dans la même communauté, non persistée. Exploration non proposé (réservé)
+- `stores/interfaceMode.ts` : `contextMode` + `applyContextMode` (Layout seul) / `chooseMode` (boutons). `Layout.tsx` : boutons à la place du badge de contexte (hidden sm:flex), effet de dérivation keyé sur la paire communauté+contexte avec ref du dernier appliqué + garde d'état transitoire. `businessRules.ts` : règle `interface-mode-context-override`
+- Bug trouvé en vérifiant : changer d'espace dans la même communauté effaçait le choix (currentSpace vide pendant le chargement → communauté nulle → contexte réappliqué). Corrigé par la garde `communityResolving` + ref
+- Vérifié au dev (Test SPOK, FORUM) : Forum par défaut → Projet → espaces Dev/Backend gardent Projet → accueil = Tous → retour dans la communauté = Forum ; GlobalNavBar suit (Forum masque Tableau de bord/Tâches…, Tous affiche tout). Typecheck web OK
+- MCP SPOK toujours 401 : doc non mise à jour
+- MEP 2026-09-27 (e4a9661) — typecheck 5 packages OK, 603/603 tests verts
+
+### Modale Forum : description à hauteur adaptée, contributions visibles — 2026-09-26
+- Demande Thomas : en mode Forum, la description (80vh fixe) masquait les contributions. Option A retenue : hauteur adaptée au contenu (240px min, plafond puis scroll interne)
+- `RichTextEditor` : prop `fillHeight` supprimée (seul usage = ItemEditModal), `defaultMaxHeight` accepte `number | string`. `ItemEditModal` : `defaultMaxHeight="40vh"` en Forum replié (55vh prévu initialement, abaissé après mesure : sur 768px de haut les contributions restaient 20px sous le bord)
+- Vérifié au dev (Réunion hebdo S8, 2 contributions, viewport 768px) : éditeur plafonné à 307px, « Contributions (2) » visible sans scroll. Typecheck web OK
+- MCP SPOK toujours 401 : item de doc modale Forum non mis à jour
+- MEP 2026-09-27 (3553c56)
+
 ### Cascade "Entraîne" étendue aux enfants (parent/enfant) — 2026-09-19
 - Demande Thomas : pouvoir décaler un item et entraîner ses enfants, en plus de la relation "Entraîne" existante. Clarifié par échange : le drag du corps de barre (déjà en prod) fonctionne bien ("non, je viens de tester, c'est bien") ; le vrai besoin est de proposer le décalage des enfants **dans la modale de confirmation**, pas une cascade parent/enfant automatique/silencieuse — la hiérarchie reste structurelle, décision initiale confirmée
 - **Backend** : `utils/itemDescendants.ts` (BFS parentId, même pattern que `drivesGraph.ts`). `item-cascade-shift.ts` revalide désormais `drivesReachable ∪ descendantIds` (un dependentId confirmé peut être un enfant OU un lié "Entraîne"). Tests réécrits avec un mock `item.findMany` basé sur `where` (parentId vs id) plutôt que sur l'ordre d'appel — nécessaire car `getDescendantIds` utilise le même modèle Prisma que la récupération finale
