@@ -1118,8 +1118,10 @@ export function ItemEditModal({
                     const vAt = viewedAtRef.current;
                     const isNewContrib = vAt === null
                       || (vAt && new Date(contribution.createdAt) > new Date(vAt));
+                    // px-2 sur toutes les contributions (texte aligné lu/non lu), jamais de marge
+                    // négative : elle débordait du conteneur scrollable (barre horizontale).
                     return (
-                      <div key={contribution.id} className={`${depth > 0 ? 'ml-6 border-l-2 border-border pl-3' : ''} ${isNewContrib ? 'bg-blue-50/60 dark:bg-blue-950/20 rounded-md px-2 -mx-2' : ''}`}>
+                      <div key={contribution.id} className={`px-2 ${depth > 0 ? 'ml-6 border-l-2 border-border pl-3' : ''} ${isNewContrib ? 'bg-blue-50/60 dark:bg-blue-950/20 rounded-md' : ''}`}>
                         <div className="py-2">
                           {editingContributionId === contribution.id ? (
                             <div className="space-y-2">
