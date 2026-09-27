@@ -11,6 +11,9 @@
  * et repasse en layout 3 colonnes. Auto-ouvert si l'item porte déjà des données avancées.
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
  * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
+ * Sous-modales keyées par itemId (remontage = reset de leur state d'un item à l'autre) : chaque clé
+ * doit rester préfixée et unique parmi les enfants de <Modal> (deux `key={itemId}` frères = warning
+ * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -1906,7 +1909,7 @@ export function ItemEditModal({
       )}
       {itemId && (
         <SaveAsTemplateModal
-          key={itemId}
+          key={`save-tpl-${itemId}`}
           isOpen={showSaveAsTemplateModal}
           onClose={() => setShowSaveAsTemplateModal(false)}
           itemId={itemId}
@@ -1915,7 +1918,7 @@ export function ItemEditModal({
       )}
       {itemId && (
         <InsertTemplateModal
-          key={itemId}
+          key={`insert-tpl-${itemId}`}
           isOpen={showInsertTemplateModal}
           onClose={() => setShowInsertTemplateModal(false)}
           spaceId={spaceId}
