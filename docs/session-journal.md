@@ -6,6 +6,13 @@
 
 ## EN COURS
 
+### Gantt : échéance au clic droit, déplaçable et supprimable — 2026-09-28
+- Demande Thomas : ajout rapide d'échéance par clic droit (option A : jour sous le curseur, sans menu), puis complément en cours de design : pouvoir la déplacer et la supprimer aisément
+- `lib/timelineDueDate.ts` (+8 tests) : `dayAtLaneX`, `dueDateForDay` (heure existante conservée, sinon midi local). `TimelineView` : prop `onUpdateDueDate(id, iso|null)`, clic droit sur la zone chronologique, losange interactif (zone 16px, glisser seuil 4px avec aperçu, clic droit = suppression). `SpacePage` branché sur `handleInlineUpdate`. Écart au plan : `useSpaceActions` étendu (`dueDate` dans le type + mise à jour optimiste, sinon le losange revenait en arrière pendant la requête). Règle `gantt-due-date-gestures` dans businessRules
+- Vérifié au dev (item « Implémenter JWT », restauré à l'identique ensuite) : clic droit → 2 oct 12:00 en base ; glisser → 6 oct 12:00 ; clic droit losange → NULL, start/end intacts ; zoom mois → 15 oct 12:00. Aucune erreur console. Typecheck web OK
+- MCP SPOK toujours 401 : Claude pas encore redémarré (ancien process `dist/index.js` du 27/09 11:55)
+- MEP 2026-09-28 (c6af7e0) — typecheck 5 packages OK, 611/611 tests verts
+
 ### Fix MCP SPOK 401 — 2026-09-27
 - Cause : `apps/mcp/src/client.ts` chargeait `apps/mcp/.env` (copie d'avril, mot de passe d'avant la rotation 2026-07-11) en écrasant les variables déjà définies → 401 quelle que soit la config. Config active (`~/.claude.json`) = ancienne entrée locale `dist/index.js` + mot de passe en clair ; l'entrée `launch.mjs` était dans `~/.claude/settings.local.json`, non lu pour les MCP
 - Fix : client.ts n'écrase plus une variable déjà set (dist recompilé) ; entrée user remplacée via `claude mcp add spok -s user -- node .../launch.mjs` (plus de mot de passe en clair) ; entrée morte retirée de settings.local.json ; mémoire project_mcp_prod réécrite
