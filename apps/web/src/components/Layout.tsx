@@ -1,6 +1,7 @@
 /*
  * Layout principal connecté : header (row 1 : notifications, mode admin/dev compact, déconnexion,
- * "Retourner à", vignette profil ; row 2 : GlobalNavBar) + zone de contenu.
+ * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/Tous à côté du
+ * titre ; row 2 : GlobalNavBar) + zone de contenu. Seul appelant de interfaceMode.applyContextMode.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
@@ -34,6 +35,16 @@ import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, type InterfaceMode } from '../stores/interfaceMode';
 import type { SpaceWithRole } from '@spok/shared';
+
+/** Boutons d'option du mode d'interface (header). 'exploration' volontairement absent (réservé). */
+const INTERFACE_MODES: { value: InterfaceMode; label: string; hint: string }[] = [
+  { value: 'forum',  label: 'Forum',  hint: 'Interface axée sujets et discussions' },
+  { value: 'projet', label: 'Projet', hint: 'Interface de pilotage complète' },
+  { value: 'tous',   label: 'Tous',   hint: 'Aucun filtrage' },
+];
+const INTERFACE_MODE_LABELS: Record<InterfaceMode, string> = {
+  forum: 'Forum', projet: 'Projet', exploration: 'Exploration', tous: 'Tous',
+};
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
@@ -295,6 +306,8 @@ export function Layout() {
   const { initTheme } = useThemeStore();
   const { spaceViews, sections: menuSections, visibleItems } = useMenuItems();
   const interfaceMode = useInterfaceModeStore(s => s.mode);
+  const contextInterfaceMode = useInterfaceModeStore(s => s.contextMode);
+  const chooseInterfaceMode = useInterfaceModeStore(s => s.chooseMode);
   const adminMenuItems = visibleItems.filter(item => item.section === 'admin');
   const adminMode = useAdminMode();
   const { clearIncludeChildren } = useSpaceStore();
@@ -600,15 +613,26 @@ export function Layout() {
 
   // Dérivation du mode d'interface depuis le contexte de la communauté visitée
   // (spec 2026-07-15-community-context-mode) : FORUM → forum, PROJECT → projet,
-  // hors communauté ou contexte neutre → tous. Seul écrivain du store interfaceMode.
+  // hors communauté ou contexte neutre → tous. Le contexte n'est réappliqué (effaçant le choix manuel
+  // fait via les boutons du header) que si la paire communauté+contexte change réellement :
+  // - lastAppliedCommunityRef évite qu'un refetch ou un re-render ne réapplique la même paire ;
+  // - état transitoire ignoré : pendant le chargement de l'espace suivant (currentSpace pas encore
+  //   celui de l'URL) ou de la liste des communautés, la communauté paraît nulle à tort.
+  const communityResolving = (!!currentSpaceId && currentSpace?.id !== currentSpaceId)
+    || (!!currentCommunityId && !communities);
+  const currentCommunityKey = currentCommunity?.id ?? null;
+  const currentCommunityContext = currentCommunity?.context ?? null;
+  const lastAppliedCommunityRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    const derived: InterfaceMode = currentCommunity?.context === 'FORUM' ? 'forum'
-      : currentCommunity?.context === 'PROJECT' ? 'projet'
+    if (communityResolving) return;
+    const pairKey = `${currentCommunityKey}|${currentCommunityContext}`;
+    if (lastAppliedCommunityRef.current === pairKey) return;
+    lastAppliedCommunityRef.current = pairKey;
+    const derived: InterfaceMode = currentCommunityContext === 'FORUM' ? 'forum'
+      : currentCommunityContext === 'PROJECT' ? 'projet'
       : 'tous';
-    if (useInterfaceModeStore.getState().mode !== derived) {
-      useInterfaceModeStore.getState().setMode(derived);
-    }
-  }, [currentCommunity]);
+    useInterfaceModeStore.getState().applyContextMode(derived);
+  }, [currentCommunityKey, currentCommunityContext, communityResolving]);
 
   const communityFavoriteSpaces = useMemo(() => {
     if (!currentCommunityId) return favoriteSpaces;
@@ -1218,18 +1242,26 @@ export function Layout() {
                   className="text-sm md:text-base font-semibold text-foreground truncate"
                   title={currentSpace?.description || undefined}
                 >{getPageTitle()}</h2>
-                {/* Badge du contexte de communauté : seul indicateur du mode d'interface
-                    dérivé depuis la suppression du sélecteur (décision 2026-07-15) */}
-                {currentCommunity?.context && (
-                  <span
-                    className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border bg-accent text-muted-foreground"
-                    title={currentCommunity.context === 'FORUM'
-                      ? 'Communauté en contexte Forum : interface axée sujets et discussions'
-                      : 'Communauté en contexte Projet : interface de pilotage complète'}
-                  >
-                    {currentCommunity.context === 'FORUM' ? 'Forum' : 'Projet'}
-                  </span>
-                )}
+                {/* Boutons d'option du mode d'interface (réintroduits le 2026-09-27) : le mode part
+                    du contexte de la communauté, surcharge manuelle tant qu'on reste dans la même
+                    communauté (cf. stores/interfaceMode.ts). Masqués sur mobile (place). */}
+                <div className="hidden sm:flex items-center gap-0.5 rounded-md border border-border p-0.5 flex-shrink-0">
+                  {INTERFACE_MODES.map(m => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => chooseInterfaceMode(m.value)}
+                      title={`${m.hint} — contexte de la communauté : ${INTERFACE_MODE_LABELS[contextInterfaceMode]}`}
+                      className={`h-6 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                        interfaceMode === m.value
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               {currentSpace && (
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -1274,9 +1306,7 @@ export function Layout() {
                 <span className="hidden sm:inline">Nouvel item</span>
               </button>
             )}
-            {/* Sélecteur de mode retiré (décision 2026-07-15) : le mode d'interface est dérivé
-                du contexte de la communauté visitée (Community.context), plus une bascule utilisateur.
-                Champ de recherche global également retiré : la page /search (bouton Recherche
+            {/* Champ de recherche global retiré : la page /search (bouton Recherche
                 du bandeau) est l'unique point d'entrée, avec ses filtres. */}
             {user ? (
               <>

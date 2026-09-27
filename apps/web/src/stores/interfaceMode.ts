@@ -1,12 +1,15 @@
 /**
- * Store du mode d'interface — VALEUR DÉRIVÉE depuis le contexte de la communauté visitée
- * (spec 2026-07-15-community-context-mode) :
- * - communauté context FORUM   → 'forum'      (vues discussion, sans données de pilotage)
- * - communauté context PROJECT → 'projet'     (pilotage complet)
- * - partout ailleurs           → 'tous'       (neutre : espace perso, pages globales)
- * - 'exploration' : réservé, non dérivé pour l'instant (chantier à venir).
- * La dérivation est poussée par Layout.tsx (seul écrivain via setMode) — ne pas ajouter
- * de persistance localStorage ni de bascule utilisateur : le contenu dicte l'interface.
+ * Store du mode d'interface — contexte de la communauté visitée + surcharge manuelle
+ * (spec 2026-07-15-community-context-mode, bascule utilisateur réintroduite le 2026-09-27) :
+ * - contextMode = mode par défaut dérivé du contexte de la communauté :
+ *     FORUM → 'forum', PROJECT → 'projet', hors communauté / contexte neutre → 'tous'
+ * - mode = mode effectif lu par toute l'app (GlobalNavBar, SpaceToolbar, ItemEditModal…)
+ * Écrivains :
+ * - applyContextMode : Layout.tsx UNIQUEMENT, au changement de communauté (id ou contexte) —
+ *   réaligne mode sur le contexte et efface le choix manuel.
+ * - chooseMode : boutons d'option du header (Layout.tsx) — surcharge valable tant qu'on reste
+ *   dans la même communauté. Volontairement non persistée (pas de localStorage).
+ * 'exploration' : réservé, ni dérivé ni proposé en bouton pour l'instant (chantier « loupe »).
  */
 import { create } from 'zustand';
 
@@ -14,12 +17,16 @@ export type InterfaceMode = 'forum' | 'projet' | 'exploration' | 'tous';
 
 interface InterfaceModeState {
   mode: InterfaceMode;
-  setMode: (mode: InterfaceMode) => void;
+  contextMode: InterfaceMode;
+  applyContextMode: (mode: InterfaceMode) => void;
+  chooseMode: (mode: InterfaceMode) => void;
 }
 
 export const useInterfaceModeStore = create<InterfaceModeState>()((set) => ({
   mode: 'tous',
-  setMode: (mode) => set({ mode }),
+  contextMode: 'tous',
+  applyContextMode: (mode) => set({ mode, contextMode: mode }),
+  chooseMode: (mode) => set({ mode }),
 }));
 
 /**

@@ -116,4 +116,12 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
   },
 ];
 
-export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [];
+export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
+  {
+    id: 'interface-mode-context-override',
+    page: 'Toutes (header)',
+    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Tous du header",
+    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté",
+    location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode)',
+  },
+];
