@@ -873,6 +873,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => actions.handleInlineUpdate(id, { startDate, endDate })}
+              onUpdateDueDate={(id, dueDate) => actions.handleInlineUpdate(id, { dueDate })}
               onCascadeShift={actions.handleCascadeShift}
               onCreateRelation={actions.handleCreateRelation}
               onDeleteRelation={actions.handleDeleteRelation}

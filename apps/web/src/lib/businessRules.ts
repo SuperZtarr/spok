@@ -124,4 +124,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté",
     location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode)',
   },
+  {
+    id: 'gantt-due-date-gestures',
+    page: 'Vue Gantt (TimelineView)',
+    trigger: "Clic droit sur la zone chronologique d'une ligne / glisser le losange d'échéance / clic droit sur le losange",
+    effect: "Pose ou déplace l'échéance au jour visé (heure de l'ancienne échéance conservée, sinon 12:00 local) / la déplace au jour près / la supprime. Sans confirmation, sans cascade « Entraîne ». Inactif sur les lignes à dates dérivées des enfants et sans droit d'édition",
+    location: 'apps/web/src/components/views/TimelineView.tsx (handleLaneContextMenu, handleDueMouseDown), apps/web/src/lib/timelineDueDate.ts',
+  },
 ];

@@ -4,7 +4,11 @@
  * Gère : zoom (jour/semaine/mois/trimestre/année), navigation centerDate, DnD repositionnement dates,
  * DnD réordonnancement arborescence panneau gauche (RootDropZone pour remonter un item à la racine),
  * création de relations par glisser-déposer, chemin critique, export, scrollbar de navigation temporelle en bas de vue.
- * Props clés : items, relations, onUpdateDates, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
+ * Échéance (losange rouge) : clic droit sur la zone chronologique d'une ligne = poser/déplacer au jour
+ * sous le curseur ; glisser le losange = déplacer ; clic droit sur le losange = supprimer (onUpdateDueDate,
+ * helpers lib/timelineDueDate.ts). Jamais de cascade "Entraîne" sur l'échéance. Inactif sur les lignes
+ * à dates dérivées des enfants et sans droit d'édition.
+ * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
@@ -26,6 +30,7 @@ import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shar
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
 import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../../lib/cascadeShift';
+import { dayAtLaneX, dueDateForDay } from '../../lib/timelineDueDate';
 import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { Button } from '../ui/Button';
@@ -56,6 +61,8 @@ interface TimelineViewProps {
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
+  /** Pose/déplace (ISO) ou supprime (null) l'échéance — clic droit sur la ligne, glisser/clic droit sur le losange. */
+  onUpdateDueDate?: (id: string, dueDate: string | null) => void;
   onCascadeShift?: (id: string, deltaDays: number, dependentIds: string[]) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string, label?: string) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
@@ -88,7 +95,7 @@ interface TimelineViewProps {
 }
 
 
-export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onCascadeShift, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '',
+export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '',
 onNewItem, onStartTour, pulseHelp,
 treeSort: treeSortProp,
 }: TimelineViewProps) {
@@ -158,6 +165,9 @@ treeSort: treeSortProp,
   // Preview local pendant le drag (aucun appel API) + confirmation après save
   const [dragPreview, setDragPreview] = useState<{ itemId: string; startDate: string | null; endDate: string | null } | null>(null);
   const [savedItemId, setSavedItemId] = useState<string | null>(null);
+
+  // Glisser du losange d'échéance : jour survolé (aperçu local), enregistré au relâchement
+  const [dueDrag, setDueDrag] = useState<{ itemId: string; day: Date } | null>(null);
 
   // Drag state for creating relations
   const [relationDrag, setRelationDrag] = useState<{
@@ -636,6 +646,58 @@ treeSort: treeSortProp,
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   }, [canEdit, onUpdateDates, items]);
+
+  // ── Échéance : clic droit sur la ligne (poser/déplacer), glisser ou clic droit sur le losange ──
+  // Jamais de cascade "Entraîne" : poser une échéance n'est pas un déplacement de l'item.
+  const canEditDueDate = useCallback((item: Item) =>
+    canEdit && !!onUpdateDueDate && (canEditItem ? canEditItem(item) : true),
+  [canEdit, onUpdateDueDate, canEditItem]);
+
+  const commitDueDate = useCallback((itemId: string, dueDate: string | null) => {
+    if (!onUpdateDueDate) return;
+    onUpdateDueDate(itemId, dueDate);
+    setSavedItemId(itemId);
+    setTimeout(() => setSavedItemId(prev => prev === itemId ? null : prev), 1500);
+  }, [onUpdateDueDate]);
+
+  // Clic droit sur la zone chronologique d'une ligne : échéance au jour sous le curseur
+  const handleLaneContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>, item: Item) => {
+    if (dragging || dueDrag || relationDrag || !canEditDueDate(item)) return; // menu natif conservé
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const day = dayAtLaneX(e.clientX - rect.left, dayWidth, visibleStartDate);
+    if (item.dueDate && startOfDay(new Date(item.dueDate)).getTime() === day.getTime()) return;
+    commitDueDate(item.id, dueDateForDay(day, item.dueDate));
+  }, [dragging, dueDrag, relationDrag, canEditDueDate, dayWidth, visibleStartDate, commitDueDate]);
+
+  // Glisser du losange (seuil 4px comme les barres) : aperçu au jour près, un seul appel API au relâchement
+  const handleDueMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, item: Item) => {
+    if (e.button !== 0 || !item.dueDate) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const lane = e.currentTarget.parentElement;
+    if (!lane) return;
+    const startX = e.clientX;
+    const originalDay = startOfDay(new Date(item.dueDate)).getTime();
+    let moved = false;
+    let lastDay: Date | null = null;
+    const onMove = (ev: MouseEvent) => {
+      if (!moved && Math.abs(ev.clientX - startX) <= 4) return;
+      moved = true;
+      lastDay = dayAtLaneX(ev.clientX - lane.getBoundingClientRect().left, dayWidth, visibleStartDate);
+      setDueDrag({ itemId: item.id, day: lastDay });
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      setDueDrag(null);
+      if (moved && lastDay && lastDay.getTime() !== originalDay) {
+        commitDueDate(item.id, dueDateForDay(lastDay, item.dueDate));
+      }
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [dayWidth, visibleStartDate, commitDueDate]);
 
   // Handle drag move — mise à jour visuelle locale uniquement, pas d'appel API
   const handleDragMove = useCallback((e: MouseEvent) => {
@@ -1312,8 +1374,13 @@ treeSort: treeSortProp,
                     canEditItem={canEditItem}
                   />
 
-                  {/* Timeline bar area */}
-                  <div className="relative flex-1" style={{ minHeight: 40 }}>
+                  {/* Timeline bar area — clic droit : échéance au jour sous le curseur */}
+                  <div
+                    className="relative flex-1"
+                    style={{ minHeight: 40 }}
+                    onContextMenu={!derived ? (e) => handleLaneContextMenu(e, item) : undefined}
+                    title={!derived && canEditDueDate(item) ? "Clic droit : poser l'échéance ici" : undefined}
+                  >
                     {/* Grid lines — per-day (day/week/month), per-week (quarter), per-month (year) */}
                     <div className="absolute inset-0 flex">
                       {zoomConfig.showDayNumbers ? (
@@ -1440,7 +1507,8 @@ treeSort: treeSortProp,
 
                     {/* Due date marker (red diamond) */}
                     {item.dueDate && (() => {
-                      const dueDateObj = startOfDay(new Date(item.dueDate));
+                      const dueDateObj = dueDrag?.itemId === item.id ? dueDrag.day : startOfDay(new Date(item.dueDate));
+                      const dueEditable = !derived && canEditDueDate(item);
                       const dueOffset = differenceInDays(dueDateObj, visibleStartDate);
                       // Only render if visible
                       if (dueOffset < -1 || dueOffset > visibleDays + 1) return null;
@@ -1475,11 +1543,18 @@ treeSort: treeSortProp,
                               />
                             </svg>
                           )}
-                          {/* Diamond marker */}
+                          {/* Diamond marker — éditable : glisser = déplacer, clic droit = supprimer.
+                              Zone de prise 16px × hauteur de ligne autour du losange de 12px. */}
                           <div
-                            className="absolute top-1 z-10 pointer-events-none"
-                            style={{ left: dueX - 6 }}
-                            title={`Échéance : ${formatDateShort(dueDateObj)}`}
+                            className={`absolute top-0 z-10 flex justify-center pt-1 ${dueEditable
+                              ? `pointer-events-auto ${dueDrag?.itemId === item.id ? 'cursor-grabbing' : 'cursor-grab'}`
+                              : 'pointer-events-none'}`}
+                            style={{ left: dueX - 8, width: 16, height: ROW_HEIGHT }}
+                            title={dueEditable
+                              ? `Échéance : ${formatDateShort(dueDateObj)} — glisser pour déplacer · clic droit pour supprimer`
+                              : `Échéance : ${formatDateShort(dueDateObj)}`}
+                            onMouseDown={dueEditable ? (e) => handleDueMouseDown(e, item) : undefined}
+                            onContextMenu={dueEditable ? (e) => { e.preventDefault(); e.stopPropagation(); commitDueDate(item.id, null); } : undefined}
                           >
                             <svg width="12" height="32" viewBox="0 0 12 32">
                               {/* Vertical line */}

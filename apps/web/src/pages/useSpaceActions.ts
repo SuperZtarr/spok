@@ -100,12 +100,13 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; updatedAt?: string; propagateToChildren?: boolean } }) =>
+    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; updatedAt?: string; propagateToChildren?: boolean } }) =>
       itemsApi.update(itemSpaceId, id, data),
-    // Optimistic update : applique startDate/endDate au cache avant la réponse serveur.
-    // Évite qu'ItemEditModal lise des dates stales si ouverte juste après un drag dans le Gantt.
+    // Optimistic update : applique startDate/endDate/dueDate au cache avant la réponse serveur.
+    // Évite qu'ItemEditModal lise des dates stales si ouverte juste après un drag dans le Gantt,
+    // et que le losange d'échéance du Gantt revienne à son ancienne place pendant la requête.
     onMutate: ({ id, data }) => {
-      if (data.startDate === undefined && data.endDate === undefined) return;
+      if (data.startDate === undefined && data.endDate === undefined && data.dueDate === undefined) return;
       queryClient.setQueriesData({ queryKey: ['items'] }, (old: any) => {
         if (!old?.data) return old;
         return {
@@ -116,6 +117,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
                   ...item,
                   ...(data.startDate !== undefined ? { startDate: data.startDate } : {}),
                   ...(data.endDate !== undefined ? { endDate: data.endDate } : {}),
+                  ...(data.dueDate !== undefined ? { dueDate: data.dueDate } : {}),
                 }
               : item
           ),
@@ -285,7 +287,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [convertingItem, resolveItemSpaceId, convertToSpaceMutation]);
 
-  const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
+  const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
     const updates = { ...data };
 
