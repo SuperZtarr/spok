@@ -6,6 +6,34 @@
 
 ## EN COURS
 
+### Modes — étape 3/4 : modale Forum toujours réduite + résumé — 2026-09-28
+- Choix Thomas (brainstorming) : périmètre modale seule ; Forum = toujours réduite avec résumé (option A) ; Projet inchangé
+- `buildForumSummary` (item-edit-helpers, +4 tests) : type (hors Note/Non défini) · statut · priorité (PRIORITIES) · période (une seule date si même jour) ou « dès » · échéance · assigné · N liens. `ItemEditModal` : effet de dépliage auto supprimé, ligne de résumé cliquable (→ déplie) sous l'en-tête en Forum replié. Règle `forum-modal-reduced-with-summary`
+- Vérifié au dev (Test SPOK, Forum) : Réunion hebdo S8 réduite avec « Réunion · Terminé · 22 avr. 2026 », clic → complète ; Note vierge sans résumé ; bascule Projet → complète, pas de toggle. Typecheck web OK
+- MCP SPOK 401 : doc « modes d'interface » non mise à jour
+- MEP 2026-09-28 (321de3c) — typecheck 5 packages OK, 631/631 tests verts
+
+### Priorités inversées dans DeadlinesView et DeleteConfirmModal — 2026-09-28
+- TODO « DeadlinesView ne filtre pas la priorité » : le filtre fonctionne (Urgente = 4 → 0 item, conforme à la base). La vraie divergence : tables de libellés locales à l'échelle inversée (1 = Critique) dans `DeadlinesView` et `DeleteConfirmModal`, alors que la référence `PRIORITIES` est 4 = Urgente … 1 = Basse → badges contredisant le filtre ; la capture de Thomas affichait « Haute » pour une priorité 2 (Normale)
+- Fix : les deux fichiers lisent `PRIORITIES` (libellé + couleurs). Règle `priority-scale-single-source` dans businessRules
+- Vérifié au dev : dashboard filtré « Haute » → 2 items (= base), badges « Haute » ; confirmation de suppression d'« Amélioration des vues » → « Normale » (annulée). Typecheck web OK
+- MEP 2026-09-28 (418ed50) — typecheck 5 packages OK, 631/631 tests verts
+
+### Gantt : déplacement de barre au jour près dans tous les zooms — 2026-09-28
+- Option A retenue par Thomas. `handleDragMove` : type `move` → `addDays(initialDate, round(rawDays))`, plus de snap calendaire (lundi en trimestre, 1er du mois en année, pas de 90 j en multi-années). Resize start/end inchangé
+- Vérifié au dev en zoom année (4 px/j) : glisser de 20 px sur OWASP → 12→17 juil. (+5 j, heure conservée), fin « aujourd'hui » → +5 j. Item restauré. Typecheck web OK
+- MEP 2026-09-28 (6c8474b) — typecheck 5 packages OK, 631/631 tests verts
+
+### Modèle : nom vide après lien direct + accord du libellé — 2026-09-28
+- `SaveAsTemplateModal` : effet sur `isOpen` qui pré-remplit le nom avec le titre courant et vide la description à chaque ouverture (l'initialiseur `useState` tournait au montage, avant chargement d'`allItems`). Libellé « 1 élément sera capturé » / « N éléments seront capturés »
+- Vérifié au dev par lien direct + reload : feuille « Amélioration des vues » (nom OK, singulier), parent « Capture écran — Dashboard V2 » (nom OK, « 9 éléments seront capturés »). Typecheck web OK
+- MEP 2026-09-28 (ddd4fb2) — typecheck 5 packages OK, 631/631 tests verts
+
+### « Absorber les enfants » seulement si l'item a des enfants — 2026-09-28
+- `hasChildItems` (itemMenuGroups.ts, +3 tests : `childCount` de la liste API ou `children` des vues en arbre ; paramètre `object` car `childCount` absent du type partagé Item). Appliqué comme le motif « Éclater » aux 13 appels `buildItemMenuGroups` (Documents, Images, Liens, Kanban, Liste, Planning, Priorité, Types, Membres, Fil, Texte, TreeItemRow, carte mentale). Modale : bouton si `allItems` contient un enfant. Règle businessRules `absorb-children-only-if-children`
+- Vérifié au dev : menu Gantt du parent « Capture écran — Dashboard V2 » (7 enfants) propose l'action, menu de la feuille « Amélioration des vues » non ; modale idem. Typecheck web OK
+- MEP 2026-09-28 (8d2b626) — typecheck 5 packages OK, 631/631 tests verts
+
 ### Fix modale item périmée après modif dans une vue / absorption — 2026-09-28
 - Signalé par Thomas : la modale ignore les changements faits dans les vues (date Gantt, statut MindMap) et n'affiche pas la description après absorption, jusqu'au rechargement
 - Cause double : (1) fiche `['item', spaceId, id]` jamais invalidée par les mutations des vues + staleTime global 5 min → pas de refetch ; (2) même rechargée (absorption l'invalide), le formulaire ne se recopiait que si id/dates changeaient (initKey) → description/statut/titre figés. Risque associé : « Enregistrer » sur une fiche périmée renvoyait les anciennes valeurs par-dessus la modif de la vue
