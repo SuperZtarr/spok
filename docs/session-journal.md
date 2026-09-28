@@ -6,6 +6,23 @@
 
 ## EN COURS
 
+### Focus des modales — étape 1 : focus visible global — 2026-09-28
+- Constat : `Modal.tsx` ne gère aucun focus (ni initial, ni piège Tab, ni restauration) ; focus par défaut hétérogène (titre même sur item existant, recherche, nom… ; confirmations : aucun) ; focus quasi invisible (`focus:outline-none` partout, pas de style global)
+- Règle proposée (6 points, en attente de validation Thomas) : création → titre ; item existant → la modale (pas le titre) ; recherche → champ recherche ; confirmation destructive → Annuler ; non destructive → action principale ; `Modal.tsx` : piège Tab + restauration du focus
+- Fait (demande Thomas) : `index.css` — contour 2px `--ring` offset 2px sur `:focus-visible` (boutons, liens, champs, contenteditable, tabindex), hors layer + !important. MEP 2026-09-28 (3dd9da7)
+- Étape 2 (règle validée « go ») : `hooks/useDialogFocus.ts` (+6 tests jsdom : data-autofocus, panneau, autoFocus respecté, rotation Tab, pile, restauration) branché dans `Modal.tsx` (16 modales) + 10 modales maison (script) + 8 dialogues relation/portail (Item, Gantt, PERT, MindMap). Cibles : titre seulement si item sans titre ; Annuler sur suppressions/Unsaved/AuditRestore/StatusManager ; action sur Cascade/StatusPropagation ; ConfirmModal selon confirmVariant. Skill spok-menu + doc SPOK « Focus des modales » créés. MEP 2026-09-28 (3dd9da7) — typecheck 5 packages OK, 644/644 tests verts
+
+### Fix faux conflit à l'enregistrement d'un item Image / Document / Diagramme — 2026-09-28
+- Signalé par Thomas (création d'item + image, puis diagrammes). Cause : les écritures directes de la modale (upload image/document, auto-save XML diagramme à 2 s, « Enregistrer et fermer » draw.io) font avancer `updatedAt` serveur sans relire la fiche (non-invalidation volontaire, antérieure à `mergeFormWithServer`) → Enregistrer envoie l'ancien `updatedAt` + type/titre modifiés → 409 à chaque fois
+- Revue des autres écritures : contributions et relations invalident déjà la fiche ; favori / lu-non lu ne touchent pas l'item ; Lien et autres types : pas d'écriture directe
+- Fix `ItemEditModal` : `refreshItem()` (fiche + liste) après les 4 écritures, y compris si l'upload du PNG échoue ; commentaire obsolète + en-tête corrigés. Typecheck web OK. Doc SPOK « Enregistrer » MAJ. MEP 2026-09-28 (8fe8c8e)
+
+### Boutons « Nouveau » bleu vif + « Enregistrer » orange — 2026-09-28
+- Demande Thomas : bouton Nouveau des vues en couleur flashy (bleu choisi) ; en cours de route : Enregistrer de la modale item en orange
+- `components/ui/NewItemButton.tsx` (bg-blue-600, source unique) remplace les 19 copies `bg-secondary` des en-têtes de vue (script) ; `ViewToolbar.tsx` (inutilisé) non touché ; imports `Plus` morts retirés (MindMap, Timeline). `ItemEditModal` : Enregistrer en `bg-orange-500 hover:bg-orange-600` (twMerge écrase bg-primary)
+- Skill spok-menu (standard du bouton) + doc SPOK (Vues, Enregistrer) mis à jour. Typecheck web OK. MEP 2026-09-28 (3209561, 8fe8c8e)
+- Suite (signalé par Thomas) : barre d'en-tête de vue invisible dans l'inspecteur dev → `data-devzone="contenu-barre-vue"` sur les 31 `#view-header` (19 vues + SpacePage), couleur dans ZONE_COLORS. Skill spok-menu + doc SPOK outils dev MAJ. MEP 2026-09-28 (3209561)
+
 ### MCP SPOK — 3e cause : token expiré vu comme anonyme — 2026-09-28
 - Symptôme : 15 min après le login, `list_spaces` vide, 404 sur les espaces privés, `search_items` vide — sans erreur. Cause : access token 15 min, routes `optionalAuthenticate` → requête traitée en anonyme (pas de 401 → pas de re-login)
 - Fix `apps/mcp/src/client.ts` : re-login avant l'`exp` du JWT (marge 60 s). Build OK ; effectif au prochain redémarrage de Claude. MEP 2026-09-28 (4db5fb2)

@@ -10,6 +10,11 @@
 - [x] Nouveau type de relation `drives` ("Entraîne", sens unique, écart déduit dynamiquement, chaîne transitive, détection de cycle) — spec `docs/superpowers/specs/2026-09-13-cascade-date-relation-design.md`, plan `docs/superpowers/plans/2026-09-13-cascade-date-relation.md`. Backend : `item-cascade-shift.ts` + `drivesGraph.ts` (revalidation serveur). Frontend : `lib/cascadeShift.ts`, `CascadeShiftConfirmModal`, branché dans ItemEditModal (sauvegarde) et nouveau drag de déplacement du corps de barre dans TimelineView ; type `drives` ajouté partout où les relations existent (ItemEditModal, PertView, TimelineView, MindMapView) — 2026-09-14 (4eae01d)
 - [x] Extension enfants : la modale de confirmation propose aussi, séparément (case décochée par défaut), de décaler les enfants (`parentId`) de l'ancre — `utils/itemDescendants.ts` (backend, revalidation `drives ∪ descendants`), `computeCascadeDescendants` (frontend). La hiérarchie parent/enfant reste structurelle : ce n'est jamais automatique, toujours une proposition explicite — 2026-09-19 (58a3f6b)
 
+### Modales et boutons (2026-09-28)
+- [x] Bouton « Nouveau » des vues en bleu vif via composant partagé `NewItemButton` (19 vues) + zone dev `contenu-barre-vue` sur chaque `#view-header` — 2026-09-28 (3209561)
+- [x] Focus des modales : `useDialogFocus` (focus initial selon la règle, Tab piégé, restauration) dans `Modal.tsx`, modales maison et dialogues relation/portail + contour `:focus-visible` global — 2026-09-28 (3dd9da7)
+- [x] Faux conflit à l'enregistrement d'un item Image/Document/Diagramme (écritures directes sans relecture de la fiche) + bouton Enregistrer orange — 2026-09-28 (8fe8c8e)
+
 ### Refonte esthétique
 - [x] Piste "Dense technique" choisie (canvas Claude Design, 3 directions explorées) : tokens globaux (IBM Plex Sans/Mono, palette gris-bleu froid, radius réduit), fond gris clair sidebar/header/toolbar de vue vs contenu blanc, cohérent clair/sombre — 2026-08-19
 - [ ] Densité des composants (paddings/tailles par vue) — volontairement non touchée, à faire au cas par cas si besoin
@@ -105,7 +110,12 @@
 
 ### Outillage Claude
 
-- [x] MCP SPOK 401 : `apps/mcp/src/client.ts` écrasait les credentials par ceux de `apps/mcp/.env` (copie d'avant la rotation 2026-07-11) — ne remplace plus une variable déjà définie ; config user refaite via `claude mcp add` → `launch.mjs` (.env racine, plus de mot de passe en clair) — 2026-09-27 (9c5cb31). Reste (Thomas) : redémarrer Claude pour valider, supprimer `apps/mcp/.env`
+- [x] MCP SPOK 401 : `apps/mcp/src/client.ts` écrasait les credentials par ceux de `apps/mcp/.env` (copie d'avant la rotation 2026-07-11) — ne remplace plus une variable déjà définie ; config user refaite via `claude mcp add` → `launch.mjs` (.env racine, plus de mot de passe en clair) — 2026-09-27 (9c5cb31). `apps/mcp/.env` n'existe plus (constaté 2026-09-28)
+- [x] MCP SPOK 401 (2e cause) : `launch.mjs` tronquait les valeurs `.env` au premier guillemet — lecture brute — 2026-09-28 (93c6545)
+- [x] MCP SPOK résultats vides sans erreur : token 15 min expiré → routes `optionalAuthenticate` traitées en anonyme, pas de 401 donc pas de re-login — re-login avant l'`exp` du JWT — 2026-09-28 (4db5fb2). Actif après redémarrage de Claude
+- [x] Rattrapage doc SPOK de tout ce qui a été livré depuis le 11/07 (MCP en panne) — ~35 items mis à jour, 17 créés, tous `to_validate` — 2026-09-28
+- [ ] Doc SPOK à valider par Thomas (items `to_validate` du 2026-09-28), dont : item « Sélecteur de vue » (Structure) = doublon probable de « Bandeau de navigation [GlobalNavBar] » ; page Activité : fonctionnement de la sourdine à préciser ; ancienne arborescence ItemEditModal dans « Les modales » non mise à jour (référence = espace Items)
+- [ ] `RelationTooltip` (Gantt/PERT) : type `depends` absent de `RELATION_TYPES`, pas de libellé pour `implements`/`drives` — à aligner
 
 - [x] Skill `spok-layout` : documente Layout.tsx/GlobalNavBar.tsx (anciens MainMenu.tsx/Sidebar.tsx, supprimés) — invariants, régressions passées (z-index, overflow-hidden, polling sidebar, largeur toggle), fichiers clés — ARCHITECTURE.md et CLAUDE.md mis à jour avec les noms de fichiers réels — 2026-07-14
 - [x] `dev-autostart.ps1` : attend la readiness (`:3000` + `:3001/health` = 200) puis ouvre Chrome sur localhost:3000 — plus d'actions manuelles au démarrage — 2026-08-31 (bea0bcd)

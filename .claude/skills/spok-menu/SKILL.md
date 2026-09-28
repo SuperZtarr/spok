@@ -208,7 +208,7 @@ Deux zones :
 className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
 ```
 
-- Bouton **Nouveau** : `bg-secondary text-secondary-foreground hover:bg-secondary/80`
+- Bouton **Nouveau** : composant partagé `components/ui/NewItemButton.tsx` (bleu vif `bg-blue-600 text-white`, décision Thomas 2026-09-28) — ne jamais recopier ses classes dans une vue : `{canEdit && onNewItem && <NewItemButton onClick={onNewItem} />}`
 - Boutons icône seule (Historique, Paramètres) : `h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors`
 - Icônes : `w-3.5 h-3.5` pour les boutons texte, `w-4 h-4` pour les boutons icône seule
 - Labels : `<span className="hidden sm:inline">Label</span>` pour masquer sur mobile
@@ -222,7 +222,7 @@ className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium t
 ### ViewHeader — structure type
 
 ```tsx
-<div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header">
+<div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header" data-devzone="contenu-barre-vue">
   {/* boutons SPÉCIFIQUES à cette vue uniquement */}
 </div>
 ```
@@ -241,6 +241,22 @@ className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium t
 - Bouton "Lumière" — supprimé
 
 ---
+
+## Focus des modales — RÈGLE 2026-09-28
+
+Socle : `hooks/useDialogFocus.ts` — appliqué par `ui/Modal.tsx` ; toute modale faite main (overlay `fixed inset-0`) l'appelle sur son panneau : `useDialogFocus(panelRef, isOpen)` + `ref` et `outline-none` sur le panneau. Tab piégé (modale du dessus seulement), focus rendu à l'élément d'origine à la fermeture.
+
+Focus à l'ouverture :
+| Cas | Cible |
+|-----|-------|
+| Création (item sans titre, espace, modèle…) | premier champ (`autoFocus`) |
+| Item existant | le panneau (rien de modifiable par une frappe) |
+| Recherche / sélection (Déplacer, Dupliquer, Fusionner…) | champ de recherche (`autoFocus`) |
+| Confirmation destructive (suppression, quitter sans enregistrer, restauration d'audit) | **Annuler** (`data-autofocus`) |
+| Confirmation non destructive (cascade, propagation de statut) | action principale (`data-autofocus`) |
+| Conflit de modification | le panneau (aucun choix pré-sélectionné) |
+
+`ConfirmModal` choisit seul : Annuler si `confirmVariant='destructive'` (défaut), sinon l'action. Focus visible : règle `:focus-visible` globale dans `index.css` — ne pas la neutraliser.
 
 ## Menu contextuel des items
 
