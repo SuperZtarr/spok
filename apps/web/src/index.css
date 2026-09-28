@@ -1,3 +1,8 @@
+/*
+ * Styles globaux SPOK : directives Tailwind, tokens de la charte « Dense technique » (variables HSL,
+ * --radius), utilitaires spécifiques (scrollbar Gantt, contenu BBCode…) et focus visible global.
+ * Focus : voir la règle :focus-visible en fin de fichier — ne pas la neutraliser composant par composant.
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -229,4 +234,16 @@
   .bbcode-content ol {
     @apply list-decimal pl-5 my-2;
   }
+}
+
+/*
+ * Focus visible global (décision Thomas 2026-09-28) : tout élément focalisé au clavier ou par un
+ * focus automatique (ouverture de modale) est entouré d'un contour net, couleur --ring.
+ * :focus-visible → pas de cadre résiduel après un clic souris sur un bouton ; toujours visible sur
+ * un champ de saisie. Hors @layer et en !important pour passer devant les `focus:outline-none`
+ * disséminés dans les composants.
+ */
+:where(a[href], button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]):focus-visible {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
 }

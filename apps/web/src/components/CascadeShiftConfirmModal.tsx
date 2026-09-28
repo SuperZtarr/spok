@@ -6,11 +6,13 @@
  * listes déjà calculées par computeCascadeDependents / computeCascadeDescendants.
  * anchorWithoutDates (TimelineView, glisser d'une barre pointillée = parent sans dates propres) :
  * seul le groupe bouge — enfants cochés par défaut, « Non, seul » devient « Annuler » (rien n'est
- * modifié), l'ancre n'est jamais datée. */
-import { useState } from 'react';
+ * modifié), l'ancre n'est jamais datée.
+ * Focus : action principale (« Oui, déplacer » / « Décaler », non destructive), Tab piégé (useDialogFocus). */
+import { useRef, useState } from 'react';
 import type { CascadeDependent } from '../lib/cascadeShift';
 import { Button } from './ui/Button';
 import { DevModalBadge } from './ui/DevModalBadge';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 interface CascadeShiftConfirmModalProps {
   anchorTitle: string;
@@ -42,10 +44,12 @@ export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, d
   const sign = deltaDays > 0 ? '+' : '';
   const plural = dependents.length > 1;
   const descendantsPlural = descendants.length > 1;
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(panelRef, true);
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="bg-card border rounded-lg shadow-xl p-6 max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+      <div ref={panelRef} className="bg-card border rounded-lg shadow-xl p-6 max-w-sm mx-4 outline-none" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 mb-2">
           <DevModalBadge name="CascadeShiftConfirmModal" />
           <h3 className="text-lg font-semibold">{anchorWithoutDates ? 'Décaler le groupe ?' : 'Déplacer aussi les éléments liés ?'}</h3>
@@ -89,7 +93,7 @@ export function CascadeShiftConfirmModal({ anchorTitle, deltaDays, dependents, d
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <Button size="sm" onClick={() => onConfirm(includeDescendants)} disabled={nothingToShift} className="w-full justify-center">{anchorWithoutDates ? 'Décaler' : 'Oui, déplacer'}</Button>
+            <Button size="sm" onClick={() => onConfirm(includeDescendants)} disabled={nothingToShift} className="w-full justify-center" data-autofocus>{anchorWithoutDates ? 'Décaler' : 'Oui, déplacer'}</Button>
             {anchorWithoutDates ? (
               <p className="text-xs text-muted-foreground text-right">
                 {nothingToShift

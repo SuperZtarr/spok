@@ -3,7 +3,8 @@
  * décalées cumulativement d'une unité de temps (jour/semaine/mois/an) — pratique pour créer
  * une série récurrente. iterations=1 (défaut) = comportement classique, pas de décalage.
  */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Copy, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
@@ -78,12 +79,14 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
 
   const spaceGroups = useMemo(() => groupSpacesByCommunity(filteredSpaces), [filteredSpaces]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card border rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+      <div ref={dialogRef} className="outline-none relative bg-card border rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"

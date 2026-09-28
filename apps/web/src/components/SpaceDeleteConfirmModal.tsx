@@ -131,7 +131,7 @@ export function SpaceDeleteConfirmModal({
         ) : null}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="bordered" onClick={onClose} disabled={isPending}>
+          <Button variant="bordered" onClick={onClose} disabled={isPending} data-autofocus>
             Annuler
           </Button>
           <Button

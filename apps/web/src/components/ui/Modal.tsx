@@ -1,8 +1,11 @@
-/* Modale de base : portal, overlay, Escape, tailles — socle de toutes les modales. */
-import { useEffect, type ReactNode } from 'react';
+/* Modale de base : portal, overlay, Escape, tailles, focus — socle de toutes les modales.
+ * Focus (useDialogFocus) : à l'ouverture, champ en autoFocus ou élément `data-autofocus` du contenu,
+ * sinon le panneau ; Tab piégé dans la modale ; focus rendu à l'élément d'origine à la fermeture. */
+import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useDevMode } from '../DevDbStatus';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -17,6 +20,8 @@ export interface ModalProps {
 
 export function Modal({ isOpen, onClose, title, children, className, size = 'default', devName }: ModalProps) {
   const devMode = useDevMode();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(panelRef, isOpen);
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -48,9 +53,10 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
 
       {/* Modal content */}
       <div
+        ref={panelRef}
         className={cn(
-          // Mobile: always fullscreen
-          'relative z-50 flex flex-col bg-background p-4 sm:p-6',
+          // Mobile: always fullscreen ; outline-none : focus du panneau lui-même sans contour
+          'relative z-50 flex flex-col bg-background p-4 sm:p-6 outline-none',
           'w-full h-full sm:h-auto sm:rounded-lg sm:border sm:shadow-lg',
           // Desktop: size-specific constraints
           size === 'fullscreen'

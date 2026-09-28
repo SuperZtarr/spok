@@ -1,5 +1,6 @@
 /* Détail d'une entrée d'audit : diff before/after + bouton restaurer. */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import type { AuditLog, AuditAction } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -156,13 +157,15 @@ export function AuditLogDetail({
   onRestore,
   isRestoring,
 }: AuditLogDetailProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
   const changes = log.changes as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+      <div ref={dialogRef} className="outline-none bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div>

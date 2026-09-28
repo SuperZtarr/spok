@@ -46,13 +46,16 @@ export function ConfirmModal({
         )}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="bordered" onClick={onClose} disabled={isPending}>
+          {/* Focus par défaut : Annuler si l'action est destructive, sinon l'action (useDialogFocus) */}
+          <Button variant="bordered" onClick={onClose} disabled={isPending}
+            data-autofocus={confirmVariant === 'destructive' ? true : undefined}>
             Annuler
           </Button>
           <Button
             variant={confirmVariant}
             onClick={onConfirm}
             disabled={isPending}
+            data-autofocus={confirmVariant === 'destructive' ? undefined : true}
           >
             {confirmLabel}
           </Button>

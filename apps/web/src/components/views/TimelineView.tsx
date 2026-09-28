@@ -16,8 +16,9 @@
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
@@ -45,6 +46,7 @@ import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
+import { NewItemButton } from '../ui/NewItemButton';
 
 const ROW_HEIGHT = 40;
 const HEADER_HEIGHT = 24;
@@ -186,6 +188,11 @@ treeSort: treeSortProp,
 
   // Pending connection awaiting type selection
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
+  // Focus des modales de relation (création / édition) : panneau, Tab piégé, restauration (useDialogFocus)
+  const createRelationDialogRef = useRef<HTMLDivElement>(null);
+  const editRelationDialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(createRelationDialogRef, !!pendingConnection);
+  useDialogFocus(editRelationDialogRef, !!editingRelation);
   const [pendingLabel, setPendingLabel] = useState('');
 
   // DnD state for left-panel reordering
@@ -1101,12 +1108,9 @@ treeSort: treeSortProp,
   return (
     <div className="flex flex-col h-full" ref={viewContainerRef}>
       {/* ViewHeader */}
-      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
-          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Nouveau</span>
-          </button>
+          <NewItemButton onClick={onNewItem} />
         )}
         <div className="h-4 w-px bg-border mx-1" />
         {/* Navigation */}
@@ -1765,7 +1769,7 @@ treeSort: treeSortProp,
       {/* Relation type selection modal */}
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div ref={createRelationDialogRef} className="outline-none bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Type de relation <DevModalBadge name="TimelineView (créer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{pendingSourceItem?.title}</span>
@@ -1833,7 +1837,7 @@ treeSort: treeSortProp,
       {/* Edit relation dialog */}
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div ref={editRelationDialogRef} className="outline-none bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifier la relation <DevModalBadge name="TimelineView (éditer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{editingRelation.sourceName}</span>

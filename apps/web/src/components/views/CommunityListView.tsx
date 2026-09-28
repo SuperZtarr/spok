@@ -1,5 +1,6 @@
 /* Liste des communautés avec leurs espaces en arborescence (accueil/communautés). */
-import { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useState, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Users, Globe, Lock, Crown, User, Eye, X, AlertTriangle, Search, ArrowRight, Clock, LogIn, Mail, ShieldCheck } from 'lucide-react';
@@ -19,6 +20,8 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
   const queryClient = useQueryClient();
   const user = useAuthStore(s => s.user);
   const [showCreate, setShowCreate] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, showCreate);
   const [step, setStep] = useState<CreateStep>('awareness');
   const [searchExisting, setSearchExisting] = useState('');
   const [newName, setNewName] = useState('');
@@ -214,7 +217,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
       {/* Modale de création */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeCreate}>
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div ref={dialogRef} className="outline-none bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 {step === 'awareness' ? 'Créer une communauté' : 'Informations'}

@@ -3,7 +3,8 @@
  * optionnellement un sélecteur de parent, et crée l'arborescence complète en un appel.
  * Ouverte depuis SpaceToolbar (racine de l'espace) et ItemEditModal (comme enfant de l'item ouvert).
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, LayoutTemplate, Search, Trash2 } from 'lucide-react';
 import { itemTemplatesApi } from '../lib/api';
@@ -62,11 +63,13 @@ export function InsertTemplateModal({ isOpen, onClose, spaceId, allItems, defaul
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['item-templates'] }),
   });
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg max-h-[70vh] flex flex-col rounded-xl border border-border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="outline-none w-full max-w-lg max-h-[70vh] flex flex-col rounded-xl border border-border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h3 className="flex items-center gap-2 text-base font-semibold">
             <LayoutTemplate className="w-4 h-4" />

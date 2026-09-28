@@ -14,6 +14,7 @@
  * changement de layoutCallbacks (withCurrentCallbacks) — sinon handlers périmés (2026-09-28).
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -37,7 +38,7 @@ import type { ViewMode } from '../../stores/viewMode';
 import { ViewSelectorBar } from '../ui/ViewSelectorBar';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
-import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Plus, Share2 } from 'lucide-react';
+import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Share2 } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { toPng } from 'html-to-image';
 import { getViewportForBounds } from '@xyflow/react';
@@ -66,6 +67,7 @@ import { nodeTypes } from './mindmap-nodes';
 import { calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
 import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
+import { NewItemButton } from '../ui/NewItemButton';
 
 const edgeTypes = { relation: RelationEdge };
 
@@ -171,6 +173,13 @@ function MindMapViewInner({
   useEscapeKey(() => { setEditingEdge(null); setEditEdgeType(''); setEditEdgeLabel(''); }, !!editingEdge);
   useEscapeKey(() => setShowPortalDialog(false), showPortalDialog);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
+  // Focus des dialogues (relation : création / édition, portail) : panneau, Tab piégé, restauration
+  const createRelationDialogRef = useRef<HTMLDivElement>(null);
+  const editRelationDialogRef = useRef<HTMLDivElement>(null);
+  const portalDialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(createRelationDialogRef, !!pendingConnection);
+  useDialogFocus(editRelationDialogRef, !!editingEdge);
+  useDialogFocus(portalDialogRef, showPortalDialog && !!pendingPortalParentId);
   const { fitView, getIntersectingNodes, getNodes, getNodesBounds: getNodesBoundsHook } = useReactFlow();
   const { setDropTargetId: setSidebarDropTargetId } = useContext(SidebarDropContext);
 
@@ -1351,12 +1360,9 @@ function MindMapViewInner({
   return (
     <div className="flex flex-col h-full">
       {/* ViewHeader */}
-      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
-          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-shrink-0">
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Nouveau</span>
-          </button>
+          <NewItemButton onClick={onNewItem} />
         )}
         <div className="h-4 w-px bg-border mx-1" />
         <CollapseToggleButton
@@ -1511,7 +1517,7 @@ function MindMapViewInner({
       {/* Relation type selection dialog */}
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div ref={createRelationDialogRef} className="outline-none bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Type de relation <DevModalBadge name="MindMapView (créer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{pendingSourceItem?.title}</span>
@@ -1565,7 +1571,7 @@ function MindMapViewInner({
       {/* Edit relation dialog */}
       {editingEdge && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div ref={editRelationDialogRef} className="outline-none bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifier la relation <DevModalBadge name="MindMapView (éditer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{editingEdge.sourceName}</span>
@@ -1637,7 +1643,7 @@ function MindMapViewInner({
       {/* Portal selection dialog */}
       {showPortalDialog && pendingPortalParentId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
+          <div ref={portalDialogRef} className="outline-none bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
               <ExternalLink className="w-5 h-5 text-indigo-600" />
               Ajouter un portail

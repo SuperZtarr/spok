@@ -3,7 +3,8 @@
  * suppression. L'URL ICS est un secret utilisateur — ne l'afficher qu'à la saisie.
  * Props : open/onClose. Les mutations invalident ['calendar-feeds'] et ['agenda'].
  */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Trash2, X } from 'lucide-react';
 import { useCalendarFeeds, useCalendarFeedMutations } from '@/hooks/useAgenda';
 import { DevModalBadge } from '../ui/DevModalBadge';
@@ -13,10 +14,12 @@ export function CalendarFeedsModal({ open, onClose }: { open: boolean; onClose: 
   const { createFeed, updateFeed, deleteFeed } = useCalendarFeedMutations();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, open);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-lg border border-border bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="outline-none w-full max-w-lg rounded-lg border border-border bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold flex items-center gap-2">Calendriers externes (ICS) <DevModalBadge name="CalendarFeedsModal" /></h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground" aria-label="Fermer"><X className="w-4 h-4" /></button>

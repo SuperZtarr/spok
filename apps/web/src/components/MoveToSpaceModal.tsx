@@ -1,5 +1,6 @@
 /* Déplacement d'un item vers un autre espace : sélecteur groupé par communauté. */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, FolderInput, Loader2, Search } from 'lucide-react';
 import { spacesApi, itemsApi } from '../lib/api';
@@ -57,12 +58,14 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
 
   const spaceGroups = useMemo(() => groupSpacesByCommunity(filteredSpaces), [filteredSpaces]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-card border rounded-lg shadow-xl w-[75vw] max-w-none mx-4 p-4" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
+      <div ref={dialogRef} className="outline-none relative bg-card border rounded-lg shadow-xl w-[75vw] max-w-none mx-4 p-4" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"

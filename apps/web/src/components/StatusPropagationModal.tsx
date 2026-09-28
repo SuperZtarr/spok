@@ -33,7 +33,7 @@ export function StatusPropagationModal({
         </div>
 
         <div className="flex flex-col gap-2 pt-1">
-          <Button variant="default" onClick={onPropagate} className="w-full justify-center">
+          <Button variant="default" onClick={onPropagate} className="w-full justify-center" data-autofocus>
             Propager aux {childCount} descendant{childCount > 1 ? 's' : ''}
           </Button>
           <Button variant="bordered" onClick={onKeepOnly} className="w-full justify-center">

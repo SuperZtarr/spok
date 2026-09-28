@@ -4,6 +4,7 @@
  * Pas de drag & drop de réorganisation ici (onMove non câblé) — le tri est géré par PertToolbar (rang/alpha).
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Ban, ArrowRight, Link2, FastForward, ChevronDown, ChevronRight } from 'lucide-react';
 import { PertToolbar } from './PertToolbar';
@@ -196,6 +197,11 @@ export function PertView({
     type: string; label: string; sourceName: string; targetName: string;
   } | null>(null);
   const [editRelationType, setEditRelationType] = useState<string>('');
+  // Focus des modales de relation (création / édition) : panneau, Tab piégé, restauration (useDialogFocus)
+  const createRelationDialogRef = useRef<HTMLDivElement>(null);
+  const editRelationDialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(createRelationDialogRef, !!pendingConnection);
+  useDialogFocus(editRelationDialogRef, !!editingRelation);
 
 
   const [zoom, setZoom] = useState(1);
@@ -994,7 +1000,7 @@ export function PertView({
       {/* Edit relation dialog */}
       {editingRelation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
+          <div ref={editRelationDialogRef} className="outline-none bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
             <h3 className="text-base font-semibold mb-1 flex items-center gap-2">Modifier la relation <DevModalBadge name="PertView (éditer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-medium">{editingRelation.sourceName}</span>
@@ -1066,7 +1072,7 @@ export function PertView({
       {/* Relation type selection modal */}
       {pendingConnection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
+          <div ref={createRelationDialogRef} className="outline-none bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
             <h3 className="text-base font-semibold mb-1 flex items-center gap-2">Type de relation <DevModalBadge name="PertView (créer relation)" /></h3>
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-medium">{pendingSourceItem?.title}</span>

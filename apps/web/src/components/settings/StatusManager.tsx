@@ -1,5 +1,6 @@
 /* Éditeur des statuts d'un référentiel : ajout, couleurs, ordre (DnD), visibilité, usage. */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import type { StatusConfig } from '@spok/shared';
 import { Button } from '../ui/Button';
@@ -19,6 +20,8 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
   const [newStatusLabel, setNewStatusLabel] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [deleteWarning, setDeleteWarning] = useState<{ id: string; count: number } | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, !!deleteWarning);
 
   const handleAdd = () => {
     if (!newStatusLabel.trim()) return;
@@ -103,7 +106,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
       {/* Delete warning modal */}
       {deleteWarning && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card p-6 rounded-lg shadow-lg max-w-md">
+          <div ref={dialogRef} className="outline-none bg-card p-6 rounded-lg shadow-lg max-w-md">
             <div className="flex items-start gap-3 mb-4">
               <AlertTriangle className="w-6 h-6 text-yellow-500 flex-shrink-0" />
               <div>
@@ -116,7 +119,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="bordered" onClick={() => setDeleteWarning(null)}>
+              <Button variant="bordered" onClick={() => setDeleteWarning(null)} data-autofocus>
                 Annuler
               </Button>
               <Button variant="destructive" onClick={() => confirmDelete(deleteWarning.id)}>

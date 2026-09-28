@@ -207,7 +207,7 @@ export function AuditRestoreDialog({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end pt-2 border-t border-border">
-          <Button variant="bordered" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose} data-autofocus>
             Annuler
           </Button>
           <Button

@@ -4,7 +4,8 @@
  * tous les utilisateurs). Ouverte depuis la barre d'actions d'ItemEditModal.
  * Nom pré-rempli avec le titre de l'item à chaque ouverture (pas seulement au montage).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, LayoutTemplate } from 'lucide-react';
 import { itemTemplatesApi } from '../lib/api';
@@ -47,11 +48,13 @@ export function SaveAsTemplateModal({ isOpen, onClose, itemId, allItems }: SaveA
     },
   });
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="outline-none w-full max-w-md rounded-xl border border-border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h3 className="flex items-center gap-2 text-base font-semibold">
             <LayoutTemplate className="w-4 h-4" />

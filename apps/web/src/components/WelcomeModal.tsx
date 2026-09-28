@@ -1,5 +1,6 @@
 /* Modale de bienvenue à la première connexion : lance le tour d'onboarding (useOnboarding). */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import logoUrl from '../assets/logo.png';
 import { Users, FolderKanban, LayoutGrid, GitBranch, BarChart3, Search, Bell, ArrowRight } from 'lucide-react';
 import { DevModalBadge } from './ui/DevModalBadge';
@@ -60,6 +61,8 @@ const STORAGE_KEY = 'spok-hide-welcome';
 export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps) {
   const [hideNextTime, setHideNextTime] = useState(localStorage.getItem(STORAGE_KEY) === 'true');
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
   const handleClose = () => {
@@ -73,8 +76,8 @@ export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={handleClose}>
-      <div
-        className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      <div ref={dialogRef}
+        className="outline-none bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
