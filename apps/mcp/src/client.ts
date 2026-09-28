@@ -2,6 +2,10 @@
 // Source des credentials : launch.mjs (charge le .env racine) — le .env local apps/mcp/.env n'est
 // qu'un repli et ne doit JAMAIS écraser une variable déjà définie (sinon une copie périmée du mot
 // de passe masque le .env racine : 401 constaté de 09/2026, après la rotation du 2026-07-11).
+// Expiration : le token d'accès dure 15 min (JWT_EXPIRES_IN). Les routes en optionalAuthenticate
+// (espaces, items, recherche) ne renvoient PAS 401 avec un token expiré : elles répondent comme à
+// un anonyme (communautés publiques seules, 404 sur un espace privé). On se reconnecte donc AVANT
+// l'échéance lue dans le champ `exp` du JWT ; le retry sur 401 reste en filet pour les routes strictes.
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
@@ -23,6 +27,19 @@ const EMAIL = process.env.SPOK_EMAIL ?? '';
 const PASSWORD = process.env.SPOK_PASSWORD ?? '';
 
 let token = '';
+let tokenExpiresAt = 0; // ms epoch, lu dans le JWT
+
+// Marge avant échéance : on renouvelle 60 s avant l'expiration réelle.
+const EXPIRY_MARGIN_MS = 60_000;
+
+function readJwtExpiry(jwt: string): number {
+  try {
+    const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString('utf8'));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : 0;
+  } catch {
+    return 0; // illisible → reconnexion à chaque requête plutôt qu'un token périmé silencieux
+  }
+}
 
 async function login() {
   if (!EMAIL || !PASSWORD) {
@@ -39,10 +56,11 @@ async function login() {
   }
   const data = await res.json() as any;
   token = data.tokens.accessToken;
+  tokenExpiresAt = readJwtExpiry(token);
 }
 
 async function req(path: string, options: RequestInit = {}, retry = true): Promise<any> {
-  if (!token) await login();
+  if (!token || Date.now() >= tokenExpiresAt - EXPIRY_MARGIN_MS) await login();
 
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
