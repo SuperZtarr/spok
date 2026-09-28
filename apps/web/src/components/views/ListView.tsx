@@ -13,6 +13,7 @@ import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
+import { NewItemButton } from '../ui/NewItemButton';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -226,13 +227,10 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
   return (
     <div className="flex flex-col h-full">
       {/* ViewHeader */}
-      {!hideToolbar && <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      {!hideToolbar && <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {/* Gauche */}
         {canEdit && onNewItem && (
-          <button onClick={onNewItem}
-            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-            + Nouveau
-          </button>
+          <NewItemButton onClick={onNewItem} />
         )}
         <div className="flex-1" />
         {/* Droite */}

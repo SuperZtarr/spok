@@ -7,6 +7,7 @@ import type { Item } from '@spok/shared';
 import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } from '../../lib/exportUtils';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { NewItemButton } from '../ui/NewItemButton';
 
 function LegendButton() {
   const [open, setOpen] = useState(false);
@@ -121,12 +122,9 @@ export function PertToolbar({
   const filename = buildExportFilename(spaceName, 'pert');
 
   return (
-    <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+    <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
       {canEdit && onNewItem && (
-        <button onClick={onNewItem}
-          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-          + Nouveau
-        </button>
+        <NewItemButton onClick={onNewItem} />
       )}
       <div className="h-4 w-px bg-border mx-1" />
       {onTogglePertRankSort && (

@@ -5,6 +5,7 @@ import { ListView } from './ListView';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, SpaceReferentiels } from '@spok/shared';
+import { NewItemButton } from '../ui/NewItemButton';
 
 interface PortalGroup {
   spaceId: string;
@@ -63,11 +64,9 @@ export function TodoView({ items, portalGroups, onNewItem, spaceName, viewContai
   }, [portalGroups]);
 
   const header = (
-    <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+    <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
       {canEdit && onNewItem && (
-        <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-          + Nouveau
-        </button>
+        <NewItemButton onClick={onNewItem} />
       )}
       <div className="flex-1" />
       <ViewHelpButton viewMode="todo" onStartTour={onStartTour} pulse={pulseHelp} />

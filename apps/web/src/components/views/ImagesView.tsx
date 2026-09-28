@@ -9,6 +9,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
+import { NewItemButton } from '../ui/NewItemButton';
 
 const ZOOM_LEVELS = [
   { cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10', label: 'XS' },
@@ -245,11 +246,9 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
   }, [flatImages]);
 
   const header = (
-    <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+    <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
       {canEdit && onNewItem && (
-        <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-          + Nouveau
-        </button>
+        <NewItemButton onClick={onNewItem} />
       )}
       <div className="flex-1" />
       <ViewHelpButton viewMode="images" onStartTour={onStartTour} pulse={pulseHelp} />

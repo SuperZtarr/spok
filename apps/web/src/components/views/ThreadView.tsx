@@ -9,6 +9,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
+import { NewItemButton } from '../ui/NewItemButton';
 
 interface ItemWithContributions extends Item {
   contributions?: ContributionWithAuthor[];
@@ -326,12 +327,9 @@ export function ThreadView({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ViewHeader */}
-      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
-          <button onClick={onNewItem}
-            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-            + Nouveau
-          </button>
+          <NewItemButton onClick={onNewItem} />
         )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="thread" onStartTour={onStartTour} pulse={pulseHelp} />

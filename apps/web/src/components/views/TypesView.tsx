@@ -24,6 +24,7 @@ import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
+import { NewItemButton } from '../ui/NewItemButton';
 
 interface PortalGroup {
   spaceId: string;
@@ -455,11 +456,9 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
-          <button onClick={onNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-            + Nouveau
-          </button>
+          <NewItemButton onClick={onNewItem} />
         )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="types" onStartTour={onStartTour} pulse={pulseHelp} />

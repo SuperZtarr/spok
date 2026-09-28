@@ -978,7 +978,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             />
           ) : viewMode === 'graph' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1009,7 +1009,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'sunburst' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1036,7 +1036,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'relations' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1063,7 +1063,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'bubble' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1090,7 +1090,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'radialTree' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1116,7 +1116,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'treemap' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1142,7 +1142,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'burndown' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1168,7 +1168,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'cfd' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1194,7 +1194,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'chord' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1237,7 +1237,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             />
           ) : viewMode === 'heatmap' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1264,7 +1264,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'ego' ? (
             <div className="flex flex-col h-full overflow-hidden">
-              <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
                 {canEdit && (
                   <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                     + Nouveau
@@ -1492,7 +1492,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : (
             /* Tree view (default) */
             <div className="flex flex-col h-full overflow-hidden">
-            <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+            <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
               {canEdit && (
                 <button onClick={handleNewItem} className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                   + Nouveau

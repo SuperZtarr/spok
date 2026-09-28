@@ -26,6 +26,7 @@ import { stripMarkup } from '../../lib/bbcode';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { TagBadge } from '../ui/TagBadge';
 import { RoleGuard } from '../RoleGuard';
+import { NewItemButton } from '../ui/NewItemButton';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -486,12 +487,9 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ViewHeader */}
-      <div id="view-header" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {canEdit && onNewItem && (
-          <button onClick={onNewItem}
-            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-            + Nouveau
-          </button>
+          <NewItemButton onClick={onNewItem} />
         )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="kanban" onStartTour={onStartTour} pulse={pulseHelp} />
