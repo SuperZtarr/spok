@@ -6,6 +6,13 @@
 
 ## EN COURS
 
+### « Marquer comme non lu » (items + notifications) — 2026-09-28
+- Demande Thomas (option A ; B « accusé de lecture » noté au TODO, limité à l'assignation). Constat : `ItemView` déjà exploitée (activity, clignotement, badge Nouveau) — entrée TODO close
+- Schéma : `ItemView.markedUnread Boolean @default(false)` (db push local ; en prod, start-api.sh fait `prisma db push`, colonne additive). API : `POST /activity/items/:id/unread`, `…/view` efface la marque, feed `/activity` inclut les items marqués quels que soient âge/auteur/mute/espace (accès : membre de la communauté ou de l'espace), espaces perso → pseudo-groupe `__personal__` ; liste items : marqué → `viewedAt: null` (clignote) ; `PATCH /notifications/:id/unread`. +7 tests API
+- Web : `lib/queryClient.ts` (client extrait de main.tsx pour rafraîchir le cache hors composant), `markItemUnread` dans itemMenuGroups (action « Marquer comme non lu », groupe Ouvrir → toutes les vues sans câblage), bouton dans la modale (ferme la modale), action dans la cloche sur les notifications lues, ActivityPage : titre simple pour le groupe perso. Écart au design : pas d'action dans la page Activité (tout y est déjà non lu). Règle `mark-unread`
+- Vérifié au dev : menu Gantt → marque en base + clignotement → présent dans Activité (5→6) → ouverture efface la marque ; modale d'un item perso → groupe « Espaces personnels » sans lien ; cloche lu → non lu (badge 1) → relu. États restaurés. Typecheck api+web OK
+- MEP 2026-09-28 (2963b42) — build packages + typecheck 5 packages OK, 638/638 tests verts
+
 ### Modes — étape 3/4 : modale Forum toujours réduite + résumé — 2026-09-28
 - Choix Thomas (brainstorming) : périmètre modale seule ; Forum = toujours réduite avec résumé (option A) ; Projet inchangé
 - `buildForumSummary` (item-edit-helpers, +4 tests) : type (hors Note/Non défini) · statut · priorité (PRIORITIES) · période (une seule date si même jour) ou « dès » · échéance · assigné · N liens. `ItemEditModal` : effet de dépliage auto supprimé, ligne de résumé cliquable (→ déplie) sous l'en-tête en Forum replié. Règle `forum-modal-reduced-with-summary`

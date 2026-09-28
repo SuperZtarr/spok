@@ -87,8 +87,9 @@
 - [ ] Recherche dans la vue
 - [ ] Réduction de données
 - [ ] Identification d'élément
-- [ ] Notifications : suivi de lecture / marqué comme non lue
-- [ ] Notifications : exploiter la table `ItemView` (item_views) — le suivi des vues par utilisateur existe déjà dans le schéma Prisma (constaté 2026-07-11), reste à l'exploiter côté notifications
+- [x] « Marquer comme non lu » : notifications (cloche, `PATCH /notifications/:id/unread`) et items (menus contextuels de toutes les vues + modale ; `ItemView.markedUnread`, `POST /activity/items/:id/unread`, effacé à l'ouverture). Item marqué → Activité / Non lus quels que soient âge, auteur, espace (perso → groupe « Espaces personnels ») + clignotement — 2026-09-28 (2963b42)
+- [ ] Accusé de lecture à l'assignation : quand un item est assigné à quelqu'un, montrer à l'assigneur si l'assigné l'a consulté depuis l'assignation (ex. « Vu par Alice le 3 oct. » / « Pas encore vu ») — s'appuie sur `ItemView` de l'assigné (demande Thomas 2026-09-28, scope limité aux assignations)
+- [x] Exploiter la table `ItemView` : déjà faite avant 2026-09 (feed /activity, panneau Non lus, clignotement des items non vus, badge « Nouveau » des contributions) — entrée obsolète, close le 2026-09-28
 
 ### IA / Résumés
 - [ ] Résumé de conversations avec identification des consensus (style Reddit TL;DR)
