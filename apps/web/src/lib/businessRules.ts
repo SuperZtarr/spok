@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'absorb-children-only-if-children',
+    page: 'Toutes les vues (menu contextuel) + modale item',
+    trigger: "Affichage de l'action « Absorber les enfants »",
+    effect: "Proposée uniquement si l'item a des enfants (childCount de la liste API ou children des vues en arbre ; allItems dans la modale) — sinon l'API répond 400 « No children to absorb »",
+    location: 'apps/web/src/lib/itemMenuGroups.ts (hasChildItems), apps/web/src/components/ItemEditModal.tsx',
+  },
+  {
     id: 'login-remember-last-email',
     page: 'Connexion (/login)',
     trigger: 'Connexion réussie',

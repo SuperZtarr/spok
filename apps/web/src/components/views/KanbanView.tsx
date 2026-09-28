@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/core';
 import { ExternalLink, GripVertical, Calendar, FolderKanban, GripHorizontal, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasChildItems } from '../../lib/itemMenuGroups';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
@@ -240,7 +240,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             onConvertToSpace,
             onSelfAssign,
             onMerge,
-            onAbsorbChildren,
+            onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined,
             onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
             onOpen,
             onOpenInNewTab,

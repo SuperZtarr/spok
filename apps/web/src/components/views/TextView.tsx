@@ -5,7 +5,7 @@ import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } 
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { exportTextDocumentPDF, buildExportFilename } from '../../lib/exportUtils';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -425,7 +425,7 @@ function TextItem({
               onConvertToSpace,
               onSelfAssign,
               onMerge,
-              onAbsorbChildren,
+              onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined,
               onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpen,
             onOpenInNewTab,

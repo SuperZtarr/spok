@@ -15,7 +15,7 @@ import {
   CheckSquare,
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -276,7 +276,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
               onConvertToSpace,
               onSelfAssign,
               onMerge,
-              onAbsorbChildren,
+              onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined,
               onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpen,
             onOpenInNewTab,

@@ -17,7 +17,7 @@ function getPriorityBorder(priority: number | null | undefined): string {
 import { ChevronRight, ChevronDown, FolderOpen, RotateCcw, ExternalLink, X, Pin, PinOff, GripVertical } from 'lucide-react';
 import { SidebarDropContext } from '../Layout';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
 
 function FaviconImg({ src, domain, fallbackColor }: { src: string; domain: string; fallbackColor: string }) {
@@ -352,7 +352,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
               onConvertToSpace: canEdit ? onConvertToSpace : undefined,
               onSelfAssign,
               onMerge: canEdit ? onMerge : undefined,
-              onAbsorbChildren: canEdit ? onAbsorbChildren : undefined,
+              onAbsorbChildren: canEdit && hasChildItems(item) ? onAbsorbChildren : undefined,
               onSplitDescription: canEdit && hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpen,
             onOpenInNewTab,

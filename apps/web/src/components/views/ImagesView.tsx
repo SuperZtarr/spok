@@ -8,7 +8,7 @@ import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { DevModalBadge } from '../ui/DevModalBadge';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 
 const ZOOM_LEVELS = [
   { cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10', label: 'XS' },
@@ -363,7 +363,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
 
                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ItemActionMenu
-                        groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpen,
+                        groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(img) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpen,
             onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(img) : canEdit, statusOptions, currentStatusId: img.status || undefined })}
                         triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
                       />

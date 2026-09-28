@@ -18,7 +18,7 @@ import { ExternalLink, GripVertical, FolderKanban, GripHorizontal } from 'lucide
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -206,7 +206,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       {/* Action menu */}
       <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <ItemActionMenu
-          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpen,
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpen,
             onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
         />
       </div>

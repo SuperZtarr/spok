@@ -8,7 +8,7 @@ import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { getTypeIcon } from '../../constants/ui';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 
 function getFileIcon(url: string) {
   return getTypeIcon('DOCUMENT', url);
@@ -215,7 +215,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                       </a>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         <ItemActionMenu
-                          groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(doc.description) ? onSplitDescription : undefined, onOpen,
+                          groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(doc) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(doc.description) ? onSplitDescription : undefined, onOpen,
             onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(doc) : canEdit, statusOptions, currentStatusId: doc.status || undefined })}
                         />
                       </div>

@@ -6,7 +6,7 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { Button } from '../ui/Button';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 
@@ -263,7 +263,7 @@ export function ThreadView({
             {/* Actions */}
             <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
               <ItemActionMenu
-                groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined, onOpen,
+                groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(node) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined, onOpen,
             onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(node) : canEdit })}
               />
             </div>

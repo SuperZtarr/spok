@@ -7,6 +7,16 @@ import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMen
 
 export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
 
+/**
+ * L'item a-t-il des enfants ? (`childCount` fourni par la liste API, ou `children` des vues en arbre).
+ * Condition d'affichage de « Absorber les enfants » — sans enfant, l'API répond 400 « No children to absorb ».
+ */
+export const hasChildItems = (item?: object | null) => {
+  // `childCount` est renvoyé par l'API liste mais absent du type partagé Item → lecture défensive
+  const it = item as { childCount?: number; children?: unknown[] } | null | undefined;
+  return !!it && ((it.childCount ?? 0) > 0 || (it.children?.length ?? 0) > 0);
+};
+
 export interface ItemMenuCallbacks {
   onOpen?: (id: string) => void;
   onOpenInNewTab?: (id: string) => void;

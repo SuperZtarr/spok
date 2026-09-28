@@ -1748,7 +1748,7 @@ export function ItemEditModal({
             {/* Contextual actions */}
             {item && canEdit && itemId && (
               <div className="flex items-center gap-1 sm:ml-auto">
-                {onAbsorbChildren && (
+                {onAbsorbChildren && allItems.some(i => i.parentId === itemId) && (
                   <Button type="button" variant="ghost" size="sm" title="Absorber les enfants"
                     onClick={() => { onAbsorbChildren(itemId); onClose(); }}>
                     <ArrowDownToLine className="w-4 h-4" />

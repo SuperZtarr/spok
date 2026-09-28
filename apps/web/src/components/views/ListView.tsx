@@ -6,7 +6,7 @@ import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
@@ -430,7 +430,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                           onConvertToSpace,
                           onSelfAssign,
                           onMerge,
-                          onAbsorbChildren,
+                          onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined,
                           onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
                           onOpen,
             onOpenInNewTab,

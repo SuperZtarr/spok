@@ -10,7 +10,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { Item } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { buildItemMenuGroups, hasHeadings } from '../../lib/itemMenuGroups';
+import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { getTypeIcon } from '../../constants/ui';
 
 // Zone de dépôt pour remonter un item à la racine de l'espace (drag & drop)
@@ -224,7 +224,7 @@ export function TreeItemRow({
                 onConvertToSpace,
                 onSelfAssign,
                 onMerge,
-                onAbsorbChildren,
+                onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined,
                 onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
               }, {
                 canEdit: canEditItem ? canEditItem(item) : editable,
