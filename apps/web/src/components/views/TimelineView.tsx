@@ -11,6 +11,7 @@
  * Barre pointillée (parent sans dates, période dérivée des enfants) : glisser = décaler le groupe via
  * CascadeShiftConfirmModal (anchorWithoutDates, enfants cochés par défaut) — le parent n'est jamais daté.
  * Barre d'un item sans endDate : se déplace telle qu'affichée (fin = aujourd'hui, cf. moveInitialEnd).
+ * Déplacement de barre au jour près dans tous les zooms ; seul le resize (poignées) s'aimante au calendrier.
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  */
@@ -722,7 +723,12 @@ treeSort: treeSortProp,
     const raw = new Date(rawMs);
 
     let newDate: Date;
-    if (snap === 7) {
+    if (dragging.type === 'move') {
+      // Déplacement du corps de barre : suit la souris au jour près dans TOUS les zooms (décision
+      // 2026-09-28). L'ancien snap calendaire (lundi / 1er du mois / pas de 90 j) alignait la date
+      // elle-même : petit glisser sans effet, ou barre qui recule/saute d'un mois. Resize : snap conservé.
+      newDate = addDays(dragging.initialDate, Math.round(rawDays));
+    } else if (snap === 7) {
       const dow = raw.getDay(); // 0=dim, 1=lun…6=sam
       if (dragging.type === 'end') {
         // Snap au dimanche le plus proche
