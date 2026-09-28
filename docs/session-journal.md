@@ -6,6 +6,17 @@
 
 ## EN COURS
 
+### Types de relation : source unique + conversion des types hors liste (option B) — 2026-09-28
+- `constants/relationTypes.ts` (+4 tests) remplace 9 tables locales (ItemEditModal ×3, RelationTooltip, timeline-constants, flèches Gantt, mindmap-utils, mindmap-layout, PertView ×3, PertToolbar, RelationsMapView). Ordonnancement unique `isOrderingRelation` = blocks + implements : Gantt CPM aligné sur le PERT (+3 tests, dont implements qui ordonne désormais), PERT ne fait plus ordonner `relates` en sens inverse (reste de `depends`), Entraîne affiché (centre à centre) et filtrable, carte des relations : 4 types visibles par défaut
+- API `z.enum(RELATION_TYPES)` création/modif (+5 tests 400), MCP enum (description suggérait DEPENDS_ON), seed sans types hors liste, règle businessRules `relation-types-single-source`
+- Comportement préexistant noté, non modifié : chemin critique Gantt — tout item terminal isolé ressort critique (LF = son propre EF)
+- Script `migrate-relation-types.ts` : local appliqué (2 `tests` → relates). Prod à blanc : 18 `depends` + 13 `depends_on`. Ajout de `depends_on` au code du script REFUSÉ par le classifieur (Production Reads) — script incohérent, à compléter/autoriser par Thomas ; prod non modifiée
+- MEP 2026-09-28 (069d869) — typecheck 5 packages OK, 657/657 tests verts (3 tests items.test.ts passés de RELATED/DEPENDS_ON à des types officiels). Script de migration non commité (en attente de la ligne depends_on par Thomas)
+
+### RelationTooltip aligné sur RELATION_TYPES — 2026-09-28
+- Bloque / Permet / Entraîne / Lié à, couleurs des badges ItemEditModal ; `depends` retiré (type inconnu = nom brut). En-tête corrigé (utilisé aussi par graphe, carte des relations, arêtes MindMap). Base locale : aucun `depends`, 2 `tests` (seed). Typecheck web OK. NON COMMITÉ
+- Hors périmètre → TODO : source unique des types de relation (`depends` encore dans CPM Gantt, PERT, MindMap, RelationsMapView dont le filtre par défaut masque Permet/Entraîne ; API sans enum). Doc SPOK « Dépendances » MAJ
+
 ### Focus des modales — étape 1 : focus visible global — 2026-09-28
 - Constat : `Modal.tsx` ne gère aucun focus (ni initial, ni piège Tab, ni restauration) ; focus par défaut hétérogène (titre même sur item existant, recherche, nom… ; confirmations : aucun) ; focus quasi invisible (`focus:outline-none` partout, pas de style global)
 - Règle proposée (6 points, en attente de validation Thomas) : création → titre ; item existant → la modale (pas le titre) ; recherche → champ recherche ; confirmation destructive → Annuler ; non destructive → action principale ; `Modal.tsx` : piège Tab + restauration du focus
