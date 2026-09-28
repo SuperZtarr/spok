@@ -1,4 +1,5 @@
-/* Feed d'activité (/activity) : éléments non lus groupés communauté > espace, avec mute. */
+/* Feed d'activité (/activity) : éléments non lus groupés communauté > espace, avec mute.
+ * Groupe `__personal__` (renvoyé par l'API) = items d'espaces perso « marqués non lus » : titre simple. */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Activity, Loader2 } from 'lucide-react';
@@ -7,6 +8,9 @@ import { ItemEditModal } from '../components/ItemEditModal';
 import { CommunityCard } from '../components/ui/CommunityCard';
 import { SpaceCard } from '../components/ui/SpaceCard';
 import { ItemCard } from '../components/ui/ItemCard';
+
+/** Identifiant du pseudo-groupe « Espaces personnels » (miroir de PERSONAL_GROUP_ID côté API). */
+const PERSONAL_GROUP_ID = '__personal__';
 
 export function ActivityPage() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -83,11 +87,16 @@ export function ActivityPage() {
           return (
             <div key={group.community.id} className="space-y-2">
               <div className="max-w-xs">
-                <CommunityCard
-                  community={community}
-                  onMute={(muted) => muteCommunity.mutate({ id: group.community.id, muted })}
-                  isMutePending={muteCommunity.isPending}
-                />
+                {group.community.id === PERSONAL_GROUP_ID ? (
+                  // Items d'espaces perso marqués non lus : pas une vraie communauté (ni lien, ni mute)
+                  <h2 className="text-sm font-semibold text-muted-foreground px-1">{group.community.name}</h2>
+                ) : (
+                  <CommunityCard
+                    community={community}
+                    onMute={(muted) => muteCommunity.mutate({ id: group.community.id, muted })}
+                    isMutePending={muteCommunity.isPending}
+                  />
+                )}
               </div>
 
               {/* Espaces de la communauté */}

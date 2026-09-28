@@ -215,7 +215,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       if (userId) {
         prismaInclude.views = {
           where: { userId },
-          select: { viewedAt: true },
+          select: { viewedAt: true, markedUnread: true },
           take: 1,
         };
       }
@@ -249,9 +249,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           const recentUpdate = new Date(item.updatedAt) >= since60days;
           // Expose viewedAt only when item was updated by someone else recently
           // undefined = not exposed (seen/irrelevant), null = unseen (no view record), string = compare with updatedAt
-          const exposedViewedAt = userId && updatedByOther && recentUpdate
-            ? (viewedAt ? viewedAt.toISOString() : null)
-            : undefined;
+          // Marqué non lu par l'utilisateur → toujours exposé comme non vu (null), quels que soient auteur/âge
+          const markedUnread = !!item.views?.[0]?.markedUnread;
+          const exposedViewedAt = userId && markedUnread
+            ? null
+            : userId && updatedByOther && recentUpdate
+              ? (viewedAt ? viewedAt.toISOString() : null)
+              : undefined;
           const { views, ...rest } = item;
           return {
             ...rest,

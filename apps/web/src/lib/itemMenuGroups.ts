@@ -1,9 +1,23 @@
 /*
  * Construction des groupes d'actions du menu contextuel des items (ItemActionMenu) : Ajouter,
  * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
+ * « Marquer comme non lu » (groupe Ouvrir, toujours présent) : markItemUnread, sans callback à câbler.
  */
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, Circle } from 'lucide-react';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, EyeOff, Circle } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
+import { activityApi } from './api';
+import { queryClient } from './queryClient';
+
+/**
+ * « Marquer comme non lu » : pose la marque serveur puis rafraîchit le feed d'activité (page Activité,
+ * panneau Non lus, badge du bandeau) et les listes d'items (clignotement dans les vues).
+ * Personnel → disponible même sans droit d'édition. Utilisé par les menus et par ItemEditModal.
+ */
+export async function markItemUnread(itemId: string): Promise<void> {
+  await activityApi.markUnread(itemId);
+  queryClient.invalidateQueries({ queryKey: ['activity'] });
+  queryClient.invalidateQueries({ queryKey: ['items'] });
+}
 
 export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
 
@@ -74,6 +88,7 @@ export function buildItemMenuGroups(
   const group1: ItemAction[] = [
     ...(onOpen ? [{ id: 'open', label: 'Ouvrir', icon: Eye, onClick: () => onOpen(itemId) }] : []),
     ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
+    { id: 'mark-unread', label: 'Marquer comme non lu', icon: EyeOff, onClick: () => { void markItemUnread(itemId); } },
   ];
 
   // Groupe 2 — Modifier (write) : Modifier, Absorber, Éclater, Fusionner

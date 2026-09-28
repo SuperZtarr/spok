@@ -1863,6 +1863,8 @@ export const notificationsApi = {
 
   markRead: (id: string) =>
     fetchApi<Notification>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markUnread: (id: string) =>
+    fetchApi<Notification>(`/notifications/${id}/unread`, { method: 'PATCH' }),
 
   markAllRead: () =>
     fetchApi<{ updated: number }>('/notifications/read-all', { method: 'PATCH' }),
@@ -1922,6 +1924,9 @@ export const activityApi = {
 
   markViewed: (itemId: string) =>
     fetchApi<void>(`/activity/items/${itemId}/view`, { method: 'POST' }),
+  /** « Marquer comme non lu » : réapparaît dans /activity et clignote jusqu'à la prochaine ouverture */
+  markUnread: (itemId: string) =>
+    fetchApi<void>(`/activity/items/${itemId}/unread`, { method: 'POST' }),
 };
 
 // Public config API (no auth needed) — legacy, kept for backward compat

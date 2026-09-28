@@ -1,8 +1,14 @@
 /*
  * Feed d'activité non lue : contributions/items récents groupés communauté > espace, avec
  * respect des mutes (membership.muted) et du suivi de lecture (ItemView).
+ * « Marquer comme non lu » (ItemView.markedUnread, POST /items/:id/unread) : l'item est inclus quels
+ * que soient âge / auteur / mute / espace (perso → groupe PERSONAL_GROUP), effacé par POST …/view.
  */
 import { FastifyPluginAsync } from 'fastify';
+
+/** Pseudo-communauté regroupant les items d'espaces perso marqués non lus (pas de mute côté UI). */
+export const PERSONAL_GROUP_ID = '__personal__';
+const PERSONAL_GROUP = { id: PERSONAL_GROUP_ID, name: 'Espaces personnels', avatarUrl: null, coverUrl: null };
 
 export const activityRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('onRequest', async (request, reply) => {
@@ -24,20 +30,41 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
     });
     const communityIds = memberships.map((m) => m.communityId);
 
-    if (communityIds.length === 0) return { groups: [], total: 0 };
+    // Items explicitement « marqués comme non lus » : inclus quels que soient leur âge, l'auteur de la
+    // dernière modif, le mute et l'espace (perso compris) — tant que l'utilisateur y a encore accès.
+    const markedViews = await app.prisma.itemView.findMany({
+      where: { userId, markedUnread: true },
+      select: { itemId: true },
+    });
+    const markedIds = markedViews.map((v) => v.itemId);
+
+    if (communityIds.length === 0 && markedIds.length === 0) return { groups: [], total: 0 };
 
     // Only look at items updated in the last 60 days
     const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
-    // All items in those community spaces, with views and contributions
+    // Items récents modifiés par d'autres dans les communautés suivies + items marqués non lus
     const items = await app.prisma.item.findMany({
       where: {
-        space: { communityId: { in: communityIds } },
-        updatedAt: { gte: since },
-        // Created or last-updated by someone else
         OR: [
-          { updatedById: { not: userId } },
-          { updatedById: null, createdById: { not: userId } },
+          {
+            space: { communityId: { in: communityIds } },
+            updatedAt: { gte: since },
+            // Created or last-updated by someone else
+            OR: [
+              { updatedById: { not: userId } },
+              { updatedById: null, createdById: { not: userId } },
+            ],
+          },
+          {
+            id: { in: markedIds },
+            space: {
+              OR: [
+                { community: { memberships: { some: { userId } } } },
+                { memberships: { some: { userId } } },
+              ],
+            },
+          },
         ],
       },
       orderBy: { updatedAt: 'desc' },
@@ -62,7 +89,7 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
           },
         },
         updatedBy: { select: { id: true, name: true, avatarUrl: true } },
-        views: { where: { userId }, select: { viewedAt: true } },
+        views: { where: { userId }, select: { viewedAt: true, markedUnread: true } },
         contributions: {
           where: { authorId: { not: userId } },
           orderBy: { createdAt: 'desc' },
@@ -84,8 +111,8 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
           ? lastContribAt
           : itemUpdatedAt;
 
-        // Unseen = no view, or activity happened after last view
-        const unseen = !viewedAt || activityAt > viewedAt;
+        // Unseen = marqué non lu, no view, or activity happened after last view
+        const unseen = !!item.views[0]?.markedUnread || !viewedAt || activityAt > viewedAt;
         return { ...item, activityAt, unseen };
       })
       .filter((item) => item.unseen)
@@ -100,8 +127,8 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
     }>();
 
     for (const item of unseenItems) {
-      const community = item.space.community;
-      if (!community) continue;
+      // Espace perso (sans communauté) : seul un item marqué non lu peut arriver ici → groupe dédié
+      const community = item.space.community ?? PERSONAL_GROUP;
 
       if (!communityMap.has(community.id)) {
         communityMap.set(community.id, { community, spaces: new Map() });
@@ -161,10 +188,32 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
       await app.prisma.itemView.upsert({
         where: { userId_itemId: { userId, itemId } },
         create: { userId, itemId },
-        update: { viewedAt: new Date() },
+        // Consulter l'item efface la marque « non lu » (comme un mail)
+        update: { viewedAt: new Date(), markedUnread: false },
       });
 
       reply.status(204).send();
+    }
+  );
+
+  // POST /activity/items/:id/unread — « Marquer comme non lu » (réapparaît dans /activity et clignote
+  // dans les vues jusqu'à la prochaine consultation)
+  app.post<{ Params: { id: string } }>(
+    '/items/:id/unread',
+    async (request, reply) => {
+      const userId = request.user.userId;
+      const itemId = request.params.id;
+
+      const item = await app.prisma.item.findUnique({ where: { id: itemId }, select: { id: true } });
+      if (!item) return reply.status(404).send({ message: 'Élément introuvable' });
+
+      await app.prisma.itemView.upsert({
+        where: { userId_itemId: { userId, itemId } },
+        create: { userId, itemId, markedUnread: true },
+        update: { markedUnread: true },
+      });
+
+      return reply.status(204).send();
     }
   );
 };

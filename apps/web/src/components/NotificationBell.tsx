@@ -2,12 +2,13 @@
  * Cloche de notifications dans le header.
  * Le dropdown est rendu via createPortal dans document.body pour échapper
  * au stacking context du header (z-30).
+ * Actions par notification : marquer comme lu / non lu (PATCH …/read | …/unread), supprimer.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database, EyeOff } from 'lucide-react';
 import { notificationsApi, invitationsApi, authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { Notification, NotificationType, Invitation } from '@spok/shared';
@@ -61,6 +62,13 @@ export function NotificationBell() {
 
   const markReadMutation = useMutation({
     mutationFn: notificationsApi.markRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const markUnreadMutation = useMutation({
+    mutationFn: notificationsApi.markUnread,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
@@ -295,6 +303,18 @@ export function NotificationBell() {
                           title="Marquer comme lu"
                         >
                           <Check className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                      )}
+                      {notif.read && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markUnreadMutation.mutate(notif.id);
+                          }}
+                          className="p-1 rounded hover:bg-accent"
+                          title="Marquer comme non lu"
+                        >
+                          <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
                         </button>
                       )}
                       <button

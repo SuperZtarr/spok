@@ -1,4 +1,4 @@
-/* Notifications utilisateur : liste, marquage lu/tout lu, suppression. Création via utils/notifications. */
+/* Notifications utilisateur : liste, marquage lu/non lu/tout lu, suppression. Création via utils/notifications. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
@@ -50,6 +50,21 @@ export const notificationsRoutes: FastifyPluginAsync = async (app) => {
     });
 
     return updated;
+  });
+
+  // PATCH /notifications/:id/unread — « Marquer comme non lu » (symétrique de /read)
+  app.patch('/:id/unread', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const notification = await app.prisma.notification.findUnique({ where: { id } });
+    if (!notification || notification.userId !== request.user.userId) {
+      return reply.status(404).send({ message: 'Notification non trouvée' });
+    }
+
+    return app.prisma.notification.update({
+      where: { id },
+      data: { read: false },
+    });
   });
 
   // PATCH /notifications/read-all

@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'mark-unread',
+    page: 'Menus contextuels des items, modale item, cloche de notifications, page Activité',
+    trigger: "« Marquer comme non lu » (item ou notification)",
+    effect: "Item : marque personnelle (ItemView.markedUnread) → l'item réapparaît dans Activité / Non lus (même ancien, modifié par soi ou en espace perso — groupe « Espaces personnels ») et clignote dans les vues ; la prochaine ouverture le remet en lu. Notification : repasse non lue (compteur de la cloche +1)",
+    location: 'apps/api/src/routes/activity.ts, apps/api/src/routes/notifications.ts, apps/web/src/lib/itemMenuGroups.ts (markItemUnread)',
+  },
+  {
     id: 'forum-modal-reduced-with-summary',
     page: 'Modale item (mode Forum)',
     trigger: "Ouverture d'un item en mode d'interface Forum",

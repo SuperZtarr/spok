@@ -31,7 +31,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, FastForward, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, FastForward, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -62,7 +62,7 @@ import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
 import { SaveAsTemplateModal } from './SaveAsTemplateModal';
 import { InsertTemplateModal } from './InsertTemplateModal';
-import { hasHeadings } from '../lib/itemMenuGroups';
+import { hasHeadings, markItemUnread } from '../lib/itemMenuGroups';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
 
 function ItemHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
@@ -1774,6 +1774,11 @@ export function ItemEditModal({
                     <Merge className="w-4 h-4" />
                   </Button>
                 )}
+                {/* Personnel : la modale se ferme, sinon l'item serait aussitôt re-marqué lu */}
+                <Button type="button" variant="ghost" size="sm" title="Marquer comme non lu"
+                  onClick={() => { void markItemUnread(itemId); onClose(); }}>
+                  <EyeOff className="w-4 h-4" />
+                </Button>
                 <Button type="button" variant="ghost" size="sm" title="Enregistrer comme modèle"
                   onClick={() => setShowSaveAsTemplateModal(true)}>
                   <LayoutTemplate className="w-4 h-4" />

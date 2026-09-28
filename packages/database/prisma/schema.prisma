@@ -529,9 +529,12 @@ model PasswordResetToken {
 
 // Suivi de lecture des items (pour le feed d'activité)
 model ItemView {
-  userId   String
-  itemId   String
-  viewedAt DateTime @default(now()) @updatedAt
+  userId       String
+  itemId       String
+  viewedAt     DateTime @default(now()) @updatedAt
+  // « Marquer comme non lu » : force l'item dans le feed /activity (hors fenêtre 60 j / auteur),
+  // effacé à la prochaine consultation (POST /activity/items/:id/view)
+  markedUnread Boolean  @default(false)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
