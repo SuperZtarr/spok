@@ -2,8 +2,9 @@
  * Modale "Enregistrer comme modèle" : capture un item existant + ses descendants (titre+type,
  * récursif) et les sauvegarde comme ItemTemplate réutilisable (portée globale — visible par
  * tous les utilisateurs). Ouverte depuis la barre d'actions d'ItemEditModal.
+ * Nom pré-rempli avec le titre de l'item à chaque ouverture (pas seulement au montage).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, LayoutTemplate } from 'lucide-react';
 import { itemTemplatesApi } from '../lib/api';
@@ -24,6 +25,16 @@ export function SaveAsTemplateModal({ isOpen, onClose, itemId, allItems }: SaveA
   const item = allItems.find((i) => i.id === itemId);
   const [name, setName] = useState(item?.title || '');
   const [description, setDescription] = useState('');
+
+  // Pré-remplissage à CHAQUE ouverture (fermé → ouvert) avec le titre courant : la modale est montée
+  // fermée avec ItemEditModal, souvent avant le chargement d'allItems (lien direct après reload) —
+  // l'initialiseur du useState laissait alors le nom vide.
+  const itemTitle = item?.title;
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(itemTitle || '');
+    setDescription('');
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps -- uniquement à l'ouverture, ne pas écraser la saisie
 
   const structure = isOpen ? buildItemTemplateStructure(itemId, allItems) : null;
   const nodeCount = structure ? countTemplateNodes(structure) : 0;
@@ -52,7 +63,7 @@ export function SaveAsTemplateModal({ isOpen, onClose, itemId, allItems }: SaveA
           </button>
         </div>
         <div className="px-5 pb-2 text-xs text-muted-foreground">
-          {nodeCount} élément{nodeCount > 1 ? 's' : ''} seront capturés (titre + type uniquement).
+          {nodeCount > 1 ? `${nodeCount} éléments seront capturés` : `${nodeCount} élément sera capturé`} (titre + type uniquement).
         </div>
         <div className="px-5 pb-5 space-y-3">
           <div className="space-y-1">
