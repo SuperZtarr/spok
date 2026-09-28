@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+### MCP SPOK 401 — 2e cause : parsing du .env dans launch.mjs — 2026-09-28
+- Le mot de passe prod (mis à jour par Thomas dans le `.env` racine) contient `"` et `'` ; `launch.mjs` lisait les valeurs avec `[^"']*` → tronqué au 1er guillemet (2 caractères lus sur 16) → 401
+- Fix : valeur brute après le 1er `=`, guillemets retirés seulement s'ils entourent toute la valeur. Vérifié localement sans afficher le secret : 16 caractères lus, e-mail OK. Mémoire project_mcp_prod mise à jour
+- Vérifié après redémarrage de Claude : `search_items` répond sans 401
+- MEP 2026-09-28 (93c6545)
+
 ### « Marquer comme non lu » (items + notifications) — 2026-09-28
 - Demande Thomas (option A ; B « accusé de lecture » noté au TODO, limité à l'assignation). Constat : `ItemView` déjà exploitée (activity, clignotement, badge Nouveau) — entrée TODO close
 - Schéma : `ItemView.markedUnread Boolean @default(false)` (db push local ; en prod, start-api.sh fait `prisma db push`, colonne additive). API : `POST /activity/items/:id/unread`, `…/view` efface la marque, feed `/activity` inclut les items marqués quels que soient âge/auteur/mute/espace (accès : membre de la communauté ou de l'espace), espaces perso → pseudo-groupe `__personal__` ; liste items : marqué → `viewedAt: null` (clignote) ; `PATCH /notifications/:id/unread`. +7 tests API
