@@ -11,6 +11,9 @@
  * et repasse en layout 3 colonnes. Auto-ouvert si l'item porte déjà des données avancées.
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
  * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
+ * Fraîcheur : la fiche ['item', spaceId, itemId] est TOUJOURS relue à l'ouverture (staleTime 0) et
+ * chaque version plus récente (updatedAt) est fusionnée champ par champ dans le formulaire
+ * (mergeFormWithServer) — les vues modifient l'item sans invalider cette clé.
  * Sous-modales keyées par itemId (remontage = reset de leur state d'un item à l'autre) : chaque clé
  * doit rester préfixée et unique parmi les enfants de <Modal> (deux `key={itemId}` frères = warning
  * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
@@ -52,7 +55,7 @@ import { CascadeShiftConfirmModal } from './CascadeShiftConfirmModal';
 import { DevModalBadge } from './ui/DevModalBadge';
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
-import { fileNameToTitle, urlToTitle, getDescendantIds } from './item-edit-helpers';
+import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
 import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
@@ -255,6 +258,11 @@ export function ItemEditModal({
     queryKey: ['item', spaceId, itemId],
     queryFn: () => itemsApi.get(spaceId, itemId!),
     enabled: !!itemId && isOpen,
+    // Toujours relire la fiche à l'ouverture : les vues (Gantt, MindMap…) modifient l'item sans
+    // invalider cette clé, et le staleTime global (5 min) resservait une fiche périmée.
+    // staleTime 0 couvre aussi le cas où la modale reste montée et ne fait que repasser enabled=true.
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   // canEdit: space OWNER, or item author, or item assignee (new items are always editable)
@@ -295,6 +303,8 @@ export function ItemEditModal({
   // (e.g. after a comment is added) while still re-initialising when a
   // different item is opened.
   const initializedItemIdRef = useRef<string | null>(null);
+  // Version de l'item qui a rempli le formulaire (base de la fusion champ par champ)
+  const loadedItemRef = useRef<Item | null>(null);
 
   // Capture viewedAt from the list snapshot BEFORE marking as viewed
   const viewedAtRef = useRef<string | null | undefined>(undefined);
@@ -309,6 +319,7 @@ export function ItemEditModal({
   // Reset the tracker whenever the requested item changes
   useEffect(() => {
     initializedItemIdRef.current = null;
+    loadedItemRef.current = null;
     setForumExpanded(false);
   }, [itemId]);
 
@@ -326,42 +337,60 @@ export function ItemEditModal({
     if (hasAdvanced) setForumExpanded(true);
   }, [item, isForumMode]);
 
-  // Populate the form once the correct item data has arrived
+  // Formulaire ← item : au premier chargement, puis à CHAQUE version plus récente du même item
+  // (updatedAt) — refetch à l'ouverture après une modif faite dans une vue, absorption, cascade…
+  // Fusion champ par champ (mergeFormWithServer) : un champ déjà modifié par l'utilisateur garde sa
+  // saisie. Ancienne clé id+dates : les autres champs restaient figés sur la fiche en cache
+  // (description après absorption, statut changé dans une vue…) jusqu'au rechargement de la page.
   useEffect(() => {
     if (!item) return;
-    const initKey = `${item.id}::${item.dueDate ?? ''}::${item.startDate ?? ''}::${item.endDate ?? ''}`;
-    if (initializedItemIdRef.current === initKey) return; // already initialised for this item+dates
+    const initKey = `${item.id}::${item.updatedAt ?? ''}`;
+    if (initializedItemIdRef.current === initKey) return; // déjà synchronisé sur cette version
     initializedItemIdRef.current = initKey;
 
-    setTitle(item.title);
-    setDescription(item.description || '');
-    setUrl(item.url || '');
-    setParentId(item.parentId || '');
-    setStatus(item.status || '');
-    setPriority(item.priority ?? null);
-    setAssignedToId(item.assignedToId || '');
-    setType(item.type);
-    setDiagramXml((item.content as Record<string, unknown>)?.xml as string || '');
-    // Format date for datetime-local input (YYYY-MM-DDTHH:mm) — en heure locale
-    if (item.dueDate) {
-      setDueDate(toDatetimeLocal(new Date(item.dueDate)));
-    } else {
-      setDueDate('');
+    const toForm = (it: NonNullable<typeof item>) => ({
+      title: it.title,
+      description: it.description || '',
+      url: it.url || '',
+      parentId: it.parentId || '',
+      status: it.status || '',
+      priority: it.priority ?? null,
+      assignedToId: it.assignedToId || '',
+      type: it.type as string,
+      diagramXml: (it.content as Record<string, unknown>)?.xml as string || '',
+      // datetime-local (YYYY-MM-DDTHH:mm) en heure locale
+      dueDate: it.dueDate ? toDatetimeLocal(new Date(it.dueDate)) : '',
+      startDate: it.startDate ? toDatetimeLocal(new Date(it.startDate)) : '',
+      endDate: it.endDate ? toDatetimeLocal(new Date(it.endDate)) : '',
+      tags: tagKey(it.tags?.map((t: Tag) => t.id) || []),
+    });
+    const base = loadedItemRef.current?.id === item.id ? toForm(loadedItemRef.current) : null;
+    loadedItemRef.current = item;
+    const next = toForm(item);
+    const merged = mergeFormWithServer(
+      { title, description, url, parentId, status, priority, assignedToId, type: type as string, diagramXml, dueDate, startDate, endDate, tags: tagKey(selectedTagIds) },
+      base,
+      next,
+    );
+
+    setTitle(merged.title);
+    setDescription(merged.description);
+    setUrl(merged.url);
+    setParentId(merged.parentId);
+    setStatus(merged.status);
+    setPriority(merged.priority);
+    setAssignedToId(merged.assignedToId);
+    if (!base || merged.type !== type) {
+      setType(merged.type as ItemType);
+      setAllDay(merged.type !== 'MEETING');
     }
-    if (item.startDate) {
-      setStartDate(toDatetimeLocal(new Date(item.startDate)));
-    } else {
-      setStartDate('');
-    }
-    setAllDay(item.type !== 'MEETING');
-    if (item.endDate) {
-      setEndDate(toDatetimeLocal(new Date(item.endDate)));
-    } else {
-      setEndDate('');
-    }
-    const tagIds = item.tags?.map((t: Tag) => t.id) || [];
-    setSelectedTagIds(tagIds);
-    setOriginalTagIds(tagIds);
+    setDiagramXml(merged.diagramXml);
+    setDueDate(merged.dueDate);
+    setStartDate(merged.startDate);
+    setEndDate(merged.endDate);
+    const serverTagIds = item.tags?.map((t: Tag) => t.id) || [];
+    if (merged.tags === next.tags) setSelectedTagIds(serverTagIds);
+    setOriginalTagIds(serverTagIds);
   }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateMutation = useMutation({

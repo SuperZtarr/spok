@@ -1,4 +1,4 @@
-/* Helpers d'ItemEditModal : préparation des payloads, diff des champs modifiés. */
+/* Helpers d'ItemEditModal : préparation des payloads, diff des champs modifiés, fusion formulaire/serveur (mergeFormWithServer). */
 import type { Item, ItemTemplateNode } from '@spok/shared';
 
 /** Extract a clean name from a filename (remove extension) */
@@ -51,4 +51,26 @@ export function getDescendantIds(id: string, allItems: Item[]): Set<string> {
   };
   findDescendants(id);
   return descendants;
+}
+
+/**
+ * Resynchronisation du formulaire d'ItemEditModal quand une version plus récente de l'item arrive
+ * (refetch à l'ouverture après une modif faite dans une vue, absorption, cascade…).
+ * Fusion champ par champ : un champ modifié par l'utilisateur (≠ `base`, la version qui a rempli le
+ * formulaire) garde sa saisie ; les autres prennent la valeur serveur `next`. Sans `base` (premier
+ * chargement de cet item) : tout vient de `next`. Valeurs comparées par égalité stricte — passer des
+ * scalaires (tags : clé triée jointe, cf. tagKey).
+ */
+export function mergeFormWithServer<T extends Record<string, unknown>>(current: T, base: T | null, next: T): T {
+  if (!base) return { ...next };
+  const merged = { ...next };
+  for (const key of Object.keys(next) as (keyof T)[]) {
+    if (current[key] !== base[key]) merged[key] = current[key];
+  }
+  return merged;
+}
+
+/** Clé scalaire d'un ensemble d'ids de tags (ordre indifférent), pour mergeFormWithServer. */
+export function tagKey(ids: string[]): string {
+  return [...ids].sort().join(',');
 }
