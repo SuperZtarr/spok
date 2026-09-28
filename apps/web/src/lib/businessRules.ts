@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'login-remember-last-email',
+    page: 'Connexion (/login)',
+    trigger: 'Connexion réussie',
+    effect: "L'e-mail est mémorisé dans le navigateur (localStorage spok_last_login_email) et pré-rempli à la prochaine ouverture de la page, focus sur le mot de passe. Jamais le mot de passe. Un échec de connexion ne modifie pas l'e-mail mémorisé",
+    location: 'apps/web/src/pages/LoginPage.tsx',
+  },
+  {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
     trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Tous du header",

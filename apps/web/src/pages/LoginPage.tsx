@@ -6,6 +6,9 @@
  * Auto-login dev : build dev + VITE_DEV_AUTOLOGIN=1 → soumet le compte de seed
  * (admin@spok.app), une seule tentative par session navigateur (sessionStorage) pour
  * que la déconnexion volontaire reste possible. Jamais actif sur un build prod.
+ * Dernier e-mail : mémorisé (localStorage `spok_last_login_email`) après une connexion RÉUSSIE
+ * uniquement, pré-rempli à l'ouverture suivante (focus sur le mot de passe). Le mot de passe n'est
+ * jamais stocké par l'appli — autoComplete username/current-password pour le gestionnaire du navigateur.
  */
 import { useEffect, useState } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -17,19 +20,26 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader } from '../components/ui/Card';
 
+const LAST_LOGIN_EMAIL_KEY = 'spok_last_login_email';
+
+function readLastLoginEmail(): string {
+  try { return localStorage.getItem(LAST_LOGIN_EMAIL_KEY) ?? ''; } catch { return ''; }
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [email, setEmail] = useState('');
+  const [rememberedEmail] = useState(readLastLoginEmail);
+  const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [errorDetails, setErrorDetails] = useState<unknown>(null);
   const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true');
   const loginMutation = useMutation({
     mutationFn: authApi.login,
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      try { localStorage.setItem(LAST_LOGIN_EMAIL_KEY, variables.email); } catch { /* stockage indisponible */ }
       queryClient.clear();
       // If session expired (not voluntary logout), promote last location to resume entry
       if (sessionStorage.getItem('spok_session_expired')) {
@@ -114,6 +124,8 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vous@exemple.com"
+                autoComplete="username"
+                autoFocus={!rememberedEmail}
                 required
               />
             </div>
@@ -137,6 +149,8 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                autoComplete="current-password"
+                autoFocus={!!rememberedEmail}
                 required
               />
             </div>
