@@ -1,9 +1,10 @@
-/* Confirmation de suppression d'item : aperçu des enfants impactés, choix cascade/orphelins. */
+/* Confirmation de suppression d'item : aperçu des enfants impactés, choix cascade/orphelins.
+ * Libellé de priorité via PRIORITIES (constants/ui), jamais de table locale. */
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Calendar, Link as LinkIcon, User, Tag as TagIcon, Flag } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
-import { TYPE_ICONS, TYPE_LABELS } from '../constants/ui';
+import { TYPE_ICONS, TYPE_LABELS, PRIORITIES } from '../constants/ui';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -24,12 +25,8 @@ interface DeleteConfirmModalProps {
   tags?: Array<{ name: string; color?: string | null }>;
 }
 
-const PRIORITY_LABELS: Record<number, string> = {
-  1: 'Critique',
-  2: 'Haute',
-  3: 'Moyenne',
-  4: 'Basse',
-};
+// Source unique PRIORITIES (4 = Urgente … 1 = Basse) — l'ancienne table locale était inversée.
+const PRIORITY_LABELS: Record<number, string> = Object.fromEntries(PRIORITIES.map((p) => [p.value, p.label]));
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('fr-FR', {

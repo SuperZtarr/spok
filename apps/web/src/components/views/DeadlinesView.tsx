@@ -1,4 +1,5 @@
-/* Vue Échéances : items à échéance triés par urgence — embeddable dans le dashboard (prop filters). */
+/* Vue Échéances : items à échéance triés par urgence — embeddable dans le dashboard (prop filters).
+ * Badges de priorité : toujours via PRIORITIES (constants/ui), jamais de table locale. */
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -16,16 +17,14 @@ import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
 import type { GlobalTaskFilterState } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
+import { PRIORITIES } from '../../constants/ui';
 
 const STATUS_COLOR_MAP = buildStatusColorMap();
 const STATUS_LABEL_MAP = buildStatusLabelMap();
 
-const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: 'Critique', color: 'bg-red-100 text-red-800' },
-  2: { label: 'Haute', color: 'bg-orange-100 text-orange-800' },
-  3: { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800' },
-  4: { label: 'Basse', color: 'bg-blue-100 text-blue-800' },
-};
+// Libellés/couleurs de priorité : source unique PRIORITIES (4 = Urgente … 1 = Basse). L'ancienne table
+// locale était inversée (1 = Critique) → badges contredisant le filtre de priorité du dashboard.
+const PRIORITY_BY_VALUE = new Map(PRIORITIES.map((p) => [p.value, p]));
 
 interface DeadlineGroup {
   key: string;
@@ -241,10 +240,12 @@ export function DeadlinesView({ embedded, filters: externalFilters }: { embedded
                   {task.priority && (
                     <span
                       className={`hidden sm:inline-block text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        PRIORITY_LABELS[task.priority]?.color || 'bg-gray-100 text-gray-600'
+                        PRIORITY_BY_VALUE.has(task.priority)
+                          ? `${PRIORITY_BY_VALUE.get(task.priority)!.bgColor} ${PRIORITY_BY_VALUE.get(task.priority)!.textColor}`
+                          : 'bg-gray-100 text-gray-600'
                       }`}
                     >
-                      {PRIORITY_LABELS[task.priority]?.label || `P${task.priority}`}
+                      {PRIORITY_BY_VALUE.get(task.priority)?.label || `P${task.priority}`}
                     </span>
                   )}
                 </div>

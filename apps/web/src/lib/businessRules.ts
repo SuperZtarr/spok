@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'priority-scale-single-source',
+    page: 'Toutes (badges, filtres, confirmations, exports)',
+    trigger: "Affichage ou filtrage d'une priorité",
+    effect: "Échelle 4 = Urgente (P1), 3 = Haute, 2 = Normale, 1 = Basse (P4). Libellés et couleurs toujours tirés de PRIORITIES — pas de table locale (DeadlinesView et DeleteConfirmModal avaient l'échelle inversée)",
+    location: 'apps/web/src/constants/ui.ts (PRIORITIES)',
+  },
+  {
     id: 'absorb-children-only-if-children',
     page: 'Toutes les vues (menu contextuel) + modale item',
     trigger: "Affichage de l'action « Absorber les enfants »",
