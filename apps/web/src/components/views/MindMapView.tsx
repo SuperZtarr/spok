@@ -10,6 +10,8 @@
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
  * les ajouter/retirer sans déclencher de recalcul de layout.
+ * Callbacks des nœuds (onDelete, onMerge…) : rafraîchis dans les data des nœuds existants à chaque
+ * changement de layoutCallbacks (withCurrentCallbacks) — sinon handlers périmés (2026-09-28).
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
@@ -61,7 +63,7 @@ import {
   getContrastTextColor,
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
-import { calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+import { calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
 import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
 
@@ -417,6 +419,22 @@ function MindMapViewInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   setNodesRef.current = setNodes;
   setEdgesRef.current = setEdges;
+
+  // Actions des nœuds toujours à jour : les nœuds existants ne sont plus reconstruits (layout
+  // incrémental) et gardaient les callbacks de leur construction — ex. onDelete comptant les enfants
+  // sur une ancienne liste. Ne touche qu'aux data (ni positions, ni arêtes, ni relayout).
+  useEffect(() => {
+    setNodes(current => {
+      let changed = false;
+      const next = current.map(n => {
+        const data = withCurrentCallbacks(n.data as Record<string, unknown>, layoutCallbacks);
+        if (data === n.data) return n;
+        changed = true;
+        return { ...n, data };
+      });
+      return changed ? next : current;
+    });
+  }, [layoutCallbacks, setNodes]);
 
   // Reorganize children implementation
   reorganizeRef.current = (parentId: string) => {

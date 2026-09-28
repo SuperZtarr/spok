@@ -1,4 +1,4 @@
-/* Layout de la MindMap : placement radial des nœuds, espacement, recalcul — zone fragile (cf. CLAUDE.md). */
+/* Layout de la MindMap : placement radial des nœuds, espacement, recalcul, rafraîchissement des callbacks des nœuds (withCurrentCallbacks) — zone fragile (cf. CLAUDE.md). */
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';
@@ -66,6 +66,32 @@ export interface MindMapCallbacks {
   onOpenInNewTab?: (id: string) => void;
   onTogglePin?: (id: string) => void;
   onSavePosition?: (id: string, pos: { x: number; y: number }) => void;
+}
+
+const NODE_CALLBACK_KEYS = [
+  'onEdit', 'onDelete', 'onUpdateStatus', 'onAddChild', 'onAddPortal', 'onToggleCollapse',
+  'onReorganizeChildren', 'onMoveToSpace', 'onDuplicateToSpace', 'onConvertToSpace', 'onSelfAssign',
+  'onMerge', 'onAbsorbChildren', 'onSplitDescription', 'onOpenInNewTab', 'onTogglePin', 'onSavePosition',
+] as const satisfies readonly (keyof MindMapCallbacks)[];
+
+/**
+ * Remplace, dans les data d'un nœud déjà construit, les actions par leur version COURANTE.
+ * Les nœuds stockent leurs callbacks à la construction ; depuis le layout incrémental ils ne sont
+ * plus reconstruits → sans ça, un onDelete/onMerge/onConvertToSpace… gardait un handler de SpacePage
+ * capturant une liste d'items ancienne (ex. « N descendants » à la suppression d'un parent vidé).
+ * Ne touche qu'aux clés déjà présentes ; renvoie `data` inchangé si rien ne change.
+ */
+export function withCurrentCallbacks<T extends Record<string, unknown>>(data: T, callbacks: MindMapCallbacks): T {
+  let next: T | null = null;
+  for (const key of NODE_CALLBACK_KEYS) {
+    if (!(key in data)) continue;
+    const current = callbacks[key] ?? (key === 'onTogglePin' ? data[key] : undefined);
+    if (data[key] !== current) {
+      next = next ?? { ...data };
+      (next as Record<string, unknown>)[key] = current;
+    }
+  }
+  return next ?? data;
 }
 
 export interface MindMapLayoutOptions {
