@@ -6,6 +6,29 @@
 
 ## EN COURS
 
+### Fix modale item périmée après modif dans une vue / absorption — 2026-09-28
+- Signalé par Thomas : la modale ignore les changements faits dans les vues (date Gantt, statut MindMap) et n'affiche pas la description après absorption, jusqu'au rechargement
+- Cause double : (1) fiche `['item', spaceId, id]` jamais invalidée par les mutations des vues + staleTime global 5 min → pas de refetch ; (2) même rechargée (absorption l'invalide), le formulaire ne se recopiait que si id/dates changeaient (initKey) → description/statut/titre figés. Risque associé : « Enregistrer » sur une fiche périmée renvoyait les anciennes valeurs par-dessus la modif de la vue
+- Fix `ItemEditModal` : `staleTime: 0` + `refetchOnMount: 'always'` sur la fiche ; resynchro sur `updatedAt` avec fusion champ par champ (`mergeFormWithServer` + `tagKey` dans item-edit-helpers, +4 tests) — un champ modifié par l'utilisateur garde sa saisie
+- Vérifié au dev : échéance posée au Gantt visible à la réouverture sans reload ; absorption → description compilée visible sans reload ; saisie du titre conservée après ajout d'un commentaire. Items de test créés/supprimés via l'API locale. Typecheck web OK
+- Remarqué : « Absorber les enfants » est proposé sans condition (modale + menus), même sans enfant → erreur serveur (TODO)
+- MEP 2026-09-28 (fb47579) — typecheck 5 packages OK, 624/624 tests verts
+
+### Fix MindMap : actions des nœuds périmées (suppression « croit avoir encore ses enfants ») — 2026-09-28
+- Signalé par Thomas en live dans la carte mentale (« Amélioration des vues » : enfants déplacés dans un autre item, la confirmation annonçait 3 descendants). Diagnostic dans son onglet : liste `['items','space-dev','all']` à jour (0 enfant) → le compte venait d'un `handleDelete` périmé
+- Cause : les nœuds MindMap stockent leurs callbacks (onDelete, onMerge, onConvertToSpace, onMoveToSpace…) dans `data` à la construction ; depuis le layout incrémental (15/07) les nœuds existants ne sont plus reconstruits (`...n.data`) → handlers capturant une ancienne liste d'items
+- Fix : `withCurrentCallbacks` (mindmap-layout, +4 tests) + effet sur `layoutCallbacks` dans MindMapView qui remplace les callbacks dans les data des nœuds existants (ni positions, ni arêtes, ni relayout)
+- Vérifié au dev (items TEST via API locale, supprimés ensuite) : carte chargée, enfants déplacés P→Q via la modale, onDelete du nœud P rafraîchi, confirmation sans descendants ; arêtes Q→enfants correctes, plus d'arête depuis P. Typecheck web OK
+- MEP 2026-09-28 (d1cd6dc) — typecheck 5 packages OK, 624/624 tests verts
+
+### Connexion : mémoriser le dernier e-mail — 2026-09-28
+- Demande Thomas (ne se souvient jamais du login local). `LoginPage.tsx` : e-mail stocké en localStorage (`spok_last_login_email`) dans `onSuccess` uniquement, pré-rempli + autoFocus sur le mot de passe ; `autoComplete="username"` / `"current-password"`. Règle `login-remember-last-email` dans businessRules
+- Vérifié au dev : après l'auto-login dev puis déconnexion, /login affiche admin@spok.app, focus mot de passe. Typecheck web OK
+- MEP 2026-09-28 (7a9e875) — typecheck 5 packages OK, 624/624 tests verts
+
+### MCP SPOK — suite après redémarrage — 2026-09-28
+- Après redémarrage de Claude, le process MCP est bien `launch.mjs` (nouvelle config OK), aucune variable SPOK_* parasite dans l'environnement Windows, mais toujours 401 → le `SPOK_PASSWORD` du `.env` racine n'est pas le bon mot de passe prod de superztarr@gmail.com. À corriger par Thomas (puis redémarrer Claude)
+
 ### Gantt : décaler un parent sans dates (barre pointillée) — 2026-09-28
 - Demande Thomas : pas de « main » sur un item sans dates mais avec enfants. Option A retenue : glisser la barre pointillée = décaler ses enfants (et liés « Entraîne »), le parent reste sans dates
 - `TimelineView` : `handleBodyMouseDown(e, id, derivedRange)` (dates initiales = période dérivée), flag `anchorWithoutDates` dans `dragging`/`pendingCascade`, `handleDragEnd` → toujours la modale (jamais `onUpdateDates` sur l'ancre, ni à l'application ni à l'annulation), barre pointillée avec zone de prise `cursor-grab` + clic = ouvrir l'item. `CascadeShiftConfirmModal` : prop `anchorWithoutDates` (titre « Décaler le groupe ? », enfants cochés par défaut, « Annuler »/« Décaler », bouton désactivé si rien de coché). 2 règles businessRules (barre sans fin, parent sans dates)

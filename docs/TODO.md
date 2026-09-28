@@ -48,6 +48,10 @@
 - [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide
 
 ### UX & formulaires
+- [x] BUG modale item périmée : changements faits dans les vues (date Gantt, statut MindMap…) ou par absorption invisibles à la réouverture jusqu'au rechargement — fiche relue à chaque ouverture (staleTime 0) + formulaire resynchronisé sur `updatedAt` avec fusion champ par champ (`mergeFormWithServer`, saisie en cours conservée) — 2026-09-28 (fb47579)
+- [x] BUG MindMap : actions des nœuds périmées depuis le layout incrémental (callbacks stockés dans `data` jamais rafraîchis) → ex. suppression d'un parent vidé annonçant encore « N descendants » jusqu'au rechargement. `withCurrentCallbacks` + effet sur `layoutCallbacks` — 2026-09-28 (d1cd6dc)
+- [ ] « Absorber les enfants » proposé sans condition (modale + menus contextuels), même sur un item sans enfant → erreur serveur « No children to absorb ». À conditionner à la présence d'enfants
+- [x] Connexion : dernier e-mail connecté mémorisé (localStorage `spok_last_login_email`, après connexion réussie uniquement) et pré-rempli, focus sur le mot de passe ; `autoComplete` username/current-password pour le gestionnaire du navigateur. Jamais le mot de passe — 2026-09-28 (7a9e875)
 - [x] /today — D&D tâche→grille : glisser une tâche ou une suggestion de la liste sur la colonne Tâches (placement à l'heure du drop, snap 15 min) + grille en 2 colonnes Agenda/Tâches — 2026-07-12
 - [x] /today — D&D événement→liste : glisser une réunion (bandeau journée entière ou colonne Agenda) sur la liste du jour crée une TASK et l'engage — espace cible = espace personnel (résolu via SpaceMembership OWNER + type PERSONAL, le plus ancien) — 2026-07-12
 - [x] Vue Texte : export PDF réécrit pour refléter le document affiché (arbre, descriptions, contributions, filtre de recherche, sections portails) au lieu du tableau générique — 2026-07-14 (71071f0)
