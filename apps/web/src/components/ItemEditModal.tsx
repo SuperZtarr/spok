@@ -11,7 +11,10 @@
  * et repasse en layout 3 colonnes. Toujours ouvert réduit (plus de dépliage auto, 2026-09-28) : une
  * ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
- * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
+ * Save explicite via bouton Enregistrer (orange vif, action principale — 2026-09-28), avec verrou
+ * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
+ * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien. Écritures directes hors Enregistrer (upload image/document, XML de diagramme
+ * auto-sauvé ou « Enregistrer et fermer » draw.io) : toujours suivies de refreshItem(), sinon faux 409.
  * Fraîcheur : la fiche ['item', spaceId, itemId] est TOUJOURS relue à l'ouverture (staleTime 0) et
  * chaque version plus récente (updatedAt) est fusionnée champ par champ dans le formulaire
  * (mergeFormWithServer) — les vues modifient l'item sans invalider cette clé.
@@ -20,6 +23,7 @@
  * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
@@ -243,6 +247,8 @@ export function ItemEditModal({
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
   const [newRelationLabel, setNewRelationLabel] = useState('');
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
+  const editRelationDialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(editRelationDialogRef, !!editingRelationId);
   const [editRelationType, setEditRelationType] = useState('');
   const [editRelationLabel, setEditRelationLabel] = useState('');
   const [editingRelationMeta, setEditingRelationMeta] = useState<{ sourceName: string; targetName: string } | null>(null);
@@ -418,12 +424,19 @@ export function ItemEditModal({
     descendants: CascadeDependent[];
   } | null>(null);
 
+  // Écritures directes de la modale hors « Enregistrer » (upload image/document, XML de diagramme) :
+  // elles font avancer updatedAt côté serveur. Sans relire la fiche, « Enregistrer » renverrait
+  // l'ancien updatedAt → 409 « conflit » contre sa propre modification (bug 2026-09-28). La relecture
+  // est fusionnée champ par champ (mergeFormWithServer) : la saisie en cours est conservée.
+  const refreshItem = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
+    queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+  }, [queryClient, spaceId, itemId]);
+
   const autoSaveDiagramMutation = useMutation({
     mutationFn: (xml: string) =>
       itemsApi.update(spaceId, itemId!, { content: { xml } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-    },
+    onSuccess: refreshItem,
   });
 
   const autoSaveDiagramTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -485,9 +498,7 @@ export function ItemEditModal({
     mutationFn: (file: File) => itemsApi.uploadImage(spaceId, itemId!, file),
     onSuccess: (updatedItem) => {
       setUrl(updatedItem.url || '');
-      // Only invalidate the list (for thumbnails etc.), NOT the individual item query
-      // Invalidating ['item', ...] would trigger the useEffect that resets all form fields
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      refreshItem();
     },
   });
 
@@ -496,7 +507,7 @@ export function ItemEditModal({
     mutationFn: (file: File) => itemsApi.uploadDocument(spaceId, itemId!, file),
     onSuccess: (updatedItem) => {
       setUrl(updatedItem.url || '');
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      refreshItem();
     },
   });
 
@@ -907,8 +918,12 @@ export function ItemEditModal({
             await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
             setDiagramXml(savedXml);
             const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
-            await uploadImageMutation.mutateAsync(file);
-            queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+            // XML déjà écrit : relire la fiche même si l'upload du PNG échoue (ex. R2 absent en local)
+            try {
+              await uploadImageMutation.mutateAsync(file);
+            } finally {
+              refreshItem();
+            }
           }}
           previewUrl={url || undefined}
           editable={canEdit}
@@ -1015,7 +1030,7 @@ export function ItemEditModal({
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Titre de l'élément"
                   className="text-lg sm:text-xl font-bold px-2 py-1 h-auto bg-muted/30 hover:bg-muted/60 focus:bg-background transition-colors"
-                  autoFocus
+                  autoFocus={!item?.title}
                 />
               ) : (
                 <h1 className="text-lg sm:text-xl font-bold truncate">{title}</h1>
@@ -1707,7 +1722,8 @@ export function ItemEditModal({
           {/* Footer — always visible */}
           <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
             {canEdit && (
-              <Button type="submit" disabled={!hasChanges || updateMutation.isPending} className={!hasChanges ? 'opacity-40' : ''}>
+              <Button type="submit" disabled={!hasChanges || updateMutation.isPending}
+                className={`bg-orange-500 text-white hover:bg-orange-600 ${!hasChanges ? 'opacity-40' : ''}`}>
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             )}
@@ -1851,7 +1867,7 @@ export function ItemEditModal({
       {editingRelationId && editingRelationMeta && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setEditingRelationId(null)} />
-          <div className="relative bg-background rounded-xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4">
+          <div ref={editRelationDialogRef} className="outline-none relative bg-background rounded-xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold flex items-center gap-2">Modifier la relation <DevModalBadge name="ItemEditModal (éditer relation)" /></h3>
               <button type="button" onClick={() => setEditingRelationId(null)} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
