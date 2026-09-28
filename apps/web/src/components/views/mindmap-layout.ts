@@ -2,17 +2,11 @@
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';
-const RELATION_LABELS: Record<string, string> = {
-  relates: '🔗 Lié',
-  blocks: '🚫 Bloque',
-  depends: '← Dépend',
-  duplicates: '📋 Duplique',
-  implements: '⚙ Implémente',
-  tests: '🧪 Teste',
-};
+import { getRelationMeta } from '../../constants/relationTypes';
 
+// Libellé d'arête : source unique constants/relationTypes.ts (type hors liste → nom brut)
 function relationEdgeLabel(type: string, label?: string | null): string {
-  const base = RELATION_LABELS[type] || type;
+  const base = getRelationMeta(type).label;
   if (!label) return base;
   const short = label.length > 30 ? label.slice(0, 27) + '…' : label;
   return `${base} · ${short}`;

@@ -1,11 +1,8 @@
-/* Tooltip d'une relation (type, items liés, commentaire) au survol dans les vues Gantt/PERT. */
+/* Tooltip d'une relation (type, items liés, commentaire) au survol — Gantt, PERT, graphe, carte des
+ * relations, arêtes de la carte mentale. Libellé et badge : source unique constants/relationTypes.ts
+ * (type hors liste : nom brut en gris). */
 import { createPortal } from 'react-dom';
-
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  blocks:  { label: 'Bloque',    color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-  depends: { label: 'Dépend de', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  relates: { label: 'Lié à',     color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-};
+import { getRelationMeta } from '../constants/relationTypes';
 
 interface RelationTooltipProps {
   label: string;
@@ -17,7 +14,8 @@ interface RelationTooltipProps {
 }
 
 export function RelationTooltip({ label, relationType, fromTitle, toTitle, x, y }: RelationTooltipProps) {
-  const config = TYPE_LABELS[relationType] ?? { label: relationType, color: 'bg-muted text-muted-foreground' };
+  const meta = getRelationMeta(relationType);
+  const config = { label: meta.label, color: meta.badgeClass };
   return createPortal(
     <div
       className="fixed z-[9999] max-w-[280px] rounded-lg border bg-popover shadow-lg p-3 text-sm pointer-events-none"

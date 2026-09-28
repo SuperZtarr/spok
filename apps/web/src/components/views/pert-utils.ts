@@ -1,8 +1,10 @@
 /*
- * Utilitaires PERT : graphe de précédence (blocks/implements ordonnent, depends non — spec
- * 2026-06-11), rangs par plus long chemin, chemin critique. Testé par pert-utils.test.ts.
+ * Utilitaires PERT : graphe de précédence (isOrderingRelation : blocks/implements ordonnent ; drives,
+ * relates et types hors liste non — spec 2026-06-11, source unique 2026-09-28), rangs par plus long
+ * chemin, chemin critique. Testé par pert-utils.test.ts.
  */
 import type { Item, ItemRelation } from '@spok/shared';
+import { isOrderingRelation } from '../../constants/relationTypes';
 
 export interface PertGraph {
   predecessors: Map<string, string[]>;
@@ -23,7 +25,7 @@ export function buildPertGraph(items: Item[], relations: ItemRelation[]): PertGr
     const from = rel.fromItemId;
     const to = rel.toItemId;
     if (!itemSet.has(from) || !itemSet.has(to)) continue;
-    if (rel.type !== 'blocks' && rel.type !== 'implements') continue;
+    if (!isOrderingRelation(rel.type)) continue;
 
     // blocks / implements: from → to means from is predecessor of to
     predecessors.get(to)!.push(from);

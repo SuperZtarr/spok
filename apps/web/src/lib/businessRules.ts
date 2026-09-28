@@ -180,4 +180,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "Propose de décaler le groupe (CascadeShiftConfirmModal, enfants cochés par défaut, liés « Entraîne » inclus) ; « Annuler » ne modifie rien ; le parent n'est jamais daté",
     location: 'apps/web/src/components/views/TimelineView.tsx (handleDragEnd, anchorWithoutDates), apps/web/src/components/CascadeShiftConfirmModal.tsx',
   },
+  {
+    id: 'relation-types-single-source',
+    page: 'Toutes (modale item, Gantt, PERT, carte mentale, carte des relations, infobulles)',
+    trigger: "Affichage, création ou calcul d'ordonnancement d'une relation",
+    effect: "4 types officiels : Bloque, Permet, Entraîne, Lié à — mêmes libellés et couleurs partout. Seuls Bloque et Permet ordonnent (chemin critique Gantt, rangs PERT) ; Entraîne décale les dates sans ordonner ; Lié à n'ordonne pas. Un type hors liste est refusé par l'API et, s'il existe encore, affiché en gris sans effet",
+    location: 'apps/web/src/constants/relationTypes.ts, apps/api/src/routes/item-relations.ts (z.enum RELATION_TYPES)',
+  },
 ];

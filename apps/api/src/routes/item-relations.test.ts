@@ -1,5 +1,5 @@
-/* TNR de POST /spaces/:spaceId/items/:id/relations : création de relation + détection de cycle
- * pour le type 'drives' ("Entraîne", cascade de dates — cf. spec 2026-09-13). */
+/* TNR des relations : création + détection de cycle
+ * pour drives ("Entraîne", spec 2026-09-13), refus des types hors RELATION_TYPES (2026-09-28). */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -125,5 +125,40 @@ describe('POST /spaces/:spaceId/items/:id/relations', () => {
     })
 
     expect(res.statusCode).toBe(201)
+  })
+})
+
+describe('Types de relation acceptés (RELATION_TYPES uniquement, 2026-09-28)', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  let token: string
+
+  beforeEach(async () => {
+    const result = await buildApp()
+    app = result.app
+    prisma = result.prisma
+    token = getTestToken(app, { userId: USER_ID, email: 'test@test.com' })
+    prisma.spaceMembership.findUnique.mockResolvedValue({ userId: USER_ID, spaceId: 'space-1', role: 'MEMBER' })
+  })
+
+  it.each(['depends', 'tests', 'duplicates', 'n-importe-quoi'])('POST refuse le type hors liste %s (400)', async (type) => {
+    const res = await app.inject({
+      method: 'POST', url: '/spaces/space-1/items/A/relations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { toItemId: 'B', type },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(prisma.itemRelation.create).not.toHaveBeenCalled()
+  })
+
+  it('PATCH refuse un type hors liste (400)', async () => {
+    prisma.itemRelation.findFirst.mockResolvedValue({ id: 'rel-1', fromItemId: 'A', toItemId: 'B', type: 'blocks', label: null })
+    const res = await app.inject({
+      method: 'PATCH', url: '/spaces/space-1/items/A/relations/rel-1',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { type: 'depends' },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(prisma.itemRelation.update).not.toHaveBeenCalled()
   })
 })

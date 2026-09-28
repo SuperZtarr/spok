@@ -1,6 +1,8 @@
-/* Utilitaires du Gantt : calculs de dates/positions de barres, plages visibles, snapping. */
+/* Utilitaires du Gantt : calculs de dates/positions de barres, plages visibles, snapping, chemin
+ * critique (ordonnancement = isOrderingRelation : blocks et implements, comme le PERT). */
 import type { StatusConfig } from '@spok/shared';
 import type { Item, ItemRelation } from '@spok/shared';
+import { isOrderingRelation } from '../../constants/relationTypes';
 
 /**
  * Fin de référence d'un déplacement du corps de barre (TimelineView, drag 'move') : la fin
@@ -26,9 +28,9 @@ export function moveInitialEnd(
  * CPM — retourne l'ensemble des IDs d'items sur le chemin critique.
  * Retourne un Set vide si le graphe contient un cycle.
  *
- * Relations :
- *   - blocks  (from=A, to=B) : A est prédécesseur de B
- *   - depends (from=A, to=B) : B est prédécesseur de A
+ * Relations (isOrderingRelation, source unique relationTypes — même règle que le PERT) :
+ *   - blocks / implements (from=A, to=B) : A est prédécesseur de B
+ *   - drives, relates, types hors liste : n'ordonnent pas
  *
  * Items sans dates mais avec au moins une dépendance : durée = 0 (jalons).
  * Items sans dates ET sans dépendances : exclus.
@@ -51,14 +53,10 @@ export function computeCriticalPath(items: Item[], relations: ItemRelation[]): S
     const to   = rel.toItemId;
     if (!itemSet.has(from) || !itemSet.has(to)) continue;
 
-    if (rel.type === 'blocks') {
+    if (isOrderingRelation(rel.type)) {
       // from doit finir avant to
       predecessors.get(to)!.push(from);
       successors.get(from)!.push(to);
-    } else if (rel.type === 'depends') {
-      // from dépend de to → to est prédécesseur de from
-      predecessors.get(from)!.push(to);
-      successors.get(to)!.push(from);
     }
   }
 

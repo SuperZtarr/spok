@@ -24,6 +24,7 @@
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
+import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
@@ -35,7 +36,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Ban, FastForward, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -243,7 +244,7 @@ export function ItemEditModal({
 
   // Relations state
   const [showAddRelation, setShowAddRelation] = useState(false);
-  const [newRelationType, setNewRelationType] = useState<'blocks' | 'relates' | 'implements' | 'drives'>('implements');
+  const [newRelationType, setNewRelationType] = useState<OfficialRelationType>('implements');
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
   const [newRelationLabel, setNewRelationLabel] = useState('');
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
@@ -1581,13 +1582,8 @@ export function ItemEditModal({
                     <div className="space-y-2">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Type</label>
-                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as 'blocks' | 'relates' | 'implements' | 'drives')}
-                          options={[
-                            { value: 'blocks',     label: 'Bloque...'   },
-                            { value: 'implements', label: 'Permet...'   },
-                            { value: 'drives',     label: 'Entraîne...' },
-                            { value: 'relates',    label: 'Lié à...'    },
-                          ]} />
+                        <Select value={newRelationType} onChange={(e) => setNewRelationType(e.target.value as OfficialRelationType)}
+                          options={RELATION_TYPE_LIST.map((m) => ({ value: m.id, label: `${m.label}...` }))} />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Élément</label>
@@ -1616,8 +1612,8 @@ export function ItemEditModal({
                 {((item.relationsFrom && item.relationsFrom.length > 0) || (item.relationsTo && item.relationsTo.length > 0)) ? (
                   <div className="space-y-2">
                     {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => {
-                      const typeLabel = relation.type === 'blocks' ? 'Bloque' : relation.type === 'implements' ? 'Permet' : relation.type === 'drives' ? 'Entraîne' : 'Lié à';
-                      const typeClass = relation.type === 'blocks' ? 'bg-red-100 text-red-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : relation.type === 'drives' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
+                      const typeLabel = getRelationMeta(relation.type).label;
+                      const typeClass = getRelationMeta(relation.type).badgeClass;
                       const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: item.title, targetName: relation.toItem?.title || '' }); } : undefined;
                       return (
                         <div key={relation.id}
@@ -1631,8 +1627,8 @@ export function ItemEditModal({
                       );
                     })}
                     {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => {
-                      const typeLabel = relation.type === 'blocks' ? 'Bloqué par' : relation.type === 'implements' ? 'Permis par' : relation.type === 'drives' ? 'Entraîné par' : 'Lié à';
-                      const typeClass = relation.type === 'blocks' ? 'bg-orange-100 text-orange-700' : relation.type === 'implements' ? 'bg-green-100 text-green-700' : relation.type === 'drives' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
+                      const typeLabel = getRelationMeta(relation.type).inverseLabel;
+                      const typeClass = getRelationMeta(relation.type).inverseBadgeClass;
                       const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: relation.fromItem?.title || '', targetName: item.title }); } : undefined;
                       return (
                         <div key={relation.id}
@@ -1873,12 +1869,7 @@ export function ItemEditModal({
               <button type="button" onClick={() => setEditingRelationId(null)} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
             <div className="flex flex-col gap-2">
-              {([
-                { id: 'blocks',     label: 'bloque',    Icon: Ban,        hex: '#ef4444', sel: 'bg-red-50 border-red-400',   hov: 'hover:bg-red-50 hover:border-red-300'   },
-                { id: 'implements', label: 'permet',    Icon: ArrowRight, hex: '#22c55e', sel: 'bg-green-50 border-green-400', hov: 'hover:bg-green-50 hover:border-green-300' },
-                { id: 'drives',     label: 'entraîne',  Icon: FastForward, hex: '#a855f7', sel: 'bg-purple-50 border-purple-400', hov: 'hover:bg-purple-50 hover:border-purple-300' },
-                { id: 'relates',    label: 'est lié à', Icon: Link2,      hex: '#3b82f6', sel: 'bg-blue-50 border-blue-400',  hov: 'hover:bg-blue-50 hover:border-blue-300'  },
-              ] as const).map(type => (
+              {RELATION_TYPE_LIST.map((m) => ({ id: m.id, label: m.verb, Icon: m.Icon, hex: m.hex, sel: m.selectedClass, hov: m.hoverClass })).map(type => (
                 <button key={type.id} type="button"
                   onClick={() => setEditRelationType(type.id)}
                   className={`flex items-center gap-3 px-3 py-2 border rounded-lg transition-colors w-full text-left ${editRelationType === type.id ? type.sel : `border-border ${type.hov}`}`}

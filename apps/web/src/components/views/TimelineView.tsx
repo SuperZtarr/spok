@@ -40,6 +40,7 @@ import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
+import { RELATION_TYPE_LIST, getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
@@ -1611,16 +1612,16 @@ treeSort: treeSortProp,
                 style={{ left: 288, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0), pointerEvents: 'none' }}
               >
                 <defs>
-                  <marker id="arrowhead-blocks"     markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ef4444" opacity="0.8" /></marker>
-                  <marker id="arrowhead-implements" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#22c55e" opacity="0.8" /></marker>
-                  <marker id="arrowhead-drives"     markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a855f7" opacity="0.8" /></marker>
-                  <marker id="arrowhead-relates"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3b82f6" opacity="0.8" /></marker>
+                  {/* Un marqueur par type officiel + un gris pour un type hors liste (source unique relationTypes) */}
+                  {[...RELATION_TYPE_LIST, getRelationMeta(null)].map((m) => (
+                    <marker key={m.id} id={`arrowhead-${isOfficialRelationType(m.id) ? m.id : 'unknown'}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill={m.hex} opacity="0.8" /></marker>
+                  ))}
                 </defs>
                 {dependencyArrows.map((arrow, idx) => {
-                  const color = arrow.type === 'blocks' ? '#ef4444' : arrow.type === 'implements' ? '#22c55e' : arrow.type === 'drives' ? '#a855f7' : '#3b82f6';
-                  const markerId = `arrowhead-${arrow.type === 'blocks' ? 'blocks' : arrow.type === 'implements' ? 'implements' : arrow.type === 'drives' ? 'drives' : 'relates'}`;
-                  const relType = RELATION_TYPES.find(t => t.id === arrow.type);
-                  const relLabel = relType?.label || arrow.type;
+                  const meta = getRelationMeta(arrow.type);
+                  const color = meta.hex;
+                  const markerId = `arrowhead-${isOfficialRelationType(arrow.type) ? arrow.type : 'unknown'}`;
+                  const relLabel = meta.label;
 
                   const dx = arrow.toX - arrow.fromX;
                   const dy = arrow.toY - arrow.fromY;

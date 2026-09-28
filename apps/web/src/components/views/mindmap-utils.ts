@@ -1,7 +1,9 @@
-/* Utilitaires MindMap : construction nodes/edges depuis les items, portails — edges recalculés via onInit. */
+/* Utilitaires MindMap : construction nodes/edges depuis les items, portails — edges recalculés via onInit.
+ * RELATION_TYPES : dérivé de la source unique constants/relationTypes.ts — ne pas redéfinir ici. */
 import type { ItemWithRelations, StatusConfig } from '@spok/shared';
 import type { Node, Edge } from '@xyflow/react';
-import { Link2, Ban, ArrowRight, FastForward, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { RELATION_TYPE_LIST } from '../../constants/relationTypes';
 
 // Tree types
 export interface TreeItem extends ItemWithRelations {
@@ -26,13 +28,9 @@ export interface PortalState {
   parentItemId: string;
 }
 
-// Relation type options with descriptions
-export const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
-  { id: 'blocks',     label: 'Bloque',   Icon: Ban,         description: 'Contrainte dure — B ne peut démarrer avant la fin de A',        color: 'text-red-500'    },
-  { id: 'implements', label: 'Permet',   Icon: ArrowRight,  description: 'A permet/rend possible B',                                       color: 'text-green-500'  },
-  { id: 'drives',     label: 'Entraîne', Icon: FastForward, description: 'Déplacer A décale B du même nombre de jours',                    color: 'text-purple-500' },
-  { id: 'relates',    label: 'Lié à',    Icon: Link2,       description: 'A et B doivent être traités ensemble',                            color: 'text-blue-500'   },
-];
+// Types de relation proposés (source unique : constants/relationTypes.ts)
+export const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] =
+  RELATION_TYPE_LIST.map((m) => ({ id: m.id, label: m.label, Icon: m.Icon, description: m.description, color: m.textClass }));
 
 // Get status color from referentiels
 export function getStatusColor(status: string | null | undefined, statuses: StatusConfig[]): string {

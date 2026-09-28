@@ -545,14 +545,14 @@ describe('Items routes', () => {
       prisma.item.findFirst
         .mockResolvedValueOnce(mockItem({ id: 'item-1' }))
         .mockResolvedValueOnce(mockItem({ id: 'item-2' }))
-      const relation = { id: 'rel-1', fromItemId: 'item-1', toItemId: 'item-2', type: 'RELATED' }
+      const relation = { id: 'rel-1', fromItemId: 'item-1', toItemId: 'item-2', type: 'relates' }
       prisma.itemRelation.create.mockResolvedValue(relation)
 
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items/item-1/relations`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { toItemId: 'item-2', type: 'RELATED' },
+        payload: { toItemId: 'item-2', type: 'relates' },
       })
 
       expect(res.statusCode).toBe(201)
@@ -568,13 +568,13 @@ describe('Items routes', () => {
       prisma.spaceMembership.findUnique
         .mockResolvedValueOnce(mockMembership()) // first check (space-1)
         .mockResolvedValueOnce(mockMembership()) // second check (space-2 cross-space)
-      prisma.itemRelation.create.mockResolvedValue({ id: 'rel-2', fromItemId: 'item-1', toItemId: 'item-3', type: 'DEPENDS_ON' })
+      prisma.itemRelation.create.mockResolvedValue({ id: 'rel-2', fromItemId: 'item-1', toItemId: 'item-3', type: 'blocks' })
 
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items/item-1/relations`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { toItemId: 'item-3', type: 'DEPENDS_ON' },
+        payload: { toItemId: 'item-3', type: 'blocks' },
       })
 
       expect(res.statusCode).toBe(201)
@@ -590,7 +590,7 @@ describe('Items routes', () => {
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items/item-1/relations`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { toItemId: 'non-existent', type: 'RELATED' },
+        payload: { toItemId: 'non-existent', type: 'relates' },
       })
 
       expect(res.statusCode).toBe(404)
@@ -603,7 +603,7 @@ describe('Items routes', () => {
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items/item-1/relations`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { toItemId: 'item-2', type: 'RELATED' },
+        payload: { toItemId: 'item-2', type: 'relates' },
       })
 
       expect(res.statusCode).toBe(403)
@@ -613,7 +613,7 @@ describe('Items routes', () => {
   describe('DELETE /spaces/:spaceId/items/:id/relations/:relationId', () => {
     it('should delete a relation', async () => {
       allowSpaceAccess()
-      const relation = { id: 'rel-1', fromItemId: 'item-1', toItemId: 'item-2', type: 'RELATED' }
+      const relation = { id: 'rel-1', fromItemId: 'item-1', toItemId: 'item-2', type: 'relates' }
       prisma.itemRelation.findFirst.mockResolvedValue(relation)
       prisma.itemRelation.delete.mockResolvedValue(relation)
 

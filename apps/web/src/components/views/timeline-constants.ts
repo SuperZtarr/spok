@@ -1,5 +1,7 @@
-/* Constantes du Gantt : hauteurs de lignes, largeurs de colonnes, niveaux de zoom. */
-import { Link2, Ban, ArrowRight, FastForward, type LucideIcon } from 'lucide-react';
+/* Constantes du Gantt : hauteurs de lignes, largeurs de colonnes, niveaux de zoom.
+ * RELATION_TYPES : dérivé de la source unique constants/relationTypes.ts — ne pas redéfinir ici. */
+import type { LucideIcon } from 'lucide-react';
+import { RELATION_TYPE_LIST } from '../../constants/relationTypes';
 
 // Zoom level configuration
 export type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'multiyear';
@@ -25,10 +27,6 @@ export const ZOOM_CONFIGS: Record<ZoomLevel, ZoomConfig> = {
 
 export const ZOOM_ORDER: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year', 'multiyear'];
 
-// Relation types (same as MindMapView)
-export const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] = [
-  { id: 'blocks',     label: 'Bloque',   Icon: Ban,         description: 'Contrainte dure — B ne peut démarrer avant la fin de A',        color: 'text-red-500'    },
-  { id: 'implements', label: 'Permet',   Icon: ArrowRight,  description: 'A permet/rend possible B',                                       color: 'text-green-500'  },
-  { id: 'drives',     label: 'Entraîne', Icon: FastForward, description: 'Déplacer A décale B du même nombre de jours',                    color: 'text-purple-500' },
-  { id: 'relates',    label: 'Lié à',    Icon: Link2,       description: 'A et B doivent être traités ensemble',                            color: 'text-blue-500'   },
-];
+// Types de relation proposés (source unique : constants/relationTypes.ts)
+export const RELATION_TYPES: { id: string; label: string; Icon: LucideIcon; description: string; color: string }[] =
+  RELATION_TYPE_LIST.map((m) => ({ id: m.id, label: m.label, Icon: m.Icon, description: m.description, color: m.textClass }));

@@ -2,11 +2,15 @@
  * PertView — Réseau PERT (dépendances/jalons) affiché comme diagramme + panneau arborescence à gauche.
  * Panneau gauche : lignes via TreeItemRow (composant partagé avec le Gantt, variant "sticky" par défaut).
  * Pas de drag & drop de réorganisation ici (onMove non câblé) — le tri est géré par PertToolbar (rang/alpha).
+ * Relations : les 4 types officiels sont affichés (source unique constants/relationTypes.ts) ; seuls
+ * blocks / implements ordonnent les rangs (isOrderingRelation) ; Lié à et Entraîne sont tracés de centre à
+ * centre. Type hors liste : ignoré.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Ban, ArrowRight, Link2, FastForward, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { RELATION_TYPE_LIST, RELATION_TYPE_META, getRelationMeta, isOfficialRelationType, isOrderingRelation } from '../../constants/relationTypes';
 import { PertToolbar } from './PertToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
@@ -38,21 +42,14 @@ const SPACE_COLORS = [
   { fill: 'rgba(168,85,247,0.06)',  stroke: 'rgba(168,85,247,0.30)',  text: 'rgba(168,85,247,0.75)'  },
 ];
 
-const PERT_RELATION_TYPES = [
-  { id: 'blocks',     label: 'Bloque',   Icon: Ban,         hexColor: '#ef4444', tailwindColor: 'text-red-500',    selectedClass: 'bg-red-50    border-red-400    dark:bg-red-950/30',    hoverClass: 'hover:bg-red-50    hover:border-red-300'    },
-  { id: 'implements', label: 'Permet',   Icon: ArrowRight,  hexColor: '#22c55e', tailwindColor: 'text-green-500',  selectedClass: 'bg-green-50  border-green-400  dark:bg-green-950/30',  hoverClass: 'hover:bg-green-50  hover:border-green-300'  },
-  { id: 'drives',     label: 'Entraîne', Icon: FastForward, hexColor: '#a855f7', tailwindColor: 'text-purple-500', selectedClass: 'bg-purple-50 border-purple-400 dark:bg-purple-950/30', hoverClass: 'hover:bg-purple-50 hover:border-purple-300' },
-  { id: 'relates',    label: 'Lié à',    Icon: Link2,       hexColor: '#3b82f6', tailwindColor: 'text-blue-500',   selectedClass: 'bg-blue-50   border-blue-400   dark:bg-blue-950/30',   hoverClass: 'hover:bg-blue-50   hover:border-blue-300'   },
-] as const;
+// Types de relation : source unique constants/relationTypes.ts (libellés, couleurs, icônes, ordonnancement)
+const PERT_RELATION_TYPES = RELATION_TYPE_LIST.map((m) => ({
+  id: m.id, label: m.label, Icon: m.Icon, hexColor: m.hex, tailwindColor: m.textClass,
+  selectedClass: m.selectedClass, hoverClass: m.hoverClass,
+}));
 
-const RELATION_HEX: Record<string, string> = {
-  blocks: '#ef4444',
-  implements: '#22c55e',
-  drives: '#a855f7',
-  relates: '#3b82f6',
-};
 function getRelationColor(type: string): string {
-  return RELATION_HEX[type] ?? '#94a3b8';
+  return getRelationMeta(type).hex;
 }
 function ItemChip({ name, status, statusOptions, borderColor }: {
   name: string;
@@ -78,16 +75,9 @@ function RelationRow({ typeId, sourceName, targetName, sourceStatus, targetStatu
   targetStatus?: string | null;
   statusOptions: StatusConfig[];
 }) {
-  const borderColor = RELATION_HEX[typeId] ?? '#94a3b8';
-  const [item1, verb, item2, s1, s2]: [string, string, string, string | null | undefined, string | null | undefined] = (() => {
-    switch (typeId) {
-      case 'blocks':     return [sourceName, 'bloque',    targetName, sourceStatus, targetStatus];
-      case 'implements': return [sourceName, 'permet',    targetName, sourceStatus, targetStatus];
-      case 'drives':     return [sourceName, 'entraîne',  targetName, sourceStatus, targetStatus];
-      case 'relates':    return [sourceName, 'est lié à', targetName, sourceStatus, targetStatus];
-      default:           return [sourceName, '→',         targetName, sourceStatus, targetStatus];
-    }
-  })();
+  const borderColor = getRelationColor(typeId);
+  const [item1, verb, item2, s1, s2]: [string, string, string, string | null | undefined, string | null | undefined] =
+    [sourceName, isOfficialRelationType(typeId) ? getRelationMeta(typeId).verb : '→', targetName, sourceStatus, targetStatus];
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
       <div className="w-[42%] flex-shrink-0"><ItemChip name={item1} status={s1} statusOptions={statusOptions} borderColor={borderColor} /></div>
@@ -247,7 +237,8 @@ export function PertView({
   const [pertRankSort, setPertRankSort] = useState(false);
 
   const pertRelations = useMemo(
-    () => relations.filter(r => r.type === 'blocks' || r.type === 'implements' || r.type === 'relates'),
+    // Tous les types officiels sont affichés (Entraîne compris) ; seuls blocks/implements ordonnent les rangs
+    () => relations.filter(r => isOfficialRelationType(r.type)),
     [relations]
   );
 
@@ -257,9 +248,8 @@ export function PertView({
     const parentMap = new Map(items.map(i => [i.id, i.parentId]));
     const pertPreds = new Map<string, string[]>();
     for (const rel of pertRelations) {
-      let predId: string, succId: string;
-      if (rel.type === 'blocks' || rel.type === 'implements') { predId = rel.fromItemId; succId = rel.toItemId; }
-      else { predId = rel.toItemId; succId = rel.fromItemId; }
+      if (!isOrderingRelation(rel.type)) continue; // relates / drives n'ordonnent pas
+      const predId = rel.fromItemId, succId = rel.toItemId;
       if (idSet.has(predId) && idSet.has(succId)) {
         if (!pertPreds.has(succId)) pertPreds.set(succId, []);
         pertPreds.get(succId)!.push(predId);
@@ -355,9 +345,9 @@ export function PertView({
     // PERT predecessors per item (items that must come strictly before)
     const pertPreds = new Map<string, string[]>();
     for (const rel of pertRelations) {
-      let predId: string, succId: string;
-      if (rel.type === 'blocks' || rel.type === 'implements') { predId = rel.fromItemId; succId = rel.toItemId; }
-      else { predId = rel.toItemId; succId = rel.fromItemId; }
+      // Seules les relations qui ordonnent (blocks / implements : from avant to) comptent pour les rangs
+      if (!isOrderingRelation(rel.type)) continue;
+      const predId = rel.fromItemId, succId = rel.toItemId;
       if (idSet.has(predId) && idSet.has(succId)) {
         if (!pertPreds.has(succId)) pertPreds.set(succId, []);
         pertPreds.get(succId)!.push(predId);
@@ -701,17 +691,19 @@ export function PertView({
     { rel, visibleFrom, visibleTo, proxied }: { rel: ItemRelation; visibleFrom: string; visibleTo: string; proxied: boolean },
     key: string,
   ) {
+    // Relation qui n'ordonne pas (Lié à, Entraîne) : tracée de centre à centre ; Lié à sans pointe
     const isRelates = rel.type === 'relates';
-    const x1 = isRelates ? nodeX(visibleFrom) + NODE_WIDTH / 2 : nodeX(visibleFrom) + NODE_WIDTH;
+    const centered = !isOrderingRelation(rel.type);
+    const x1 = centered ? nodeX(visibleFrom) + NODE_WIDTH / 2 : nodeX(visibleFrom) + NODE_WIDTH;
     const y1 = nodeY(visibleFrom) + NODE_HEIGHT / 2;
-    const x2 = isRelates ? nodeX(visibleTo) + NODE_WIDTH / 2 : nodeX(visibleTo);
+    const x2 = centered ? nodeX(visibleTo) + NODE_WIDTH / 2 : nodeX(visibleTo);
     const y2 = nodeY(visibleTo) + NODE_HEIGHT / 2;
     const cpOffset = Math.abs(x2 - x1) * 0.4;
 
     const isCritical = !proxied && criticalPathIds.has(visibleFrom) && criticalPathIds.has(visibleTo);
     const stroke = getRelationColor(rel.type);
     const strokeWidth = isCritical ? 2.5 : 1.5;
-    const markerType = rel.type in RELATION_HEX ? rel.type : 'normal';
+    const markerType = isOfficialRelationType(rel.type) ? rel.type : 'normal';
 
     const pathD = `M${x1},${y1} C${x1 + cpOffset},${y1} ${x2 - cpOffset},${y2} ${x2},${y2}`;
     const mx = (x1 + x2) / 2;
@@ -875,10 +867,9 @@ export function PertView({
           <svg ref={pertSvgRef} width={svgWidth} height={Math.max(svgHeight, 100)} style={{ transformOrigin: 'top left', transform: `scale(${zoom})`, position: 'absolute', top: 0, left: 0, display: 'block' }}>
             <defs>
               <marker id="arrow-normal"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
-              <marker id="arrow-blocks"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef4444" /></marker>
-              <marker id="arrow-implements" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#22c55e" /></marker>
-              <marker id="arrow-drives"     markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#a855f7" /></marker>
-              <marker id="arrow-relates"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3b82f6" /></marker>
+              {RELATION_TYPE_LIST.map((m) => (
+                <marker key={m.id} id={`arrow-${m.id}`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill={m.hex} /></marker>
+              ))}
             </defs>
 
             {/* Branch enclosing boxes */}
@@ -923,8 +914,8 @@ export function PertView({
                 const nodeRels = pertRelations.filter(r => r.fromItemId === item.id || r.toItemId === item.id);
                 if (nodeRels.some(r => r.type === 'blocks' && r.fromItemId === item.id)) return '#ef4444'; // bloque → rouge
                 if (nodeRels.some(r => r.type === 'blocks' && r.toItemId   === item.id)) return '#fb923c'; // est bloqué → orange clair
-                if (nodeRels.some(r => r.type === 'implements')) return RELATION_HEX.implements;
-                if (nodeRels.some(r => r.type === 'drives'))     return RELATION_HEX.drives;
+                if (nodeRels.some(r => r.type === 'implements')) return RELATION_TYPE_META.implements.hex;
+                if (nodeRels.some(r => r.type === 'drives'))     return RELATION_TYPE_META.drives.hex;
                 if (nodeRels.some(r => r.type === 'relates'))    return null;
                 return null;
               })();

@@ -1,21 +1,24 @@
 /*
- * Relations entre items (blocks, depends, implements, relates) : CRUD + commentaire de relation.
- * La sémantique PERT des types vit côté web (pert-utils) — cf. spec 2026-06-11.
+ * Relations entre items : CRUD + commentaire de relation. Types acceptés = RELATION_TYPES (@spok/shared :
+ * blocks, relates, implements, parent, drives) — tout autre type (ancien `depends`, `tests`…) est refusé
+ * en 400 depuis le 2026-09-28. Détection de cycle pour `drives`. La sémantique des types (ordonnancement,
+ * libellés) vit côté web : apps/web/src/constants/relationTypes.ts.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { RELATION_TYPES } from '@spok/shared';
 import { createAuditLog, serializeRelationForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { getDrivesReachableIds } from '../utils/drivesGraph.js';
 
 const createRelationSchema = z.object({
   toItemId: z.string(),
-  type: z.string(),
+  type: z.enum(RELATION_TYPES),
   label: z.string().nullable().optional(),
 });
 
 const updateRelationSchema = z.object({
-  type: z.string().optional(),
+  type: z.enum(RELATION_TYPES).optional(),
   label: z.string().nullable().optional(),
 });
 

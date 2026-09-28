@@ -127,7 +127,8 @@ async function main() {
   const relParent = await createItem({
     type: 'PROJECT', title: '🔗 Test Relations', status: 'in_progress',
   });
-  const relTypes = ['blocks', 'depends', 'relates', 'implements', 'tests', 'duplicates'];
+  // Types officiels uniquement (RELATION_TYPES hors parent) — l'API refuse les autres depuis le 2026-09-28
+  const relTypes = ['blocks', 'implements', 'drives', 'relates'];
   const relItems: string[] = [];
   for (const relType of relTypes) {
     const a = await createItem({

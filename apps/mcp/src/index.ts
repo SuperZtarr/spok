@@ -7,6 +7,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { api } from './client.js';
 
+/** Types de relation proposés (miroir de RELATION_TYPES @spok/shared hors `parent` — l'API refuse tout autre type). */
+const RELATION_TYPE_VALUES = ['blocks', 'implements', 'drives', 'relates'] as const;
+
 const server = new McpServer({
   name: 'spok',
   version: '0.1.0',
@@ -869,7 +872,7 @@ server.tool(
     spaceId: z.string(),
     itemId: z.string().describe('Item source'),
     toItemId: z.string().describe('Item cible'),
-    type: z.string().describe('Type de relation (ex: RELATED, BLOCKS, DEPENDS_ON)'),
+    type: z.enum(RELATION_TYPE_VALUES).describe('Type de relation : blocks (bloque), implements (permet), drives (entraîne — décale les dates), relates (lié à)'),
     label: z.string().optional(),
   },
   async ({ spaceId, itemId, toItemId, type, label }) => {
@@ -889,7 +892,7 @@ server.tool(
     spaceId: z.string(),
     itemId: z.string(),
     relationId: z.string(),
-    type: z.string().optional(),
+    type: z.enum(RELATION_TYPE_VALUES).optional(),
     label: z.string().nullable().optional(),
   },
   async ({ spaceId, itemId, relationId, ...fields }) => {

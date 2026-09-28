@@ -1,5 +1,7 @@
-/* Toolbar de la vue PERT : filtre bloquants, zoom, tri rang/alpha, export SVG (sur ViewToolbar). */
+/* Toolbar de la vue PERT : filtre par type de relation (4 types officiels, source unique
+ * constants/relationTypes.ts), zoom, tri rang/alpha, export SVG (sur ViewToolbar). */
 import { Minus, Plus, Info, ArrowUpDown } from 'lucide-react';
+import { RELATION_TYPE_LIST } from '../../constants/relationTypes';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -140,11 +142,8 @@ export function PertToolbar({
       <div className="h-4 w-px bg-border mx-1" />
       {onToggleRelFilter && (
         <>
-          {[
-            { type: 'blocks',     label: 'Bloque',   activeClass: 'bg-red-100 text-red-700 border border-red-300',   dot: 'bg-red-500' },
-            { type: 'implements', label: 'Permet',   activeClass: 'bg-green-100 text-green-700 border border-green-300', dot: 'bg-green-500' },
-            { type: 'relates',    label: 'Lié à',    activeClass: 'bg-blue-100 text-blue-700 border border-blue-300',  dot: 'bg-blue-500' },
-          ].map(({ type, label, activeClass, dot }) => {
+          {/* Un filtre par type officiel (source unique relationTypes, Entraîne compris) */}
+          {RELATION_TYPE_LIST.map(({ id: type, label, badgeClass: activeClass, hex }) => {
             const active = activeRelFilters.has(type);
             return (
               <button
@@ -153,7 +152,7 @@ export function PertToolbar({
                 className={`inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs font-medium transition-colors ${active ? activeClass : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
                 title={active ? `Retirer le filtre "${label}"` : `Filtrer les items "${label}"`}
               >
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
                 <span className="hidden sm:inline">{label}</span>
               </button>
             );

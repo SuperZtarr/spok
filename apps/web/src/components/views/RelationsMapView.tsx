@@ -1,10 +1,13 @@
-/* Vue Relations : carte des relations entre items (sans hiérarchie). */
+/* Vue Relations : carte des relations entre items (sans hiérarchie).
+ * Types de relation : source unique constants/relationTypes.ts — les 4 types officiels sont visibles par
+ * défaut (Bloque, Permet, Entraîne, Lié à) ; un type hors liste n'est jamais affiché. */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { Maximize2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import type { Item } from '@spok/shared';
 import { RelationTooltip } from '../RelationTooltip';
+import { RELATION_TYPE_LIST, RELATION_TYPE_ORDER, getRelationMeta } from '../../constants/relationTypes';
 
 const NODE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -19,17 +22,6 @@ const NODE_COLORS: Record<string, string> = {
   BUG: '#ef4444',
 };
 
-const RELATION_COLORS: Record<string, string> = {
-  blocks: '#ef4444',
-  depends: '#f97316',
-  relates: '#a855f7',
-};
-
-const RELATION_LABELS: Record<string, string> = {
-  blocks: 'Bloque',
-  depends: 'Dépend de',
-  relates: 'Lié à',
-};
 
 interface GraphNode {
   id: string;
@@ -70,7 +62,7 @@ export function RelationsMapView({
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [visibleRelTypes, setVisibleRelTypes] = useState<string[]>(['blocks', 'depends', 'relates']);
+  const [visibleRelTypes, setVisibleRelTypes] = useState<string[]>([...RELATION_TYPE_ORDER]);
   const [showOrphans, setShowOrphans] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<any>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -106,7 +98,7 @@ export function RelationsMapView({
           source: item.id,
           target: targetId,
           type: relType,
-          color: RELATION_COLORS[relType] || '#94a3b8',
+          color: getRelationMeta(relType).hex,
           label: rel.label ?? undefined,
           fromTitle: item.title,
           toTitle: targetItem?.title ?? targetId,
@@ -126,7 +118,7 @@ export function RelationsMapView({
             source: sourceId,
             target: item.id,
             type: relType,
-            color: RELATION_COLORS[relType] || '#94a3b8',
+            color: getRelationMeta(relType).hex,
           });
           connectedIds.add(sourceId);
           connectedIds.add(item.id);
@@ -209,7 +201,7 @@ export function RelationsMapView({
         {/* Relation type toggles */}
         <div data-tour="relations-filters" className="bg-card/90 backdrop-blur border rounded-lg p-2 flex flex-col gap-1.5">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Relations</span>
-          {Object.entries(RELATION_LABELS).map(([type, label]) => (
+          {RELATION_TYPE_LIST.map(({ id: type, label, hex }) => (
             <label key={type} className="flex items-center gap-2 text-xs cursor-pointer">
               <input
                 type="checkbox"
@@ -219,7 +211,7 @@ export function RelationsMapView({
               />
               <span
                 className="w-3 h-0.5 rounded"
-                style={{ backgroundColor: RELATION_COLORS[type] }}
+                style={{ backgroundColor: hex }}
               />
               {label}
             </label>
