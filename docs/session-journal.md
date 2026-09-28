@@ -6,6 +6,13 @@
 
 ## EN COURS
 
+### MCP SPOK — 3e cause : token expiré vu comme anonyme — 2026-09-28
+- Symptôme : 15 min après le login, `list_spaces` vide, 404 sur les espaces privés, `search_items` vide — sans erreur. Cause : access token 15 min, routes `optionalAuthenticate` → requête traitée en anonyme (pas de 401 → pas de re-login)
+- Fix `apps/mcp/src/client.ts` : re-login avant l'`exp` du JWT (marge 60 s). Build OK ; effectif au prochain redémarrage de Claude. MEP 2026-09-28 (4db5fb2)
+- Rattrapage doc SPOK (tout depuis le 11/07, 73 commits feat/fix) : FAIT via MCP, tout en `to_validate` — ~35 items mis à jour, 17 créés (Items, Espaces, Communautés, Structure, Modales, Pages utilisateur/publiques, Admin, Système, Modèle de données, Autres fonctionnalités). Sources : journal + businessRules.ts + code
+- Signalé dans la doc : item « Sélecteur de vue » (Structure) = doublon probable de « Bandeau de navigation [GlobalNavBar] » ; divergence RelationTooltip (type `depends` hors RELATION_TYPES) ; Activité : sourdine à compléter par Thomas
+
+
 ### MCP SPOK 401 — 2e cause : parsing du .env dans launch.mjs — 2026-09-28
 - Le mot de passe prod (mis à jour par Thomas dans le `.env` racine) contient `"` et `'` ; `launch.mjs` lisait les valeurs avec `[^"']*` → tronqué au 1er guillemet (2 caractères lus sur 16) → 401
 - Fix : valeur brute après le 1er `=`, guillemets retirés seulement s'ils entourent toute la valeur. Vérifié localement sans afficher le secret : 16 caractères lus, e-mail OK. Mémoire project_mcp_prod mise à jour
