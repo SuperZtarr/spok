@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'forum-modal-reduced-with-summary',
+    page: 'Modale item (mode Forum)',
+    trigger: "Ouverture d'un item en mode d'interface Forum",
+    effect: "Modale toujours réduite (titre, description, média, réactions/contributions) — plus de dépliage automatique. Ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic ou « Plus de champs » = modale complète. Projet/Tous : modale complète",
+    location: 'apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/item-edit-helpers.ts (buildForumSummary)',
+  },
+  {
     id: 'priority-scale-single-source',
     page: 'Toutes (badges, filtres, confirmations, exports)',
     trigger: "Affichage ou filtrage d'une priorité",

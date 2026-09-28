@@ -8,7 +8,8 @@
  * Titre + Description (hauteur adaptée au contenu, 240px min / 40vh max, pour que les contributions
  * restent visibles juste dessous) + blocs media + Réactions/Contributions ; un toggle « Plus de champs »
  * (forumExpanded → showAll) révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants
- * et repasse en layout 3 colonnes. Auto-ouvert si l'item porte déjà des données avancées.
+ * et repasse en layout 3 colonnes. Toujours ouvert réduit (plus de dépliage auto, 2026-09-28) : une
+ * ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
  * Auto-save sur blur titre ; save explicite via bouton Enregistrer.
  * Fraîcheur : la fiche ['item', spaceId, itemId] est TOUJOURS relue à l'ouverture (staleTime 0) et
@@ -55,7 +56,7 @@ import { CascadeShiftConfirmModal } from './CascadeShiftConfirmModal';
 import { DevModalBadge } from './ui/DevModalBadge';
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
-import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey } from './item-edit-helpers';
+import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
 import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
@@ -322,20 +323,6 @@ export function ItemEditModal({
     loadedItemRef.current = null;
     setForumExpanded(false);
   }, [itemId]);
-
-  // Forum : si l'item porte déjà des données « avancées » (type non-Note, pilotage, relations),
-  // ouvrir le modal complet d'emblée pour que la sélection courante reste visible.
-  useEffect(() => {
-    if (!item || !isForumMode) return;
-    // Volontairement strict : le statut est ignoré (quasi toujours renseigné, même par défaut).
-    const hasAdvanced =
-      (item.type !== 'NOTE' && item.type !== 'UNDEFINED') ||
-      item.priority != null ||
-      !!item.dueDate || !!item.startDate || !!item.endDate ||
-      !!item.assignedToId ||
-      ((item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0)) > 0;
-    if (hasAdvanced) setForumExpanded(true);
-  }, [item, isForumMode]);
 
   // Formulaire ← item : au premier chargement, puis à CHAQUE version plus récente du même item
   // (updatedAt) — refetch à l'ouverture après une modif faite dans une vue, absorption, cascade…
@@ -1072,6 +1059,27 @@ export function ItemEditModal({
               <ItemHelpButton pulse={itemPulse} onStartTour={startItemTour} />
             </div>
           </div>
+
+          {/* Forum replié : résumé cliquable des champs avancés renseignés (remplace le dépliage auto) */}
+          {isForumMode && !forumExpanded && item && (() => {
+            const parts = buildForumSummary(item, {
+              typeLabel: (t) => (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[t as ItemType]?.labelShort,
+              statusLabel: (s) => (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((st) => st.id === s)?.label,
+              priorityLabel: (p) => PRIORITIES.find((pr) => pr.value === p)?.label,
+              formatDate: (iso) => formatDate(iso),
+            });
+            if (parts.length === 0) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => setForumExpanded(true)}
+                className="self-start -mt-1 mb-2 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                title="Afficher tous les champs"
+              >
+                {parts.join(' · ')}
+              </button>
+            );
+          })()}
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto pr-1">

@@ -1,6 +1,6 @@
 /* TNR des helpers item-edit-helpers : structure de modèle, fusion formulaire/serveur. */
 import { describe, it, expect } from 'vitest'
-import { buildItemTemplateStructure, countTemplateNodes, mergeFormWithServer, tagKey } from './item-edit-helpers'
+import { buildItemTemplateStructure, countTemplateNodes, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers'
 import type { Item } from '@spok/shared'
 
 function mockItem(overrides: Partial<Item> & { id: string }): Item {
@@ -68,5 +68,37 @@ describe('mergeFormWithServer', () => {
 
   it('tagKey : ordre indifférent', () => {
     expect(tagKey(['b', 'a'])).toBe(tagKey(['a', 'b']))
+  })
+})
+
+describe('buildForumSummary', () => {
+  const labels = {
+    typeLabel: (t: string) => ({ TASK: 'Tâche', MEETING: 'Réunion' } as Record<string, string>)[t],
+    statusLabel: (s: string) => ({ in_progress: 'En cours', todo: 'À faire' } as Record<string, string>)[s],
+    priorityLabel: (p: number) => ({ 4: 'Urgente', 3: 'Haute' } as Record<number, string>)[p],
+    formatDate: (iso: string) => iso.slice(0, 10),
+  }
+
+  it('Note vierge : aucun résumé', () => {
+    expect(buildForumSummary({ type: 'NOTE' }, labels)).toEqual([])
+    expect(buildForumSummary({ type: 'UNDEFINED', status: 'undefined' }, labels)).toEqual([])
+  })
+
+  it('item complet : type · statut · priorité · période · échéance · assigné · liens', () => {
+    expect(buildForumSummary({
+      type: 'TASK', status: 'in_progress', priority: 3,
+      startDate: '2026-10-01T10:00:00Z', endDate: '2026-10-05T10:00:00Z', dueDate: '2026-10-03T12:00:00Z',
+      assignedTo: { name: 'Alice' }, relationsFrom: [{}], relationsTo: [{}],
+    }, labels)).toEqual(['Tâche', 'En cours', 'Haute', '2026-10-01 → 2026-10-05', 'échéance 2026-10-03', 'Alice', '2 liens'])
+  })
+
+  it('début et fin le même jour : une seule date', () => {
+    expect(buildForumSummary({ type: 'MEETING', startDate: '2026-04-22T08:00:00Z', endDate: '2026-04-22T09:00:00Z' }, labels))
+      .toEqual(['Réunion', '2026-04-22'])
+  })
+
+  it('début seul, 1 lien', () => {
+    expect(buildForumSummary({ type: 'NOTE', startDate: '2026-10-01T10:00:00Z', relationsFrom: [{}] }, labels))
+      .toEqual(['dès 2026-10-01', '1 lien'])
   })
 })

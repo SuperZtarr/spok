@@ -1,4 +1,4 @@
-/* Helpers d'ItemEditModal : préparation des payloads, diff des champs modifiés, fusion formulaire/serveur (mergeFormWithServer). */
+/* Helpers d'ItemEditModal : payloads, diff des champs modifiés, fusion formulaire/serveur (mergeFormWithServer), résumé Forum (buildForumSummary). */
 import type { Item, ItemTemplateNode } from '@spok/shared';
 
 /** Extract a clean name from a filename (remove extension) */
@@ -73,4 +73,42 @@ export function mergeFormWithServer<T extends Record<string, unknown>>(current: 
 /** Clé scalaire d'un ensemble d'ids de tags (ordre indifférent), pour mergeFormWithServer. */
 export function tagKey(ids: string[]): string {
   return [...ids].sort().join(',');
+}
+
+/**
+ * Résumé des champs avancés renseignés, affiché sous le titre de la modale Forum réduite
+ * (ex. « Tâche · En cours · Haute · échéance 3 oct. · Alice · 2 liens »). Remplace le dépliage
+ * automatique : la modale Forum reste réduite, rien n'est caché. Vide pour une Note vierge.
+ * Ordre : type (hors Note/Non défini), statut (hors non défini), priorité, période ou début,
+ * échéance, assigné, nombre de liens. Libellés injectés (référentiels, PRIORITIES, format de date).
+ */
+export function buildForumSummary(
+  item: {
+    type?: string | null; status?: string | null; priority?: number | null;
+    startDate?: string | null; endDate?: string | null; dueDate?: string | null;
+    assignedTo?: { name?: string | null } | null;
+    relationsFrom?: unknown[] | null; relationsTo?: unknown[] | null;
+  },
+  labels: {
+    typeLabel: (type: string) => string | undefined;
+    statusLabel: (status: string) => string | undefined;
+    priorityLabel: (priority: number) => string | undefined;
+    formatDate: (iso: string) => string;
+  },
+): string[] {
+  const parts: string[] = [];
+  if (item.type && item.type !== 'NOTE' && item.type !== 'UNDEFINED') parts.push(labels.typeLabel(item.type) ?? item.type);
+  if (item.status && item.status !== 'undefined') parts.push(labels.statusLabel(item.status) ?? item.status);
+  if (item.priority != null) parts.push(labels.priorityLabel(item.priority) ?? `P${item.priority}`);
+  if (item.startDate && item.endDate) {
+    const from = labels.formatDate(item.startDate);
+    const to = labels.formatDate(item.endDate);
+    parts.push(from === to ? from : `${from} → ${to}`); // réunion d'un jour : une seule date
+  }
+  else if (item.startDate) parts.push(`dès ${labels.formatDate(item.startDate)}`);
+  if (item.dueDate) parts.push(`échéance ${labels.formatDate(item.dueDate)}`);
+  if (item.assignedTo?.name) parts.push(item.assignedTo.name);
+  const links = (item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0);
+  if (links > 0) parts.push(`${links} lien${links > 1 ? 's' : ''}`);
+  return parts;
 }
