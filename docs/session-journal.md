@@ -6,6 +6,19 @@
 
 ## EN COURS
 
+### Accusé de lecture à l'assignation — FAIT — 2026-09-29
+- Conception validée (Thomas) : modale + vue Membres + colonne Assigné de /tasks (œil barré si pas vu) ; règles : vu = ItemView de l'assigné après assignedAt ; réassignation = repart de zéro ; auto-assignation / désassignation / assignations antérieures = pas d'indicateur (option A, pas de reprise)
+- FAIT : schéma `Item.assignedAt/assignedById` (db push local + generate + build:packages) ; `apps/api/src/utils/assignment.ts` (+6 tests) ; écritures branchées : création + PATCH (items.ts), fusion (item-merge : garde la date d'origine), restauration audit (admin/auditLogs.ts) ; lectures : liste items, fiche item, /user/tasks renvoient `assignmentReceipt`. Types : shared `AssignmentReceipt` + `Item.assignedAt/assignedById/assignmentReceipt`, web `GlobalTask.assignmentReceipt`. Typecheck api OK, 60 tests api OK
+- Web : `lib/assignmentReceipt.ts` (+4 tests) ; modale sous « Assigné à » (seulement pour l'assigné enregistré) ; œil barré sur les cartes MembersKanbanView ; page Tâches : PAS de colonne Assigné (écart à la conception annoncée, doc SPOK corrigée) → œil barré à côté du titre avec infobulle « Pas encore vu par X » ; règle businessRules `assignment-read-receipt` ; doc SPOK (Assigné à, Membres, Tâches, modèle Item)
+- MEP 2026-09-29 (a2eb5d9 accusé, e2fdbbe chemin critique) — build + typecheck 5 packages OK, 671/671 tests verts — schéma additif (start-api.sh fait db push)
+
+### Chemin critique Gantt/PERT : CPM standard — 2026-09-28
+- Signalé en creusant les types de relation : Gantt = tout item daté participait (isolé → critique) ; Gantt ET PERT = fin de chaîne LF = son propre EF → toute fin de chaîne / chaîne courte critique
+- Fix `timeline-utils` (seuls les items reliés par une relation d'ordre participent) + `timeline-utils` et `pert-utils` (LF d'une fin de chaîne = fin du projet = EF max). +4 tests (rouges avant fix). Tests existants inchangés et verts. Typecheck web OK. Doc SPOK Gantt MAJ. MEP 2026-09-29 (e2fdbbe)
+
+### Ménage TODO — section « Serveur MCP » close — 2026-09-28
+- 6 questions de conception obsolètes remplacées par les réponses de fait (serveur séparé `apps/mcp`, 44 outils, auth par compte + JWT, pas de ressources). MEP 2026-09-29
+
 ### Types de relation : source unique + conversion des types hors liste (option B) — 2026-09-28
 - `constants/relationTypes.ts` (+4 tests) remplace 9 tables locales (ItemEditModal ×3, RelationTooltip, timeline-constants, flèches Gantt, mindmap-utils, mindmap-layout, PertView ×3, PertToolbar, RelationsMapView). Ordonnancement unique `isOrderingRelation` = blocks + implements : Gantt CPM aligné sur le PERT (+3 tests, dont implements qui ordonne désormais), PERT ne fait plus ordonner `relates` en sens inverse (reste de `depends`), Entraîne affiché (centre à centre) et filtrable, carte des relations : 4 types visibles par défaut
 - API `z.enum(RELATION_TYPES)` création/modif (+5 tests 400), MCP enum (description suggérait DEPENDS_ON), seed sans types hors liste, règle businessRules `relation-types-single-source`

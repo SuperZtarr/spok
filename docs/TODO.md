@@ -93,7 +93,9 @@
 - [ ] Réduction de données
 - [ ] Identification d'élément
 - [x] « Marquer comme non lu » : notifications (cloche, `PATCH /notifications/:id/unread`) et items (menus contextuels de toutes les vues + modale ; `ItemView.markedUnread`, `POST /activity/items/:id/unread`, effacé à l'ouverture). Item marqué → Activité / Non lus quels que soient âge, auteur, espace (perso → groupe « Espaces personnels ») + clignotement — 2026-09-28 (2963b42)
-- [ ] Accusé de lecture à l'assignation : quand un item est assigné à quelqu'un, montrer à l'assigneur si l'assigné l'a consulté depuis l'assignation (ex. « Vu par Alice le 3 oct. » / « Pas encore vu ») — s'appuie sur `ItemView` de l'assigné (demande Thomas 2026-09-28, scope limité aux assignations)
+- [x] Accusé de lecture à l'assignation — `Item.assignedAt/assignedById`, `utils/assignment.ts` (tampon sur création/PATCH/fusion/restauration d'audit, calcul groupé), `assignmentReceipt` renvoyé par liste/fiche/`/user/tasks` ; modale « Vu par X le … » / « Pas encore vu », œil barré dans la vue Membres et à côté du titre dans la page Tâches (pas de colonne Assigné) — 2026-09-29 (a2eb5d9)
+- [x] Chemin critique Gantt/PERT en CPM standard (item isolé jamais critique, fin de chaîne = fin du projet) — 2026-09-29 (e2fdbbe)
+- [ ] (historique) Accusé de lecture à l'assignation : quand un item est assigné à quelqu'un, montrer à l'assigneur si l'assigné l'a consulté depuis l'assignation (ex. « Vu par Alice le 3 oct. » / « Pas encore vu ») — s'appuie sur `ItemView` de l'assigné (demande Thomas 2026-09-28, scope limité aux assignations)
 - [x] Exploiter la table `ItemView` : déjà faite avant 2026-09 (feed /activity, panneau Non lus, clignotement des items non vus, badge « Nouveau » des contributions) — entrée obsolète, close le 2026-09-28
 
 ### IA / Résumés
@@ -153,10 +155,10 @@
 - [ ] MVP : animateur sélectionne → participants voient en temps réel, puis itérer
 
 ### Serveur MCP (Model Context Protocol)
-- [ ] Réfléchir à l'intérêt : exposer les données SPOK (items, espaces, relations) comme contexte pour les LLM
-- [ ] Cas d'usage : navigation/recherche dans SPOK via Claude, création d'items par prompt, résumé de contenu, analyse de graphe
-- [ ] Architecture : serveur MCP séparé ou intégré à l'API Fastify existante ?
-- [ ] Quelles ressources exposer (items, espaces, communautés, relations, contributions) ?
-- [ ] Quels outils MCP proposer (search, create, update, summarize, navigate) ?
-- [ ] Auth : comment authentifier les requêtes MCP (token utilisateur, clé API dédiée) ?
+- [x] Section de conception close le 2026-09-28 — le serveur existe et sert en prod (doc SPOK : Système › Architecture technique › « Serveur MCP SPOK [apps/mcp] »). Réponses de fait aux 6 questions d'origine :
+  - Intérêt / cas d'usage : Claude lit et écrit dans SPOK (recherche, CRUD, mise à jour de la documentation) ; résumé et analyse de graphe faits côté Claude, pas d'outil dédié
+  - Architecture : serveur séparé `apps/mcp` (stdio), client de l'API REST de prod — pas intégré à Fastify
+  - Ressources : aucune ressource MCP, uniquement des outils
+  - Outils (44) : espaces, items (dont `search_items`), communautés, utilisateurs, contributions, tags, membres d'espace et de communauté, notifications, relations (types limités à blocks/implements/drives/relates depuis le 2026-09-28)
+  - Auth : compte utilisateur (e-mail + mot de passe du `.env` racine via `launch.mjs`) → JWT, reconnexion avant expiration (4db5fb2) ; pas de clé API dédiée
 
