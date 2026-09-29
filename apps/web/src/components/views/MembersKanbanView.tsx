@@ -1,4 +1,5 @@
-/* Vue Assignations : kanban par membre (colonnes = membres de l'espace). */
+/* Vue Assignations : kanban par membre (colonnes = membres de l'espace). Icône œil barré sur une carte
+ * quand l'assigné n'a pas encore ouvert l'item depuis son assignation (assignmentReceipt, 2026-09-29). */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,7 +16,7 @@ import {
   useDraggable,
   pointerWithin,
 } from '@dnd-kit/core';
-import { GripVertical, User, Users, FolderKanban, GripHorizontal } from 'lucide-react';
+import { GripVertical, User, Users, FolderKanban, GripHorizontal, EyeOff } from 'lucide-react';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -155,6 +156,12 @@ function MemberKanbanCard({
             {pConfig && (
               <span className={`text-[10px] font-bold ${pConfig.textColor} flex-shrink-0`} title={pConfig.label}>
                 {pConfig.shortLabel}
+              </span>
+            )}
+            {/* Accusé de lecture : icône seulement si l'assigné n'a pas encore ouvert l'item */}
+            {item.assignmentReceipt && !item.assignmentReceipt.seenAt && (
+              <span title="Pas encore vu par l'assigné" className="flex-shrink-0 text-orange-500">
+                <EyeOff className="w-3.5 h-3.5" />
               </span>
             )}
           </div>

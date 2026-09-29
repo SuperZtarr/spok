@@ -6,8 +6,10 @@
  * `type` : si absent (ou aucune valeur valide) → AUCUN filtre de type, tous les types remontent.
  * Les appelants qui veulent uniquement les tâches passent `type=TASK` explicitement
  * (ex. useGlobalTaskFilters avec defaultTypes:['TASK'] pour la page /tasks).
+ * Chaque tâche porte assignmentReceipt (accusé de lecture à l'assignation, utils/assignment.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
+import { computeAssignmentReceipts } from '../utils/assignment.js';
 
 export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
@@ -255,6 +257,8 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
           spaceId: true,
           createdById: true,
           assignedToId: true,
+          assignedAt: true,
+          assignedById: true,
           parentId: true,
           description: true,
           url: true,
@@ -271,9 +275,12 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.item.count({ where }),
     ]);
 
+    const receipts = await computeAssignmentReceipts(fastify.prisma, tasks);
+
     return {
       data: tasks.map((t) => ({
         ...t,
+        assignmentReceipt: receipts.get(t.id) ?? null,
         spaceName: t.space.name,
         spaceParentId: t.space.parentId,
         communityId: t.space.communityId,

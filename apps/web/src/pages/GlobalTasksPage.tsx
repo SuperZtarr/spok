@@ -1,4 +1,6 @@
-/* Tâches globales (/tasks) : tableau multi-espaces sur /user/tasks, regroupé par horizon temporel (Maintenant/Aujourd'hui/Semaine/Mois/Plus tard/À trier), filtres et tri par colonne. */
+/* Tâches globales (/tasks) : tableau multi-espaces sur /user/tasks, regroupé par horizon temporel (Maintenant/Aujourd'hui/Semaine/Mois/Plus tard/À trier), filtres et tri par colonne.
+ * Pas de colonne Assigné : l'accusé de lecture à l'assignation est une icône œil barré à côté du titre
+ * quand l'assigné n'a pas encore ouvert l'item (assignmentReceipt, 2026-09-29). */
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +10,7 @@ import {
   FolderKanban,
   CheckSquare,
   AlertCircle,
+  EyeOff,
 } from 'lucide-react';
 import { userTasksApi, itemsApi } from '../lib/api';
 import type { GlobalTask, GlobalTaskFilters } from '../lib/api';
@@ -28,6 +31,16 @@ const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
   2: { label: 'Normale', color: 'bg-blue-100 text-blue-800' },
   1: { label: 'Basse', color: 'bg-gray-100 text-gray-600' },
 };
+
+/** Œil barré si l'assigné n'a pas encore ouvert l'item depuis son assignation ; rien sinon. */
+function UnseenAssignmentIcon({ task }: { task: GlobalTask }) {
+  if (!task.assignmentReceipt || task.assignmentReceipt.seenAt) return null;
+  return (
+    <span title={`Pas encore vu par ${task.assignedToName ?? "l'assigné"}`} className="flex-shrink-0 text-orange-500">
+      <EyeOff className="w-3.5 h-3.5" />
+    </span>
+  );
+}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -141,6 +154,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
         <span className="truncate font-medium text-sm">
           {task.title}
         </span>
+        <UnseenAssignmentIcon task={task} />
         {task.parent && (
           <span className="text-xs text-muted-foreground truncate flex-shrink-0">
             ← {task.parent.title}
@@ -298,7 +312,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
                   <div className="flex items-start gap-2 mb-1.5">
                     <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{task.title}</p>
+                      <p className="font-medium text-sm truncate flex items-center gap-1">{task.title} <UnseenAssignmentIcon task={task} /></p>
                       {task.parent && (
                         <p className="text-xs text-muted-foreground truncate">← {task.parent.title}</p>
                       )}

@@ -1,6 +1,7 @@
 /*
  * Fusion de deux items : choix champ par champ (source/target), absorption des enfants,
- * contributions et relations, puis suppression de la source.
+ * contributions et relations, puis suppression de la source. L'assigné retenu conserve sa date et son
+ * auteur d'assignation (assignedAt / assignedById) — pas de nouvel accusé de lecture.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -92,7 +93,10 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
         type: pick('type').type as any,
         status: pick('status').status,
         priority: pick('priority').priority,
+        // L'assignation retenue garde sa date/auteur d'origine (accusé de lecture, utils/assignment.ts)
         assignedToId: pick('assignedToId').assignedToId,
+        assignedAt: pick('assignedToId').assignedAt,
+        assignedById: pick('assignedToId').assignedById,
         startDate: pick('startDate').startDate,
         endDate: pick('endDate').endDate,
         dueDate: pick('dueDate').dueDate,

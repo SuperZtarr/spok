@@ -3,9 +3,12 @@
  * détail avec relations/contributions/reactionSummary. Exporte checkSpaceAccess et
  * getEffectiveVisibility (visibilité espace → parent → communauté ; OPEN→MEMBER, READONLY→VIEWER)
  * utilisés par de nombreuses routes — toute modification impacte l'accès global.
+ * Accusé de lecture à l'assignation : création/PATCH posent assignedAt/assignedById (assignmentStamp) ;
+ * liste et détail renvoient assignmentReceipt (computeAssignmentReceipts) — cf. utils/assignment.ts.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { assignmentStamp, computeAssignmentReceipts } from '../utils/assignment.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { createItemTree } from '../utils/itemTree.js';
 import { createNotification } from '../utils/notifications.js';
@@ -241,6 +244,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       ]);
 
       const since60days = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+      const receipts = await computeAssignmentReceipts(fastify.prisma, items as any);
 
       return {
         data: items.map((item: any) => {
@@ -262,6 +266,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             tags: item.tags.map((t: any) => t.tag),
             childCount: item._count.children,
             contributionCount: item._count.contributions,
+            assignmentReceipt: receipts.get(item.id) ?? null,
             ...(exposedViewedAt !== undefined ? { viewedAt: exposedViewedAt } : {}),
             ...(includeContributions && item.contributions ? { contributions: item.contributions } : {}),
           };
@@ -294,6 +299,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const item = await fastify.prisma.item.create({
         data: {
           ...itemData,
+          ...assignmentStamp(null, itemData.assignedToId, request.user.userId),
           dueDate: itemData.dueDate ? new Date(itemData.dueDate) : undefined,
           startDate: itemData.startDate ? new Date(itemData.startDate) : undefined,
           endDate: itemData.endDate ? new Date(itemData.endDate) : undefined,
@@ -421,6 +427,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const currentUserId = request.user?.userId;
+    const assignmentReceipt = (await computeAssignmentReceipts(fastify.prisma, [item as any])).get(item.id) ?? null;
 
     // Build reaction summary helper
     const buildSummary = (reactions: { reactionType: string; userId: string }[]) => {
@@ -442,6 +449,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         tags: c.tags.map((t) => t.tag),
       })),
       reactionSummary: buildSummary(item.reactions),
+      assignmentReceipt,
       contributions: item.contributions.map((c: any) => ({
         ...c,
         reactionSummary: buildSummary(c.reactions),
@@ -568,6 +576,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.params.id },
         data: {
           ...updateData,
+          ...assignmentStamp(existingItem.assignedToId, updateData.assignedToId, request.user.userId),
           updatedById: request.user.userId,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
           startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : undefined,

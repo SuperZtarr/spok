@@ -1,4 +1,4 @@
-/* Types item : Item, ItemType, relations, inputs de création/déplacement. */
+/* Types item : Item, ItemType, relations, inputs de création/déplacement, accusé de lecture à l'assignation. */
 import type { ContributionWithAuthor } from './contribution.js';
 import type { ReactionSummary } from './reaction.js';
 import type { HorizonBucket } from '../utils/horizon.js';
@@ -25,10 +25,18 @@ export interface Item {
   spaceId: string;
   createdById: string;
   assignedToId?: string | null;
+  /** Date / auteur de l'assignation courante (null = non assigné ou assignation antérieure au 2026-09-29) */
+  assignedAt?: string | null;
+  assignedById?: string | null;
+  /** Accusé de lecture calculé par l'API : null = pas d'indicateur ; seenAt null = pas encore vu */
+  assignmentReceipt?: AssignmentReceipt;
   parentId?: string | null;
   tags?: Tag[];
   viewedAt?: string | null;
 }
+
+/** Accusé de lecture à l'assignation (cf. apps/api/src/utils/assignment.ts). */
+export type AssignmentReceipt = { seenAt: string | null } | null;
 
 export interface MoveItemInput {
   parentId?: string | null;

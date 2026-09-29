@@ -53,6 +53,7 @@ import type {
   HorizonBucket,
   ItemTemplate,
   ItemTemplateNode,
+  AssignmentReceipt,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -465,6 +466,8 @@ export interface GlobalTask {
   communityName: string | null;
   createdByName: string;
   assignedToName: string | null;
+  /** Accusé de lecture à l'assignation : null = pas d'indicateur ; seenAt null = pas encore vu */
+  assignmentReceipt: AssignmentReceipt;
   space: { id: string; name: string };
   createdBy: { id: string; name: string };
   assignedTo: { id: string; name: string } | null;

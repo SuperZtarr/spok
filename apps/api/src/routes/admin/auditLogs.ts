@@ -1,7 +1,9 @@
-/* Journal d'audit global (admin) : tous espaces, filtres entité/action/utilisateur/dates. */
+/* Journal d'audit global (admin) : tous espaces, filtres entité/action/utilisateur/dates, restauration.
+ * Restaurer l'assigné d'un item repose la date d'assignation (assignmentStamp — accusé de lecture). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
+import { assignmentStamp } from '../../utils/assignment.js';
 
 const querySchema = z.object({
   entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community']).optional(),
@@ -246,9 +248,13 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
         case 'Item': {
           const existing = await fastify.prisma.item.findUnique({ where: { id: log.entityId } });
           if (!existing) return reply.notFound('Item no longer exists');
+          // Restaurer l'assigné = nouvelle assignation (accusé de lecture, utils/assignment.ts)
+          const stamp = 'assignedToId' in restoreData
+            ? assignmentStamp(existing.assignedToId, restoreData.assignedToId as string | null, request.user.userId)
+            : {};
           restored = await fastify.prisma.item.update({
             where: { id: log.entityId },
-            data: restoreData as any,
+            data: { ...restoreData, ...stamp } as any,
           });
           break;
         }

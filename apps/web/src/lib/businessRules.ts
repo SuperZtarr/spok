@@ -187,4 +187,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "4 types officiels : Bloque, Permet, Entraîne, Lié à — mêmes libellés et couleurs partout. Seuls Bloque et Permet ordonnent (chemin critique Gantt, rangs PERT) ; Entraîne décale les dates sans ordonner ; Lié à n'ordonne pas. Un type hors liste est refusé par l'API et, s'il existe encore, affiché en gris sans effet",
     location: 'apps/web/src/constants/relationTypes.ts, apps/api/src/routes/item-relations.ts (z.enum RELATION_TYPES)',
   },
+  {
+    id: 'assignment-read-receipt',
+    page: 'Modale item (Assigné à), vue Membres, page Tâches',
+    trigger: "Assignation d'un item à quelqu'un d'autre que soi",
+    effect: "La date et l'auteur de l'assignation sont enregistrés. « Vu par X le … » dès que l'assigné ouvre l'item après cette date, sinon « Pas encore vu » (œil barré orange dans la vue Membres et la page Tâches). Réassignation = repart de zéro ; auto-assignation, désassignation et assignations antérieures au 29/09/2026 : pas d'indicateur. Marquer non lu ensuite ne retire pas l'accusé",
+    location: 'apps/api/src/utils/assignment.ts, apps/web/src/lib/assignmentReceipt.ts',
+  },
 ];

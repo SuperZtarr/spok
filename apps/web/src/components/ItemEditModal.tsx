@@ -13,7 +13,9 @@
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
  * Save explicite via bouton Enregistrer (orange vif, action principale — 2026-09-28), avec verrou
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
- * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien. Écritures directes hors Enregistrer (upload image/document, XML de diagramme
+ * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien.
+ * Accusé de lecture à l'assignation sous « Assigné à » (assignmentReceipt de l'API) : « Vu par X le … » ou
+ * « Pas encore vu », seulement pour l'assigné enregistré. Écritures directes hors Enregistrer (upload image/document, XML de diagramme
  * auto-sauvé ou « Enregistrer et fermer » draw.io) : toujours suivies de refreshItem(), sinon faux 409.
  * Fraîcheur : la fiche ['item', spaceId, itemId] est TOUJOURS relue à l'ouverture (staleTime 0) et
  * chaque version plus récente (updatedAt) est fusionnée champ par champ dans le formulaire
@@ -25,6 +27,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
+import { assignmentReceiptLabel } from '../lib/assignmentReceipt';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
@@ -1560,6 +1563,19 @@ export function ItemEditModal({
                       {assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu') : <span className="text-muted-foreground">Non assigné</span>}
                     </p>
                   )}
+                  {/* Accusé de lecture : seulement pour l'assigné enregistré (pas pendant un changement en cours) */}
+                  {(() => {
+                    if (!item || (item.assignedToId ?? '') !== assignedToId) return null;
+                    const name = spaceMembers.find((m) => m.userId === assignedToId)?.name;
+                    const receipt = assignmentReceiptLabel(item.assignmentReceipt, name);
+                    if (!receipt) return null;
+                    return (
+                      <p className={`text-xs flex items-center gap-1 ${receipt.seen ? 'text-muted-foreground' : 'text-orange-600 dark:text-orange-400'}`}>
+                        {receipt.seen ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        {receipt.text}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 
