@@ -182,3 +182,14 @@ describe('computeCriticalPathNaive', () => {
     expect(cp.has('D')).toBe(true);
   });
 });
+
+describe('computeCriticalPathNaive — fin du projet (CPM standard)', () => {
+  it('une chaîne courte parallèle n\'est pas critique, la plus longue l\'est', () => {
+    // Longue : A → B → C (3 étapes) ; courte : D → E (2 étapes)
+    const items = ['A', 'B', 'C', 'D', 'E'].map(makeItem);
+    const rels = [makeRel('A', 'B', 'blocks'), makeRel('B', 'C', 'blocks'), makeRel('D', 'E', 'blocks')];
+    const { predecessors, successors } = buildPertGraph(items, rels);
+    const cp = computeCriticalPathNaive(items, predecessors, successors);
+    expect([...cp].sort()).toEqual(['A', 'B', 'C']);
+  });
+});

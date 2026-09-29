@@ -32,8 +32,10 @@ export function moveInitialEnd(
  *   - blocks / implements (from=A, to=B) : A est prédécesseur de B
  *   - drives, relates, types hors liste : n'ordonnent pas
  *
- * Items sans dates mais avec au moins une dépendance : durée = 0 (jalons).
- * Items sans dates ET sans dépendances : exclus.
+ * Seuls les items ayant au moins une relation d'ordre participent (item isolé : jamais critique).
+ * Items sans dates mais reliés : durée = 0 (jalons).
+ * Fin de chaîne : date au plus tard = fin du projet (EF maximal) — CPM standard (2026-09-28) : une
+ * chaîne courte qui finit avant la fin du projet a de la marge et n'est pas critique.
  */
 export function computeCriticalPath(items: Item[], relations: ItemRelation[]): Set<string> {
   // 1. Construire le graphe de précédence
@@ -64,15 +66,14 @@ export function computeCriticalPath(items: Item[], relations: ItemRelation[]): S
   const hasDeps = (id: string) =>
     (predecessors.get(id)?.length ?? 0) > 0 || (successors.get(id)?.length ?? 0) > 0;
 
+  // Seuls les items reliés par une relation d'ordre participent (un item isolé n'a pas de chemin)
   const durationsMs = new Map<string, number>();
   for (const item of items) {
+    if (!hasDeps(item.id)) continue;
     const hasDate = item.startDate && item.endDate;
-    if (hasDate) {
-      durationsMs.set(item.id, new Date(item.endDate!).getTime() - new Date(item.startDate!).getTime());
-    } else if (hasDeps(item.id)) {
-      durationsMs.set(item.id, 0); // jalon
-    }
-    // sinon : exclu
+    durationsMs.set(item.id, hasDate
+      ? new Date(item.endDate!).getTime() - new Date(item.startDate!).getTime()
+      : 0); // sans dates : jalon
   }
 
   const included = Array.from(durationsMs.keys());
@@ -120,14 +121,16 @@ export function computeCriticalPath(items: Item[], relations: ItemRelation[]): S
     EF.set(id, es + durationsMs.get(id)!);
   }
 
-  // 5. Backward pass — LS / LF en ms epoch
+  // 5. Backward pass — LS / LF en ms epoch. Fin de chaîne : LF = fin du projet (EF maximal), pas son
+  // propre EF — sinon toute fin de chaîne aurait une marge nulle et ressortirait critique.
   const LS = new Map<string, number>();
   const LF = new Map<string, number>();
+  const projectEnd = Math.max(...Array.from(EF.values()));
 
   for (const id of [...topoOrder].reverse()) {
     const succs = (successors.get(id) ?? []).filter(s => durationsMs.has(s));
     const lf = succs.length === 0
-      ? EF.get(id)!
+      ? projectEnd
       : Math.min(...succs.map(s => LS.get(s) ?? Infinity));
     LF.set(id, lf);
     LS.set(id, lf - durationsMs.get(id)!);

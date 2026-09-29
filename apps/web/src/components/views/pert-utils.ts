@@ -1,7 +1,7 @@
 /*
  * Utilitaires PERT : graphe de précédence (isOrderingRelation : blocks/implements ordonnent ; drives,
  * relates et types hors liste non — spec 2026-06-11, source unique 2026-09-28), rangs par plus long
- * chemin, chemin critique. Testé par pert-utils.test.ts.
+ * chemin, chemin critique (CPM standard : fin de chaîne = fin du projet). Testé par pert-utils.test.ts.
  */
 import type { Item, ItemRelation } from '@spok/shared';
 import { isOrderingRelation } from '../../constants/relationTypes';
@@ -126,13 +126,15 @@ export function computeCriticalPathNaive(
     EF.set(id, es + 1);
   }
 
-  // Backward pass
+  // Backward pass — fin de chaîne : LF = fin du projet (EF maximal), pas son propre EF (CPM standard,
+  // 2026-09-28 : sinon toute chaîne courte ressortait critique)
   const LS = new Map<string, number>();
   const LF = new Map<string, number>();
+  const projectEnd = Math.max(...Array.from(EF.values()));
 
   for (const id of [...topoOrder].reverse()) {
     const succs = (successors.get(id) ?? []).filter(s => connectedIds.has(s));
-    const lf = succs.length === 0 ? EF.get(id)! : Math.min(...succs.map(s => LS.get(s) ?? Infinity));
+    const lf = succs.length === 0 ? projectEnd : Math.min(...succs.map(s => LS.get(s) ?? Infinity));
     LF.set(id, lf);
     LS.set(id, lf - 1);
   }

@@ -53,3 +53,29 @@ describe('computeCriticalPath — ordonnancement (blocks + implements, comme le 
     expect([...withRel].sort()).toEqual([...without].sort());
   });
 });
+
+describe('computeCriticalPath — fin du projet (CPM standard)', () => {
+  const d = (day: number) => new Date(2026, 8, day).toISOString();
+  const mk = (id: string, start: number, end: number) =>
+    ({ id, title: id, startDate: d(start), endDate: d(end), dueDate: null } as unknown as Item);
+  const rel = (fromItemId: string, toItemId: string) =>
+    ({ id: `${fromItemId}-${toItemId}`, fromItemId, toItemId, type: 'blocks' } as unknown as ItemRelation);
+
+  it('un item isolé (sans relation d\'ordre) n\'est jamais critique, même s\'il finit en dernier', () => {
+    const items = [mk('A', 1, 3), mk('B', 4, 6), mk('X', 1, 20)];
+    const cp = computeCriticalPath(items, [rel('A', 'B')]);
+    expect(cp.has('X')).toBe(false);
+    expect(cp.has('A') && cp.has('B')).toBe(true);
+  });
+
+  it('une chaîne courte parallèle, qui finit avant la fin du projet, n\'est pas critique', () => {
+    // Longue : A (1→5) → B (6→15) ; courte : C (1→2) → D (3→4)
+    const items = [mk('A', 1, 5), mk('B', 6, 15), mk('C', 1, 2), mk('D', 3, 4)];
+    const cp = computeCriticalPath(items, [rel('A', 'B'), rel('C', 'D')]);
+    expect([...cp].sort()).toEqual(['A', 'B']);
+  });
+
+  it('aucune relation d\'ordre : aucun chemin critique', () => {
+    expect(computeCriticalPath([mk('A', 1, 3), mk('B', 4, 9)], []).size).toBe(0);
+  });
+});
