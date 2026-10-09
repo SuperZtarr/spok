@@ -3,6 +3,8 @@
  * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/Tous à côté du
  * titre ; row 2 : GlobalNavBar) + zone de contenu. Seul appelant de interfaceMode.applyContextMode.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
+ * Row 1 : le bloc titre est flex-1 min-w-0 (tronque) et le bloc droit flex-shrink-0 — jamais
+ * l'inverse, sinon l'avatar sort de l'écran sur mobile (2026-10-10).
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -1200,7 +1202,9 @@ export function Layout() {
               <div className="absolute inset-0 -z-10 bg-card/80 backdrop-blur-sm" />
             )}
           {/* Left: hamburger + title + badges */}
-          <div className="flex items-center gap-2 md:gap-3 min-w-0 px-4 md:px-5 flex-shrink-0">
+          {/* min-w-0 flex-1 (pas flex-shrink-0) : le bloc titre rétrécit et tronque, l'avatar
+              à droite reste toujours visible sur mobile (2026-10-10). */}
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1 px-4 md:px-5">
             {/* Hamburger menu (mobile) */}
             {!isAuthPage && (
               <button
@@ -1236,7 +1240,7 @@ export function Layout() {
                 </Link>
               </>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 min-w-0">
                 <h2
                   className="text-sm md:text-base font-semibold text-foreground truncate"
@@ -1264,12 +1268,12 @@ export function Layout() {
                 </div>
               </div>
               {currentSpace && (
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
                   {currentSpace.community && (
                     <>
-                      <Link to={`/communities/${currentSpace.community.id}`} className="hover:text-foreground transition-colors inline-flex items-center gap-1">
+                      <Link to={`/communities/${currentSpace.community.id}`} className="hover:text-foreground transition-colors inline-flex items-center gap-1 min-w-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                        {currentSpace.community.name}
+                        <span className="truncate">{currentSpace.community.name}</span>
                       </Link>
                       <ChevronRight className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
                     </>
@@ -1287,9 +1291,6 @@ export function Layout() {
               )}
             </div>
           </div>
-
-          {/* Spacer */}
-          <div className="flex-1 min-w-0" />
 
           {/* Right: Quick add + Recherche + Notifications + Profil */}
           <div className="flex items-center gap-2 flex-shrink-0 px-4 md:px-5">
