@@ -1,4 +1,7 @@
-/* Accueil connecté : onglets (communautés, espaces, visualisations) selon dashboardTab. */
+/* Accueil connecté : raccourcis, aperçus tableau de bord (échéances, retard, TODO, non lus),
+   favoris, communautés, fil d'activité. Écran FirstTimeSetup si aucune communauté/espace.
+   Responsive (2026-10-10) : aperçus 1 par ligne sur mobile, en-têtes de carte tronqués pour
+   ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden). */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
@@ -153,12 +156,12 @@ function DashboardPreviewCard({
 }) {
   return (
     <div className={`bg-card border rounded-xl overflow-hidden ${variant === 'danger' ? 'border-red-200 dark:border-red-900/50' : 'border-border'}`}>
-      <div className={`flex items-center justify-between px-3 py-2 border-b ${variant === 'danger' ? 'border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20' : 'border-border'}`}>
-        <div className="flex items-center gap-1.5">
-          {icon}
-          <span className={`text-xs font-semibold ${variant === 'danger' ? 'text-red-700 dark:text-red-400' : ''}`}>{title}</span>
+      <div className={`flex items-center justify-between gap-2 px-3 py-2 border-b ${variant === 'danger' ? 'border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20' : 'border-border'}`}>
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <span className="flex-shrink-0 flex">{icon}</span>
+          <span className={`text-xs font-semibold truncate ${variant === 'danger' ? 'text-red-700 dark:text-red-400' : ''}`}>{title}</span>
           {count > 0 && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${variant === 'danger' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-muted text-muted-foreground'}`}>
+            <span className={`flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${variant === 'danger' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-muted text-muted-foreground'}`}>
               {count}
             </span>
           )}
@@ -369,7 +372,7 @@ export function HomeView() {
               className="flex flex-col items-center gap-2 p-3 md:p-4 border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all bg-card text-center"
             >
               <Icon className="w-6 h-6 text-primary" />
-              <span className="font-medium text-sm">{label}</span>
+              <span className="font-medium text-xs sm:text-sm leading-tight">{label}</span>
               <span className="text-[11px] text-muted-foreground leading-tight hidden sm:block">{description}</span>
             </Link>
           ))}
@@ -377,7 +380,7 @@ export function HomeView() {
 
         {/* Dashboard preview sections */}
         {!!user && (
-          <div className="grid grid-cols-4 gap-3 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             <DashboardPreviewCard
               title="Échéances proches"
               icon={<CalendarDays className="w-3.5 h-3.5 text-orange-500" />}
