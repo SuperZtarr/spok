@@ -2,6 +2,14 @@
 
 ## À faire
 
+### Responsive / mobile (relevé sur téléphone Android, 2026-10-07)
+- [x] Accueil : aperçus Échéances / En retard / TODO / Non lus 1 par ligne sur mobile (`grid-cols-1 sm:2 lg:4`), en-tête de carte tronqué (badge + « Voir tout » toujours visibles) — 2026-10-10 (1a9dc90)
+- [x] Carte mentale : sous-espaces superposés au-delà de 9 (pas fixe 40°) → pas 360°/N + rayon élargi ; anciens placements : bouton « Réorganiser » — 2026-10-10 (188e529)
+- [x] Carte mentale : cadrage d'ouverture mobile, centré sur le nœud espace au zoom 0,6 si la carte entière serait illisible — 2026-10-10 (188e529)
+- [x] Header : avatar coupé à droite → bloc titre `flex-1 min-w-0` (tronque), bloc droit fixe — 2026-10-10 (5cd6b20)
+- [ ] Icône PWA restée ancienne : test Thomas (supprimer raccourci + données du site, réinstaller) puis versionner les noms d'icônes (`icon-*.v2.png`, manifest, index.html, sw.js, CACHE_NAME) — cache nginx 1 an immutable sur les .png
+- [x] (Mineur) Accueil : libellé des raccourcis plus petit sur mobile (« Tableau de bord ») — 2026-10-10 (1a9dc90)
+
 ### BUG clés React dupliquées dans ItemEditModal
 - [x] Warning "Encountered two children with the same key" à chaque rendu de la modale, sur TOUS les items. Diagnostic initial (doublons d'ids dans le cache, boucle de re-renders) erroné : `SaveAsTemplateModal` et `InsertTemplateModal`, enfants frères de `<Modal>`, portaient tous deux `key={itemId}` (posé le 2026-09-12 pour reset leur state). Pas de boucle — un warning par rendu, nombreux au chargement/à la saisie. Clés préfixées `save-tpl-`/`insert-tpl-` — 2026-09-27 (615b5af)
 - [x] `SaveAsTemplateModal` : nom du modèle vide quand l'item est ouvert par lien direct après rechargement (`useState(item?.title)` évalué au montage, avant chargement d'`allItems`) — nom + description réinitialisés à chaque ouverture ; libellé accordé (« 1 élément sera capturé ») — 2026-09-28 (ddd4fb2)

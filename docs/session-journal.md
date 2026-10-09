@@ -6,6 +6,14 @@
 
 ## EN COURS
 
+### Responsive / mobile — 2026-10-10
+- Plan validé (Thomas « ok », zoom mobile inclus). FAIT : HomeView (grille aperçus + en-tête carte min-w-0/truncate + libellé raccourcis), mindmap-layout (pas portails min(40°, 360°/N) + rayon ≥ 240px d'arc ; `SPACE_NODE_ID` exporté), MindMapView (`initialFit` : mobile < 768px, zoom < 0,6 → setCenter nœud espace à 0,6 ; branché premier rendu + onInit), Layout row 1 (bloc titre flex-1 min-w-0, spacer retiré, communauté du fil d'Ariane tronquée). Typecheck web OK. Doc SPOK MAJ (Accueil, En-tête, Carte mentale). Typecheck 5 paquets + 672/672 tests OK. MEP 2026-10-10 (1a9dc90, 188e529, 5cd6b20)
+- En attente : retour visuel Thomas ; point 5 (icône PWA) attend son test de réinstallation
+
+### Page Tâches : colonne Assigné — 2026-09-29
+- Choix Thomas (« oui ») : vraie colonne Assigné triable au lieu de l'œil barré à côté du titre. API `/user/tasks` : sortBy `assignedToName` → `orderBy { assignedTo: { name } }` (+1 test ; `nulls` écarté car User.name obligatoire). Web : colonne desktop (grille 7 colonnes) avec œil barré à côté du nom, pastille assigné sur mobile. Doc SPOK Tâches MAJ. Typecheck web/api OK
+- Non vérifié à l'exécution : Docker Desktop arrêté (pas de base locale) — tri par assigné même forme que le tri par espace existant. NON COMMITÉ
+
 ### Accusé de lecture à l'assignation — FAIT — 2026-09-29
 - Conception validée (Thomas) : modale + vue Membres + colonne Assigné de /tasks (œil barré si pas vu) ; règles : vu = ItemView de l'assigné après assignedAt ; réassignation = repart de zéro ; auto-assignation / désassignation / assignations antérieures = pas d'indicateur (option A, pas de reprise)
 - FAIT : schéma `Item.assignedAt/assignedById` (db push local + generate + build:packages) ; `apps/api/src/utils/assignment.ts` (+6 tests) ; écritures branchées : création + PATCH (items.ts), fusion (item-merge : garde la date d'origine), restauration audit (admin/auditLogs.ts) ; lectures : liste items, fiche item, /user/tasks renvoient `assignmentReceipt`. Types : shared `AssignmentReceipt` + `Item.assignedAt/assignedById/assignmentReceipt`, web `GlobalTask.assignmentReceipt`. Typecheck api OK, 60 tests api OK
