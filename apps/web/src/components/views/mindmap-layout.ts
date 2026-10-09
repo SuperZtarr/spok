@@ -1,4 +1,5 @@
-/* Layout de la MindMap : placement radial des nœuds, espacement, recalcul, rafraîchissement des callbacks des nœuds (withCurrentCallbacks) — zone fragile (cf. CLAUDE.md). */
+/* Layout de la MindMap : placement radial des nœuds, espacement, recalcul, rafraîchissement des callbacks des nœuds (withCurrentCallbacks) — zone fragile (cf. CLAUDE.md).
+   Portails de sous-espaces : arc au-dessus du nœud espace, pas de 40° ramené à 360°/N au-delà de 9 (pas de superposition). */
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';
@@ -25,7 +26,7 @@ import {
   countVisible as countVisibleUtil,
 } from './mindmap-utils';
 
-const SPACE_NODE_ID = '__space__';
+export const SPACE_NODE_ID = '__space__';
 
 // Helper: get best edge handles from dx/dy between two positions
 function getBestHandles(parentPos: { x: number; y: number }, childPos: { x: number; y: number }) {
@@ -486,12 +487,20 @@ export function buildPortalNodesAndEdges(
   // Items always fill the full circle so gap-based placement is unreliable.
   // Instead, portals are placed at a large fixed radius (no collision with items)
   // centered on angle -π/2 (top), spreading symmetrically at 40° per portal.
+  // Au-delà de 9 portails, 40° × N dépasserait 360° (le 10e retombait sur le 1er) : le pas
+  // devient 360°/N (cercle complet) et le rayon grandit pour garder MIN_PORTAL_SPACING
+  // entre deux portails voisins. ≤ 9 portails : placement inchangé.
   const totalPortalSpaces = portalSpacesList.length;
-  const PORTAL_ANGLE_STEP = Math.PI / 4.5; // 40° between portals
+  const MAX_PORTAL_ANGLE_STEP = Math.PI / 4.5; // 40° between portals
+  const PORTAL_ANGLE_STEP = Math.min(MAX_PORTAL_ANGLE_STEP, (2 * Math.PI) / Math.max(1, totalPortalSpaces));
   const PORTAL_CENTER_ANGLE = -Math.PI / 2; // top of space node
   const portalTotalSpread = (totalPortalSpaces - 1) * PORTAL_ANGLE_STEP;
   const portalArcStart = PORTAL_CENTER_ANGLE - portalTotalSpread / 2;
-  const PORTAL_BASE_RADIUS = BASE_PORTAL_DIST + 250; // larger than item radius to avoid overlap
+  const MIN_PORTAL_SPACING = 240; // px d'arc entre deux portails voisins (nœud portail ≥ 120px de large)
+  const PORTAL_BASE_RADIUS = Math.max(
+    BASE_PORTAL_DIST + 250, // larger than item radius to avoid overlap
+    MIN_PORTAL_SPACING / PORTAL_ANGLE_STEP,
+  );
 
   portalSpacesList.forEach((portalSpaceEntry, index) => {
     const childPortalId = `child-space-${portalSpaceEntry.id}`;

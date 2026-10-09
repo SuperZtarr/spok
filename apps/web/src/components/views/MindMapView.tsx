@@ -12,6 +12,8 @@
  * les ajouter/retirer sans déclencher de recalcul de layout.
  * Callbacks des nœuds (onDelete, onMerge…) : rafraîchis dans les data des nœuds existants à chaque
  * changement de layoutCallbacks (withCurrentCallbacks) — sinon handlers périmés (2026-09-28).
+ * Cadrage d'ouverture (initialFit, 2026-10-10) : carte entière ; sur mobile, si le zoom tombe
+ * sous 0,6, centrage sur le nœud espace à 0,6 pour garder les étiquettes lisibles.
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
@@ -64,7 +66,7 @@ import {
   getContrastTextColor,
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
-import { calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+import { SPACE_NODE_ID, calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
 import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
 import { NewItemButton } from '../ui/NewItemButton';
@@ -180,7 +182,21 @@ function MindMapViewInner({
   useDialogFocus(createRelationDialogRef, !!pendingConnection);
   useDialogFocus(editRelationDialogRef, !!editingEdge);
   useDialogFocus(portalDialogRef, showPortalDialog && !!pendingPortalParentId);
-  const { fitView, getIntersectingNodes, getNodes, getNodesBounds: getNodesBoundsHook } = useReactFlow();
+  const { fitView, getIntersectingNodes, getNodes, getNodesBounds: getNodesBoundsHook, getNode, getZoom, setCenter } = useReactFlow();
+
+  // Cadrage d'ouverture : carte entière, sauf sur mobile si le texte devient illisible
+  // (zoom < MOBILE_MIN_INITIAL_ZOOM) → centré sur le nœud espace à ce zoom (décision 2026-10-10).
+  const initialFit = useCallback(() => {
+    fitView({ padding: 0.1 });
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
+    const MOBILE_MIN_INITIAL_ZOOM = 0.6;
+    if (getZoom() >= MOBILE_MIN_INITIAL_ZOOM) return;
+    const spaceNode = getNode(SPACE_NODE_ID);
+    if (!spaceNode) return;
+    const w = spaceNode.measured?.width ?? 0;
+    const h = spaceNode.measured?.height ?? 0;
+    setCenter(spaceNode.position.x + w / 2, spaceNode.position.y + h / 2, { zoom: MOBILE_MIN_INITIAL_ZOOM });
+  }, [fitView, getZoom, getNode, setCenter]);
   const { setDropTargetId: setSidebarDropTargetId } = useContext(SidebarDropContext);
 
   // Helper: trouve l'espace sidebar sous les coordonnées écran
@@ -642,7 +658,7 @@ function MindMapViewInner({
       const allEdges = recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], edgePosMap);
       setNodes(allNodes);
       setEdges(allEdges);
-      if (!userHasInteracted.current) setTimeout(() => fitView({ padding: 0.1 }), 50);
+      if (!userHasInteracted.current) setTimeout(initialFit, 50);
       return;
     }
 
@@ -830,7 +846,7 @@ function MindMapViewInner({
       });
       return currentNodes;
     });
-  }, [tree, items, statuses, collapsedIds, displayName, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, structureSignature, relationsSignature, depsSignature, fullTree, showRelations, savePositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, initialFit, structureSignature, relationsSignature, depsSignature, fullTree, showRelations, savePositions]);
 
   // Toggle relation edges without full layout recalculation
   useEffect(() => {
@@ -1477,7 +1493,7 @@ function MindMapViewInner({
               const posMap = new Map(getNodes().map(n => [n.id, n.position]));
               return recalculateEdgeHandles(currentEdges, posMap);
             });
-            fitView({ padding: 0.1 });
+            initialFit();
           }, 50);
         }}
         fitView
