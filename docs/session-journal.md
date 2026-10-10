@@ -6,7 +6,21 @@
 
 ## EN COURS
 
+### Import en masse vues Images + Documents, réduction d'image — 2026-10-11
+- Plan validé (« oui ») : `lib/uploadRules.ts` (source unique web des règles : formats image, 5 Mo, extensions interdites, 25 Mo — ImageUploadZone/FileUploadZone n'ont plus de copie), `lib/imageResize.ts` (1920 px WebP dans le navigateur avant contrôle des 5 Mo, jamais les GIF ; aussi branché dans ImageUploadZone → modale, avatar, couverture), `lib/bulkUpload.ts` (orchestration, 3 en parallèle, suppression de l'item si envoi KO), `hooks/useBulkUpload.ts`, `components/ui/BulkUploadButton.tsx` (bouton + dépôt sur la vue + bandeau). Branché ImagesView et DocumentsView (canEdit)
+- +22 tests (uploadRules, imageResize, bulkUpload). Typecheck web OK. Vérifié en vrai (navigateur intégré, dev d'une autre session) : boutons présents dans les 2 vues ; réduction 4000×3000 31 Mo → 1920×1440 WebP 1,37 Mo ; dépôt de 3 fichiers → BMP refusé avant envoi, 2 items créés puis supprimés car R2 non configuré en local (compteur 4→4), bilan affiché. Envoi R2 réel NON testé (pas de R2 en local)
+- businessRules : `bulk-upload-images-documents`, `image-resize-before-upload`. Doc SPOK Images / Documents MAJ (to_validate). MEP 2026-10-11 (fc37006 MCP, c3c12ad import) — typecheck 5 paquets OK, 792/792 tests
+
+### Import Shadow World (md → SPOK prod via MCP) — FAIT 2026-10-11
+- 7 espaces, 188 items (dont 40 GBK `cmv2yi0ll00hihrilzzlrthfr`). Thomas a créé pendant l'import un espace parent « Import » (`cmv2yct2j00bqhrilfsj98y5n`) et y a rangé 6 des 7 espaces — GBK pas encore rangé. Visibilité PRIVATE envoyée par PATCH sans erreur, non relue (list_spaces affiche « ? »). Markdown affiché brut (MCP texte → <p>)
+- Demande Thomas (« go ») : importer les 7 .md de `C:\Users\Admin\OneDrive\Documents\_JDR\SHADOW WORLD` (racine seulement) dans la communauté prod `cmv2rzgrj0001zm5epbrme4la` (« Campagne ShadowWorld », PUBLIQUE) : 1 espace PRIVÉ par fichier (nom = titre `#`), chaque `##` = item NOTE (description = texte de la section, ordre du fichier), chaque `###` = enfant du `##` précédent, texte avant le 1er `##` = item « Introduction ». ~188 items. Espaces PRIVÉS impératif (03 contient « SECRETS MJ »)
+- Découpe : `python -I apps/api/scripts/tmp_split_md_sections.py "<dossier>" <scratchpad>/sw` → par fichier index.json + NN.txt
+- Débloqué (MCP relancé par Thomas). FAIT (espaces PRIVÉS) : 02 `cmv2xrt350006hrilfnu67s04` (9), 03 `cmv2xtn01001bhrilfjsxgt3z` (28), 06 `cmv2xxy3n004jhrilq5wd8gzl` (10), 07 `cmv2y3gc7005rhrilnd66aww9` (8), Anto-9 `cmv2y5ccu006rhriljv5n4cw2` (57), cahier `cmv2yf5zx00dehrilsijaqevo` (36). Reste : campagne-shadow-world-v02
+- Bloqué (résolu) : MCP `create_space` → 400 (`type` requis, jamais envoyé) + `visibility` ignorée par POST /spaces (absente du schéma → espace visible dans une communauté publique). Fix MCP (`apps/mcp/src/index.ts` : type GROUP + PATCH visibilité après création), build OK. NON COMMITÉ. Thomas redémarre Claude pour charger le MCP corrigé. RIEN n'a encore été créé dans SPOK
+- Hors périmètre à signaler : API POST /spaces devrait accepter `visibility` ; MCP `create_item` envoie la description en texte brut (markdown affiché tel quel)
+
 ### Séances de présentation live — étapes 1 et 2 — 2026-10-10
+- Retour Thomas : nouvel espace de séance absent de la sidebar → invalidation ['sidebar-spaces'] (ParentSessionsButton, LiveSessionBar suite). Typecheck web OK. NON COMMITÉ
 - CI verte (run 38046739848) → prod déployée. Adaptation mobile LiveWindow (plein écran < 768px, Voir l'espace / Retour au direct) — 571f586
 - 2026-10-10 soir (« ok ») : 5 points de la revue sécurité corrigés, NON COMMITÉS — suppression en cascade refusée si descendant verrouillé (non-OWNER) ; programme filtré pour les participants (visibleAgenda + liveHub.broadcastEach, refetch sur roles) ; enfants limités à l'espace de séance (loadState, sessionCopy) ; restauration d'audit admin limitée au rangement sur copie verrouillée ; /suite revérifie isParentMember. API 113/113 ciblés, web 43/43, typecheck API + web OK. MEP 2026-10-10 : 537494d (sécurité), 571f586 (mobile) — typecheck 5 paquets OK, 770/770 tests
 - MEP 2026-10-10 : 3cbd457 (Tâches colonne Assigné, autre session), 3b87228 (séances live), 67bd850 (bouton Nouvel espace, autre session) — typecheck 5 paquets OK, 758/758 tests. Prochain : adaptation mobile (validée)
