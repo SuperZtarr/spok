@@ -12,7 +12,8 @@
 
 ### Responsive / mobile — 2026-10-10
 - Plan validé (Thomas « ok », zoom mobile inclus). FAIT : HomeView (grille aperçus + en-tête carte min-w-0/truncate + libellé raccourcis), mindmap-layout (pas portails min(40°, 360°/N) + rayon ≥ 240px d'arc ; `SPACE_NODE_ID` exporté), MindMapView (`initialFit` : mobile < 768px, zoom < 0,6 → setCenter nœud espace à 0,6 ; branché premier rendu + onInit), Layout row 1 (bloc titre flex-1 min-w-0, spacer retiré, communauté du fil d'Ariane tronquée). Typecheck web OK. Doc SPOK MAJ (Accueil, En-tête, Carte mentale). Typecheck 5 paquets + 672/672 tests OK. MEP 2026-10-10 (1a9dc90, 188e529, 5cd6b20)
-- En attente : retour visuel Thomas ; point 5 (icône PWA) attend son test de réinstallation
+- Validé par Thomas sur téléphone en prod (accueil, carte mentale CMDB, header) — 2026-10-10
+- Icône PWA : versionnement v2 + nginx (47f0cff, autre session) validé par Thomas sur téléphone. Chantier responsive clos
 
 ### Page Tâches : colonne Assigné — 2026-09-29
 - Choix Thomas (« oui ») : vraie colonne Assigné triable au lieu de l'œil barré à côté du titre. API `/user/tasks` : sortBy `assignedToName` → `orderBy { assignedTo: { name } }` (+1 test ; `nulls` écarté car User.name obligatoire). Web : colonne desktop (grille 7 colonnes) avec œil barré à côté du nom, pastille assigné sur mobile. Doc SPOK Tâches MAJ. Typecheck web/api OK

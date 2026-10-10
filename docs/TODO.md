@@ -7,7 +7,7 @@
 - [x] Carte mentale : sous-espaces superposés au-delà de 9 (pas fixe 40°) → pas 360°/N + rayon élargi ; anciens placements : bouton « Réorganiser » — 2026-10-10 (188e529)
 - [x] Carte mentale : cadrage d'ouverture mobile, centré sur le nœud espace au zoom 0,6 si la carte entière serait illisible — 2026-10-10 (188e529)
 - [x] Header : avatar coupé à droite → bloc titre `flex-1 min-w-0` (tronque), bloc droit fixe — 2026-10-10 (5cd6b20)
-- [ ] Icône PWA restée ancienne même après réinstallation (test Thomas 2026-10-10) : la prod servait la bonne icône, mais nginx mettait tous les .png en `immutable` 1 an → le téléphone gardait l'image de mars. Icônes renommées `favicon/icon-192/icon-512.v2.png` (manifest, index.html, sw.js, `CACHE_NAME` spok-v5) ; nginx : immutable limité à `/assets/` (Vite, avec empreinte), fichiers de `public/` en `no-cache`. MEP 2026-10-10 (47f0cff) — à vérifier par Thomas (supprimer le raccourci, réinstaller)
+- [x] Icône PWA restée ancienne même après réinstallation (test Thomas 2026-10-10) : la prod servait la bonne icône, mais nginx mettait tous les .png en `immutable` 1 an → le téléphone gardait l'image de mars. Icônes renommées `favicon/icon-192/icon-512.v2.png` (manifest, index.html, sw.js, `CACHE_NAME` spok-v5) ; nginx : immutable limité à `/assets/` (Vite, avec empreinte), fichiers de `public/` en `no-cache`. MEP 2026-10-10 (47f0cff) — validé par Thomas sur téléphone le 2026-10-10
 - [x] (Mineur) Accueil : libellé des raccourcis plus petit sur mobile (« Tableau de bord ») — 2026-10-10 (1a9dc90)
 
 ### BUG clés React dupliquées dans ItemEditModal
