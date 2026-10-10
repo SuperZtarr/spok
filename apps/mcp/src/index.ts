@@ -1,6 +1,8 @@
 /*
  * Serveur MCP SPOK : expose les données (items, espaces, communautés...) comme outils MCP.
  * S'authentifie sur l'API REST avec SPOK_EMAIL/SPOK_PASSWORD (fournis par launch.mjs via .env).
+ * Après modification : rebuild (`pnpm --filter @spok/mcp build`) puis redémarrer Claude — le process
+ * MCP charge dist/ au lancement.
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -326,13 +328,17 @@ server.tool(
     visibility: z.enum(['PRIVATE', 'OPEN', 'READONLY']).optional().default('PRIVATE').describe('Visibilité'),
   },
   async ({ name, communityId, parentId, description, visibility }) => {
-    const body: Record<string, unknown> = { name, communityId, visibility };
+    // `type` est obligatoire côté API (400 sans lui) ; un espace de communauté est toujours GROUP.
+    const body: Record<string, unknown> = { name, communityId, type: 'GROUP' };
     if (parentId) body.parentId = parentId;
     if (description) body.description = description;
 
     const space = await api.post('/spaces', body);
+    // POST /spaces ignore `visibility` (absent de son schéma) : sans ce PATCH, l'espace naît en
+    // visibilité nulle = visible par tous dans une communauté publique, même si PRIVATE était demandé.
+    await api.patch(`/spaces/${space.id}`, { visibility });
     return {
-      content: [{ type: 'text', text: `Espace créé : [${space.id}] ${space.name}` }],
+      content: [{ type: 'text', text: `Espace créé : [${space.id}] ${space.name} | visibilité: ${visibility}` }],
     };
   }
 );
