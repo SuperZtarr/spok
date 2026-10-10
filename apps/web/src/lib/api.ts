@@ -435,7 +435,7 @@ export interface GlobalTaskFilters {
   assignedToMe?: boolean;
   myTasks?: boolean;
   updatedAfter?: string;
-  sortBy?: 'dueDate' | 'status' | 'spaceName' | 'createdAt' | 'updatedAt' | 'priority' | 'title';
+  sortBy?: 'dueDate' | 'status' | 'spaceName' | 'assignedToName' | 'createdAt' | 'updatedAt' | 'priority' | 'title';
   sortDir?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;

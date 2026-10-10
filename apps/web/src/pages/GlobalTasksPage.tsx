@@ -1,6 +1,6 @@
 /* Tâches globales (/tasks) : tableau multi-espaces sur /user/tasks, regroupé par horizon temporel (Maintenant/Aujourd'hui/Semaine/Mois/Plus tard/À trier), filtres et tri par colonne.
- * Pas de colonne Assigné : l'accusé de lecture à l'assignation est une icône œil barré à côté du titre
- * quand l'assigné n'a pas encore ouvert l'item (assignmentReceipt, 2026-09-29). */
+ * Colonne Assigné (triable, sortBy=assignedToName) avec l'accusé de lecture à l'assignation : œil barré à
+ * côté du nom quand l'assigné n'a pas encore ouvert l'item (assignmentReceipt, 2026-09-29). */
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -137,7 +137,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
 
   const renderDesktopRow = (task: GlobalTask) => (
     <div
-      className="grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-3 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
+      className="grid grid-cols-[1fr_10rem_9rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-3 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
       onClick={() =>
         setEditingTask({ itemId: task.id, spaceId: task.spaceId })
       }
@@ -154,7 +154,6 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
         <span className="truncate font-medium text-sm">
           {task.title}
         </span>
-        <UnseenAssignmentIcon task={task} />
         {task.parent && (
           <span className="text-xs text-muted-foreground truncate flex-shrink-0">
             ← {task.parent.title}
@@ -173,6 +172,16 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
           <FolderKanban className="w-3 h-3 flex-shrink-0" />
           <span className="truncate">{task.spaceName}</span>
         </button>
+      </div>
+      <div className="flex items-center gap-1 min-w-0 text-xs">
+        {task.assignedToName ? (
+          <>
+            <span className="truncate" title={task.assignedToName}>{task.assignedToName}</span>
+            <UnseenAssignmentIcon task={task} />
+          </>
+        ) : (
+          <span className="text-muted-foreground/50">-</span>
+        )}
       </div>
       <div>
         {task.status ? (
@@ -245,9 +254,10 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
       )}
 
       {/* Table header — hidden on mobile */}
-      <div className="hidden md:grid grid-cols-[1fr_10rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
+      <div className="hidden md:grid grid-cols-[1fr_10rem_9rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
         <SortHeader label="Titre" field="title" />
         <SortHeader label="Espace" field="spaceName" />
+        <SortHeader label="Assigné" field="assignedToName" />
         <SortHeader label="Statut" field="status" />
         <SortHeader label="Priorite" field="priority" />
         <SortHeader label="Echeance" field="dueDate" />
@@ -312,7 +322,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
                   <div className="flex items-start gap-2 mb-1.5">
                     <CheckSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate flex items-center gap-1">{task.title} <UnseenAssignmentIcon task={task} /></p>
+                      <p className="font-medium text-sm truncate">{task.title}</p>
                       {task.parent && (
                         <p className="text-xs text-muted-foreground truncate">← {task.parent.title}</p>
                       )}
@@ -336,6 +346,12 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
                       <FolderKanban className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate max-w-[100px]">{task.spaceName}</span>
                     </button>
+                    {task.assignedToName && (
+                      <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                        <span className="truncate max-w-[100px]">{task.assignedToName}</span>
+                        <UnseenAssignmentIcon task={task} />
+                      </span>
+                    )}
                     {task.status && (
                       <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full ${STATUS_COLOR_MAP[task.status] || 'bg-gray-100 text-gray-600'}`}>
                         {STATUS_LABEL_MAP[task.status] || task.status}

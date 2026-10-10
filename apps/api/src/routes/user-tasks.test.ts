@@ -286,6 +286,20 @@ describe('User Tasks routes', () => {
       expect(orderBy).toEqual({ space: { name: 'asc' } })
     })
 
+    it('trie par nom de l\'assigné', async () => {
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+
+      await app.inject({
+        method: 'GET', url: '/user/tasks?sortBy=assignedToName&sortDir=desc',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      const orderBy = prisma.item.findMany.mock.calls[0][0].orderBy
+      expect(orderBy).toEqual({ assignedTo: { name: 'desc' } })
+    })
+
     it('should support pagination', async () => {
       prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])

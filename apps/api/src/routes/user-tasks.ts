@@ -225,7 +225,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // 3. Sort
-    const validSortBy = ['dueDate', 'status', 'spaceName', 'createdAt', 'updatedAt', 'priority', 'title'];
+    const validSortBy = ['dueDate', 'status', 'spaceName', 'assignedToName', 'createdAt', 'updatedAt', 'priority', 'title'];
     const validSortDir = ['asc', 'desc'];
     const safeSortBy = validSortBy.includes(sortBy) ? sortBy : 'createdAt';
     const safeSortDir = validSortDir.includes(sortDir) ? sortDir : 'desc';
@@ -233,6 +233,10 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     let orderBy: unknown;
     if (safeSortBy === 'spaceName') {
       orderBy = { space: { name: safeSortDir } };
+    } else if (safeSortBy === 'assignedToName') {
+      // Tri par nom de l'assigné (colonne Assigné de la page Tâches). `nulls` interdit : User.name est
+      // obligatoire ; les non assignés suivent l'ordre par défaut de PostgreSQL (fin en asc, début en desc)
+      orderBy = { assignedTo: { name: safeSortDir } };
     } else {
       orderBy = { [safeSortBy]: safeSortDir };
     }
