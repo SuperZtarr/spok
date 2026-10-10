@@ -2,6 +2,7 @@
  * Point d'entrée de l'API Fastify : enregistrement des plugins (prisma, jwt, sensible, multipart,
  * helmet, rate-limit) et de toutes les routes avec leurs préfixes. Gestion d'erreurs Zod → 400 structuré.
  * rate-limit : 100 req/min/IP par défaut globalement, routes auth sensibles surchargées à 5/min (voir auth.ts).
+ * /live-sessions : séances de présentation en direct ; le flux SSE /:id/stream est exempté du rate-limit.
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -57,6 +58,7 @@ import { itemTemplatesRoutes } from './routes/item-templates.js';
 import { activityRoutes } from './routes/activity.js';
 import { urlMetaRoutes } from './routes/url-meta.js';
 import { spacePreferencesRoutes } from './routes/space-preferences.js';
+import { liveSessionsRoutes } from './routes/live-sessions.js';
 
 const envToLogger = {
   development: {
@@ -262,7 +264,7 @@ async function buildApp() {
       error: 'Not Found',
       message: `Route non trouvée: ${request.method} ${request.url}`,
       code: 'ROUTE_NOT_FOUND',
-      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/communities/*', '/admin/*'],
+      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/communities/*', '/live-sessions/*', '/admin/*'],
     });
   });
 
@@ -318,6 +320,7 @@ async function buildApp() {
   await app.register(notificationsRoutes, { prefix: '/notifications' });
   await app.register(itemTemplatesRoutes, { prefix: '/item-templates' });
   await app.register(activityRoutes, { prefix: '/activity' });
+  await app.register(liveSessionsRoutes, { prefix: '/live-sessions' });
   await app.register(urlMetaRoutes);
 
   // Health check

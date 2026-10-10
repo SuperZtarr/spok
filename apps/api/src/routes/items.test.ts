@@ -755,3 +755,59 @@ describe('Items routes', () => {
     })
   })
 })
+
+describe('verrou de séance', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const token = () => getTestToken(app)
+  const lockedItem = {
+    id: 'copy-1', spaceId: 'sess-space', type: 'NOTE', title: 'Copie', status: 'todo',
+    createdById: 'presenter-id', lockedAt: new Date('2026-10-10T10:00:00Z'), parentId: null,
+    updatedAt: new Date('2026-10-10T10:00:00Z'), position: 0,
+  }
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue({ userId: 'test-user-id', spaceId: 'sess-space', role: 'MEMBER' })
+    prisma.item.findFirst.mockResolvedValue(lockedItem)
+  })
+
+  it('PATCH status sur item verrouillé → 403', async () => {
+    const res = await app.inject({ method: 'PATCH', url: '/spaces/sess-space/items/copy-1',
+      headers: { authorization: `Bearer ${token()}` }, payload: { status: 'done' } })
+    expect(res.statusCode).toBe(403)
+    expect(prisma.item.update).not.toHaveBeenCalled()
+  })
+
+  it('PATCH parentId sur item verrouillé créé par un autre → autorisé pour un MEMBER', async () => {
+    prisma.item.update.mockResolvedValue({ ...lockedItem, parentId: 'theme-1', tags: [] })
+    const res = await app.inject({ method: 'PATCH', url: '/spaces/sess-space/items/copy-1',
+      headers: { authorization: `Bearer ${token()}` }, payload: { parentId: 'theme-1' } })
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('DELETE item verrouillé par un MEMBER (même auteur) → 403', async () => {
+    prisma.item.findFirst.mockResolvedValue({ ...lockedItem, createdById: 'test-user-id', tags: [] })
+    const res = await app.inject({ method: 'DELETE', url: '/spaces/sess-space/items/copy-1',
+      headers: { authorization: `Bearer ${token()}` } })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('split sur item verrouillé → 403', async () => {
+    prisma.item.findFirst.mockResolvedValue({ ...lockedItem, description: '<h2>A</h2>' })
+    const res = await app.inject({ method: 'POST', url: '/spaces/sess-space/items/copy-1/split',
+      headers: { authorization: `Bearer ${token()}` } })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('propagation de statut ignore les enfants verrouillés', async () => {
+    prisma.spaceMembership.findUnique.mockResolvedValue({ userId: 'test-user-id', spaceId: 'sess-space', role: 'OWNER' })
+    prisma.item.findFirst.mockResolvedValue({ ...lockedItem, id: 'theme-1', lockedAt: null })
+    prisma.item.update.mockResolvedValue({ ...lockedItem, id: 'theme-1', lockedAt: null, tags: [] })
+    await app.inject({ method: 'PATCH', url: '/spaces/sess-space/items/theme-1',
+      headers: { authorization: `Bearer ${token()}` }, payload: { status: 'done', propagateToChildren: true } })
+    const childQueries = prisma.item.findMany.mock.calls.map((c: any[]) => c[0]?.where).filter((w: any) => w?.parentId)
+    expect(childQueries.length).toBeGreaterThan(0)
+    for (const where of childQueries) expect(where.lockedAt).toBeNull()
+  })
+})

@@ -72,6 +72,7 @@ const mutation = useMutation({
 | `useSpaces()` | `['spaces']` | Liste des espaces |
 | `useReferentiels(spaceId)` | `['referentiels', spaceId]` | Statuts/types configurés |
 | `useMenuItems()` | `['menu-items']` | Items de navigation |
+| `useLiveSession(spaceId, { stream })` | `['live-session', spaceId]` | Séance live d'un espace de séance (404 = pas une séance). Flux SSE (`lib/liveStream.ts`) seulement avec `stream: true` — réservé à `LiveSessionHost` (un flux par onglet) ; événements appliqués sur le cache, refetch à chaque reconnexion |
 
 ---
 
@@ -180,6 +181,7 @@ apps/api/src/routes/
   items.ts         → /spaces/:spaceId/items/*
   relations.ts     → /spaces/:spaceId/relations/*
   tags.ts          → /spaces/:spaceId/tags/*
+  live-sessions.ts → /live-sessions/* (séances live : création, join, présentateurs, display, end, flux SSE /:id/stream)
   admin/           → /admin/*
 ```
 
@@ -206,3 +208,13 @@ import type { Item, ItemType, Space, SpaceReferentiels, AuthUser } from '@spok/s
 ```
 
 ⚠️ Après modification de `@spok/shared` ou `@spok/database` : toujours `pnpm build:packages` puis redémarrer le dev.
+
+---
+
+## Séances de présentation en direct (étape 1 « Socle », 2026-10-10)
+
+- **Modèle** : `LiveSession` (1:1 avec son espace dédié, sous-espace PRIVATE d'un espace de communauté), `LiveSessionRole` (HOST/PRESENTER), `LiveSessionEntry` (journal DISPLAY/JOIN, indépendant de l'organisation de l'espace). Champs `Item.lockedAt/sourceItemId/sourceSpaceId` pour les copies.
+- **Temps réel** : SSE + hub en mémoire (`apps/api/src/utils/liveHub.ts`) — valable pour UNE instance d'API. Plusieurs instances → relais PostgreSQL LISTEN/NOTIFY derrière la même interface.
+- **Verrou** : `apps/api/src/utils/itemLock.ts` — toute nouvelle route qui écrit le contenu d'un item doit appeler `isLocked()`. Seuls `parentId`/`tagIds` passent en PATCH ; move/reorder/relations/contributions restent libres.
+- **Web** : séance active = store `useActiveLiveSessionStore` (`stores/activeLiveSession.ts`, seul `spaceId` persisté). `LiveSessionHost` (monté dans `App.tsx`) ouvre l'unique flux et affiche la fenêtre flottante sur toutes les pages (portail, jamais dans `Layout.tsx`) ; `SpacePage` affiche le bandeau et fait de l'espace ouvert la séance active ; bouton « Séances » via le slot `liveSessionsSlot` de `SpaceToolbar` ; section « Séance » du menu contextuel ajoutée par `itemMenuGroups` (`lib/liveItemActions.ts`).
+- **Étape 2 (2026-10-10)** : statut `PREPARED` avant `LIVE` ; programme `LiveSessionAgendaItem` (liens vers les sources, ordre : animateur = tout, présentateur = ses lignes) ; affichage sans sous-items, révélés un par un (`/pending-children`, `/reveal`) ; une nouvelle copie se range sous la copie de son parent d'origine déjà présenté.

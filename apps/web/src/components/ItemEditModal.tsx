@@ -23,6 +23,9 @@
  * Sous-modales keyées par itemId (remontage = reset de leur state d'un item à l'autre) : chaque clé
  * doit rester préfixée et unique parmi les enfants de <Modal> (deux `key={itemId}` frères = warning
  * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
+ * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
+ * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
+ * Pied : boutons « Ajouter au programme » / « Présenter en séance » si la séance live active le permet (liveItemActions).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
@@ -33,6 +36,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag, TypeLabelConfig } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
+import { buildLiveItemActions } from '../lib/liveItemActions';
+import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Modal } from './ui/Modal';
@@ -281,7 +286,14 @@ export function ItemEditModal({
   const isSpaceOwner = spaceRole === 'OWNER';
   const isItemAuthor = !!user && !!item && (item as any).createdById === user.id;
   const isItemAssignee = !!user && !!item && item.assignedToId === user.id;
-  const canEdit = canEditProp && !visitorPreview && (isNewItem || isSpaceOwner || isItemAuthor || isItemAssignee);
+  // Copie de séance verrouillée : lecture seule (commentaires et tags restent possibles) — cf. itemLock.ts côté API
+  const isLockedCopy = !!item?.lockedAt;
+  const canEdit = canEditProp && !visitorPreview && !isLockedCopy && (isNewItem || isSpaceOwner || isItemAuthor || isItemAssignee);
+  const canEditTags = canEditProp && !visitorPreview && (canEdit || isLockedCopy);
+  // Séance live active : actions « Ajouter au programme » / « Présenter en séance » du pied
+  const liveInfo = useActiveLiveSessionStore((s) => s.info);
+  const liveSpaceId = useActiveLiveSessionStore((s) => s.spaceId);
+  const liveActions = (id: string) => buildLiveItemActions(id, liveInfo, liveSpaceId);
   // canInteract: any authenticated member can react and contribute (even if they can't edit the item)
   const canInteract = canEditProp && !visitorPreview;
 
@@ -696,6 +708,18 @@ export function ItemEditModal({
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
 
+    // Copie de séance : seuls les tags sont modifiables
+    if (isLockedCopy) {
+      const tagsChanged = [...selectedTagIds].sort().join() !== [...originalTagIds].sort().join();
+      if (tagsChanged) {
+        const tagUpdate = { updatedAt: item.updatedAt, tagIds: selectedTagIds };
+        updateMutation.mutate(tagUpdate);
+      } else {
+        onClose();
+      }
+      return;
+    }
+
     if (type !== item.type) {
       updates.type = type;
     }
@@ -991,6 +1015,11 @@ export function ItemEditModal({
         <div className="py-8 text-center text-muted-foreground">Chargement...</div>
       ) : item ? (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          {isLockedCopy && (
+            <div className="mb-3 rounded border border-orange-300 bg-orange-50 dark:bg-orange-950/30 px-3 py-2 text-xs">
+              Copie de séance — présentée le {new Date(item!.lockedAt!).toLocaleString('fr-FR')}. Contenu verrouillé ; commentaires et tags possibles.
+            </div>
+          )}
           {/* Breadcrumb */}
           {(communityName || spaceName || breadcrumb.length > 0) && (
             <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3 px-1 flex-wrap" data-tour="item-breadcrumb">
@@ -1670,7 +1699,7 @@ export function ItemEditModal({
                   <TagIcon className="w-4 h-4" />
                   Tags
                 </h2>
-                {canEdit ? (
+                {canEditTags ? (
                   <TagSelector spaceId={spaceId} value={selectedTagIds} onChange={setSelectedTagIds} />
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
@@ -1733,7 +1762,7 @@ export function ItemEditModal({
 
           {/* Footer — always visible */}
           <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
-            {canEdit && (
+            {canEditTags && (
               <Button type="submit" disabled={!hasChanges || updateMutation.isPending}
                 className={`bg-orange-500 text-white hover:bg-orange-600 ${!hasChanges ? 'opacity-40' : ''}`}>
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
@@ -1742,6 +1771,11 @@ export function ItemEditModal({
             <Button type="button" variant="bordered" onClick={() => guardClose(onClose)}>
               {canEdit ? 'Fermer' : 'Fermer'}
             </Button>
+            {itemId && liveActions(itemId).map((a) => (
+              <Button key={a.id} type="button" variant="bordered" onClick={a.onClick}>
+                <a.icon className="w-4 h-4 mr-1" />{a.label}
+              </Button>
+            ))}
             {item && (
               <>
                 <Button

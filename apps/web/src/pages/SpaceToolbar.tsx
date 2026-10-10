@@ -4,6 +4,8 @@
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ;
  * les 2 autres familles restent accessibles via le dropdown "Autres vues", jamais masquées.
+ * liveSessionsSlot : bouton « Séances » (ParentSessionsButton) fourni par SpacePage, rendu avant le compteur ;
+ * la barre d'outils ne connaît pas la logique des séances live.
  */
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -145,6 +147,8 @@ export interface SpaceToolbarProps {
   // Space
   spaceId?: string;
   spaceRole?: string;
+  // Séances live (bouton fourni par SpacePage)
+  liveSessionsSlot?: React.ReactNode;
 }
 
 export function SpaceToolbar({
@@ -175,6 +179,7 @@ export function SpaceToolbar({
   onInsertTemplate,
   spaceId,
   spaceRole,
+  liveSessionsSlot,
 }: SpaceToolbarProps) {
   const { mode: interfaceMode } = useInterfaceModeStore();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
@@ -608,6 +613,7 @@ export function SpaceToolbar({
         </div>{/* end mobile filters wrapper */}
 
         <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+          {liveSessionsSlot}
           {/* Item count */}
           {showFiltersForView && (
             <span className="inline-flex items-center justify-center h-7 rounded px-2 text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">

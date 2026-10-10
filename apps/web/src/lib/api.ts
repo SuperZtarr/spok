@@ -1,6 +1,7 @@
 /*
  * Client API REST : fetch typé + gestion des tokens (refresh proactif < 1 min et retry sur 401 —
  * ne pas simplifier, cf. zones fragiles CLAUDE.md) + tous les endpoints groupés par domaine.
+ * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
  */
 import type {
   AuthResponse,
@@ -54,6 +55,12 @@ import type {
   ItemTemplate,
   ItemTemplateNode,
   AssignmentReceipt,
+  LiveSessionState,
+  LiveSessionSummary,
+  LiveSessionEntry,
+  LiveDisplayedItem,
+  LiveAgendaItem,
+  LivePendingChild,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -2014,3 +2021,46 @@ export const contactApi = {
 };
 
 export { ApiError };
+
+/** Token d'accès valide (refresh proactif si expiré) — pour les flux hors fetchApi (SSE des séances). */
+export async function getValidAccessToken(): Promise<string | null> {
+  const token = localStorage.getItem('accessToken');
+  if (token && !isTokenExpired(30)) return token;
+  if (!refreshPromise) refreshPromise = tryRefreshToken().finally(() => { refreshPromise = null; });
+  const ok = await refreshPromise;
+  return ok ? localStorage.getItem('accessToken') : null;
+}
+
+export { API_URL as LIVE_API_URL };
+
+export const liveSessionsApi = {
+  create: (parentSpaceId: string, name?: string) =>
+    fetchApi<LiveSessionState>('/live-sessions', { method: 'POST', body: JSON.stringify({ parentSpaceId, name }) }),
+  listForParent: (parentSpaceId: string) =>
+    fetchApi<LiveSessionSummary[]>(`/live-sessions?parentSpaceId=${encodeURIComponent(parentSpaceId)}`),
+  getBySpace: (spaceId: string) => fetchApi<LiveSessionState>(`/live-sessions/by-space/${spaceId}`),
+  join: (id: string) => fetchApi<LiveSessionState>(`/live-sessions/${id}/join`, { method: 'POST' }),
+  setPresenters: (id: string, userIds: string[]) =>
+    fetchApi<{ roles: LiveSessionState['roles'] }>(`/live-sessions/${id}/presenters`, { method: 'PUT', body: JSON.stringify({ userIds }) }),
+  /** Afficher : une ligne du programme ({ agendaItemId }) ou un item ({ sourceItemId, sourceSpaceId? }). */
+  display: (id: string, body: { agendaItemId: string } | { sourceItemId: string; sourceSpaceId?: string }) =>
+    fetchApi<{ entry: LiveSessionEntry; displayed: LiveDisplayedItem }>(`/live-sessions/${id}/display`, {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+  end: (id: string) => fetchApi<{ endedAt: string }>(`/live-sessions/${id}/end`, { method: 'POST' }),
+  start: (id: string) => fetchApi<{ liveAt: string }>(`/live-sessions/${id}/start`, { method: 'POST' }),
+  /** Suite d'une séance terminée : nouvelle séance préparée (programme non présenté + éléments présentés recopiés). */
+  createSuite: (id: string, name?: string) =>
+    fetchApi<LiveSessionState>(`/live-sessions/${id}/suite`, { method: 'POST', body: JSON.stringify({ name }) }),
+  addToAgenda: (id: string, sourceItemId: string, sourceSpaceId?: string, includeChildren = false) =>
+    fetchApi<LiveAgendaItem[]>(`/live-sessions/${id}/agenda`, { method: 'POST', body: JSON.stringify({ sourceItemId, sourceSpaceId, includeChildren }) }),
+  sourceChildren: (id: string, sourceItemId: string) =>
+    fetchApi<{ count: number }>(`/live-sessions/${id}/source-children?sourceItemId=${encodeURIComponent(sourceItemId)}`),
+  removeFromAgenda: (id: string, agendaId: string) =>
+    fetchApi<LiveAgendaItem[]>(`/live-sessions/${id}/agenda/${agendaId}`, { method: 'DELETE' }),
+  reorderAgenda: (id: string, ids: string[]) =>
+    fetchApi<LiveAgendaItem[]>(`/live-sessions/${id}/agenda/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+  pendingChildren: (id: string) => fetchApi<LivePendingChild[]>(`/live-sessions/${id}/pending-children`),
+  reveal: (id: string, sourceItemId: string) =>
+    fetchApi<{ child: Item }>(`/live-sessions/${id}/reveal`, { method: 'POST', body: JSON.stringify({ sourceItemId }) }),
+};

@@ -2,11 +2,13 @@
  * Fusion de deux items : choix champ par champ (source/target), absorption des enfants,
  * contributions et relations, puis suppression de la source. L'assigné retenu conserve sa date et son
  * auteur d'assignation (assignedAt / assignedById) — pas de nouvel accusé de lecture.
+ * Fusion et absorption refusées si un item concerné est une copie de séance verrouillée (itemLock).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
+import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 
 const mergeItemSchema = z.object({
   targetItemId: z.string(),
@@ -65,6 +67,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!source) return reply.notFound('Source item not found');
     if (!target) return reply.notFound('Target item not found');
+    if (isLocked(source) || isLocked(target)) return reply.forbidden(LOCKED_MESSAGE);
 
     const beforeSource = serializeItemForAudit(source);
     const beforeTarget = serializeItemForAudit(target);
@@ -212,6 +215,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     if (children.length === 0) {
       return reply.badRequest('No children to absorb');
     }
+    if (isLocked(parent) || children.some(isLocked)) return reply.forbidden(LOCKED_MESSAGE);
 
     const beforeParent = serializeItemForAudit(parent);
 

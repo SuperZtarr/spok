@@ -53,6 +53,10 @@ model User {
   calendarFeeds              CalendarFeed[]
   dayPlanEntries             DayPlanEntry[]
   itemTemplates               ItemTemplate[]
+  hostedLiveSessions          LiveSession[]      @relation("LiveSessionHost")
+  liveSessionRoles            LiveSessionRole[]  @relation("LiveSessionRoles")
+  liveSessionEntries          LiveSessionEntry[] @relation("LiveSessionEntries")
+  liveSessionAgendaItems      LiveSessionAgendaItem[] @relation("LiveSessionAgendaPresenter")
 
   @@map("users")
 }
@@ -90,6 +94,8 @@ model Space {
   auditLogs   AuditLog[]
   invitations Invitation[]
   favoritedBy SpaceFavorite[]
+  liveSession       LiveSession?  @relation("LiveSessionSpace")
+  childLiveSessions LiveSession[] @relation("LiveSessionParent")
 
   @@index([communityId])
   @@index([parentId])
@@ -321,6 +327,12 @@ model Item {
   assignedAt   DateTime?
   assignedById String?
 
+  // Copie de séance : lockedAt non null = contenu verrouillé (cf. apps/api/src/utils/itemLock.ts).
+  // sourceItemId/sourceSpaceId : simple trace d'origine, pas de FK (la source peut disparaître).
+  lockedAt      DateTime?
+  sourceItemId  String?
+  sourceSpaceId String?
+
   // Relations hiérarchiques
   parentId String?
   parent   Item?   @relation("ItemHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
@@ -336,11 +348,13 @@ model Item {
   bookmarkedBy  ItemBookmark[]
   views         ItemView[]
   dayPlanEntries DayPlanEntry[]
+  liveSessionEntries LiveSessionEntry[]
 
   @@index([spaceId])
   @@index([createdById])
   @@index([assignedToId])
   @@index([parentId])
+  @@index([sourceItemId])
   @@map("items")
 }
 
@@ -627,4 +641,102 @@ model ItemTemplate {
 
   @@index([createdById])
   @@map("item_templates")
+}
+
+// Séance de présentation en direct — liée 1:1 à son espace dédié (sous-espace daté de parentSpaceId).
+// controllerId : réservé au futur « passage de main » ; null = affichage libre (seul mode de l'étape 1).
+// previousSessionId : séance dont celle-ci est la « suite » (une seule suite directe par séance, @unique).
+model LiveSession {
+  id             String            @id @default(cuid())
+  spaceId        String            @unique
+  parentSpaceId  String
+  hostId         String
+  status         LiveSessionStatus @default(PREPARED)
+  controllerId   String?
+  currentEntryId String?
+  startedAt      DateTime          @default(now())
+  liveAt         DateTime?
+  endedAt        DateTime?
+  previousSessionId String? @unique
+
+  space       Space              @relation("LiveSessionSpace", fields: [spaceId], references: [id], onDelete: Cascade)
+  parentSpace Space              @relation("LiveSessionParent", fields: [parentSpaceId], references: [id], onDelete: Cascade)
+  host        User               @relation("LiveSessionHost", fields: [hostId], references: [id], onDelete: Cascade)
+  roles       LiveSessionRole[]
+  entries     LiveSessionEntry[]
+  agenda      LiveSessionAgendaItem[]
+  previousSession LiveSession? @relation("LiveSessionSuite", fields: [previousSessionId], references: [id], onDelete: SetNull)
+  nextSession     LiveSession? @relation("LiveSessionSuite")
+
+  @@index([parentSpaceId])
+  @@map("live_sessions")
+}
+
+enum LiveSessionStatus {
+  PREPARED
+  LIVE
+  ENDED
+}
+
+// Rôle explicite dans une séance. Les participants n'ont pas de ligne (membres de l'espace de séance).
+model LiveSessionRole {
+  id        String              @id @default(cuid())
+  sessionId String
+  userId    String
+  role      LiveSessionRoleType
+
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation("LiveSessionRoles", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("live_session_roles")
+}
+
+enum LiveSessionRoleType {
+  HOST
+  PRESENTER
+}
+
+// Journal de séance : chronologie indépendante de l'organisation de l'espace (jamais réécrit).
+// itemTitle : titre figé à l'affichage, survit à la suppression de la copie (itemId → null).
+model LiveSessionEntry {
+  id        String               @id @default(cuid())
+  sessionId String
+  kind      LiveSessionEntryKind
+  userId    String
+  itemId    String?
+  itemTitle String?
+  createdAt DateTime             @default(now())
+
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation("LiveSessionEntries", fields: [userId], references: [id], onDelete: Cascade)
+  item    Item?       @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, createdAt])
+  @@map("live_session_entries")
+}
+
+enum LiveSessionEntryKind {
+  DISPLAY
+  JOIN
+}
+
+// Ligne du programme d'une séance : lien vers un item source (aucune copie avant l'affichage).
+// title : titre au moment de l'ajout (affichable même si la source devient inaccessible ou est supprimée).
+model LiveSessionAgendaItem {
+  id            String    @id @default(cuid())
+  sessionId     String
+  presenterId   String
+  sourceItemId  String
+  sourceSpaceId String
+  title         String
+  position      Int
+  presentedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  session   LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  presenter User        @relation("LiveSessionAgendaPresenter", fields: [presenterId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, position])
+  @@map("live_session_agenda_items")
 }

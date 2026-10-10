@@ -1,11 +1,13 @@
 /*
  * Déplacement d'un item dans l'arborescence (parentId + position) avec renumérotation des
  * frères. Utilisé par le DnD des vues (ListView, Gantt). Garde anti-cycle.
+ * Copies de séance verrouillées : réorganisation libre ici, mais déplacement vers un autre espace refusé.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
+import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 
 const moveItemSchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -202,6 +204,7 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
     if (items.length === 0) {
       return reply.notFound('No items found to move');
     }
+    if (items.some(isLocked)) return reply.forbidden(LOCKED_MESSAGE);
 
     if (membership.role === 'MEMBER') {
       const unauthorizedItems = items.filter(i => i.createdById !== request.user.userId);

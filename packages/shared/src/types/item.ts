@@ -1,4 +1,5 @@
-/* Types item : Item, ItemType, relations, inputs de création/déplacement, accusé de lecture à l'assignation. */
+/* Types item : Item, ItemType, relations, inputs de création/déplacement, accusé de lecture à l'assignation,
+ * champs de copie de séance live (lockedAt/sourceItemId/sourceSpaceId). */
 import type { ContributionWithAuthor } from './contribution.js';
 import type { ReactionSummary } from './reaction.js';
 import type { HorizonBucket } from '../utils/horizon.js';
@@ -33,6 +34,10 @@ export interface Item {
   parentId?: string | null;
   tags?: Tag[];
   viewedAt?: string | null;
+  /** Copie de séance verrouillée (contenu non modifiable) — cf. apps/api/src/utils/itemLock.ts */
+  lockedAt?: string | null;
+  sourceItemId?: string | null;
+  sourceSpaceId?: string | null;
 }
 
 /** Accusé de lecture à l'assignation (cf. apps/api/src/utils/assignment.ts). */

@@ -2,11 +2,15 @@
  * Construction des groupes d'actions du menu contextuel des items (ItemActionMenu) : Ajouter,
  * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
  * « Marquer comme non lu » (groupe Ouvrir, toujours présent) : markItemUnread, sans callback à câbler.
+ * Section « Séance » (Ajouter au programme / Présenter en séance) : ajoutée d'office si une séance live active
+ * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  */
 import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, EyeOff, Circle } from 'lucide-react';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 import { activityApi } from './api';
 import { queryClient } from './queryClient';
+import { buildLiveItemActions } from './liveItemActions';
+import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 
 /**
  * « Marquer comme non lu » : pose la marque serveur puis rafraîchit le feed d'activité (page Activité,
@@ -139,5 +143,13 @@ export function buildItemMenuGroups(
     ...(group3.length > 0 ? [{ actions: group3 }] : []),
     ...(group5.length > 0 ? [{ actions: group5 }] : []),
     ...extraSections.filter((s) => s.actions.length > 0),
+    ...liveSection(itemId),
   ];
+}
+
+/** Section « Séance » : lue au moment de construire le menu (séance active de l'onglet). */
+function liveSection(itemId: string) {
+  const { info, spaceId } = useActiveLiveSessionStore.getState();
+  const actions = buildLiveItemActions(itemId, info, spaceId);
+  return actions.length > 0 ? [{ label: 'Séance', actions }] : [];
 }

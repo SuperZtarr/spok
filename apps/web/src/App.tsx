@@ -3,10 +3,12 @@
  * Gère le routage global et l'écouteur d'événement `auth:logout` (expiration forcée de session).
  * Distinction volontaire/forcée : déconnexion forcée → `spok_session_expired` en sessionStorage
  * pour déclencher le bouton "Retourner à" dans GlobalNavBar après reconnexion.
+ * LiveSessionHost (utilisateur connecté) : fenêtre de la séance live active, visible sur toutes les pages.
  */
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
+import { LiveSessionHost } from './components/live/LiveSessionHost';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -158,6 +160,7 @@ function DevPageName() {
 
 export default function App() {
   const logout = useAuthStore((state) => state.logout);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -175,6 +178,7 @@ export default function App() {
   return (
     <>
     <DevPageName />
+    {isAuthenticated && <LiveSessionHost />}
     <Routes>
       <Route
         path="/"

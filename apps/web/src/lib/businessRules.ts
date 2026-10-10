@@ -194,4 +194,25 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "La date et l'auteur de l'assignation sont enregistrés. « Vu par X le … » dès que l'assigné ouvre l'item après cette date, sinon « Pas encore vu » (œil barré orange dans la vue Membres et la page Tâches). Réassignation = repart de zéro ; auto-assignation, désassignation et assignations antérieures au 29/09/2026 : pas d'indicateur. Marquer non lu ensuite ne retire pas l'accusé",
     location: 'apps/api/src/utils/assignment.ts, apps/web/src/lib/assignmentReceipt.ts',
   },
+  {
+    id: 'live-session-create-access',
+    page: 'Espace de communauté (bouton « Séances »), espace de séance',
+    trigger: "Création ou ouverture d'une séance de présentation en direct",
+    effect: "Seul un propriétaire de la communauté crée une séance : sous-espace PRIVÉ nommé par la date du jour, dont il est animateur. Seuls les membres de l'espace parent peuvent rejoindre ; rejoindre = devenir membre de l'espace de séance (accès conservé après la séance). L'animateur désigne les présentateurs parmi les membres du parent",
+    location: 'apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/ParentSessionsButton.tsx',
+  },
+  {
+    id: 'live-session-locked-copy',
+    page: 'Espace de séance (vues, modale item, fenêtre en direct)',
+    trigger: "Un présentateur affiche un élément pendant la séance",
+    effect: "L'élément seul est copié dans l'espace de séance et verrouillé (images dupliquées) ; ses sous-items restent cachés et sont révélés un par un par l'animateur seul, qui est le seul à les voir avant révélation (« ne pas spoiler »). Une copie se range sous la copie de son parent d'origine s'il a déjà été présenté. Contenu (titre, description, statut, dates…) non modifiable par personne ; organisation libre pour tous les membres (déplacer, tags, relations) ; commentaires ouverts ; seul l'animateur peut supprimer une copie. Réafficher un élément inchangé réutilise la même copie, sinon nouvelle copie. Le dernier affichage l'emporte (affichage libre, « présenté par … »)",
+    location: 'apps/api/src/utils/itemLock.ts, apps/api/src/utils/sessionCopy.ts, apps/web/src/components/ItemEditModal.tsx',
+  },
+  {
+    id: 'live-session-preparation-agenda',
+    page: 'Espace de séance (Programme), fenêtre en direct, menu contextuel et modale des items',
+    trigger: "Préparation puis animation d'une séance",
+    effect: "« Nouvelle séance » crée une séance préparée ; l'animateur la démarre. Animateur et présentateurs ajoutent au programme des éléments de n'importe lequel de leurs espaces (menu de l'item ou modale : « Ajouter au programme »), sans copie avant l'affichage ; si l'élément a des sous-éléments directs, la question « Élément seul / Avec ses N sous-éléments » est posée (ajoutés juste après, dans leur ordre). L'animateur réordonne tout ; un présentateur seulement ses propres lignes ; chacun retire les siennes (l'animateur toutes). Afficher (programme, recherche ou « Présenter en séance ») n'est possible qu'en direct. La séance ouverte devient la séance active : sa fenêtre en direct suit l'utilisateur sur toutes les pages jusqu'à la fin ou « Quitter le direct ». Une seule séance en cours (préparée ou en direct) par espace ; noms uniques « date (n) ». Séance terminée : l'animateur peut « Créer la suite » (une seule suite directe) — nouvelle séance préparée liée, qui reprend les présentateurs, le programme non présenté et recopie les éléments déjà présentés (sans l'organisation ni les commentaires)",
+    location: 'apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/*, apps/web/src/lib/liveItemActions.ts',
+  },
 ];

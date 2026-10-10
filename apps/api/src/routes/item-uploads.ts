@@ -1,10 +1,12 @@
 /*
  * Upload de fichiers d'un item vers R2 : images (5 Mo max, mimes whitelist) et documents
  * (mimes exécutables bloqués). Nécessite R2 configuré (isR2Configured).
+ * Refusé sur copie de séance verrouillée (itemLock).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { isR2Configured, processImage, uploadImageToR2, deleteImageFromR2, uploadFileToR2, deleteFileFromR2 } from '../utils/r2.js';
 import { checkSpaceAccess } from './items.js';
+import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 Mo
@@ -54,6 +56,7 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
       if (!item) {
         return reply.notFound('Item not found');
       }
+      if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
 
       const file = await request.file();
       if (!file) {
@@ -121,6 +124,7 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
       if (!item) {
         return reply.notFound('Item not found');
       }
+      if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
 
       const file = await request.file();
       if (!file) {

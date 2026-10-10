@@ -5,10 +5,13 @@
  * utilisés par de nombreuses routes — toute modification impacte l'accès global.
  * Accusé de lecture à l'assignation : création/PATCH posent assignedAt/assignedById (assignmentStamp) ;
  * liste et détail renvoient assignmentReceipt (computeAssignmentReceipts) — cf. utils/assignment.ts.
+ * Verrou de séance (copies lockedAt) : cf. utils/itemLock.ts — PATCH (organisation seule), DELETE (OWNER),
+ * split refusé, propagation de statut ignore les enfants verrouillés.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { assignmentStamp, computeAssignmentReceipts } from '../utils/assignment.js';
+import { isLocked, lockedFieldViolations, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { createItemTree } from '../utils/itemTree.js';
 import { createNotification } from '../utils/notifications.js';
@@ -484,7 +487,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Item not found');
       }
 
-      if (membership.role === 'MEMBER' && existingItem.createdById !== request.user.userId) {
+      // Copie de séance : seule l'organisation (parent, tags) est modifiable, par tout membre
+      if (isLocked(existingItem)) {
+        if (lockedFieldViolations(request.body as Record<string, unknown>).length > 0) {
+          return reply.forbidden(LOCKED_MESSAGE);
+        }
+      } else if (membership.role === 'MEMBER' && existingItem.createdById !== request.user.userId) {
         return reply.forbidden('Members can only edit their own items');
       }
 
@@ -610,7 +618,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       if (propagateToChildren && updateData.status !== undefined) {
         const collectDescendantIds = async (parentId: string): Promise<string[]> => {
           const children = await fastify.prisma.item.findMany({
-            where: { parentId, spaceId: request.params.spaceId },
+            where: { parentId, spaceId: request.params.spaceId, lockedAt: null },
             select: { id: true },
           });
           const ids = children.map(c => c.id);
@@ -663,6 +671,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: request.params.id, spaceId: request.params.spaceId },
     });
     if (!item) return reply.notFound('Item not found');
+    if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
     if (!item.description) return reply.badRequest('Item has no description');
 
     // Parse HTML: split on H2/H3 (seuls niveaux disponibles dans l'éditeur)
@@ -745,6 +754,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!item) {
       return reply.notFound('Item not found');
+    }
+
+    // Copie de séance : seul le propriétaire de l'espace (animateur) peut la retirer
+    if (isLocked(item) && membership.role !== 'OWNER') {
+      return reply.forbidden(LOCKED_MESSAGE);
     }
 
     if (membership.role === 'MEMBER' && item.createdById !== request.user.userId) {

@@ -3,11 +3,13 @@
  * Le client (ItemEditModal, TimelineView) calcule et affiche la liste des éléments affectés pour
  * confirmation ; cette route revalide côté serveur que chaque id confirmé est bien atteignable
  * depuis l'ancre (drives OU descendant) avant d'appliquer le décalage — ne fait jamais confiance
- * à la liste envoyée par le client seule (TOCTOU entre la prévisualisation et l'envoi). */
+ * à la liste envoyée par le client seule (TOCTOU entre la prévisualisation et l'envoi).
+ * Refusé si l'ancre ou un dépendant est une copie de séance verrouillée (itemLock). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
+import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { shiftItemDates } from '../utils/dateShift.js';
 import { getDrivesReachableIds } from '../utils/drivesGraph.js';
 import { getDescendantIds } from '../utils/itemDescendants.js';
@@ -38,6 +40,7 @@ export const itemCascadeShiftRoutes: FastifyPluginAsync = async (fastify) => {
     if (!anchor) {
       return reply.notFound('Anchor item not found');
     }
+    if (isLocked(anchor)) return reply.forbidden(LOCKED_MESSAGE);
 
     const [drivesReachable, descendantIds] = await Promise.all([
       getDrivesReachableIds(fastify.prisma, anchor.id),
@@ -52,6 +55,7 @@ export const itemCascadeShiftRoutes: FastifyPluginAsync = async (fastify) => {
     const dependents = await fastify.prisma.item.findMany({
       where: { id: { in: body.dependentIds } },
     });
+    if (dependents.some(isLocked)) return reply.forbidden(LOCKED_MESSAGE);
 
     // Les relations drives peuvent être cross-space (même règle que la création de relation) —
     // vérifier l'accès en écriture à chaque espace distinct touché, pas seulement celui de l'ancre.

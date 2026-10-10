@@ -1,8 +1,10 @@
-/* Conversion d'un item en espace : crée l'espace, migre les enfants en items racine. */
+/* Conversion d'un item en espace : crée l'espace, migre les enfants en items racine.
+ * Refusé sur copie de séance verrouillée (itemLock). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
+import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 
 const convertToSpaceSchema = z.object({
   spaceName: z.string().min(1),
@@ -36,6 +38,7 @@ export const itemConvertRoutes: FastifyPluginAsync = async (fastify) => {
     if (!item) {
       return reply.notFound('Item not found');
     }
+    if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
 
     // Get source space for default communityId
     const sourceSpace = await fastify.prisma.space.findUnique({

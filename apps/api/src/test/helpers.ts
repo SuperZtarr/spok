@@ -66,6 +66,10 @@ export function createMockPrisma() {
     calendarFeed: mockModel(),
     dayPlanEntry: mockModel(),
     itemTemplate: mockModel(),
+    liveSession: mockModel(),
+    liveSessionRole: mockModel(),
+    liveSessionEntry: mockModel(),
+    liveSessionAgendaItem: mockModel(),
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn().mockImplementation((arg: unknown) => {

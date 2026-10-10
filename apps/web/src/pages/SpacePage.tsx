@@ -2,6 +2,10 @@
  * Page principale d'un espace (vues : liste, kanban, timeline, mindmap, etc.).
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
+ * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
+ * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar ;
+ * les copies verrouillées (lockedAt) ne sont pas éditables (canEditItem). Dans un espace de communauté
+ * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
@@ -26,7 +30,7 @@ import {
   Loader2,
   ChevronsUpDown,
 } from 'lucide-react';
-import { spacesApi, itemsApi } from '../lib/api';
+import { spacesApi, itemsApi, communitiesApi } from '../lib/api';
 import type { Item, ItemType } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
@@ -85,6 +89,10 @@ import { TreeItem, RootDropZone } from './space-tree-view';
 import { useSpaceActions } from './useSpaceActions';
 import { type TreeSort, applyTreeSort } from '../lib/treeSort';
 import { SpaceToolbar } from './SpaceToolbar';
+import { useLiveSession } from '../hooks/useLiveSession';
+import { LiveSessionBar } from '../components/live/LiveSessionBar';
+import { ParentSessionsButton } from '../components/live/ParentSessionsButton';
+import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ViewHelpButton } from '../components/ViewHelpButton';
 import { SpaceExportButton } from '../components/SpaceExportButton';
 import { useAuthStore } from '../stores/auth';
@@ -150,11 +158,29 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   const canEdit = !!user && !!space?.role && space.role !== 'VIEWER';
 
-  const canEditItem = useCallback((item: { createdById?: string }) => {
+  const canEditItem = useCallback((item: { createdById?: string; lockedAt?: string | null }) => {
     if (!canEdit) return false;
+    if (item.lockedAt) return false; // copie de séance : contenu verrouillé (organisation via DnD/tags reste possible)
     if (space?.role === 'OWNER') return true;
     return item.createdById === user?.id;
   }, [canEdit, space?.role, user?.id]);
+
+  // --- Séances live ---
+  const live = useLiveSession(spaceId);
+  const setActiveLiveSpace = useActiveLiveSessionStore((s) => s.setActive);
+  useEffect(() => {
+    if (live.isLiveSpace && spaceId) setActiveLiveSpace(spaceId);
+  }, [live.isLiveSpace, spaceId, setActiveLiveSpace]);
+  const { data: liveParentMembers = [] } = useQuery({
+    queryKey: ['space-members', live.state?.session.parentSpaceId],
+    queryFn: () => spacesApi.getMembers(live.state!.session.parentSpaceId),
+    enabled: live.state?.myRole === 'HOST',
+  });
+  const { data: spaceCommunity } = useQuery({
+    queryKey: ['community', space?.communityId],
+    queryFn: () => communitiesApi.get(space!.communityId!),
+    enabled: !!space?.communityId && !live.isLiveSpace,
+  });
 
   // Reset viewReady when navigating to a new space (must run before defaultView effect)
   useEffect(() => {
@@ -614,7 +640,13 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           onInsertTemplate={canEdit ? handleInsertTemplate : undefined}
           spaceId={spaceId}
           spaceRole={space?.role}
+          liveSessionsSlot={space?.communityId && !live.isLiveSpace && spaceId ? (
+            <ParentSessionsButton spaceId={spaceId} canCreate={spaceCommunity?.role === 'OWNER'} />
+          ) : undefined}
         />
+        {live.isLiveSpace && live.state && (
+          <LiveSessionBar state={live.state} live={live} members={liveParentMembers} onOpenItem={setEditingItemId} />
+        )}
 
         {/* Items / Views */}
         <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'members' || viewMode === 'types' || viewMode === 'priority' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'pert' || viewMode === 'text' || viewMode === 'thread' || viewMode === 'tree' ? ' overflow-hidden flex flex-col' : ''}`}>

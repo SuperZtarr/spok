@@ -1,8 +1,9 @@
 /*
  * Client Cloudflare R2 (S3) : upload/suppression d'images et fichiers, redimensionnement avatars
  * et covers (sharp). isR2Configured() garde toutes les routes d'upload.
+ * copyR2Object : duplique un objet pour les copies de séance — une copie ne partage jamais le fichier de la source.
  */
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 
 const {
@@ -136,4 +137,21 @@ export async function deleteImageFromR2(url: string): Promise<void> {
       Key: key,
     })
   );
+}
+
+export function isR2Url(url: string | null | undefined): url is string {
+  return !!url && !!R2_PUBLIC_URL && url.startsWith(`${R2_PUBLIC_URL}/`);
+}
+
+/** Duplique un objet R2 sous items/<newItemId>/… et retourne sa nouvelle URL publique. */
+export async function copyR2Object(url: string, newItemId: string): Promise<string> {
+  const key = url.slice(R2_PUBLIC_URL!.length + 1).split('?')[0];
+  const fileName = key.split('/').pop()!;
+  const newKey = `items/${newItemId}/${Date.now()}-${fileName}`;
+  await getS3Client().send(new CopyObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    CopySource: `${R2_BUCKET_NAME}/${key}`,
+    Key: newKey,
+  }));
+  return `${R2_PUBLIC_URL}/${newKey}`;
 }
