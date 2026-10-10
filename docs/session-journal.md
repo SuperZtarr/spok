@@ -6,6 +6,10 @@
 
 ## EN COURS
 
+### Icône PWA restée ancienne — 2026-10-10
+- Test Thomas : réinstallée sur mobile, toujours l'ancienne icône. Prod vérifiée : `icon-192.png` servi = celui du dépôt (réseau gris, avril) ; l'ancien = atome de mars. Cause : nginx `immutable` 1 an sur tous les .png sans empreinte
+- Plan validé (« oui ») : icônes → `*.v2.png` (manifest, index.html, sw.js précache, `CACHE_NAME` spok-v5) + nginx immutable limité à `^~ /assets/`, autres images en `no-cache`. `nginx -t` OK + en-têtes vérifiés en conteneur jetable ; nouvelles URL servies en dev. Doc SPOK « Service worker PWA » MAJ. MEP 2026-10-10 (47f0cff) — en attente de la confirmation de Thomas sur le téléphone
+
 ### Responsive / mobile — 2026-10-10
 - Plan validé (Thomas « ok », zoom mobile inclus). FAIT : HomeView (grille aperçus + en-tête carte min-w-0/truncate + libellé raccourcis), mindmap-layout (pas portails min(40°, 360°/N) + rayon ≥ 240px d'arc ; `SPACE_NODE_ID` exporté), MindMapView (`initialFit` : mobile < 768px, zoom < 0,6 → setCenter nœud espace à 0,6 ; branché premier rendu + onInit), Layout row 1 (bloc titre flex-1 min-w-0, spacer retiré, communauté du fil d'Ariane tronquée). Typecheck web OK. Doc SPOK MAJ (Accueil, En-tête, Carte mentale). Typecheck 5 paquets + 672/672 tests OK. MEP 2026-10-10 (1a9dc90, 188e529, 5cd6b20)
 - En attente : retour visuel Thomas ; point 5 (icône PWA) attend son test de réinstallation
