@@ -3,6 +3,7 @@
  * En mémoire = valable pour UNE instance d'API (cas Railway actuel). Si l'API passe à plusieurs
  * instances, remplacer broadcast() par un relais PostgreSQL LISTEN/NOTIFY — l'interface ne change pas.
  * Les abonnés qui lèvent une erreur (socket fermée) sont retirés silencieusement.
+ * broadcastEach : événement calculé par abonné (ex. programme complet pour l'animateur, filtré pour les participants).
  */
 import type { LiveEvent, LiveUser } from '@spok/shared';
 
@@ -26,11 +27,18 @@ export class LiveHub {
   }
 
   broadcast(sessionId: string, event: LiveEvent): void {
+    this.broadcastEach(sessionId, () => event);
+  }
+
+  broadcastEach(sessionId: string, eventFor: (user: LiveUser) => LiveEvent | null): void {
     const set = this.sessions.get(sessionId);
     if (!set) return;
     const dead: Subscriber[] = [];
     for (const sub of set) {
-      try { sub.send(event); } catch { dead.push(sub); }
+      try {
+        const event = eventFor(sub.user);
+        if (event) sub.send(event);
+      } catch { dead.push(sub); }
     }
     if (dead.length > 0) {
       for (const sub of dead) set.delete(sub);

@@ -810,4 +810,26 @@ describe('verrou de séance', () => {
     expect(childQueries.length).toBeGreaterThan(0)
     for (const where of childQueries) expect(where.lockedAt).toBeNull()
   })
+
+describe('verrou de séance — suppression en cascade', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue({ userId: 'test-user-id', spaceId: 'sess-space', role: 'MEMBER' })
+    prisma.item.findFirst.mockResolvedValue({ id: 'theme-1', spaceId: 'sess-space', createdById: 'test-user-id', lockedAt: null, tags: [] })
+    prisma.item.findMany.mockImplementation(async ({ where }: any) => {
+      if (where?.parentId === 'theme-1') return [{ id: 'copy-1' }]
+      if (where?.id?.in) return [{ id: 'copy-1', lockedAt: new Date(), spaceId: 'sess-space' }]
+      return []
+    })
+  })
+
+  it('DELETE deleteChildren par un MEMBER : refusé si un descendant est une copie verrouillée', async () => {
+    const res = await app.inject({ method: 'DELETE', url: '/spaces/sess-space/items/theme-1?deleteChildren=true',
+      headers: { authorization: `Bearer ${getTestToken(app)}` } })
+    expect(res.statusCode).toBe(403)
+    expect(prisma.item.deleteMany).not.toHaveBeenCalled()
+  })
+})
 })

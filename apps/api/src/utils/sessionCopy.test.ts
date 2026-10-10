@@ -96,6 +96,7 @@ describe('copyItemToSession', () => {
     const res = await copyItemToSession(prisma as any, { sourceItemId: 'src-1', sourceSpaceId: 'src-space', sessionSpaceId: 'sess', userId: 'u1' })
     expect(res.reused).toBe(true)
     expect(res.item.id).toBe('copy-old')
+    expect(prisma.item.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { parentId: 'copy-old', spaceId: 'sess' } }))
     expect(prisma.item.create).not.toHaveBeenCalled()
   })
 

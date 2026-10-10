@@ -1,9 +1,11 @@
 /* Journal d'audit global (admin) : tous espaces, filtres entité/action/utilisateur/dates, restauration.
- * Restaurer l'assigné d'un item repose la date d'assignation (assignmentStamp — accusé de lecture). */
+ * Restaurer l'assigné d'un item repose la date d'assignation (assignmentStamp — accusé de lecture).
+ * Copie de séance verrouillée (itemLock) : seul le rangement (parentId, position) peut être restauré. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 import { assignmentStamp } from '../../utils/assignment.js';
+import { isLocked, LOCKED_MESSAGE } from '../../utils/itemLock.js';
 
 const querySchema = z.object({
   entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community']).optional(),
@@ -248,6 +250,9 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
         case 'Item': {
           const existing = await fastify.prisma.item.findUnique({ where: { id: log.entityId } });
           if (!existing) return reply.notFound('Item no longer exists');
+          if (isLocked(existing) && Object.keys(restoreData).some((f) => f !== 'parentId' && f !== 'position')) {
+            return reply.forbidden(LOCKED_MESSAGE);
+          }
           // Restaurer l'assigné = nouvelle assignation (accusé de lecture, utils/assignment.ts)
           const stamp = 'assignedToId' in restoreData
             ? assignmentStamp(existing.assignedToId, restoreData.assignedToId as string | null, request.user.userId)

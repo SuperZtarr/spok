@@ -791,6 +791,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           where: { id: { in: descendantIds } },
         });
 
+        // Copies de séance parmi les descendants : seul le propriétaire de l'espace peut les supprimer
+        if (membership.role !== 'OWNER' && descendants.some(isLocked)) {
+          return reply.forbidden(LOCKED_MESSAGE);
+        }
+
         await fastify.prisma.item.deleteMany({
           where: { id: { in: descendantIds } },
         });

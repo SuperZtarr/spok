@@ -16,7 +16,9 @@
  *   avec les droits du présentateur sur l'espace source (copyItemToSession, verrouillée).
  * - Flux SSE /:id/stream : état poussé via liveHub (une instance API). Le client refetch l'état complet
  *   (by-space) à chaque (re)connexion — le flux ne rejoue pas l'historique.
- * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies.
+ * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
+ * le programme (titres/espaces sources) n'est envoyé en entier qu'à l'animateur et aux présentateurs ;
+ * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach).
  */
 import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
@@ -60,6 +62,9 @@ async function resolveSource(prisma: any, userId: string, sourceItemId: string, 
   return access ? item : null;
 }
 
+/** Programme visible : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants. */
+const visibleAgenda = (agenda: LiveAgendaItem[], canSeeAll: boolean) => (canSeeAll ? agenda : agenda.filter((a) => a.presentedAt));
+
 /** Programme ordonné avec nom d'espace source (null si l'espace n'existe plus). */
 async function loadAgenda(prisma: any, sessionId: string): Promise<LiveAgendaItem[]> {
   const rows = (await prisma.liveSessionAgendaItem.findMany({
@@ -96,7 +101,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (currentEntry?.itemId) {
       const item = await prisma.item.findFirst({ where: { id: currentEntry.itemId, spaceId: s.spaceId }, include: TAGS_INCLUDE });
       if (item) {
-        const children = await prisma.item.findMany({ where: { parentId: item.id }, include: TAGS_INCLUDE, orderBy: { position: 'asc' } });
+        const children = await prisma.item.findMany({ where: { parentId: item.id, spaceId: s.spaceId }, include: TAGS_INCLUDE, orderBy: { position: 'asc' } });
         current = { entry: currentEntry, item: flattenTags(item), children: children.map(flattenTags) };
       }
     }
@@ -115,7 +120,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       roles,
       myRole: mine?.role ?? 'PARTICIPANT',
       entries,
-      agenda: await loadAgenda(prisma, s.id),
+      agenda: visibleAgenda(await loadAgenda(prisma, s.id), !!mine),
       current,
       presence: liveHub.presence(s.id),
     };
@@ -156,9 +161,11 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return prisma.item.findFirst({ where: { id: entry.itemId, spaceId: s.spaceId } });
   }
 
+  /** Diffuse le programme : complet aux titulaires d'un rôle, lignes présentées aux participants. Renvoie le complet. */
   async function broadcastAgenda(sessionId: string) {
     const agenda = await loadAgenda(prisma, sessionId);
-    liveHub.broadcast(sessionId, { type: 'agenda', agenda });
+    const roleHolders = new Set(((await prisma.liveSessionRole.findMany({ where: { sessionId }, select: { userId: true } })) ?? []).map((r: any) => r.userId));
+    liveHub.broadcastEach(sessionId, (user) => ({ type: 'agenda', agenda: visibleAgenda(agenda, roleHolders.has(user.id)) }));
     return agenda;
   }
 
@@ -457,7 +464,9 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Présentateurs repris (et membres du nouvel espace)
     const roles = await prisma.liveSessionRole.findMany({ where: { sessionId: prev.id, role: 'PRESENTER' } });
-    const presenterIds = (roles ?? []).map((r: any) => r.userId).filter((id: string) => id !== userId);
+    const candidates = (roles ?? []).map((r: any) => r.userId).filter((id: string) => id !== userId);
+    const presenterIds: string[] = [];
+    for (const id of candidates) if (await isParentMember(prisma, id, parent.id)) presenterIds.push(id);
     if (presenterIds.length > 0) {
       await prisma.liveSessionRole.createMany({ data: presenterIds.map((id: string) => ({ sessionId: next.id, userId: id, role: 'PRESENTER' })) });
       for (const id of presenterIds) await prisma.spaceMembership.create({ data: { userId: id, spaceId: space.id, role: 'MEMBER' } });

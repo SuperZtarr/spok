@@ -6,6 +6,7 @@
  * Un display plus ancien que le courant (entry.createdAt) est ignoré — convergence si deux présentateurs.
  * Invalide ['items', spaceId] à chaque display/reveal : les copies apparaissent dans les vues de l'espace.
  * start()/end() refetch aussitôt ; les mutations de programme posent la liste renvoyée dans le cache.
+ * Programme : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants (filtré par l'API).
  */
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -59,6 +60,8 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
       onOpen: () => { if (!first) refetch(); first = false; },
       onEvent: (event) => {
         queryClient.setQueryData<LiveSessionState>(['live-session', spaceId], (prev) => (prev ? applyLiveEvent(prev, event) : prev));
+        // Changement de rôles : le programme visible dépend du rôle (complet / déjà présenté) → état rechargé
+        if (event.type === 'roles') refetch();
         if (event.type === 'display' || event.type === 'reveal') {
           queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
           queryClient.invalidateQueries({ queryKey: ['live-pending', sessionId] });

@@ -38,4 +38,14 @@ describe('LiveHub', () => {
     expect(good).toHaveBeenCalledWith({ type: 'ended', endedAt: 'x' })
     expect(hub.presence('S1').map(u => u.id)).toEqual(['b'])
   })
+
+  it('broadcastEach : événement calculé par abonné', () => {
+    const hub = new LiveHub()
+    const sa = vi.fn(); const sb = vi.fn()
+    hub.subscribe('S1', alice, sa)
+    hub.subscribe('S1', bob, sb)
+    hub.broadcastEach('S1', (user) => ({ type: 'ended', endedAt: user.id }))
+    expect(sa).toHaveBeenCalledWith({ type: 'ended', endedAt: 'a' })
+    expect(sb).toHaveBeenCalledWith({ type: 'ended', endedAt: 'b' })
+  })
 })

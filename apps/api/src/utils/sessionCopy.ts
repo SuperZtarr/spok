@@ -69,7 +69,7 @@ export async function copyItemToSession(prisma: any, params: CopyParams) {
 
   // Élément déjà dans l'espace de séance (copie) : on le réaffiche tel quel
   if (params.sourceSpaceId === params.sessionSpaceId) {
-    const children = await prisma.item.findMany({ where: { parentId: source.id }, include: TAGS_INCLUDE, orderBy: { position: 'asc' } });
+    const children = await prisma.item.findMany({ where: { parentId: source.id, spaceId: params.sessionSpaceId }, include: TAGS_INCLUDE, orderBy: { position: 'asc' } });
     return { item: flattenTags(source), children: children.map(flattenTags), reused: true };
   }
 
@@ -79,7 +79,7 @@ export async function copyItemToSession(prisma: any, params: CopyParams) {
     include: TAGS_INCLUDE,
   });
   if (previous?.lockedAt && source.updatedAt <= previous.lockedAt) {
-    const children = await prisma.item.findMany({ where: { parentId: previous.id }, include: TAGS_INCLUDE, orderBy: { position: 'asc' } });
+    const children = await prisma.item.findMany({ where: { parentId: previous.id, spaceId: params.sessionSpaceId }, include: TAGS_INCLUDE, orderBy: { position: 'asc' } });
     return { item: flattenTags(previous), children: children.map(flattenTags), reused: true };
   }
 

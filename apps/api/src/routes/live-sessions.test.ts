@@ -360,6 +360,8 @@ describe('/live-sessions', () => {
       prisma.space.create.mockResolvedValue({ id: 'sp-2', name: '2026-10-10 (2)' })
       prisma.liveSession.create.mockResolvedValue({ id: 'ls-2', spaceId: 'sp-2' })
       prisma.liveSessionRole.findMany.mockResolvedValue([{ userId: USER, role: 'HOST' }, { userId: 'pres-1', role: 'PRESENTER' }])
+      prisma.spaceMembership.findUnique.mockImplementation(async ({ where }: any) =>
+        (where.userId_spaceId.spaceId === 'parent' ? { role: 'MEMBER' } : null))
       prisma.liveSessionAgendaItem.findMany.mockResolvedValue([
         { id: 'a1', presenterId: USER, sourceItemId: 'i1', sourceSpaceId: 'src', title: 'Fait', position: 0, presentedAt: new Date() },
         { id: 'a2', presenterId: 'pres-1', sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Reste', position: 1, presentedAt: null },
@@ -405,6 +407,58 @@ describe('/live-sessions', () => {
       expect(agenda).toEqual([{ sessionId: 'ls-2', presenterId: 'pres-1', sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Reste', position: 0 }])
       expect(cloneSessionCopies).toHaveBeenCalledWith(expect.anything(), { fromSpaceId: 'sess-space', toSpaceId: 'sp-2' })
       expect(prisma.spaceMembership.create).toHaveBeenCalledWith({ data: { userId: 'pres-1', spaceId: 'sp-2', role: 'MEMBER' } })
+    })
+  })
+
+  describe('confidentialité et périmètre', () => {
+    const rows = [
+      { id: 'a1', presenterId: USER, sourceItemId: 'i1', sourceSpaceId: 'src', title: 'Déjà vu', position: 0, presentedAt: new Date(), presenter: { id: USER, name: 'T' } },
+      { id: 'a2', presenterId: USER, sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Secret', position: 1, presentedAt: null, presenter: { id: USER, name: 'T' } },
+    ]
+
+    it('participant : le programme ne contient que les éléments déjà présentés', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other', roles: [], entries: [] })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(rows)
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().agenda.map((a: any) => a.title)).toEqual(['Déjà vu'])
+    })
+
+    it('animateur : programme complet', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, roles: [{ userId: USER, role: 'HOST', user: { id: USER, name: 'T' } }], entries: [] })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(rows)
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
+      expect(res.json().agenda).toHaveLength(2)
+    })
+
+    it("sous-éléments de l'élément courant limités à l'espace de séance", async () => {
+      const entry = { id: 'e1', kind: 'DISPLAY', createdAt: new Date(), userId: USER, itemId: 'copy-1', itemTitle: 'X', user: { id: USER, name: 'T' } }
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, currentEntryId: 'e1', roles: [], entries: [entry] })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.item.findFirst.mockResolvedValue({ id: 'copy-1', title: 'X', tags: [] })
+      await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
+      const childQuery = prisma.item.findMany.mock.calls.map((c: any[]) => c[0]?.where).find((w: any) => w?.parentId === 'copy-1')
+      expect(childQuery).toMatchObject({ parentId: 'copy-1', spaceId: 'sess-space' })
+    })
+
+    it("suite : un présentateur qui n'est plus membre du parent n'est pas repris", async () => {
+      prisma.liveSession.findUnique.mockImplementation(async ({ where }: any) => {
+        if (where.id === 'ls-1') return { ...session, status: 'ENDED' }
+        if (where.previousSessionId) return null
+        return { ...session, id: 'ls-2', spaceId: 'sp-2', status: 'PREPARED', roles: [], entries: [] }
+      })
+      prisma.liveSession.findFirst.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue({ id: 'parent', communityId: 'c1', type: 'GROUP', community: { visibility: 'PRIVATE', isPublic: false } })
+      prisma.space.create.mockResolvedValue({ id: 'sp-2', name: 'x' })
+      prisma.liveSession.create.mockResolvedValue({ id: 'ls-2', spaceId: 'sp-2' })
+      prisma.liveSessionRole.findMany.mockResolvedValue([{ userId: 'gone', role: 'PRESENTER' }])
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue([])
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: auth(), payload: {} })
+      expect(res.statusCode).toBe(201)
+      expect(prisma.liveSessionRole.createMany).not.toHaveBeenCalled()
     })
   })
 })

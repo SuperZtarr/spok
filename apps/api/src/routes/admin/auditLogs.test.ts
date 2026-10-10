@@ -152,6 +152,31 @@ describe('Admin AuditLogs routes', () => {
   // ─── RESTORE SINGLE ───────────────────────────────────
 
   describe('POST /admin/audit-logs/:id/restore', () => {
+    it('refuse de restaurer le contenu d\'une copie de séance verrouillée', async () => {
+      allowAdmin()
+      prisma.auditLog.findUnique.mockResolvedValue(mockAuditLog({
+        action: 'UPDATE', entity: 'Item', entityId: 'copy-1', spaceId: 'sess',
+        changes: { before: { title: 'Ancien' }, after: { title: 'Nouveau' } },
+      }))
+      prisma.item.findUnique.mockResolvedValue({ id: 'copy-1', lockedAt: new Date(), assignedToId: null })
+      const res = await app.inject({ method: 'POST', url: '/admin/audit-logs/log-1/restore', headers: { authorization: `Bearer ${token}` } })
+      expect(res.statusCode).toBe(403)
+      expect(prisma.item.update).not.toHaveBeenCalled()
+    })
+
+    it('autorise de restaurer le rangement (parentId/position) d\'une copie verrouillée', async () => {
+      allowAdmin()
+      prisma.auditLog.findUnique.mockResolvedValue(mockAuditLog({
+        action: 'MOVE', entity: 'Item', entityId: 'copy-1', spaceId: 'sess',
+        changes: { before: { parentId: 'theme-1', position: 2 }, after: { parentId: null, position: 0 } },
+      }))
+      prisma.item.findUnique.mockResolvedValue({ id: 'copy-1', lockedAt: new Date(), assignedToId: null })
+      prisma.item.update.mockResolvedValue({ id: 'copy-1' })
+      prisma.auditLog.create.mockResolvedValue({})
+      const res = await app.inject({ method: 'POST', url: '/admin/audit-logs/log-1/restore', headers: { authorization: `Bearer ${token}` } })
+      expect(res.statusCode).toBe(200)
+    })
+
     it('should restore a deleted Item', async () => {
       allowAdmin()
       prisma.auditLog.findUnique.mockResolvedValue(mockAuditLog({
