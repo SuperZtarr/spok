@@ -6,7 +6,8 @@
  * Déplaçable (barre de titre), redimensionnable (poignée bas-droite), réductible, plein écran ; géométrie
  * mémorisée (liveWindowGeometry). Portail sur document.body (z-40, sous les modales z-50) : ne jamais l'insérer
  * dans Layout.tsx. « Aller à la séance » ouvre l'espace de séance ; « Quitter le direct » oublie la séance active.
- * Desktop uniquement.
+ * Écran étroit (< 768px, useIsNarrowScreen) : plein écran, sans déplacement ni redimensionnement ; « Voir l'espace »
+ * réduit la fenêtre en barre en bas d'écran, « Retour au direct » la rouvre ; chaque nouvel affichage la ramène au premier plan.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -30,6 +31,21 @@ type Tab = 'live' | 'agenda' | 'search';
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 
+const NARROW_QUERY = '(max-width: 767px)';
+
+/** Écran étroit (mobile) — suit les changements de taille / d'orientation. */
+function useIsNarrowScreen() {
+  const [narrow, setNarrow] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia(NARROW_QUERY).matches);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(NARROW_QUERY);
+    const onChange = () => setNarrow(mq.matches);
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+  return narrow;
+}
+
 export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: Props) {
   const [geo, setGeo] = useState<Geometry>(() => clampGeometry(loadGeometry(), viewport()));
   const [tab, setTab] = useState<Tab>('live');
@@ -37,18 +53,21 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
   const drag = useRef<{ kind: 'move' | 'resize'; startX: number; startY: number; origin: Geometry } | null>(null);
   const currentId = state.current?.entry.id;
   const presenter = state.myRole !== 'PARTICIPANT';
+  const narrow = useIsNarrowScreen();
+  const [mobileView, setMobileView] = useState<'live' | 'space'>('live');
 
   useEffect(() => { saveGeometry(geo); }, [geo]);
   useEffect(() => {
     if (!currentId) return;
     setTab('live');
+    setMobileView('live');
     setFlash(true);
     const t = setTimeout(() => setFlash(false), 1500);
     return () => clearTimeout(t);
   }, [currentId]);
 
   const onPointerDown = (kind: 'move' | 'resize') => (e: React.PointerEvent) => {
-    if (geo.mode === 'maximized') return;
+    if (geo.mode === 'maximized' || narrow) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     drag.current = { kind, startX: e.clientX, startY: e.clientY, origin: geo };
   };
@@ -65,7 +84,22 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
   const onPointerUp = () => { drag.current = null; };
 
   const current = state.current;
-  const style: React.CSSProperties = geo.mode === 'maximized'
+
+  // Mobile, espace visible : barre compacte en bas d'écran
+  if (narrow && mobileView === 'space') {
+    return createPortal(
+      <div data-testid="live-window" className="fixed z-40 left-0 right-0 bottom-0 flex items-center gap-2 border-t border-border bg-background px-3 py-2 shadow-2xl">
+        <Radio className="h-4 w-4 shrink-0 text-red-500" />
+        <span className="flex-1 truncate text-sm">{current ? current.item.title || 'Sans titre' : 'En direct'}</span>
+        <button className="rounded bg-orange-500 px-2 py-1 text-xs text-white" onClick={() => setMobileView('live')}>Retour au direct</button>
+      </div>,
+      document.body,
+    );
+  }
+
+  const style: React.CSSProperties = narrow
+    ? { inset: 0 }
+    : geo.mode === 'maximized'
     ? { inset: 16 }
     : geo.mode === 'minimized'
       ? { left: geo.x, top: geo.y, width: 300 }
@@ -86,9 +120,13 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
         <span className="text-sm font-medium truncate flex-1" title={state.spaceName}>
           {current ? current.item.title || 'Sans titre' : 'En attente du premier élément'}
         </span>
+        {narrow && (
+          <button className="rounded border border-border px-2 py-0.5 text-xs" onClick={() => { setMobileView('space'); onGoToSession(); }}>Voir l'espace</button>
+        )}
         <button aria-label="Aller à la séance" title="Aller à la séance" className={headerBtn} onPointerDown={(e) => e.stopPropagation()} onClick={onGoToSession}>
           <LogIn className="h-4 w-4" />
         </button>
+        {!narrow && <>
         <button aria-label={geo.mode === 'minimized' ? 'Agrandir' : 'Réduire'} className={headerBtn} onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setGeo((g) => ({ ...g, mode: g.mode === 'minimized' ? 'normal' : 'minimized' }))}>
           <Minus className="h-4 w-4" />
@@ -97,26 +135,27 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
           onClick={() => setGeo((g) => ({ ...g, mode: g.mode === 'maximized' ? 'normal' : 'maximized' }))}>
           {geo.mode === 'maximized' ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
+        </>}
         <button aria-label="Quitter le direct" title="Quitter le direct" className={headerBtn} onPointerDown={(e) => e.stopPropagation()} onClick={onLeave}>
           <X className="h-4 w-4" />
         </button>
       </div>
-      {geo.mode !== 'minimized' && presenter && (
+      {(narrow || geo.mode !== 'minimized') && presenter && (
         <div className="flex items-center gap-1 px-2 py-1 border-b border-border">
           <button className={tabBtn('live')} onClick={() => setTab('live')}>Direct</button>
           <button className={tabBtn('agenda')} onClick={() => setTab('agenda')}>Programme ({state.agenda.length})</button>
           <button className={tabBtn('search')} onClick={() => setTab('search')}>Rechercher</button>
         </div>
       )}
-      {geo.mode !== 'minimized' && tab === 'agenda' && presenter && (
+      {(narrow || geo.mode !== 'minimized') && tab === 'agenda' && presenter && (
         <div className="flex-1 overflow-auto"><AgendaPanel state={state} live={live} compact /></div>
       )}
-      {geo.mode !== 'minimized' && tab === 'search' && presenter && (
+      {(narrow || geo.mode !== 'minimized') && tab === 'search' && presenter && (
         <div className="flex-1 overflow-auto">
           <PresenterPanel sessionSpaceId={state.session.spaceId} onDisplay={(spaceId, itemId) => live.displayItem(itemId, spaceId)} />
         </div>
       )}
-      {geo.mode !== 'minimized' && (tab === 'live' || !presenter) && (
+      {(narrow || geo.mode !== 'minimized') && (tab === 'live' || !presenter) && (
         <div className="flex-1 overflow-auto p-4 cursor-pointer" onClick={() => current && onOpenItem(current.item.id)}>
           {current && (
             <>
@@ -140,7 +179,7 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
           )}
         </div>
       )}
-      {geo.mode === 'normal' && (
+      {!narrow && geo.mode === 'normal' && (
         <div aria-label="Redimensionner" className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize" onPointerDown={onPointerDown('resize')} />
       )}
     </div>,
