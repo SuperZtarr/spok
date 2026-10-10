@@ -1,12 +1,18 @@
-/* Page communauté (/communities/:id) : cover, espaces en arborescence, membres, activité. */
-import { useMemo, useEffect } from 'react';
+/* Page communauté (/communities/:id) : cover, espaces en arborescence, membres, activité.
+   Bouton « Nouvel espace » (2026-10-10) : membres (OWNER/MEMBER) et admin en mode admin, comme
+   l'autorise l'API POST /spaces — formulaire nom + « Espace parent » (espaces de la communauté,
+   arbre indenté, défaut racine → sous-espace sinon), ouvre l'espace créé. Choix de modèle :
+   rester sur le Tableau de bord, ne pas dupliquer ici. */
+import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Globe, Lock, Crown, User } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, Plus } from 'lucide-react';
 import { communitiesApi, spacesApi, activityApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { RoleGuard } from '../components/RoleGuard';
 import { SpaceCard } from '../components/ui/SpaceCard';
 import { useAdminMode } from '../components/DevDbStatus';
@@ -86,6 +92,28 @@ export function CommunityPage() {
 
   const adminMode = useAdminMode();
   const isAdminOrOwner = community?.role === 'OWNER' || community?.role === 'ADMIN_VIEW' || adminMode;
+  const canCreateSpace = !!user && (community?.role === 'OWNER' || community?.role === 'MEMBER' || adminMode);
+
+  const queryClient = useQueryClient();
+  const [showCreateSpace, setShowCreateSpace] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState('');
+  const [newSpaceParentId, setNewSpaceParentId] = useState('');
+  const closeCreateSpace = () => { setShowCreateSpace(false); setNewSpaceName(''); setNewSpaceParentId(''); };
+  const createSpaceMutation = useMutation({
+    mutationFn: ({ name, parentId }: { name: string; parentId: string }) =>
+      spacesApi.create({ name, type: 'GROUP', communityId, parentId: parentId || undefined }),
+    onSuccess: (space) => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
+      closeCreateSpace();
+      navigate(`/spaces/${space.id}`);
+    },
+  });
+  const submitNewSpace = () => {
+    const name = newSpaceName.trim();
+    if (name && !createSpaceMutation.isPending) createSpaceMutation.mutate({ name, parentId: newSpaceParentId });
+  };
 
   // Sort members: OWNER first, then MEMBER
   const roleOrder: Record<string, number> = { OWNER: 0, MEMBER: 1 };
@@ -120,6 +148,19 @@ export function CommunityPage() {
     });
     return roots;
   }, [spaces]);
+
+  // Options « Espace parent » du formulaire de création : arbre aplati, indenté par niveau
+  const parentSpaceOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [{ value: '', label: 'Aucun (espace racine)' }];
+    const walk = (nodes: typeof spaceTree, depth: number) => {
+      nodes.forEach(n => {
+        if (n.type === 'GROUP') options.push({ value: n.id, label: `${'   '.repeat(depth)}${depth > 0 ? '└ ' : ''}${n.name}` });
+        walk(n.children, depth + 1);
+      });
+    };
+    walk(spaceTree, 0);
+    return options;
+  }, [spaceTree]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -174,10 +215,51 @@ export function CommunityPage() {
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-8">
           {/* Spaces column */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-              <FolderOpen className="w-4 h-4" />
-              Espaces ({spaces?.length || 0})
-            </h2>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-sm font-semibold uppercase text-muted-foreground flex items-center gap-2">
+                <FolderOpen className="w-4 h-4" />
+                Espaces ({spaces?.length || 0})
+              </h2>
+              {canCreateSpace && !showCreateSpace && (
+                <Button size="sm" onClick={() => setShowCreateSpace(true)}>
+                  <Plus className="w-4 h-4" />
+                  Nouvel espace
+                </Button>
+              )}
+            </div>
+            {showCreateSpace && (
+              <div className="mb-4 p-3 rounded-lg border border-border bg-muted/50 space-y-3">
+                <Input
+                  value={newSpaceName}
+                  onChange={(e) => setNewSpaceName(e.target.value)}
+                  placeholder="Nom de l'espace"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitNewSpace();
+                    if (e.key === 'Escape') closeCreateSpace();
+                  }}
+                  autoFocus
+                />
+                {parentSpaceOptions.length > 1 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Espace parent</label>
+                    <Select
+                      value={newSpaceParentId}
+                      onChange={(e) => setNewSpaceParentId(e.target.value)}
+                      options={parentSpaceOptions}
+                    />
+                  </div>
+                )}
+                {createSpaceMutation.isError && (
+                  <p className="text-xs text-destructive">La création a échoué. Réessaie.</p>
+                )}
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={submitNewSpace} disabled={!newSpaceName.trim() || createSpaceMutation.isPending}>
+                    {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
+                  </Button>
+                  <Button size="sm" variant="bordered" onClick={closeCreateSpace}>Annuler</Button>
+                </div>
+              </div>
+            )}
             {spaceTree.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {spaceTree.map(node => (
