@@ -215,4 +215,18 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "« Nouvelle séance » crée une séance préparée ; l'animateur la démarre. Animateur et présentateurs ajoutent au programme des éléments de n'importe lequel de leurs espaces (menu de l'item ou modale : « Ajouter au programme »), sans copie avant l'affichage ; si l'élément a des sous-éléments directs, la question « Élément seul / Avec ses N sous-éléments » est posée (ajoutés juste après, dans leur ordre). Le programme complet n'est visible que de l'animateur et des présentateurs ; les participants ne voient que les éléments déjà présentés. L'animateur réordonne tout ; un présentateur seulement ses propres lignes ; chacun retire les siennes (l'animateur toutes). Afficher (programme, recherche ou « Présenter en séance ») n'est possible qu'en direct. La séance ouverte devient la séance active : sa fenêtre en direct suit l'utilisateur sur toutes les pages jusqu'à la fin ou « Quitter le direct ». Une seule séance en cours (préparée ou en direct) par espace ; noms uniques « date (n) ». Séance terminée : l'animateur peut « Créer la suite » (une seule suite directe) — nouvelle séance préparée liée, qui reprend les présentateurs, le programme non présenté et recopie les éléments déjà présentés (sans l'organisation ni les commentaires)",
     location: 'apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/*, apps/web/src/lib/liveItemActions.ts',
   },
+  {
+    id: 'bulk-upload-images-documents',
+    page: 'Vues Images et Documents (import en masse)',
+    trigger: "Import de plusieurs fichiers (bouton « Importer des … » ou glisser-déposer sur la vue)",
+    effect: "Un item IMAGE (vue Images) ou DOCUMENT (vue Documents) par fichier, créé à la racine de l'espace, titré du nom de fichier sans extension. Fichiers refusés avant envoi (format, extension interdite, taille) listés avec leur raison ; si l'envoi échoue après création, l'item est supprimé. Réservé aux membres pouvant éditer",
+    location: 'apps/web/src/lib/bulkUpload.ts, apps/web/src/hooks/useBulkUpload.ts',
+  },
+  {
+    id: 'image-resize-before-upload',
+    page: "Tout envoi d'image (modale d'item, avatar et couverture d'espace / communauté, import en masse)",
+    trigger: "Envoi d'une image JPEG, PNG ou WebP",
+    effect: "Réduite dans le navigateur à 1920 px max (plus grand côté), réencodée en WebP, avant le contrôle des 5 Mo : une photo lourde passe au lieu d'être refusée. Les GIF ne sont jamais réduits (animation) et restent limités à 5 Mo. Le serveur réduit de toute façon à 1920 px WebP",
+    location: 'apps/web/src/lib/imageResize.ts, apps/web/src/components/ui/ImageUploadZone.tsx',
+  },
 ];

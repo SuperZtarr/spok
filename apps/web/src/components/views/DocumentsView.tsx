@@ -1,5 +1,11 @@
-/* Vue Documents : items DOCUMENT en tableau (téléchargement, remplacement). */
+/*
+ * Vue Documents : items DOCUMENT en tableau (téléchargement, remplacement), groupés par parent.
+ * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un item
+ * DOCUMENT par fichier, créé à la racine — réservé à canEdit et à l'espace courant (currentSpaceId).
+ */
 import { useMemo, useCallback } from 'react';
+import { useBulkUpload } from '../../hooks/useBulkUpload';
+import { BulkUploadButton, BulkUploadDropZone, BulkUploadStatus } from '../ui/BulkUploadButton';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { FileText, Download, FolderKanban, GripVertical } from 'lucide-react';
 import { SpaceExportButton } from '../SpaceExportButton';
@@ -85,9 +91,11 @@ interface DocumentsViewProps {
 }
 
 export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId,
+            onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId,
             onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: DocumentsViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const bulk = useBulkUpload(currentSpaceId, 'document');
+  const canBulkUpload = canEdit && !!currentSpaceId;
   const documents = useMemo(() => {
     if (!items) return [];
     return items.filter(item => item.type === 'DOCUMENT' && item.url);
@@ -138,6 +146,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
       {canEdit && onNewItem && (
         <NewItemButton onClick={onNewItem} />
       )}
+      {canBulkUpload && <BulkUploadButton bulk={bulk} kind="document" />}
       <div className="flex-1" />
       <ViewHelpButton viewMode="documents" onStartTour={onStartTour} pulse={pulseHelp} />
       {spaceName && viewContainerRef && (
@@ -150,13 +159,17 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
     return (
       <div className="flex flex-col h-full overflow-hidden">
         {header}
+        <BulkUploadStatus bulk={bulk} />
+        <BulkUploadDropZone bulk={bulk} kind="document" enabled={canBulkUpload}>
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
             <p className="text-lg font-medium">Aucun document</p>
             <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item de type DOCUMENT.</p>
+            {canBulkUpload && <p className="text-sm text-muted-foreground mt-1">Glissez des fichiers ici pour les importer.</p>}
           </div>
         </div>
+        </BulkUploadDropZone>
       </div>
     );
   }
@@ -164,6 +177,8 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {header}
+      <BulkUploadStatus bulk={bulk} />
+    <BulkUploadDropZone bulk={bulk} kind="document" enabled={canBulkUpload}>
     <DndContext sensors={dndSensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
     <div className="flex-1 overflow-auto p-4 space-y-4">
       {groups.map((group) => (
@@ -314,6 +329,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
       })}
     </div>
     </DndContext>
+    </BulkUploadDropZone>
     </div>
   );
 }

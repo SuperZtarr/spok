@@ -1,5 +1,12 @@
-/* Vue Images : galerie des items IMAGE (upload, aperçu plein écran). */
+/*
+ * Vue Images : galerie des items IMAGE (aperçu plein écran, zoom, regroupement par parent).
+ * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un item IMAGE
+ * par fichier, créé à la racine, image réduite dans le navigateur avant envoi — réservé à canEdit et à
+ * l'espace courant (currentSpaceId).
+ */
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useBulkUpload } from '../../hooks/useBulkUpload';
+import { BulkUploadButton, BulkUploadDropZone, BulkUploadStatus } from '../ui/BulkUploadButton';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { ImageIcon, ChevronLeft, ChevronRight, X, FolderKanban, GripVertical, ZoomIn, ZoomOut, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { SpaceExportButton } from '../SpaceExportButton';
@@ -154,8 +161,10 @@ interface ImagesViewProps {
 }
 
 export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
-            onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId,
+            onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId,
             onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: ImagesViewProps) {
+  const bulk = useBulkUpload(currentSpaceId, 'image');
+  const canBulkUpload = canEdit && !!currentSpaceId;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(2); // default M
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -250,6 +259,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
       {canEdit && onNewItem && (
         <NewItemButton onClick={onNewItem} />
       )}
+      {canBulkUpload && <BulkUploadButton bulk={bulk} kind="image" />}
       <div className="flex-1" />
       <ViewHelpButton viewMode="images" onStartTour={onStartTour} pulse={pulseHelp} />
       {spaceName && viewContainerRef && (
@@ -262,13 +272,17 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
     return (
       <div className="flex flex-col h-full overflow-hidden">
         {header}
+        <BulkUploadStatus bulk={bulk} />
+        <BulkUploadDropZone bulk={bulk} kind="image" enabled={canBulkUpload}>
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
             <p className="text-lg font-medium">Aucune image</p>
             <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item avec une image.</p>
+            {canBulkUpload && <p className="text-sm text-muted-foreground mt-1">Glissez des images ici pour les importer.</p>}
           </div>
         </div>
+        </BulkUploadDropZone>
       </div>
     );
   }
@@ -276,6 +290,8 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {header}
+      <BulkUploadStatus bulk={bulk} />
+    <BulkUploadDropZone bulk={bulk} kind="image" enabled={canBulkUpload}>
     <DndContext sensors={dndSensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
     <div className="flex-1 overflow-auto p-4 space-y-4">
       {/* Zoom controls */}
@@ -467,6 +483,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
       )}
     </div>
     </DndContext>
+    </BulkUploadDropZone>
     </div>
   );
 }

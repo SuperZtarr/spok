@@ -1,15 +1,10 @@
-/* Zone de dépôt de fichiers (drag & drop + clic) avec validation mime/taille. */
+/*
+ * Zone de dépôt d'un document (drag & drop + clic) pour un item DOCUMENT.
+ * Validation (extensions interdites, 25 Mo) : lib/uploadRules — ne pas redéfinir les règles ici.
+ */
 import { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, FileText, FileSpreadsheet, FileImage, FileArchive, File as FileIcon, Download } from 'lucide-react';
-
-const BLOCKED_EXTENSIONS = new Set([
-  '.exe', '.bat', '.cmd', '.com', '.scr', '.msi', '.dll',
-  '.sh', '.bash', '.zsh', '.ps1', '.psm1', '.psd1',
-  '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh',
-  '.jar', '.py', '.rb', '.pl', '.php',
-]);
-
-const MAX_SIZE = 25 * 1024 * 1024; // 25 Mo
+import { validateUploadFile } from '../../lib/uploadRules';
 
 function getFileIcon(filename: string) {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -55,15 +50,9 @@ export function FileUploadZone({
     (file: File) => {
       setError(null);
 
-      const ext = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '');
-
-      if (BLOCKED_EXTENSIONS.has(ext)) {
-        setError('Ce type de fichier n\'est pas autorisé.');
-        return;
-      }
-
-      if (file.size > MAX_SIZE) {
-        setError('Fichier trop volumineux (max 25 Mo).');
+      const invalid = validateUploadFile(file, 'document');
+      if (invalid) {
+        setError(invalid);
         return;
       }
 

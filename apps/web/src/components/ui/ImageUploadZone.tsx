@@ -1,10 +1,14 @@
-/* Zone de dépôt d'images avec aperçu et upload R2. */
+/*
+ * Zone de dépôt d'une image (clic, glisser, Ctrl+V) avec aperçu — modale d'item, avatar et couverture
+ * d'espace / de communauté.
+ * L'image est réduite dans le navigateur (lib/imageResize, 1920 px) avant validation, pour qu'une photo
+ * de plus de 5 Mo passe. Règles (formats, 5 Mo) : lib/uploadRules — ne pas les redéfinir ici.
+ */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, ClipboardPaste } from 'lucide-react';
 import { DevModalBadge } from './DevModalBadge';
-
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
+import { IMAGE_ACCEPTED_TYPES, validateUploadFile } from '../../lib/uploadRules';
+import { resizeImageFile } from '../../lib/imageResize';
 
 interface ImageUploadZoneProps {
   currentUrl?: string | null;
@@ -26,16 +30,18 @@ export function ImageUploadZone({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validateAndUpload = useCallback(
-    (file: File) => {
+    async (original: File) => {
       setError(null);
 
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        setError('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
+      // Contrôle du format d'abord (inutile de décoder un fichier refusé), puis réduction, puis taille.
+      if (!IMAGE_ACCEPTED_TYPES.includes(original.type)) {
+        setError(validateUploadFile(original, 'image'));
         return;
       }
-
-      if (file.size > MAX_SIZE) {
-        setError('Fichier trop volumineux (max 5 Mo).');
+      const file = await resizeImageFile(original);
+      const invalid = validateUploadFile(file, 'image');
+      if (invalid) {
+        setError(invalid);
         return;
       }
 
@@ -183,7 +189,7 @@ export function ImageUploadZone({
                 <ClipboardPaste className="w-3 h-3" /> ou Ctrl+V pour coller une capture
               </p>
               <p className="text-xs text-muted-foreground/70 mt-0.5">
-                JPEG, PNG, WebP, GIF — max 5 Mo
+                JPEG, PNG, WebP, GIF — réduites automatiquement (GIF : max 5 Mo)
               </p>
             </div>
           </>
@@ -197,7 +203,7 @@ export function ImageUploadZone({
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPTED_TYPES.join(',')}
+        accept={IMAGE_ACCEPTED_TYPES.join(',')}
         onChange={handleFileSelect}
         className="hidden"
       />
