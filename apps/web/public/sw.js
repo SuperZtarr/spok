@@ -1,4 +1,10 @@
-const CACHE_NAME = 'spok-v4';
+/*
+ * Service worker PWA : met en cache l'app shell et les icônes pour l'installation,
+ * réseau d'abord avec repli sur le cache. Changer CACHE_NAME purge le cache chez
+ * tous les utilisateurs (v5 le 2026-10-10 : icônes renommées en *.v2.png).
+ * Ne jamais précacher une ressource dont l'URL ne change pas quand son contenu change.
+ */
+const CACHE_NAME = 'spok-v5';
 
 // Install: cache app shell
 self.addEventListener('install', (event) => {
@@ -6,8 +12,8 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
         '/',
-        '/icon-192.png',
-        '/icon-512.png',
+        '/icon-192.v2.png',
+        '/icon-512.v2.png',
       ]);
     })
   );
