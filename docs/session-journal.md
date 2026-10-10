@@ -6,6 +6,20 @@
 
 ## EN COURS
 
+### Séances de présentation live — étapes 1 et 2 — 2026-10-10
+- MEP 2026-10-10 : 3cbd457 (Tâches colonne Assigné, autre session), 3b87228 (séances live), 67bd850 (bouton Nouvel espace, autre session) — typecheck 5 paquets OK, 758/758 tests. Prochain : adaptation mobile (validée)
+- Conception validée en chat (Thomas), plan `docs/superpowers/plans/2026-10-10-live-sessions-socle.md` validé (« cela a l'air ok »), exécution inline sur master. Ledger : `.superpowers/sdd/2026-10-10-live-sessions-socle/progress.md`
+- FAIT : schéma (db push local OK), verrou API itemLock (items, uploads, convert, merge/absorb, cascade-shift, bulk-move), liveHub, sessionCopy (+R2 copy), routes /live-sessions, client SSE + useLiveSession, LiveWindow, bandeau/fil/panneau présentateur, bouton Séances, intégration SpacePage + ItemEditModal. Tests ciblés verts, typecheck web OK
+- Débloqué (dev lancé par une autre session Claude arrêté avec l'accord de Thomas) : generate + typecheck API OK. Retour Thomas : fenêtre restait après Terminer → masquée hors LIVE
+- Étape 2 validée (« oui » conception, « ok » plan) + demandes en cours : pas de spoil des sous-items (révélation progressive), copie rangée sous la copie du parent d'origine. FAIT : schéma PREPARED + LiveSessionAgendaItem, routes start/agenda/pending-children/reveal, store séance active, LiveSessionHost (App.tsx), AgendaPanel, PendingChildren, actions « Séance » (menu + modale). Tests ciblés verts, typecheck API + web OK. Vérif UI par Thomas en attente. NON COMMITÉ
+- Demande Thomas (« ok ») : ajout au programme d'un élément avec sous-éléments → question « Élément seul / Avec ses N sous-éléments » (route source-children, option includeChildren, AddChildrenDialog via LiveSessionHost). Tests 29/29 API, 15/15 web, typecheck OK
+- Retour Thomas (capture) : « À révéler » visible des présentateurs → réservé à l'animateur (API pending-children/reveal = host seul, UI). 30/30 API, typecheck OK
+- Concurrence : une seule séance en cours par espace (409 + bouton « Ouvrir la séance en cours »), noms uniques, libellés d'actions nommant la séance. Suite (option B, « ok ») : LiveSession.previousSessionId @unique (db push local avec --accept-data-loss, avertissement d'unicité sur colonne neuve), route /:id/suite, cloneSessionCopies, bouton « Créer la suite » + liens. 38/38 API, typecheck API + web OK. NON COMMITÉ
+
+### Page communauté : bouton « Nouvel espace » — 2026-10-10
+- Signalé Thomas : aucun moyen de créer un espace depuis /communities/:id (seulement Réglages OWNER ou Tableau de bord). Plan validé (« ok »)
+- FAIT : CommunityPage — bouton à côté de « Espaces (N) » (OWNER/MEMBER ou mode admin, = règle API), formulaire nom + « Espace parent » (demande Thomas : créer aussi les sous-espaces ici ; bouton dans la vue Aperçu abandonné), ouvre l'espace créé. Typecheck web OK. Doc SPOK Page communauté MAJ. NON COMMITÉ
+
 ### Icône PWA restée ancienne — 2026-10-10
 - Test Thomas : réinstallée sur mobile, toujours l'ancienne icône. Prod vérifiée : `icon-192.png` servi = celui du dépôt (réseau gris, avril) ; l'ancien = atome de mars. Cause : nginx `immutable` 1 an sur tous les .png sans empreinte
 - Plan validé (« oui ») : icônes → `*.v2.png` (manifest, index.html, sw.js précache, `CACHE_NAME` spok-v5) + nginx immutable limité à `^~ /assets/`, autres images en `no-cache`. `nginx -t` OK + en-têtes vérifiés en conteneur jetable ; nouvelles URL servies en dev. Doc SPOK « Service worker PWA » MAJ. MEP 2026-10-10 (47f0cff) — en attente de la confirmation de Thomas sur le téléphone

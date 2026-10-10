@@ -153,14 +153,13 @@
 - [ ] Cytoscape.js — remplacement potentiel de D3 pour les grands graphes
 
 ### Séances de présentation live
-- [ ] Définir le transport temps réel (WebSocket Fastify natif / Socket.io / SSE)
-- [ ] Modèle de session : liée à un espace/communauté ? lien/code d'invitation ?
-- [ ] Accès : membres uniquement ou ouvert à quiconque avec le lien ?
-- [ ] Vue participant : item courant en lecture seule, navigation libre ou verrouillée sur l'animateur ?
-- [ ] Interactions participants : commentaires, réactions, votes ?
-- [ ] Persistance : session éphémère ou sauvegardée (historique, compte-rendu) ?
-- [ ] Préparation : liste d'items à l'avance ou sélection live par l'animateur ?
-- [ ] MVP : animateur sélectionne → participants voient en temps réel, puis itérer
+- [x] Conception close le 2026-10-10 (plan : `docs/superpowers/plans/2026-10-10-live-sessions-socle.md`) : espace dédié daté (sous-espace PRIVATE), création réservée aux OWNER de la communauté, accès = membres de l'espace parent, transport SSE, copies verrouillées (organisation libre, commentaires/relations), affichage libre multi-présentateurs, journal chronologique, fenêtre flottante, desktop uniquement
+- [x] Étape 1 « Socle » — 2026-10-10 (3b87228)
+- [x] Étape 2 « Préparation et séance active » — 2026-10-10 (3b87228) (plan `docs/superpowers/plans/2026-10-10-live-sessions-preparation.md`) — statut préparée, programme, fenêtre qui suit la navigation, actions sur les items, révélation progressive des sous-items, rangement sous la copie du parent d'origine
+  - Ajouts du 2026-10-10 : question « avec les sous-éléments ? », « À révéler » réservé à l'animateur, une seule séance en cours par espace, suite de séance (nouvelle séance liée : programme non présenté + éléments présentés recopiés)
+- [ ] Adaptation mobile : fenêtre en direct plein écran sur écran étroit, bascule « Voir l'espace » / « Retour au direct » (validé Thomas, à lancer après la MEP du 2026-10-10)
+- [ ] Plus tard : compte-rendu généré à la clôture ; tri « présenté le » dans les vues
+- [ ] Plus tard (peut-être) : invités sans compte, réactions/votes/questions, passage de main, mobile
 
 ### Serveur MCP (Model Context Protocol)
 - [x] Section de conception close le 2026-09-28 — le serveur existe et sert en prod (doc SPOK : Système › Architecture technique › « Serveur MCP SPOK [apps/mcp] »). Réponses de fait aux 6 questions d'origine :
