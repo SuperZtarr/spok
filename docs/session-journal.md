@@ -7,6 +7,8 @@
 ## EN COURS
 
 ### Séances de présentation live — étapes 1 et 2 — 2026-10-10
+- CI verte (run 38046739848) → prod déployée. Adaptation mobile LiveWindow (plein écran < 768px, Voir l'espace / Retour au direct) — 571f586
+- 2026-10-10 soir (« ok ») : 5 points de la revue sécurité corrigés, NON COMMITÉS — suppression en cascade refusée si descendant verrouillé (non-OWNER) ; programme filtré pour les participants (visibleAgenda + liveHub.broadcastEach, refetch sur roles) ; enfants limités à l'espace de séance (loadState, sessionCopy) ; restauration d'audit admin limitée au rangement sur copie verrouillée ; /suite revérifie isParentMember. API 113/113 ciblés, web 43/43, typecheck API + web OK. MEP 2026-10-10 : 537494d (sécurité), 571f586 (mobile) — typecheck 5 paquets OK, 770/770 tests
 - MEP 2026-10-10 : 3cbd457 (Tâches colonne Assigné, autre session), 3b87228 (séances live), 67bd850 (bouton Nouvel espace, autre session) — typecheck 5 paquets OK, 758/758 tests. Prochain : adaptation mobile (validée)
 - Conception validée en chat (Thomas), plan `docs/superpowers/plans/2026-10-10-live-sessions-socle.md` validé (« cela a l'air ok »), exécution inline sur master. Ledger : `.superpowers/sdd/2026-10-10-live-sessions-socle/progress.md`
 - FAIT : schéma (db push local OK), verrou API itemLock (items, uploads, convert, merge/absorb, cascade-shift, bulk-move), liveHub, sessionCopy (+R2 copy), routes /live-sessions, client SSE + useLiveSession, LiveWindow, bandeau/fil/panneau présentateur, bouton Séances, intégration SpacePage + ItemEditModal. Tests ciblés verts, typecheck web OK
