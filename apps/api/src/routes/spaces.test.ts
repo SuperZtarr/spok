@@ -74,6 +74,43 @@ describe('Spaces routes', () => {
   // ─── LIST SPACES ──────────────────────────────────────────────
 
   describe('GET /spaces', () => {
+    // Mode admin : la sidebar (liste sans communityId) doit inclure les espaces de toutes les communautés,
+    // privés compris — bug 2026-10-12 : espace d'une communauté non rejointe absent de la sidebar
+    it('should include spaces of all communities, private ones too, in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      prisma.communityMembership.findMany.mockResolvedValue([])
+      prisma.space.findMany.mockResolvedValue([mockSpace({ id: 'sp-other', communityId: 'com-x', visibility: 'PRIVATE' })])
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const where = prisma.space.findMany.mock.calls[0][0].where
+      expect(where.communityId).toEqual({ not: null })
+      expect(where.OR).toBeUndefined()
+      expect(res.json()[0]).toMatchObject({ id: 'sp-other', role: 'OWNER', isMember: false })
+    })
+
+    it('should not add other communities spaces for an admin without admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      prisma.communityMembership.findMany.mockResolvedValue([])
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toHaveLength(0)
+      expect(prisma.space.findMany).not.toHaveBeenCalled()
+    })
+
     it('should list user spaces', async () => {
       const space = mockSpace()
       prisma.spaceMembership.findMany.mockResolvedValue([
@@ -247,6 +284,36 @@ describe('Spaces routes', () => {
   // ─── GET SPACE BY ID ──────────────────────────────────────────
 
   describe('GET /spaces/:id', () => {
+    // Mode admin : rôle OWNER renvoyé, membre simple ou non membre → les écrans débloquent tout
+    it('should return role OWNER to a plain-member admin in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ ...mockMembership({ role: 'MEMBER' }), space: mockSpace() })
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('OWNER')
+    })
+
+    it('should keep role ADMIN (read-only) for a non-member admin without admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace())
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('ADMIN')
+    })
+
     it('should return space for direct member', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue({
         ...mockMembership(),
@@ -297,6 +364,31 @@ describe('Spaces routes', () => {
   // ─── UPDATE SPACE ─────────────────────────────────────────────
 
   describe('PATCH /spaces/:id', () => {
+    // Bug 2026-10-12 : visibility validée mais jamais enregistrée ; null = retour à l'héritage
+    it('should save visibility, and null to inherit again', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ ...mockMembership({ role: 'OWNER' }), space: mockSpace() })
+      prisma.space.update.mockResolvedValue(mockSpace())
+
+      const set = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { visibility: 'READONLY' },
+      })
+      expect(set.statusCode).toBe(200)
+      expect(prisma.space.update.mock.calls[0][0].data.visibility).toBe('READONLY')
+
+      const reset = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { visibility: null },
+      })
+      expect(reset.statusCode).toBe(200)
+      expect(prisma.space.update.mock.calls[1][0].data.visibility).toBeNull()
+    })
+
     it('should update space name as OWNER', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
       prisma.spaceMembership.findUnique.mockResolvedValue({

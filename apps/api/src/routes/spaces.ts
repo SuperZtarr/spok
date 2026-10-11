@@ -4,13 +4,16 @@
  * referentiels. Suppression : space OWNER, community OWNER ou admin en mode admin.
  * Gestion (membres, invitations, images, emails) : isSpaceOwnerOrAdmin — le mode admin voit et fait
  * tout. Actions personnelles (join/leave, transfert de sa propriété) liées à l'appelant.
+ * GET / en mode admin : espaces de toutes les communautés (ou de celle demandée), privés compris, rôle OWNER.
+ * PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée). GET /:id renvoie inheritedVisibility +
+ * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Role, SpaceDeletePreview } from '@spok/shared';
 import { SPACE_TEMPLATES } from '@spok/shared';
 import type { SpaceTemplateItem } from '@spok/shared';
-import { itemsRoutes } from './items.js';
+import { itemsRoutes, getEffectiveVisibility } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
@@ -38,7 +41,7 @@ const updateSpaceSchema = z.object({
   communityId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   defaultRole: z.enum(['MEMBER']).nullable().optional(),
-  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
+  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).nullable().optional(), // null = héritée (parent → communauté)
   defaultView: z.string().nullable().optional(),
   coverPosition: z.number().int().min(0).max(100).optional(),
   coverPositionX: z.number().int().min(0).max(100).optional(),
@@ -56,6 +59,17 @@ async function isAdminModeActive(prisma: any, userId: string, isAdminMode: boole
   if (!isAdminMode) return false;
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
   return user?.globalRole === 'ADMIN';
+}
+
+// Visibilité qu'aurait l'espace sans réglage propre : celle (effective) du parent, sinon celle de la
+// communauté, sinon PRIVATE. Renvoyée par GET /:id pour afficher le choix « Héritée » des paramètres.
+async function getInheritedVisibility(prisma: any, space: { parentId: string | null; communityId: string | null }) {
+  if (space.parentId) return { inheritedVisibility: await getEffectiveVisibility(prisma, space.parentId), inheritedFrom: 'parent' as const };
+  if (space.communityId) {
+    const community = await prisma.community.findUnique({ where: { id: space.communityId }, select: { visibility: true } });
+    return { inheritedVisibility: community?.visibility ?? 'PRIVATE', inheritedFrom: 'community' as const };
+  }
+  return { inheritedVisibility: 'PRIVATE', inheritedFrom: null };
 }
 
 // Garde des actions de gestion d'un espace : OWNER de l'espace, ou admin en mode admin.
@@ -225,14 +239,18 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       ? [communityId]
       : communityIds;
 
-    if (effectiveCommunityIds.length > 0) {
+    // Mode admin : espaces de TOUTES les communautés (ou de celle demandée), privés compris, rôle OWNER —
+    // sinon la sidebar (liste sans communityId) omet les espaces des communautés dont l'admin n'est pas membre.
+    const adminModeOn = communityId !== 'none' && await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode);
+
+    if (effectiveCommunityIds.length > 0 || adminModeOn) {
       const communitySpaceFilter: Record<string, unknown> = {
         communityId: communityId && communityId !== 'none'
           ? communityId
-          : { in: effectiveCommunityIds },
+          : adminModeOn ? { not: null } : { in: effectiveCommunityIds },
         type: 'GROUP',
         id: { notIn: Array.from(memberSpaceIds) },
-        OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
+        ...(adminModeOn ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
       };
 
       const visibleSpaces = await fastify.prisma.space.findMany({
@@ -258,7 +276,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const nonMemberSpaces = visibleSpaces.map((s) => ({
         ...s,
-        role: ((s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
+        role: (adminModeOn ? 'OWNER' : (s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -390,6 +408,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Get space by ID (direct membership, community membership, or public community)
   fastify.get<{ Params: { id: string } }>('/:id', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
     const userId = request.user?.userId;
+    // Mode admin : rôle OWNER renvoyé (membre ou non) → les écrans débloquent toutes les actions
+    const adminModeOn = !!userId && await isAdminModeActive(fastify.prisma, userId, request.isAdminMode);
 
     // 1. If authenticated, try direct membership
     if (userId) {
@@ -420,13 +440,14 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (membership) {
         return {
           ...membership.space,
-          role: membership.role,
+          ...(await getInheritedVisibility(fastify.prisma, membership.space)),
+          role: adminModeOn ? ('OWNER' as Role) : membership.role,
           memberCount: membership.space._count.memberships,
           itemCount: membership.space._count.items,
         };
       }
 
-      // 1b. Admin bypass — full access without membership
+      // 1b. Admin bypass — accès sans adhésion : OWNER en mode admin, 'ADMIN' (lecture) sinon
       const adminUser = await fastify.prisma.user.findUnique({
         where: { id: userId },
         select: { globalRole: true },
@@ -443,7 +464,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         if (adminSpace) {
           return {
             ...adminSpace,
-            role: 'ADMIN' as Role,
+            ...(await getInheritedVisibility(fastify.prisma, adminSpace)),
+            role: (adminModeOn ? 'OWNER' : 'ADMIN') as Role,
             memberCount: adminSpace._count.memberships,
             itemCount: adminSpace._count.items,
           };
@@ -628,6 +650,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.coverPositionX !== undefined) updateData.coverPositionX = body.coverPositionX;
       if (body.coverZoom !== undefined) updateData.coverZoom = body.coverZoom;
       if (body.defaultView !== undefined) updateData.defaultView = body.defaultView;
+      if (body.visibility !== undefined) updateData.visibility = body.visibility;
 
       // Si la communauté change réellement, embarquer tous les sous-espaces descendants —
       // sinon un enfant reste rattaché à l'ancienne communauté alors que son parent a bougé.

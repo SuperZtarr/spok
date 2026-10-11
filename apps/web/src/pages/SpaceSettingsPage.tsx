@@ -1,6 +1,7 @@
 /* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER.
    Vue par défaut non réglée (defaultView null) : affichée « Liste », ce que SpacePage ouvre réellement.
-   Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'. */
+   Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'.
+   Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id). */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -151,6 +152,10 @@ function SpaceSettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onSt
 // Vue ouverte par SpacePage quand l'espace n'a pas de vue par défaut
 const FALLBACK_DEFAULT_VIEW = 'list';
 
+// Choix « Héritée » de la visibilité (envoyé null à l'API : visibilité du parent, sinon de la communauté)
+const INHERIT = 'INHERIT';
+const VISIBILITY_LABELS: Record<string, string> = { OPEN: 'Ouvert', READONLY: 'Lecture seule', PRIVATE: 'Privé' };
+
 export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
@@ -248,7 +253,7 @@ export function SpaceSettingsPage() {
   const [editCommunityId, setEditCommunityId] = useState<string>('');
   const [editParentId, setEditParentId] = useState<string>('');
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
-  const [editVisibility, setEditVisibility] = useState<string>('OPEN');
+  const [editVisibility, setEditVisibility] = useState<string>(INHERIT);
   const [editDefaultView, setEditDefaultView] = useState<string>(FALLBACK_DEFAULT_VIEW);
 
 
@@ -260,7 +265,7 @@ export function SpaceSettingsPage() {
       setEditCommunityId(space.communityId || '');
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
-      setEditVisibility(space.visibility || 'OPEN');
+      setEditVisibility(space.visibility || INHERIT);
       setEditDefaultView(space.defaultView || FALLBACK_DEFAULT_VIEW);
     }
   }, [space, editName]);
@@ -268,7 +273,7 @@ export function SpaceSettingsPage() {
   const handleSaveSpaceInfo = async () => {
     if (!space) return;
 
-    const updates: { name?: string; description?: string | null; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string; defaultView?: string | null } = {};
+    const updates: { name?: string; description?: string | null; communityId?: string | null; parentId?: string | null; defaultRole?: Role | null; visibility?: string | null; defaultView?: string | null } = {};
     if (editName !== space.name) updates.name = editName;
     if (editDescription !== (space.description || '')) updates.description = editDescription || null;
     const newCommunityId = editCommunityId || null;
@@ -277,7 +282,7 @@ export function SpaceSettingsPage() {
     if (newParentId !== (space.parentId || null)) updates.parentId = newParentId;
     const newDefaultRole = (editDefaultRole || null) as Role | null;
     if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
-    if (editVisibility !== (space.visibility || 'OPEN')) updates.visibility = editVisibility;
+    if (editVisibility !== (space.visibility || INHERIT)) updates.visibility = editVisibility === INHERIT ? null : editVisibility;
     if (editDefaultView !== (space.defaultView || FALLBACK_DEFAULT_VIEW)) updates.defaultView = editDefaultView;
 
     if (Object.keys(updates).length > 0) {
@@ -291,7 +296,7 @@ export function SpaceSettingsPage() {
     (editCommunityId || null) !== space.communityId ||
     (editParentId || null) !== (space.parentId || null) ||
     (editDefaultRole || null) !== (space.defaultRole || null) ||
-    editVisibility !== (space.visibility || 'OPEN') ||
+    editVisibility !== (space.visibility || INHERIT) ||
     editDefaultView !== (space.defaultView || FALLBACK_DEFAULT_VIEW)
   );
 
@@ -501,8 +506,15 @@ export function SpaceSettingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Visibilité</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
+                    {
+                      value: INHERIT,
+                      label: `Héritée — ${VISIBILITY_LABELS[(space as any).inheritedVisibility] ?? 'Privé'}`,
+                      description: (space as any).inheritedFrom === 'parent'
+                        ? "Suit la visibilité de l'espace parent"
+                        : 'Suit la visibilité de la communauté',
+                    },
                     { value: 'OPEN', label: 'Ouvert', description: 'Tous les membres de la communauté peuvent voir et modifier' },
                     { value: 'READONLY', label: 'Lecture seule', description: 'Les membres de la communauté peuvent voir, seuls les membres de l\'espace peuvent modifier' },
                     { value: 'PRIVATE', label: 'Privé', description: 'Seuls les membres de l\'espace ont accès' },
