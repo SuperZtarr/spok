@@ -814,7 +814,7 @@ export function CommunitySettingsPage() {
             <div className="max-w-[320px] space-y-6 pointer-events-none">
               <div>
                 <p className="text-sm font-medium mb-2">Carte (liste des communautés)</p>
-                <CommunityCard community={community} />
+                <CommunityCard community={community} showActions={false} />
               </div>
               <div>
                 <p className="text-sm font-medium mb-2">Bannière (page activité)</p>

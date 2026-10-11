@@ -1,7 +1,10 @@
-/* Carte de communauté (listes/accueil) : nom, visibilité (pastille sur la cover, lue sur visibility), compteurs, cover. */
-import { Link } from 'react-router-dom';
+/* Carte de communauté (listes/accueil) : nom, visibilité (pastille sur la cover, lue sur visibility), compteurs, cover.
+   Pastille de visibilité + raccourci paramètres groupés en bas à droite de la carte, sous l'image (OWNER ou admin en mode admin ; showActions=false
+   pour l'aperçu de CommunitySettingsPage). Boutons dans un Link : preventDefault + stopPropagation. */
+import { Link, useNavigate } from 'react-router-dom';
 import { VisibilityPill } from './VisibilityPill';
-import { Users, Crown, User, Eye, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
+import { useAdminMode } from '../DevDbStatus';
+import { Settings, Users, Crown, User, Eye, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
 import { Button } from './Button';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -118,13 +121,17 @@ interface CommunityCardProps {
   isMutePending?: boolean;
   onLeave?: () => void;
   isLeavePending?: boolean;
+  showActions?: boolean;
 }
 
-export function CommunityCard({ community, to, onMute, isMutePending, onLeave, isLeavePending }: CommunityCardProps) {
+export function CommunityCard({ community, to, onMute, isMutePending, onLeave, isLeavePending, showActions = true }: CommunityCardProps) {
+  const navigate = useNavigate();
+  const adminMode = useAdminMode();
   const config = ROLE_CONFIG[community.role || 'MEMBER'] || ROLE_CONFIG.MEMBER;
   const RoleIcon = config.icon;
   const showMuteButton = onMute && ['OWNER', 'MEMBER', 'VIEWER'].includes(community.role || '');
   const showLeaveButton = onLeave && community.role === 'MEMBER';
+  const canEditSettings = showActions && (community.role === 'OWNER' || adminMode);
 
   return (
     <Link
@@ -133,15 +140,7 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
     >
       <div className="relative">
         <CoverWithAvatar community={community} bannerHeight="aspect-[3/1]" />
-        <VisibilityPill visibility={community.visibility} className="absolute top-2 left-2" />
       </div>
-
-      {community.pendingPublic && (
-        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium">
-          <Clock className="w-3 h-3" />
-          Publication en attente
-        </div>
-      )}
 
       <div className="pt-8 px-4 pb-4">
         <div className="flex items-center gap-2">
@@ -167,8 +166,7 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
           </span>
         </div>
 
-        {(showMuteButton || showLeaveButton) && (
-          <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center gap-2 mt-3">
             {showMuteButton && (
               <Button
                 size="sm"
@@ -194,8 +192,27 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
                 Quitter
               </Button>
             )}
-          </div>
-        )}
+            <div className="ml-auto flex items-center gap-1">
+              {community.pendingPublic && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium">
+                  <Clock className="w-3 h-3" />
+                  Publication en attente
+                </span>
+              )}
+              <VisibilityPill visibility={community.visibility} />
+              {canEditSettings && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/communities/${community.id}/settings`); }}
+                  className="p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  title="Paramètres de la communauté"
+                  aria-label="Paramètres de la communauté"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+        </div>
       </div>
     </Link>
   );

@@ -653,7 +653,7 @@ export function SpaceSettingsPage() {
             <h2 className="text-lg font-semibold">Aperçu des formats d'affichage</h2>
             <div className="max-w-[280px] pointer-events-none">
               <p className="text-sm font-medium mb-2">Carte (liste des espaces)</p>
-              <SpaceCard space={space} />
+              <SpaceCard space={space} showActions={false} />
             </div>
           </div>
         )}
