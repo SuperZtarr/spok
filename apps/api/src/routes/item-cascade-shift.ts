@@ -24,7 +24,7 @@ export const itemCascadeShiftRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string; id: string };
     Body: z.infer<typeof cascadeShiftSchema>;
   }>('/:id/cascade-shift', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -62,7 +62,7 @@ export const itemCascadeShiftRoutes: FastifyPluginAsync = async (fastify) => {
     const dependentSpaceIds = [...new Set(dependents.map((d) => d.spaceId).filter((id): id is string => !!id))];
     for (const depSpaceId of dependentSpaceIds) {
       if (depSpaceId === request.params.spaceId) continue;
-      const depMembership = await checkSpaceAccess(fastify.prisma, request.user.userId, depSpaceId);
+      const depMembership = await checkSpaceAccess(fastify.prisma, request.user.userId, depSpaceId, request.isAdminMode);
       if (!depMembership || (depMembership.role !== 'OWNER' && depMembership.role !== 'MEMBER')) {
         return reply.forbidden(`Accès insuffisant à l'espace d'un élément lié (${depSpaceId})`);
       }

@@ -17,7 +17,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // List tags
   fastify.get<{ Params: { spaceId: string } }>('/', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -53,7 +53,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -95,7 +95,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -144,7 +144,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete tag
   fastify.delete<{ Params: { spaceId: string; id: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }

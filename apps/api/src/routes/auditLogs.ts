@@ -25,7 +25,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string };
     Querystring: z.infer<typeof querySchema>;
   }>('/', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -82,7 +82,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{
     Params: { spaceId: string; id: string };
   }>('/:id', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -118,7 +118,7 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { spaceId: string; id: string };
   }>('/:id/restore', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }

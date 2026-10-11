@@ -70,7 +70,10 @@
 - [x] Vignettes communauté/espace : raccourcis paramètres (OWNER/admin) + vue par défaut (espace), groupés avec la pastille en bas à droite sous l'image — 2026-10-11 (a726011)
 - [x] SpaceSettingsPage : vue par défaut non réglée affichée « Liste » (comme SpacePage) au lieu de « Fil » — 2026-10-11 (aa95e92)
 - [x] Mode admin = droits OWNER sur communautés et espaces (API isOwnerOrAdmin / isSpaceOwnerOrAdmin + écrans de paramètres) ; PATCH communauté PRIVATE → public soumis à validation admin (sauf mode admin) — 2026-10-12
-- [ ] Mode admin phase 3 : items, tags, séances live, relations, contributions… (~35 gardes OWNER sans bypass)
+- [x] Mode admin phase 3 : checkSpaceAccess(…, isAdminMode) → OWNER dans tout espace (items, tags, relations, contributions…), GET /spaces et /spaces/:id en OWNER (sidebar : espaces de toutes les communautés, privés compris), création de séance, annulation d'invitation — 2026-10-12
+- [x] BUG visibilité d'espace jamais enregistrée (PATCH) + choix « Héritée » dans les paramètres — 2026-10-12
+- [ ] Actions d'animation des séances live réservées à l'animateur, admin compris — à ouvrir au mode admin ?
+- [ ] 503 sur /spaces/:id/settings en prod (2026-10-12) : URL de la requête en échec à récupérer
 - [ ] PATCH /spaces/:id laisse passer tout admin global même sans mode admin — aligner sur la règle (à valider, retire un droit)
 - [ ] Demande de publication : permettre au propriétaire d'annuler sa demande ; reject-public doit vider pendingVisibility
 - [ ] Données prod : lancer `scripts/check-community-visibility.ts --prod` et resynchroniser isPublic/visibility au cas par cas (« Campagne ShadowWorld » : isPublic=true, visibility=PRIVATE)

@@ -18,7 +18,7 @@ export const itemConvertRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string; itemId: string };
     Body: z.infer<typeof convertToSpaceSchema>;
   }>('/:itemId/convert-to-space', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }

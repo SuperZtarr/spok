@@ -1,6 +1,7 @@
 /*
  * Invitations par token (communauté ou espace) : création, acceptation (avec auto-join des
  * espaces à defaultRole), refus, liste. Helper createInvitation partagé par communities/spaces.
+ * Annulation : l'invitant, le OWNER de la cible, ou un admin en mode admin.
  */
 import { FastifyPluginAsync } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
@@ -232,13 +233,19 @@ export const invitationsRoutes: FastifyPluginAsync = async (fastify) => {
       const isInviter = invitation.invitedById === request.user.userId;
       let isAdmin = false;
 
-      if (!isInviter && invitation.communityId) {
+      // Mode admin (admin global + X-Admin-Mode) : peut annuler toute invitation
+      if (!isInviter && request.isAdminMode) {
+        const user = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
+        isAdmin = user?.globalRole === 'ADMIN';
+      }
+
+      if (!isInviter && !isAdmin && invitation.communityId) {
         const mem = await fastify.prisma.communityMembership.findUnique({
           where: { userId_communityId: { userId: request.user.userId, communityId: invitation.communityId } },
         });
         isAdmin = mem ? mem.role === 'OWNER' : false;
       }
-      if (!isInviter && invitation.spaceId) {
+      if (!isInviter && !isAdmin && invitation.spaceId) {
         const mem = await fastify.prisma.spaceMembership.findUnique({
           where: { userId_spaceId: { userId: request.user.userId, spaceId: invitation.spaceId } },
         });

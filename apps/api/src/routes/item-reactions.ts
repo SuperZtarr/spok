@@ -38,7 +38,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { spaceId: string; id: string }; Body: { reactionType: string } }>(
     '/:id/reactions',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
 
       const body = reactionSchema.parse(request.body);
@@ -69,7 +69,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{ Params: { spaceId: string; id: string } }>(
     '/:id/reactions',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
 
       await fastify.prisma.reaction.deleteMany({
@@ -89,7 +89,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { spaceId: string; id: string; contributionId: string }; Body: { reactionType: string } }>(
     '/:id/contributions/:contributionId/reactions',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
 
       const body = reactionSchema.parse(request.body);
@@ -119,7 +119,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{ Params: { spaceId: string; id: string; contributionId: string } }>(
     '/:id/contributions/:contributionId/reactions',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
 
       await fastify.prisma.reaction.deleteMany({

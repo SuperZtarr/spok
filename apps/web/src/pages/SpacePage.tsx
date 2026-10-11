@@ -39,6 +39,7 @@ import { useViewOnboarding } from '../hooks/useOnboarding';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { useAdminMode } from '../components/DevDbStatus';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore, VIEWER_ALLOWED_VIEWS, type ViewMode } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
@@ -144,6 +145,7 @@ export function SpacePage() {
   const [searchQuery, setSearchQuery] = useState('');
 const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const { includeChildrenSpaceIds } = useSpaceStore();
+  const adminMode = useAdminMode(); // mode admin = droits OWNER (space.role renvoyé 'OWNER' par l'API)
 
 
   useEffect(() => {
@@ -642,7 +644,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           spaceId={spaceId}
           spaceRole={space?.role}
           liveSessionsSlot={space?.communityId && !live.isLiveSpace && spaceId ? (
-            <ParentSessionsButton spaceId={spaceId} canCreate={spaceCommunity?.role === 'OWNER'} />
+            <ParentSessionsButton spaceId={spaceId} canCreate={spaceCommunity?.role === 'OWNER' || adminMode} />
           ) : undefined}
           liveSessionBarSlot={live.isLiveSpace && live.state ? (
             <LiveSessionBar state={live.state} live={live} members={liveParentMembers} onOpenItem={setEditingItemId} />

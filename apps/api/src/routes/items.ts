@@ -3,6 +3,9 @@
  * détail avec relations/contributions/reactionSummary. Exporte checkSpaceAccess et
  * getEffectiveVisibility (visibilité espace → parent → communauté ; OPEN→MEMBER, READONLY→VIEWER)
  * utilisés par de nombreuses routes — toute modification impacte l'accès global.
+ * checkSpaceAccess(…, isAdminMode) : en mode admin (admin global + X-Admin-Mode) → rôle OWNER partout,
+ * membre ou non ; hors mode admin, un admin non membre a le rôle 'ADMIN' (lecture seule). Toute route
+ * doit passer request.isAdminMode en 4e argument.
  * Accusé de lecture à l'assignation : création/PATCH posent assignedAt/assignedById (assignmentStamp) ;
  * liste et détail renvoient assignmentReceipt (computeAssignmentReceipts) — cf. utils/assignment.ts.
  * Verrou de séance (copies lockedAt) : cf. utils/itemLock.ts — PATCH (organisation seule), DELETE (OWNER),
@@ -100,17 +103,27 @@ export async function getEffectiveVisibility(prisma: any, spaceId: string): Prom
 
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
-export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string) {
-  // 1. If authenticated, check direct space membership (always has priority)
+export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string, isAdminMode = false) {
+  // 1. If authenticated, check direct space membership (always has priority — sauf mode admin)
   if (userId) {
     const membership = await prisma.spaceMembership.findUnique({
       where: {
         userId_spaceId: { userId, spaceId },
       },
     });
+
+    // Mode admin (admin global + header X-Admin-Mode) : droits OWNER partout, membre ou non —
+    // le mode admin voit et fait tout. Les routes passent request.isAdminMode en 4e argument.
+    if (isAdminMode) {
+      const adminUser = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+      if (adminUser?.globalRole === 'ADMIN') {
+        return { ...(membership ?? { id: '', joinedAt: new Date() }), userId, spaceId, role: 'OWNER' as const };
+      }
+    }
+
     if (membership) return membership;
 
-    // Admin bypass — full access without membership
+    // Admin global hors mode admin : lecture seule sans adhésion (rôle 'ADMIN', refusé en écriture)
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
     if (user?.globalRole === 'ADMIN') {
       return { userId, spaceId, role: 'ADMIN' as const, id: '', joinedAt: new Date() };
@@ -171,7 +184,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { spaceId: string }; Querystring: z.infer<typeof querySchema> }>(
     '/',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -287,7 +300,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -349,7 +362,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     '/from-template',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -385,7 +398,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get item by ID
   fastify.get<{ Params: { spaceId: string; id: string } }>('/:id', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -467,7 +480,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -663,7 +676,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Split item description by headings into child items
   fastify.post<{ Params: { spaceId: string; id: string } }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') return reply.forbidden('Insufficient permissions');
 
@@ -733,7 +746,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete item
   fastify.delete<{ Params: { spaceId: string; id: string }; Querystring: { deleteChildren?: string } }>('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }

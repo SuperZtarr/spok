@@ -37,7 +37,7 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Le stockage R2 n\'est pas configuré. Contactez l\'administrateur.');
       }
 
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -105,7 +105,7 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Le stockage R2 n\'est pas configuré. Contactez l\'administrateur.');
       }
 
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }

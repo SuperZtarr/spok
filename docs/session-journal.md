@@ -6,6 +6,20 @@
 
 ## EN COURS
 
+### MCP distant pour utilisateurs tiers — 2026-10-12
+- Conception validée : MCP monté dans l'API (`POST /mcp`, outils via fastify.inject avec le jeton de l'appelant), jetons personnels (étape 1), OAuth claude.ai/Desktop (étape 2, plus tard), conformité = instructions serveur + get_space_conventions + validation stricte + Markdown→HTML, audit source MCP
+- Plan étape 1 : docs/superpowers/plans/2026-10-12-mcp-distant-etape1.md — en attente de relecture Thomas. Rien codé
+- Bug existant repéré : create_contribution du MCP envoie un objet Tiptap alors que l'API attend une chaîne (z.string) → corrigé par le plan (Task 5)
+
+### Mode admin — phase 3 (contenu des espaces) — 2026-10-12
+- checkSpaceAccess(prisma, userId, spaceId, isAdminMode) : mode admin → rôle OWNER (membre ou non) ; 40 appels de routes passent request.isAdminMode (items, tags, relations, contributions, réactions, move, merge, bulk, convert, uploads, auditLogs, referentiels). Utilitaires live (liveInvites, helpers live-sessions) inchangés
+- GET /spaces/:id renvoie role OWNER en mode admin → écrans de l'espace débloqués ; live-sessions création + invite-candidates ; annulation d'invitation ; SpacePage bouton séance
+- Code mort supprimé : pages/DashboardPage.tsx (plus routée) + components/DashboardToolbar.tsx (orphelin)
+- Tests : items+spaces 103/103 (+6), routes touchées vertes ; typecheck web/api OK. Non vérifié en navigateur (admin propriétaire de tout en local). MEP 2026-10-12 (avec correctifs visibilité + sidebar)
+- BUG visibilité d'espace : PATCH /spaces/:id ne l'enregistrait jamais (absente d'updateData) → corrigé, null = héritée ; GET /:id renvoie inheritedVisibility/inheritedFrom ; écran : choix « Héritée — X » (au lieu de « Ouvert » affiché à tort). Vérifié local (Backend API : READONLY puis retour hérité). NON COMMITÉ
+- BUG sidebar : « Arc Enigmes a Sigil ! » (prod, communauté privée Campagne ShadowWorld, seul membre Ondoval) visible sur la page communauté mais pas dans la sidebar — GET /spaces sans communityId ignorait le mode admin. Corrigé : en mode admin, espaces de toutes les communautés, privés compris, rôle OWNER (+2 tests). NON COMMITÉ
+- 503 signalé sur la page paramètres d'espace en prod : URL de la requête en échec demandée à Thomas, non diagnostiqué
+
 ### Mode admin = tout voir, tout faire — phase 1 communautés — 2026-10-12
 - Règle Thomas (mémoire feedback_admin_mode_all_access) : toute garde OWNER doit accepter l'admin en mode admin
 - API : `isOwnerOrAdmin` dans communities.ts (delete, available-users, add/remove member, role, invite, invitations, tags x3, emails x4, images) ; community-referentiels checkCommunityOwner + isAdminMode. Exceptions : join/leave/mute/transfer-ownership

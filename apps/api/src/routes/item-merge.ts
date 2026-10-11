@@ -40,7 +40,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string; id: string };
     Body: z.infer<typeof mergeItemSchema>;
   }>('/:id/merge', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot merge items');
@@ -193,7 +193,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { spaceId: string; id: string };
   }>('/:id/absorb-children', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       return reply.forbidden('Viewers cannot absorb items');

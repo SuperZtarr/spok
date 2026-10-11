@@ -1,7 +1,8 @@
 /*
  * Routes /live-sessions : séances de présentation en direct (étapes 1 « Socle » et 2 « Préparation »).
  * - Cycle : PREPARED (création) → LIVE (/:id/start, animateur) → ENDED (/:id/end). Afficher/révéler : LIVE seulement.
- * - Création : OWNER de la communauté de l'espace parent uniquement → sous-espace PRIVATE daté + rôle HOST ;
+ * - Création : OWNER de la communauté de l'espace parent (ou admin en mode admin) → sous-espace PRIVATE daté + rôle HOST ;
+ *   les actions d'animation restent réservées à l'animateur (hostId), y compris pour un admin ;
  *   une seule séance en cours (PREPARED|LIVE) par espace parent (409 sinon) ; nom unique « date (n) ».
  *   Préparation initiale facultative (agenda: [{ sourceItemId, includeChildren }]) : éléments de l'espace parent
  *   uniquement (400 sinon, rien n'est créé), sous-éléments directs juste après leur parent.
@@ -187,7 +188,14 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return agenda;
   }
 
-  // Créer une séance (OWNER de la communauté)
+  /** Admin global avec le mode admin activé : mêmes droits qu'un OWNER de communauté (création, invitables). */
+  async function isAdminModeOn(userId: string, isAdminMode: boolean): Promise<boolean> {
+    if (!isAdminMode) return false;
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+    return user?.globalRole === 'ADMIN';
+  }
+
+  // Créer une séance (OWNER de la communauté, ou admin en mode admin)
   fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const body = createSchema.parse(request.body);
@@ -195,7 +203,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parent) return reply.notFound('Espace introuvable');
     if (parent.type !== 'GROUP' || !parent.communityId) return reply.badRequest('Une séance se crée dans un espace de communauté');
     const cm = await prisma.communityMembership.findUnique({ where: { userId_communityId: { userId, communityId: parent.communityId } } });
-    if (cm?.role !== 'OWNER') return reply.forbidden('Seul un propriétaire de la communauté peut créer une séance');
+    if (cm?.role !== 'OWNER' && !(await isAdminModeOn(userId, request.isAdminMode))) return reply.forbidden('Seul un propriétaire de la communauté peut créer une séance');
 
     // Une seule séance en cours (préparée ou en direct) par espace (décision Thomas 2026-10-10)
     if (await ongoingIn(parent.id)) return reply.conflict(ONGOING_MESSAGE);
@@ -271,7 +279,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parent?.communityId) return reply.notFound('Espace introuvable');
     const cm = await prisma.communityMembership.findUnique({ where: { userId_communityId: { userId, communityId: parent.communityId } } });
     const isHost = await prisma.liveSession.findFirst({ where: { parentSpaceId, hostId: userId }, select: { id: true } });
-    if (cm?.role !== 'OWNER' && !isHost) return reply.forbidden('Réservé à l\'animateur');
+    if (cm?.role !== 'OWNER' && !isHost && !(await isAdminModeOn(userId, request.isAdminMode))) return reply.forbidden('Réservé à l\'animateur');
     return listInviteCandidates(prisma, parentSpaceId, [userId]);
   });
 

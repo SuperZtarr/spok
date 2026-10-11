@@ -833,3 +833,36 @@ describe('verrou de séance — suppression en cascade', () => {
   })
 })
 })
+
+// Règle : le mode admin voit et fait tout — checkSpaceAccess(…, isAdminMode) donne OWNER à l'admin
+describe('checkSpaceAccess — mode admin', () => {
+  const fakePrisma = (membership: any, globalRole: string) => ({
+    spaceMembership: { findUnique: vi.fn().mockResolvedValue(membership) },
+    user: { findUnique: vi.fn().mockResolvedValue({ globalRole }) },
+    space: { findUnique: vi.fn().mockResolvedValue(null) },
+  })
+
+  it('donne OWNER à un admin membre simple en mode admin', async () => {
+    const { checkSpaceAccess } = await import('./items.js')
+    const access = await checkSpaceAccess(fakePrisma({ id: 'm1', userId: 'u1', spaceId: 's1', role: 'MEMBER' }, 'ADMIN'), 'u1', 's1', true)
+    expect(access?.role).toBe('OWNER')
+  })
+
+  it('donne OWNER à un admin non membre en mode admin', async () => {
+    const { checkSpaceAccess } = await import('./items.js')
+    const access = await checkSpaceAccess(fakePrisma(null, 'ADMIN'), 'u1', 's1', true)
+    expect(access?.role).toBe('OWNER')
+  })
+
+  it('garde le rôle réel hors mode admin, et ADMIN (lecture) pour un admin non membre', async () => {
+    const { checkSpaceAccess } = await import('./items.js')
+    expect((await checkSpaceAccess(fakePrisma({ role: 'MEMBER' }, 'ADMIN'), 'u1', 's1'))?.role).toBe('MEMBER')
+    expect((await checkSpaceAccess(fakePrisma(null, 'ADMIN'), 'u1', 's1'))?.role).toBe('ADMIN')
+  })
+
+  it("ignore le header mode admin pour un non-admin", async () => {
+    const { checkSpaceAccess } = await import('./items.js')
+    const access = await checkSpaceAccess(fakePrisma({ role: 'MEMBER' }, 'USER'), 'u1', 's1', true)
+    expect(access?.role).toBe('MEMBER')
+  })
+})

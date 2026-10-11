@@ -19,7 +19,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/', async (request, reply) => {
     const { spaceId } = request.params as { spaceId: string };
 
-    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Espace non trouvé ou accès refusé');
     }

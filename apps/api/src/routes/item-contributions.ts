@@ -23,7 +23,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { spaceId: string; id: string } }>(
     '/:id/contributions',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }
@@ -58,7 +58,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string; id: string };
     Body: z.infer<typeof createContributionSchema>;
   }>('/:id/contributions', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -138,7 +138,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string; id: string; contributionId: string };
     Body: z.infer<typeof updateContributionSchema>;
   }>('/:id/contributions/:contributionId', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -196,7 +196,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{ Params: { spaceId: string; id: string; contributionId: string } }>(
     '/:id/contributions/:contributionId',
     async (request, reply) => {
-      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+      const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) {
         return reply.notFound('Space not found');
       }

@@ -19,7 +19,7 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { spaceId: string };
     Body: z.infer<typeof bulkDuplicateSchema>;
   }>('/bulk-duplicate', async (request, reply) => {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) {
       return reply.notFound('Space not found');
     }
@@ -32,7 +32,7 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
     const { itemIds, targetSpaceId, includeChildren, iterations, offsetUnit } = body;
 
     // Check access to target space
-    const targetMembership = await checkSpaceAccess(fastify.prisma, request.user.userId, targetSpaceId);
+    const targetMembership = await checkSpaceAccess(fastify.prisma, request.user.userId, targetSpaceId, request.isAdminMode);
     if (!targetMembership) {
       return reply.notFound('Target space not found');
     }
