@@ -8,6 +8,10 @@
  * - Suite (/:id/suite, animateur, séance ENDED, une seule suite directe) : nouvelle séance PREPARED liée
  *   (previousSessionId) qui reprend les présentateurs, la préparation NON présentée et recopie les éléments présentés.
  *   Le nom (date locale) est envoyé par le client ; à défaut, date UTC du serveur.
+ * - Invités (champ invitees à la création, /invite-candidates, /:id/invitees GET/POST/DELETE) : membres de la
+ *   communauté SANS accès à l'espace parent, membres de l'espace de séance seulement (utils/liveInvites) ;
+ *   animateur seul ; ajout tant que la séance n'est pas terminée, retrait à tout moment ; repris dans la suite.
+ *   Un flux SSE déjà ouvert n'est pas coupé au retrait (contrôle d'accès à la connexion).
  * - /ongoing : séances en cours (préparées ou en direct) auxquelles l'utilisateur est convié — membre de l'espace
  *   parent ou de l'espace de séance — pour le bouton de l'en-tête ; en direct d'abord.
  * - Préparation (/:id/agenda) : liens vers des items sources (pas de copie), ajout par HOST/PRESENTER avec accès
@@ -31,12 +35,15 @@ import type { LiveAgendaItem, LiveEvent, LiveSessionEntry, LiveSessionOngoing, L
 import { checkSpaceAccess } from './items.js';
 import { liveHub } from '../utils/liveHub.js';
 import { cloneSessionCopies, copyItemToSession, revealChildInSession, SessionCopyError } from '../utils/sessionCopy.js';
+import { addInvitees, assertInvitable, listInviteCandidates, listInvitees, removeInvitee } from '../utils/liveInvites.js';
 
 const createSchema = z.object({
   parentSpaceId: z.string(),
   name: z.string().trim().min(1).max(120).optional(),
   // Préparation initiale : éléments de l'espace parent, dans l'ordre voulu (fenêtre « Préparer la séance »)
   agenda: z.array(z.object({ sourceItemId: z.string(), includeChildren: z.boolean().optional() })).max(500).optional(),
+  // Invités : membres de la communauté sans accès à l'espace parent (utils/liveInvites)
+  invitees: z.array(z.string()).max(200).optional(),
 });
 const presentersSchema = z.object({ userIds: z.array(z.string()) });
 const displaySchema = z.union([
@@ -47,6 +54,7 @@ const agendaAddSchema = z.object({ sourceItemId: z.string(), sourceSpaceId: z.st
 const agendaOrderSchema = z.object({ ids: z.array(z.string()) });
 const revealSchema = z.object({ sourceItemId: z.string() });
 const suiteSchema = z.object({ name: z.string().trim().min(1).max(120).optional() });
+const inviteesSchema = z.object({ userIds: z.array(z.string()).min(1).max(200) });
 
 const USER_SELECT = { id: true, name: true, avatarUrl: true } as const;
 const TAGS_INCLUDE = { tags: { include: { tag: true } } } as const;
@@ -217,6 +225,12 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    const inviteeIds = [...new Set(body.invitees ?? [])].filter((id) => id !== userId);
+    if (inviteeIds.length > 0) {
+      const invalid = await assertInvitable(prisma, parent.id, inviteeIds);
+      if (invalid) return reply.badRequest(invalid);
+    }
+
     const name = await uniqueName(parent.id, body.name ?? new Date().toISOString().slice(0, 10));
 
     const space = await prisma.space.create({
@@ -236,7 +250,56 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         })),
       });
     }
+    if (inviteeIds.length > 0) await addInvitees(prisma, s, inviteeIds, userId, name);
     return reply.status(201).send(await loadState(s.id, userId));
+  });
+
+  /** Animateur de la séance ; sinon répond 404/403 et retourne null. */
+  async function sessionForHost(reply: FastifyReply, id: string, userId: string) {
+    const s = await prisma.liveSession.findUnique({ where: { id }, include: { space: { select: { name: true } } } });
+    if (!s) { reply.notFound('Séance introuvable'); return null; }
+    if (s.hostId !== userId) { reply.forbidden('Réservé à l\'animateur'); return null; }
+    return s;
+  }
+
+  // Membres de la communauté invitables (sans accès à l'espace parent) — OWNER de la communauté ou animateur
+  fastify.get<{ Querystring: { parentSpaceId?: string } }>('/invite-candidates', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+    const { parentSpaceId } = request.query;
+    if (!parentSpaceId) return reply.badRequest('parentSpaceId requis');
+    const parent = await prisma.space.findUnique({ where: { id: parentSpaceId } });
+    if (!parent?.communityId) return reply.notFound('Espace introuvable');
+    const cm = await prisma.communityMembership.findUnique({ where: { userId_communityId: { userId, communityId: parent.communityId } } });
+    const isHost = await prisma.liveSession.findFirst({ where: { parentSpaceId, hostId: userId }, select: { id: true } });
+    if (cm?.role !== 'OWNER' && !isHost) return reply.forbidden('Réservé à l\'animateur');
+    return listInviteCandidates(prisma, parentSpaceId, [userId]);
+  });
+
+  fastify.get<{ Params: { id: string } }>('/:id/invitees', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const s = await sessionForHost(reply, request.params.id, request.user.userId);
+    if (!s) return reply;
+    return listInvitees(prisma, s.id);
+  });
+
+  fastify.post<{ Params: { id: string } }>('/:id/invitees', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+    const s = await sessionForHost(reply, request.params.id, userId);
+    if (!s) return reply;
+    if (s.status === 'ENDED') return reply.conflict('Séance terminée : plus d\'invitation possible');
+    const { userIds } = inviteesSchema.parse(request.body);
+    const ids = userIds.filter((id) => id !== s.hostId);
+    const invalid = await assertInvitable(prisma, s.parentSpaceId, [...new Set(ids)]);
+    if (invalid) return reply.badRequest(invalid);
+    await addInvitees(prisma, s, ids, userId, s.space?.name ?? '');
+    return listInvitees(prisma, s.id);
+  });
+
+  // Retirer un invité (même séance terminée) : retire aussi l'accès à l'espace de séance que l'invitation avait donné
+  fastify.delete<{ Params: { id: string; userId: string } }>('/:id/invitees/:userId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const s = await sessionForHost(reply, request.params.id, request.user.userId);
+    if (!s) return reply;
+    await removeInvitee(prisma, s, request.params.userId);
+    return listInvitees(prisma, s.id);
   });
 
   // Séances en cours auxquelles je suis convié (bouton de l'en-tête)
@@ -543,6 +606,12 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       await prisma.liveSessionRole.createMany({ data: presenterIds.map((id: string) => ({ sessionId: next.id, userId: id, role: 'PRESENTER' })) });
       for (const id of presenterIds) await prisma.spaceMembership.create({ data: { userId: id, spaceId: space.id, role: 'MEMBER' } });
     }
+
+    // Invités repris s'ils restent invitables (toujours dans la communauté, toujours sans accès au parent)
+    const prevInvites = (await prisma.liveSessionInvite.findMany({ where: { sessionId: prev.id }, select: { userId: true } })) ?? [];
+    const keptInvitees: string[] = [];
+    for (const { userId: id } of prevInvites) if (!(await assertInvitable(prisma, parent.id, [id]))) keptInvitees.push(id);
+    if (keptInvitees.length > 0) await addInvitees(prisma, { id: next.id, spaceId: space.id }, keptInvitees, userId, space.name);
 
     // Préparation : seulement les éléments non présentés, même ordre et même présentateur
     const agenda = await prisma.liveSessionAgendaItem.findMany({ where: { sessionId: prev.id }, orderBy: { position: 'asc' } });

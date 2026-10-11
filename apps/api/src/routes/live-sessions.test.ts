@@ -13,6 +13,15 @@ vi.mock('../utils/sessionCopy.js', () => ({
   cloneSessionCopies: vi.fn(async () => 0),
 }))
 
+const invites = vi.hoisted(() => ({
+  listInviteCandidates: vi.fn(async () => [{ userId: 'a', name: 'Alice', email: 'a@x' }]),
+  assertInvitable: vi.fn(async () => null as string | null),
+  addInvitees: vi.fn(async (_p: any, _s: any, ids: string[]) => ids),
+  removeInvitee: vi.fn(async () => true),
+  listInvitees: vi.fn(async () => []),
+}))
+vi.mock('../utils/liveInvites.js', () => invites)
+
 import { liveSessionsRoutes } from './live-sessions.js'
 
 const USER = 'test-user-id'
@@ -462,7 +471,7 @@ describe('/live-sessions', () => {
       expect(res.statusCode).toBe(409)
     })
 
-    it('suite : nouvelle séance PREPARED liée, présentateurs + préparation non présenté repris, copies recopiées', async () => {
+    it('suite : nouvelle séance PREPARED liée, présentateurs + préparation non présentée repris, copies recopiées', async () => {
       const { cloneSessionCopies } = await import('../utils/sessionCopy.js')
       const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: auth(), payload: { name: '2026-10-10' } })
       expect(res.statusCode).toBe(201)
@@ -473,6 +482,18 @@ describe('/live-sessions', () => {
       expect(agenda).toEqual([{ sessionId: 'ls-2', presenterId: 'pres-1', sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Reste', position: 0 }])
       expect(cloneSessionCopies).toHaveBeenCalledWith(expect.anything(), { fromSpaceId: 'sess-space', toSpaceId: 'sp-2' })
       expect(prisma.spaceMembership.create).toHaveBeenCalledWith({ data: { userId: 'pres-1', spaceId: 'sp-2', role: 'MEMBER' } })
+    })
+
+    it('suite : invités repris s\'ils restent invitables', async () => {
+      Object.values(invites).forEach((fn: any) => fn.mockClear())
+      prisma.liveSessionInvite.findMany.mockResolvedValue([{ userId: 'inv-ok' }, { userId: 'inv-ko' }])
+      invites.assertInvitable.mockImplementation(async (_p: any, _s: string, ids: string[]) => (ids[0] === 'inv-ko' ? 'a déjà accès' : null))
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: auth(), payload: { name: '2026-10-10' } })
+      expect(res.statusCode).toBe(201)
+      expect(invites.addInvitees).toHaveBeenCalledTimes(1)
+      expect(invites.addInvitees.mock.calls[0][1]).toMatchObject({ id: 'ls-2' })
+      expect(invites.addInvitees.mock.calls[0][2]).toEqual(['inv-ok'])
+      invites.assertInvitable.mockImplementation(async () => null)
     })
   })
 
@@ -525,6 +546,66 @@ describe('/live-sessions', () => {
       const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: auth(), payload: {} })
       expect(res.statusCode).toBe(201)
       expect(prisma.liveSessionRole.createMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('invités', () => {
+    beforeEach(() => { Object.values(invites).forEach((fn: any) => fn.mockClear()) })
+
+    it('création avec invités : validés puis ajoutés à la nouvelle séance', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.space.create.mockResolvedValue({ id: 'sess-space', name: '2026-10-11' })
+      prisma.liveSession.create.mockResolvedValue({ ...session, status: 'PREPARED' })
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'PREPARED', roles: [], entries: [] })
+      const res = await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent', invitees: ['a'] } })
+      expect(res.statusCode).toBe(201)
+      expect(invites.assertInvitable).toHaveBeenCalledWith(expect.anything(), 'parent', ['a'])
+      expect(invites.addInvitees.mock.calls[0][2]).toEqual(['a'])
+    })
+
+    it('création refusée si un invité n\'est pas invitable, rien créé', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      invites.assertInvitable.mockResolvedValueOnce('Cette personne a déjà accès à l\'espace')
+      const res = await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent', invitees: ['b'] } })
+      expect(res.statusCode).toBe(400)
+      expect(prisma.space.create).not.toHaveBeenCalled()
+    })
+
+    it('candidats : réservé à un OWNER de la communauté (403 sinon)', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.liveSession.findFirst.mockResolvedValue(null)
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/invite-candidates?parentSpaceId=parent', headers: auth() })
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('candidats : OWNER → liste sans l\'utilisateur courant', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/invite-candidates?parentSpaceId=parent', headers: auth() })
+      expect(res.statusCode).toBe(200)
+      expect(invites.listInviteCandidates).toHaveBeenCalledWith(expect.anything(), 'parent', [USER])
+    })
+
+    it('ajout : réservé à l\'animateur', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'quelquun-d-autre' })
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/invitees', headers: auth(), payload: { userIds: ['a'] } })
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('ajout refusé sur une séance terminée (409), retrait autorisé', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'ENDED', space: { name: 'S' } })
+      const add = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/invitees', headers: auth(), payload: { userIds: ['a'] } })
+      expect(add.statusCode).toBe(409)
+      const del = await app.inject({ method: 'DELETE', url: '/live-sessions/ls-1/invitees/a', headers: auth() })
+      expect(del.statusCode).toBe(200)
+      expect(invites.removeInvitee).toHaveBeenCalled()
+    })
+
+    it('ajout : invités validés puis ajoutés, renvoie la liste', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'LIVE', space: { name: 'S' } })
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/invitees', headers: auth(), payload: { userIds: ['a', 'a'] } })
+      expect(res.statusCode).toBe(200)
+      expect(invites.addInvitees.mock.calls[0][2]).toEqual(['a', 'a']) // dédoublonnage dans addInvitees (Task 2)
+      expect(invites.listInvitees).toHaveBeenCalledWith(expect.anything(), 'ls-1')
     })
   })
 
