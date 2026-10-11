@@ -46,6 +46,8 @@
 
 ### Sécurité API
 - [x] Audit sécurité API (auth/JWT/CORS/upload/SQL) : rate limiting sur `/auth/*` (5 req/min/IP), `JWT_SECRET` sans fallback en dur (échec au démarrage si absent), refresh token hashé SHA-256 en base, `@fastify/helmet` — 2026-08-24
+- [x] 403 à l'upload avatar/cover d'une communauté en mode admin (routes images réservées à l'OWNER sans bypass admin, contrairement à PATCH) — 2026-10-11 (0683134)
+- [ ] Même contrôle à vérifier sur les routes avatar/cover des espaces (`spaces.ts`)
 
 ### Tests / qualité
 - [x] BUG filtres échéances (GlobalTaskFilterBar) : corrigé — 2026-07-12
@@ -164,6 +166,9 @@
 - [x] Adaptation mobile : fenêtre en direct plein écran sur écran étroit, bascule « Voir l'espace » / « Retour au direct » — 2026-10-10 (571f586)
 - [x] Sidebar : nouvel espace de séance visible immédiatement (invalidation ['sidebar-spaces']) — 2026-10-11 (f7a99c1)
 - [x] Durcissement sécurité (revue automatique : cascade, programme filtré participants, périmètre des sous-éléments, restauration d'audit, présentateurs de la suite) — 2026-10-10 (537494d)
+- [x] Préparation initiale à la création (« Préparer la séance ») — 2026-10-11 (efa3715, 2048994) — LOCAL, non poussé
+- [x] Invités d'une séance (membres de la communauté sans accès au parent, à la création et depuis le bandeau, repris dans la suite) — 2026-10-11 (8f5fdd2..HEAD) — LOCAL, non poussé ; limites : flux SSE non coupé au retrait, nom du parent visible
+- [ ] Fuite préexistante : GET /spaces/:id renvoie la fiche (nom, compteurs, role MEMBER) d'un espace PRIVÉ à tout membre de la communauté (les éléments restent protégés) — constaté 2026-10-11
 - [ ] Plus tard : compte-rendu généré à la clôture ; tri « présenté le » dans les vues
 - [ ] Plus tard (peut-être) : invités sans compte, réactions/votes/questions, passage de main, mobile
 

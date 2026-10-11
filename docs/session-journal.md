@@ -6,6 +6,33 @@
 
 ## EN COURS
 
+### Séances : invités (accès à la séance seule) — 2026-10-11
+- Plan `docs/superpowers/plans/2026-10-11-live-session-invitees.md` exécuté inline (tâches 1-6), commits LOCAUX non poussés (8f5fdd2, d5b1269, d4378c1, d776426, 5b310c1, 5b68618 + doc/correctif). Modèle LiveSessionInvite (createdMembership), utils/liveInvites.ts, routes invite-candidates / invitees, section « Invités » de « Préparer la séance », panneau « Invités » du bandeau
+- Vérifié en local (admin + Alice ajoutée à la communauté « Un JDR ») : invitation depuis le bandeau → notification, séance dans « séances en cours », éléments de la séance OK, éléments du parent 404 ; retrait → 404/403. Correctif : message « déjà accès » faux quand tous les candidats sont invités
+- Constat hors périmètre : GET /spaces/:id expose la fiche d'un espace PRIVÉ aux membres de la communauté (TODO)
+
+### Modale item : bouton « Copier la fiche » — 2026-10-11
+- Validé (« copie seule ») : bouton ClipboardCopy dans le pied de page de ItemEditModal (après PDF), copie HTML + Markdown via `lib/itemClipboard.ts` (champs renseignés seulement, relations avec titre lié, convertisseur HTML→Markdown maison sans dépendance). Impression/PDF non touchés (pas de refactor commun, contrairement au plan initial). 8 tests OK, typecheck web OK, vérifié en local (contenu copié + état ✓). Doc SPOK créée (cmv3r2qp10005odabh9ujduyd). Commit local ab6a8b4 (non poussé)
+
+### Fix 404 console GET /live-sessions/by-space sur chaque espace — 2026-10-11
+- Cause : by-space répondait 404 pour tout espace non-séance (appelé par SpacePage sur chaque espace). Désormais 200 null (403 inchangé si non membre) ; front `getBySpace` → `LiveSessionState | null`, LiveSessionHost vide la séance active si null. +1 test API, +1 test web, typecheck api/web OK. Les 7 tests « invités » de live-sessions.test.ts échouent (chantier invitations en cours, sans lien). Commité dans d4378c1 (embarqué par le commit d'une autre session, laissé tel quel — accord Thomas). NON POUSSÉ
+
+### Fix 403 upload avatar/cover communauté en mode admin — 2026-10-11
+- Cause : routes POST/DELETE `/communities/:id/avatar|cover` exigeaient OWNER sans bypass admin (contrairement à PATCH /:id). Helper `getCommunityForImageEdit` dans communities.ts (OWNER ou admin en mode admin). Typecheck API OK. Commit local 0683134 (non poussé). Même problème probable sur spaces.ts (non traité)
+
+### Séances : préparation initiale à la création — 2026-10-11
+- Thomas : « tout prendre en compte ici » (travail de l'autre session repris). Point de sauvegarde, commits LOCAUX non poussés : 668dac6 (bouton « séances en cours » de l'autre session), 524c363 (bandeau toolbar + renommage Préparation) — build + typecheck 5 paquets OK, 797/797 tests avant commit
+- Validé (C puis B, « ok ») : « Nouvelle séance » → `NewSessionDialog` « Préparer la séance » (premier niveau de l'espace parent, ordre position, tout coché, « avec ses N sous-éléments » activé par défaut, Tout cocher/décocher). API POST /live-sessions : champ `agenda` facultatif, éléments de l'espace parent uniquement (400 sinon, validé AVANT toute écriture — pas de transaction, écart au plan car le mock Prisma de transaction fournit un client séparé), sous-éléments directs après leur parent, createMany. `components/live/initialAgenda.ts` (logique pure)
+- Tests : +3 API (47/47), +4 initialAgenda, +2 NewSessionDialog. Typecheck web OK. Vérifié en vrai (local, espace « Mon scénario ») : séance créée PREPARED, préparation Scène 2 / Scène 1 / Indice A / Indice B. businessRules + doc SPOK MAJ. NON COMMITÉ
+- Nouvelle demande (à cadrer) : invités d'une séance sans accès à l'espace parent, désignés éventuellement à la création — noté [À REVOIR] dans la doc SPOK
+
+### Bandeau de séance dans la toolbar + « Programme » → « Préparation » — 2026-10-11
+- Demande Thomas (« oui ») : LiveSessionBar passé en 3e ligne de SpaceToolbar via `liveSessionBarSlot` (SpacePage), plus rien entre la toolbar et la vue ; bouton « Programme (n) » du bandeau renommé « Préparation (n) » (LiveSessionBar.tsx — fichier aussi modifié par une autre session, seul le libellé + en-tête touchés). Puis « partout » (Thomas) : libellés (fenêtre en direct, menu « Ajouter à la préparation de … », AddChildrenDialog, AgendaPanel, messages d'erreur API), businessRules, commentaires et intitulés de tests (web, api, shared). Seul l'identifiant technique `agenda` reste. Incident : script perl a double-encodé l'UTF-8 inséré → réparé (octets C3 83 C2 xx → C3 xx), plus aucun « Ã »
+- Typecheck web + api OK, 72 tests séances OK. Vérifié sur un espace de séance local : 3 lignes dans la zone `toolbar`. Skill spok-menu + doc SPOK LiveSession MAJ. NON COMMITÉ
+
+### Séances live : bouton « séances en cours » dans l'en-tête — 2026-10-11
+- Validé (« ok ») : route GET /live-sessions/ongoing (membre du parent ou de la séance, en direct d'abord), LiveSessionsButton à côté de la cloche (masqué si aucune, badge, rouge si direct, liste en portail, Ouvrir/Rejoindre → séance active), refresh 30 s + invalidations (création, rejoindre, suite, start/end, événements started/ended). API 44/44, web 46/46, typecheck OK. NON COMMITÉ
+
 ### Import en masse vues Images + Documents, réduction d'image — 2026-10-11
 - Plan validé (« oui ») : `lib/uploadRules.ts` (source unique web des règles : formats image, 5 Mo, extensions interdites, 25 Mo — ImageUploadZone/FileUploadZone n'ont plus de copie), `lib/imageResize.ts` (1920 px WebP dans le navigateur avant contrôle des 5 Mo, jamais les GIF ; aussi branché dans ImageUploadZone → modale, avatar, couverture), `lib/bulkUpload.ts` (orchestration, 3 en parallèle, suppression de l'item si envoi KO), `hooks/useBulkUpload.ts`, `components/ui/BulkUploadButton.tsx` (bouton + dépôt sur la vue + bandeau). Branché ImagesView et DocumentsView (canEdit)
 - +22 tests (uploadRules, imageResize, bulkUpload). Typecheck web OK. Vérifié en vrai (navigateur intégré, dev d'une autre session) : boutons présents dans les 2 vues ; réduction 4000×3000 31 Mo → 1920×1440 WebP 1,37 Mo ; dépôt de 3 fichiers → BMP refusé avant envoi, 2 items créés puis supprimés car R2 non configuré en local (compteur 4→4), bilan affiché. Envoi R2 réel NON testé (pas de R2 en local)
