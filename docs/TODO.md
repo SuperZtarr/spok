@@ -162,6 +162,7 @@
 - [x] Étape 2 « Préparation et séance active » — 2026-10-10 (3b87228) (plan `docs/superpowers/plans/2026-10-10-live-sessions-preparation.md`) — statut préparée, programme, fenêtre qui suit la navigation, actions sur les items, révélation progressive des sous-items, rangement sous la copie du parent d'origine
   - Ajouts du 2026-10-10 : question « avec les sous-éléments ? », « À révéler » réservé à l'animateur, une seule séance en cours par espace, suite de séance (nouvelle séance liée : programme non présenté + éléments présentés recopiés)
 - [x] Adaptation mobile : fenêtre en direct plein écran sur écran étroit, bascule « Voir l'espace » / « Retour au direct » — 2026-10-10 (571f586)
+- [x] Sidebar : nouvel espace de séance visible immédiatement (invalidation ['sidebar-spaces']) — 2026-10-11 (f7a99c1)
 - [x] Durcissement sécurité (revue automatique : cascade, programme filtré participants, périmètre des sous-éléments, restauration d'audit, présentateurs de la suite) — 2026-10-10 (537494d)
 - [ ] Plus tard : compte-rendu généré à la clôture ; tri « présenté le » dans les vues
 - [ ] Plus tard (peut-être) : invités sans compte, réactions/votes/questions, passage de main, mobile
