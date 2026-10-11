@@ -7,7 +7,7 @@
  * « Nouvelle séance » est remplacé par « Ouvrir la séance en cours » (l'API refuse aussi la création, 409).
  * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
  * « Nouvelle séance » ouvre d'abord NewSessionDialog (« Préparer la séance ») : les éléments cochés de cet espace
- * forment la préparation initiale (champ agenda de la création).
+ * forment la préparation initiale (champ agenda de la création) ; les invités cochés sont transmis (invitees).
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -52,9 +52,9 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
     if (!isMember) await liveSessionsApi.join(id);
     return sessionSpaceId;
   });
-  const create = async (agenda: Array<{ sourceItemId: string; includeChildren?: boolean }>) => {
+  const create = async (agenda: Array<{ sourceItemId: string; includeChildren?: boolean }>, invitees: string[]) => {
     setCreating(true);
-    await run(async () => (await liveSessionsApi.create(spaceId, todayLocal(), agenda)).session.spaceId);
+    await run(async () => (await liveSessionsApi.create(spaceId, todayLocal(), agenda, invitees)).session.spaceId);
     setCreating(false);
   };
 
@@ -103,7 +103,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
           spaceId={spaceId}
           busy={creating}
           error={error}
-          onCreate={(agenda) => { void create(agenda); }}
+          onCreate={(agenda, invitees) => { void create(agenda, invitees); }}
           onClose={() => { setPreparing(false); setError(null); }}
         />
       )}

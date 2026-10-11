@@ -62,6 +62,8 @@ import type {
   LiveAgendaItem,
   LivePendingChild,
   LiveSessionOngoing,
+  LiveInvitee,
+  LiveInviteCandidate,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -2035,9 +2037,16 @@ export async function getValidAccessToken(): Promise<string | null> {
 export { API_URL as LIVE_API_URL };
 
 export const liveSessionsApi = {
-  /** Crée une séance préparée ; agenda = préparation initiale (éléments de l'espace parent, dans l'ordre). */
-  create: (parentSpaceId: string, name?: string, agenda?: Array<{ sourceItemId: string; includeChildren?: boolean }>) =>
-    fetchApi<LiveSessionState>('/live-sessions', { method: 'POST', body: JSON.stringify({ parentSpaceId, name, agenda }) }),
+  /** Crée une séance préparée ; agenda = préparation initiale ; invitees = membres de la communauté sans accès au parent. */
+  create: (parentSpaceId: string, name?: string, agenda?: Array<{ sourceItemId: string; includeChildren?: boolean }>, invitees?: string[]) =>
+    fetchApi<LiveSessionState>('/live-sessions', { method: 'POST', body: JSON.stringify({ parentSpaceId, name, agenda, invitees }) }),
+  inviteCandidates: (parentSpaceId: string) =>
+    fetchApi<LiveInviteCandidate[]>(`/live-sessions/invite-candidates?parentSpaceId=${encodeURIComponent(parentSpaceId)}`),
+  invitees: (id: string) => fetchApi<LiveInvitee[]>(`/live-sessions/${id}/invitees`),
+  invite: (id: string, userIds: string[]) =>
+    fetchApi<LiveInvitee[]>(`/live-sessions/${id}/invitees`, { method: 'POST', body: JSON.stringify({ userIds }) }),
+  uninvite: (id: string, userId: string) =>
+    fetchApi<LiveInvitee[]>(`/live-sessions/${id}/invitees/${userId}`, { method: 'DELETE' }),
   listForParent: (parentSpaceId: string) =>
     fetchApi<LiveSessionSummary[]>(`/live-sessions?parentSpaceId=${encodeURIComponent(parentSpaceId)}`),
   // null : l'espace n'est pas une séance

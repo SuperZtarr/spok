@@ -1,5 +1,5 @@
 /* Tests de NewSessionDialog (« Préparer la séance ») : éléments de premier niveau cochés par défaut,
- * « avec ses N sous-éléments » activé, envoi de la sélection, « Tout décocher » → préparation vide. */
+ * « avec ses N sous-éléments » activé, envoi de la sélection, « Tout décocher » → préparation vide, invités cochés envoyés. */
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -12,7 +12,8 @@ const api = vi.hoisted(() => ({
     { id: 'b', title: 'Bilan', parentId: null, position: 2 },
   ] })),
 }))
-vi.mock('../../lib/api', () => ({ itemsApi: api }))
+const live = vi.hoisted(() => ({ inviteCandidates: vi.fn(async () => [{ userId: 'u1', name: 'Alice', email: 'alice@x.fr' }]) }))
+vi.mock('../../lib/api', () => ({ itemsApi: api, liveSessionsApi: live }))
 
 import { NewSessionDialog } from './NewSessionDialog'
 
@@ -32,7 +33,7 @@ describe('NewSessionDialog', () => {
     expect(queryByText('Accueil 1')).toBeNull()
     getByText('avec ses 2 sous-éléments')
     fireEvent.click(getByText('Créer la séance'))
-    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }])
+    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }], [])
   })
 
   it('« Tout décocher » crée une séance à préparation vide', async () => {
@@ -40,6 +41,14 @@ describe('NewSessionDialog', () => {
     await findByText('Accueil')
     fireEvent.click(getByText('Tout décocher'))
     fireEvent.click(getByText('Créer la séance'))
-    expect(onCreate).toHaveBeenCalledWith([])
+    expect(onCreate).toHaveBeenCalledWith([], [])
+  })
+
+  it('invités cochés envoyés avec la création', async () => {
+    const { findByText, findByLabelText, getByText, onCreate } = renderDialog()
+    await findByText('Accueil')
+    fireEvent.click(await findByLabelText('Alice'))
+    fireEvent.click(getByText('Créer la séance'))
+    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }], ['u1'])
   })
 })
