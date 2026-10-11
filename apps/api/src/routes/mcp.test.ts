@@ -51,15 +51,37 @@ describe('POST /mcp', () => {
     ;({ app, prisma } = await buildApp())
   })
 
-  it('401 sans authentification', async () => {
+  it('401 sans authentification : WWW-Authenticate + marche à suivre', async () => {
     const res = await app.inject({ method: 'POST', url: '/mcp', headers: HEADERS, payload: INIT })
     expect(res.statusCode).toBe(401)
+    expect(res.headers['www-authenticate']).toMatch(/^Bearer realm="spok"/)
+    expect(res.json().message).toMatch(/Accès Claude/)
+    expect(res.json().help).toBe('https://spok.space/llms.txt')
   })
 
-  it('403 avec un JWT de session web', async () => {
+  it('401 explicite avec un jeton personnel invalide', async () => {
+    prisma.personalAccessToken.findUnique.mockResolvedValue(null)
+    const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer ${generatePersonalToken().token}` }, payload: INIT })
+    expect(res.statusCode).toBe(401)
+    expect(res.headers['www-authenticate']).toMatch(/error="invalid_token"/)
+    expect(res.json().message).toMatch(/révoqué|expiré|invalide/)
+  })
+
+  it('403 avec un JWT de session web, avec la marche à suivre', async () => {
     const jwt = getTestToken(app)
     const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer ${jwt}` }, payload: INIT })
     expect(res.statusCode).toBe(403)
+    expect(res.json().help).toBe('https://spok.space/llms.txt')
+  })
+
+  it('refuse un lot JSON-RPC (tableau) : un seul message par requête', async () => {
+    withScope('write')
+    const res = await app.inject({
+      method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer ${token}` },
+      payload: [rpc('tools/list', {}, 1), rpc('tools/list', {}, 2)],
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.message).toMatch(/lot/i)
   })
 
   it('initialize renvoie les instructions SPOK', async () => {
@@ -88,8 +110,9 @@ describe('POST /mcp', () => {
     expect(res.json().result.content[0].text).toContain('vue par u1 admin=false')
   })
 
-  it('GET /mcp → 405', async () => {
+  it('GET /mcp → 405 avec les instructions de connexion', async () => {
     const res = await app.inject({ method: 'GET', url: '/mcp' })
     expect(res.statusCode).toBe(405)
+    expect(res.json().error.message).toMatch(/claude mcp add/)
   })
 })

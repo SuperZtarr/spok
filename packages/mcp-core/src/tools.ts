@@ -5,6 +5,7 @@
  *  - 'public-read' : MCP distant, jeton portée read — lecture seule.
  * Toute écriture d'item passe par les conventions de l'espace (conventions.ts) ; les erreurs (ConventionError,
  * SpokApiError) sont renvoyées au modèle en isError, jamais levées. Ajouter un outil = choisir son niveau.
+ * Tout paramètre d'identifiant DOIT utiliser zId() (jamais z.string()) : il est interpolé dans un chemin REST.
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z, type ZodRawShape } from 'zod'
@@ -59,6 +60,13 @@ interface ItemFieldsInput {
   description?: string | null
   tags?: string[]
 }
+
+/**
+ * Identifiant SPOK (cuid ou id de seed) : interpolé dans les chemins REST, il ne doit JAMAIS pouvoir contenir
+ * `/`, `.`, `%`, `?` ou `&` — sinon `../` ferait sortir l'appel de la route prévue (échappement de profil).
+ */
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
+const zId = () => z.string().regex(ID_PATTERN, 'Identifiant invalide (lettres, chiffres, _ et - uniquement)')
 
 /** Couleur de tag acceptée par l'API (routes/tags.ts). */
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/
@@ -118,7 +126,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
   // ─── Lecture ──────────────────────────────────────────────────────────────
 
   define('read', 'list_spaces', 'Liste les espaces SPOK accessibles. Peut filtrer par communauté.',
-    { communityId: z.string().optional().describe('ID de communauté pour filtrer (optionnel)') },
+    { communityId: zId().optional().describe('ID de communauté pour filtrer (optionnel)') },
     async ({ communityId }) => {
       const qs = communityId ? `?communityId=${communityId}` : ''
       const spaces = asList(await client.get(`/spaces${qs}`), 'spaces', 'data')
@@ -129,7 +137,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('read', 'get_space', 'Retourne le détail d\'un espace SPOK et ses items.',
     {
-      spaceId: z.string().describe('ID de l\'espace'),
+      spaceId: zId().describe('ID de l\'espace'),
       limit: z.number().optional().default(200).describe('Nombre max d\'items à retourner (défaut 200)'),
     },
     async ({ spaceId, limit }) => {
@@ -152,7 +160,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('read', 'get_space_conventions',
     'Statuts, types et tags autorisés dans un espace. À appeler avant toute création/modification d\'item dans cet espace.',
-    { spaceId: z.string().describe('ID de l\'espace') },
+    { spaceId: zId().describe('ID de l\'espace') },
     async ({ spaceId }) => {
       const conv = await fetchConventions(client, spaceId)
       conventionsCache.set(spaceId, conv)
@@ -178,10 +186,10 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('read', 'list_items', 'Liste les items d\'un espace SPOK avec filtres optionnels.',
     {
-      spaceId: z.string().describe('ID de l\'espace'),
+      spaceId: zId().describe('ID de l\'espace'),
       type: z.string().optional().describe('Filtrer par type (NOTE, TASK, PROJECT…)'),
       status: z.string().optional().describe('Filtrer par statut (todo, in_progress, done…)'),
-      parentId: z.string().optional().describe('Filtrer par parent'),
+      parentId: zId().optional().describe('Filtrer par parent'),
       pageSize: z.number().optional().default(100).describe('Nombre max de résultats (défaut 100)'),
       page: z.number().optional().default(1).describe('Page (défaut 1)'),
     },
@@ -196,7 +204,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('read', 'get_item', 'Retourne le détail complet d\'un item SPOK (tous les champs + contenu).',
-    { spaceId: z.string().describe('ID de l\'espace'), itemId: z.string().describe('ID de l\'item') },
+    { spaceId: zId().describe('ID de l\'espace'), itemId: zId().describe('ID de l\'item') },
     async ({ spaceId, itemId }) => {
       const item = await client.get(`/spaces/${spaceId}/items/${itemId}`)
       const lines = [
@@ -224,7 +232,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('read', 'get_community', 'Retourne le détail d\'une communauté SPOK et ses espaces.',
-    { communityId: z.string().describe('ID de la communauté') },
+    { communityId: zId().describe('ID de la communauté') },
     async ({ communityId }) => {
       const [community, spacesData] = await Promise.all([
         client.get(`/communities/${communityId}`),
@@ -242,7 +250,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('read', 'list_relations', 'Liste les relations d\'un item.',
-    { spaceId: z.string(), itemId: z.string() },
+    { spaceId: zId(), itemId: zId() },
     async ({ spaceId, itemId }) => {
       const relations = asList(await client.get(`/spaces/${spaceId}/items/${itemId}/relations`), 'data')
       const lines = relations.map((r: any) =>
@@ -251,7 +259,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('read', 'list_contributions', 'Liste les contributions (commentaires) d\'un item.',
-    { spaceId: z.string(), itemId: z.string() },
+    { spaceId: zId(), itemId: zId() },
     async ({ spaceId, itemId }) => {
       const contributions = asList(await client.get(`/spaces/${spaceId}/items/${itemId}/contributions`), 'data')
       const lines = contributions.map((c: any) =>
@@ -260,7 +268,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('read', 'get_contribution', 'Retourne le détail d\'une contribution.',
-    { spaceId: z.string(), itemId: z.string(), contributionId: z.string() },
+    { spaceId: zId(), itemId: zId(), contributionId: zId() },
     async ({ spaceId, itemId, contributionId }) => {
       const contributions = asList(await client.get(`/spaces/${spaceId}/items/${itemId}/contributions`), 'data')
       const c = contributions.find((x: any) => x.id === contributionId)
@@ -269,7 +277,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('read', 'list_tags', 'Liste les tags utilisables dans un espace (tags de l\'espace + tags de sa communauté).',
-    { spaceId: z.string().describe('ID de l\'espace') },
+    { spaceId: zId().describe('ID de l\'espace') },
     async ({ spaceId }) => {
       const tags = asList(await client.get(`/spaces/${spaceId}/tags`), 'data')
       const lines = tags.map((t: any) =>
@@ -292,13 +300,13 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
   define('write', 'create_item',
     'Crée un item dans un espace. Statut et type doivent appartenir aux conventions de l\'espace (get_space_conventions). Description en Markdown.',
     {
-      spaceId: z.string().describe('ID de l\'espace cible'),
+      spaceId: zId().describe('ID de l\'espace cible'),
       type: z.enum(ITEM_TYPES).describe('Type d\'item (id renvoyé par get_space_conventions)'),
       title: z.string().min(1).describe('Titre court'),
       description: z.string().optional().describe('Description en Markdown'),
       status: z.string().optional().describe('Id (ou libellé) d\'un statut de l\'espace'),
       priority: z.number().int().min(1).max(4).optional().describe('1 basse … 4 critique'),
-      parentId: z.string().optional().describe('ID d\'un item parent du même espace'),
+      parentId: zId().optional().describe('ID d\'un item parent du même espace'),
       startDate: z.string().optional().describe('AAAA-MM-JJ ou ISO 8601'),
       endDate: z.string().optional().describe('AAAA-MM-JJ ou ISO 8601, ≥ startDate'),
       dueDate: z.string().optional().describe('Échéance, AAAA-MM-JJ ou ISO 8601'),
@@ -317,8 +325,8 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
   define('write', 'update_item',
     'Met à jour un item. Mêmes règles que create_item ; null efface un champ.',
     {
-      spaceId: z.string(),
-      itemId: z.string(),
+      spaceId: zId(),
+      itemId: zId(),
       title: z.string().min(1).optional(),
       description: z.string().nullable().optional().describe('Markdown ; null efface'),
       status: z.string().nullable().optional(),
@@ -328,7 +336,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       endDate: z.string().nullable().optional(),
       dueDate: z.string().nullable().optional(),
       url: z.string().url().nullable().optional(),
-      parentId: z.string().nullable().optional().describe('null = racine'),
+      parentId: zId().nullable().optional().describe('null = racine'),
       tags: z.array(z.string()).optional().describe('REMPLACE la liste complète des tags de l\'item (noms ou ids existants) ; [] = aucun tag'),
     },
     async ({ spaceId, itemId, title, priority, url, ...rest }) => {
@@ -342,8 +350,8 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('write', 'delete_item', 'Supprime un item SPOK. Ne jamais l\'appeler sans confirmation explicite de l\'utilisateur.',
     {
-      spaceId: z.string().describe('ID de l\'espace'),
-      itemId: z.string().describe('ID de l\'item'),
+      spaceId: zId().describe('ID de l\'espace'),
+      itemId: zId().describe('ID de l\'item'),
       deleteChildren: z.boolean().optional().default(false).describe('Supprimer aussi les enfants (défaut false)'),
     },
     async ({ spaceId, itemId, deleteChildren }) => {
@@ -355,8 +363,8 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
   define('write', 'create_space', 'Crée un espace SPOK dans une communauté.',
     {
       name: z.string().describe('Nom de l\'espace'),
-      communityId: z.string().describe('ID de la communauté parente'),
-      parentId: z.string().optional().describe('ID de l\'espace parent (pour sous-espace)'),
+      communityId: zId().describe('ID de la communauté parente'),
+      parentId: zId().optional().describe('ID de l\'espace parent (pour sous-espace)'),
       description: z.string().optional().describe('Description de l\'espace'),
       visibility: z.enum(['PRIVATE', 'OPEN', 'READONLY']).optional().default('PRIVATE').describe('Visibilité'),
     },
@@ -374,9 +382,9 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('write', 'create_relation', 'Crée une relation entre deux items.',
     {
-      spaceId: z.string(),
-      itemId: z.string().describe('Item source'),
-      toItemId: z.string().describe('Item cible'),
+      spaceId: zId(),
+      itemId: zId().describe('Item source'),
+      toItemId: zId().describe('Item cible'),
       type: z.enum(RELATION_TYPE_VALUES).describe('Type de relation : blocks (bloque), implements (permet), drives (entraîne — décale les dates), relates (lié à)'),
       label: z.string().optional(),
     },
@@ -389,9 +397,9 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('write', 'update_relation', 'Met à jour le type ou le label d\'une relation.',
     {
-      spaceId: z.string(),
-      itemId: z.string(),
-      relationId: z.string(),
+      spaceId: zId(),
+      itemId: zId(),
+      relationId: zId(),
       type: z.enum(RELATION_TYPE_VALUES).optional(),
       label: z.string().nullable().optional(),
     },
@@ -401,7 +409,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('write', 'delete_relation', 'Supprime une relation entre items.',
-    { spaceId: z.string(), itemId: z.string(), relationId: z.string() },
+    { spaceId: zId(), itemId: zId(), relationId: zId() },
     async ({ spaceId, itemId, relationId }) => {
       await client.delete(`/spaces/${spaceId}/items/${itemId}/relations/${relationId}`)
       return ok(`Relation ${relationId} supprimée.`)
@@ -409,7 +417,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('write', 'create_contribution',
     'Ajoute une contribution (commentaire) à un item. Contenu en Markdown.',
-    { spaceId: z.string(), itemId: z.string(), content: z.string().min(1).describe('Markdown') },
+    { spaceId: zId(), itemId: zId(), content: z.string().min(1).describe('Markdown') },
     async ({ spaceId, itemId, content }) => {
       const c = await client.post(`/spaces/${spaceId}/items/${itemId}/contributions`, { content: markdownToHtml(content) })
       return ok(`Contribution créée : [${c.id}]`)
@@ -417,14 +425,14 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('write', 'update_contribution',
     'Met à jour une contribution. Contenu en Markdown.',
-    { spaceId: z.string(), itemId: z.string(), contributionId: z.string(), content: z.string().min(1) },
+    { spaceId: zId(), itemId: zId(), contributionId: zId(), content: z.string().min(1) },
     async ({ spaceId, itemId, contributionId, content }) => {
       const c = await client.patch(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`, { content: markdownToHtml(content) })
       return ok(`Contribution mise à jour : [${c.id}]`)
     })
 
   define('write', 'mark_notification_read', 'Marque une notification comme lue (ou toutes si notificationId omis).',
-    { notificationId: z.string().optional().describe('ID de la notification, ou omis pour tout marquer lu') },
+    { notificationId: zId().optional().describe('ID de la notification, ou omis pour tout marquer lu') },
     async ({ notificationId }) => {
       if (notificationId) {
         await client.patch(`/notifications/${notificationId}`, { read: true })
@@ -438,7 +446,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('admin', 'update_space', 'Met à jour un espace SPOK (nom, description, visibilité).',
     {
-      spaceId: z.string().describe('ID de l\'espace'),
+      spaceId: zId().describe('ID de l\'espace'),
       name: z.string().optional().describe('Nouveau nom'),
       description: z.string().optional().describe('Nouvelle description'),
       visibility: z.enum(['PRIVATE', 'OPEN', 'READONLY']).optional().describe('Nouvelle visibilité'),
@@ -449,7 +457,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'delete_space', 'Supprime un espace SPOK.',
-    { spaceId: z.string().describe('ID de l\'espace') },
+    { spaceId: zId().describe('ID de l\'espace') },
     async ({ spaceId }) => {
       await client.delete(`/spaces/${spaceId}`)
       return ok(`Espace ${spaceId} supprimé.`)
@@ -470,7 +478,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('admin', 'update_community', 'Met à jour une communauté SPOK (nom, description, visibilité).',
     {
-      communityId: z.string().describe('ID de la communauté'),
+      communityId: zId().describe('ID de la communauté'),
       name: z.string().optional().describe('Nouveau nom'),
       description: z.string().optional().describe('Nouvelle description'),
       isPublic: z.boolean().optional().describe('Rendre publique ou privée'),
@@ -481,7 +489,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'delete_community', 'Supprime une communauté SPOK.',
-    { communityId: z.string().describe('ID de la communauté') },
+    { communityId: zId().describe('ID de la communauté') },
     async ({ communityId }) => {
       await client.delete(`/communities/${communityId}`)
       return ok(`Communauté ${communityId} supprimée.`)
@@ -503,7 +511,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'get_user', 'Retourne le détail d\'un utilisateur SPOK.',
-    { userId: z.string() },
+    { userId: zId() },
     async ({ userId }) => {
       const u = await client.get(`/admin/users/${userId}`)
       const lines = [
@@ -517,7 +525,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('admin', 'update_user', 'Met à jour un utilisateur (nom, email, rôle global, statut actif).',
     {
-      userId: z.string(),
+      userId: zId(),
       name: z.string().optional(),
       email: z.string().optional(),
       globalRole: z.enum(['USER', 'ADMIN']).optional(),
@@ -529,14 +537,14 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'delete_user', 'Supprime (désactive) un utilisateur SPOK.',
-    { userId: z.string() },
+    { userId: zId() },
     async ({ userId }) => {
       await client.delete(`/admin/users/${userId}`)
       return ok(`Utilisateur ${userId} supprimé.`)
     })
 
   define('admin', 'delete_contribution', 'Supprime une contribution.',
-    { spaceId: z.string(), itemId: z.string(), contributionId: z.string() },
+    { spaceId: zId(), itemId: zId(), contributionId: zId() },
     async ({ spaceId, itemId, contributionId }) => {
       await client.delete(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`)
       return ok(`Contribution ${contributionId} supprimée.`)
@@ -550,7 +558,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
 
   define('admin', 'create_tag', 'Crée un tag dans un espace.',
     {
-      spaceId: z.string().describe('ID de l\'espace'),
+      spaceId: zId().describe('ID de l\'espace'),
       name: z.string().min(1),
       color: z.string().optional().describe('Couleur hex #RRGGBB'),
     },
@@ -562,7 +570,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'update_tag', 'Met à jour un tag d\'espace (nom, couleur).',
-    { spaceId: z.string(), tagId: z.string(), name: z.string().min(1).optional(), color: z.string().optional().describe('Couleur hex #RRGGBB') },
+    { spaceId: zId(), tagId: zId(), name: z.string().min(1).optional(), color: z.string().optional().describe('Couleur hex #RRGGBB') },
     async ({ spaceId, tagId, ...fields }) => {
       assertColor(fields.color)
       const t = await client.patch(`/spaces/${spaceId}/tags/${tagId}`, fields)
@@ -571,7 +579,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'delete_tag', 'Supprime un tag d\'espace.',
-    { spaceId: z.string(), tagId: z.string() },
+    { spaceId: zId(), tagId: zId() },
     async ({ spaceId, tagId }) => {
       await client.delete(`/spaces/${spaceId}/tags/${tagId}`)
       conventionsCache.delete(spaceId)
@@ -579,7 +587,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'list_space_members', 'Liste les membres d\'un espace.',
-    { spaceId: z.string() },
+    { spaceId: zId() },
     async ({ spaceId }) => {
       const members = asList(await client.get(`/spaces/${spaceId}/members`), 'data')
       const lines = members.map((m: any) =>
@@ -588,28 +596,28 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'add_space_member', 'Ajoute un membre à un espace.',
-    { spaceId: z.string(), userId: z.string(), role: z.enum(['OWNER', 'MEMBER', 'VIEWER']).default('MEMBER') },
+    { spaceId: zId(), userId: zId(), role: z.enum(['OWNER', 'MEMBER', 'VIEWER']).default('MEMBER') },
     async ({ spaceId, userId, role }) => {
       await client.post(`/spaces/${spaceId}/members`, { userId, role })
       return ok(`Membre ajouté : ${userId} (${role})`)
     })
 
   define('admin', 'update_space_member', 'Met à jour le rôle d\'un membre dans un espace.',
-    { spaceId: z.string(), userId: z.string(), role: z.enum(['OWNER', 'MEMBER', 'VIEWER']) },
+    { spaceId: zId(), userId: zId(), role: z.enum(['OWNER', 'MEMBER', 'VIEWER']) },
     async ({ spaceId, userId, role }) => {
       await client.patch(`/spaces/${spaceId}/members/${userId}`, { role })
       return ok(`Rôle mis à jour : ${userId} → ${role}`)
     })
 
   define('admin', 'remove_space_member', 'Retire un membre d\'un espace.',
-    { spaceId: z.string(), userId: z.string() },
+    { spaceId: zId(), userId: zId() },
     async ({ spaceId, userId }) => {
       await client.delete(`/spaces/${spaceId}/members/${userId}`)
       return ok(`Membre ${userId} retiré de l'espace ${spaceId}.`)
     })
 
   define('admin', 'list_community_members', 'Liste les membres d\'une communauté.',
-    { communityId: z.string() },
+    { communityId: zId() },
     async ({ communityId }) => {
       const members = asList(await client.get(`/communities/${communityId}/members`), 'data')
       const lines = members.map((m: any) =>
@@ -618,21 +626,21 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     })
 
   define('admin', 'add_community_member', 'Ajoute un membre à une communauté.',
-    { communityId: z.string(), userId: z.string(), role: z.enum(['OWNER', 'MEMBER']).default('MEMBER') },
+    { communityId: zId(), userId: zId(), role: z.enum(['OWNER', 'MEMBER']).default('MEMBER') },
     async ({ communityId, userId, role }) => {
       await client.post(`/communities/${communityId}/members`, { userId, role })
       return ok(`Membre ajouté : ${userId} (${role})`)
     })
 
   define('admin', 'remove_community_member', 'Retire un membre d\'une communauté.',
-    { communityId: z.string(), userId: z.string() },
+    { communityId: zId(), userId: zId() },
     async ({ communityId, userId }) => {
       await client.delete(`/communities/${communityId}/members/${userId}`)
       return ok(`Membre ${userId} retiré de la communauté ${communityId}.`)
     })
 
   define('admin', 'delete_notification', 'Supprime une notification.',
-    { notificationId: z.string() },
+    { notificationId: zId() },
     async ({ notificationId }) => {
       await client.delete(`/notifications/${notificationId}`)
       return ok(`Notification ${notificationId} supprimée.`)

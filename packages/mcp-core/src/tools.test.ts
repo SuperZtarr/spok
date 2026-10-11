@@ -192,6 +192,30 @@ describe('tags', () => {
   })
 })
 
+describe('identifiants', () => {
+  it('un id contenant ../ est refusé sans aucun appel API (pas d\'échappement de profil)', async () => {
+    const { mcp, client } = await connect('public')
+    const r = await mcp.callTool({ name: 'delete_item', arguments: { spaceId: 's1', itemId: '../../../communities/c1' } })
+    expect(r.isError).toBe(true)
+    expect(client.delete).not.toHaveBeenCalled()
+  })
+
+  it('un parentId piégé est refusé avant tout appel', async () => {
+    const { mcp, client } = await connect('public')
+    const r = await mcp.callTool({ name: 'create_item', arguments: { spaceId: 's1', type: 'TASK', title: 'x', parentId: 'p1/../../x' } })
+    expect(r.isError).toBe(true)
+    expect(client.get).not.toHaveBeenCalled()
+    expect(client.post).not.toHaveBeenCalled()
+  })
+
+  it('un communityId piégé dans une query est refusé', async () => {
+    const { mcp, client } = await connect('public')
+    const r = await mcp.callTool({ name: 'list_spaces', arguments: { communityId: 'c1&x=1' } })
+    expect(r.isError).toBe(true)
+    expect(client.get).not.toHaveBeenCalled()
+  })
+})
+
 describe('erreurs API', () => {
   it('une 404 API devient isError lisible', async () => {
     const { mcp } = await connect('public')
