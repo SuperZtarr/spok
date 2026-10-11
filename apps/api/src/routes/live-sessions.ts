@@ -20,6 +20,7 @@
  *   avec les droits du présentateur sur l'espace source (copyItemToSession, verrouillée).
  * - Flux SSE /:id/stream : état poussé via liveHub (une instance API). Le client refetch l'état complet
  *   (by-space) à chaque (re)connexion — le flux ne rejoue pas l'historique.
+ * - /by-space/:spaceId : 200 null si l'espace n'est pas une séance (appelé sur chaque espace), 403 si non membre.
  * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
  * la préparation (titres/espaces sources) n'est envoyée en entier qu'à l'animateur et aux présentateurs ;
  * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach).
@@ -279,11 +280,15 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // État complet d'une séance à partir de son espace (utilisé par SpacePage)
+  // État complet d'une séance à partir de son espace (utilisé par SpacePage sur TOUS les espaces) :
+  // 200 null si l'espace n'est pas une séance (pas de 404 rouge en console à chaque espace ouvert)
   fastify.get<{ Params: { spaceId: string } }>('/by-space/:spaceId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const s = await sessionForMember(reply, { spaceId: request.params.spaceId }, request.user.userId);
-    if (!s) return reply;
-    return loadState(s.id, request.user.userId);
+    const userId = request.user.userId;
+    const s = await prisma.liveSession.findUnique({ where: { spaceId: request.params.spaceId } });
+    if (!s) return reply.send(null);
+    const m = await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } });
+    if (!m) return reply.forbidden('Rejoignez la séance depuis son espace parent');
+    return loadState(s.id, userId);
   });
 
   // Rejoindre (membres de l'espace parent)

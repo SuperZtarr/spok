@@ -1,7 +1,8 @@
 /*
  * Règles d'invitation aux séances live (invités = membres de la communauté SANS accès à l'espace parent).
  * Un invité devient membre MEMBER de l'espace de séance (PRIVÉ) — les droits étant propres à chaque espace,
- * il n'obtient rien sur l'espace parent. Retrait = suppression de l'invitation ET de cette adhésion.
+ * il n'obtient rien sur l'espace parent. Retrait = suppression de l'invitation ET de l'adhésion qu'elle a créée
+ * (createdMembership) — une adhésion antérieure à l'invitation est conservée.
  * Limite assumée : un flux SSE déjà ouvert n'est pas coupé au retrait (contrôle à la connexion seulement).
  * Utilisé par routes/live-sessions.ts (création, /:id/invitees, /invite-candidates, suite).
  */
@@ -53,7 +54,7 @@ export async function addInvitees(
     if (existing) continue;
     const m = await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: session.spaceId } } });
     if (!m) await prisma.spaceMembership.create({ data: { userId, spaceId: session.spaceId, role: 'MEMBER' } });
-    await prisma.liveSessionInvite.create({ data: { sessionId: session.id, userId, invitedById } });
+    await prisma.liveSessionInvite.create({ data: { sessionId: session.id, userId, invitedById, createdMembership: !m } });
     await createNotification(prisma, {
       userId, type: 'INVITATION',
       title: `Invitation à la séance « ${sessionName} »`,
@@ -69,7 +70,8 @@ export async function removeInvitee(prisma: any, session: { id: string; spaceId:
   const invite = await prisma.liveSessionInvite.findUnique({ where: { sessionId_userId: { sessionId: session.id, userId } } });
   if (!invite) return false;
   await prisma.liveSessionInvite.delete({ where: { id: invite.id } });
-  await prisma.spaceMembership.deleteMany({ where: { userId, spaceId: session.spaceId } });
+  // Seulement l'adhésion créée par l'invitation (jamais une adhésion antérieure, jamais un rôle OWNER)
+  if (invite.createdMembership) await prisma.spaceMembership.deleteMany({ where: { userId, spaceId: session.spaceId, role: 'MEMBER' } });
   return true;
 }
 

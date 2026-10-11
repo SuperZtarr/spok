@@ -194,6 +194,13 @@ describe('/live-sessions', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  it('by-space : 200 null quand l\'espace n\'est pas une séance', async () => {
+    prisma.liveSession.findUnique.mockResolvedValue(null)
+    const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/plain-space', headers: auth() })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toBeNull()
+  })
+
   it('by-space : refusé à qui n\'est pas membre de l\'espace de séance', async () => {
     prisma.liveSession.findUnique.mockResolvedValue(session)
     prisma.spaceMembership.findUnique.mockResolvedValue(null)

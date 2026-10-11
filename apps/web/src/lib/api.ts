@@ -2040,7 +2040,8 @@ export const liveSessionsApi = {
     fetchApi<LiveSessionState>('/live-sessions', { method: 'POST', body: JSON.stringify({ parentSpaceId, name, agenda }) }),
   listForParent: (parentSpaceId: string) =>
     fetchApi<LiveSessionSummary[]>(`/live-sessions?parentSpaceId=${encodeURIComponent(parentSpaceId)}`),
-  getBySpace: (spaceId: string) => fetchApi<LiveSessionState>(`/live-sessions/by-space/${spaceId}`),
+  // null : l'espace n'est pas une séance
+  getBySpace: (spaceId: string) => fetchApi<LiveSessionState | null>(`/live-sessions/by-space/${spaceId}`),
   /** Séances en cours auxquelles je suis convié (bouton de l'en-tête). */
   ongoing: () => fetchApi<LiveSessionOngoing[]>('/live-sessions/ongoing'),
   join: (id: string) => fetchApi<LiveSessionState>(`/live-sessions/${id}/join`, { method: 'POST' }),

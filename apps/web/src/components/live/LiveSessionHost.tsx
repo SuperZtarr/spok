@@ -2,7 +2,7 @@
  * LiveSessionHost — hôte global de la séance active (monté une fois dans App.tsx, utilisateur connecté) : ouvre
  * l'UNIQUE flux SSE de l'onglet (useLiveSession(spaceId, { stream: true })), synchronise
  * useActiveLiveSessionStore.info et affiche LiveWindow sur toutes les pages tant que la séance est LIVE.
- * Vide la séance active si l'API répond en erreur (séance supprimée, accès retiré) ou sur « Quitter le direct ».
+ * Vide la séance active si l'API répond null (séance supprimée) ou en erreur (accès retiré), ou sur « Quitter le direct ».
  * Rend aussi AddChildrenDialog (question « avec les sous-éléments ? »), quel que soit le statut de la séance.
  * Ne jamais ouvrir un second flux ailleurs (SpacePage lit le cache partagé ['live-session', spaceId]).
  */
@@ -22,8 +22,8 @@ export function LiveSessionHost() {
   const state = live.state;
 
   useEffect(() => {
-    if (spaceId && live.isError) clear();
-  }, [spaceId, live.isError, clear]);
+    if (spaceId && (live.isError || state === null)) clear();
+  }, [spaceId, live.isError, state, clear]);
 
   useEffect(() => {
     setInfo(state ? { sessionId: state.session.id, status: state.session.status, myRole: state.myRole, spaceName: state.spaceName } : null);

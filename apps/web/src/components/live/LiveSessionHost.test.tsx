@@ -43,6 +43,13 @@ describe('LiveSessionHost', () => {
     expect(queryByTestId('live-window')).toBeNull()
   })
 
+  it("vide la séance active si l'espace n'est plus une séance (null)", async () => {
+    getBySpace.mockResolvedValue(null)
+    const { queryByTestId } = renderHost()
+    await waitFor(() => expect(useActiveLiveSessionStore.getState().spaceId).toBeNull())
+    expect(queryByTestId('live-window')).toBeNull()
+  })
+
   it("vide la séance active si l'API refuse", async () => {
     getBySpace.mockRejectedValue(new Error('403'))
     renderHost()

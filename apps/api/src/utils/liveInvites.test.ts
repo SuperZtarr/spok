@@ -47,16 +47,31 @@ describe('liveInvites', () => {
     const added = await addInvitees(prisma as any, session, ['a', 'old', 'a'], 'host', '2026-10-11')
     expect(added).toEqual(['a'])
     expect(prisma.spaceMembership.create).toHaveBeenCalledWith({ data: { userId: 'a', spaceId: 'sess-space', role: 'MEMBER' } })
-    expect(prisma.liveSessionInvite.create).toHaveBeenCalledWith({ data: { sessionId: 'ls-1', userId: 'a', invitedById: 'host' } })
+    expect(prisma.liveSessionInvite.create).toHaveBeenCalledWith({ data: { sessionId: 'ls-1', userId: 'a', invitedById: 'host', createdMembership: true } })
     expect(createNotification).toHaveBeenCalledTimes(1)
     expect(vi.mocked(createNotification).mock.calls[0][1]).toMatchObject({ userId: 'a', type: 'INVITATION', link: '/spaces/sess-space' })
   })
 
   it('retrait : supprime invitation et adhésion à l\'espace de séance', async () => {
-    prisma.liveSessionInvite.findUnique.mockResolvedValue({ id: 'inv' })
+    prisma.liveSessionInvite.findUnique.mockResolvedValue({ id: 'inv', createdMembership: true })
     expect(await removeInvitee(prisma as any, session, 'a')).toBe(true)
     expect(prisma.liveSessionInvite.delete).toHaveBeenCalledWith({ where: { id: 'inv' } })
-    expect(prisma.spaceMembership.deleteMany).toHaveBeenCalledWith({ where: { userId: 'a', spaceId: 'sess-space' } })
+    expect(prisma.spaceMembership.deleteMany).toHaveBeenCalledWith({ where: { userId: 'a', spaceId: 'sess-space', role: 'MEMBER' } })
+  })
+
+  it('ajout : une adhésion déjà existante est conservée et marquée comme non créée par l\'invitation', async () => {
+    prisma.liveSessionInvite.findUnique.mockResolvedValue(null)
+    prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'm', role: 'MEMBER' })
+    await addInvitees(prisma as any, session, ['a'], 'host', 'S')
+    expect(prisma.spaceMembership.create).not.toHaveBeenCalled()
+    expect(prisma.liveSessionInvite.create).toHaveBeenCalledWith({ data: { sessionId: 'ls-1', userId: 'a', invitedById: 'host', createdMembership: false } })
+  })
+
+  it('retrait : ne supprime pas une adhésion antérieure à l\'invitation', async () => {
+    prisma.liveSessionInvite.findUnique.mockResolvedValue({ id: 'inv', createdMembership: false })
+    expect(await removeInvitee(prisma as any, session, 'a')).toBe(true)
+    expect(prisma.liveSessionInvite.delete).toHaveBeenCalledWith({ where: { id: 'inv' } })
+    expect(prisma.spaceMembership.deleteMany).not.toHaveBeenCalled()
   })
 
   it('retrait d\'un non-invité : false, rien supprimé', async () => {

@@ -1,6 +1,6 @@
 /*
  * useLiveSession(spaceId, { stream }) : état d'une séance live à partir de son espace (+ abonnement SSE si stream).
- * queryKey ['live-session', spaceId] ; 404/403 = pas une séance ou pas d'accès (isError, pas de retry).
+ * queryKey ['live-session', spaceId] ; state null = pas une séance (200 null) ; 403 = pas d'accès (isError, pas de retry).
  * UN SEUL flux par onglet : seul LiveSessionHost passe stream: true ; SpacePage et les autres lisent le cache partagé.
  * Les événements sont appliqués sur le cache (applyLiveEvent) ; à chaque reconnexion l'état complet est refetch.
  * Un display plus ancien que le courant (entry.createdAt) est ignoré — convergence si deux présentateurs.
