@@ -3,8 +3,10 @@
  * - Cycle : PREPARED (création) → LIVE (/:id/start, animateur) → ENDED (/:id/end). Afficher/révéler : LIVE seulement.
  * - Création : OWNER de la communauté de l'espace parent uniquement → sous-espace PRIVATE daté + rôle HOST ;
  *   une seule séance en cours (PREPARED|LIVE) par espace parent (409 sinon) ; nom unique « date (n) ».
+ *   Préparation initiale facultative (agenda: [{ sourceItemId, includeChildren }]) : éléments de l'espace parent
+ *   uniquement (400 sinon, rien n'est créé), sous-éléments directs juste après leur parent.
  * - Suite (/:id/suite, animateur, séance ENDED, une seule suite directe) : nouvelle séance PREPARED liée
- *   (previousSessionId) qui reprend les présentateurs, la préparation NON présenté et recopie les éléments présentés.
+ *   (previousSessionId) qui reprend les présentateurs, la préparation NON présentée et recopie les éléments présentés.
  *   Le nom (date locale) est envoyé par le client ; à défaut, date UTC du serveur.
  * - /ongoing : séances en cours (préparées ou en direct) auxquelles l'utilisateur est convié — membre de l'espace
  *   parent ou de l'espace de séance — pour le bouton de l'en-tête ; en direct d'abord.
@@ -19,7 +21,7 @@
  * - Flux SSE /:id/stream : état poussé via liveHub (une instance API). Le client refetch l'état complet
  *   (by-space) à chaque (re)connexion — le flux ne rejoue pas l'historique.
  * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
- * la préparation (titres/espaces sources) n'est envoyé en entier qu'à l'animateur et aux présentateurs ;
+ * la préparation (titres/espaces sources) n'est envoyée en entier qu'à l'animateur et aux présentateurs ;
  * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach).
  */
 import { FastifyPluginAsync, FastifyReply } from 'fastify';
@@ -29,7 +31,12 @@ import { checkSpaceAccess } from './items.js';
 import { liveHub } from '../utils/liveHub.js';
 import { cloneSessionCopies, copyItemToSession, revealChildInSession, SessionCopyError } from '../utils/sessionCopy.js';
 
-const createSchema = z.object({ parentSpaceId: z.string(), name: z.string().trim().min(1).max(120).optional() });
+const createSchema = z.object({
+  parentSpaceId: z.string(),
+  name: z.string().trim().min(1).max(120).optional(),
+  // Préparation initiale : éléments de l'espace parent, dans l'ordre voulu (fenêtre « Préparer la séance »)
+  agenda: z.array(z.object({ sourceItemId: z.string(), includeChildren: z.boolean().optional() })).max(500).optional(),
+});
 const presentersSchema = z.object({ userIds: z.array(z.string()) });
 const displaySchema = z.union([
   z.object({ agendaItemId: z.string() }),
@@ -183,6 +190,29 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Une seule séance en cours (préparée ou en direct) par espace (décision Thomas 2026-10-10)
     if (await ongoingIn(parent.id)) return reply.conflict(ONGOING_MESSAGE);
+
+    // Préparation initiale : tout est vérifié AVANT la moindre écriture (un élément refusé ne crée rien).
+    // Seuls des éléments de l'espace parent ; sous-éléments directs ajoutés juste après leur parent, dans leur ordre.
+    const wanted = body.agenda ?? [];
+    let initialRows: Array<{ id: string; title: string | null }> = [];
+    if (wanted.length > 0) {
+      const ids = wanted.map((w) => w.sourceItemId);
+      const found = (await prisma.item.findMany({ where: { id: { in: ids }, spaceId: parent.id }, select: { id: true, title: true } })) ?? [];
+      const byId = new Map<string, { id: string; title: string | null }>(found.map((i: any) => [i.id, i]));
+      if (ids.some((id) => !byId.has(id))) return reply.badRequest('Seuls des éléments de cet espace peuvent être ajoutés à la préparation');
+      const withChildren = wanted.filter((w) => w.includeChildren).map((w) => w.sourceItemId);
+      const children = withChildren.length
+        ? ((await prisma.item.findMany({
+            where: { parentId: { in: withChildren }, spaceId: parent.id }, orderBy: { position: 'asc' },
+            select: { id: true, title: true, parentId: true },
+          })) ?? [])
+        : [];
+      for (const w of wanted) {
+        initialRows.push(byId.get(w.sourceItemId)!);
+        if (w.includeChildren) initialRows.push(...children.filter((c: any) => c.parentId === w.sourceItemId));
+      }
+    }
+
     const name = await uniqueName(parent.id, body.name ?? new Date().toISOString().slice(0, 10));
 
     const space = await prisma.space.create({
@@ -194,6 +224,14 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const s = await prisma.liveSession.create({
       data: { spaceId: space.id, parentSpaceId: parent.id, hostId: userId, roles: { create: { userId, role: 'HOST' } } },
     });
+    if (initialRows.length > 0) {
+      await prisma.liveSessionAgendaItem.createMany({
+        data: initialRows.map((row, position) => ({
+          sessionId: s.id, presenterId: userId, sourceItemId: row.id, sourceSpaceId: parent.id,
+          title: row.title || 'Sans titre', position,
+        })),
+      });
+    }
     return reply.status(201).send(await loadState(s.id, userId));
   });
 

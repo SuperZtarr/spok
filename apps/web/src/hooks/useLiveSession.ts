@@ -60,7 +60,7 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
       onOpen: () => { if (!first) refetch(); first = false; },
       onEvent: (event) => {
         queryClient.setQueryData<LiveSessionState>(['live-session', spaceId], (prev) => (prev ? applyLiveEvent(prev, event) : prev));
-        // Changement de rôles : la préparation visible dépend du rôle (complet / déjà présenté) → état rechargé
+        // Changement de rôles : la préparation visible dépend du rôle (complète / déjà présentée) → état rechargé
         if (event.type === 'roles') refetch();
         // Démarrage / fin : le bouton « séances en cours » de l'en-tête se met à jour
         if (event.type === 'started' || event.type === 'ended') queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] });

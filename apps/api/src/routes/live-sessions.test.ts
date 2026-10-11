@@ -66,6 +66,50 @@ describe('/live-sessions', () => {
     expect(prisma.liveSession.create.mock.calls[0][0].data.roles.create).toEqual({ userId: USER, role: 'HOST' })
     expect(prisma.liveSession.create.mock.calls[0][0].data.status ?? 'PREPARED').toBe('PREPARED')
     expect(res.json().myRole).toBe('HOST')
+    expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+  })
+
+  describe('création avec préparation initiale (éléments de l\'espace parent)', () => {
+    beforeEach(() => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.space.create.mockResolvedValue({ id: 'sess-space', name: '2026-10-11' })
+      prisma.liveSession.create.mockResolvedValue({ ...session, status: 'PREPARED' })
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'PREPARED', roles: [{ userId: USER, role: 'HOST', user: { id: USER, name: 'Thomas', avatarUrl: null } }], entries: [] })
+    })
+
+    it("remplit la préparation dans l'ordre demandé, sous-éléments juste après leur parent", async () => {
+      prisma.item.findMany.mockImplementation(async (args: any) => {
+        if (args.where.id) return [{ id: 'B', title: 'Bilan' }, { id: 'A', title: 'Accueil' }]
+        return [{ id: 'A2', title: 'A deux', parentId: 'A' }, { id: 'A1', title: 'A un', parentId: 'A' }].sort(() => 0)
+      })
+      const res = await app.inject({
+        method: 'POST', url: '/live-sessions', headers: auth(),
+        payload: { parentSpaceId: 'parent', agenda: [{ sourceItemId: 'A', includeChildren: true }, { sourceItemId: 'B' }] },
+      })
+      expect(res.statusCode).toBe(201)
+      // Seuls les éléments de l'espace parent sont recherchés
+      expect(prisma.item.findMany.mock.calls[0][0].where).toMatchObject({ id: { in: ['A', 'B'] }, spaceId: 'parent' })
+      const rows = prisma.liveSessionAgendaItem.createMany.mock.calls[0][0].data
+      expect(rows.map((r: any) => [r.sourceItemId, r.position])).toEqual([['A', 0], ['A2', 1], ['A1', 2], ['B', 3]])
+      expect(rows[0]).toMatchObject({ sessionId: 'ls-1', presenterId: USER, sourceSpaceId: 'parent', title: 'Accueil' })
+    })
+
+    it("refuse un élément qui n'appartient pas à l'espace parent, sans rien créer", async () => {
+      prisma.item.findMany.mockResolvedValue([{ id: 'A', title: 'Accueil' }])
+      const res = await app.inject({
+        method: 'POST', url: '/live-sessions', headers: auth(),
+        payload: { parentSpaceId: 'parent', agenda: [{ sourceItemId: 'A' }, { sourceItemId: 'ailleurs' }] },
+      })
+      expect(res.statusCode).toBe(400)
+      expect(prisma.space.create).not.toHaveBeenCalled()
+      expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+    })
+
+    it('liste vide : séance créée sans préparation', async () => {
+      const res = await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent', agenda: [] } })
+      expect(res.statusCode).toBe(201)
+      expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+    })
   })
 
   it('join refusé à un non-membre du parent', async () => {

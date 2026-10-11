@@ -6,6 +6,8 @@
  * (useActiveLiveSessionStore) et rafraîchit la barre latérale (['sidebar-spaces']). Une seule séance en cours par espace : si une séance est préparée ou en direct,
  * « Nouvelle séance » est remplacé par « Ouvrir la séance en cours » (l'API refuse aussi la création, 409).
  * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
+ * « Nouvelle séance » ouvre d'abord NewSessionDialog (« Préparer la séance ») : les éléments cochés de cet espace
+ * forment la préparation initiale (champ agenda de la création).
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,10 +16,13 @@ import { Radio } from 'lucide-react';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
 import { todayLocal } from './sessionName';
+import { NewSessionDialog } from './NewSessionDialog';
 
 
 export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; canCreate: boolean }) {
   const [open, setOpen] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -37,6 +42,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
       queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); // bouton de l'en-tête
       setOpen(false);
+      setPreparing(false);
       navigate(`/spaces/${target}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action impossible');
@@ -46,7 +52,11 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
     if (!isMember) await liveSessionsApi.join(id);
     return sessionSpaceId;
   });
-  const create = () => run(async () => (await liveSessionsApi.create(spaceId, todayLocal())).session.spaceId);
+  const create = async (agenda: Array<{ sourceItemId: string; includeChildren?: boolean }>) => {
+    setCreating(true);
+    await run(async () => (await liveSessionsApi.create(spaceId, todayLocal(), agenda)).session.spaceId);
+    setCreating(false);
+  };
 
   const rank = { LIVE: 0, PREPARED: 1, ENDED: 2 } as const;
   const sorted = [...sessions].sort((a, b) => rank[a.status] - rank[b.status]);
@@ -68,7 +78,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
               {ongoing.isMember ? 'Ouvrir' : 'Rejoindre'} la séance en cours
             </button>
           ) : canCreate && (
-            <button className="w-full rounded bg-orange-500 px-2 py-1 text-white mb-2" onClick={create}>Nouvelle séance</button>
+            <button className="w-full rounded bg-orange-500 px-2 py-1 text-white mb-2" onClick={() => { setError(null); setOpen(false); setPreparing(true); }}>Nouvelle séance</button>
           )}
           {error && <p className="text-xs text-red-600 px-1 mb-1">{error}</p>}
           {sorted.length === 0 && <p className="text-muted-foreground px-1">Aucune séance.</p>}
@@ -87,6 +97,15 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
             ))}
           </ul>
         </div>
+      )}
+      {preparing && (
+        <NewSessionDialog
+          spaceId={spaceId}
+          busy={creating}
+          error={error}
+          onCreate={(agenda) => { void create(agenda); }}
+          onClose={() => { setPreparing(false); setError(null); }}
+        />
       )}
     </div>
   );

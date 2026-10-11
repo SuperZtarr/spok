@@ -2035,8 +2035,9 @@ export async function getValidAccessToken(): Promise<string | null> {
 export { API_URL as LIVE_API_URL };
 
 export const liveSessionsApi = {
-  create: (parentSpaceId: string, name?: string) =>
-    fetchApi<LiveSessionState>('/live-sessions', { method: 'POST', body: JSON.stringify({ parentSpaceId, name }) }),
+  /** Crée une séance préparée ; agenda = préparation initiale (éléments de l'espace parent, dans l'ordre). */
+  create: (parentSpaceId: string, name?: string, agenda?: Array<{ sourceItemId: string; includeChildren?: boolean }>) =>
+    fetchApi<LiveSessionState>('/live-sessions', { method: 'POST', body: JSON.stringify({ parentSpaceId, name, agenda }) }),
   listForParent: (parentSpaceId: string) =>
     fetchApi<LiveSessionSummary[]>(`/live-sessions?parentSpaceId=${encodeURIComponent(parentSpaceId)}`),
   getBySpace: (spaceId: string) => fetchApi<LiveSessionState>(`/live-sessions/by-space/${spaceId}`),
@@ -2052,7 +2053,7 @@ export const liveSessionsApi = {
     }),
   end: (id: string) => fetchApi<{ endedAt: string }>(`/live-sessions/${id}/end`, { method: 'POST' }),
   start: (id: string) => fetchApi<{ liveAt: string }>(`/live-sessions/${id}/start`, { method: 'POST' }),
-  /** Suite d'une séance terminée : nouvelle séance préparée (préparation non présenté + éléments présentés recopiés). */
+  /** Suite d'une séance terminée : nouvelle séance préparée (préparation non présentée + éléments présentés recopiés). */
   createSuite: (id: string, name?: string) =>
     fetchApi<LiveSessionState>(`/live-sessions/${id}/suite`, { method: 'POST', body: JSON.stringify({ name }) }),
   addToAgenda: (id: string, sourceItemId: string, sourceSpaceId?: string, includeChildren = false) =>
