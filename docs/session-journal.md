@@ -10,7 +10,7 @@
 - ui/SpaceCard : boutons haut-droite « vue par défaut » (?view=defaultView, repli list) + paramètres (OWNER/admin) ; ui/CommunityCard : bouton paramètres (OWNER/admin), « Publication en attente » déplacé sous la pastille ; showActions=false sur les aperçus des pages de paramètres
 - Typecheck web OK ; vérifié local (5+5 boutons, vue mindmap ouverte, paramètres communauté ouverts). Doc SPOK CommunityPage + CommunitiesListPage MAJ. MEP 2026-10-11
 - Repositionné à la demande : pastille + boutons en bas à droite sous l'image (SpaceCard : dernière ligne dédiée pour ne pas tronquer le nom ; CommunityCard : ligne Notifier/Quitter). Vérifié local
-- Divergence signalée : SpaceSettingsPage affiche « Fil » comme défaut si defaultView null, SpacePage ouvre « Liste »
+- Divergence « Fil »/« Liste » corrigée : SpaceSettingsPage replie sur 'list' (FALLBACK_DEFAULT_VIEW). Vérifié local (Backend API → Liste). Doc SPOK SpaceSettingsPage MAJ. NON COMMITÉ
 
 ### /communities : distinguer privées / publiques — 2026-10-11
 - Icône globe/cadenas trop discrète et lue sur isPublic (désynchronisable) ; carte « à rejoindre » toujours globe

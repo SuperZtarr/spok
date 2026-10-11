@@ -1,4 +1,5 @@
-/* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER. */
+/* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER.
+   Vue par défaut non réglée (defaultView null) : affichée « Liste », ce que SpacePage ouvre réellement. */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -146,6 +147,9 @@ function SpaceSettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onSt
   );
 }
 
+// Vue ouverte par SpacePage quand l'espace n'a pas de vue par défaut
+const FALLBACK_DEFAULT_VIEW = 'list';
+
 export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
@@ -244,7 +248,7 @@ export function SpaceSettingsPage() {
   const [editParentId, setEditParentId] = useState<string>('');
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
   const [editVisibility, setEditVisibility] = useState<string>('OPEN');
-  const [editDefaultView, setEditDefaultView] = useState<string>('thread');
+  const [editDefaultView, setEditDefaultView] = useState<string>(FALLBACK_DEFAULT_VIEW);
 
 
   // Initialize space info state
@@ -256,7 +260,7 @@ export function SpaceSettingsPage() {
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
       setEditVisibility(space.visibility || 'OPEN');
-      setEditDefaultView(space.defaultView || 'thread');
+      setEditDefaultView(space.defaultView || FALLBACK_DEFAULT_VIEW);
     }
   }, [space, editName]);
 
@@ -273,7 +277,7 @@ export function SpaceSettingsPage() {
     const newDefaultRole = (editDefaultRole || null) as Role | null;
     if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
     if (editVisibility !== (space.visibility || 'OPEN')) updates.visibility = editVisibility;
-    if (editDefaultView !== (space.defaultView || 'thread')) updates.defaultView = editDefaultView;
+    if (editDefaultView !== (space.defaultView || FALLBACK_DEFAULT_VIEW)) updates.defaultView = editDefaultView;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -287,7 +291,7 @@ export function SpaceSettingsPage() {
     (editParentId || null) !== (space.parentId || null) ||
     (editDefaultRole || null) !== (space.defaultRole || null) ||
     editVisibility !== (space.visibility || 'OPEN') ||
-    editDefaultView !== (space.defaultView || 'thread')
+    editDefaultView !== (space.defaultView || FALLBACK_DEFAULT_VIEW)
   );
 
   useCtrlS(!!hasSpaceInfoChanges && !updateSpaceMutation.isPending, handleSaveSpaceInfo);
