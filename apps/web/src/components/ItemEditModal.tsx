@@ -11,6 +11,7 @@
  * et repasse en layout 3 colonnes. Toujours ouvert réduit (plus de dépliage auto, 2026-09-28) : une
  * ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
+ * Pied de page : Imprimer / Export PDF (itemExport.ts) et « Copier la fiche » (itemClipboard.ts, HTML + Markdown).
  * Save explicite via bouton Enregistrer (orange vif, action principale — 2026-09-28), avec verrou
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
  * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien.
@@ -44,7 +45,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -71,6 +72,7 @@ import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
+import { buildItemSheet, copyItemSheet } from '../lib/itemClipboard';
 import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
 import { SaveAsTemplateModal } from './SaveAsTemplateModal';
@@ -204,6 +206,7 @@ export function ItemEditModal({
   // Mode Forum : modal réduit (titre + description + contributions) ; toggle « Plus de champs »
   // pour révéler Type / Statut / Priorité / Dates / Assigné / Dépendances / Parent / Tags / Enfants.
   const [forumExpanded, setForumExpanded] = useState(false);
+  const [sheetCopied, setSheetCopied] = useState(false);
   const [visitorPreview, setVisitorPreview] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -1801,6 +1804,35 @@ export function ItemEditModal({
                   }}
                 >
                   <FileDown className="w-4 h-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  title={sheetCopied ? 'Fiche copiée' : 'Copier la fiche'}
+                  onClick={async () => {
+                    const sheet = buildItemSheet({
+                      item: item as any,
+                      children: allItems.filter(i => i.parentId === item.id),
+                      spaceName,
+                      parentTitle: item.parentId ? allItems.find(i => i.id === item.parentId)?.title : null,
+                      labels: {
+                        typeLabel: (t) => (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[t as ItemType]?.labelShort,
+                        statusLabel: (s) => (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((st) => st.id === s)?.label,
+                        priorityLabel: (p) => PRIORITIES.find((pr) => pr.value === p)?.label,
+                        formatDate: (iso) => formatDate(iso),
+                      },
+                      relationLabel: (type, direction) => {
+                        const meta = getRelationMeta(type);
+                        return direction === 'from' ? meta.label : meta.inverseLabel;
+                      },
+                    });
+                    await copyItemSheet(sheet);
+                    setSheetCopied(true);
+                    setTimeout(() => setSheetCopied(false), 2000);
+                  }}
+                >
+                  {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
                 </Button>
                 {user && (
                   <Button
