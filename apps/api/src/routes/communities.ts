@@ -1092,21 +1092,28 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Images avatar/cover : OWNER, ou admin global en mode admin (même règle que PATCH /:id).
+  // Retourne la communauté (pour supprimer l'ancienne image R2), null si absente, 'forbidden' sinon.
+  async function getCommunityForImageEdit(communityId: string, userId: string, isAdminMode: boolean) {
+    const adminBypass = await isAdminModeActive(fastify.prisma, userId, isAdminMode);
+    if (!adminBypass) {
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId, communityId } },
+        select: { role: true },
+      });
+      if (!membership || membership.role !== 'OWNER') return 'forbidden' as const;
+    }
+    return fastify.prisma.community.findUnique({
+      where: { id: communityId },
+      select: { avatarUrl: true, coverUrl: true },
+    });
+  }
+
   // Upload community avatar
   fastify.post<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-      include: { community: true },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
+    const existing = await getCommunityForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (existing === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!existing) return reply.notFound('Community not found');
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
@@ -1123,8 +1130,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     let avatarUrl: string;
 
     if (isR2Configured()) {
-      if (membership.community.avatarUrl?.startsWith('http')) {
-        await deleteFileFromR2(membership.community.avatarUrl);
+      if (existing.avatarUrl?.startsWith('http')) {
+        await deleteFileFromR2(existing.avatarUrl);
       }
       avatarUrl = await uploadEntityImage(processed, `communities/${request.params.id}/avatar`);
     } else {
@@ -1142,22 +1149,12 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete community avatar
   fastify.delete<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-      include: { community: true },
-    });
+    const existing = await getCommunityForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (existing === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!existing) return reply.notFound('Community not found');
 
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
-
-    if (membership.community.avatarUrl?.startsWith('http')) {
-      await deleteFileFromR2(membership.community.avatarUrl);
+    if (existing.avatarUrl?.startsWith('http')) {
+      await deleteFileFromR2(existing.avatarUrl);
     }
 
     await fastify.prisma.community.update({
@@ -1170,19 +1167,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Upload community cover
   fastify.post<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-      include: { community: true },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
+    const existing = await getCommunityForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (existing === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!existing) return reply.notFound('Community not found');
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
@@ -1199,8 +1186,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     let coverUrl: string;
 
     if (isR2Configured()) {
-      if (membership.community.coverUrl?.startsWith('http')) {
-        await deleteFileFromR2(membership.community.coverUrl);
+      if (existing.coverUrl?.startsWith('http')) {
+        await deleteFileFromR2(existing.coverUrl);
       }
       coverUrl = await uploadEntityImage(processed, `communities/${request.params.id}/cover`);
     } else {
@@ -1218,22 +1205,12 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete community cover
   fastify.delete<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-      include: { community: true },
-    });
+    const existing = await getCommunityForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (existing === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!existing) return reply.notFound('Community not found');
 
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
-
-    if (membership.community.coverUrl?.startsWith('http')) {
-      await deleteFileFromR2(membership.community.coverUrl);
+    if (existing.coverUrl?.startsWith('http')) {
+      await deleteFileFromR2(existing.coverUrl);
     }
 
     await fastify.prisma.community.update({
