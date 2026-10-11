@@ -1,14 +1,17 @@
 /*
  * TNR de POST /mcp : refus sans jeton personnel (JWT web refusé), initialize + tools/list selon la portée,
- * appel d'outil rejoué sur les routes REST via inject avec le jeton de l'appelant, sans mode admin.
+ * appel d'outil rejoué sur les routes REST via inject avec le jeton de l'appelant, sans mode admin,
+ * limites de débit : par IP avant authentification (faux jetons en rafale), par jeton après (en-têtes variés).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
+import rateLimit from '@fastify/rate-limit'
 import { createMockPrisma, getTestToken, MockPrisma } from '../test/helpers.js'
 import { jwtPlugin } from '../plugins/jwt.js'
 import { mcpRoutes } from './mcp.js'
 import { generatePersonalToken } from '../utils/personalTokens.js'
+import { resetTokenRateLimits, MCP_REQUESTS_PER_MINUTE_PER_TOKEN, MCP_REQUESTS_PER_MINUTE_PER_IP } from '../mcp/tokenRateLimit.js'
 
 const HEADERS = { 'content-type': 'application/json', accept: 'application/json, text/event-stream' }
 
@@ -16,6 +19,7 @@ async function buildApp() {
   const app = Fastify({ logger: false })
   const prisma = createMockPrisma()
   await app.register(sensible)
+  await app.register(rateLimit, { global: false })
   app.decorate('prisma', prisma as any)
   await app.register(jwtPlugin)
   // Route REST factice pour observer les sous-requêtes des outils
@@ -48,6 +52,7 @@ describe('POST /mcp', () => {
   }
 
   beforeEach(async () => {
+    resetTokenRateLimits()
     ;({ app, prisma } = await buildApp())
   })
 
@@ -108,6 +113,27 @@ describe('POST /mcp', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(res.json().result.content[0].text).toContain('vue par u1 admin=false')
+  })
+
+  it('limite par jeton : varier l\x27écriture de l\x27en-tête ne crée pas de nouveau compteur', async () => {
+    withScope('write')
+    const variants = [`Bearer ${token}`, `Bearer  ${token}`, `Bearer ${token} `]
+    for (let i = 0; i < MCP_REQUESTS_PER_MINUTE_PER_TOKEN; i++) {
+      const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: variants[i % 3] }, payload: rpc('tools/list') })
+      expect(res.statusCode).toBe(200)
+    }
+    const over = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: variants[1] }, payload: rpc('tools/list') })
+    expect(over.statusCode).toBe(429)
+  })
+
+  it('limite par IP avant authentification : faux jetons en rafale → 429', async () => {
+    prisma.personalAccessToken.findUnique.mockResolvedValue(null)
+    let last = 0
+    for (let i = 0; i <= MCP_REQUESTS_PER_MINUTE_PER_IP; i++) {
+      const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer spok_pat_faux${i}` }, payload: INIT })
+      last = res.statusCode
+    }
+    expect(last).toBe(429)
   })
 
   it('GET /mcp → 405 avec les instructions de connexion', async () => {

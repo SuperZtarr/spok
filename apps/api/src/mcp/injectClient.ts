@@ -5,31 +5,12 @@
  * l'exemption de rate-limit global et la traçabilité d'audit. Réponse non 2xx → SpokApiError (renvoyée au modèle).
  * Défenses (les sous-requêtes sont exemptées du rate-limit par IP) :
  *  - chemin piégé (.., %2e, //, \) refusé avant tout inject — doublon volontaire de zId() côté mcp-core ;
- *  - plafond de sous-requêtes par jeton et par minute (maxPerMinute, défaut 600) → 429.
+ *  - plafond de sous-requêtes par jeton et par minute (maxPerMinute, défaut 600, cf. tokenRateLimit.ts) → 429.
  */
 import type { FastifyInstance } from 'fastify'
 import { SpokApiError, type SpokClient } from '@spok/mcp-core'
 import { INTERNAL_REQUEST_HEADER, INTERNAL_REQUEST_SECRET, INTERNAL_TOKEN_ID_HEADER, INTERNAL_TOKEN_NAME_HEADER } from './internal.js'
-
-const DEFAULT_MAX_PER_MINUTE = 600
-const WINDOW_MS = 60_000
-
-/** Compteurs par jeton, fenêtre fixe d'une minute. Partagés entre requêtes /mcp (module-level). */
-const usage = new Map<string, { windowStart: number; count: number }>()
-
-function consume(tokenId: string, max: number): boolean {
-  const now = Date.now()
-  const u = usage.get(tokenId)
-  if (!u || now - u.windowStart >= WINDOW_MS) {
-    usage.set(tokenId, { windowStart: now, count: 1 })
-    // Purge opportuniste des fenêtres expirées (évite une croissance illimitée de la Map)
-    if (usage.size > 1000) for (const [k, v] of usage) if (now - v.windowStart >= WINDOW_MS) usage.delete(k)
-    return true
-  }
-  if (u.count >= max) return false
-  u.count++
-  return true
-}
+import { consumeTokenRate, MCP_SUBREQUESTS_PER_MINUTE_PER_TOKEN } from './tokenRateLimit.js'
 
 const UNSAFE_PATH = /\.\.|%2e|\/\/|\\/i
 
@@ -39,14 +20,14 @@ export function createInjectClient(
   token: { id: string; name: string },
   opts: { maxPerMinute?: number } = {},
 ): SpokClient {
-  const max = opts.maxPerMinute ?? DEFAULT_MAX_PER_MINUTE
+  const max = opts.maxPerMinute ?? MCP_SUBREQUESTS_PER_MINUTE_PER_TOKEN
 
   async function call(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown) {
     const pathname = path.split('?')[0]
     if (!path.startsWith('/') || UNSAFE_PATH.test(pathname)) {
       throw new SpokApiError(400, 'Chemin refusé (identifiant invalide)', path)
     }
-    if (!consume(token.id, max)) {
+    if (!consumeTokenRate(`sub:${token.id}`, max)) {
       throw new SpokApiError(429, `Trop d'appels : limite de ${max} opérations par minute pour ce jeton. Réessayez dans une minute.`, path)
     }
     const res = await app.inject({

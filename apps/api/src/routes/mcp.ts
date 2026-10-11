@@ -4,26 +4,22 @@
  * portée du jeton : write → 'public', read → 'public-read'. Les outils appellent les routes REST via
  * createInjectClient avec le jeton de l'appelant ; les écritures sont tracées (plugins/requestContext → audit).
  * Découvrabilité : 401/403/405 renvoient la marche à suivre (WWW-Authenticate + lien vers spok.space/llms.txt).
- * Débit : un seul message JSON-RPC par requête (lots refusés), 120 requêtes/min par jeton (clé = hash de
- * l'en-tête Authorization, calculée avant authentification), sous-requêtes plafonnées dans injectClient.
+ * Débit (cf. mcp/tokenRateLimit.ts) : un seul message JSON-RPC par requête (lots refusés) ; 300 req/min par IP
+ * avant authentification ; 120 req/min par jeton après authentification (clé = id du jeton) ; sous-requêtes
+ * plafonnées dans injectClient.
  * GET/DELETE /mcp → 405 (pas de flux SSE serveur ni de session en mode sans état).
  */
-import { createHash } from 'crypto'
-import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
+import { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createSpokMcpServer } from '@spok/mcp-core'
 import { createInjectClient } from '../mcp/injectClient.js'
+import { consumeTokenRate, MCP_REQUESTS_PER_MINUTE_PER_IP, MCP_REQUESTS_PER_MINUTE_PER_TOKEN } from '../mcp/tokenRateLimit.js'
 
 const HELP_URL = 'https://spok.space/llms.txt'
 const CONNECT_HINT =
   'Créez un jeton personnel sur https://spok.space (Profil → Accès Claude (MCP)), puis connectez Claude Code avec : ' +
   'claude mcp add --transport http spok https://api.spok.space/mcp --header "Authorization: Bearer <jeton>"'
 
-/** Clé de rate-limit : hash de l'en-tête Authorization (request.personalToken n'existe pas encore à onRequest). */
-function rateLimitKey(req: FastifyRequest): string {
-  const auth = req.headers.authorization
-  return auth ? `mcp:${createHash('sha256').update(auth).digest('hex').slice(0, 32)}` : `mcp-ip:${req.ip}`
-}
 
 export const mcpRoutes: FastifyPluginAsync = async (fastify) => {
   // Gestionnaire d'erreurs encapsulé dans ce plugin : réponses d'authentification explicites pour un modèle.
@@ -57,7 +53,8 @@ export const mcpRoutes: FastifyPluginAsync = async (fastify) => {
     config: {
       // Le protocole MCP est toujours en POST : un jeton 'read' doit pouvoir l'appeler (outils limités à la lecture).
       allowReadOnlyToken: true,
-      rateLimit: { max: 120, timeWindow: '1 minute', keyGenerator: rateLimitKey },
+      // Par IP, AVANT authentification : borne les rafales de faux jetons (chacun coûte une lecture en base).
+      rateLimit: { max: MCP_REQUESTS_PER_MINUTE_PER_IP, timeWindow: '1 minute', keyGenerator: (req) => `mcp-ip:${req.ip}` },
     },
   }, async (request, reply) => {
     if (request.authVia !== 'pat' || !request.personalToken) {
@@ -74,6 +71,15 @@ export const mcpRoutes: FastifyPluginAsync = async (fastify) => {
       return
     }
     const pat = request.personalToken
+    // Par jeton, APRÈS authentification : clé = id du jeton en base, insensible à l'écriture de l'en-tête.
+    if (!consumeTokenRate(`req:${pat.id}`, MCP_REQUESTS_PER_MINUTE_PER_TOKEN)) {
+      reply.status(429).send({
+        jsonrpc: '2.0',
+        error: { code: -32000, message: `Trop de requêtes : limite de ${MCP_REQUESTS_PER_MINUTE_PER_TOKEN} par minute pour ce jeton. Réessayez dans une minute.` },
+        id: null,
+      })
+      return
+    }
     const client = createInjectClient(fastify, request.headers.authorization!, { id: pat.id, name: pat.name })
     const server = createSpokMcpServer({ client, profile: pat.scope === 'read' ? 'public-read' : 'public' })
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
