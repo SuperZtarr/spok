@@ -2,11 +2,14 @@
    Bouton « Nouvel espace » (2026-10-10) : membres (OWNER/MEMBER) et admin en mode admin, comme
    l'autorise l'API POST /spaces — formulaire nom + « Espace parent » (espaces de la communauté,
    arbre indenté, défaut racine → sous-espace sinon), ouvre l'espace créé. Choix de modèle :
-   rester sur le Tableau de bord, ne pas dupliquer ici. */
+   rester sur le Tableau de bord, ne pas dupliquer ici.
+   Vignettes d'espace : pastille de visibilité effective (visibilityBySpace, résolue côté client avec
+   la règle de getEffectiveVisibility), en pointillé quand elle est héritée. En-tête : même pastille
+   pour la communauté, lue sur visibility (jamais isPublic, déprécié). */
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Globe, Lock, Crown, User, Plus } from 'lucide-react';
+import { Users, FolderOpen, Settings, Crown, User, Plus } from 'lucide-react';
 import { communitiesApi, spacesApi, activityApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
@@ -15,6 +18,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { RoleGuard } from '../components/RoleGuard';
 import { SpaceCard } from '../components/ui/SpaceCard';
+import { VisibilityPill } from '../components/ui/VisibilityPill';
 import { useAdminMode } from '../components/DevDbStatus';
 // Types used implicitly via API responses
 
@@ -23,14 +27,16 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: st
   MEMBER: { label: 'Membre', icon: User, color: 'text-foreground' },
 };
 
-function SpaceTreeNode({ node, depth = 0, activityBySpace }: { node: any; depth?: number; activityBySpace: Map<string, number> }) {
+type SpaceVisibilityInfo = { value: string; inheritedFrom: 'parent' | 'community' | null };
+
+function SpaceTreeNode({ node, depth = 0, activityBySpace, visibilityBySpace }: { node: any; depth?: number; activityBySpace: Map<string, number>; visibilityBySpace: Map<string, SpaceVisibilityInfo> }) {
   const hasChildren = node.children?.length > 0;
   const indent = depth > 0 ? `${depth * 2.5}rem` : undefined;
   if (!hasChildren) {
     return (
       <div className="col-span-full" style={{ paddingLeft: indent }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <SpaceCard space={node} onClick={undefined} activityCount={activityBySpace.get(node.id)} />
+          <SpaceCard space={node} onClick={undefined} activityCount={activityBySpace.get(node.id)} visibility={visibilityBySpace.get(node.id)} />
         </div>
       </div>
     );
@@ -39,12 +45,12 @@ function SpaceTreeNode({ node, depth = 0, activityBySpace }: { node: any; depth?
     <div className="col-span-full">
       <div style={{ paddingLeft: indent }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <SpaceCard space={node} onClick={undefined} activityCount={activityBySpace.get(node.id)} />
+          <SpaceCard space={node} onClick={undefined} activityCount={activityBySpace.get(node.id)} visibility={visibilityBySpace.get(node.id)} />
         </div>
       </div>
       <div className="mt-2">
         {node.children.map((child: any) => (
-          <SpaceTreeNode key={child.id} node={child} depth={depth + 1} activityBySpace={activityBySpace} />
+          <SpaceTreeNode key={child.id} node={child} depth={depth + 1} activityBySpace={activityBySpace} visibilityBySpace={visibilityBySpace} />
         ))}
       </div>
     </div>
@@ -149,6 +155,29 @@ export function CommunityPage() {
     return roots;
   }, [spaces]);
 
+  // Visibilité effective de chaque espace, même règle que getEffectiveVisibility (API) :
+  // propre → espace parent → communauté. Parent absent de la liste (inaccessible) → communauté.
+  const visibilityBySpace = useMemo(() => {
+    const result = new Map<string, SpaceVisibilityInfo>();
+    if (!spaces) return result;
+    const byId = new Map(spaces.map(s => [s.id, s as typeof s & { visibility?: string | null }]));
+    const communityVisibility = (community as any)?.visibility ?? 'PRIVATE';
+    const resolve = (id: string, seen: Set<string>): SpaceVisibilityInfo => {
+      const cached = result.get(id);
+      if (cached) return cached;
+      const space = byId.get(id)!;
+      let info: SpaceVisibilityInfo;
+      if (space.visibility) info = { value: space.visibility, inheritedFrom: null };
+      else if (space.parentId && byId.has(space.parentId) && !seen.has(space.parentId)) {
+        info = { value: resolve(space.parentId, seen.add(id)).value, inheritedFrom: 'parent' };
+      } else info = { value: communityVisibility, inheritedFrom: 'community' };
+      result.set(id, info);
+      return info;
+    };
+    spaces.forEach(s => resolve(s.id, new Set()));
+    return result;
+  }, [spaces, community]);
+
   // Options « Espace parent » du formulaire de création : arbre aplati, indenté par niveau
   const parentSpaceOptions = useMemo(() => {
     const options: { value: string; label: string }[] = [{ value: '', label: 'Aucun (espace racine)' }];
@@ -190,11 +219,7 @@ export function CommunityPage() {
           <div className="flex-1 min-w-0 pb-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold truncate">{community?.name}</h1>
-              {community?.isPublic ? (
-                <span title="Communauté publique"><Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" /></span>
-              ) : (
-                <span title="Communauté privée"><Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" /></span>
-              )}
+              {community && <VisibilityPill visibility={(community as any).visibility} className="flex-shrink-0" />}
             </div>
             {community?.description && (
               <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{community.description}</p>
@@ -263,7 +288,7 @@ export function CommunityPage() {
             {spaceTree.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {spaceTree.map(node => (
-                  <SpaceTreeNode key={node.id} node={node} activityBySpace={activityBySpace} />
+                  <SpaceTreeNode key={node.id} node={node} activityBySpace={activityBySpace} visibilityBySpace={visibilityBySpace} />
                 ))}
               </div>
             ) : (

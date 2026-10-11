@@ -1,6 +1,7 @@
-/* Carte de communauté (listes/accueil) : nom, visibilité, compteurs, cover. */
+/* Carte de communauté (listes/accueil) : nom, visibilité (pastille sur la cover, lue sur visibility), compteurs, cover. */
 import { Link } from 'react-router-dom';
-import { Users, Globe, Lock, Crown, User, Eye, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
+import { VisibilityPill } from './VisibilityPill';
+import { Users, Crown, User, Eye, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
 import { Button } from './Button';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -21,6 +22,7 @@ interface Community {
   coverPositionX?: number;
   coverZoom?: number;
   isPublic?: boolean;
+  visibility?: string | null;
   memberCount?: number;
   spaceCount?: number;
   role?: string | null;
@@ -131,6 +133,7 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
     >
       <div className="relative">
         <CoverWithAvatar community={community} bannerHeight="aspect-[3/1]" />
+        <VisibilityPill visibility={community.visibility} className="absolute top-2 left-2" />
       </div>
 
       {community.pendingPublic && (
@@ -143,11 +146,6 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
       <div className="pt-8 px-4 pb-4">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold truncate">{community.name}</h3>
-          {community.isPublic ? (
-            <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-          )}
         </div>
 
         {community.description && (

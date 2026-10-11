@@ -1,4 +1,5 @@
-/* Liste des communautés avec leurs espaces en arborescence (accueil/communautés). */
+/* Liste des communautés avec leurs espaces en arborescence (accueil/communautés).
+   Visibilité de chaque carte : VisibilityPill sur la cover (lue sur visibility, jamais isPublic). */
 import { useState, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ import { Users, Globe, Lock, Crown, User, Eye, X, AlertTriangle, Search, ArrowRi
 import { communitiesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { CommunityCard } from '../ui/CommunityCard';
+import { VisibilityPill } from '../ui/VisibilityPill';
 import { DevModalBadge } from '../ui/DevModalBadge';
 
 type CreateStep = 'awareness' | 'form';
@@ -138,6 +140,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
         ) : (
           <div className="aspect-[3/1] bg-gradient-to-r from-primary/10 to-primary/5" />
         )}
+        <VisibilityPill visibility={community.visibility} className="absolute top-2 left-2" />
         <div className="absolute -bottom-4 left-4">
           {community.avatarUrl ? (
             <img src={community.avatarUrl} alt="" className="w-12 h-12 rounded-xl border-4 border-background object-cover shadow" />
@@ -153,7 +156,6 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
       <div className="pt-8 px-4 pb-4">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold truncate">{community.name}</h3>
-          <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
         </div>
         {community.description && (
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{community.description}</p>

@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+### /communities : distinguer privées / publiques — 2026-10-11
+- Icône globe/cadenas trop discrète et lue sur isPublic (désynchronisable) ; carte « à rejoindre » toujours globe
+- Fait : `ui/CommunityVisibilityPill` (Privée ambre / Ouverte vert / Lecture seule bleu) sur la cover, lue sur visibility, dans CommunityCard + carte à rejoindre. Typecheck web OK, vérifié en local (« Test SPOK » isPublic=true/PRIVATE → « Privée »). Doc SPOK CommunitiesListPage MAJ (to_validate). NON COMMITÉ
+- Suite : pastille renommée `ui/VisibilityPill` (entity community/space, inheritedFrom) ; vignettes d'espace de CommunityPage = visibilité effective résolue côté client (propre → parent → communauté), pointillé si héritée. Vérifié en local (community-test). Doc SPOK CommunityPage MAJ. NON COMMITÉ
+- En-tête de CommunityPage : globe/cadenas sur isPublic remplacé par VisibilityPill (visibility). Vérifié local (« Test SPOK » → Privée). Pastille héritée : « · hérité » dans le libellé. MEP 2026-10-11
+
 ### Upload avatar/couverture communauté : 403 en prod — 2026-10-11
 - Cause : uploads (user/space/community avatar+cover) en fetch direct sans header X-Admin-Mode → admin non OWNER refusé (le PATCH passait via fetchApi). Pas de refresh 401 non plus
 - Fait : api.ts → helper `uploadFile` via fetchApi (Content-Type JSON non posé pour FormData). Typecheck web OK. Non vérifié en navigateur (upload). MEP 2026-10-11

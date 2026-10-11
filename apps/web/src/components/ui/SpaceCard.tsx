@@ -1,22 +1,29 @@
-/* Carte d'espace (listes/accueil) : nom, communauté, compteurs, cover. */
+/* Carte d'espace (listes/accueil) : nom, communauté, compteurs, cover.
+   Prop visibility (optionnelle) : visibilité effective déjà résolue par l'appelant (espace → parent →
+   communauté) + inheritedFrom ; la pastille n'apparaît que si elle est fournie. */
 import { Link } from 'react-router-dom';
 import { Clock, FolderOpen } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';
+import { VisibilityPill } from './VisibilityPill';
 
 interface SpaceCardProps {
   space: SpaceWithRole;
   onClick?: () => void;
   activityCount?: number;
   to?: string;
+  visibility?: { value: string; inheritedFrom: 'parent' | 'community' | null };
 }
 
-export function SpaceCard({ space, onClick, activityCount, to }: SpaceCardProps) {
+export function SpaceCard({ space, onClick, activityCount, to, visibility }: SpaceCardProps) {
   return (
     <Link
       to={to ?? `/spaces/${space.id}`}
       onClick={onClick}
-      className="block rounded-lg border border-border hover:border-primary/30 hover:shadow-md transition-all overflow-hidden"
+      className="relative block rounded-lg border border-border hover:border-primary/30 hover:shadow-md transition-all overflow-hidden"
     >
+      {visibility && (
+        <VisibilityPill visibility={visibility.value} entity="space" inheritedFrom={visibility.inheritedFrom} className="absolute top-2 left-2 z-10" />
+      )}
       {space.coverUrl ? (
         <div className="h-24 overflow-hidden">
           <img
