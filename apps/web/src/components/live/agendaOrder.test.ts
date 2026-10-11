@@ -1,4 +1,4 @@
-/* Tests des règles de déplacement du programme côté client (miroir de l'API PUT /agenda/order). */
+/* Tests des règles de déplacement de la préparation côté client (miroir de l'API PUT /agenda/order). */
 import { describe, it, expect } from 'vitest'
 import { moveTarget, swapIds } from './agendaOrder'
 

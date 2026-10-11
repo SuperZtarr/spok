@@ -5,6 +5,8 @@
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ;
  * les 2 autres familles restent accessibles via le dropdown "Autres vues", jamais masquées.
  * liveSessionsSlot : bouton « Séances » (ParentSessionsButton) fourni par SpacePage, rendu avant le compteur ;
+ * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
+ * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
  * la barre d'outils ne connaît pas la logique des séances live.
  */
 import { useState, useEffect, useRef } from 'react';
@@ -149,6 +151,8 @@ export interface SpaceToolbarProps {
   spaceRole?: string;
   // Séances live (bouton fourni par SpacePage)
   liveSessionsSlot?: React.ReactNode;
+  // Bandeau de séance (LiveSessionBar, espace de séance uniquement) — 3e ligne de la toolbar
+  liveSessionBarSlot?: React.ReactNode;
 }
 
 export function SpaceToolbar({
@@ -180,6 +184,7 @@ export function SpaceToolbar({
   spaceId,
   spaceRole,
   liveSessionsSlot,
+  liveSessionBarSlot,
 }: SpaceToolbarProps) {
   const { mode: interfaceMode } = useInterfaceModeStore();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
@@ -658,6 +663,9 @@ export function SpaceToolbar({
           )}
         </div>
       </div>
+
+      {/* Bandeau de séance — 3e ligne, espace de séance uniquement (fourni par SpacePage) */}
+      {liveSessionBarSlot}
 
     </div>
   );

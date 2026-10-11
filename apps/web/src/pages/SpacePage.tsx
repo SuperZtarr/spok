@@ -3,7 +3,8 @@
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
- * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar ;
+ * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar, passé à SpaceToolbar
+ * (liveSessionBarSlot → 3e ligne de la toolbar) ;
  * les copies verrouillées (lockedAt) ne sont pas éditables (canEditItem). Dans un espace de communauté
  * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar.
  */
@@ -643,10 +644,10 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           liveSessionsSlot={space?.communityId && !live.isLiveSpace && spaceId ? (
             <ParentSessionsButton spaceId={spaceId} canCreate={spaceCommunity?.role === 'OWNER'} />
           ) : undefined}
+          liveSessionBarSlot={live.isLiveSpace && live.state ? (
+            <LiveSessionBar state={live.state} live={live} members={liveParentMembers} onOpenItem={setEditingItemId} />
+          ) : undefined}
         />
-        {live.isLiveSpace && live.state && (
-          <LiveSessionBar state={live.state} live={live} members={liveParentMembers} onOpenItem={setEditingItemId} />
-        )}
 
         {/* Items / Views */}
         <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'members' || viewMode === 'types' || viewMode === 'priority' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'pert' || viewMode === 'text' || viewMode === 'thread' || viewMode === 'tree' ? ' overflow-hidden flex flex-col' : ''}`}>

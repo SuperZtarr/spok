@@ -2,7 +2,7 @@
  * Construction des groupes d'actions du menu contextuel des items (ItemActionMenu) : Ajouter,
  * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
  * « Marquer comme non lu » (groupe Ouvrir, toujours présent) : markItemUnread, sans callback à câbler.
- * Section « Séance » (Ajouter au programme / Présenter en séance) : ajoutée d'office si une séance live active
+ * Section « Séance » (Ajouter à la préparation / Présenter en séance) : ajoutée d'office si une séance live active
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  */
 import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, EyeOff, Circle } from 'lucide-react';

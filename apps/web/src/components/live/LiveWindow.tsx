@@ -2,7 +2,7 @@
  * LiveWindow — fenêtre flottante « en direct » de la séance active, rendue par LiveSessionHost sur TOUTES les
  * pages tant que la séance est LIVE. Onglet Direct : copie présentée (titre, « présenté par », description,
  * sous-items révélés) + pour l'animateur SEUL la section « À révéler » (PendingChildren).
- * Onglets Programme (AgendaPanel compact) et Rechercher (PresenterPanel) pour l'animateur/les présentateurs.
+ * Onglets Préparation (anciennement « Programme » : AgendaPanel compact) et Rechercher (PresenterPanel) pour l'animateur/les présentateurs.
  * Déplaçable (barre de titre), redimensionnable (poignée bas-droite), réductible, plein écran ; géométrie
  * mémorisée (liveWindowGeometry). Portail sur document.body (z-40, sous les modales z-50) : ne jamais l'insérer
  * dans Layout.tsx. « Aller à la séance » ouvre l'espace de séance ; « Quitter le direct » oublie la séance active.
@@ -143,7 +143,7 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
       {(narrow || geo.mode !== 'minimized') && presenter && (
         <div className="flex items-center gap-1 px-2 py-1 border-b border-border">
           <button className={tabBtn('live')} onClick={() => setTab('live')}>Direct</button>
-          <button className={tabBtn('agenda')} onClick={() => setTab('agenda')}>Programme ({state.agenda.length})</button>
+          <button className={tabBtn('agenda')} onClick={() => setTab('agenda')}>Préparation ({state.agenda.length})</button>
           <button className={tabBtn('search')} onClick={() => setTab('search')}>Rechercher</button>
         </div>
       )}

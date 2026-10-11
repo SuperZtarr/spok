@@ -1,6 +1,6 @@
 /*
  * Store de la séance live active (une par navigateur) : la fenêtre en direct et les actions
- * « Ajouter au programme » / « Présenter en séance » suivent l'utilisateur sur toutes les pages.
+ * « Ajouter à la préparation » / « Présenter en séance » suivent l'utilisateur sur toutes les pages.
  * - spaceId : espace de la séance active — SEUL champ persisté (localStorage 'spok.activeLiveSession').
  * - info : statut/rôle synchronisés par LiveSessionHost depuis l'API (jamais persistés, revalidés au chargement).
  * Écrivains : SpacePage (setActive à l'ouverture d'un espace de séance), ParentSessionsButton (création/rejoindre),

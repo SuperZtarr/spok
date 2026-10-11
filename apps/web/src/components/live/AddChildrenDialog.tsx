@@ -1,8 +1,9 @@
 /*
- * AddChildrenDialog — question posée quand on ajoute au programme un élément qui a des sous-éléments directs :
+ * AddChildrenDialog — question posée quand on ajoute à la préparation un élément qui a des sous-éléments directs :
  * « Élément seul » ou « Avec ses N sous-éléments » (ajoutés juste après, dans leur ordre d'origine).
  * Piloté par useActiveLiveSessionStore.pendingAdd (posé par requestAddToAgenda) ; rendu par LiveSessionHost
  * pour fonctionner depuis n'importe quelle page. Annuler (fermeture) n'ajoute rien.
+ * Libellés : « préparation » (anciennement « programme », renommé 2026-10-11).
  */
 import { useState } from 'react';
 import { Modal } from '../ui/Modal';
@@ -34,9 +35,9 @@ export function AddChildrenDialog() {
   };
 
   return (
-    <Modal isOpen onClose={close} title="Ajouter au programme" size="small">
+    <Modal isOpen onClose={close} title="Ajouter à la préparation" size="small">
       <p className="text-sm mb-4">
-        Cet élément a {pending.count} sous-élément{pending.count > 1 ? 's' : ''}. Les ajouter aussi au programme, juste après lui ?
+        Cet élément a {pending.count} sous-élément{pending.count > 1 ? 's' : ''}. Les ajouter aussi à la préparation, juste après lui ?
       </p>
       {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
       <div className="flex flex-wrap justify-end gap-2">

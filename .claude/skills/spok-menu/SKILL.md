@@ -154,7 +154,9 @@ cd apps/web && npx tsc --noEmit
 SpacePage
 ├── SpaceToolbar
 │   ├── #view-selector   — sélecteur de vue
-│   └── #global-toolbar  — toujours visible, toutes les vues
+│   ├── #global-toolbar  — toujours visible, toutes les vues
+│   └── liveSessionBarSlot — 3e ligne, espace de séance uniquement : LiveSessionBar fourni par SpacePage
+│                            (décision Thomas 2026-10-11 : dans la toolbar, jamais entre la toolbar et la vue)
 └── <VueActive>
     ├── #view-header     — header de contenu, contrôles vue-spécifiques uniquement
     └── <contenu>

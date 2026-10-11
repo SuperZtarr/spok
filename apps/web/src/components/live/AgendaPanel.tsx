@@ -1,8 +1,9 @@
 /*
- * AgendaPanel — programme d'une séance : lignes ordonnées (titre, espace source, présentateur, « présenté à HH:MM »).
+ * AgendaPanel — préparation d'une séance : lignes ordonnées (titre, espace source, présentateur, « présenté à HH:MM »).
  * Animateur/présentateurs : ↑/↓ (règles agendaOrder, miroir de l'API), Retirer (sa ligne ou animateur),
  * Afficher (séance LIVE). Participants : lecture seule. compact = version resserrée pour la fenêtre en direct.
  * Les lignes sont des liens vers les sources : rien n'est copié avant « Afficher ».
+ * Libellés affichés : « préparation » (anciennement « programme », renommé 2026-10-11).
  */
 import { useState } from 'react';
 import { ArrowDown, ArrowUp, Play, X } from 'lucide-react';
@@ -31,7 +32,7 @@ export function AgendaPanel({ state, live, compact }: Props) {
   if (agenda.length === 0) {
     return (
       <p className="text-sm text-muted-foreground p-3">
-        Programme vide.{canEdit && ' Ajoutez des éléments depuis le menu d\'un item (« Ajouter au programme ») ou la recherche.'}
+        Préparation vide.{canEdit && ' Ajoutez des éléments depuis le menu d\'un item (« Ajouter à la préparation ») ou la recherche.'}
       </p>
     );
   }
@@ -65,7 +66,7 @@ export function AgendaPanel({ state, live, compact }: Props) {
                     <ArrowDown className="w-3.5 h-3.5" />
                   </button>
                   {canRemove && (
-                    <button aria-label="Retirer du programme" className="p-1 rounded hover:bg-accent text-muted-foreground"
+                    <button aria-label="Retirer de la préparation" className="p-1 rounded hover:bg-accent text-muted-foreground"
                       onClick={() => run(() => live.removeFromAgenda(a.id))}>
                       <X className="w-3.5 h-3.5" />
                     </button>

@@ -3,7 +3,7 @@
  * En mémoire = valable pour UNE instance d'API (cas Railway actuel). Si l'API passe à plusieurs
  * instances, remplacer broadcast() par un relais PostgreSQL LISTEN/NOTIFY — l'interface ne change pas.
  * Les abonnés qui lèvent une erreur (socket fermée) sont retirés silencieusement.
- * broadcastEach : événement calculé par abonné (ex. programme complet pour l'animateur, filtré pour les participants).
+ * broadcastEach : événement calculé par abonné (ex. préparation complète pour l'animateur, filtré pour les participants).
  */
 import type { LiveEvent, LiveUser } from '@spok/shared';
 

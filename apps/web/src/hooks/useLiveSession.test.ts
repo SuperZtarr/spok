@@ -1,4 +1,4 @@
-/* Tests de applyLiveEvent : convergence (deux présentateurs), fin/démarrage de séance, programme, révélation de sous-items. */
+/* Tests de applyLiveEvent : convergence (deux présentateurs), fin/démarrage de séance, préparation, révélation de sous-items. */
 import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../lib/api', () => ({ liveSessionsApi: {}, getValidAccessToken: vi.fn(), LIVE_API_URL: '/api' }))
@@ -36,7 +36,7 @@ describe('applyLiveEvent', () => {
     expect(next.session.liveAt).toBe('x')
   })
 
-  it('agenda remplace le programme', () => {
+  it('agenda remplace la préparation', () => {
     const state: any = { session: {}, entries: [], agenda: [], current: null }
     const agenda: any = [{ id: 'a' }]
     expect(applyLiveEvent(state, { type: 'agenda', agenda }).agenda).toBe(agenda)

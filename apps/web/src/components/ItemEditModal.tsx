@@ -25,7 +25,7 @@
  * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
  * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
- * Pied : boutons « Ajouter au programme » / « Présenter en séance » si la séance live active le permet (liveItemActions).
+ * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
@@ -290,7 +290,7 @@ export function ItemEditModal({
   const isLockedCopy = !!item?.lockedAt;
   const canEdit = canEditProp && !visitorPreview && !isLockedCopy && (isNewItem || isSpaceOwner || isItemAuthor || isItemAssignee);
   const canEditTags = canEditProp && !visitorPreview && (canEdit || isLockedCopy);
-  // Séance live active : actions « Ajouter au programme » / « Présenter en séance » du pied
+  // Séance live active : actions « Ajouter à la préparation » / « Présenter en séance » du pied
   const liveInfo = useActiveLiveSessionStore((s) => s.info);
   const liveSpaceId = useActiveLiveSessionStore((s) => s.spaceId);
   const liveActions = (id: string) => buildLiveItemActions(id, liveInfo, liveSpaceId);

@@ -18,7 +18,7 @@ describe('buildLiveItemActions', () => {
     expect(buildLiveItemActions('i', info('LIVE', 'PARTICIPANT'), 'sp')).toEqual([])
     expect(buildLiveItemActions('i', info('ENDED'), 'sp')).toEqual([])
   })
-  it('séance préparée : seulement « Ajouter au programme »', () => {
+  it('séance préparée : seulement « Ajouter à la préparation »', () => {
     expect(buildLiveItemActions('i', info('PREPARED', 'PRESENTER'), 'sp').map((a) => a.id)).toEqual(['live-add-agenda'])
   })
   it('séance en direct : ajouter + présenter', () => {

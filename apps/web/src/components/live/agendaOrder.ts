@@ -1,5 +1,5 @@
 /*
- * Règles de déplacement des lignes du programme côté client — miroir de PUT /live-sessions/:id/agenda/order :
+ * Règles de déplacement des lignes de la préparation côté client — miroir de PUT /live-sessions/:id/agenda/order :
  * l'animateur échange avec la voisine directe ; un présentateur n'échange sa ligne qu'avec SA ligne voisine
  * (les lignes des autres restent à leur position). moveTarget renvoie l'index cible ou null (bouton masqué).
  */
