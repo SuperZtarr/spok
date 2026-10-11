@@ -64,7 +64,8 @@
 
 ### UX & formulaires
 - [x] Recherche : portée par défaut = espace (sous-espaces inclus) ou communauté d'où on la lance, élargissement explicite ; fix choix communauté écrasé ; utilisateurs filtrés par portée — 2026-10-11 (51bc4ee)
-- [x] Sidebar : visibilité des communautés (globe/œil/cadenas, non membre grisé, « Invitation », bouclier admin) ; communautés privées visibles/accessibles par des non-membres quand isPublic est désynchronisé → GET /communities, /:id, /:id/members sur visibility seul, création admin renseigne visibility — 2026-10-11 (hash à compléter)
+- [x] Sidebar : visibilité des communautés (globe/œil/cadenas, non membre grisé, « Invitation », bouclier admin) ; communautés privées visibles/accessibles par des non-membres quand isPublic est désynchronisé → GET /communities, /:id, /:id/members sur visibility seul, création admin renseigne visibility — 2026-10-11 (18f3be3)
+- [x] BUG upload avatar/couverture communauté (et espace, profil) : 403 pour un admin en mode admin non OWNER — uploads en fetch direct sans X-Admin-Mode ni refresh 401 → helper `uploadFile` via fetchApi — 2026-10-11
 - [ ] Données prod : lancer `scripts/check-community-visibility.ts --prod` et resynchroniser isPublic/visibility au cas par cas (« Campagne ShadowWorld » : isPublic=true, visibility=PRIVATE)
 - [ ] Remplacer les `isPublic || visibility !== 'PRIVATE'` restants (items.ts:146, spaces.ts:139/467/1093, graph.ts:266/382/581, admin/users.ts:584, search.ts:104) par visibility seul
 - [ ] Recherche (/search) — reste du diagnostic 2026-10-11 : filtres items (type/statut/tags) sans effet sur les sections communautés/utilisateurs (les masquer ou filtrer les contributions via l'item) ; champ Tags texte libre → sélecteur ; filtre Statut absent + types d'item en codes bruts ; pagination commune à toutes les sections ; périmètre incohérent (communautés publiques visibles mais pas leurs espaces/items) ; écarts doc : 20/page vs 10, min 2 caractères vs 1

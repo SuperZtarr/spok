@@ -1,6 +1,7 @@
 /*
  * Client API REST : fetch typé + gestion des tokens (refresh proactif < 1 min et retry sur 401 —
  * ne pas simplifier, cf. zones fragiles CLAUDE.md) + tous les endpoints groupés par domaine.
+ * Uploads de fichiers : toujours via uploadFile (passe par fetchApi → header admin + refresh).
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
  */
 import type {
@@ -221,7 +222,8 @@ async function fetchApi<T>(
   };
 
   // Only set Content-Type: application/json when there is a body
-  if (options.body) {
+  // (FormData : le navigateur pose lui-même le multipart avec sa boundary)
+  if (options.body && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -335,6 +337,14 @@ async function fetchApi<T>(
   return response.json();
 }
 
+// Upload multipart d'un fichier (champ "file") via fetchApi : hérite du header X-Admin-Mode
+// et du refresh sur 401. Ne pas réécrire un fetch direct pour les uploads (403 en mode admin).
+function uploadFile<T>(endpoint: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return fetchApi<T>(endpoint, { method: 'POST', body: formData });
+}
+
 // Auth
 export const authApi = {
   register: (data: RegisterInput) =>
@@ -399,24 +409,7 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
 
-  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/user/avatar`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload avatar', error);
-    }
-
-    return response.json();
-  },
+  uploadAvatar: (file: File) => uploadFile<{ avatarUrl: string }>('/user/avatar', file),
 
   deleteAvatar: () =>
     fetchApi<{ success: boolean }>('/user/avatar', { method: 'DELETE' }),
@@ -668,46 +661,14 @@ export const spacesApi = {
       body: JSON.stringify({ role }),
     }),
 
-  uploadAvatar: async (id: string, file: File): Promise<{ avatarUrl: string }> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/spaces/${id}/avatar`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload avatar', error);
-    }
-
-    return response.json();
-  },
+  uploadAvatar: (id: string, file: File) =>
+    uploadFile<{ avatarUrl: string }>(`/spaces/${id}/avatar`, file),
 
   deleteAvatar: (id: string) =>
     fetchApi<{ success: boolean }>(`/spaces/${id}/avatar`, { method: 'DELETE' }),
 
-  uploadCover: async (id: string, file: File): Promise<{ coverUrl: string }> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/spaces/${id}/cover`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload couverture', error);
-    }
-
-    return response.json();
-  },
+  uploadCover: (id: string, file: File) =>
+    uploadFile<{ coverUrl: string }>(`/spaces/${id}/cover`, file),
 
   deleteCover: (id: string) =>
     fetchApi<{ success: boolean }>(`/spaces/${id}/cover`, { method: 'DELETE' }),
@@ -835,46 +796,14 @@ export const communitiesApi = {
       method: 'POST',
     }),
 
-  uploadAvatar: async (id: string, file: File): Promise<{ avatarUrl: string }> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/communities/${id}/avatar`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload avatar', error);
-    }
-
-    return response.json();
-  },
+  uploadAvatar: (id: string, file: File) =>
+    uploadFile<{ avatarUrl: string }>(`/communities/${id}/avatar`, file),
 
   deleteAvatar: (id: string) =>
     fetchApi<{ success: boolean }>(`/communities/${id}/avatar`, { method: 'DELETE' }),
 
-  uploadCover: async (id: string, file: File): Promise<{ coverUrl: string }> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/communities/${id}/cover`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload couverture', error);
-    }
-
-    return response.json();
-  },
+  uploadCover: (id: string, file: File) =>
+    uploadFile<{ coverUrl: string }>(`/communities/${id}/cover`, file),
 
   deleteCover: (id: string) =>
     fetchApi<{ success: boolean }>(`/communities/${id}/cover`, { method: 'DELETE' }),

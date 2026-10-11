@@ -6,6 +6,10 @@
 
 ## EN COURS
 
+### Upload avatar/couverture communauté : 403 en prod — 2026-10-11
+- Cause : uploads (user/space/community avatar+cover) en fetch direct sans header X-Admin-Mode → admin non OWNER refusé (le PATCH passait via fetchApi). Pas de refresh 401 non plus
+- Fait : api.ts → helper `uploadFile` via fetchApi (Content-Type JSON non posé pour FormData). Typecheck web OK. Non vérifié en navigateur (upload). MEP 2026-10-11
+
 ### Sidebar : visibilité des communautés + communautés privées visibles par des non-membres — 2026-10-11
 - Cause : GET /communities filtrait les « publiques » sur isPublic (déprécié) ; « Campagne ShadowWorld » (prod) a isPublic=true + visibility=PRIVATE → visible dans la sidebar et accessible (GET /:id, /:id/members faisaient `isPublic || visibility`). Création admin posait isPublic sans visibility
 - Fait : communities.ts filtre/contrôle sur visibility seul ; admin create renseigne visibility ; type shared Community.visibility ; CommunityBadge (globe/œil/cadenas, nom grisé non membre, « Invitation », bouclier admin) dans la sidebar et l'en-tête immersif ; script lecture seule `scripts/check-community-visibility.ts` (local : « Test SPOK » incohérente). businessRules + doc SPOK Barre latérale MAJ (to_validate)
