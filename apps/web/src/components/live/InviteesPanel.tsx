@@ -2,7 +2,7 @@
  * InviteesPanel — panneau « Invités » du bandeau de séance (LiveSessionBar), réservé à l'animateur.
  * Liste les invités de la séance (« Retirer » révoque l'accès, possible même séance terminée) et,
  * tant que la séance n'est pas terminée, propose d'en ajouter via InviteePicker (membres de la communauté
- * sans accès à l'espace parent, déjà invités exclus). Les invités voient la séance, jamais l'espace parent.
+ * sans accès à l'espace parent, déjà invités exclus ; s'ils sont tous invités, un message le dit). Les invités voient la séance, jamais l'espace parent.
  * Props : sessionId (séance), parentSpaceId (espace parent, pour les candidats), ended (séance terminée → pas d'ajout).
  * Caches : ['live-invitees', sessionId] mis à jour avec la réponse de l'API ; candidats invalidés après chaque action.
  */
@@ -67,7 +67,11 @@ export function InviteesPanel({ sessionId, parentSpaceId, ended }: {
       {!ended && (
         <>
           <p className="text-xs text-muted-foreground mb-2">Ajouter des membres de la communauté : ils verront la séance, pas l'espace.</p>
-          <InviteePicker candidates={available} selected={selected} onChange={setSelected} />
+          {candidates.length > 0 && available.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Tous les membres invitables sont déjà invités.</p>
+          ) : (
+            <InviteePicker candidates={available} selected={selected} onChange={setSelected} />
+          )}
           <div className="flex justify-end mt-2">
             <button
               className="rounded bg-orange-500 px-2 py-1 text-xs text-white disabled:opacity-50"

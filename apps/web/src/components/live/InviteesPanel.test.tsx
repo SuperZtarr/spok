@@ -40,6 +40,13 @@ describe('InviteesPanel', () => {
     await waitFor(() => expect(api.invite).toHaveBeenCalledWith('ls-1', ['u2']))
   })
 
+  it('tous les candidats déjà invités : le dit, sans prétendre qu\'ils ont accès à l\'espace', async () => {
+    api.inviteCandidates.mockResolvedValueOnce([{ userId: 'u1', name: 'Alice', email: 'a@x' }])
+    const { findByText, queryByText } = renderPanel()
+    await findByText('Tous les membres invitables sont déjà invités.')
+    expect(queryByText(/ont déjà accès/)).toBeNull()
+  })
+
   it('séance terminée : pas d\'ajout possible, retrait toujours possible', async () => {
     const { findByText, queryByText } = renderPanel(true)
     await findByText('Retirer')

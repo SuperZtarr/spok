@@ -216,6 +216,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/*, apps/web/src/lib/liveItemActions.ts',
   },
   {
+    id: 'live-session-invitees',
+    page: 'Séances live (Préparer la séance, bandeau « Invités »)',
+    trigger: "L'animateur invite des membres de la communauté",
+    effect: "Seuls des membres de la communauté SANS accès à l'espace parent peuvent être invités (les autres rejoignent déjà). L'invité devient membre de l'espace de séance seulement : il voit la séance (éléments présentés, fil, commentaires, réorganisation) et la fenêtre en direct, jamais l'espace parent ; il est participant (ni préparation complète, ni présentation). Notification à l'invitation. Invitation à la création ou depuis le bandeau tant que la séance n'est pas terminée ; retrait possible à tout moment (retire l'accès). Les invités sont repris dans la suite s'ils restent invitables",
+    location: 'apps/api/src/utils/liveInvites.ts, apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/InviteesPanel.tsx',
+  },
+  {
     id: 'bulk-upload-images-documents',
     page: 'Vues Images et Documents (import en masse)',
     trigger: "Import de plusieurs fichiers (bouton « Importer des … » ou glisser-déposer sur la vue)",
