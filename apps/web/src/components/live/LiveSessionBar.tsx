@@ -2,7 +2,8 @@
  * LiveSessionBar — bandeau d'un espace de séance, rendu en 3e ligne de SpaceToolbar (liveSessionBarSlot) :
  * statut (préparée / en direct / terminée), présence, boutons « Préparation » (AgendaPanel — la préparation ;
  * libellé renommé à la demande de Thomas 2026-10-11), « Fil » (SessionTimeline), « Présenter » (recherche, en direct, host/présentateurs),
- * « Présentateurs » (host : choix parmi les membres de l'espace parent), « Démarrer la séance » (host, préparée)
+ * « Présentateurs » (host : choix parmi les membres de l'espace parent), « Invités » (host, toute séance : InviteesPanel —
+ * invités qui voient la séance sans l'espace parent ; ajout tant que non terminée, retrait toujours), « Démarrer la séance » (host, préparée)
  * et « Terminer » (host, en direct, avec confirmation) ; séance terminée : « Créer la suite » (host, si pas encore
  * de suite) ; liens « Suite de … » / « Suite : … » vers les séances liées. Panneaux en popover simples, pas de modale.
  * members = membres de l'espace PARENT (on peut désigner quelqu'un qui n'a pas encore rejoint).
@@ -17,10 +18,11 @@ import type { LiveSessionState, SpaceMember } from '@spok/shared';
 import { SessionTimeline } from './SessionTimeline';
 import { PresenterPanel } from './PresenterPanel';
 import { AgendaPanel } from './AgendaPanel';
+import { InviteesPanel } from './InviteesPanel';
 import { ConfirmModal } from '../ConfirmModal';
 import type { LiveSessionHandle } from '../../hooks/useLiveSession';
 
-type Panel = 'agenda' | 'timeline' | 'present' | 'presenters' | null;
+type Panel = 'agenda' | 'timeline' | 'present' | 'presenters' | 'invitees' | null;
 
 interface Props {
   state: LiveSessionState;
@@ -89,6 +91,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
       <button className="hover:underline" onClick={() => toggle('timeline')}>Fil</button>
       {canPresent && <button className="hover:underline" onClick={() => toggle('present')}>Présenter</button>}
       {isHost && status !== 'ENDED' && <button className="hover:underline" onClick={() => toggle('presenters')}>Présentateurs</button>}
+      {isHost && <button className="hover:underline" onClick={() => toggle('invitees')}>Invités</button>}
       {isHost && status === 'PREPARED' && (
         <button className="rounded bg-orange-500 px-2 py-0.5 text-white" onClick={() => run(live.start)}>Démarrer la séance</button>
       )}
@@ -104,6 +107,9 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
           )}
           {panel === 'present' && (
             <PresenterPanel sessionSpaceId={state.session.spaceId} onDisplay={(spaceId, itemId) => live.displayItem(itemId, spaceId)} />
+          )}
+          {panel === 'invitees' && (
+            <InviteesPanel sessionId={state.session.id} parentSpaceId={state.session.parentSpaceId} ended={status === 'ENDED'} />
           )}
           {panel === 'presenters' && (
             <ul className="max-h-72 overflow-auto p-2">
