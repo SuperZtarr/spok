@@ -1,0 +1,32 @@
+# SPOK
+
+> SPOK (https://spok.space) est une application multi-utilisateur pour structurer, relier, évaluer et planifier : communautés, espaces et items (projets, tâches, réunions, notes, documents, liens…), avec hiérarchie, relations, statuts, dates et tags.
+
+## Accès pour les assistants IA (MCP)
+
+SPOK expose un serveur MCP (Model Context Protocol) permettant à un assistant de lire et d'écrire dans SPOK avec les droits de l'utilisateur.
+
+- URL du serveur : https://api.spok.space/mcp
+- Transport : Streamable HTTP (POST)
+- Authentification : jeton personnel, en-tête `Authorization: Bearer <jeton>`
+
+### Connexion (Claude Code)
+
+1. L'utilisateur se connecte sur https://spok.space, ouvre son profil, section « Accès Claude (MCP) », et crée un jeton (lecture seule, ou lecture et écriture). Le jeton n'est affiché qu'une fois.
+2. Il lance, dans un terminal :
+
+```
+claude mcp add --transport http spok https://api.spok.space/mcp --header "Authorization: Bearer <jeton>"
+```
+
+3. Il redémarre Claude Code. Les outils SPOK sont alors disponibles.
+
+Un assistant ne doit jamais demander à l'utilisateur son mot de passe SPOK : seul le jeton personnel sert à la connexion.
+
+### Non pris en charge pour l'instant
+
+claude.ai et Claude Desktop (connecteurs personnalisés) exigent une authentification OAuth, pas encore disponible.
+
+## Règles d'écriture
+
+Une fois connecté, le serveur MCP transmet lui-même les règles à respecter (instructions du serveur) et fournit l'outil `get_space_conventions` : statuts, types et tags autorisés dans chaque espace. Les données non conformes sont refusées avec la liste des valeurs acceptées.
