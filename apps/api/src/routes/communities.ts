@@ -1,7 +1,10 @@
 /*
  * Routes /communities : CRUD (visibilité avec workflow d'approbation pendingPublic), membres
  * (multi-OWNER, mute), invitations par token, join/leave, avatar/cover, tags, emails.
- * Seul le OWNER modifie la communauté ; création = PRIVATE + pendingVisibility.
+ * Gestion (modification, suppression, membres, invitations, tags, emails, images) : OWNER ou admin
+ * global en mode admin, via isOwnerOrAdmin — le mode admin voit et fait tout. Actions personnelles
+ * (join/leave/mute, transfert de sa propriété) : liées à l'appelant. Création = PRIVATE + pendingVisibility ;
+ * PATCH PRIVATE → OPEN/READONLY = même demande (validation admin), sauf admin en mode admin.
  * Visibilité : `visibility` est la seule source de vérité (listes, contrôles d'accès).
  * `isPublic` est déprécié et peut être désynchronisé en base — ne jamais filtrer dessus seul.
  */
@@ -49,12 +52,45 @@ async function isAdminModeActive(prisma: PrismaClient, userId: string, isAdminMo
   return user?.globalRole === 'ADMIN';
 }
 
+// Garde des actions de gestion : OWNER de la communauté, ou admin global en mode admin
+// (règle : le mode admin voit et fait tout). Ne pas l'utiliser pour les actions personnelles
+// (join/leave/mute, transfert de sa propre propriété).
+async function isOwnerOrAdmin(prisma: PrismaClient, communityId: string, userId: string, isAdminMode: boolean): Promise<boolean> {
+  if (await isAdminModeActive(prisma, userId, isAdminMode)) return true;
+  const membership = await prisma.communityMembership.findUnique({
+    where: { userId_communityId: { userId, communityId } },
+    select: { role: true },
+  });
+  return membership?.role === 'OWNER';
+}
+
 export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Register referentiels sub-routes
   await fastify.register(async function (optInstance) {
     optInstance.addHook('preHandler', optInstance.optionalAuthenticate);
     await optInstance.register(communityReferentielsRoutes, { prefix: '/:communityId/referentiels' });
   });
+
+  // Demande de publication (création ou PATCH PRIVATE → public) : notifie tous les admins globaux
+  async function notifyAdminsOfPublicationRequest(requesterId: string, communityName: string) {
+    const admins = await fastify.prisma.user.findMany({
+      where: { globalRole: 'ADMIN' },
+      select: { id: true },
+    });
+    const requester = await fastify.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { name: true },
+    });
+    for (const admin of admins) {
+      await createNotification(fastify.prisma, {
+        userId: admin.id,
+        type: 'INVITATION',
+        title: 'Demande de publication',
+        message: `${requester?.name || 'Un utilisateur'} demande à rendre la communauté "${communityName}" publique.`,
+        link: '/admin',
+      });
+    }
+  }
 
   // Create a new community
   fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -88,25 +124,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Notify admins if pending public approval
-    if (wantsPublic) {
-      const admins = await fastify.prisma.user.findMany({
-        where: { globalRole: 'ADMIN' },
-        select: { id: true },
-      });
-      const creator = await fastify.prisma.user.findUnique({
-        where: { id: request.user.userId },
-        select: { name: true },
-      });
-      for (const admin of admins) {
-        await createNotification(fastify.prisma, {
-          userId: admin.id,
-          type: 'INVITATION',
-          title: 'Demande de publication',
-          message: `${creator?.name || 'Un utilisateur'} demande à rendre la communauté "${body.name}" publique.`,
-          link: '/admin',
-        });
-      }
-    }
+    if (wantsPublic) await notifyAdminsOfPublicationRequest(request.user.userId, body.name);
 
     return reply.status(201).send({
       ...community,
@@ -352,16 +370,32 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = updateCommunitySchema.parse(request.body);
 
-      // Sync isPublic from visibility for backward compat
+      const current = await fastify.prisma.community.findUnique({
+        where: { id: request.params.id },
+        select: { name: true, visibility: true },
+      });
+      if (!current) return reply.notFound('Community not found');
+
+      // Visibilité (isPublic accepté pour compat, converti) — même règle qu'à la création :
+      // sortir du privé (PRIVATE → OPEN/READONLY) passe par une demande validée par un admin
+      // (pendingPublic + pendingVisibility), sauf admin en mode admin. Repasser en privé, ou
+      // basculer OPEN ↔ READONLY (déjà public), est immédiat. isPublic suit visibility.
+      const requestedVisibility = body.visibility ?? (body.isPublic !== undefined ? (body.isPublic ? 'OPEN' : 'PRIVATE') : undefined);
       const updateData: Record<string, unknown> = {};
+      let publicationRequested = false;
       if (body.name) updateData.name = body.name;
       if (body.description !== undefined) updateData.description = body.description;
-      if (body.visibility) {
-        updateData.visibility = body.visibility;
-        updateData.isPublic = body.visibility !== 'PRIVATE';
-      } else if (body.isPublic !== undefined) {
-        updateData.isPublic = body.isPublic;
-        updateData.visibility = body.isPublic ? 'OPEN' : 'PRIVATE';
+      if (requestedVisibility && requestedVisibility !== current.visibility) {
+        if (current.visibility === 'PRIVATE' && requestedVisibility !== 'PRIVATE' && !adminBypass) {
+          updateData.pendingPublic = true;
+          updateData.pendingVisibility = requestedVisibility;
+          publicationRequested = true;
+        } else {
+          updateData.visibility = requestedVisibility;
+          updateData.isPublic = requestedVisibility !== 'PRIVATE';
+          updateData.pendingPublic = false;
+          updateData.pendingVisibility = null;
+        }
       }
       if (body.context !== undefined) updateData.context = body.context;
       if (body.coverPosition !== undefined) updateData.coverPosition = body.coverPosition;
@@ -372,6 +406,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.params.id },
         data: updateData,
       });
+
+      if (publicationRequested) await notifyAdminsOfPublicationRequest(request.user.userId, current.name);
 
       return community;
     }
@@ -438,16 +474,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Community not found');
     }
 
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
+    if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
       return reply.forbidden('Only the owner can delete a community');
     }
 
@@ -717,16 +744,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // List users not yet members of this community
   fastify.get<{ Params: { id: string } }>('/:id/available-users', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.communityMembership.findUnique({
-      where: {
-        userId_communityId: {
-          userId: request.user.userId,
-          communityId: request.params.id,
-        },
-      },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
+    if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
       return reply.forbidden('Only owners can view available users');
     }
 
@@ -758,16 +776,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/members',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only owners can add members');
       }
 
@@ -811,21 +820,15 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/invite',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const mem = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-        include: { community: { select: { name: true } } },
+      const targetCommunity = await fastify.prisma.community.findUnique({
+        where: { id: request.params.id },
+        select: { name: true },
       });
-
-      if (!mem) {
+      if (!targetCommunity) {
         return reply.notFound('Community not found');
       }
 
-      if (mem.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -867,9 +870,9 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         await createNotification(fastify.prisma, {
           userId: invitedUser.id,
           type: 'INVITATION',
-          title: `${inviterName} vous invite à rejoindre la communauté « ${mem.community.name} »`,
+          title: `${inviterName} vous invite à rejoindre la communauté « ${targetCommunity.name} »`,
           link: `/invitations`,
-          metadata: { actorId: request.user.userId, actorName: inviterName, communityName: mem.community.name, invitationId: invitation.id },
+          metadata: { actorId: request.user.userId, actorName: inviterName, communityName: targetCommunity.name, invitationId: invitation.id },
         });
       }
 
@@ -877,7 +880,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       await sendInvitationEmail({
         to: body.email,
         inviterName,
-        targetName: mem.community.name,
+        targetName: targetCommunity.name,
         targetType: 'communauté',
         token: invitation.token,
         message: body.message,
@@ -893,10 +896,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/invitations',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const mem = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
-      });
-      if (!mem || mem.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -917,20 +917,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/members/:memberId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership) {
-        return reply.notFound('Community not found');
-      }
-
-      if (membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -960,21 +947,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/members/:memberId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership) {
-        return reply.notFound('Community not found');
-      }
-
-      // Only owner can change roles
-      if (membership.role !== 'OWNER') {
+      // Only owner (or admin in admin mode) can change roles
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only the owner can change member roles');
       }
 
@@ -1097,14 +1071,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Images avatar/cover : OWNER, ou admin global en mode admin (même règle que PATCH /:id).
   // Retourne la communauté (pour supprimer l'ancienne image R2), null si absente, 'forbidden' sinon.
   async function getCommunityForImageEdit(communityId: string, userId: string, isAdminMode: boolean) {
-    const adminBypass = await isAdminModeActive(fastify.prisma, userId, isAdminMode);
-    if (!adminBypass) {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId, communityId } },
-        select: { role: true },
-      });
-      if (!membership || membership.role !== 'OWNER') return 'forbidden' as const;
-    }
+    if (!(await isOwnerOrAdmin(fastify.prisma, communityId, userId, isAdminMode))) return 'forbidden' as const;
     return fastify.prisma.community.findUnique({
       where: { id: communityId },
       select: { avatarUrl: true, coverUrl: true },
@@ -1253,10 +1220,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/tags',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
-      });
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only owners and admins can manage community tags');
       }
 
@@ -1281,10 +1245,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/tags/:tagId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
-      });
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only owners and admins can manage community tags');
       }
 
@@ -1315,10 +1276,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/tags/:tagId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: { userId_communityId: { userId: request.user.userId, communityId: request.params.id } },
-      });
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only owners and admins can manage community tags');
       }
 
@@ -1391,16 +1349,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.serviceUnavailable('Email service is not configured');
       }
 
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1445,16 +1394,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/emails',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1482,16 +1422,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/emails/:emailId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1534,16 +1465,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.serviceUnavailable('Email service is not configured');
       }
 
-      const membership = await fastify.prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId: request.user.userId,
-            communityId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 

@@ -1,5 +1,6 @@
 /* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER.
-   Vue par défaut non réglée (defaultView null) : affichée « Liste », ce que SpacePage ouvre réellement. */
+   Vue par défaut non réglée (defaultView null) : affichée « Liste », ce que SpacePage ouvre réellement.
+   Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'. */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -667,7 +668,7 @@ export function SpaceSettingsPage() {
           <div className="bg-card border rounded-lg p-6 space-y-6" data-tour="space-members">
             <SpaceMembersManager
               spaceId={spaceId!}
-              currentUserRole={space.role || 'MEMBER'}
+              currentUserRole={canEdit ? 'OWNER' : (space.role || 'MEMBER')}
               currentUserId={user.id}
               spaceType={space.type}
             />

@@ -1,4 +1,8 @@
-/* Paramètres communauté (/communities/:id/settings) : infos, visibilité, membres, référentiels, emails — OWNER. */
+/* Paramètres communauté (/communities/:id/settings) : infos, visibilité, membres, référentiels, emails — OWNER.
+   Mode admin = mêmes droits que le OWNER partout (canEdit) : visibilité, contexte, gestion des membres
+   (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
+   Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
+   message d'avertissement avant, « en attente » après ; en mode admin, appliqué directement. */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -358,16 +362,16 @@ export function CommunitySettingsPage() {
     moveSpaceMutation.mutate({ spaceId, parentId: newParentId });
   };
 
+  // Check permissions (mode admin = mêmes droits que le OWNER)
+  const adminMode = useAdminMode();
+  const canEdit = community?.role === 'OWNER' || community?.role === 'ADMIN_VIEW' || adminMode;
+
   // Spaces that can be added (GROUP spaces not in any community, owned/admin by user)
   const availableSpaces = allSpaces?.filter(
     s => s.type === 'GROUP' &&
          !s.communityId &&
-         s.role === 'OWNER'
+         (s.role === 'OWNER' || adminMode)
   ) || [];
-
-  // Check permissions
-  const adminMode = useAdminMode();
-  const canEdit = community?.role === 'OWNER' || community?.role === 'ADMIN_VIEW' || adminMode;
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
@@ -501,8 +505,8 @@ export function CommunitySettingsPage() {
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
     const currentVisibility = (community as any)?.visibility || (community?.isPublic ? 'OPEN' : 'PRIVATE');
-    if (editVisibility !== currentVisibility && community?.role === 'OWNER') updates.visibility = editVisibility;
-    if (editContext !== (community?.context || 'NONE') && community?.role === 'OWNER') {
+    if (editVisibility !== currentVisibility && canEdit) updates.visibility = editVisibility;
+    if (editContext !== (community?.context || 'NONE') && canEdit) {
       updates.context = editContext === 'NONE' ? null : editContext;
     }
     if (Object.keys(updates).length > 0) {
@@ -613,7 +617,7 @@ export function CommunitySettingsPage() {
                       placeholder="Description de la communauté"
                     />
                   </div>
-                  {community?.role === 'OWNER' && (
+                  {canEdit && (
                     <div>
                       <label className="block text-sm font-medium mb-2">Visibilité</label>
                       <div className="grid grid-cols-3 gap-2">
@@ -637,9 +641,19 @@ export function CommunitySettingsPage() {
                           </button>
                         ))}
                       </div>
+                      {/* Sortir du privé = demande validée par un admin (sauf mode admin, appliqué directement) */}
+                      {(community as any).pendingPublic ? (
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
+                          Demande de publication en « {(community as any).pendingVisibility === 'READONLY' ? 'Lecture seule' : 'Ouverte'} » en attente de validation par un administrateur.
+                        </p>
+                      ) : !adminMode && (community as any).visibility === 'PRIVATE' && editVisibility !== 'PRIVATE' ? (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Rendre la communauté visible par tous nécessite la validation d'un administrateur : une demande sera envoyée à l'enregistrement.
+                        </p>
+                      ) : null}
                     </div>
                   )}
-                  {community?.role === 'OWNER' && (
+                  {canEdit && (
                     <div>
                       <label className="block text-sm font-medium mb-2">Contexte</label>
                       <div className="grid grid-cols-3 gap-2">
@@ -668,7 +682,7 @@ export function CommunitySettingsPage() {
                   )}
                   <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                     <div>Rôle : <span className="font-medium text-foreground">
-                      {community.role === 'OWNER' ? 'Propriétaire' : 'Membre'}
+                      {community.role === 'OWNER' ? 'Propriétaire' : community.role === 'MEMBER' ? 'Membre' : 'Admin (mode admin)'}
                     </span></div>
                     <div>Membres : <span className="font-medium text-foreground">{community.memberCount || 0}</span></div>
                     <div>Espaces : <span className="font-medium text-foreground">{communitySpaces.length}</span></div>
@@ -1039,7 +1053,7 @@ export function CommunitySettingsPage() {
           <div className="bg-card border rounded-lg p-6 flex-1 min-h-0 flex flex-col">
             <CommunityMembersManager
               communityId={communityId!}
-              currentUserRole={community.role || 'MEMBER'}
+              currentUserRole={canEdit ? 'OWNER' : (community.role || 'MEMBER')}
               currentUserId={user.id}
             />
           </div>

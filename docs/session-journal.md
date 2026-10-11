@@ -6,6 +6,17 @@
 
 ## EN COURS
 
+### Mode admin = tout voir, tout faire — phase 1 communautés — 2026-10-12
+- Règle Thomas (mémoire feedback_admin_mode_all_access) : toute garde OWNER doit accepter l'admin en mode admin
+- API : `isOwnerOrAdmin` dans communities.ts (delete, available-users, add/remove member, role, invite, invitations, tags x3, emails x4, images) ; community-referentiels checkCommunityOwner + isAdminMode. Exceptions : join/leave/mute/transfer-ownership
+- Web : CommunitySettingsPage visibilité/contexte/membres/ajout d'espaces sur canEdit (adminMode)
+- Tests communities 51/51 (+5 mode admin, 4 invite réalignés). Typecheck web/api OK. Non vérifié en navigateur (pas de communauté non possédée en local). NON COMMITÉ
+- Option A validée : PATCH PRIVATE → OPEN/READONLY = demande (pendingPublic/pendingVisibility + notif admins, helper notifyAdminsOfPublicationRequest partagé avec la création), sauf mode admin ; retour PRIVATE / OPEN↔READONLY immédiats. UI : avertissement + « en attente ». Tests 55/55 (+4). Vérifié local (demande créée puis refusée via reject-public). NON COMMITÉ
+- Limites notées : le propriétaire ne peut pas annuler sa propre demande ; reject-public ne vide pas pendingVisibility
+- Phase 2 espaces : spaces.ts isSpaceOwnerOrAdmin (available-users, add/remove member, role, invite, invitations, images x4, send-email) + bypass admin sur delete/delete-preview ; SpaceSettingsPage membres en OWNER si canEdit. Tests 108/108. MEP 2026-10-12 (phases 1-2 + option A)
+- Code mort supprimé : components/CommunitySelector.tsx (aucun import)
+- Signalé : PATCH /spaces/:id laisse passer tout admin global même SANS mode admin (incohérent avec la règle, non modifié)
+
 ### Vignettes : raccourcis paramètres + vue par défaut — 2026-10-11
 - ui/SpaceCard : boutons haut-droite « vue par défaut » (?view=defaultView, repli list) + paramètres (OWNER/admin) ; ui/CommunityCard : bouton paramètres (OWNER/admin), « Publication en attente » déplacé sous la pastille ; showActions=false sur les aperçus des pages de paramètres
 - Typecheck web OK ; vérifié local (5+5 boutons, vue mindmap ouverte, paramètres communauté ouverts). Doc SPOK CommunityPage + CommunitiesListPage MAJ. MEP 2026-10-11

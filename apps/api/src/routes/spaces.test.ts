@@ -693,6 +693,10 @@ describe('Spaces routes', () => {
   // ─── INVITE MEMBER ────────────────────────────────────────────
 
   describe('POST /spaces/:id/invite', () => {
+    beforeEach(() => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace()) // espace cible, lu avant la garde de rôle
+    })
+
     it('should invite a user as OWNER', async () => {
       prisma.spaceMembership.findUnique
         .mockResolvedValueOnce({ ...mockMembership({ role: 'OWNER' }), space: mockSpace() }) // caller check
@@ -734,6 +738,7 @@ describe('Spaces routes', () => {
     })
 
     it('should reject invite to PERSONAL space', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ type: 'PERSONAL' }))
       prisma.spaceMembership.findUnique.mockResolvedValue({
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace({ type: 'PERSONAL' }),
@@ -911,6 +916,49 @@ describe('Spaces routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().role).toBe('OWNER')
+    })
+  })
+
+  // Règle : le mode admin voit et fait tout — admin global non membre + header X-Admin-Mode
+  describe('Mode admin (admin global non membre)', () => {
+    const adminHeaders = () => ({ authorization: `Bearer ${token}`, 'x-admin-mode': 'true' })
+
+    it('should remove a space member as admin in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'mem-2', userId: 'user-2', spaceId: SPACE_ID, role: 'MEMBER' })
+      prisma.spaceMembership.delete.mockResolvedValue({})
+
+      const res = await app.inject({ method: 'DELETE', url: `/spaces/${SPACE_ID}/members/mem-2`, headers: adminHeaders() })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should invite to a space as admin in admin mode', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace())
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN', id: 'admin-1', name: 'Admin' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.invitation.findFirst.mockResolvedValue(null)
+      prisma.invitation.create.mockResolvedValue({
+        id: 'inv-9', email: 'x@test.com', role: 'MEMBER', spaceId: SPACE_ID, token: 'tok-9', status: 'PENDING',
+      })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/invite`,
+        headers: adminHeaders(),
+        payload: { email: 'x@test.com', role: 'MEMBER' },
+      })
+
+      expect(res.statusCode).toBe(201)
+    })
+
+    it('should reject a space member removal by an admin without admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+
+      const res = await app.inject({ method: 'DELETE', url: `/spaces/${SPACE_ID}/members/mem-2`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.statusCode).toBe(403)
     })
   })
 })

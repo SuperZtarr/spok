@@ -1,7 +1,9 @@
 /*
  * Routes /spaces : CRUD (visibilité effective, accès anonyme aux espaces publics), hiérarchie,
  * membres (multi-OWNER), invitations par token, join/leave, avatar/cover, sous-routes items/tags/
- * referentiels. Suppression : space OWNER ou community OWNER uniquement.
+ * referentiels. Suppression : space OWNER, community OWNER ou admin en mode admin.
+ * Gestion (membres, invitations, images, emails) : isSpaceOwnerOrAdmin — le mode admin voit et fait
+ * tout. Actions personnelles (join/leave, transfert de sa propriété) liées à l'appelant.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -48,6 +50,24 @@ const inviteSchema = z.object({
   role: z.enum(['OWNER', 'MEMBER']),
   message: z.string().optional(),
 });
+
+// Admin global avec le mode admin activé (header X-Admin-Mode) : le mode admin voit et fait tout
+async function isAdminModeActive(prisma: any, userId: string, isAdminMode: boolean): Promise<boolean> {
+  if (!isAdminMode) return false;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+  return user?.globalRole === 'ADMIN';
+}
+
+// Garde des actions de gestion d'un espace : OWNER de l'espace, ou admin en mode admin.
+// Ne pas l'utiliser pour les actions personnelles (join/leave, transfert de sa propre propriété).
+async function isSpaceOwnerOrAdmin(prisma: any, spaceId: string, userId: string, isAdminMode: boolean): Promise<boolean> {
+  if (await isAdminModeActive(prisma, userId, isAdminMode)) return true;
+  const membership = await prisma.spaceMembership.findUnique({
+    where: { userId_spaceId: { userId, spaceId } },
+    select: { role: true },
+  });
+  return membership?.role === 'OWNER';
+}
 
 export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   // Register nested routes — optional auth (each file adds authenticate on write routes)
@@ -679,7 +699,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    let canDelete = spaceMembership?.role === 'OWNER';
+    let canDelete = spaceMembership?.role === 'OWNER'
+      || await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode);
 
     if (!canDelete && space.communityId) {
       const communityMembership = await fastify.prisma.communityMembership.findUnique({
@@ -779,13 +800,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     let canDelete = false;
 
-    // Space OWNER can always delete (including personal spaces)
-    if (spaceMembership?.role === 'OWNER') {
+    // Space OWNER can always delete (including personal spaces) ; admin en mode admin aussi
+    if (spaceMembership?.role === 'OWNER' || await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode)) {
       canDelete = true;
     }
 
     // Community OWNER can delete community spaces (CommunityRole n'a que OWNER/MEMBER —
-    // pas de rôle ADMIN au niveau communauté ; l'admin site suit /admin/* sans bypass ici)
+    // pas de rôle ADMIN au niveau communauté)
     if (!canDelete && space.communityId) {
       const communityMembership = await fastify.prisma.communityMembership.findUnique({
         where: {
@@ -1124,16 +1145,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // List users not yet members of this space (community members only)
   fastify.get<{ Params: { id: string } }>('/:id/available-users', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
-        },
-      },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
+    if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
       return reply.forbidden('Only owners can view available users');
     }
 
@@ -1185,16 +1197,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/members',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const ownerMembership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-      });
-
-      if (!ownerMembership || ownerMembership.role !== 'OWNER') {
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only owners can add members');
       }
 
@@ -1240,25 +1243,16 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/invite',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-        include: { space: true },
-      });
-
-      if (!membership) {
+      const targetSpace = await fastify.prisma.space.findUnique({ where: { id: request.params.id } });
+      if (!targetSpace) {
         return reply.notFound('Space not found');
       }
 
-      if (membership.role !== 'OWNER') {
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
-      if (membership.space.type === 'PERSONAL') {
+      if (targetSpace.type === 'PERSONAL') {
         return reply.forbidden('Cannot invite members to personal space');
       }
 
@@ -1300,9 +1294,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         await createNotification(fastify.prisma, {
           userId: invitedUser.id,
           type: 'INVITATION',
-          title: `${inviterName} vous invite à rejoindre l'espace « ${membership.space.name} »`,
+          title: `${inviterName} vous invite à rejoindre l'espace « ${targetSpace.name} »`,
           link: `/invitations`,
-          metadata: { actorId: request.user.userId, actorName: inviterName, spaceName: membership.space.name, invitationId: invitation.id },
+          metadata: { actorId: request.user.userId, actorName: inviterName, spaceName: targetSpace.name, invitationId: invitation.id },
         });
       }
 
@@ -1310,7 +1304,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       await sendInvitationEmail({
         to: body.email,
         inviterName,
-        targetName: membership.space.name,
+        targetName: targetSpace.name,
         targetType: 'espace',
         token: invitation.token,
         message: body.message,
@@ -1326,10 +1320,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/invitations',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: { userId_spaceId: { userId: request.user.userId, spaceId: request.params.id } },
-      });
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1350,20 +1341,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/members/:memberId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership) {
-        return reply.notFound('Space not found');
-      }
-
-      if (membership.role !== 'OWNER') {
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 
@@ -1392,20 +1370,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/members/:memberId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership) {
-        return reply.notFound('Space not found');
-      }
-
-      if (membership.role !== 'OWNER') {
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Only the owner can change member roles');
       }
 
@@ -1498,21 +1463,21 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Images avatar/cover : OWNER de l'espace ou admin en mode admin. Retourne l'espace (pour
+  // supprimer l'ancienne image R2), null si absent, 'forbidden' sinon.
+  async function getSpaceForImageEdit(spaceId: string, userId: string, isAdminMode: boolean) {
+    if (!(await isSpaceOwnerOrAdmin(fastify.prisma, spaceId, userId, isAdminMode))) return 'forbidden' as const;
+    return fastify.prisma.space.findUnique({
+      where: { id: spaceId },
+      select: { avatarUrl: true, coverUrl: true },
+    });
+  }
+
   // Upload space avatar
   fastify.post<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
-        },
-      },
-      include: { space: true },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
+    const imageSpace = await getSpaceForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (imageSpace === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!imageSpace) return reply.notFound('Space not found');
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
@@ -1530,8 +1495,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (isR2Configured()) {
       // Delete old avatar from R2 if exists
-      if (membership.space.avatarUrl?.startsWith('http')) {
-        await deleteFileFromR2(membership.space.avatarUrl);
+      if (imageSpace.avatarUrl?.startsWith('http')) {
+        await deleteFileFromR2(imageSpace.avatarUrl);
       }
       avatarUrl = await uploadEntityImage(processed, `spaces/${request.params.id}/avatar`);
     } else {
@@ -1549,22 +1514,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete space avatar
   fastify.delete<{ Params: { id: string } }>('/:id/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
-        },
-      },
-      include: { space: true },
-    });
+    const imageSpace = await getSpaceForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (imageSpace === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!imageSpace) return reply.notFound('Space not found');
 
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
-
-    if (membership.space.avatarUrl?.startsWith('http')) {
-      await deleteFileFromR2(membership.space.avatarUrl);
+    if (imageSpace.avatarUrl?.startsWith('http')) {
+      await deleteFileFromR2(imageSpace.avatarUrl);
     }
 
     await fastify.prisma.space.update({
@@ -1577,19 +1532,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Upload space cover
   fastify.post<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
-        },
-      },
-      include: { space: true },
-    });
-
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
+    const imageSpace = await getSpaceForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (imageSpace === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!imageSpace) return reply.notFound('Space not found');
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
@@ -1606,8 +1551,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     let coverUrl: string;
 
     if (isR2Configured()) {
-      if (membership.space.coverUrl?.startsWith('http')) {
-        await deleteFileFromR2(membership.space.coverUrl);
+      if (imageSpace.coverUrl?.startsWith('http')) {
+        await deleteFileFromR2(imageSpace.coverUrl);
       }
       coverUrl = await uploadEntityImage(processed, `spaces/${request.params.id}/cover`);
     } else {
@@ -1625,22 +1570,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete space cover
   fastify.delete<{ Params: { id: string } }>('/:id/cover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const membership = await fastify.prisma.spaceMembership.findUnique({
-      where: {
-        userId_spaceId: {
-          userId: request.user.userId,
-          spaceId: request.params.id,
-        },
-      },
-      include: { space: true },
-    });
+    const imageSpace = await getSpaceForImageEdit(request.params.id, request.user.userId, request.isAdminMode);
+    if (imageSpace === 'forbidden') return reply.forbidden('Permissions insuffisantes');
+    if (!imageSpace) return reply.notFound('Space not found');
 
-    if (!membership || membership.role !== 'OWNER') {
-      return reply.forbidden('Permissions insuffisantes');
-    }
-
-    if (membership.space.coverUrl?.startsWith('http')) {
-      await deleteFileFromR2(membership.space.coverUrl);
+    if (imageSpace.coverUrl?.startsWith('http')) {
+      await deleteFileFromR2(imageSpace.coverUrl);
     }
 
     await fastify.prisma.space.update({
@@ -1668,16 +1603,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.serviceUnavailable('Email service is not configured');
       }
 
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
         return reply.forbidden('Insufficient permissions');
       }
 

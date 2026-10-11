@@ -324,6 +324,83 @@ describe('Communities routes', () => {
   // ─── UPDATE COMMUNITY ─────────────────────────────────────────
 
   describe('PATCH /communities/:id', () => {
+    beforeEach(() => {
+      prisma.community.findUnique.mockResolvedValue(mockCommunity()) // état courant (PRIVATE)
+    })
+
+    // Option A (2026-10-12) : sortir du privé = demande validée par un admin, comme à la création
+    it('should turn PRIVATE → OPEN into a publication request for an OWNER', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'OPEN' }))
+      prisma.user.findMany.mockResolvedValue([{ id: 'admin-1' }])
+      prisma.user.findUnique.mockResolvedValue({ name: 'Owner' })
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { visibility: 'OPEN' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const data = prisma.community.update.mock.calls[0][0].data
+      expect(data.visibility).toBeUndefined()
+      expect(data.pendingPublic).toBe(true)
+      expect(data.pendingVisibility).toBe('OPEN')
+    })
+
+    it('should apply PRIVATE → OPEN directly for an admin in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.community.update.mockResolvedValue(mockCommunity({ visibility: 'OPEN' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
+        payload: { visibility: 'OPEN' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const data = prisma.community.update.mock.calls[0][0].data
+      expect(data.visibility).toBe('OPEN')
+      expect(data.isPublic).toBe(true)
+    })
+
+    it('should apply a switch back to PRIVATE immediately and clear any pending request', async () => {
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ visibility: 'OPEN', isPublic: true }))
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity())
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { visibility: 'PRIVATE' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const data = prisma.community.update.mock.calls[0][0].data
+      expect(data.visibility).toBe('PRIVATE')
+      expect(data.pendingPublic).toBe(false)
+    })
+
+    it('should apply OPEN → READONLY immediately (already public)', async () => {
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ visibility: 'OPEN', isPublic: true }))
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity({ visibility: 'READONLY' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { visibility: 'READONLY' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.community.update.mock.calls[0][0].data.visibility).toBe('READONLY')
+    })
+
     it('should update name as OWNER', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
       prisma.community.update.mockResolvedValue(mockCommunity({ name: 'Renamed' }))
@@ -638,6 +715,7 @@ describe('Communities routes', () => {
     // Depuis le système d'invitations : POST /invite crée une Invitation (token + email),
     // plus une adhésion directe.
     it('should invite a user as OWNER', async () => {
+      prisma.community.findUnique.mockResolvedValue({ name: 'Test Community' })
       prisma.communityMembership.findUnique
         .mockResolvedValueOnce({ ...mockComMembership({ role: 'OWNER' }), community: { name: 'Test Community' } }) // caller
         .mockResolvedValueOnce(null) // invited not already member
@@ -667,6 +745,7 @@ describe('Communities routes', () => {
     })
 
     it('should reject invite by MEMBER', async () => {
+      prisma.community.findUnique.mockResolvedValue({ name: 'Test Community' })
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'MEMBER' }))
 
       const res = await app.inject({
@@ -682,6 +761,7 @@ describe('Communities routes', () => {
     // Un email inconnu n'est plus une erreur : l'invitation par token permet
     // d'inviter quelqu'un qui n'a pas encore de compte.
     it('should invite an unknown email (no account yet)', async () => {
+      prisma.community.findUnique.mockResolvedValue({ name: 'Test Community' })
       prisma.communityMembership.findUnique.mockResolvedValue({ ...mockComMembership({ role: 'OWNER' }), community: { name: 'Test Community' } })
       prisma.user.findUnique.mockResolvedValue(null)
       prisma.invitation.findFirst.mockResolvedValue(null)
@@ -706,6 +786,7 @@ describe('Communities routes', () => {
     })
 
     it('should reject invite for already-member', async () => {
+      prisma.community.findUnique.mockResolvedValue({ name: 'Test Community' })
       prisma.communityMembership.findUnique
         .mockResolvedValueOnce(mockComMembership({ role: 'OWNER' }))
         .mockResolvedValueOnce(mockComMembership({ userId: 'user-2' }))
@@ -847,6 +928,76 @@ describe('Communities routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().role).toBe('OWNER')
+    })
+  })
+
+  // Règle : le mode admin voit et fait tout — un admin global non membre, header X-Admin-Mode,
+  // passe toutes les gardes OWNER de gestion ; sans le header (ou non admin), refus inchangé.
+  describe('Mode admin (admin global non membre)', () => {
+    const adminHeaders = () => ({ authorization: `Bearer ${token}`, 'x-admin-mode': 'true' })
+
+    it('should delete community as admin in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.community.findUnique.mockResolvedValue(mockCommunity())
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findMany.mockResolvedValue([])
+      prisma.communityMembership.deleteMany.mockResolvedValue({ count: 1 })
+      prisma.community.delete.mockResolvedValue(mockCommunity())
+
+      const res = await app.inject({ method: 'DELETE', url: `/communities/${COM_ID}`, headers: adminHeaders() })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should remove a member as admin in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ id: 'cmem-2', userId: 'user-2', communityId: COM_ID, role: 'MEMBER' })
+      prisma.communityMembership.delete.mockResolvedValue({})
+
+      const res = await app.inject({ method: 'DELETE', url: `/communities/${COM_ID}/members/cmem-2`, headers: adminHeaders() })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should change a member role as admin in admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ id: 'cmem-2', userId: 'user-2', communityId: COM_ID, role: 'MEMBER' })
+      prisma.communityMembership.update.mockResolvedValue({
+        id: 'cmem-2',
+        userId: 'user-2',
+        role: 'OWNER',
+        joinedAt: new Date(),
+        user: { id: 'user-2', email: 'u2@test.com', name: 'User 2' },
+      })
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}/members/cmem-2`,
+        headers: adminHeaders(),
+        payload: { role: 'OWNER' },
+      })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should still reject a non-admin user sending the admin header', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.community.findUnique.mockResolvedValue(mockCommunity())
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'MEMBER' }))
+
+      const res = await app.inject({ method: 'DELETE', url: `/communities/${COM_ID}`, headers: adminHeaders() })
+
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('should reject an admin without admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.community.findUnique.mockResolvedValue(mockCommunity())
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+
+      const res = await app.inject({ method: 'DELETE', url: `/communities/${COM_ID}`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.statusCode).toBe(403)
     })
   })
 })

@@ -68,7 +68,11 @@
 - [x] BUG upload avatar/couverture communauté (et espace, profil) : 403 pour un admin en mode admin non OWNER — uploads en fetch direct sans X-Admin-Mode ni refresh 401 → helper `uploadFile` via fetchApi — 2026-10-11 (c12ca0a)
 - [x] Visibilité affichée en pastille (`VisibilityPill`, lue sur visibility) : cartes de /communities, en-tête de la page communauté, vignettes d'espace (visibilité effective, « · hérité » en pointillé si héritée) — 2026-10-11 (3d33f79)
 - [x] Vignettes communauté/espace : raccourcis paramètres (OWNER/admin) + vue par défaut (espace), groupés avec la pastille en bas à droite sous l'image — 2026-10-11 (a726011)
-- [x] SpaceSettingsPage : vue par défaut non réglée affichée « Liste » (comme SpacePage) au lieu de « Fil » — 2026-10-11
+- [x] SpaceSettingsPage : vue par défaut non réglée affichée « Liste » (comme SpacePage) au lieu de « Fil » — 2026-10-11 (aa95e92)
+- [x] Mode admin = droits OWNER sur communautés et espaces (API isOwnerOrAdmin / isSpaceOwnerOrAdmin + écrans de paramètres) ; PATCH communauté PRIVATE → public soumis à validation admin (sauf mode admin) — 2026-10-12
+- [ ] Mode admin phase 3 : items, tags, séances live, relations, contributions… (~35 gardes OWNER sans bypass)
+- [ ] PATCH /spaces/:id laisse passer tout admin global même sans mode admin — aligner sur la règle (à valider, retire un droit)
+- [ ] Demande de publication : permettre au propriétaire d'annuler sa demande ; reject-public doit vider pendingVisibility
 - [ ] Données prod : lancer `scripts/check-community-visibility.ts --prod` et resynchroniser isPublic/visibility au cas par cas (« Campagne ShadowWorld » : isPublic=true, visibility=PRIVATE)
 - [ ] Remplacer les `isPublic || visibility !== 'PRIVATE'` restants (items.ts:146, spaces.ts:139/467/1093, graph.ts:266/382/581, admin/users.ts:584, search.ts:104) par visibility seul
 - [ ] Recherche (/search) — reste du diagnostic 2026-10-11 : filtres items (type/statut/tags) sans effet sur les sections communautés/utilisateurs (les masquer ou filtrer les contributions via l'item) ; champ Tags texte libre → sélecteur ; filtre Statut absent + types d'item en codes bruts ; pagination commune à toutes les sections ; périmètre incohérent (communautés publiques visibles mais pas leurs espaces/items) ; écarts doc : 20/page vs 10, min 2 caractères vs 1

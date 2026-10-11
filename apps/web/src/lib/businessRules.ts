@@ -243,4 +243,18 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "La visibilité se lit uniquement sur le champ visibility (OPEN / READONLY / PRIVATE), jamais sur isPublic (déprécié, parfois désynchronisé en base). La sidebar montre en plus des communautés de l'utilisateur les communautés non privées non rejointes, les invitations en attente et, en mode admin, toutes les autres ; chacune porte une icône de visibilité (globe / œil / cadenas), et les non-membres ont le nom grisé avec la mention « Invitation » ou un bouclier admin",
     location: 'apps/api/src/routes/communities.ts (GET /, GET /:id, GET /:id/members), apps/web/src/components/CommunityBadge.tsx',
   },
+  {
+    id: 'community-publication-approval',
+    page: 'Création de communauté, paramètres de communauté (Visibilité)',
+    trigger: 'Passage d\'une communauté de « Privée » à « Ouverte » ou « Lecture seule », à la création ou dans les paramètres',
+    effect: "La communauté reste privée et une demande de publication est créée (« Publication en attente », admins notifiés) ; un admin valide ou refuse dans Administration. Repasser en Privée, ou basculer Ouverte ↔ Lecture seule, est immédiat. Un admin en mode admin change directement, sans demande",
+    location: 'apps/api/src/routes/communities.ts (POST /, PATCH /:id), apps/api/src/routes/admin/communities.ts (approve-public / reject-public), apps/web/src/pages/CommunitySettingsPage.tsx',
+  },
+  {
+    id: 'admin-mode-owner-rights',
+    page: "Paramètres de communauté et d'espace, toutes les actions de gestion de communauté et d'espace",
+    trigger: 'Admin global avec le mode admin activé, membre ou non de la communauté',
+    effect: "Mêmes droits que le propriétaire : modifier nom, description, visibilité et contexte, images, référentiels, tags, gérer membres, rôles et invitations, envoyer des emails, supprimer la communauté. Sans le mode admin, un admin global n'a que ses droits de membre. Les actions personnelles (rejoindre, quitter, sourdine, céder sa propre propriété) restent liées à l'utilisateur. Côté espace : membres, rôles, invitations, images, emails, suppression. Étendu aux communautés et espaces le 2026-10-12 ; items, tags, séances live à suivre",
+    location: 'apps/api/src/routes/communities.ts (isOwnerOrAdmin), apps/api/src/routes/community-referentiels.ts, apps/api/src/routes/spaces.ts (isSpaceOwnerOrAdmin), apps/web/src/pages/CommunitySettingsPage.tsx et SpaceSettingsPage.tsx (canEdit)',
+  },
 ];

@@ -1,6 +1,6 @@
 /*
- * Référentiels au niveau communauté (statuts, labels de types) : lecture, PUT (OWNER),
- * reset. Les espaces résolvent leurs référentiels ici (cf. routes/referentiels.ts).
+ * Référentiels au niveau communauté (statuts, labels de types) : lecture, PUT (OWNER ou
+ * admin en mode admin), reset (idem). Les espaces résolvent leurs référentiels ici (cf. routes/referentiels.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -36,11 +36,16 @@ function parseReferentiels(config: unknown): SpaceReferentiels | null {
   return config as SpaceReferentiels;
 }
 
-async function checkCommunityOwner(prisma: any, userId: string, communityId: string) {
+// OWNER de la communauté, ou admin global en mode admin (le mode admin voit et fait tout)
+async function checkCommunityOwner(prisma: any, userId: string, communityId: string, isAdminMode: boolean): Promise<boolean> {
+  if (isAdminMode) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+    if (user?.globalRole === 'ADMIN') return true;
+  }
   const membership = await prisma.communityMembership.findUnique({
     where: { userId_communityId: { userId, communityId } },
   });
-  return membership?.role === 'OWNER' ? membership : null;
+  return membership?.role === 'OWNER';
 }
 
 export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -69,7 +74,7 @@ export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) =
   fastify.put<{ Body: z.infer<typeof updateReferentielsSchema> }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { communityId } = request.params as { communityId: string };
 
-    const owner = await checkCommunityOwner(fastify.prisma, request.user.userId, communityId);
+    const owner = await checkCommunityOwner(fastify.prisma, request.user.userId, communityId, request.isAdminMode);
     if (!owner) {
       return reply.forbidden('Seul le propriétaire peut modifier les référentiels');
     }
@@ -100,7 +105,7 @@ export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) =
   fastify.post('/reset', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { communityId } = request.params as { communityId: string };
 
-    const owner = await checkCommunityOwner(fastify.prisma, request.user.userId, communityId);
+    const owner = await checkCommunityOwner(fastify.prisma, request.user.userId, communityId, request.isAdminMode);
     if (!owner) {
       return reply.forbidden('Seul le propriétaire peut réinitialiser les référentiels');
     }
