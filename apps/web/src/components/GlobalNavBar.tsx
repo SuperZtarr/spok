@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { activityApi } from '../lib/api';
 import { useMenuItems } from '../hooks/useMenuItems';
+import { resolveMenuRoute } from '../lib/searchScope';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED } from '../stores/interfaceMode';
 import type { MenuItemConfig } from '@spok/shared';
 
@@ -39,7 +40,8 @@ export function GlobalNavBar() {
   const { mode: interfaceMode } = useInterfaceModeStore();
 
   const handleItemClick = (item: MenuItemConfig) => {
-    if (item.route) navigate(item.route);
+    // Recherche : portée par défaut = espace/communauté courant (cf. lib/searchScope)
+    if (item.route) navigate(resolveMenuRoute(item.key, item.route, location.pathname));
   };
 
   const { data: activityData } = useQuery({

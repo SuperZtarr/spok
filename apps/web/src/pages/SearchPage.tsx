@@ -1,4 +1,9 @@
-/* Recherche globale (/search?q=...) : items et contributions, pagination — anonyme = vide. */
+/*
+ * Recherche avancée (/search?q=...) : communautés, espaces, items, utilisateurs, contributions.
+ * Portée par défaut = espace/communauté d'où la recherche est lancée (?spaceId= / ?communityId=,
+ * posés par lib/searchScope) ; l'utilisateur élargit explicitement (« Toute la communauté », « Partout »).
+ * Tout l'état vit dans l'URL ; modifier plusieurs paramètres → updateParams (un seul setSearchParams).
+ */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -102,15 +107,20 @@ export function SearchPage() {
     }, { replace: true });
   };
 
-  const updateParam = (key: string, value: string) => {
+  // Plusieurs clés en UN SEUL setSearchParams : deux appels successifs ne se composent pas
+  // en react-router v6 (le second repart de l'URL d'avant le premier et l'écrase).
+  const updateParams = (changes: Record<string, string>) => {
     setSearchParams(prev => {
       const params = new URLSearchParams(prev);
-      if (value) params.set(key, value);
-      else params.delete(key);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      }
       params.set('page', '1');
       return params;
     }, { replace: true });
   };
+  const updateParam = (key: string, value: string) => updateParams({ [key]: value });
 
   const setPage = (p: number) => {
     setSearchParams(prev => {
@@ -132,19 +142,28 @@ export function SearchPage() {
     enabled: !!user,
   });
 
+  // Espace de portée et sa communauté : arriver avec ?spaceId= seul (depuis un espace)
+  // suffit, la communauté est déduite de l'espace.
+  const scopeSpace = useMemo(
+    () => (spaceIdParam ? allSpaces?.find(s => s.id === spaceIdParam) ?? null : null),
+    [allSpaces, spaceIdParam],
+  );
+  const effectiveCommunityId = communityIdParam || scopeSpace?.communityId || '';
+  const scopeCommunity = effectiveCommunityId ? communities?.find(c => c.id === effectiveCommunityId) ?? null : null;
+
   const scopeSpaces = useMemo(() => {
     if (!allSpaces) return [];
-    if (communityIdParam) return allSpaces.filter(s => s.communityId === communityIdParam);
-    return allSpaces.filter(s => s.type === 'GROUP');
-  }, [allSpaces, communityIdParam]);
+    if (effectiveCommunityId) return allSpaces.filter(s => s.communityId === effectiveCommunityId);
+    return allSpaces;
+  }, [allSpaces, effectiveCommunityId]);
 
   // Search query
   const { data, isLoading } = useQuery({
-    queryKey: ['advanced-search', qParam, typesParam, communityIdParam, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, pageParam],
+    queryKey: ['advanced-search', qParam, typesParam, effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, pageParam],
     queryFn: () => searchApi.advanced({
       q: qParam,
       types: typesParam,
-      communityId: communityIdParam || undefined,
+      communityId: effectiveCommunityId || undefined,
       spaceId: spaceIdParam || undefined,
       itemType: itemTypeParam || undefined,
       itemStatus: itemStatusParam || undefined,
@@ -182,6 +201,39 @@ export function SearchPage() {
           )}
         </div>
 
+        {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
+            élargissement explicite par l'utilisateur */}
+        {user && (spaceIdParam || effectiveCommunityId) && (
+          <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
+            <span className="text-muted-foreground">Recherche dans :</span>
+            {spaceIdParam ? (
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <FolderKanban className="w-4 h-4 text-blue-500" />
+                {scopeSpace?.name ?? 'Espace'}
+                <span className="font-normal text-muted-foreground">(et ses sous-espaces)</span>
+                {scopeCommunity && <span className="font-normal text-muted-foreground">· {scopeCommunity.name}</span>}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Building2 className="w-4 h-4 text-primary" />
+                {scopeCommunity?.name ?? 'Communauté'}
+              </span>
+            )}
+            <span className="flex items-center gap-1 ml-auto">
+              {spaceIdParam && effectiveCommunityId && (
+                <Button variant="bordered" size="sm" className="h-7 text-xs"
+                  onClick={() => updateParams({ communityId: effectiveCommunityId, spaceId: '' })}>
+                  Toute la communauté
+                </Button>
+              )}
+              <Button variant="bordered" size="sm" className="h-7 text-xs"
+                onClick={() => updateParams({ communityId: '', spaceId: '' })}>
+                Partout
+              </Button>
+            </span>
+          </div>
+        )}
+
         {/* Entity type toggles */}
         <div className="flex flex-wrap gap-2 mb-4">
           {ENTITY_TYPES.map(({ key, label, icon: Icon }) => (
@@ -213,8 +265,8 @@ export function SearchPage() {
             <div className="flex items-center gap-2">
               <label className="text-xs text-muted-foreground">Communaute :</label>
               <Select
-                value={communityIdParam}
-                onChange={e => { updateParam('communityId', e.target.value); updateParam('spaceId', ''); }}
+                value={effectiveCommunityId}
+                onChange={e => updateParams({ communityId: e.target.value, spaceId: '' })}
                 options={[{ value: '', label: 'Toutes' }, ...communities.map(c => ({ value: c.id, label: c.name }))]}
                 className="w-48 h-8 text-sm"
               />

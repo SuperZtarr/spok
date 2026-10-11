@@ -1,5 +1,6 @@
 /*
  * TNR de /search : résultats, pagination, périmètre par memberships, anonyme → vide.
+ * /search/advanced : portée espace (sous-espaces inclus) / communauté sur items et utilisateurs.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -157,6 +158,75 @@ describe('Search routes', () => {
       expect(res.statusCode).toBe(200)
       expect(res.json().items).toHaveLength(0)
       expect(res.json().totalItems).toBe(0)
+    })
+  })
+
+  // Portée : espace (+ sous-espaces) ou communauté, appliquée aux items ET aux utilisateurs
+  describe('GET /search/advanced — portée', () => {
+    beforeEach(() => {
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+      prisma.user.findMany.mockResolvedValue([])
+      prisma.user.count.mockResolvedValue(0)
+    })
+
+    it('spaceId inclut les sous-espaces, bornés aux espaces accessibles', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }, { spaceId: 's1a' }])
+      // s1 → s1a, s1b (s1b non accessible) ; s1a → s1a1 (non accessible) ; fin
+      prisma.space.findMany
+        .mockResolvedValueOnce([{ id: 's1a' }, { id: 's1b' }])
+        .mockResolvedValueOnce([{ id: 's1a1' }])
+        .mockResolvedValueOnce([])
+
+      await app.inject({
+        method: 'GET', url: '/search/advanced?q=test&types=items,users&spaceId=s1',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: ['s1', 's1a'] })
+      expect(prisma.user.findMany.mock.calls[0][0].where.memberships).toEqual({ some: { spaceId: { in: ['s1', 's1a'] } } })
+    })
+
+    it('communityId restreint les utilisateurs aux membres de la communauté', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+
+      await app.inject({
+        method: 'GET', url: '/search/advanced?q=test&types=items,users&communityId=c1',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(prisma.item.findMany.mock.calls[0][0].where.space).toEqual({ communityId: 'c1' })
+      expect(prisma.user.findMany.mock.calls[0][0].where.communityMemberships).toEqual({ some: { communityId: 'c1' } })
+    })
+
+    it("communauté privée dont on n'est pas membre : aucun membre révélé", async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      prisma.communityMembership.findFirst.mockResolvedValue(null)
+      prisma.community.findFirst.mockResolvedValue(null)
+
+      const res = await app.inject({
+        method: 'GET', url: '/search/advanced?q=test&types=users&communityId=c-private',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.json().users).toEqual([])
+      expect(res.json().totals.users).toBe(0)
+      expect(prisma.user.findMany).not.toHaveBeenCalled()
+    })
+
+    it('sans portée : utilisateurs non filtrés', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+
+      await app.inject({
+        method: 'GET', url: '/search/advanced?q=test&types=users',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      const where = prisma.user.findMany.mock.calls[0][0].where
+      expect(where.memberships).toBeUndefined()
+      expect(where.communityMemberships).toBeUndefined()
     })
   })
 })

@@ -22,6 +22,7 @@ import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, itemsApi } from '../lib/api';
+import { resolveMenuRoute } from '../lib/searchScope';
 
 import { useAdminMode, AdminModeToggle, DevModeToggle } from './DevDbStatus';
 import { RoleGuard } from './RoleGuard';
@@ -838,7 +839,7 @@ export function Layout() {
               return (
                 <button
                   key={item.key}
-                  onClick={() => { navigate(item.route || '/'); setSidebarOpen(false); }}
+                  onClick={() => { navigate(resolveMenuRoute(item.key, item.route || '/', location.pathname)); setSidebarOpen(false); }}
                   className="flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-md text-[10px] hover:bg-accent/50 transition-colors text-foreground/70"
                 >
                   {Icon && <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />}

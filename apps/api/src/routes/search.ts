@@ -1,7 +1,9 @@
 /*
  * Recherche globale (/search et /search/advanced) sur items et contributions.
  * optionalAuthenticate : un anonyme reçoit des résultats vides (pas d'espaces accessibles).
- * Le périmètre est borné aux espaces des memberships (pas de bypass admin).
+ * Le périmètre est borné aux espaces des memberships (un admin global voit tout).
+ * /advanced : spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi
+ * la section utilisateurs aux membres (portée par défaut posée par la page Recherche).
  */
 import { FastifyPluginAsync } from 'fastify';
 
@@ -60,10 +62,22 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const spaceFilter = accessibleSpaceIds ? { in: accessibleSpaceIds } : undefined;
-    // If spaceId is specified, intersect with accessible spaces
-    const effectiveSpaceIds = spaceId
-      ? (accessibleSpaceIds ? (accessibleSpaceIds.includes(spaceId) ? [spaceId] : []) : [spaceId])
-      : null;
+    // Portée espace : l'espace ET ses sous-espaces (parcours en largeur sur parentId),
+    // intersectés avec les espaces accessibles
+    let effectiveSpaceIds: string[] | null = null;
+    if (spaceId) {
+      const subtree = [spaceId];
+      let frontier = [spaceId];
+      while (frontier.length > 0) {
+        const children = await fastify.prisma.space.findMany({
+          where: { parentId: { in: frontier } },
+          select: { id: true },
+        });
+        frontier = children.map(c => c.id).filter(id => !subtree.includes(id));
+        subtree.push(...frontier);
+      }
+      effectiveSpaceIds = accessibleSpaceIds ? subtree.filter(id => accessibleSpaceIds!.includes(id)) : subtree;
+    }
     const effectiveSpaceFilter = effectiveSpaceIds ? { in: effectiveSpaceIds } : spaceFilter ? { in: spaceFilter.in } : undefined;
 
     const truncate = (text: string | null, maxLen = 200) => {
@@ -203,17 +217,30 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     // ── Users ──
     let users: any[] = [];
     let totalUsers = 0;
-    if (enabledTypes.has('users') && !spaceId) {
-      const userWhere = {
+    if (enabledTypes.has('users')) {
+      const userWhere: Record<string, unknown> = {
         OR: [
           { name: { contains: query, mode: 'insensitive' as const } },
           { email: { contains: query, mode: 'insensitive' as const } },
         ],
       };
+      // Portée : membres de l'espace (sous-espaces inclus, déjà bornés aux espaces accessibles)
+      // ou de la communauté — seulement si le demandeur peut la voir (admin, membre, ou publique
+      // non privée), sinon on ne révèle pas ses membres
+      let canListMembers = true;
+      if (!effectiveSpaceIds && communityId && !isAdmin) {
+        const [membership, publicCommunity] = await Promise.all([
+          userId ? fastify.prisma.communityMembership.findFirst({ where: { communityId, userId }, select: { id: true } }) : null,
+          fastify.prisma.community.findFirst({ where: { id: communityId, isPublic: true, visibility: { not: 'PRIVATE' } }, select: { id: true } }),
+        ]);
+        canListMembers = !!(membership || publicCommunity);
+      }
+      if (effectiveSpaceIds) userWhere.memberships = { some: { spaceId: { in: effectiveSpaceIds } } };
+      else if (communityId) userWhere.communityMemberships = { some: { communityId } };
 
-      const [rows, count] = await Promise.all([
+      const [rows, count] = canListMembers ? await Promise.all([
         fastify.prisma.user.findMany({
-          where: userWhere,
+          where: userWhere as any,
           select: {
             id: true, name: true, email: true, avatarUrl: true, globalRole: true, createdAt: true,
             _count: { select: { communityMemberships: true, memberships: true } },
@@ -221,8 +248,8 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
           orderBy: { name: 'asc' },
           skip, take: pageSize,
         }),
-        fastify.prisma.user.count({ where: userWhere }),
-      ]);
+        fastify.prisma.user.count({ where: userWhere as any }),
+      ]) : [[], 0] as const;
       users = rows.map(u => ({
         id: u.id, name: u.name, email: userId ? u.email : null, // hide email for anonymous
         avatarUrl: u.avatarUrl, globalRole: u.globalRole,

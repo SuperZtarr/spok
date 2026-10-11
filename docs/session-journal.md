@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+### Recherche : portée par défaut = espace/communauté courant — 2026-10-11
+- Signalé : filtres de /search incohérents. Diagnostic : choix communauté écrasé (2 setSearchParams successifs, react-router v6), filtres items sans effet sur les autres sections, utilisateurs jamais filtrés, espace sans sous-espaces, tags texte libre, pagination commune
+- Validé : `lib/searchScope.ts` (bandeau + grille mobile → ?spaceId= / ?communityId= selon le pathname), SearchPage : ligne « Recherche dans : » + « Toute la communauté » / « Partout », `updateParams` (fix communauté), communauté déduite de l'espace ; API /search/advanced : spaceId = sous-arbre, utilisateurs filtrés par portée
+- Tests : 11/11 search API (+3), 4/4 searchScope ; typecheck web/api OK ; vérifié en local (espace parent → items du sous-espace, élargissement, changement de communauté, depuis page communauté). Doc SPOK SearchPage MAJ (to_validate). NON COMMITÉ
+- Revue sécu : filtre communauté révélait les membres d'une communauté privée → membres listés seulement si admin / membre / communauté publique non privée (+1 test, 12/12)
+
 ### Séances : invités (accès à la séance seule) — 2026-10-11
 - Plan `docs/superpowers/plans/2026-10-11-live-session-invitees.md` exécuté inline (tâches 1-6), commits LOCAUX non poussés (8f5fdd2, d5b1269, d4378c1, d776426, 5b310c1, 5b68618 + doc/correctif). Modèle LiveSessionInvite (createdMembership), utils/liveInvites.ts, routes invite-candidates / invitees, section « Invités » de « Préparer la séance », panneau « Invités » du bandeau
 - Vérifié en local (admin + Alice ajoutée à la communauté « Un JDR ») : invitation depuis le bandeau → notification, séance dans « séances en cours », éléments de la séance OK, éléments du parent 404 ; retrait → 404/403. Correctif : message « déjà accès » faux quand tous les candidats sont invités
