@@ -15,7 +15,6 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { InvitationPage } from './pages/InvitationPage';
-// DashboardPage now accessed via SpacesListPage
 import { SpacePage } from './pages/SpacePage';
 import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
 import { useParams } from 'react-router-dom';
