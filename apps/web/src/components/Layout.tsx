@@ -5,6 +5,7 @@
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  * Row 1 : le bloc titre est flex-1 min-w-0 (tronque) et le bloc droit flex-shrink-0 — jamais
  * l'inverse, sinon l'avatar sort de l'écran sur mobile (2026-10-10).
+ * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -33,6 +34,7 @@ import { DevZoneInspector } from './DevZoneInspector';
 import { NotificationBell } from './NotificationBell';
 import { LiveSessionsButton } from './live/LiveSessionsButton';
 import { GlobalNavBar } from './GlobalNavBar';
+import { CommunityBadge, isNonMemberRole } from './CommunityBadge';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { getViewIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
@@ -128,9 +130,10 @@ function CommunitySection({
               <Building2 className={`w-3 h-3 ${isActive ? 'text-primary' : 'text-foreground/50'}`} />
             </div>
           )}
-          <span className={`text-base font-bold truncate transition-colors ${isActive ? 'text-primary' : 'text-foreground'}`}>
+          <span className={`text-base font-bold truncate transition-colors ${isActive ? 'text-primary' : isNonMemberRole(community.role) ? 'text-muted-foreground' : 'text-foreground'}`}>
             {community.name}
           </span>
+          <CommunityBadge visibility={community.visibility} role={community.role} />
         </Link>
         {!isExpanded && spaceCount > 0 && (
           <span className="text-[10px] text-muted-foreground/40 flex-shrink-0">{spaceCount}</span>
@@ -909,6 +912,7 @@ export function Layout() {
                   </div>
                 )}
                 <span className="text-base font-bold text-foreground truncate">{currentCommunity.name}</span>
+                <CommunityBadge visibility={currentCommunity.visibility} role={currentCommunity.role} />
               </Link>
               {currentCommunityGroup.spaceTree.length > 0 ? (
                 currentCommunityGroup.spaceTree.map((node) => (

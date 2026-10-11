@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+### Sidebar : visibilité des communautés + communautés privées visibles par des non-membres — 2026-10-11
+- Cause : GET /communities filtrait les « publiques » sur isPublic (déprécié) ; « Campagne ShadowWorld » (prod) a isPublic=true + visibility=PRIVATE → visible dans la sidebar et accessible (GET /:id, /:id/members faisaient `isPublic || visibility`). Création admin posait isPublic sans visibility
+- Fait : communities.ts filtre/contrôle sur visibility seul ; admin create renseigne visibility ; type shared Community.visibility ; CommunityBadge (globe/œil/cadenas, nom grisé non membre, « Invitation », bouclier admin) dans la sidebar et l'en-tête immersif ; script lecture seule `scripts/check-community-visibility.ts` (local : « Test SPOK » incohérente). businessRules + doc SPOK Barre latérale MAJ (to_validate)
+- Tests 46/46 communities (+4, 1 réaligné) ; typecheck web/api OK ; vérifié en local (icônes, infobulles, 0 erreur console ; cas non membre non visualisable avec le seul compte admin). NON COMMITÉ
+- Reste : diagnostic prod + resync données (sur accord) ; même `isPublic ||` dans graph.ts, items.ts, spaces.ts, admin/users.ts, search.ts (hors périmètre, signalé)
+
 ### Recherche : portée par défaut = espace/communauté courant — 2026-10-11
 - Signalé : filtres de /search incohérents. Diagnostic : choix communauté écrasé (2 setSearchParams successifs, react-router v6), filtres items sans effet sur les autres sections, utilisateurs jamais filtrés, espace sans sous-espaces, tags texte libre, pagination commune
 - Validé : `lib/searchScope.ts` (bandeau + grille mobile → ?spaceId= / ?communityId= selon le pathname), SearchPage : ligne « Recherche dans : » + « Toute la communauté » / « Partout », `updateParams` (fix communauté), communauté déduite de l'espace ; API /search/advanced : spaceId = sous-arbre, utilisateurs filtrés par portée

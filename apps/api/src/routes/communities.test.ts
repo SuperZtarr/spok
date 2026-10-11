@@ -210,6 +210,33 @@ describe('Communities routes', () => {
       expect(body[0].role).toBe('OWNER')
       expect(body[0].memberCount).toBe(1)
     })
+
+    it('should select non-joined public communities on visibility, not on stale isPublic', async () => {
+      prisma.communityMembership.findMany.mockResolvedValue([])
+      prisma.community.findMany.mockResolvedValue([])
+      prisma.user.findUnique.mockResolvedValue({ email: 'test@test.com', globalRole: 'USER' })
+      prisma.invitation.findMany.mockResolvedValue([])
+
+      await app.inject({
+        method: 'GET',
+        url: '/communities',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      const where = prisma.community.findMany.mock.calls[0][0].where
+      expect(where.visibility).toEqual({ not: 'PRIVATE' })
+      expect(where.isPublic).toBeUndefined()
+    })
+
+    it('should select public communities on visibility for anonymous users', async () => {
+      prisma.community.findMany.mockResolvedValue([])
+
+      await app.inject({ method: 'GET', url: '/communities' })
+
+      const where = prisma.community.findMany.mock.calls[0][0].where
+      expect(where.visibility).toEqual({ not: 'PRIVATE' })
+      expect(where.isPublic).toBeUndefined()
+    })
   })
 
   // ─── LIST PUBLIC COMMUNITIES ──────────────────────────────────
@@ -255,7 +282,7 @@ describe('Communities routes', () => {
 
     it('should return public community for non-member', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(null)
-      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true }))
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true, visibility: 'OPEN' }))
 
       const res = await app.inject({
         method: 'GET',
@@ -265,6 +292,19 @@ describe('Communities routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().role).toBeNull()
+    })
+
+    it('should return 404 for non-member when isPublic is stale but visibility is PRIVATE', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true, visibility: 'PRIVATE' }))
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(404)
     })
 
     it('should return 404 for private community non-member', async () => {
@@ -567,6 +607,20 @@ describe('Communities routes', () => {
 
     it('should return 404 for non-member', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(null)
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/communities/${COM_ID}/members`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('should return 404 for non-member when isPublic is stale but visibility is PRIVATE', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ isPublic: true, visibility: 'PRIVATE' }))
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
 
       const res = await app.inject({
         method: 'GET',

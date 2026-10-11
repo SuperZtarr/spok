@@ -1,6 +1,7 @@
 /*
  * Administration des communautés : liste globale, création, approbation du passage en public
  * (pendingPublic → isPublic), suppression.
+ * Toute écriture de isPublic doit renseigner visibility en cohérence (visibility fait foi).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -159,7 +160,9 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         name,
         description,
+        // visibility = source de vérité ; isPublic (déprécié) maintenu en miroir
         isPublic: isPublic ?? false,
+        visibility: isPublic ? 'OPEN' : 'PRIVATE',
         memberships: {
           create: {
             userId: ownerId,

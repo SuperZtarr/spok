@@ -9,6 +9,9 @@ export interface Community {
   name: string;
   description?: string;
   context?: CommunityContext | null;
+  /** Source de vérité de la visibilité (renvoyée par l'API). */
+  visibility?: 'OPEN' | 'READONLY' | 'PRIVATE';
+  /** @deprecated — peut être désynchronisé, utiliser visibility. */
   isPublic: boolean;
   pendingPublic: boolean;
   avatarUrl?: string | null;

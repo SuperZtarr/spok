@@ -2,6 +2,8 @@
  * Routes /communities : CRUD (visibilité avec workflow d'approbation pendingPublic), membres
  * (multi-OWNER, mute), invitations par token, join/leave, avatar/cover, tags, emails.
  * Seul le OWNER modifie la communauté ; création = PRIVATE + pendingVisibility.
+ * Visibilité : `visibility` est la seule source de vérité (listes, contrôles d'accès).
+ * `isPublic` est déprécié et peut être désynchronisé en base — ne jamais filtrer dessus seul.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -119,7 +121,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     if (!request.user?.userId) {
       // Anonymous: return public communities
       const publicCommunities = await fastify.prisma.community.findMany({
-        where: { isPublic: true },
+        where: { visibility: { not: 'PRIVATE' } },
         include: { _count: { select: { memberships: true, spaces: true } } },
         orderBy: { name: 'asc' },
       });
@@ -159,7 +161,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     // Also include public communities the user hasn't joined
     const myIds = new Set(memberships.map(m => m.communityId));
     const publicCommunities = await fastify.prisma.community.findMany({
-      where: { isPublic: true, id: { notIn: Array.from(myIds) } },
+      where: { visibility: { not: 'PRIVATE' }, id: { notIn: Array.from(myIds) } },
       include: { _count: { select: { memberships: true, spaces: true } } },
       orderBy: { name: 'asc' },
     });
@@ -310,8 +312,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       ? await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } })
       : null;
 
-    // Block access if community is private and not public (check both fields for backward compat)
-    const isAccessible = community.isPublic || community.visibility !== 'PRIVATE';
+    // Block access if community is private (visibility only — isPublic may be stale)
+    const isAccessible = community.visibility !== 'PRIVATE';
     if (!isAccessible && !(currentUser?.globalRole === 'ADMIN' && request.isAdminMode)) {
       return reply.notFound('Community not found or access denied');
     }
@@ -676,7 +678,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       }),
       fastify.prisma.community.findUnique({
         where: { id: request.params.id },
-        select: { isPublic: true, visibility: true },
+        select: { visibility: true },
       }),
       fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } }),
     ]);
@@ -684,7 +686,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     if (!community) return reply.notFound('Community not found');
 
     const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
-    const isPublicCommunity = community.isPublic || community.visibility !== 'PRIVATE';
+    const isPublicCommunity = community.visibility !== 'PRIVATE';
 
     if (!membership && !isAdminBypass && !isPublicCommunity) {
       return reply.notFound('Community not found');

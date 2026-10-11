@@ -236,4 +236,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "Réduite dans le navigateur à 1920 px max (plus grand côté), réencodée en WebP, avant le contrôle des 5 Mo : une photo lourde passe au lieu d'être refusée. Les GIF ne sont jamais réduits (animation) et restent limités à 5 Mo. Le serveur réduit de toute façon à 1920 px WebP",
     location: 'apps/web/src/lib/imageResize.ts, apps/web/src/components/ui/ImageUploadZone.tsx',
   },
+  {
+    id: 'community-visibility-source-of-truth',
+    page: 'Sidebar (liste des communautés), accès à une communauté et à ses membres',
+    trigger: "Affichage ou accès à une communauté dont l'utilisateur n'est pas membre",
+    effect: "La visibilité se lit uniquement sur le champ visibility (OPEN / READONLY / PRIVATE), jamais sur isPublic (déprécié, parfois désynchronisé en base). La sidebar montre en plus des communautés de l'utilisateur les communautés non privées non rejointes, les invitations en attente et, en mode admin, toutes les autres ; chacune porte une icône de visibilité (globe / œil / cadenas), et les non-membres ont le nom grisé avec la mention « Invitation » ou un bouclier admin",
+    location: 'apps/api/src/routes/communities.ts (GET /, GET /:id, GET /:id/members), apps/web/src/components/CommunityBadge.tsx',
+  },
 ];
