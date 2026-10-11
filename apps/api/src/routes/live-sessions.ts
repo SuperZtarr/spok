@@ -4,9 +4,11 @@
  * - Création : OWNER de la communauté de l'espace parent uniquement → sous-espace PRIVATE daté + rôle HOST ;
  *   une seule séance en cours (PREPARED|LIVE) par espace parent (409 sinon) ; nom unique « date (n) ».
  * - Suite (/:id/suite, animateur, séance ENDED, une seule suite directe) : nouvelle séance PREPARED liée
- *   (previousSessionId) qui reprend les présentateurs, le programme NON présenté et recopie les éléments présentés.
+ *   (previousSessionId) qui reprend les présentateurs, la préparation NON présenté et recopie les éléments présentés.
  *   Le nom (date locale) est envoyé par le client ; à défaut, date UTC du serveur.
- * - Programme (/:id/agenda) : liens vers des items sources (pas de copie), ajout par HOST/PRESENTER avec accès
+ * - /ongoing : séances en cours (préparées ou en direct) auxquelles l'utilisateur est convié — membre de l'espace
+ *   parent ou de l'espace de séance — pour le bouton de l'en-tête ; en direct d'abord.
+ * - Préparation (/:id/agenda) : liens vers des items sources (pas de copie), ajout par HOST/PRESENTER avec accès
  *   à la source ; includeChildren ajoute aussi les sous-éléments directs juste après (/:id/source-children les compte) ;
  *   ordre : l'animateur permute tout, un présentateur seulement ses lignes (les autres restent en place).
  * - Révélation progressive : l'affichage ne copie pas les sous-items ; /:id/pending-children (ANIMATEUR seul) liste
@@ -17,12 +19,12 @@
  * - Flux SSE /:id/stream : état poussé via liveHub (une instance API). Le client refetch l'état complet
  *   (by-space) à chaque (re)connexion — le flux ne rejoue pas l'historique.
  * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
- * le programme (titres/espaces sources) n'est envoyé en entier qu'à l'animateur et aux présentateurs ;
+ * la préparation (titres/espaces sources) n'est envoyé en entier qu'à l'animateur et aux présentateurs ;
  * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach).
  */
 import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import type { LiveAgendaItem, LiveEvent, LiveSessionEntry, LiveSessionState, LiveUser } from '@spok/shared';
+import type { LiveAgendaItem, LiveEvent, LiveSessionEntry, LiveSessionOngoing, LiveSessionState, LiveUser } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';
 import { liveHub } from '../utils/liveHub.js';
 import { cloneSessionCopies, copyItemToSession, revealChildInSession, SessionCopyError } from '../utils/sessionCopy.js';
@@ -62,10 +64,10 @@ async function resolveSource(prisma: any, userId: string, sourceItemId: string, 
   return access ? item : null;
 }
 
-/** Programme visible : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants. */
+/** Préparation visible : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants. */
 const visibleAgenda = (agenda: LiveAgendaItem[], canSeeAll: boolean) => (canSeeAll ? agenda : agenda.filter((a) => a.presentedAt));
 
-/** Programme ordonné avec nom d'espace source (null si l'espace n'existe plus). */
+/** Préparation ordonnée avec nom d'espace source (null si l'espace n'existe plus). */
 async function loadAgenda(prisma: any, sessionId: string): Promise<LiveAgendaItem[]> {
   const rows = (await prisma.liveSessionAgendaItem.findMany({
     where: { sessionId }, orderBy: { position: 'asc' }, include: { presenter: { select: USER_SELECT } },
@@ -161,7 +163,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return prisma.item.findFirst({ where: { id: entry.itemId, spaceId: s.spaceId } });
   }
 
-  /** Diffuse le programme : complet aux titulaires d'un rôle, lignes présentées aux participants. Renvoie le complet. */
+  /** Diffuse la préparation : complet aux titulaires d'un rôle, lignes présentées aux participants. Renvoie le complet. */
   async function broadcastAgenda(sessionId: string) {
     const agenda = await loadAgenda(prisma, sessionId);
     const roleHolders = new Set(((await prisma.liveSessionRole.findMany({ where: { sessionId }, select: { userId: true } })) ?? []).map((r: any) => r.userId));
@@ -193,6 +195,30 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       data: { spaceId: space.id, parentSpaceId: parent.id, hostId: userId, roles: { create: { userId, role: 'HOST' } } },
     });
     return reply.status(201).send(await loadState(s.id, userId));
+  });
+
+  // Séances en cours auxquelles je suis convié (bouton de l'en-tête)
+  fastify.get('/ongoing', { preHandler: [fastify.authenticate] }, async (request) => {
+    const userId = request.user.userId;
+    const sessions = await prisma.liveSession.findMany({
+      where: { status: { in: ['PREPARED', 'LIVE'] } },
+      include: {
+        space: { select: { name: true, memberships: { where: { userId }, select: { id: true } } } },
+        parentSpace: { select: { name: true } },
+        roles: { where: { userId }, select: { role: true } },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+    const result: LiveSessionOngoing[] = [];
+    for (const s of sessions ?? []) {
+      const isMember = (s.space?.memberships?.length ?? 0) > 0;
+      if (!isMember && !(await isParentMember(prisma, userId, s.parentSpaceId))) continue;
+      result.push({
+        id: s.id, spaceId: s.spaceId, spaceName: s.space?.name ?? '', parentSpaceName: s.parentSpace?.name ?? '',
+        status: s.status, isMember, myRole: s.roles?.[0]?.role ?? 'PARTICIPANT',
+      });
+    }
+    return result.sort((a, b) => (a.status === b.status ? 0 : a.status === 'LIVE' ? -1 : 1));
   });
 
   // Séances d'un espace parent (liste + bouton Rejoindre)
@@ -275,7 +301,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const fromAgenda = (body as { agendaItemId?: string }).agendaItemId;
     if (fromAgenda) {
       agendaRow = await prisma.liveSessionAgendaItem.findFirst({ where: { id: fromAgenda, sessionId: s.id } });
-      if (!agendaRow) return reply.notFound('Ligne de programme introuvable');
+      if (!agendaRow) return reply.notFound('Ligne de préparation introuvable');
       sourceItemId = agendaRow.sourceItemId;
       sourceSpaceId = agendaRow.sourceSpaceId;
     } else {
@@ -321,12 +347,12 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return { liveAt: liveAt.toISOString() };
   });
 
-  // Programme : ajouter (host/présentateur, avec accès à la source)
+  // Préparation : ajouter (host/présentateur, avec accès à la source)
   fastify.post<{ Params: { id: string } }>('/:id/agenda', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await roleOf(s.id, userId))) return reply.forbidden('Seuls l\'animateur et les présentateurs préparent le programme');
+    if (!(await roleOf(s.id, userId))) return reply.forbidden('Seuls l\'animateur et les présentateurs modifient la préparation');
     if (s.status === 'ENDED') return reply.conflict('Séance terminée');
     const body = agendaAddSchema.parse(request.body);
     const src = await resolveSource(prisma, userId, body.sourceItemId, body.sourceSpaceId);
@@ -351,7 +377,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return broadcastAgenda(s.id);
   });
 
-  // Nombre de sous-éléments directs d'un item source (pour proposer de les ajouter au programme)
+  // Nombre de sous-éléments directs d'un item source (pour proposer de les ajouter à la préparation)
   fastify.get<{ Params: { id: string }; Querystring: { sourceItemId?: string } }>('/:id/source-children', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
@@ -364,7 +390,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return { count };
   });
 
-  // Programme : retirer (auteur de la ligne ou host)
+  // Préparation : retirer (auteur de la ligne ou host)
   fastify.delete<{ Params: { id: string; agendaId: string } }>('/:id/agenda/:agendaId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
@@ -376,7 +402,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return broadcastAgenda(s.id);
   });
 
-  // Programme : réordonner (host : tout ; présentateur : ses lignes entre leurs positions)
+  // Préparation : réordonner (host : tout ; présentateur : ses lignes entre leurs positions)
   fastify.put<{ Params: { id: string } }>('/:id/agenda/order', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
@@ -385,7 +411,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const { ids } = agendaOrderSchema.parse(request.body);
     const rows = await prisma.liveSessionAgendaItem.findMany({ where: { sessionId: s.id }, orderBy: { position: 'asc' } });
     if (ids.length !== rows.length || new Set(ids).size !== ids.length || !rows.every((r: any) => ids.includes(r.id))) {
-      return reply.badRequest('La liste doit contenir toutes les lignes du programme, une seule fois');
+      return reply.badRequest('La liste doit contenir toutes les lignes de la préparation, une seule fois');
     }
     if (s.hostId !== userId) {
       const moved = rows.some((r: any, i: number) => r.presenterId !== userId && ids[i] !== r.id);
@@ -472,7 +498,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       for (const id of presenterIds) await prisma.spaceMembership.create({ data: { userId: id, spaceId: space.id, role: 'MEMBER' } });
     }
 
-    // Programme : seulement les éléments non présentés, même ordre et même présentateur
+    // Préparation : seulement les éléments non présentés, même ordre et même présentateur
     const agenda = await prisma.liveSessionAgendaItem.findMany({ where: { sessionId: prev.id }, orderBy: { position: 'asc' } });
     const remaining = (agenda ?? []).filter((a: any) => !a.presentedAt);
     if (remaining.length > 0) {

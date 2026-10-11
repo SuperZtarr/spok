@@ -1,6 +1,7 @@
 /*
- * LiveSessionBar — bandeau d'un espace de séance : statut (préparée / en direct / terminée), présence, boutons
- * « Programme » (AgendaPanel), « Fil » (SessionTimeline), « Présenter » (recherche, en direct, host/présentateurs),
+ * LiveSessionBar — bandeau d'un espace de séance, rendu en 3e ligne de SpaceToolbar (liveSessionBarSlot) :
+ * statut (préparée / en direct / terminée), présence, boutons « Préparation » (AgendaPanel — la préparation ;
+ * libellé renommé à la demande de Thomas 2026-10-11), « Fil » (SessionTimeline), « Présenter » (recherche, en direct, host/présentateurs),
  * « Présentateurs » (host : choix parmi les membres de l'espace parent), « Démarrer la séance » (host, préparée)
  * et « Terminer » (host, en direct, avec confirmation) ; séance terminée : « Créer la suite » (host, si pas encore
  * de suite) ; liens « Suite de … » / « Suite : … » vers les séances liées. Panneaux en popover simples, pas de modale.
@@ -54,6 +55,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
     const suite = await liveSessionsApi.createSuite(state.session.id, todayLocal());
     queryClient.invalidateQueries({ queryKey: ['spaces'] });
     queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
+    queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); // bouton de l'en-tête
     queryClient.invalidateQueries({ queryKey: ['live-session', state.session.spaceId] });
     setActive(suite.session.spaceId);
     navigate(`/spaces/${suite.session.spaceId}`);
@@ -83,7 +85,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
       )}
       {error && <span className="text-xs text-red-600">{error}</span>}
       <div className="flex-1" />
-      <button className="hover:underline" onClick={() => toggle('agenda')}>Programme ({state.agenda.length})</button>
+      <button className="hover:underline" onClick={() => toggle('agenda')}>Préparation ({state.agenda.length})</button>
       <button className="hover:underline" onClick={() => toggle('timeline')}>Fil</button>
       {canPresent && <button className="hover:underline" onClick={() => toggle('present')}>Présenter</button>}
       {isHost && status !== 'ENDED' && <button className="hover:underline" onClick={() => toggle('presenters')}>Présentateurs</button>}

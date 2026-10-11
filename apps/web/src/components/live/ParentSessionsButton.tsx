@@ -35,6 +35,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
       setActive(target);
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
+      queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); // bouton de l'en-tête
       setOpen(false);
       navigate(`/spaces/${target}`);
     } catch (e) {

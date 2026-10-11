@@ -1,0 +1,49 @@
+/* Tests de LiveSessionsButton (en-tête) : masqué sans séance, badge du nombre, rouge si une séance est en direct,
+ * « Rejoindre » rejoint puis active la séance. */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
+
+const api = vi.hoisted(() => ({ ongoing: vi.fn(), join: vi.fn(async () => ({})) }))
+vi.mock('../../lib/api', () => ({ liveSessionsApi: api }))
+
+import { LiveSessionsButton } from './LiveSessionsButton'
+import { useActiveLiveSessionStore } from '../../stores/activeLiveSession'
+
+const s = (id: string, status: 'LIVE' | 'PREPARED', isMember = true) =>
+  ({ id, spaceId: `sp-${id}`, spaceName: `Séance ${id}`, parentSpaceName: 'Comité', status, isMember, myRole: 'PARTICIPANT' })
+
+const renderButton = () => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter><LiveSessionsButton /></MemoryRouter>
+  </QueryClientProvider>,
+)
+
+describe('LiveSessionsButton', () => {
+  beforeEach(() => { localStorage.clear(); api.ongoing.mockReset(); api.join.mockClear(); useActiveLiveSessionStore.getState().clear() })
+
+  it('rien sans séance en cours', async () => {
+    api.ongoing.mockResolvedValue([])
+    const { container } = renderButton()
+    await waitFor(() => expect(api.ongoing).toHaveBeenCalled())
+    expect(container.querySelector('[data-testid="live-sessions-button"]')).toBeNull()
+  })
+
+  it('badge du nombre de séances, rouge si une est en direct', async () => {
+    api.ongoing.mockResolvedValue([s('a', 'LIVE'), s('b', 'PREPARED')])
+    const { findByTestId } = renderButton()
+    const btn = await findByTestId('live-sessions-button')
+    expect(btn.textContent).toContain('2')
+    expect(btn.className).toContain('text-red-600')
+  })
+
+  it("« Rejoindre » rejoint puis fait de la séance la séance active", async () => {
+    api.ongoing.mockResolvedValue([s('a', 'LIVE', false)])
+    const { findByTestId, findByText } = renderButton()
+    fireEvent.click(await findByTestId('live-sessions-button'))
+    fireEvent.click(await findByText('Rejoindre'))
+    await waitFor(() => expect(useActiveLiveSessionStore.getState().spaceId).toBe('sp-a'))
+    expect(api.join).toHaveBeenCalledWith('a')
+  })
+})

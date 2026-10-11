@@ -1,5 +1,5 @@
 /*
- * Layout principal connecté : header (row 1 : notifications, mode admin/dev compact, déconnexion,
+ * Layout principal connecté : header (row 1 : séances live en cours (LiveSessionsButton), notifications, mode admin/dev compact, déconnexion,
  * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/Tous à côté du
  * titre ; row 2 : GlobalNavBar) + zone de contenu. Seul appelant de interfaceMode.applyContextMode.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
@@ -30,6 +30,7 @@ import { WelcomeModal } from './WelcomeModal';
 import { UserProfileModal } from './UserProfileModal';
 import { DevZoneInspector } from './DevZoneInspector';
 import { NotificationBell } from './NotificationBell';
+import { LiveSessionsButton } from './live/LiveSessionsButton';
 import { GlobalNavBar } from './GlobalNavBar';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { getViewIcon } from '../constants/viewIcons';
@@ -1311,6 +1312,7 @@ export function Layout() {
                 du bandeau) est l'unique point d'entrée, avec ses filtres. */}
             {user ? (
               <>
+                <LiveSessionsButton />
                 <NotificationBell />
                 {/* Raccourcis déplacés depuis le bandeau (GlobalNavBar) le 2026-08-31 :
                     Mode admin / Mode dev (compact, gatés admin), Déconnexion, puis "Retourner à"

@@ -5,8 +5,8 @@
  * Les événements sont appliqués sur le cache (applyLiveEvent) ; à chaque reconnexion l'état complet est refetch.
  * Un display plus ancien que le courant (entry.createdAt) est ignoré — convergence si deux présentateurs.
  * Invalide ['items', spaceId] à chaque display/reveal : les copies apparaissent dans les vues de l'espace.
- * start()/end() refetch aussitôt ; les mutations de programme posent la liste renvoyée dans le cache.
- * Programme : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants (filtré par l'API).
+ * start()/end() refetch aussitôt ; les mutations de préparation posent la liste renvoyée dans le cache.
+ * Préparation : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants (filtré par l'API).
  */
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -60,8 +60,10 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
       onOpen: () => { if (!first) refetch(); first = false; },
       onEvent: (event) => {
         queryClient.setQueryData<LiveSessionState>(['live-session', spaceId], (prev) => (prev ? applyLiveEvent(prev, event) : prev));
-        // Changement de rôles : le programme visible dépend du rôle (complet / déjà présenté) → état rechargé
+        // Changement de rôles : la préparation visible dépend du rôle (complet / déjà présenté) → état rechargé
         if (event.type === 'roles') refetch();
+        // Démarrage / fin : le bouton « séances en cours » de l'en-tête se met à jour
+        if (event.type === 'started' || event.type === 'ended') queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] });
         if (event.type === 'display' || event.type === 'reveal') {
           queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
           queryClient.invalidateQueries({ queryKey: ['live-pending', sessionId] });
@@ -83,8 +85,8 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
     },
     displayAgenda: async (agendaItemId: string) => { await liveSessionsApi.display(sessionId!, { agendaItemId }); },
     reveal: async (sourceItemId: string) => { await liveSessionsApi.reveal(sessionId!, sourceItemId); },
-    start: async () => { await liveSessionsApi.start(sessionId!); await refetch(); },
-    end: async () => { await liveSessionsApi.end(sessionId!); await refetch(); },
+    start: async () => { await liveSessionsApi.start(sessionId!); await refetch(); queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); },
+    end: async () => { await liveSessionsApi.end(sessionId!); await refetch(); queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); },
     setPresenters: async (userIds: string[]) => { await liveSessionsApi.setPresenters(sessionId!, userIds); },
     addToAgenda: async (sourceItemId: string, sourceSpaceId?: string) => {
       setAgenda(await liveSessionsApi.addToAgenda(sessionId!, sourceItemId, sourceSpaceId));

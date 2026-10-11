@@ -61,6 +61,7 @@ import type {
   LiveDisplayedItem,
   LiveAgendaItem,
   LivePendingChild,
+  LiveSessionOngoing,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -2039,17 +2040,19 @@ export const liveSessionsApi = {
   listForParent: (parentSpaceId: string) =>
     fetchApi<LiveSessionSummary[]>(`/live-sessions?parentSpaceId=${encodeURIComponent(parentSpaceId)}`),
   getBySpace: (spaceId: string) => fetchApi<LiveSessionState>(`/live-sessions/by-space/${spaceId}`),
+  /** Séances en cours auxquelles je suis convié (bouton de l'en-tête). */
+  ongoing: () => fetchApi<LiveSessionOngoing[]>('/live-sessions/ongoing'),
   join: (id: string) => fetchApi<LiveSessionState>(`/live-sessions/${id}/join`, { method: 'POST' }),
   setPresenters: (id: string, userIds: string[]) =>
     fetchApi<{ roles: LiveSessionState['roles'] }>(`/live-sessions/${id}/presenters`, { method: 'PUT', body: JSON.stringify({ userIds }) }),
-  /** Afficher : une ligne du programme ({ agendaItemId }) ou un item ({ sourceItemId, sourceSpaceId? }). */
+  /** Afficher : une ligne de la préparation ({ agendaItemId }) ou un item ({ sourceItemId, sourceSpaceId? }). */
   display: (id: string, body: { agendaItemId: string } | { sourceItemId: string; sourceSpaceId?: string }) =>
     fetchApi<{ entry: LiveSessionEntry; displayed: LiveDisplayedItem }>(`/live-sessions/${id}/display`, {
       method: 'POST', body: JSON.stringify(body),
     }),
   end: (id: string) => fetchApi<{ endedAt: string }>(`/live-sessions/${id}/end`, { method: 'POST' }),
   start: (id: string) => fetchApi<{ liveAt: string }>(`/live-sessions/${id}/start`, { method: 'POST' }),
-  /** Suite d'une séance terminée : nouvelle séance préparée (programme non présenté + éléments présentés recopiés). */
+  /** Suite d'une séance terminée : nouvelle séance préparée (préparation non présenté + éléments présentés recopiés). */
   createSuite: (id: string, name?: string) =>
     fetchApi<LiveSessionState>(`/live-sessions/${id}/suite`, { method: 'POST', body: JSON.stringify({ name }) }),
   addToAgenda: (id: string, sourceItemId: string, sourceSpaceId?: string, includeChildren = false) =>
