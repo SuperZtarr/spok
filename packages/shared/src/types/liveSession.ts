@@ -99,3 +99,9 @@ export interface LiveSessionSummary {
   startedAt: string;
   isMember: boolean;
 }
+
+/** Invité d'une séance (membre de la communauté sans accès à l'espace parent). */
+export interface LiveInvitee { userId: string; user: LiveUser; invitedAt: string }
+
+/** Membre de la communauté pouvant être invité (aucun accès à l'espace parent). */
+export interface LiveInviteCandidate { userId: string; name: string; email: string }

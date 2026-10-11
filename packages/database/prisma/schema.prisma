@@ -57,6 +57,8 @@ model User {
   liveSessionRoles            LiveSessionRole[]  @relation("LiveSessionRoles")
   liveSessionEntries          LiveSessionEntry[] @relation("LiveSessionEntries")
   liveSessionAgendaItems      LiveSessionAgendaItem[] @relation("LiveSessionAgendaPresenter")
+  liveSessionInvites          LiveSessionInvite[]     @relation("LiveSessionInvitee")
+  liveSessionInvitesBy        LiveSessionInvite[]     @relation("LiveSessionInviter")
 
   @@map("users")
 }
@@ -665,6 +667,7 @@ model LiveSession {
   roles       LiveSessionRole[]
   entries     LiveSessionEntry[]
   agenda      LiveSessionAgendaItem[]
+  invites     LiveSessionInvite[]
   previousSession LiveSession? @relation("LiveSessionSuite", fields: [previousSessionId], references: [id], onDelete: SetNull)
   nextSession     LiveSession? @relation("LiveSessionSuite")
 
@@ -739,4 +742,21 @@ model LiveSessionAgendaItem {
 
   @@index([sessionId, position])
   @@map("live_session_agenda_items")
+}
+
+// Invitation à une séance d'un membre de la communauté SANS accès à l'espace parent : il devient membre
+// de l'espace de séance (PRIVÉ) uniquement. Retirer l'invitation retire aussi cette adhésion.
+model LiveSessionInvite {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  invitedById String
+  createdAt   DateTime @default(now())
+
+  session   LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User        @relation("LiveSessionInvitee", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User        @relation("LiveSessionInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("live_session_invites")
 }
