@@ -75,6 +75,8 @@ describe('/live-sessions', () => {
       prisma.space.create.mockResolvedValue({ id: 'sess-space', name: '2026-10-11' })
       prisma.liveSession.create.mockResolvedValue({ ...session, status: 'PREPARED' })
       prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'PREPARED', roles: [{ userId: USER, role: 'HOST', user: { id: USER, name: 'Thomas', avatarUrl: null } }], entries: [] })
+      // Accès à l'espace parent (membre direct) : requis pour une préparation initiale
+      prisma.spaceMembership.findUnique.mockResolvedValue({ userId: USER, spaceId: 'parent', role: 'OWNER' })
     })
 
     it("remplit la préparation dans l'ordre demandé, sous-éléments juste après leur parent", async () => {
@@ -103,6 +105,19 @@ describe('/live-sessions', () => {
       expect(res.statusCode).toBe(400)
       expect(prisma.space.create).not.toHaveBeenCalled()
       expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+    })
+
+    it("refuse une préparation initiale à un OWNER de communauté sans accès à l'espace parent (privé)", async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue({ id: 'parent', name: 'Comité', type: 'GROUP', communityId: 'c1', parentId: null, visibility: 'PRIVATE', community: { visibility: 'PRIVATE', isPublic: false } })
+      prisma.item.findMany.mockResolvedValue([{ id: 'A', title: 'Secret' }])
+      const res = await app.inject({
+        method: 'POST', url: '/live-sessions', headers: auth(),
+        payload: { parentSpaceId: 'parent', agenda: [{ sourceItemId: 'A' }] },
+      })
+      expect(res.statusCode).toBe(403)
+      expect(prisma.item.findMany).not.toHaveBeenCalled()
+      expect(prisma.space.create).not.toHaveBeenCalled()
     })
 
     it('liste vide : séance créée sans préparation', async () => {

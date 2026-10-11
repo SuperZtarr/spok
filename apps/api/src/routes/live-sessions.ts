@@ -196,6 +196,9 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const wanted = body.agenda ?? [];
     let initialRows: Array<{ id: string; title: string | null }> = [];
     if (wanted.length > 0) {
+      // Un OWNER de communauté peut créer une séance dans un espace privé dont il n'est pas membre : il ne doit pas
+      // pouvoir en recopier les éléments (titres) — même exigence que l'ajout depuis le menu (resolveSource).
+      if (!(await isParentMember(prisma, userId, parent.id))) return reply.forbidden('Accès à l\'espace requis pour préparer la séance à partir de ses éléments');
       const ids = wanted.map((w) => w.sourceItemId);
       const found = (await prisma.item.findMany({ where: { id: { in: ids }, spaceId: parent.id }, select: { id: true, title: true } })) ?? [];
       const byId = new Map<string, { id: string; title: string | null }>(found.map((i: any) => [i.id, i]));
