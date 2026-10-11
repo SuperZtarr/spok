@@ -64,6 +64,7 @@ export function createMockPrisma() {
     notification: mockModel(),
     appConfig: mockModel(),
     calendarFeed: mockModel(),
+    personalAccessToken: mockModel(),
     dayPlanEntry: mockModel(),
     itemTemplate: mockModel(),
     liveSession: mockModel(),

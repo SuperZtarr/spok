@@ -478,6 +478,31 @@ export interface GlobalTask {
   tags: { id: string; name: string; color: string | null }[];
 }
 
+export interface PersonalToken {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  scope: 'read' | 'write';
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** Jetons personnels (MCP distant). Le jeton en clair n'est présent que dans la réponse de create. */
+export const personalTokensApi = {
+  list: () => fetchApi<PersonalToken[]>('/user/tokens'),
+  create: (data: { name: string; scope: 'read' | 'write'; expiresInDays: 30 | 90 | 365 | null }) =>
+    fetchApi<PersonalToken & { token: string }>('/user/tokens', { method: 'POST', body: JSON.stringify(data) }),
+  revoke: (id: string) => fetchApi<void>(`/user/tokens/${id}`, { method: 'DELETE' }),
+};
+
+/** URL publique du serveur MCP distant (absolue, à coller dans la config Claude de l'utilisateur). */
+export function getMcpServerUrl(): string {
+  const base = API_URL.startsWith('http') ? API_URL : `${window.location.origin}${API_URL}`;
+  return `${base.replace(/\/$/, '')}/mcp`;
+}
+
 export const userTasksApi = {
   list: (params?: GlobalTaskFilters) => {
     const sp = new URLSearchParams();

@@ -59,6 +59,7 @@ model User {
   liveSessionAgendaItems      LiveSessionAgendaItem[] @relation("LiveSessionAgendaPresenter")
   liveSessionInvites          LiveSessionInvite[]     @relation("LiveSessionInvitee")
   liveSessionInvitesBy        LiveSessionInvite[]     @relation("LiveSessionInviter")
+  personalAccessTokens        PersonalAccessToken[]
 
   @@map("users")
 }
@@ -603,6 +604,27 @@ model CalendarFeed {
 
   @@index([userId])
   @@map("calendar_feeds")
+}
+
+// Jeton personnel d'accès API (MCP distant, 2026-10-12). Seul le hash SHA-256 est stocké ;
+// tokenPrefix (12 premiers caractères) sert à l'affichage. scope : 'read' (GET/HEAD) ou 'write'.
+// Révocation = revokedAt non null (jamais de suppression physique : traçabilité audit).
+model PersonalAccessToken {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String
+  scope       String    @default("write")
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("personal_access_tokens")
 }
 
 // Engagement du jour : tâche sélectionnée pour une date donnée (page Ma journée).

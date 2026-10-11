@@ -3,6 +3,9 @@
  * helmet, rate-limit) et de toutes les routes avec leurs préfixes. Gestion d'erreurs Zod → 400 structuré.
  * rate-limit : 100 req/min/IP par défaut globalement, routes auth sensibles surchargées à 5/min (voir auth.ts).
  * /live-sessions : séances de présentation en direct ; le flux SSE /:id/stream est exempté du rate-limit.
+ * /user/tokens : jetons personnels (MCP distant) ; /mcp : serveur MCP Streamable HTTP (cf. routes/mcp.ts).
+ * rate-limit : les sous-requêtes internes du MCP distant (x-spok-internal) en sont exemptées ; /mcp a sa propre
+ * limite (120/min/jeton). requestContextPlugin : contexte d'audit (origine MCP) des sous-requêtes internes.
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -27,6 +30,9 @@ import { Prisma } from '@spok/database';
 import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
 import { adminAuthPlugin } from './plugins/adminAuth.js';
+import { requestContextPlugin } from './plugins/requestContext.js';
+import { isInternalRequest } from './mcp/internal.js';
+import { mcpRoutes } from './routes/mcp.js';
 import { authRoutes } from './routes/auth.js';
 import { spacesRoutes } from './routes/spaces.js';
 import { communitiesRoutes } from './routes/communities.js';
@@ -49,6 +55,7 @@ import { searchRoutes } from './routes/search.js';
 import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
 import { calendarFeedsRoutes } from './routes/calendar-feeds.js';
+import { personalTokensRoutes } from './routes/personal-tokens.js';
 import { agendaRoutes } from './routes/agenda.js';
 import { reviewQueueRoutes } from './routes/review-queue.js';
 import { dayPlanRoutes } from './routes/day-plan.js';
@@ -264,7 +271,7 @@ async function buildApp() {
       error: 'Not Found',
       message: `Route non trouvée: ${request.method} ${request.url}`,
       code: 'ROUTE_NOT_FOUND',
-      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/communities/*', '/live-sessions/*', '/admin/*'],
+      availableRoutes: ['/health', '/auth/*', '/spaces/*', '/communities/*', '/live-sessions/*', '/admin/*', '/mcp'],
     });
   });
 
@@ -279,7 +286,9 @@ async function buildApp() {
   await app.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
+    allowList: (req) => isInternalRequest(req.headers as Record<string, unknown>),
   });
+  await app.register(requestContextPlugin);
 
   await app.register(sensible);
   await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
@@ -313,6 +322,7 @@ async function buildApp() {
   await app.register(userRoutes, { prefix: '/user' });
   await app.register(userTasksRoutes, { prefix: '/user' });
   await app.register(calendarFeedsRoutes, { prefix: '/user' });
+  await app.register(personalTokensRoutes, { prefix: '/user' });
   await app.register(agendaRoutes, { prefix: '/user' });
   await app.register(reviewQueueRoutes, { prefix: '/user' });
   await app.register(dayPlanRoutes, { prefix: '/user' });
@@ -322,6 +332,7 @@ async function buildApp() {
   await app.register(activityRoutes, { prefix: '/activity' });
   await app.register(liveSessionsRoutes, { prefix: '/live-sessions' });
   await app.register(urlMetaRoutes);
+  await app.register(mcpRoutes);
 
   // Health check
   app.get('/health', async () => {

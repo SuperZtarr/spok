@@ -6,7 +6,9 @@
 // (espaces, items, recherche) ne renvoient PAS 401 avec un token expiré : elles répondent comme à
 // un anonyme (communautés publiques seules, 404 sur un espace privé). On se reconnecte donc AVANT
 // l'échéance lue dans le champ `exp` du JWT ; le retry sur 401 reste en filet pour les routes strictes.
+// Implémente SpokClient de @spok/mcp-core ; les erreurs non 2xx lèvent SpokApiError.
 import { readFileSync } from 'fs';
+import { SpokApiError, type SpokClient } from '@spok/mcp-core';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 try {
@@ -80,13 +82,13 @@ async function req(path: string, options: RequestInit = {}, retry = true): Promi
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`SPOK API ${res.status} on ${path}: ${body}`);
+    throw new SpokApiError(res.status, body, path);
   }
 
   return res.json() as Promise<any>;
 }
 
-export const api = {
+export const api: SpokClient = {
   get: (path: string) => req(path),
   post: (path: string, body: unknown) => req(path, { method: 'POST', body: JSON.stringify(body) }),
   patch: (path: string, body: unknown) => req(path, { method: 'PATCH', body: JSON.stringify(body) }),

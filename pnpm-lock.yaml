@@ -62,12 +62,18 @@ importers:
       '@fastify/sensible':
         specifier: ^5.5.0
         version: 5.6.0
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@3.25.76)
       '@sentry/node':
         specifier: ^10.65.0
         version: 10.65.0(@opentelemetry/core@2.9.0)
       '@spok/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@spok/mcp-core':
+        specifier: workspace:*
+        version: link:../../packages/mcp-core
       '@spok/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -124,8 +130,11 @@ importers:
   apps/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.10.2
+        specifier: ^1.29.0
         version: 1.29.0(zod@3.25.76)
+      '@spok/mcp-core':
+        specifier: workspace:*
+        version: link:../../packages/mcp-core
       zod:
         specifier: ^3.22.4
         version: 3.25.76
@@ -372,6 +381,28 @@ importers:
       tsx:
         specifier: ^4.7.0
         version: 4.21.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/mcp-core:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@3.25.76)
+      marked:
+        specifier: ^14.1.4
+        version: 14.1.4
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.30
+      rimraf:
+        specifier: ^5.0.5
+        version: 5.0.10
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
@@ -5963,6 +5994,7 @@ packages:
 
   /glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
     dependencies:
       foreground-child: 3.3.1
@@ -6635,6 +6667,12 @@ packages:
       mdurl: 2.0.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
+    dev: false
+
+  /marked@14.1.4:
+    resolution: {integrity: sha512-vkVZ8ONmUdPnjCKc5uTRvmkRbx4EAi2OkTOXmfTDhZz3OFqMNBM1oTTWwTr4HY4uAEojhzPf+Fy8F1DWa3Sndg==}
+    engines: {node: '>= 18'}
+    hasBin: true
     dev: false
 
   /math-intrinsics@1.1.0:

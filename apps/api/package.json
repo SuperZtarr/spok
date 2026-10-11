@@ -13,6 +13,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.987.0",
     "@fastify/cors": "^9.0.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@spok/mcp-core": "workspace:*",
     "@fastify/helmet": "^11",
     "@fastify/jwt": "^8.0.0",
     "@fastify/multipart": "8",

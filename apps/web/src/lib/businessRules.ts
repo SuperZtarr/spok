@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'personal-token-shown-once',
+    page: 'Profil utilisateur',
+    trigger: "Création d'un jeton d'accès Claude (MCP distant)",
+    effect: "Le jeton en clair est affiché une seule fois ; seul son hash est stocké. Portée lecture seule = outils de lecture uniquement. Révocation immédiate (revokedAt), sans suppression. Un jeton ne peut ni gérer les jetons ni accéder à /admin ; toute écriture via MCP est tracée dans l'audit (changes.source)",
+    location: 'apps/web/src/components/PersonalTokensSection.tsx, apps/api/src/routes/personal-tokens.ts, apps/api/src/plugins/jwt.ts, apps/api/src/routes/mcp.ts',
+  },
+  {
     id: 'mark-unread',
     page: 'Menus contextuels des items, modale item, cloche de notifications, page Activité',
     trigger: "« Marquer comme non lu » (item ou notification)",

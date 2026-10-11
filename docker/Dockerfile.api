@@ -1,3 +1,4 @@
+# Image API. @spok/mcp-core : outils MCP partagés, requis par la route /mcp de l API.
 # Build stage
 FROM node:20-slim AS builder
 
@@ -11,6 +12,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/database/package.json ./packages/database/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/mcp-core/package.json ./packages/mcp-core/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile --store-dir /tmp/pnpm-store
@@ -20,6 +22,7 @@ COPY tsconfig.base.json ./
 COPY apps/api ./apps/api
 COPY packages/database ./packages/database
 COPY packages/shared ./packages/shared
+COPY packages/mcp-core ./packages/mcp-core
 
 # Generate Prisma client
 RUN pnpm --filter @spok/database generate
@@ -27,6 +30,7 @@ RUN pnpm --filter @spok/database generate
 # Build packages
 RUN pnpm --filter @spok/shared build
 RUN pnpm --filter @spok/database build
+RUN pnpm --filter @spok/mcp-core build
 RUN pnpm --filter @spok/api build
 
 # Production stage
@@ -53,6 +57,10 @@ COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+
+COPY --from=builder /app/packages/mcp-core/package.json ./packages/mcp-core/
+COPY --from=builder /app/packages/mcp-core/dist ./packages/mcp-core/dist
+COPY --from=builder /app/packages/mcp-core/node_modules ./packages/mcp-core/node_modules
 
 ENV NODE_ENV=production
 

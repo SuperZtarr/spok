@@ -8,8 +8,12 @@
 
 ### MCP distant pour utilisateurs tiers — 2026-10-12
 - Conception validée : MCP monté dans l'API (`POST /mcp`, outils via fastify.inject avec le jeton de l'appelant), jetons personnels (étape 1), OAuth claude.ai/Desktop (étape 2, plus tard), conformité = instructions serveur + get_space_conventions + validation stricte + Markdown→HTML, audit source MCP
-- Plan étape 1 : docs/superpowers/plans/2026-10-12-mcp-distant-etape1.md — en attente de relecture Thomas. Rien codé
-- Bug existant repéré : create_contribution du MCP envoie un objet Tiptap alors que l'API attend une chaîne (z.string) → corrigé par le plan (Task 5)
+- Plan étape 1 : docs/superpowers/plans/2026-10-12-mcp-distant-etape1.md — IMPLÉMENTÉ, NON COMMITÉ
+- Fait : table personal_access_tokens (db push local) ; auth PAT dans jwt.ts (portée read, périmètre /spaces /communities /search /notifications /mcp, jamais /user /auth /admin) ; /user/tokens ; packages/mcp-core (outils, instructions, conventions, Markdown) ; apps/mcp rebranché (45 outils) ; POST /mcp ; audit changes.source via plugins/requestContext ; UI Profil → Accès Claude ; Dockerfile.api
+- Vérifs : TNR 925/925, typecheck 5 paquets OK, build Docker OK (contexte git), E2E HTTP local OK (statut libellé → id, Markdown échappé, audit source). UI NON vérifiée visuellement (à faire par Thomas)
+- Bug create_contribution (objet Tiptap vs z.string) corrigé
+- Tags MCP corrigés (appelaient /tags inexistant) : list_tags(spaceId) tous profils, create/update/delete_tag sur /spaces/:id/tags en profil admin (couleur #RRGGBB), get_tag supprimé ; create_item/update_item acceptent tags (noms/ids résolus, inconnu refusé). mcp-core 37/37, E2E local OK. NON COMMITÉ
+- Doc SPOK « Serveur MCP SPOK » mise à jour (to_validate). Redémarrer Claude pour charger le nouveau MCP local
 
 ### Mode admin — phase 3 (contenu des espaces) — 2026-10-12
 - checkSpaceAccess(prisma, userId, spaceId, isAdminMode) : mode admin → rôle OWNER (membre ou non) ; 40 appels de routes passent request.isAdminMode (items, tags, relations, contributions, réactions, move, merge, bulk, convert, uploads, auditLogs, referentiels). Utilitaires live (liveInvites, helpers live-sessions) inchangés

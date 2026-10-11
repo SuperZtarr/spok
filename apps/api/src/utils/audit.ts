@@ -1,6 +1,10 @@
-/* Création des entrées AuditLog + sérialiseurs par entité (item, espace, communauté, relation). */
+/*
+ * Création des entrées AuditLog + sérialiseurs par entité (item, espace, communauté, relation).
+ * Écriture issue du MCP distant : changes.source = { via: 'mcp', tokenId, tokenName } (cf. utils/requestContext.ts).
+ */
 import type { PrismaClient } from '@spok/database';
 import type { AuditAction, AuditEntity } from '@spok/shared';
+import { getRequestContext } from './requestContext.js';
 
 export interface AuditLogData {
   action: AuditAction;
@@ -27,7 +31,10 @@ export async function createAuditLog(
       spaceId: data.spaceId,
       batchId: data.batchId || null,
       userId: data.userId,
-      changes: data.changes as any,
+      changes: (() => {
+        const ctx = getRequestContext();
+        return (ctx ? { ...data.changes, source: { via: ctx.via, tokenId: ctx.tokenId, tokenName: ctx.tokenName } } : data.changes) as any;
+      })(),
     },
   });
 }

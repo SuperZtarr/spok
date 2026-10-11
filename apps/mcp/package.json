@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@spok/mcp-core": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

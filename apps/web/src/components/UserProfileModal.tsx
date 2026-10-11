@@ -1,4 +1,4 @@
-/* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe. */
+/* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe, jetons d'accès Claude (PersonalTokensSection, profil propre uniquement). */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { AdminModeToggle, DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { PersonalTokensSection } from './PersonalTokensSection';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -623,6 +624,8 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
         </div>
 
         <NotificationPreferencesSection />
+
+        <PersonalTokensSection />
 
         <div className="pt-4 border-t border-border">
           <div className="flex items-center justify-between">

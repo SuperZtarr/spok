@@ -1,0 +1,95 @@
+/*
+ * TNR de POST /mcp : refus sans jeton personnel (JWT web refusé), initialize + tools/list selon la portée,
+ * appel d'outil rejoué sur les routes REST via inject avec le jeton de l'appelant, sans mode admin.
+ */
+import { describe, it, expect, beforeEach } from 'vitest'
+import Fastify, { FastifyInstance } from 'fastify'
+import sensible from '@fastify/sensible'
+import { createMockPrisma, getTestToken, MockPrisma } from '../test/helpers.js'
+import { jwtPlugin } from '../plugins/jwt.js'
+import { mcpRoutes } from './mcp.js'
+import { generatePersonalToken } from '../utils/personalTokens.js'
+
+const HEADERS = { 'content-type': 'application/json', accept: 'application/json, text/event-stream' }
+
+async function buildApp() {
+  const app = Fastify({ logger: false })
+  const prisma = createMockPrisma()
+  await app.register(sensible)
+  app.decorate('prisma', prisma as any)
+  await app.register(jwtPlugin)
+  // Route REST factice pour observer les sous-requêtes des outils
+  app.get('/communities', { preHandler: [app.authenticate] }, async (req) => [
+    { id: 'c1', name: `vue par ${req.user.userId} admin=${req.isAdminMode}` },
+  ])
+  await app.register(mcpRoutes)
+  await app.ready()
+  return { app, prisma }
+}
+
+function rpc(method: string, params: unknown = {}, id = 1) {
+  return { jsonrpc: '2.0', id, method, params }
+}
+
+const INIT = rpc('initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 't', version: '0' } })
+
+describe('POST /mcp', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  let token: string
+
+  function withScope(scope: 'read' | 'write') {
+    const g = generatePersonalToken()
+    token = g.token
+    prisma.personalAccessToken.findUnique.mockResolvedValue({
+      id: 'pat-1', name: 'Claude perso', tokenHash: g.tokenHash, scope, revokedAt: null, expiresAt: null, lastUsedAt: new Date(),
+      user: { id: 'u1', email: 'u1@test.com', disabledAt: null },
+    })
+  }
+
+  beforeEach(async () => {
+    ;({ app, prisma } = await buildApp())
+  })
+
+  it('401 sans authentification', async () => {
+    const res = await app.inject({ method: 'POST', url: '/mcp', headers: HEADERS, payload: INIT })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('403 avec un JWT de session web', async () => {
+    const jwt = getTestToken(app)
+    const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer ${jwt}` }, payload: INIT })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('initialize renvoie les instructions SPOK', async () => {
+    withScope('write')
+    const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer ${token}` }, payload: INIT })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().result.instructions).toContain('get_space_conventions')
+  })
+
+  it('portée read : tools/list sans outil d\'écriture', async () => {
+    withScope('read')
+    const res = await app.inject({ method: 'POST', url: '/mcp', headers: { ...HEADERS, authorization: `Bearer ${token}` }, payload: rpc('tools/list') })
+    const names = res.json().result.tools.map((t: any) => t.name)
+    expect(names).toContain('get_item')
+    expect(names).not.toContain('create_item')
+  })
+
+  it('tools/call rejoue la route REST avec l\'identité du jeton, sans mode admin', async () => {
+    withScope('write')
+    const res = await app.inject({
+      method: 'POST', url: '/mcp',
+      headers: { ...HEADERS, authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
+      payload: rpc('tools/call', { name: 'list_communities', arguments: {} }),
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().result.content[0].text).toContain('vue par u1 admin=false')
+  })
+
+  it('GET /mcp → 405', async () => {
+    const res = await app.inject({ method: 'GET', url: '/mcp' })
+    expect(res.statusCode).toBe(405)
+  })
+})
