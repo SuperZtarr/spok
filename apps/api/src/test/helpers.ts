@@ -70,6 +70,7 @@ export function createMockPrisma() {
     liveSessionRole: mockModel(),
     liveSessionEntry: mockModel(),
     liveSessionAgendaItem: mockModel(),
+    liveSessionInvite: mockModel(),
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn().mockImplementation((arg: unknown) => {
