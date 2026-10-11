@@ -3,7 +3,7 @@
  * Liste les séances de l'espace (en direct d'abord), « Rejoindre » (devient membre de l'espace de séance
  * puis y navigue) ; « Nouvelle séance » visible seulement pour un OWNER de la communauté (canCreate),
  * nommée par la date locale du jour et créée « préparée ». Créer ou rejoindre en fait la séance active
- * (useActiveLiveSessionStore). Une seule séance en cours par espace : si une séance est préparée ou en direct,
+ * (useActiveLiveSessionStore) et rafraîchit la barre latérale (['sidebar-spaces']). Une seule séance en cours par espace : si une séance est préparée ou en direct,
  * « Nouvelle séance » est remplacé par « Ouvrir la séance en cours » (l'API refuse aussi la création, 409).
  * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
  */
@@ -34,6 +34,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
       const target = await fn();
       setActive(target);
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
       setOpen(false);
       navigate(`/spaces/${target}`);
     } catch (e) {

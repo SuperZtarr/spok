@@ -53,6 +53,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   const createSuite = () => run(async () => {
     const suite = await liveSessionsApi.createSuite(state.session.id, todayLocal());
     queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
     queryClient.invalidateQueries({ queryKey: ['live-session', state.session.spaceId] });
     setActive(suite.session.spaceId);
     navigate(`/spaces/${suite.session.spaceId}`);
