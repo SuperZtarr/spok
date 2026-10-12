@@ -196,6 +196,23 @@ async function buildApp() {
     done();
   });
 
+  // DIAGNOSTIC TEMPORAIRE (2026-10-12) — à retirer dès lecture des logs Railway : déterminer combien de
+  // proxys précèdent l'API (valeur de trustProxy) en loguant les 3 premières requêtes hors /health.
+  let proxyDiagLeft = 3;
+  app.addHook('onRequest', (request, _reply, done) => {
+    if (proxyDiagLeft > 0 && !request.url.startsWith('/health')) {
+      proxyDiagLeft--;
+      app.log.info({
+        diag: 'proxy',
+        ip: request.ip,
+        remoteAddress: request.socket.remoteAddress,
+        xForwardedFor: request.headers['x-forwarded-for'],
+        xRealIp: request.headers['x-real-ip'],
+      }, '[DIAG PROXY]');
+    }
+    done();
+  });
+
   // Gestionnaire d'erreurs global
   app.setErrorHandler((error, request, reply) => {
     app.log.error(error);
