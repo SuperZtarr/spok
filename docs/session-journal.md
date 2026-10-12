@@ -6,6 +6,9 @@
 
 ## EN COURS
 
+### Mode JDR — 2026-10-13
+- Enum CommunityContext + JDR (db:generate fait, db:push local NON fait : Docker arrêté), API zod, interfaceMode 'jdr', Layout (dérivation + bouton), SpaceToolbar MODE_PRIMARY_VIEWS, CommunitySettingsPage (4e option). Tests web 3/3, communautés 57/57, typecheck 6 paquets OK. UI NON vérifiée visuellement. MEP 7013bbd
+
 ### Quitter / se rétrograder dans un espace — 2026-10-12
 - MEP 5494c5b/f0c4574/169b5d5 (CI verte). Revue sécu 169b5d5 : vignette visible des autres présentateurs → correctif proposé, en attente
 - leave OWNER si co-propriétaire ; MembersColumnManager : actions sur soi (onLeave, espaces seulement), flèches visibles ; SpaceSettingsPage : Quitter pour membre direct. spaces 76/76, web settings 4/4, typecheck api+web OK. UI NON vérifiée visuellement. MEP f66d29d
