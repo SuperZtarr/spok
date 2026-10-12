@@ -4,7 +4,7 @@
  * « avec ses N sous-éléments » activé s'il en a ; « Tout cocher » / « Tout décocher » ; « Créer la séance »
  * envoie la sélection à onCreate (champ agenda de POST /live-sessions). Tout décoché = séance à préparation vide.
  * Section « Invités » (InviteePicker) : membres de la communauté sans accès à l'espace (liste fournie par l'API) ;
- *   ils verront la séance, jamais l'espace.
+ *   ils verront la séance, jamais l'espace. Liste vide → NoInviteCandidates (pourquoi + lien vers les membres).
  * Props : spaceId (espace parent), onCreate(agenda, invitees) — l'appelant crée la séance et gère erreur/navigation ;
  * busy / error affichés tels quels ; onClose ferme sans rien créer.
  */
@@ -15,6 +15,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { itemsApi, liveSessionsApi } from '../../lib/api';
 import { InviteePicker } from './InviteePicker';
+import { NoInviteCandidates } from './NoInviteCandidates';
 import { buildAgendaChoices, defaultSelection, toAgendaPayload, type AgendaSelection } from './initialAgenda';
 
 type AgendaPayload = ReturnType<typeof toAgendaPayload>;
@@ -89,7 +90,8 @@ export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
       )}
       <h3 className="text-sm font-medium mt-4 mb-1">Invités</h3>
       <p className="text-xs text-muted-foreground mb-2">Membres de la communauté sans accès à cet espace : ils verront la séance, pas l'espace.</p>
-      <InviteePicker candidates={candidates ?? []} selected={invitees} onChange={setInvitees} />
+      <InviteePicker candidates={candidates ?? []} selected={invitees} onChange={setInvitees}
+        emptyState={candidates ? <NoInviteCandidates spaceId={spaceId} /> : null} />
       {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
       <div className="flex justify-end gap-2 mt-4">
         <Button type="button" variant="bordered" onClick={onClose} disabled={busy}>Annuler</Button>

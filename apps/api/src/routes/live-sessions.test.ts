@@ -520,6 +520,29 @@ describe('/live-sessions', () => {
       expect(res.json().agenda).toHaveLength(2)
     })
 
+    // Vignettes (2026-10-12) : URL d'un fichier de l'espace source → animateur/présentateurs seulement
+    const sourceItems = async ({ where }: any) => (where?.id?.in
+      ? [{ id: 'i1', type: 'IMAGE', url: 'https://cdn/i1.webp' }, { id: 'i2', type: 'DIAGRAM', url: 'https://cdn/i2.png' }]
+      : [])
+
+    it('animateur : vignette de l\'image ou du schéma source', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, roles: [{ userId: USER, role: 'HOST', user: { id: USER, name: 'T' } }], entries: [] })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(rows)
+      prisma.item.findMany.mockImplementation(sourceItems)
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
+      expect(res.json().agenda.map((a: any) => a.thumbnailUrl)).toEqual(['https://cdn/i1.webp', 'https://cdn/i2.png'])
+    })
+
+    it('participant : jamais de vignette (pas d\'URL de fichier source)', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other', roles: [], entries: [] })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(rows)
+      prisma.item.findMany.mockImplementation(sourceItems)
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
+      expect(res.json().agenda).toEqual([expect.objectContaining({ title: 'Déjà vu', thumbnailUrl: null })])
+    })
+
     it("sous-éléments de l'élément courant limités à l'espace de séance", async () => {
       const entry = { id: 'e1', kind: 'DISPLAY', createdAt: new Date(), userId: USER, itemId: 'copy-1', itemTitle: 'X', user: { id: USER, name: 'T' } }
       prisma.liveSession.findUnique.mockResolvedValue({ ...session, currentEntryId: 'e1', roles: [], entries: [entry] })

@@ -50,6 +50,8 @@ export interface LiveAgendaItem {
   title: string;
   position: number;
   presentedAt: string | null;
+  /** Vignette de l'élément SOURCE (image, aperçu de schéma) : animateur/présentateurs seulement, null pour les participants. */
+  thumbnailUrl: string | null;
 }
 
 /** Item affiché dans la fenêtre en direct : la copie + ses sous-items déjà révélés. */

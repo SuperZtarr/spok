@@ -2,7 +2,8 @@
  * InviteesPanel — panneau « Invités » du bandeau de séance (LiveSessionBar), réservé à l'animateur.
  * Liste les invités de la séance (« Retirer » révoque l'accès, possible même séance terminée) et,
  * tant que la séance n'est pas terminée, propose d'en ajouter via InviteePicker (membres de la communauté
- * sans accès à l'espace parent, déjà invités exclus ; s'ils sont tous invités, un message le dit). Les invités voient la séance, jamais l'espace parent.
+ * sans accès à l'espace parent, déjà invités exclus ; s'ils sont tous invités, un message le dit ; aucun candidat →
+ * NoInviteCandidates explique pourquoi et renvoie vers les membres de la communauté). Les invités voient la séance, jamais l'espace parent.
  * Props : sessionId (séance), parentSpaceId (espace parent, pour les candidats), ended (séance terminée → pas d'ajout).
  * Caches : ['live-invitees', sessionId] mis à jour avec la réponse de l'API ; candidats invalidés après chaque action.
  */
@@ -11,6 +12,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LiveInvitee } from '@spok/shared';
 import { liveSessionsApi } from '../../lib/api';
 import { InviteePicker } from './InviteePicker';
+import { NoInviteCandidates } from './NoInviteCandidates';
 
 export function InviteesPanel({ sessionId, parentSpaceId, ended }: {
   sessionId: string;
@@ -70,7 +72,8 @@ export function InviteesPanel({ sessionId, parentSpaceId, ended }: {
           {candidates.length > 0 && available.length === 0 ? (
             <p className="text-xs text-muted-foreground">Tous les membres invitables sont déjà invités.</p>
           ) : (
-            <InviteePicker candidates={available} selected={selected} onChange={setSelected} />
+            <InviteePicker candidates={available} selected={selected} onChange={setSelected}
+              emptyState={<NoInviteCandidates spaceId={parentSpaceId} />} />
           )}
           <div className="flex justify-end mt-2">
             <button

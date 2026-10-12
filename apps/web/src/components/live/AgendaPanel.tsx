@@ -1,5 +1,6 @@
 /*
- * AgendaPanel — préparation d'une séance : lignes ordonnées (titre, espace source, présentateur, « présenté à HH:MM »).
+ * AgendaPanel — préparation d'une séance : lignes ordonnées (vignette image/schéma, titre, espace source, présentateur,
+ * « présenté à HH:MM »). La vignette (thumbnailUrl) n'arrive qu'à l'animateur et aux présentateurs.
  * Animateur/présentateurs : ↑/↓ (règles agendaOrder, miroir de l'API), Retirer (sa ligne ou animateur),
  * Afficher (séance LIVE). Participants : lecture seule. compact = version resserrée pour la fenêtre en direct.
  * Les lignes sont des liens vers les sources : rien n'est copié avant « Afficher ».
@@ -23,6 +24,8 @@ export function AgendaPanel({ state, live, compact }: Props) {
   const canEdit = state.myRole !== 'PARTICIPANT' && state.session.status !== 'ENDED';
   const canDisplay = state.myRole !== 'PARTICIPANT' && state.session.status === 'LIVE';
   const agenda = state.agenda;
+  // Colonne de vignettes seulement si au moins une ligne en a une (titres alignés entre eux)
+  const anyThumbnail = agenda.some((a) => a.thumbnailUrl);
 
   const run = async (fn: () => Promise<void>) => {
     setError(null);
@@ -48,6 +51,14 @@ export function AgendaPanel({ state, live, compact }: Props) {
           return (
             <li key={a.id} className={`flex items-center gap-2 py-1.5 ${a.presentedAt ? 'opacity-60' : ''}`}>
               <span className="w-5 text-right text-muted-foreground tabular-nums">{i + 1}.</span>
+              {/* Vignette de l'image / du schéma source (null pour les participants : jamais d'URL source chez eux) */}
+              {anyThumbnail && (
+                <span className={`shrink-0 rounded border bg-muted overflow-hidden ${compact ? 'w-6 h-6' : 'w-8 h-8'}`}>
+                  {a.thumbnailUrl && (
+                    <img src={a.thumbnailUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  )}
+                </span>
+              )}
               <span className="flex-1 min-w-0">
                 <span className="block truncate font-medium">{a.title}</span>
                 <span className="block truncate text-xs text-muted-foreground">

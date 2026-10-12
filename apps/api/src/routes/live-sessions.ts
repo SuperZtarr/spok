@@ -28,7 +28,8 @@
  * - /by-space/:spaceId : 200 null si l'espace n'est pas une séance (appelé sur chaque espace), 403 si non membre.
  * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
  * la préparation (titres/espaces sources) n'est envoyée en entier qu'à l'animateur et aux présentateurs ;
- * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach).
+ * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach), sans vignette
+ * (thumbnailUrl = fichier de l'item source, réservé à l'animateur et aux présentateurs).
  */
 import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
@@ -81,21 +82,35 @@ async function resolveSource(prisma: any, userId: string, sourceItemId: string, 
   return access ? item : null;
 }
 
-/** Préparation visible : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants. */
-const visibleAgenda = (agenda: LiveAgendaItem[], canSeeAll: boolean) => (canSeeAll ? agenda : agenda.filter((a) => a.presentedAt));
+/** Préparation visible : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants,
+ *  SANS vignette (URL d'un fichier de l'espace source : jamais envoyée à un participant). */
+const visibleAgenda = (agenda: LiveAgendaItem[], canSeeAll: boolean) =>
+  (canSeeAll ? agenda : agenda.filter((a) => a.presentedAt).map((a) => ({ ...a, thumbnailUrl: null })));
 
-/** Préparation ordonnée avec nom d'espace source (null si l'espace n'existe plus). */
+const IMAGE_URL = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
+
+/** Vignette d'un item source : son image (IMAGE), l'aperçu PNG d'un schéma (DIAGRAM) ou une URL d'image. */
+const thumbnailOf = (src: { type: string; url: string | null } | undefined) =>
+  src?.url && (src.type === 'IMAGE' || src.type === 'DIAGRAM' || IMAGE_URL.test(src.url)) ? src.url : null;
+
+/** Préparation ordonnée avec nom d'espace source (null si l'espace n'existe plus) et vignette de l'item source. */
 async function loadAgenda(prisma: any, sessionId: string): Promise<LiveAgendaItem[]> {
   const rows = (await prisma.liveSessionAgendaItem.findMany({
     where: { sessionId }, orderBy: { position: 'asc' }, include: { presenter: { select: USER_SELECT } },
   })) ?? [];
   const spaceIds = [...new Set(rows.map((r: any) => r.sourceSpaceId))];
-  const spaces = spaceIds.length ? ((await prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, name: true } })) ?? []) : [];
-  const names = new Map<string, string>(spaces.map((sp: any) => [sp.id, sp.name]));
+  const itemIds = [...new Set(rows.map((r: any) => r.sourceItemId))];
+  const [spaces, sources] = await Promise.all([
+    spaceIds.length ? prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, name: true } }) : [],
+    itemIds.length ? prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, type: true, url: true } }) : [],
+  ]);
+  const names = new Map<string, string>((spaces ?? []).map((sp: any) => [sp.id, sp.name]));
+  const sourceById = new Map<string, { type: string; url: string | null }>((sources ?? []).map((it: any) => [it.id, it]));
   return rows.map((r: any) => ({
     id: r.id, presenter: r.presenter, sourceItemId: r.sourceItemId, sourceSpaceId: r.sourceSpaceId,
     sourceSpaceName: names.get(r.sourceSpaceId) ?? null, title: r.title, position: r.position,
     presentedAt: r.presentedAt ? new Date(r.presentedAt).toISOString() : null,
+    thumbnailUrl: thumbnailOf(sourceById.get(r.sourceItemId)),
   }));
 }
 

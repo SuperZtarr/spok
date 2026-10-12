@@ -2,18 +2,20 @@
  * InviteePicker — liste filtrable à cocher de membres de la communauté invitables à une séance
  * (déjà filtrés côté API : aucun accès à l'espace parent). Composant contrôlé : selected / onChange(ids).
  * Utilisé par NewSessionDialog (création) et InviteesPanel (bandeau). Ne fait aucun appel réseau.
+ * emptyState : affiché quand aucun candidat (les appelants passent NoInviteCandidates, qui explique pourquoi).
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { LiveInviteCandidate } from '@spok/shared';
 
-export function InviteePicker({ candidates, selected, onChange }: {
+export function InviteePicker({ candidates, selected, onChange, emptyState }: {
   candidates: LiveInviteCandidate[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  emptyState?: ReactNode;
 }) {
   const [query, setQuery] = useState('');
   if (candidates.length === 0) {
-    return <p className="text-xs text-muted-foreground">Tous les membres de la communauté ont déjà accès à l'espace : ils peuvent rejoindre la séance sans invitation.</p>;
+    return <>{emptyState ?? <p className="text-xs text-muted-foreground">Aucun membre de la communauté à inviter.</p>}</>;
   }
   const q = query.trim().toLowerCase();
   const shown = q ? candidates.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)) : candidates;
