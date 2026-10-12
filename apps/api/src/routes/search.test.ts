@@ -57,7 +57,7 @@ describe('Search routes', () => {
 
       const res = await app.inject({
         method: 'GET', url: '/search?q=test',
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(200)
@@ -84,6 +84,23 @@ describe('Search routes', () => {
       // Check that item query includes space filter
       const itemWhere = prisma.item.findMany.mock.calls[0][0].where
       expect(itemWhere.spaceId).toEqual({ in: ['s1'] })
+    })
+
+    // Règle Thomas 2026-10-12 : hors mode admin, un admin global cherche comme un utilisateur normal
+    it('should filter by space membership for an admin without admin mode', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }])
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+      prisma.contribution.findMany.mockResolvedValue([])
+      prisma.contribution.count.mockResolvedValue(0)
+
+      await app.inject({
+        method: 'GET', url: '/search?q=test',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: ['s1'] })
     })
 
     it('should return empty for user with no spaces', async () => {
@@ -128,7 +145,7 @@ describe('Search routes', () => {
 
       const res = await app.inject({
         method: 'GET', url: '/search?q=hello',
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       const body = res.json()
@@ -144,7 +161,7 @@ describe('Search routes', () => {
 
       await app.inject({
         method: 'GET', url: '/search?q=test&page=2&pageSize=5',
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       const itemArgs = prisma.item.findMany.mock.calls[0][0]
@@ -193,7 +210,7 @@ describe('Search routes', () => {
 
       await app.inject({
         method: 'GET', url: '/search/advanced?q=test&types=items,users&communityId=c1',
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(prisma.item.findMany.mock.calls[0][0].where.space).toEqual({ communityId: 'c1' })
@@ -221,7 +238,7 @@ describe('Search routes', () => {
 
       await app.inject({
         method: 'GET', url: '/search/advanced?q=test&types=users',
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       const where = prisma.user.findMany.mock.calls[0][0].where

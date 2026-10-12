@@ -103,7 +103,7 @@ describe('Graph routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
-      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), USER_ID, ['space-1'])
+      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), USER_ID, ['space-1'], false)
     })
 
     it('should return 403 when the space is not readable', async () => {
@@ -224,7 +224,7 @@ describe('Graph routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().nodes.length).toBeGreaterThanOrEqual(1)
-      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), undefined, ['space-1'])
+      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), undefined, ['space-1'], false)
     })
 
     it('should return 403 for anonymous on private space', async () => {
@@ -253,7 +253,7 @@ describe('Graph routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
-      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), USER_ID, ['sp-open', 'sp-private'])
+      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), USER_ID, ['sp-open', 'sp-private'], false)
       expect(prisma.item.findMany.mock.calls[0][0].where.spaceId.in).toEqual(['sp-open'])
     })
 

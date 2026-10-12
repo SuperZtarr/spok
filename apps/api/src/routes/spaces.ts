@@ -5,7 +5,7 @@
  * Gestion (membres, invitations, images, emails) : isSpaceOwnerOrAdmin — le mode admin voit et fait
  * tout. Actions personnelles (join/leave, transfert de sa propriété) liées à l'appelant.
  * GET / en mode admin : espaces de toutes les communautés (ou de celle demandée), privés compris, rôle OWNER.
- * PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée). GET /:id renvoie inheritedVisibility +
+ * POST / et PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée) — POST l'applique dès la création (GROUP). GET /:id renvoie inheritedVisibility +
  * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
  * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
@@ -42,6 +42,9 @@ const createSpaceSchema = z.object({
   communityId: z.string().optional(),
   parentId: z.string().optional(),
   templateId: z.string().optional(),
+  // Visibilité dès la création (GROUP seulement) : évite qu'un espace voulu privé naisse « hérité »,
+  // donc visible dans une communauté publique, le temps d'un PATCH. null/absent = héritée
+  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).nullable().optional(),
 });
 
 const updateSpaceSchema = z.object({
@@ -396,6 +399,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         type: body.type,
         communityId,
         parentId: body.parentId,
+        ...(body.type === 'GROUP' && body.visibility !== undefined && { visibility: body.visibility }),
         memberships: {
           create: {
             userId: request.user.userId,
@@ -495,13 +499,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         };
       }
 
-      // 1b. Accès sans adhésion : propriétaire de la communauté ou admin en mode admin → OWNER,
-      // admin global hors mode admin → 'ADMIN' (lecture)
-      const adminUser = await fastify.prisma.user.findUnique({
-        where: { id: userId },
-        select: { globalRole: true },
-      });
-      if (adminUser?.globalRole === 'ADMIN' || communityOwner) {
+      // 1b. Accès sans adhésion : propriétaire de la communauté ou admin EN MODE ADMIN → OWNER.
+      // Hors mode admin, un admin global est un utilisateur normal (aucune lecture d'office).
+      if (adminModeOn || communityOwner) {
         const adminSpace = await fastify.prisma.space.findUnique({
           where: { id: request.params.id },
           include: {
@@ -514,7 +514,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           return {
             ...adminSpace,
             ...(await getInheritedVisibility(fastify.prisma, adminSpace)),
-            role: (adminModeOn || communityOwner ? 'OWNER' : 'ADMIN') as Role,
+            role: 'OWNER' as Role,
             memberCount: adminSpace._count.memberships,
             itemCount: adminSpace._count.items,
           };

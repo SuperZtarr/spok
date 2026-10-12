@@ -300,6 +300,22 @@ describe('Spaces routes', () => {
       expect(createArg.data.communityId).toBe('com-1')
     })
 
+    // 2026-10-12 : visibilité appliquée dès la création (avant : ignorée, l'espace naissait « hérité »)
+    it('should store the requested visibility on a GROUP space at creation', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+      prisma.space.create.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Bureau', type: 'GROUP', communityId: 'com-1', visibility: 'PRIVATE' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(prisma.space.create.mock.calls[0][0].data.visibility).toBe('PRIVATE')
+    })
+
     // Fuite 2026-10-12 : un membre de la communauté créait des sous-espaces sous un espace privé
     it('should refuse a sub-space under a private parent for a mere community member', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
@@ -390,10 +406,12 @@ describe('Spaces routes', () => {
       expect(res.json().role).toBe('OWNER')
     })
 
-    it('should keep role ADMIN (read-only) for a non-member admin without admin mode', async () => {
+    // Règle Thomas 2026-10-12 : hors mode admin, un admin global est un utilisateur normal
+    it('should treat a non-member admin without admin mode as a normal user (private space → 404)', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
-      prisma.space.findUnique.mockResolvedValue(mockSpace())
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
 
       const res = await app.inject({
         method: 'GET',
@@ -401,8 +419,7 @@ describe('Spaces routes', () => {
         headers: { authorization: `Bearer ${token}` },
       })
 
-      expect(res.statusCode).toBe(200)
-      expect(res.json().role).toBe('ADMIN')
+      expect(res.statusCode).toBe(404)
     })
 
     it('should return space for direct member', async () => {

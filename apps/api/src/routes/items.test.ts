@@ -854,10 +854,11 @@ describe('checkSpaceAccess — mode admin', () => {
     expect(access?.role).toBe('OWNER')
   })
 
-  it('garde le rôle réel hors mode admin, et ADMIN (lecture) pour un admin non membre', async () => {
+  // Règle Thomas 2026-10-12 : hors mode admin, un admin global est un utilisateur normal (plus de lecture d'office)
+  it('garde le rôle réel hors mode admin, et aucun accès pour un admin non membre', async () => {
     const { checkSpaceAccess } = await import('./items.js')
     expect((await checkSpaceAccess(fakePrisma({ role: 'MEMBER' }, 'ADMIN'), 'u1', 's1'))?.role).toBe('MEMBER')
-    expect((await checkSpaceAccess(fakePrisma(null, 'ADMIN'), 'u1', 's1'))?.role).toBe('ADMIN')
+    expect(await checkSpaceAccess(fakePrisma(null, 'ADMIN'), 'u1', 's1')).toBeNull()
   })
 
   it("ignore le header mode admin pour un non-admin", async () => {
@@ -876,7 +877,7 @@ describe('filterReadableSpaceIds', () => {
     inherited: { id: 'inherited', parentId: null, visibility: null, communityId: 'c1' },
   }
 
-  async function run(opts: { userId?: string; globalRole?: string; communityRole?: string; communityVisibility?: string; direct?: string[] }, ids: string[]) {
+  async function run(opts: { userId?: string; globalRole?: string; communityRole?: string; communityVisibility?: string; direct?: string[]; adminMode?: boolean }, ids: string[]) {
     const { createMockPrisma } = await import('../test/helpers.js')
     const prisma = createMockPrisma()
     prisma.user.findUnique.mockResolvedValue({ globalRole: opts.globalRole ?? 'USER' })
@@ -885,7 +886,7 @@ describe('filterReadableSpaceIds', () => {
     prisma.communityMembership.findMany.mockResolvedValue(opts.communityRole ? [{ communityId: 'c1', role: opts.communityRole }] : [])
     prisma.spaceMembership.findMany.mockResolvedValue((opts.direct ?? []).map(spaceId => ({ spaceId })))
     const { filterReadableSpaceIds } = await import('./items.js')
-    return filterReadableSpaceIds(prisma, opts.userId, ids)
+    return filterReadableSpaceIds(prisma, opts.userId, ids, opts.adminMode ?? false)
   }
 
   const ALL = ['open', 'priv', 'childOfPriv', 'inherited']
@@ -907,7 +908,9 @@ describe('filterReadableSpaceIds', () => {
     expect(await run({ communityVisibility: 'READONLY' }, ALL)).toEqual(['open', 'inherited'])
   })
 
-  it('global admin reads everything', async () => {
-    expect(await run({ userId: 'u1', globalRole: 'ADMIN' }, ALL)).toEqual(ALL)
+  it('global admin reads everything in admin mode only', async () => {
+    expect(await run({ userId: 'u1', globalRole: 'ADMIN', adminMode: true }, ALL)).toEqual(ALL)
+    // Hors mode admin : utilisateur normal (ici non membre d'une communauté privée → rien)
+    expect(await run({ userId: 'u1', globalRole: 'ADMIN' }, ALL)).toEqual([])
   })
 })

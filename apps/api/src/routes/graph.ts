@@ -247,7 +247,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Accès (règle checkSpaceAccess, visibilité effective) à l'espace ET à chaque portail :
       // l'espace refusé → 403, un portail refusé est écarté sans erreur
-      const readable = new Set(await filterReadableSpaceIds(fastify.prisma, userId, [spaceId, ...requestedPortalIds]));
+      const readable = new Set(await filterReadableSpaceIds(fastify.prisma, userId, [spaceId, ...requestedPortalIds], request.isAdminMode));
       if (!readable.has(spaceId)) {
         return reply.forbidden('Access denied');
       }
@@ -380,7 +380,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         where: { communityId, type: 'GROUP' },
         select: { id: true },
       });
-      const readableSpaceIds = await filterReadableSpaceIds(fastify.prisma, userId, communitySpaces.map(s => s.id));
+      const readableSpaceIds = await filterReadableSpaceIds(fastify.prisma, userId, communitySpaces.map(s => s.id), request.isAdminMode);
 
       const items = await fastify.prisma.item.findMany({
         where: { spaceId: { in: readableSpaceIds } },
@@ -461,7 +461,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
           })
         : [];
       // Espaces lisibles seulement (visibilité effective, privés exclus sauf membre direct / propriétaire)
-      const communitySpaceIds = await filterReadableSpaceIds(fastify.prisma, userId, communitySpaces.map(s => s.id));
+      const communitySpaceIds = await filterReadableSpaceIds(fastify.prisma, userId, communitySpaces.map(s => s.id), request.isAdminMode);
 
       // When filtering by communities, only include direct spaces that belong to a selected community
       let filteredDirectSpaceIds = directSpaceIds;
@@ -541,7 +541,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
       if (filterSpaceId) {
         // Accès (règle checkSpaceAccess, visibilité effective) à l'espace ET à chaque portail :
         // l'espace refusé → 403, un portail refusé est écarté sans erreur
-        const readable = new Set(await filterReadableSpaceIds(fastify.prisma, userId, [filterSpaceId, ...requestedPortalIds]));
+        const readable = new Set(await filterReadableSpaceIds(fastify.prisma, userId, [filterSpaceId, ...requestedPortalIds], request.isAdminMode));
         if (!readable.has(filterSpaceId)) {
           return reply.code(403).send({ error: 'Access denied' });
         }
@@ -654,7 +654,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         : [];
       // Espaces lisibles seulement (visibilité effective, privés exclus sauf membre direct / propriétaire)
       const readableCommunitySpaceIds = new Set(
-        await filterReadableSpaceIds(fastify.prisma, userId, candidateCommunitySpaces.map(s => s.id)),
+        await filterReadableSpaceIds(fastify.prisma, userId, candidateCommunitySpaces.map(s => s.id), request.isAdminMode),
       );
       const communitySpaces = candidateCommunitySpaces.filter(s => readableCommunitySpaceIds.has(s.id));
 

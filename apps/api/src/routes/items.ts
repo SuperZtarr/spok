@@ -4,7 +4,7 @@
  * getEffectiveVisibility (visibilité espace → parent → communauté ; OPEN→MEMBER, READONLY→VIEWER)
  * utilisés par de nombreuses routes — toute modification impacte l'accès global.
  * checkSpaceAccess(…, isAdminMode) : en mode admin (admin global + X-Admin-Mode) → rôle OWNER partout,
- * membre ou non ; hors mode admin, un admin non membre a le rôle 'ADMIN' (lecture seule). Toute route
+ * membre ou non ; hors mode admin, un admin global est un utilisateur normal (aucun passe-droit). Toute route
  * doit passer request.isAdminMode en 4e argument. Le propriétaire de la communauté a le rôle OWNER
  * dans tous les espaces de sa communauté, privés compris (isCommunityOwnerOfSpace).
  * Accusé de lecture à l'assignation : création/PATCH posent assignedAt/assignedById (assignmentStamp) ;
@@ -117,7 +117,7 @@ export async function isCommunityOwnerOfSpace(prisma: any, userId: string, space
 
 // Version en masse de checkSpaceAccess (lecture) : parmi spaceIds, ceux que l'utilisateur peut lire.
 // Pour les vues qui agrègent beaucoup d'espaces (graphes, sunburst) sans N requêtes récursives.
-// Même règle : admin global ou membre direct → oui ; propriétaire de la communauté → oui ;
+// Même règle : admin global en mode admin ou membre direct → oui ; propriétaire de la communauté → oui ;
 // visibilité effective (espace → parents → communauté) PRIVATE → non ; sinon membre de la communauté
 // ou communauté non privée → oui. Ne jamais filtrer sur la visibilité propre de l'espace seule.
 // Version en masse de getEffectiveVisibility : visibilité effective (espace → parents → communauté) de
@@ -168,10 +168,11 @@ export async function getEffectiveVisibilities(prisma: any, spaceIds: string[]):
   return result;
 }
 
-export async function filterReadableSpaceIds(prisma: any, userId: string | undefined, spaceIds: string[]): Promise<string[]> {
+export async function filterReadableSpaceIds(prisma: any, userId: string | undefined, spaceIds: string[], isAdminMode = false): Promise<string[]> {
   const ids = [...new Set(spaceIds)];
   if (ids.length === 0) return [];
-  if (userId) {
+  // Admin global : tout lisible EN MODE ADMIN seulement (hors mode admin = utilisateur normal)
+  if (userId && isAdminMode) {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
     if (user?.globalRole === 'ADMIN') return ids;
   }
@@ -228,12 +229,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
     }
 
     if (membership) return membership;
-
-    // Admin global hors mode admin : lecture seule sans adhésion (rôle 'ADMIN', refusé en écriture)
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
-    if (user?.globalRole === 'ADMIN') {
-      return { userId, spaceId, role: 'ADMIN' as const, id: '', joinedAt: new Date() };
-    }
+    // Admin global HORS mode admin : aucun passe-droit, il suit les règles d'un utilisateur normal
   }
 
   // 2. Community membership or public community → access depends on effective visibility

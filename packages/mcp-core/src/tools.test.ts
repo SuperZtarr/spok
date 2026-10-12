@@ -224,3 +224,14 @@ describe('erreurs API', () => {
     expect(text(r)).toMatch(/404/)
   })
 })
+
+describe('create_space', () => {
+  // POST /spaces accepte visibility depuis le 2026-10-12 : plus de PATCH après coup (l'espace naissait « hérité »)
+  it('envoie la visibilité dans le POST, sans PATCH de rattrapage', async () => {
+    const { mcp, client } = await connect('public')
+    const r = await mcp.callTool({ name: 'create_space', arguments: { name: 'Bureau', communityId: 'c1' } })
+    expect(r.isError).toBeFalsy()
+    expect(client.post).toHaveBeenCalledWith('/spaces', expect.objectContaining({ type: 'GROUP', visibility: 'PRIVATE' }))
+    expect(client.patch).not.toHaveBeenCalled()
+  })
+})

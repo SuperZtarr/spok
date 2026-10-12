@@ -370,14 +370,12 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     },
     async ({ name, communityId, parentId, description, visibility }) => {
       // `type` est obligatoire côté API (400 sans lui) ; un espace de communauté est toujours GROUP.
-      const body: Record<string, unknown> = { name, communityId, type: 'GROUP' }
+      // La visibilité part dans le POST : l'espace naît directement avec (jamais « hérité » entre-temps).
+      const body: Record<string, unknown> = { name, communityId, type: 'GROUP', visibility }
       if (parentId) body.parentId = parentId
       if (description) body.description = description
       const space = await client.post('/spaces', body)
-      // POST /spaces ignore `visibility` (absent de son schéma) : sans ce PATCH, l'espace naît en
-      // visibilité nulle = héritée, même si PRIVATE était demandé.
-      await client.patch(`/spaces/${space.id}`, { visibility })
-      return ok(`Espace créé : [${space.id}] ${space.name} | visibilité: ${visibility}`)
+      return ok(`Espace créé : [${space.id}] ${space.name} | visibilité: ${space.visibility ?? visibility}`)
     })
 
   define('write', 'create_relation', 'Crée une relation entre deux items.',

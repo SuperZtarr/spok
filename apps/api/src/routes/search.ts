@@ -1,7 +1,7 @@
 /*
  * Recherche globale (/search et /search/advanced) sur items et contributions.
  * optionalAuthenticate : un anonyme reçoit des résultats vides (pas d'espaces accessibles).
- * Le périmètre est borné aux espaces des memberships (un admin global voit tout).
+ * Le périmètre est borné aux espaces des memberships (un admin global voit tout, en mode admin seulement).
  * /advanced : spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi
  * la section utilisateurs aux membres (portée par défaut posée par la page Recherche).
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais filtré).
@@ -39,7 +39,10 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     const enabledTypes = new Set((typesParam || 'communities,spaces,items,users,contributions').split(','));
 
     const userId = request.user?.userId;
-    const isAdmin = userId ? (await fastify.prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }))?.globalRole === 'ADMIN' : false;
+    // Admin global : tout EN MODE ADMIN seulement (hors mode admin = utilisateur normal)
+    const isAdmin = userId && request.isAdminMode
+      ? (await fastify.prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }))?.globalRole === 'ADMIN'
+      : false;
 
     // Build accessible space IDs for items/contributions
     let accessibleSpaceIds: string[] | null = null; // null = all (admin)
@@ -331,7 +334,8 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       select: { globalRole: true },
     });
 
-    const isAdmin = user?.globalRole === 'ADMIN';
+    // Admin global : recherche sur tout EN MODE ADMIN seulement (hors mode admin = utilisateur normal)
+    const isAdmin = user?.globalRole === 'ADMIN' && request.isAdminMode;
 
     let spaceFilter: { spaceId?: { in: string[] } } = {};
 
