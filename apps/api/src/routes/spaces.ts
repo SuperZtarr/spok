@@ -9,8 +9,9 @@
  * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
  * Espace PRIVATE (visibilité effective) : réservé aux membres directs et à l'admin — GET /:id et
- * /:id/members passent par checkSpaceAccess (READONLY → rôle VIEWER), /:id/join refusé hors mode admin,
- * création d'un sous-espace = accès en écriture (OWNER/MEMBER) au parent. Être membre de la
+ * /:id/members passent par checkSpaceAccess (READONLY → rôle VIEWER), /:id/join réservé aux espaces
+ * OUVERTS (hors propriétaire de communauté / mode admin), création d'un sous-espace ou rattachement
+ * (PATCH parentId) = accès en écriture (OWNER/MEMBER) au parent. Être membre de la
  * communauté ne suffit jamais pour un espace privé — être son PROPRIÉTAIRE, si : rôle OWNER dans
  * tous les espaces de la communauté (GET /, GET /:id, PATCH, gestion, join, contenu via checkSpaceAccess).
  */
@@ -599,6 +600,15 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             return reply.badRequest('Seuls les espaces de groupe peuvent avoir des sous-espaces');
           }
 
+          // Rattacher sous un parent = écrire dans ce parent (même règle que POST /) : sinon on
+          // greffe un espace sous un parent privé auquel on n'a pas accès. Admin global : règle de la route
+          if (!isGlobalAdmin) {
+            const parentAccess = await checkSpaceAccess(fastify.prisma, request.user.userId, body.parentId, request.isAdminMode);
+            if (!parentAccess || (parentAccess.role !== 'OWNER' && parentAccess.role !== 'MEMBER')) {
+              return reply.forbidden('Accès en écriture à l\'espace parent requis');
+            }
+          }
+
           // Check circular reference: walk up the chain
           let currentParentId: string | null = parentSpace.parentId;
           while (currentParentId) {
@@ -1042,12 +1052,16 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.forbidden('You must be a member of the community');
     }
 
-    // Espace privé (visibilité effective) : on y entre seulement par invitation, sauf propriétaire
-    // de la communauté ou mode admin
-    if ((await getEffectiveVisibility(fastify.prisma, request.params.id)) === 'PRIVATE'
+    // Rejoindre de soi-même = adhésion MEMBER (écriture) : seulement sur un espace OUVERT. Privé →
+    // invitation ; Lecture seule → la lecture est déjà acquise, l'écriture passe par une invitation
+    // (pas de rôle VIEWER en base). Propriétaire de la communauté et mode admin : toujours autorisés
+    const effectiveVisibility = await getEffectiveVisibility(fastify.prisma, request.params.id);
+    if (effectiveVisibility !== 'OPEN'
       && communityMembership.role !== 'OWNER'
       && !(await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode))) {
-      return reply.forbidden('Espace privé : accès sur invitation uniquement');
+      return reply.forbidden(effectiveVisibility === 'PRIVATE'
+        ? 'Espace privé : accès sur invitation uniquement'
+        : 'Espace en lecture seule : accès en écriture sur invitation uniquement');
     }
 
     // Check not already a member

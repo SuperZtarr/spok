@@ -866,3 +866,48 @@ describe('checkSpaceAccess — mode admin', () => {
     expect(access?.role).toBe('MEMBER')
   })
 })
+
+// filterReadableSpaceIds : version en masse de checkSpaceAccess (graphes/sunburst) — visibilité effective
+describe('filterReadableSpaceIds', () => {
+  const SPACES: Record<string, { id: string; parentId: string | null; visibility: string | null; communityId: string | null }> = {
+    open: { id: 'open', parentId: null, visibility: 'OPEN', communityId: 'c1' },
+    priv: { id: 'priv', parentId: null, visibility: 'PRIVATE', communityId: 'c1' },
+    childOfPriv: { id: 'childOfPriv', parentId: 'priv', visibility: null, communityId: 'c1' },
+    inherited: { id: 'inherited', parentId: null, visibility: null, communityId: 'c1' },
+  }
+
+  async function run(opts: { userId?: string; globalRole?: string; communityRole?: string; communityVisibility?: string; direct?: string[] }, ids: string[]) {
+    const { createMockPrisma } = await import('../test/helpers.js')
+    const prisma = createMockPrisma()
+    prisma.user.findUnique.mockResolvedValue({ globalRole: opts.globalRole ?? 'USER' })
+    prisma.space.findMany.mockImplementation(async ({ where }: any) => where.id.in.map((id: string) => SPACES[id]).filter(Boolean))
+    prisma.community.findMany.mockResolvedValue([{ id: 'c1', visibility: opts.communityVisibility ?? 'PRIVATE' }])
+    prisma.communityMembership.findMany.mockResolvedValue(opts.communityRole ? [{ communityId: 'c1', role: opts.communityRole }] : [])
+    prisma.spaceMembership.findMany.mockResolvedValue((opts.direct ?? []).map(spaceId => ({ spaceId })))
+    const { filterReadableSpaceIds } = await import('./items.js')
+    return filterReadableSpaceIds(prisma, opts.userId, ids)
+  }
+
+  const ALL = ['open', 'priv', 'childOfPriv', 'inherited']
+
+  it('community member: open and inherited-open spaces, never private ones nor their inherited children', async () => {
+    expect(await run({ userId: 'u1', communityRole: 'MEMBER', communityVisibility: 'OPEN' }, ALL)).toEqual(['open', 'inherited'])
+  })
+
+  it('direct member of a private space can read it', async () => {
+    expect(await run({ userId: 'u1', communityRole: 'MEMBER', direct: ['priv'] }, ['priv'])).toEqual(['priv'])
+  })
+
+  it('community owner reads every space of the community', async () => {
+    expect(await run({ userId: 'u1', communityRole: 'OWNER' }, ALL)).toEqual(ALL)
+  })
+
+  it('anonymous: nothing in a private community, non-private spaces in a public one', async () => {
+    expect(await run({}, ALL)).toEqual([])
+    expect(await run({ communityVisibility: 'READONLY' }, ALL)).toEqual(['open', 'inherited'])
+  })
+
+  it('global admin reads everything', async () => {
+    expect(await run({ userId: 'u1', globalRole: 'ADMIN' }, ALL)).toEqual(ALL)
+  })
+})

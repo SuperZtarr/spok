@@ -268,8 +268,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'private-space-direct-members-only',
     page: "Page d'un espace, liste de ses membres, sidebar, création de sous-espace",
     trigger: "Accès à un espace dont la visibilité effective (espace → parent → communauté) est Privée par un utilisateur qui n'en est pas membre direct",
-    effect: "Être membre de la communauté ne suffit pas : la fiche de l'espace et ses membres sont introuvables (404), on ne peut pas le rejoindre de soi-même (accès sur invitation uniquement) ni y créer de sous-espace. Seuls ses membres directs, le propriétaire de la communauté et un admin y accèdent (mode admin pour rejoindre ou modifier). Un espace Lecture seule s'ouvre en lecture (rôle VIEWER), un espace Ouvert en modification (rôle MEMBER)",
-    location: 'apps/api/src/routes/spaces.ts (GET /:id, GET /:id/members, POST /:id/join, POST / avec parentId), apps/api/src/routes/items.ts (checkSpaceAccess)',
+    effect: "Être membre de la communauté ne suffit pas : la fiche de l'espace, ses membres et ses éléments (y compris dans les graphes et le sunburst) sont introuvables, on ne peut pas le rejoindre de soi-même (accès sur invitation uniquement) ni y créer ou y rattacher un sous-espace. Seuls ses membres directs, le propriétaire de la communauté et un admin y accèdent (mode admin pour rejoindre ou modifier). Un espace Lecture seule s'ouvre en lecture (rôle VIEWER) et ne se rejoint que sur invitation ; un espace Ouvert s'ouvre en modification (rôle MEMBER) et se rejoint librement",
+    location: 'apps/api/src/routes/spaces.ts (GET /:id, GET /:id/members, POST /:id/join, POST / et PATCH /:id avec parentId), apps/api/src/routes/items.ts (checkSpaceAccess, filterReadableSpaceIds), apps/api/src/routes/graph.ts',
   },
   {
     id: 'community-owner-all-spaces',

@@ -115,6 +115,66 @@ export async function isCommunityOwnerOfSpace(prisma: any, userId: string, space
   return membership?.role === 'OWNER';
 }
 
+// Version en masse de checkSpaceAccess (lecture) : parmi spaceIds, ceux que l'utilisateur peut lire.
+// Pour les vues qui agrègent beaucoup d'espaces (graphes, sunburst) sans N requêtes récursives.
+// Même règle : admin global ou membre direct → oui ; propriétaire de la communauté → oui ;
+// visibilité effective (espace → parents → communauté) PRIVATE → non ; sinon membre de la communauté
+// ou communauté non privée → oui. Ne jamais filtrer sur la visibilité propre de l'espace seule.
+export async function filterReadableSpaceIds(prisma: any, userId: string | undefined, spaceIds: string[]): Promise<string[]> {
+  const ids = [...new Set(spaceIds)];
+  if (ids.length === 0) return [];
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+    if (user?.globalRole === 'ADMIN') return ids;
+  }
+
+  // Espaces demandés + leurs ancêtres (nécessaires à la visibilité héritée)
+  const byId = new Map<string, { id: string; parentId: string | null; visibility: string | null; communityId: string | null }>();
+  let toLoad = ids;
+  while (toLoad.length > 0) {
+    const rows = await prisma.space.findMany({
+      where: { id: { in: toLoad } },
+      select: { id: true, parentId: true, visibility: true, communityId: true },
+    });
+    for (const r of rows) byId.set(r.id, r);
+    toLoad = [...new Set<string>(rows.map((r: any) => r.parentId).filter((p: string | null) => !!p && !byId.has(p)))];
+  }
+
+  const communityIds = [...new Set([...byId.values()].map(s => s.communityId).filter((c): c is string => !!c))];
+  const [communities, communityMemberships, directMemberships] = await Promise.all([
+    communityIds.length > 0
+      ? prisma.community.findMany({ where: { id: { in: communityIds } }, select: { id: true, visibility: true } })
+      : [],
+    userId && communityIds.length > 0
+      ? prisma.communityMembership.findMany({ where: { userId, communityId: { in: communityIds } }, select: { communityId: true, role: true } })
+      : [],
+    userId
+      ? prisma.spaceMembership.findMany({ where: { userId, spaceId: { in: ids } }, select: { spaceId: true } })
+      : [],
+  ]);
+  const communityVisibility = new Map<string, string>(communities.map((c: any) => [c.id, c.visibility]));
+  const communityRole = new Map<string, string>(communityMemberships.map((m: any) => [m.communityId, m.role]));
+  const directIds = new Set<string>(directMemberships.map((m: any) => m.spaceId));
+
+  const effectiveVisibility = (spaceId: string, depth = 0): string => {
+    const s = byId.get(spaceId);
+    if (!s || depth > 50) return 'PRIVATE';
+    if (s.visibility) return s.visibility;
+    if (s.parentId) return effectiveVisibility(s.parentId, depth + 1);
+    return (s.communityId && communityVisibility.get(s.communityId)) || 'PRIVATE';
+  };
+
+  return ids.filter(id => {
+    if (directIds.has(id)) return true;
+    const s = byId.get(id);
+    if (!s?.communityId) return false;
+    const role = communityRole.get(s.communityId);
+    if (role === 'OWNER') return true;
+    if (effectiveVisibility(id) === 'PRIVATE') return false;
+    return !!role || communityVisibility.get(s.communityId) !== 'PRIVATE';
+  });
+}
+
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string, isAdminMode = false) {

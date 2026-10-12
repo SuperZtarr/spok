@@ -1,8 +1,13 @@
 /*
  * TNR des routes graphe/sunburst, y compris l'accès public (visitorPreview) : anonyme et
  * non-membre sur communautés publiques/privées — garantit l'absence de 500 anonymes.
+ * filterReadableSpaceIds (règle d'accès par espace) est simulé ici : les routes doivent l'appliquer à
+ * l'espace demandé, aux portails et aux espaces agrégés ; la règle elle-même est testée dans items.
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+const readable = vi.hoisted(() => ({ fn: vi.fn() }))
+vi.mock('./items.js', () => ({ filterReadableSpaceIds: readable.fn }))
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
 import { createMockPrisma, getTestToken, MockPrisma } from '../test/helpers.js'
@@ -57,6 +62,9 @@ describe('Graph routes', () => {
     app = result.app
     prisma = result.prisma
     token = getTestToken(app, { userId: USER_ID, email: 'test@test.com' })
+    // Par défaut tout est lisible ; chaque test de refus le restreint
+    readable.fn.mockReset()
+    readable.fn.mockImplementation(async (_prisma: unknown, _userId: unknown, ids: string[]) => ids)
   })
 
   // ─── SPACE GRAPH ──────────────────────────────────────
@@ -84,12 +92,8 @@ describe('Graph routes', () => {
       expect(body.nodes.some((n: any) => n.type === 'SPACE')).toBe(true)
     })
 
-    it('should allow access via community membership', async () => {
-      prisma.spaceMembership.findUnique.mockResolvedValue(null) // no direct membership
-      prisma.space.findUnique
-        .mockResolvedValueOnce({ communityId: 'com-1' }) // access check
-        .mockResolvedValueOnce({ name: 'Space 1' }) // spaceInfo
-      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID })
+    it('should check access with the caller and the requested space', async () => {
+      prisma.space.findUnique.mockResolvedValue({ name: 'Space 1' })
       prisma.item.findMany.mockResolvedValue([mockItem()])
       prisma.itemRelation.findMany.mockResolvedValue([])
 
@@ -99,11 +103,11 @@ describe('Graph routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
+      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), USER_ID, ['space-1'])
     })
 
-    it('should return 403 for non-member', async () => {
-      prisma.spaceMembership.findUnique.mockResolvedValue(null)
-      prisma.space.findUnique.mockResolvedValue({ communityId: null }) // no community
+    it('should return 403 when the space is not readable', async () => {
+      readable.fn.mockResolvedValue([])
 
       const res = await app.inject({
         method: 'GET', url: '/spaces/space-1/graph',
@@ -111,6 +115,23 @@ describe('Graph routes', () => {
       })
 
       expect(res.statusCode).toBe(403)
+      expect(prisma.item.findMany).not.toHaveBeenCalled()
+    })
+
+    // Faille 2026-10-12 : additionalSpaceIds n'était jamais contrôlé → items de n'importe quel espace
+    it('should drop portal spaces that are not readable', async () => {
+      readable.fn.mockResolvedValue(['space-1'])
+      prisma.space.findUnique.mockResolvedValue({ name: 'Space 1' })
+      prisma.item.findMany.mockResolvedValue([mockItem()])
+      prisma.itemRelation.findMany.mockResolvedValue([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/spaces/space-1/graph?additionalSpaceIds=secret-1',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId.in).toEqual(['space-1'])
     })
 
     it('should include relation links', async () => {
@@ -194,10 +215,8 @@ describe('Graph routes', () => {
 
     // Accès public (visitorPreview) : un anonyme voit le graphe d'un espace non privé
     // d'une communauté publique ; refus propre (403) sinon — jamais de 500.
-    it('should return graph for anonymous on public-community space', async () => {
-      prisma.space.findUnique
-        .mockResolvedValueOnce({ communityId: 'com-1', visibility: null, community: { isPublic: true, visibility: 'OPEN' } }) // access check
-        .mockResolvedValueOnce({ name: 'Space 1' }) // spaceInfo
+    it('should return graph for anonymous on a readable space', async () => {
+      prisma.space.findUnique.mockResolvedValue({ name: 'Space 1' })
       prisma.item.findMany.mockResolvedValue([mockItem()])
       prisma.itemRelation.findMany.mockResolvedValue([])
 
@@ -205,10 +224,11 @@ describe('Graph routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().nodes.length).toBeGreaterThanOrEqual(1)
+      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), undefined, ['space-1'])
     })
 
     it('should return 403 for anonymous on private space', async () => {
-      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1', visibility: 'PRIVATE', community: { isPublic: true, visibility: 'OPEN' } })
+      readable.fn.mockResolvedValue([])
 
       const res = await app.inject({ method: 'GET', url: '/spaces/space-1/graph' })
       expect(res.statusCode).toBe(403)
@@ -218,9 +238,29 @@ describe('Graph routes', () => {
   // ─── COMMUNITY GRAPH ─────────────────────────────────
 
   describe('GET /communities/:communityId/graph', () => {
+    // Faille 2026-10-12 : un membre recevait les items des espaces privés de la communauté
+    it('should only query items of readable community spaces', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID })
+      prisma.community.findUnique.mockResolvedValue({ name: 'Community 1' })
+      prisma.space.findMany.mockResolvedValue([{ id: 'sp-open' }, { id: 'sp-private' }])
+      readable.fn.mockResolvedValue(['sp-open'])
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.itemRelation.findMany.mockResolvedValue([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/communities/com-1/graph',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(readable.fn).toHaveBeenCalledWith(expect.anything(), USER_ID, ['sp-open', 'sp-private'])
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId.in).toEqual(['sp-open'])
+    })
+
     it('should return graph with space nodes for community member', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID })
       prisma.community.findUnique.mockResolvedValue({ name: 'Community 1' })
+      prisma.space.findMany.mockResolvedValue([{ id: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([
         mockItem({ id: 'item-1', space: { name: 'Space 1', communityId: 'com-1' } }),
       ])
@@ -244,6 +284,7 @@ describe('Graph routes', () => {
       prisma.community.findUnique
         .mockResolvedValueOnce({ isPublic: true, visibility: 'OPEN' }) // access check
         .mockResolvedValueOnce({ name: 'Community 1' }) // name
+      prisma.space.findMany.mockResolvedValue([{ id: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([mockItem({ space: { name: 'Space 1', communityId: 'com-1' } })])
       prisma.itemRelation.findMany.mockResolvedValue([])
 
@@ -259,6 +300,7 @@ describe('Graph routes', () => {
       prisma.community.findUnique
         .mockResolvedValueOnce({ isPublic: true, visibility: 'OPEN' })
         .mockResolvedValueOnce({ name: 'Community 1' })
+      prisma.space.findMany.mockResolvedValue([{ id: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([mockItem({ space: { name: 'Space 1', communityId: 'com-1' } })])
       prisma.itemRelation.findMany.mockResolvedValue([])
 
@@ -383,8 +425,7 @@ describe('Graph routes', () => {
     })
 
     it('should return 403 for space mode without access', async () => {
-      prisma.spaceMembership.findUnique.mockResolvedValue(null)
-      prisma.space.findUnique.mockResolvedValue({ communityId: null })
+      readable.fn.mockResolvedValue([])
 
       const res = await app.inject({
         method: 'GET', url: '/graph/sunburst?spaceId=space-1',
@@ -414,6 +455,20 @@ describe('Graph routes', () => {
       const portalNode = body.children?.find((c: any) => c.nodeType === 'space')
       expect(portalNode).toBeDefined()
       expect(portalNode.name).toBe('Portal')
+    })
+
+    it('should drop unreadable portal spaces in space-scoped mode', async () => {
+      readable.fn.mockResolvedValue(['space-1'])
+      prisma.space.findUnique.mockResolvedValue({ id: 'space-1', name: 'Main' })
+      prisma.item.findMany.mockResolvedValue([])
+
+      const res = await app.inject({
+        method: 'GET', url: '/graph/sunburst?spaceId=space-1&additionalSpaceIds=secret-1',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId.in).toEqual(['space-1'])
     })
 
     it('should return global sunburst with communities hierarchy', async () => {

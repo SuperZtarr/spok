@@ -4,9 +4,12 @@
  * (visitorPreview) : communautés publiques visibles, espaces PRIVATE exclus, 403 sinon.
  * Ne jamais lire request.user.userId sans garde ici (crash 500 anonyme, vécu 2026-07-11).
  * « Communauté publique » = visibility !== 'PRIVATE' uniquement — isPublic (déprécié) n'est jamais lu.
+ * Tout espace dont on renvoie les items passe par filterReadableSpaceIds (items.ts, même règle que
+ * checkSpaceAccess, visibilité effective) — y compris les portails additionalSpaceIds, jamais lus tels quels.
  */
 import { FastifyPluginAsync } from 'fastify';
 import type { SunburstNode } from '@spok/shared';
+import { filterReadableSpaceIds } from './items.js';
 
 interface GraphNode {
   id: string;
@@ -238,37 +241,17 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
       const { spaceId } = request.params;
       const userId = request.user?.userId;
       const linkTypes = parseLinkTypes(request.query.linkTypes);
-      const additionalSpaceIds = request.query.additionalSpaceIds
+      const requestedPortalIds = request.query.additionalSpaceIds
         ? request.query.additionalSpaceIds.split(',').map(id => id.trim()).filter(Boolean)
         : [];
 
-      // Accès : membre direct, membre de la communauté, ou visiteur (connecté ou anonyme)
-      // si la communauté est publique et l'espace non privé (visitorPreview, cf. doc Matrice des droits)
-      const membership = userId
-        ? await fastify.prisma.spaceMembership.findUnique({
-            where: { userId_spaceId: { userId, spaceId } },
-          })
-        : null;
-
-      if (!membership) {
-        const space = await fastify.prisma.space.findUnique({
-          where: { id: spaceId },
-          select: { communityId: true, visibility: true, community: { select: { visibility: true } } },
-        });
-
-        if (!space?.communityId) {
-          return reply.forbidden('Access denied');
-        }
-        const communityMembership = userId
-          ? await fastify.prisma.communityMembership.findUnique({
-              where: { userId_communityId: { userId, communityId: space.communityId } },
-            })
-          : null;
-        const publicOk = space.community?.visibility !== 'PRIVATE' && space.visibility !== 'PRIVATE';
-        if (!communityMembership && !publicOk) {
-          return reply.forbidden('Access denied');
-        }
+      // Accès (règle checkSpaceAccess, visibilité effective) à l'espace ET à chaque portail :
+      // l'espace refusé → 403, un portail refusé est écarté sans erreur
+      const readable = new Set(await filterReadableSpaceIds(fastify.prisma, userId, [spaceId, ...requestedPortalIds]));
+      if (!readable.has(spaceId)) {
+        return reply.forbidden('Access denied');
       }
+      const additionalSpaceIds = requestedPortalIds.filter(id => id !== spaceId && readable.has(id));
 
       const spaceInfo = await fastify.prisma.space.findUnique({
         where: { id: spaceId },
@@ -391,15 +374,16 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         select: { name: true },
       });
 
+      // Espaces lisibles seulement (visibilité effective) : un membre ne voit pas les espaces privés
+      // dont il n'est pas membre, sauf propriétaire de la communauté
+      const communitySpaces = await fastify.prisma.space.findMany({
+        where: { communityId, type: 'GROUP' },
+        select: { id: true },
+      });
+      const readableSpaceIds = await filterReadableSpaceIds(fastify.prisma, userId, communitySpaces.map(s => s.id));
+
       const items = await fastify.prisma.item.findMany({
-        where: {
-          space: {
-            communityId,
-            type: 'GROUP',
-            // Visiteur (non-membre) : exclure les espaces explicitement privés
-            ...(membership ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
-          },
-        },
+        where: { spaceId: { in: readableSpaceIds } },
         select: {
           id: true,
           title: true,
@@ -472,16 +456,12 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
 
       const communitySpaces = activeCommunityIds.length > 0
         ? await fastify.prisma.space.findMany({
-            where: {
-              communityId: { in: activeCommunityIds },
-              type: 'GROUP',
-              // Anonyme : exclure les espaces explicitement privés
-              ...(userId ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
-            },
+            where: { communityId: { in: activeCommunityIds }, type: 'GROUP' },
             select: { id: true },
           })
         : [];
-      const communitySpaceIds = communitySpaces.map(s => s.id);
+      // Espaces lisibles seulement (visibilité effective, privés exclus sauf membre direct / propriétaire)
+      const communitySpaceIds = await filterReadableSpaceIds(fastify.prisma, userId, communitySpaces.map(s => s.id));
 
       // When filtering by communities, only include direct spaces that belong to a selected community
       let filteredDirectSpaceIds = directSpaceIds;
@@ -548,7 +528,7 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
     '/graph/sunburst',
     async (request, reply) => {
       const filterSpaceId = request.query.spaceId || null;
-      const additionalSpaceIds = request.query.additionalSpaceIds
+      const requestedPortalIds = request.query.additionalSpaceIds
         ? request.query.additionalSpaceIds.split(',').map(id => id.trim()).filter(Boolean)
         : [];
       const filterCommunityIds = request.query.communityIds
@@ -559,30 +539,13 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Space-scoped mode: return item hierarchy for a single space
       if (filterSpaceId) {
-        // Verify access : membre direct, membre de la communauté, ou visiteur si public
-        const membership = userId
-          ? await fastify.prisma.spaceMembership.findUnique({
-              where: { userId_spaceId: { userId, spaceId: filterSpaceId } },
-            })
-          : null;
-        if (!membership) {
-          const spaceCheck = await fastify.prisma.space.findUnique({
-            where: { id: filterSpaceId },
-            select: { communityId: true, visibility: true, community: { select: { visibility: true } } },
-          });
-          if (!spaceCheck?.communityId) {
-            return reply.code(403).send({ error: 'Access denied' });
-          }
-          const communityMembership = userId
-            ? await fastify.prisma.communityMembership.findUnique({
-                where: { userId_communityId: { userId, communityId: spaceCheck.communityId } },
-              })
-            : null;
-          const publicOk = spaceCheck.community?.visibility !== 'PRIVATE' && spaceCheck.visibility !== 'PRIVATE';
-          if (!communityMembership && !publicOk) {
-            return reply.code(403).send({ error: 'Access denied' });
-          }
+        // Accès (règle checkSpaceAccess, visibilité effective) à l'espace ET à chaque portail :
+        // l'espace refusé → 403, un portail refusé est écarté sans erreur
+        const readable = new Set(await filterReadableSpaceIds(fastify.prisma, userId, [filterSpaceId, ...requestedPortalIds]));
+        if (!readable.has(filterSpaceId)) {
+          return reply.code(403).send({ error: 'Access denied' });
         }
+        const additionalSpaceIds = requestedPortalIds.filter(id => id !== filterSpaceId && readable.has(id));
 
         const spaceInfo = await fastify.prisma.space.findUnique({
           where: { id: filterSpaceId },
@@ -683,17 +646,17 @@ export const graphRoutes: FastifyPluginAsync = async (fastify) => {
         ? allUserCommunityIds.filter(id => filterCommunityIds.includes(id))
         : allUserCommunityIds;
 
-      const communitySpaces = activeCommunityIds.length > 0
+      const candidateCommunitySpaces = activeCommunityIds.length > 0
         ? await fastify.prisma.space.findMany({
-            where: {
-              communityId: { in: activeCommunityIds },
-              type: 'GROUP',
-              // Anonyme : exclure les espaces explicitement privés
-              ...(userId ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
-            },
+            where: { communityId: { in: activeCommunityIds }, type: 'GROUP' },
             select: { id: true, name: true, communityId: true },
           })
         : [];
+      // Espaces lisibles seulement (visibilité effective, privés exclus sauf membre direct / propriétaire)
+      const readableCommunitySpaceIds = new Set(
+        await filterReadableSpaceIds(fastify.prisma, userId, candidateCommunitySpaces.map(s => s.id)),
+      );
+      const communitySpaces = candidateCommunitySpaces.filter(s => readableCommunitySpaceIds.has(s.id));
 
       // When filtering by communities, only include direct spaces in selected communities
       let directSpacesInfo: Array<{ id: string; name: string; communityId: string | null }> = [];

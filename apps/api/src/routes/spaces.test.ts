@@ -497,6 +497,27 @@ describe('Spaces routes', () => {
       expect(prisma.space.update.mock.calls[1][0].data.visibility).toBeNull()
     })
 
+    // Revue sécu 2026-10-12 : rattacher son espace sous un parent privé sans y avoir accès
+    it('should refuse moving a space under a private parent without write access to it', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockImplementation(async ({ where }: any) =>
+        where.userId_spaceId.spaceId === SPACE_ID
+          ? { ...mockMembership({ role: 'OWNER' }), space: mockSpace({ communityId: 'com-1' }) }
+          : null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ id: 'parent-priv', type: 'GROUP', communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'MEMBER' })
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { parentId: 'parent-priv' },
+      })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.space.update).not.toHaveBeenCalled()
+    })
+
     it('should update space name as OWNER', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
       prisma.spaceMembership.findUnique.mockResolvedValue({
@@ -795,6 +816,22 @@ describe('Spaces routes', () => {
     it('should refuse joining a private space', async () => {
       prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/join`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.spaceMembership.create).not.toHaveBeenCalled()
+    })
+
+    // Revue sécu 2026-10-12 : rejoindre un espace READONLY donnait une adhésion MEMBER (écriture)
+    it('should refuse joining a read-only space for a mere community member', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'READONLY' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'MEMBER' })
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
 
       const res = await app.inject({
