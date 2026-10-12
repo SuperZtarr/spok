@@ -11,6 +11,7 @@
 - API : plus aucune lecture d'isPublic pour l'accès/les listes (graph, items, spaces, search, communities, admin/users) ; PATCH admin convertit isPublic → visibility. Tests 7 fichiers 240/240, typecheck api OK. MEP ac14b92
 - Fuite espaces privés (spaces.ts) : GET /:id et /:id/members via checkSpaceAccess, /:id/join refusé si PRIVATE (hors mode admin), POST / sous parent = écriture au parent requise. 6 tests ajoutés, spaces 64/64, typecheck api OK, règle businessRules `private-space-direct-members-only`. MEP ac14b92
 - Règle Thomas : propriétaire de communauté = OWNER dans tous ses espaces (isCommunityOwnerOfSpace dans items.ts, branché checkSpaceAccess, isSpaceOwnerOrAdmin, GET /, GET /:id, PATCH, join). Test live-sessions inversé (préparation par OWNER de communauté autorisée). TNR api 625/625, typecheck api OK. MEP ac14b92
+- Revue sécu de ac14b92 : graph.ts (4 routes) filtré par filterReadableSpaceIds (portails compris), PATCH parentId gardé, join READONLY refusé (pas de VIEWER en base). TNR api 635/635, typecheck api OK. MEP 144474b
 
 ### MCP distant pour utilisateurs tiers — 2026-10-12
 - Conception validée : MCP monté dans l'API (`POST /mcp`, outils via fastify.inject avec le jeton de l'appelant), jetons personnels (étape 1), OAuth claude.ai/Desktop (étape 2, plus tard), conformité = instructions serveur + get_space_conventions + validation stricte + Markdown→HTML, audit source MCP
