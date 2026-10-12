@@ -3,7 +3,7 @@
  * appel d'outil rejoué sur les routes REST via inject avec le jeton de l'appelant, sans mode admin,
  * limites de débit : par IP avant authentification (faux jetons en rafale), par jeton après (en-têtes variés).
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
 import rateLimit from '@fastify/rate-limit'
@@ -22,6 +22,13 @@ async function buildApp() {
   await app.register(rateLimit, { global: false })
   app.decorate('prisma', prisma as any)
   await app.register(jwtPlugin)
+  // Le faux socket de fastify.inject n'a pas destroySoon, que @hono/node-server (transport du SDK MCP)
+  // appelle 500 ms après la réponse pour drainer la requête. Un vrai socket l'a : correctif propre aux tests.
+  app.addHook('onRequest', (req, _reply, done) => {
+    const socket = req.raw.socket as any
+    if (socket && typeof socket.destroySoon !== 'function') socket.destroySoon = () => socket.destroy?.()
+    done()
+  })
   // Route REST factice pour observer les sous-requêtes des outils
   app.get('/communities', { preHandler: [app.authenticate] }, async (req) => [
     { id: 'c1', name: `vue par ${req.user.userId} admin=${req.isAdminMode}` },
@@ -36,6 +43,10 @@ function rpc(method: string, params: unknown = {}, id = 1) {
 }
 
 const INIT = rpc('initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 't', version: '0' } })
+
+// Laisse expirer les minuteurs de drain de @hono/node-server (500 ms) pour que leurs erreurs éventuelles
+// remontent ici et non au hasard de la durée de la suite (CI rouge du 2026-10-12 sur 414dabd).
+afterAll(() => new Promise((r) => setTimeout(r, 700)))
 
 describe('POST /mcp', () => {
   let app: FastifyInstance
