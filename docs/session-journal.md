@@ -6,6 +6,11 @@
 
 ## EN COURS
 
+### Règles d'envoi partagées — 2026-10-12
+- `@spok/shared` uploadRules (validateUpload) remplace 5 copies (web, item-uploads, spaces, communities, user) + plafond multipart. build:packages fait, web uploadRules 10/10, TNR api 635/635, typecheck api/web/shared OK. MEP bd20247
+- PATCH /spaces/:id : garde isSpaceOwnerOrAdmin (admin global hors mode admin refusé, validé Thomas). TNR api 636/636, typecheck api OK. MEP e86878b
+- Sidebar GET /spaces : visibilité effective (getEffectiveVisibilities + keepVisibleWithRole), 2 tests. TNR api 638/638, typecheck api OK. MEP e86878b
+
 ### Visibilité communauté : isPublic retiré des contrôles — 2026-10-12
 - Prod : check-community-visibility --prod → 0 incohérence (resynchro faite par Thomas)
 - API : plus aucune lecture d'isPublic pour l'accès/les listes (graph, items, spaces, search, communities, admin/users) ; PATCH admin convertit isPublic → visibility. Tests 7 fichiers 240/240, typecheck api OK. MEP ac14b92

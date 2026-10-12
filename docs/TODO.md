@@ -73,7 +73,7 @@
 - [x] Mode admin phase 3 : checkSpaceAccess(…, isAdminMode) → OWNER dans tout espace (items, tags, relations, contributions…), GET /spaces et /spaces/:id en OWNER (sidebar : espaces de toutes les communautés, privés compris), création de séance, annulation d'invitation — 2026-10-12
 - [x] BUG visibilité d'espace jamais enregistrée (PATCH) + choix « Héritée » dans les paramètres — 2026-10-12
 - [ ] Actions d'animation des séances live réservées à l'animateur, admin compris — à ouvrir au mode admin ?
-- [ ] PATCH /spaces/:id laisse passer tout admin global même sans mode admin — aligner sur la règle (à valider, retire un droit)
+- [x] PATCH /spaces/:id aligné : isSpaceOwnerOrAdmin (OWNER de l'espace ou de la communauté, admin en mode admin) — un admin global hors mode admin est refusé (validé Thomas) — 2026-10-12 (e86878b)
 - [ ] Demande de publication : permettre au propriétaire d'annuler sa demande ; reject-public doit vider pendingVisibility
 - [x] Données prod : isPublic/visibility resynchronisés (ShadowWorld, Découvrir SPOK, GBK Team Forum) — `check-community-visibility.ts --prod` : 14 communautés, 0 incohérente — 2026-10-12
 - [x] `isPublic` n'est plus lu nulle part dans l'API pour l'accès/les listes : `visibility !== 'PRIVATE'` seul dans graph, items, spaces, search, communities, admin/users (OR permissifs et AND restrictifs) ; PATCH /admin/communities/:id convertit isPublic en visibility (source de désynchro) — 2026-10-12 (ac14b92)
@@ -105,8 +105,8 @@
 - [x] BUG Gantt : glisser une tâche sans date de fin la faisait « disparaître » — la barre (dessinée jusqu'à aujourd'hui) était réduite à 1 jour près de son début (fin = début + delta), souvent hors période visible. Fin de référence = fin affichée (`moveInitialEnd` dans timeline-utils, 5 tests) : la barre se déplace telle quelle et reçoit une date de fin — 2026-09-28 (acfeb0f)
 - [x] Gantt : barre pointillée d'un parent sans dates (période dérivée des enfants) désormais saisissable — glisser = « Décaler le groupe ? » (`CascadeShiftConfirmModal` mode `anchorWithoutDates` : enfants cochés par défaut, liés « Entraîne » inclus, « Annuler » ne modifie rien), le parent n'est jamais daté — 2026-09-28 (fdb9873)
 - [x] Gantt zoom trimestre/année/multi-années : le déplacement de barre s'aimantait au lundi / 1er du mois / pas de 90 j (la date elle-même) → petit glisser sans effet, ou barre qui recule/saute d'un mois. Déplacement désormais au jour près dans tous les zooms ; le resize (poignées) garde son aimantation — 2026-09-28 (6c8474b)
-- [ ] Import en masse dans les vues Images et Documents (bouton + glisser-déposer, un item par fichier) + réduction d'image dans le navigateur avant envoi (1920 px WebP, GIF exclus) — MEP 2026-10-11 (c3c12ad) — envoi R2 réel à vérifier en prod
-- [ ] Règles d'envoi en double web/API (extensions interdites, formats image, tailles) : `apps/web/src/lib/uploadRules.ts` et `apps/api/src/routes/item-uploads.ts` — à déplacer dans `@spok/shared`
+- [x] Import en masse dans les vues Images et Documents (bouton + glisser-déposer, un item par fichier) + réduction d'image dans le navigateur avant envoi (1920 px WebP, GIF exclus) — MEP 2026-10-11 (c3c12ad) — envoi R2 en prod vérifié par Thomas (2026-10-12)
+- [x] Règles d'envoi en double web/API : source unique `packages/shared/src/utils/uploadRules.ts` (`validateUpload`, sans File) — web (adaptateur `lib/uploadRules.ts`), item-uploads, avatars/covers espaces/communautés/profil, plafond multipart ; le web bloque aussi les types MIME exécutables — 2026-10-12 (bd20247)
 - [ ] Vue Tableau croisé : export dédié (CSV ou Excel avec lignes/colonnes du tableau)
 - [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
 - [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
@@ -187,7 +187,7 @@
 - [x] Fuite : espace PRIVÉ accessible à tout membre de la communauté — GET /spaces/:id (fiche, aussi pour un anonyme d'une communauté publique), GET /:id/members, POST /:id/join (adhésion libre = accès complet aux items), POST / sous un parent privé. Tout passe par checkSpaceAccess / visibilité effective ; READONLY renvoie VIEWER — 2026-10-12 (ac14b92)
 - [x] Propriétaire de communauté = OWNER dans tous les espaces de sa communauté, privés compris (checkSpaceAccess, isSpaceOwnerOrAdmin, GET / sidebar, GET /:id, PATCH, join) — 2026-10-12 (ac14b92)
 - [x] Revue sécu de ac14b92 : graphes/sunburst (items des espaces privés aux membres de la communauté, `additionalSpaceIds` jamais contrôlé → items de n'importe quel espace) → `filterReadableSpaceIds` (items.ts, règle checkSpaceAccess en masse) ; PATCH /spaces/:id parentId = écriture au parent requise ; join réservé aux espaces OUVERTS (READONLY donnait MEMBER, pas de rôle VIEWER en base) — 2026-10-12 (144474b)
-- [ ] Sidebar (GET /spaces, spaces.ts ~l.258) : filtre sur la visibilité propre de l'espace seulement — un sous-espace « hérité » sous un parent privé apparaît chez les membres de la communauté alors que sa fiche renvoie 404 (visibilité effective)
+- [x] Sidebar (GET /spaces) : espaces non-membre filtrés sur la visibilité effective (`getEffectiveVisibilities`, version en masse dans items.ts) — sous-espace hérité d'un parent privé retiré, rôle implicite selon la visibilité héritée (anonymes compris) ; OWNER de communauté et mode admin : liste complète — 2026-10-12 (e86878b)
 - [ ] Plus tard : compte-rendu généré à la clôture ; tri « présenté le » dans les vues
 - [ ] Plus tard (peut-être) : invités sans compte, réactions/votes/questions, passage de main, mobile
 
