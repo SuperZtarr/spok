@@ -47,7 +47,7 @@
 ### Sécurité API
 - [x] Audit sécurité API (auth/JWT/CORS/upload/SQL) : rate limiting sur `/auth/*` (5 req/min/IP), `JWT_SECRET` sans fallback en dur (échec au démarrage si absent), refresh token hashé SHA-256 en base, `@fastify/helmet` — 2026-08-24
 - [x] 403 à l'upload avatar/cover d'une communauté en mode admin (routes images réservées à l'OWNER sans bypass admin, contrairement à PATCH) — 2026-10-11 (0683134)
-- [ ] Même contrôle à vérifier sur les routes avatar/cover des espaces (`spaces.ts`)
+- [x] Même contrôle sur les routes avatar/cover des espaces (`spaces.ts`) : `getSpaceForImageEdit` → `isSpaceOwnerOrAdmin` sur les 4 routes, front via `uploadFile` (header admin) — déjà couvert par 7917dbe, vérifié le 2026-10-12
 
 ### Tests / qualité
 - [x] BUG filtres échéances (GlobalTaskFilterBar) : corrigé — 2026-07-12
@@ -73,11 +73,10 @@
 - [x] Mode admin phase 3 : checkSpaceAccess(…, isAdminMode) → OWNER dans tout espace (items, tags, relations, contributions…), GET /spaces et /spaces/:id en OWNER (sidebar : espaces de toutes les communautés, privés compris), création de séance, annulation d'invitation — 2026-10-12
 - [x] BUG visibilité d'espace jamais enregistrée (PATCH) + choix « Héritée » dans les paramètres — 2026-10-12
 - [ ] Actions d'animation des séances live réservées à l'animateur, admin compris — à ouvrir au mode admin ?
-- [ ] 503 sur /spaces/:id/settings en prod (2026-10-12) : URL de la requête en échec à récupérer
 - [ ] PATCH /spaces/:id laisse passer tout admin global même sans mode admin — aligner sur la règle (à valider, retire un droit)
 - [ ] Demande de publication : permettre au propriétaire d'annuler sa demande ; reject-public doit vider pendingVisibility
-- [ ] Données prod : lancer `scripts/check-community-visibility.ts --prod` et resynchroniser isPublic/visibility au cas par cas (« Campagne ShadowWorld » : isPublic=true, visibility=PRIVATE)
-- [ ] Remplacer les `isPublic || visibility !== 'PRIVATE'` restants (items.ts:146, spaces.ts:139/467/1093, graph.ts:266/382/581, admin/users.ts:584, search.ts:104) par visibility seul
+- [x] Données prod : isPublic/visibility resynchronisés (ShadowWorld, Découvrir SPOK, GBK Team Forum) — `check-community-visibility.ts --prod` : 14 communautés, 0 incohérente — 2026-10-12
+- [x] `isPublic` n'est plus lu nulle part dans l'API pour l'accès/les listes : `visibility !== 'PRIVATE'` seul dans graph, items, spaces, search, communities, admin/users (OR permissifs et AND restrictifs) ; PATCH /admin/communities/:id convertit isPublic en visibility (source de désynchro) — 2026-10-12, NON COMMITÉ
 - [ ] Recherche (/search) — reste du diagnostic 2026-10-11 : filtres items (type/statut/tags) sans effet sur les sections communautés/utilisateurs (les masquer ou filtrer les contributions via l'item) ; champ Tags texte libre → sélecteur ; filtre Statut absent + types d'item en codes bruts ; pagination commune à toutes les sections ; périmètre incohérent (communautés publiques visibles mais pas leurs espaces/items) ; écarts doc : 20/page vs 10, min 2 caractères vs 1
 - [x] BUG modale item périmée : changements faits dans les vues (date Gantt, statut MindMap…) ou par absorption invisibles à la réouverture jusqu'au rechargement — fiche relue à chaque ouverture (staleTime 0) + formulaire resynchronisé sur `updatedAt` avec fusion champ par champ (`mergeFormWithServer`, saisie en cours conservée) — 2026-09-28 (fb47579)
 - [x] BUG MindMap : actions des nœuds périmées depuis le layout incrémental (callbacks stockés dans `data` jamais rafraîchis) → ex. suppression d'un parent vidé annonçant encore « N descendants » jusqu'au rechargement. `withCurrentCallbacks` + effet sur `layoutCallbacks` — 2026-09-28 (d1cd6dc)
@@ -185,7 +184,9 @@
 - [x] Durcissement sécurité (revue automatique : cascade, programme filtré participants, périmètre des sous-éléments, restauration d'audit, présentateurs de la suite) — 2026-10-10 (537494d)
 - [x] Préparation initiale à la création (« Préparer la séance ») — 2026-10-11 (efa3715, 2048994) — LOCAL, non poussé
 - [x] Invités d'une séance (membres de la communauté sans accès au parent, à la création et depuis le bandeau, repris dans la suite) — 2026-10-11 (8f5fdd2..HEAD) — LOCAL, non poussé ; limites : flux SSE non coupé au retrait, nom du parent visible
-- [ ] Fuite préexistante : GET /spaces/:id renvoie la fiche (nom, compteurs, role MEMBER) d'un espace PRIVÉ à tout membre de la communauté (les éléments restent protégés) — constaté 2026-10-11
+- [x] Fuite : espace PRIVÉ accessible à tout membre de la communauté — GET /spaces/:id (fiche, aussi pour un anonyme d'une communauté publique), GET /:id/members, POST /:id/join (adhésion libre = accès complet aux items), POST / sous un parent privé. Tout passe par checkSpaceAccess / visibilité effective ; READONLY renvoie VIEWER — 2026-10-12, NON COMMITÉ
+- [x] Propriétaire de communauté = OWNER dans tous les espaces de sa communauté, privés compris (checkSpaceAccess, isSpaceOwnerOrAdmin, GET / sidebar, GET /:id, PATCH, join) — 2026-10-12, NON COMMITÉ
+- [ ] Sidebar (GET /spaces, spaces.ts ~l.258) : filtre sur la visibilité propre de l'espace seulement — un sous-espace « hérité » sous un parent privé apparaît chez les membres de la communauté alors que sa fiche renvoie 404 (visibilité effective)
 - [ ] Plus tard : compte-rendu généré à la clôture ; tri « présenté le » dans les vues
 - [ ] Plus tard (peut-être) : invités sans compte, réactions/votes/questions, passage de main, mobile
 

@@ -4,6 +4,7 @@
  * Le périmètre est borné aux espaces des memberships (un admin global voit tout).
  * /advanced : spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi
  * la section utilisateurs aux membres (portée par défaut posée par la page Recherche).
+ * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais filtré).
  */
 import { FastifyPluginAsync } from 'fastify';
 
@@ -53,7 +54,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       const publicSpaces = await fastify.prisma.space.findMany({
         where: {
           type: 'GROUP',
-          community: { isPublic: true, visibility: { not: 'PRIVATE' } },
+          community: { visibility: { not: 'PRIVATE' } },
           OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
         },
         select: { id: true },
@@ -101,7 +102,6 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       }
       // Access: user sees their communities + public ones; anonymous sees public only
       if (!userId) {
-        communityWhere.isPublic = true;
         communityWhere.visibility = { not: 'PRIVATE' };
       } else if (!isAdmin) {
         const myCommunityIds = (await fastify.prisma.communityMembership.findMany({
@@ -110,7 +110,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         })).map(m => m.communityId);
         communityWhere.OR = [
           { id: { in: myCommunityIds }, OR: (communityWhere as any).OR },
-          { isPublic: true, visibility: { not: 'PRIVATE' }, OR: (communityWhere as any).OR },
+          { visibility: { not: 'PRIVATE' }, OR: (communityWhere as any).OR },
         ];
         delete (communityWhere as any).OR; // moved into nested OR
       }
@@ -231,7 +231,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       if (!effectiveSpaceIds && communityId && !isAdmin) {
         const [membership, publicCommunity] = await Promise.all([
           userId ? fastify.prisma.communityMembership.findFirst({ where: { communityId, userId }, select: { id: true } }) : null,
-          fastify.prisma.community.findFirst({ where: { id: communityId, isPublic: true, visibility: { not: 'PRIVATE' } }, select: { id: true } }),
+          fastify.prisma.community.findFirst({ where: { id: communityId, visibility: { not: 'PRIVATE' } }, select: { id: true } }),
         ]);
         canListMembers = !!(membership || publicCommunity);
       }

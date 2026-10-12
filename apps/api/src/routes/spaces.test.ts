@@ -95,6 +95,25 @@ describe('Spaces routes', () => {
       expect(res.json()[0]).toMatchObject({ id: 'sp-other', role: 'OWNER', isMember: false })
     })
 
+    // Règle 2026-10-12 : le propriétaire de la communauté voit ses espaces privés, rôle OWNER
+    it('should include private spaces of owned communities with role OWNER', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'com-1', role: 'OWNER' }])
+      prisma.space.findMany.mockResolvedValue([mockSpace({ id: 'sp-priv', communityId: 'com-1', visibility: 'PRIVATE' })])
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const where = prisma.space.findMany.mock.calls[0][0].where
+      expect(where.OR).toContainEqual({ communityId: { in: ['com-1'] } })
+      expect(res.json()[0]).toMatchObject({ id: 'sp-priv', role: 'OWNER', isMember: false })
+    })
+
     it('should not add other communities spaces for an admin without admin mode', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
       prisma.spaceMembership.findMany.mockResolvedValue([])
@@ -227,7 +246,7 @@ describe('Spaces routes', () => {
     })
 
     it('should inherit communityId from parent', async () => {
-      prisma.space.findUnique.mockResolvedValue(mockSpace({ id: 'parent-1', type: 'GROUP', communityId: 'com-1' }))
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ id: 'parent-1', type: 'GROUP', communityId: 'com-1', visibility: 'OPEN' }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
       prisma.space.create.mockResolvedValue(mockSpace({ parentId: 'parent-1', communityId: 'com-1' }))
 
@@ -241,6 +260,40 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(201)
       const createArg = prisma.space.create.mock.calls[0][0]
       expect(createArg.data.communityId).toBe('com-1')
+    })
+
+    // Fuite 2026-10-12 : un membre de la communauté créait des sous-espaces sous un espace privé
+    it('should refuse a sub-space under a private parent for a mere community member', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ id: 'parent-1', type: 'GROUP', communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Child Space', type: 'GROUP', parentId: 'parent-1' },
+      })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.space.create).not.toHaveBeenCalled()
+    })
+
+    it('should let the community owner create a sub-space under a private parent', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ id: 'parent-1', type: 'GROUP', communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'OWNER' })
+      prisma.space.create.mockResolvedValue(mockSpace({ parentId: 'parent-1', communityId: 'com-1' }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Child Space', type: 'GROUP', parentId: 'parent-1' },
+      })
+
+      expect(res.statusCode).toBe(201)
     })
 
     it('should reject non-GROUP parent', async () => {
@@ -333,7 +386,7 @@ describe('Spaces routes', () => {
 
     it('should return space for community member with implicit MEMBER role (OPEN)', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
-      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'OPEN' }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
 
       const res = await app.inject({
@@ -345,6 +398,61 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(200)
       // Visibilité effective OPEN → rôle implicite MEMBER (VIEWER réservé à READONLY)
       expect(res.json().role).toBe('MEMBER')
+    })
+
+    it('should return role VIEWER for a community member on a READONLY space', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'READONLY' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('VIEWER')
+    })
+
+    // Fuite 2026-10-12 : la fiche d'un espace privé était renvoyée à tout membre de la communauté
+    it('should return 404 for a community member on a private space', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(404)
+    })
+
+    // Règle 2026-10-12 : propriétaire de la communauté = OWNER dans tous ses espaces, privés compris
+    it('should return role OWNER to the community owner on a private space he is not a member of', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'OWNER' })
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('OWNER')
+    })
+
+    it('should return 404 for an anonymous visitor on a private space of a public community', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE', community: { visibility: 'OPEN' } }))
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}` })
+
+      expect(res.statusCode).toBe(404)
     })
 
     it('should return 404 when no access', async () => {
@@ -629,7 +737,7 @@ describe('Spaces routes', () => {
 
   describe('POST /spaces/:id/join', () => {
     it('should join a community space', async () => {
-      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'OPEN' }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
       prisma.spaceMembership.findUnique.mockResolvedValue(null) // not already member
       prisma.spaceMembership.create.mockResolvedValue(mockMembership({ role: 'MEMBER' }))
@@ -670,7 +778,7 @@ describe('Spaces routes', () => {
     })
 
     it('should reject if already member', async () => {
-      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'OPEN' }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
       prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership())
 
@@ -681,6 +789,37 @@ describe('Spaces routes', () => {
       })
 
       expect(res.statusCode).toBe(409)
+    })
+
+    // Fuite 2026-10-12 : tout membre de la communauté pouvait rejoindre un espace privé
+    it('should refuse joining a private space', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/join`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.spaceMembership.create).not.toHaveBeenCalled()
+    })
+
+    it('should let the community owner join a private space', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE' }))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'OWNER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.spaceMembership.create.mockResolvedValue(mockMembership({ role: 'MEMBER' }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/join`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
     })
   })
 
@@ -755,7 +894,7 @@ describe('Spaces routes', () => {
 
     it('should allow community member to list members', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
-      prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'com-1' })
+      prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'com-1', visibility: 'OPEN' })
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
       prisma.spaceMembership.findMany.mockResolvedValue([])
 
@@ -766,6 +905,36 @@ describe('Spaces routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
+    })
+
+    it('should show members of a private space to the community owner', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'com-1', visibility: 'PRIVATE' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1', role: 'OWNER' })
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}/members`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('should hide members of a private space from a mere community member', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'com-1', visibility: 'PRIVATE' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-1' })
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/spaces/${SPACE_ID}/members`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(404)
     })
 
     it('should return 404 when no access', async () => {

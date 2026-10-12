@@ -116,7 +116,8 @@ describe('/live-sessions', () => {
       expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
     })
 
-    it("refuse une préparation initiale à un OWNER de communauté sans accès à l'espace parent (privé)", async () => {
+    // Règle 2026-10-12 : le propriétaire de la communauté est OWNER dans tous ses espaces, privés compris
+    it("autorise une préparation initiale à un OWNER de communauté non membre de l'espace parent (privé)", async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
       prisma.space.findUnique.mockResolvedValue({ id: 'parent', name: 'Comité', type: 'GROUP', communityId: 'c1', parentId: null, visibility: 'PRIVATE', community: { visibility: 'PRIVATE', isPublic: false } })
       prisma.item.findMany.mockResolvedValue([{ id: 'A', title: 'Secret' }])
@@ -124,9 +125,8 @@ describe('/live-sessions', () => {
         method: 'POST', url: '/live-sessions', headers: auth(),
         payload: { parentSpaceId: 'parent', agenda: [{ sourceItemId: 'A' }] },
       })
-      expect(res.statusCode).toBe(403)
-      expect(prisma.item.findMany).not.toHaveBeenCalled()
-      expect(prisma.space.create).not.toHaveBeenCalled()
+      expect(res.statusCode).toBe(201)
+      expect(prisma.item.findMany).toHaveBeenCalled()
     })
 
     it('liste vide : séance créée sans préparation', async () => {

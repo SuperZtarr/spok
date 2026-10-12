@@ -1,7 +1,8 @@
 /*
  * Administration des communautés : liste globale, création, approbation du passage en public
  * (pendingPublic → isPublic), suppression.
- * Toute écriture de isPublic doit renseigner visibility en cohérence (visibility fait foi).
+ * Toute écriture de isPublic doit renseigner visibility en cohérence (visibility fait foi) —
+ * y compris PATCH /:id, qui convertit isPublic en visibility.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -204,7 +205,14 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           ...(name && { name }),
           ...(description !== undefined && { description }),
-          ...(isPublic !== undefined && { isPublic }),
+          // isPublic (déprécié) converti en visibility, les deux restent alignés ; une communauté
+          // déjà publique garde son niveau (READONLY n'est pas forcé en OPEN)
+          ...(isPublic !== undefined && {
+            isPublic,
+            visibility: isPublic
+              ? (community.visibility !== 'PRIVATE' ? community.visibility : 'OPEN')
+              : 'PRIVATE',
+          }),
         },
         include: {
           _count: {

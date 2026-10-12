@@ -5,11 +5,13 @@
  * utilisés par de nombreuses routes — toute modification impacte l'accès global.
  * checkSpaceAccess(…, isAdminMode) : en mode admin (admin global + X-Admin-Mode) → rôle OWNER partout,
  * membre ou non ; hors mode admin, un admin non membre a le rôle 'ADMIN' (lecture seule). Toute route
- * doit passer request.isAdminMode en 4e argument.
+ * doit passer request.isAdminMode en 4e argument. Le propriétaire de la communauté a le rôle OWNER
+ * dans tous les espaces de sa communauté, privés compris (isCommunityOwnerOfSpace).
  * Accusé de lecture à l'assignation : création/PATCH posent assignedAt/assignedById (assignmentStamp) ;
  * liste et détail renvoient assignmentReceipt (computeAssignmentReceipts) — cf. utils/assignment.ts.
  * Verrou de séance (copies lockedAt) : cf. utils/itemLock.ts — PATCH (organisation seule), DELETE (OWNER),
  * split refusé, propagation de statut ignore les enfants verrouillés.
+ * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -101,6 +103,18 @@ export async function getEffectiveVisibility(prisma: any, spaceId: string): Prom
   return 'PRIVATE';
 }
 
+// Propriétaire de la communauté de l'espace : droits OWNER sur tous ses espaces, privés compris,
+// membre direct ou non (règle 2026-10-12). Faux pour un espace personnel (sans communauté).
+export async function isCommunityOwnerOfSpace(prisma: any, userId: string, spaceId: string): Promise<boolean> {
+  const space = await prisma.space.findUnique({ where: { id: spaceId }, select: { communityId: true } });
+  if (!space?.communityId) return false;
+  const membership = await prisma.communityMembership.findUnique({
+    where: { userId_communityId: { userId, communityId: space.communityId } },
+    select: { role: true },
+  });
+  return membership?.role === 'OWNER';
+}
+
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string, isAdminMode = false) {
@@ -121,6 +135,13 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       }
     }
 
+    if (membership?.role === 'OWNER') return membership;
+
+    // Propriétaire de la communauté : OWNER dans tous ses espaces, privés compris
+    if (await isCommunityOwnerOfSpace(prisma, userId, spaceId)) {
+      return { ...(membership ?? { id: '', joinedAt: new Date() }), userId, spaceId, role: 'OWNER' as const };
+    }
+
     if (membership) return membership;
 
     // Admin global hors mode admin : lecture seule sans adhésion (rôle 'ADMIN', refusé en écriture)
@@ -133,7 +154,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
   // 2. Community membership or public community → access depends on effective visibility
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
-    select: { communityId: true, community: { select: { visibility: true, isPublic: true } } },
+    select: { communityId: true, community: { select: { visibility: true } } },
   });
   if (space?.communityId) {
     const visibility = await getEffectiveVisibility(prisma, spaceId);
@@ -155,8 +176,8 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       }
     }
 
-    // Public community (isPublic=true or visibility != PRIVATE): allow access
-    const communityIsPublic = space.community?.isPublic || space.community?.visibility !== 'PRIVATE';
+    // Public community (visibility != PRIVATE — isPublic déprécié, jamais lu): allow access
+    const communityIsPublic = space.community?.visibility !== 'PRIVATE';
     if (communityIsPublic) {
       return { userId: userId || '', spaceId, role: implicitRole, id: '', joinedAt: new Date() };
     }

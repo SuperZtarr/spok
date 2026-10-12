@@ -1,7 +1,8 @@
 /*
  * Administration des utilisateurs : liste, détail, création, rôle global, activation/désactivation,
  * suppression avec réassignation des contenus. Inclut /:id/access-tree (arbre communautés/espaces
- * avec l'accès effectif de l'utilisateur — direct, hérité de la visibilité, ou aucun).
+ * avec l'accès effectif de l'utilisateur — direct, hérité de la visibilité, ou aucun ; communauté
+ * publique = visibility !== 'PRIVATE' uniquement, isPublic déprécié jamais lu).
  * /:id/mcp-access : accorde ou retire l'accès MCP distant (efface la demande en attente, trace AuditLog).
  */
 import { FastifyPluginAsync } from 'fastify';
@@ -576,7 +577,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
 
     const [communities, spaces, communityMemberships, spaceMemberships] = await Promise.all([
       fastify.prisma.community.findMany({
-        select: { id: true, name: true, visibility: true, isPublic: true },
+        select: { id: true, name: true, visibility: true },
       }),
       fastify.prisma.space.findMany({
         where: { type: 'GROUP' },
@@ -615,7 +616,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
         return { role: implicitRole, source: 'community' };
       }
       const community = space.communityId ? communityById.get(space.communityId) : undefined;
-      const communityIsPublic = !!community && (community.isPublic || community.visibility !== 'PRIVATE');
+      const communityIsPublic = !!community && community.visibility !== 'PRIVATE';
       if (communityIsPublic) return { role: implicitRole, source: 'public' };
       return { role: null, source: null };
     }
@@ -626,7 +627,7 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
       if (directRole) return { role: directRole as AccessRole, source: 'direct' };
 
       const community = communityById.get(communityId)!;
-      if (!community.isPublic && community.visibility === 'PRIVATE') return { role: null, source: null };
+      if (community.visibility === 'PRIVATE') return { role: null, source: null };
       const implicitRole: AccessRole = community.visibility === 'OPEN' ? 'MEMBER' : 'VIEWER';
       return { role: implicitRole, source: 'public' };
     }

@@ -7,13 +7,19 @@
  * GET / en mode admin : espaces de toutes les communautés (ou de celle demandée), privés compris, rôle OWNER.
  * PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée). GET /:id renvoie inheritedVisibility +
  * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
+ * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
+ * Espace PRIVATE (visibilité effective) : réservé aux membres directs et à l'admin — GET /:id et
+ * /:id/members passent par checkSpaceAccess (READONLY → rôle VIEWER), /:id/join refusé hors mode admin,
+ * création d'un sous-espace = accès en écriture (OWNER/MEMBER) au parent. Être membre de la
+ * communauté ne suffit jamais pour un espace privé — être son PROPRIÉTAIRE, si : rôle OWNER dans
+ * tous les espaces de la communauté (GET /, GET /:id, PATCH, gestion, join, contenu via checkSpaceAccess).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Role, SpaceDeletePreview } from '@spok/shared';
 import { SPACE_TEMPLATES } from '@spok/shared';
 import type { SpaceTemplateItem } from '@spok/shared';
-import { itemsRoutes, getEffectiveVisibility } from './items.js';
+import { itemsRoutes, getEffectiveVisibility, checkSpaceAccess, isCommunityOwnerOfSpace } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
@@ -72,15 +78,16 @@ async function getInheritedVisibility(prisma: any, space: { parentId: string | n
   return { inheritedVisibility: 'PRIVATE', inheritedFrom: null };
 }
 
-// Garde des actions de gestion d'un espace : OWNER de l'espace, ou admin en mode admin.
-// Ne pas l'utiliser pour les actions personnelles (join/leave, transfert de sa propre propriété).
+// Garde des actions de gestion d'un espace : OWNER de l'espace, OWNER de sa communauté, ou admin
+// en mode admin. Ne pas l'utiliser pour les actions personnelles (join/leave, transfert de sa propre propriété).
 async function isSpaceOwnerOrAdmin(prisma: any, spaceId: string, userId: string, isAdminMode: boolean): Promise<boolean> {
   if (await isAdminModeActive(prisma, userId, isAdminMode)) return true;
   const membership = await prisma.spaceMembership.findUnique({
     where: { userId_spaceId: { userId, spaceId } },
     select: { role: true },
   });
-  return membership?.role === 'OWNER';
+  if (membership?.role === 'OWNER') return true;
+  return isCommunityOwnerOfSpace(prisma, userId, spaceId);
 }
 
 export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
@@ -105,7 +112,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         const spaces = await fastify.prisma.space.findMany({
           where: {
             type: 'GROUP',
-            community: { isPublic: true, visibility: { not: 'PRIVATE' } },
+            community: { visibility: { not: 'PRIVATE' } },
             OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
           },
           include: {
@@ -127,9 +134,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const community = await fastify.prisma.community.findUnique({
         where: { id: communityId },
-        select: { visibility: true, isPublic: true },
+        select: { visibility: true },
       });
-      if (!community || community.visibility === 'PRIVATE' || !community.isPublic) return [];
+      if (!community || community.visibility === 'PRIVATE') return [];
 
       const spaces = await fastify.prisma.space.findMany({
         where: { communityId, type: 'GROUP', OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] },
@@ -164,13 +171,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         }),
         fastify.prisma.community.findUnique({
           where: { id: communityId },
-          select: { isPublic: true, visibility: true },
+          select: { visibility: true },
         }),
         fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } }),
       ]);
 
       const isAdminBypass = currentUser?.globalRole === 'ADMIN' && request.isAdminMode;
-      isPublicCommunity = !!(community?.isPublic || community?.visibility !== 'PRIVATE');
+      isPublicCommunity = !!community && community.visibility !== 'PRIVATE';
       hasCommunityMembership = !!communityMembership;
 
       if (!communityMembership && !isAdminBypass && !isPublicCommunity) {
@@ -216,9 +223,16 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { space: { name: 'asc' } },
     });
 
+    // Communautés dont l'utilisateur est propriétaire : OWNER dans tous leurs espaces, privés compris
+    const userCommunities = await fastify.prisma.communityMembership.findMany({
+      where: { userId: request.user.userId },
+      select: { communityId: true, role: true },
+    });
+    const ownedCommunityIds = new Set(userCommunities.filter(c => c.role === 'OWNER').map(c => c.communityId));
+
     const memberSpaces = memberships.map((m) => ({
       ...m.space,
-      role: m.role as Role,
+      role: (m.space.communityId && ownedCommunityIds.has(m.space.communityId) ? 'OWNER' : m.role) as Role,
       memberCount: m.space._count.memberships,
       itemCount: m.space._count.items,
       isMember: true,
@@ -226,11 +240,6 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }));
 
     // 2. Get community spaces the user can see but hasn't joined
-    const userCommunities = await fastify.prisma.communityMembership.findMany({
-      where: { userId: request.user.userId },
-      select: { communityId: true },
-    });
-
     const communityIds = userCommunities.map(c => c.communityId);
     const memberSpaceIds = new Set(memberSpaces.map(s => s.id));
 
@@ -250,7 +259,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           : adminModeOn ? { not: null } : { in: effectiveCommunityIds },
         type: 'GROUP',
         id: { notIn: Array.from(memberSpaceIds) },
-        ...(adminModeOn ? {} : { OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] }),
+        ...(adminModeOn ? {} : { OR: [
+          { visibility: null },
+          { visibility: { not: 'PRIVATE' } },
+          ...(ownedCommunityIds.size > 0 ? [{ communityId: { in: Array.from(ownedCommunityIds) } }] : []),
+        ] }),
       };
 
       const visibleSpaces = await fastify.prisma.space.findMany({
@@ -276,7 +289,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const nonMemberSpaces = visibleSpaces.map((s) => ({
         ...s,
-        role: (adminModeOn ? 'OWNER' : (s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
+        role: (adminModeOn || (s.communityId && ownedCommunityIds.has(s.communityId))
+          ? 'OWNER'
+          : (s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -317,6 +332,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (parentSpace.type !== 'GROUP') {
         return reply.badRequest('Seuls les espaces de groupe peuvent avoir des sous-espaces');
+      }
+
+      // Créer un sous-espace = écrire dans le parent : OWNER/MEMBER (direct ou implicite OPEN),
+      // mode admin compris — un membre de la communauté sans accès à un parent privé est refusé
+      const parentAccess = await checkSpaceAccess(fastify.prisma, request.user.userId, body.parentId, request.isAdminMode);
+      if (!parentAccess || (parentAccess.role !== 'OWNER' && parentAccess.role !== 'MEMBER')) {
+        return reply.forbidden('Accès en écriture à l\'espace parent requis');
       }
 
       // Inherit communityId from parent (ignore what was passed)
@@ -410,6 +432,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user?.userId;
     // Mode admin : rôle OWNER renvoyé (membre ou non) → les écrans débloquent toutes les actions
     const adminModeOn = !!userId && await isAdminModeActive(fastify.prisma, userId, request.isAdminMode);
+    // Propriétaire de la communauté : OWNER dans tous ses espaces, privés compris
+    const communityOwner = !!userId && await isCommunityOwnerOfSpace(fastify.prisma, userId, request.params.id);
 
     // 1. If authenticated, try direct membership
     if (userId) {
@@ -441,18 +465,19 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         return {
           ...membership.space,
           ...(await getInheritedVisibility(fastify.prisma, membership.space)),
-          role: adminModeOn ? ('OWNER' as Role) : membership.role,
+          role: adminModeOn || communityOwner ? ('OWNER' as Role) : membership.role,
           memberCount: membership.space._count.memberships,
           itemCount: membership.space._count.items,
         };
       }
 
-      // 1b. Admin bypass — accès sans adhésion : OWNER en mode admin, 'ADMIN' (lecture) sinon
+      // 1b. Accès sans adhésion : propriétaire de la communauté ou admin en mode admin → OWNER,
+      // admin global hors mode admin → 'ADMIN' (lecture)
       const adminUser = await fastify.prisma.user.findUnique({
         where: { id: userId },
         select: { globalRole: true },
       });
-      if (adminUser?.globalRole === 'ADMIN') {
+      if (adminUser?.globalRole === 'ADMIN' || communityOwner) {
         const adminSpace = await fastify.prisma.space.findUnique({
           where: { id: request.params.id },
           include: {
@@ -465,7 +490,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           return {
             ...adminSpace,
             ...(await getInheritedVisibility(fastify.prisma, adminSpace)),
-            role: (adminModeOn ? 'OWNER' : 'ADMIN') as Role,
+            role: (adminModeOn || communityOwner ? 'OWNER' : 'ADMIN') as Role,
             memberCount: adminSpace._count.memberships,
             itemCount: adminSpace._count.items,
           };
@@ -473,43 +498,22 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // 2. Try community membership or public community → VIEWER access
-    const space = await fastify.prisma.space.findUnique({
-      where: { id: request.params.id },
-      include: {
-        _count: { select: { memberships: true, items: true } },
-        community: { select: { id: true, name: true, isPublic: true } },
-        parent: { select: { id: true, name: true } },
-      },
-    });
-
-    if (space?.communityId) {
-      // Authenticated user: check community membership
-      if (userId) {
-        const communityMembership = await fastify.prisma.communityMembership.findUnique({
-          where: {
-            userId_communityId: {
-              userId,
-              communityId: space.communityId,
-            },
-          },
-        });
-
-        if (communityMembership) {
-          return {
-            ...space,
-            role: 'MEMBER' as Role,
-            memberCount: space._count.memberships,
-            itemCount: space._count.items,
-          };
-        }
-      }
-
-      // Public community: allow anonymous and non-member authenticated users
-      if (space.community?.isPublic) {
+    // 2. Membre de la communauté ou communauté publique : même règle que checkSpaceAccess
+    // (visibilité effective — PRIVATE réservé aux membres directs, OPEN → MEMBER, READONLY → VIEWER)
+    const access = await checkSpaceAccess(fastify.prisma, userId, request.params.id);
+    if (access && (access.role === 'MEMBER' || access.role === 'VIEWER')) {
+      const space = await fastify.prisma.space.findUnique({
+        where: { id: request.params.id },
+        include: {
+          _count: { select: { memberships: true, items: true } },
+          community: { select: { id: true, name: true } },
+          parent: { select: { id: true, name: true } },
+        },
+      });
+      if (space) {
         return {
           ...space,
-          role: 'MEMBER' as Role,
+          role: access.role as Role,
           memberCount: space._count.memberships,
           itemCount: space._count.items,
         };
@@ -541,17 +545,18 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         include: { space: true },
       });
 
-      // Global admin can bypass membership check
+      // Global admin and community owner can bypass membership check
+      const communityOwner = await isCommunityOwnerOfSpace(fastify.prisma, request.user.userId, request.params.id);
       let space = membership?.space;
-      if (!membership && !isGlobalAdmin) {
+      if (!membership && !isGlobalAdmin && !communityOwner) {
         return reply.notFound('Space not found');
       }
 
-      if (!isGlobalAdmin && membership!.role !== 'OWNER') {
+      if (!isGlobalAdmin && !communityOwner && membership!.role !== 'OWNER') {
         return reply.forbidden('Insufficient permissions');
       }
 
-      // If global admin without membership, load space directly
+      // If global admin / community owner without membership, load space directly
       if (!space) {
         space = await fastify.prisma.space.findUnique({
           where: { id: request.params.id },
@@ -1037,6 +1042,14 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.forbidden('You must be a member of the community');
     }
 
+    // Espace privé (visibilité effective) : on y entre seulement par invitation, sauf propriétaire
+    // de la communauté ou mode admin
+    if ((await getEffectiveVisibility(fastify.prisma, request.params.id)) === 'PRIVATE'
+      && communityMembership.role !== 'OWNER'
+      && !(await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode))) {
+      return reply.forbidden('Espace privé : accès sur invitation uniquement');
+    }
+
     // Check not already a member
     const existing = await fastify.prisma.spaceMembership.findUnique({
       where: {
@@ -1090,56 +1103,10 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get space members
   fastify.get<{ Params: { id: string } }>('/:id/members', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
-    let hasAccess = false;
-
-    if (request.user?.userId) {
-      // Check direct membership
-      hasAccess = !!(await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-      }));
-
-      // Fallback: community membership
-      if (!hasAccess) {
-        const space = await fastify.prisma.space.findUnique({
-          where: { id: request.params.id },
-          select: { communityId: true },
-        });
-        if (space?.communityId) {
-          hasAccess = !!(await fastify.prisma.communityMembership.findUnique({
-            where: {
-              userId_communityId: {
-                userId: request.user.userId,
-                communityId: space.communityId,
-              },
-            },
-          }));
-        }
-      }
-
-      // Admin bypass
-      if (!hasAccess) {
-        const user = await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } });
-        if (user?.globalRole === 'ADMIN') hasAccess = true;
-      }
-    }
-
-    // Anonymous: allow access to public spaces
-    if (!hasAccess) {
-      const space = await fastify.prisma.space.findUnique({
-        where: { id: request.params.id },
-        select: { visibility: true, community: { select: { isPublic: true } } },
-      });
-      if (space && space.community?.isPublic && space.visibility !== 'PRIVATE') {
-        hasAccess = true;
-      }
-    }
-
-    if (!hasAccess) {
+    // Même règle que l'accès au contenu : membre direct, admin global, ou visibilité effective
+    // non privée (membre de la communauté, ou communauté publique pour un non-membre/anonyme)
+    const access = await checkSpaceAccess(fastify.prisma, request.user?.userId, request.params.id, request.isAdminMode);
+    if (!access) {
       return reply.notFound('Space not found');
     }
 

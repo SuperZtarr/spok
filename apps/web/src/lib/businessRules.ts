@@ -265,6 +265,20 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/communities.ts (POST /, PATCH /:id), apps/api/src/routes/admin/communities.ts (approve-public / reject-public), apps/web/src/pages/CommunitySettingsPage.tsx',
   },
   {
+    id: 'private-space-direct-members-only',
+    page: "Page d'un espace, liste de ses membres, sidebar, création de sous-espace",
+    trigger: "Accès à un espace dont la visibilité effective (espace → parent → communauté) est Privée par un utilisateur qui n'en est pas membre direct",
+    effect: "Être membre de la communauté ne suffit pas : la fiche de l'espace et ses membres sont introuvables (404), on ne peut pas le rejoindre de soi-même (accès sur invitation uniquement) ni y créer de sous-espace. Seuls ses membres directs, le propriétaire de la communauté et un admin y accèdent (mode admin pour rejoindre ou modifier). Un espace Lecture seule s'ouvre en lecture (rôle VIEWER), un espace Ouvert en modification (rôle MEMBER)",
+    location: 'apps/api/src/routes/spaces.ts (GET /:id, GET /:id/members, POST /:id/join, POST / avec parentId), apps/api/src/routes/items.ts (checkSpaceAccess)',
+  },
+  {
+    id: 'community-owner-all-spaces',
+    page: 'Sidebar, page et paramètres de tout espace de la communauté, contenu des espaces, séances live',
+    trigger: "Propriétaire d'une communauté, membre ou non d'un de ses espaces",
+    effect: "Droits de propriétaire dans tous les espaces de sa communauté, privés compris, sans passer par le mode admin : il les voit dans la sidebar, modifie leurs paramètres, gère membres et invitations, crée, modifie et supprime le contenu, crée des sous-espaces et prépare des séances à partir de n'importe quel espace",
+    location: 'apps/api/src/routes/items.ts (isCommunityOwnerOfSpace, checkSpaceAccess), apps/api/src/routes/spaces.ts (isSpaceOwnerOrAdmin, GET /, GET /:id, PATCH /:id, POST /:id/join)',
+  },
+  {
     id: 'admin-mode-owner-rights',
     page: "Paramètres de communauté et d'espace, toutes les actions de gestion de communauté et d'espace",
     trigger: 'Admin global avec le mode admin activé, membre ou non de la communauté',
