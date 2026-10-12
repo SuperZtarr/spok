@@ -1,7 +1,9 @@
 /* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER.
    Vue par défaut non réglée (defaultView null) : affichée « Liste », ce que SpacePage ouvre réellement.
    Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'.
-   Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id). */
+   Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id).
+   Quitter : membre direct sans droits de gestion → bouton sur l'écran « pas les permissions » ; propriétaire →
+   onglet Membres (se rétrograder puis quitter, s'il reste un autre propriétaire). */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -184,6 +186,17 @@ export function SpaceSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       setTransferTargetId('');
+    },
+  });
+
+  // Quitter l'espace (membre direct sans droits de gestion) — un propriétaire passe par l'onglet Membres
+  const isDirectMember = !!user && !!spaceMembers?.some((m) => m.userId === user.id);
+  const leaveSpaceMutation = useMutation({
+    mutationFn: () => spacesApi.leave(spaceId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      navigate('/');
     },
   });
 
@@ -376,6 +389,22 @@ export function SpaceSettingsPage() {
             Retour à l'espace
           </Link>
         </div>
+        {/* Membre direct (non propriétaire) : il peut quitter l'espace d'ici */}
+        {isDirectMember && (
+          <div className="mt-4 border border-border rounded-lg p-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">Vous êtes membre de cet espace.</p>
+            <Button
+              variant="bordered"
+              disabled={leaveSpaceMutation.isPending}
+              onClick={() => { if (confirm('Quitter cet espace ? Vous perdrez l\'accès s\'il est privé.')) leaveSpaceMutation.mutate(); }}
+            >
+              Quitter l'espace
+            </Button>
+          </div>
+        )}
+        {leaveSpaceMutation.isError && (
+          <p className="text-sm text-destructive mt-2">{(leaveSpaceMutation.error as any)?.message || 'Impossible de quitter l\'espace'}</p>
+        )}
       </div>
     );
   }

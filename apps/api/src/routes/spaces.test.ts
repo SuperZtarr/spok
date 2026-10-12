@@ -955,8 +955,9 @@ describe('Spaces routes', () => {
       expect(res.json().success).toBe(true)
     })
 
-    it('should prevent OWNER from leaving', async () => {
+    it('should prevent the only OWNER from leaving', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership({ role: 'OWNER' }))
+      prisma.spaceMembership.count.mockResolvedValue(0) // aucun autre propriétaire
 
       const res = await app.inject({
         method: 'POST',
@@ -965,6 +966,23 @@ describe('Spaces routes', () => {
       })
 
       expect(res.statusCode).toBe(403)
+      expect(prisma.spaceMembership.delete).not.toHaveBeenCalled()
+    })
+
+    // 2026-10-12 : un propriétaire ne pouvait jamais partir, même avec un co-propriétaire
+    it('should let an OWNER leave when another owner remains', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership({ role: 'OWNER' }))
+      prisma.spaceMembership.count.mockResolvedValue(1)
+      prisma.spaceMembership.delete.mockResolvedValue(mockMembership())
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/leave`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.spaceMembership.delete).toHaveBeenCalled()
     })
 
     it('should return 404 if not a member', async () => {

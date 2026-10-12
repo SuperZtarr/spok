@@ -272,6 +272,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/spaces.ts (GET /:id, GET /:id/members, POST /:id/join, POST / et PATCH /:id avec parentId), apps/api/src/routes/items.ts (checkSpaceAccess, filterReadableSpaceIds), apps/api/src/routes/graph.ts',
   },
   {
+    id: 'space-leave-and-self-demote',
+    page: "Paramètres d'un espace (onglet Membres, ou écran « pas les permissions » pour un simple membre)",
+    trigger: 'Un membre veut quitter un espace, ou un propriétaire veut redevenir simple membre',
+    effect: "Un propriétaire peut se rétrograder en membre ou quitter l'espace s'il reste au moins un autre propriétaire ; seul propriétaire, il doit d'abord en nommer un autre ou transférer la propriété (un espace n'est jamais sans propriétaire). Un simple membre direct peut quitter depuis les paramètres. Quitter ramène à l'accueil",
+    location: 'apps/api/src/routes/spaces.ts (POST /:id/leave, PATCH /:id/members/:memberId), apps/web/src/components/settings/MembersColumnManager.tsx, SpaceMembersManager.tsx, apps/web/src/pages/SpaceSettingsPage.tsx',
+  },
+  {
     id: 'community-owner-all-spaces',
     page: 'Sidebar, page et paramètres de tout espace de la communauté, contenu des espaces, séances live',
     trigger: "Propriétaire d'une communauté, membre ou non d'un de ses espaces",

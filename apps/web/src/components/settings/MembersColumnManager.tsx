@@ -1,4 +1,7 @@
-/* Config des colonnes de la vue Assignations (membres affichés, ordre). */
+/* Gestion des membres en 3 colonnes (Non-membres → Membres → Propriétaires), partagée espaces/communautés.
+   Flèches toujours visibles (atténuées, nettes au survol). onLeave fourni (espaces) = actions sur SA propre ligne :
+   « Me rétrograder en membre » (seulement s'il reste un autre propriétaire) et « Quitter » (depuis Membres).
+   Sans onLeave (communautés), aucune action sur sa propre ligne. */
 import { useState, useMemo } from 'react';
 import { Users, Crown, User, ChevronRight, ChevronLeft, Loader2, Search } from 'lucide-react';
 import { RoleGuard } from '../RoleGuard';
@@ -26,8 +29,13 @@ interface MembersColumnManagerProps {
   onAddMember: (userId: string, role: string) => void;
   onRemoveMember: (memberId: string) => void;
   onUpdateRole: (memberId: string, role: string) => void;
+  /** Quitter (espaces) : active les actions sur sa propre ligne (se rétrograder, quitter). */
+  onLeave?: () => void;
   isUpdating?: boolean;
 }
+
+// Flèche d'action : toujours visible (atténuée), nette au survol de la ligne
+const ARROW = 'p-1 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all disabled:opacity-25 disabled:cursor-not-allowed';
 
 function UserCard({ name, email, isSelf }: { name: string; email: string; isSelf?: boolean }) {
   return (
@@ -55,6 +63,7 @@ export function MembersColumnManager({
   onAddMember,
   onRemoveMember,
   onUpdateRole,
+  onLeave,
   isUpdating,
 }: MembersColumnManagerProps) {
   const [searchAvailable, setSearchAvailable] = useState('');
@@ -136,7 +145,7 @@ export function MembersColumnManager({
                     <button
                       onClick={() => onAddMember(user.id, 'MEMBER')}
                       disabled={isUpdating}
-                      className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                      className={`${ARROW} hover:text-primary`}
                       title="Ajouter comme membre"
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -186,12 +195,23 @@ export function MembersColumnManager({
                       <button
                         onClick={() => onRemoveMember(member.id)}
                         disabled={isUpdating}
-                        className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                        className={`${ARROW} hover:text-destructive`}
                         title="Retirer du groupe"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                     </RoleGuard>
+                  )}
+                  {isSelf && onLeave && (
+                    <button
+                      onClick={onLeave}
+                      disabled={isUpdating}
+                      className={`${ARROW} hover:text-destructive`}
+                      title="Quitter l'espace"
+                      aria-label="Quitter l'espace"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
                   )}
                   <div className="flex-1 min-w-0">
                     <UserCard name={member.name} email={member.email} isSelf={isSelf} />
@@ -201,7 +221,7 @@ export function MembersColumnManager({
                       <button
                         onClick={() => onUpdateRole(member.id, 'OWNER')}
                         disabled={isUpdating}
-                        className="p-1 text-muted-foreground hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-all"
+                        className={`${ARROW} hover:text-amber-500`}
                         title="Promouvoir propriétaire"
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -252,12 +272,24 @@ export function MembersColumnManager({
                       <button
                         onClick={() => onUpdateRole(member.id, 'MEMBER')}
                         disabled={isUpdating}
-                        className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                        className={`${ARROW} hover:text-primary`}
                         title="Rétrograder en membre"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                     </RoleGuard>
+                  )}
+                  {/* Se rétrograder soi-même : jamais le dernier propriétaire (l'API refuse aussi) */}
+                  {isSelf && onLeave && (
+                    <button
+                      onClick={() => onUpdateRole(member.id, 'MEMBER')}
+                      disabled={isUpdating || owners.length <= 1}
+                      className={`${ARROW} hover:text-primary`}
+                      title={owners.length <= 1 ? 'Nommez d\'abord un autre propriétaire' : 'Me rétrograder en membre'}
+                      aria-label="Me rétrograder en membre"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
                   )}
                   <div className="flex-1 min-w-0">
                     <UserCard name={member.name} email={member.email} isSelf={isSelf} />

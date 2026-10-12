@@ -1,5 +1,8 @@
-/* Gestion des membres d'un espace : rôles, invitations, retrait — page settings espace. */
+/* Gestion des membres d'un espace : rôles, invitations, retrait — page settings espace.
+   Actions sur soi (onLeave) : se rétrograder en membre (s'il reste un autre propriétaire) et quitter l'espace
+   (confirmation, puis retour à l'accueil). Un changement de son propre rôle rafraîchit l'espace (droits). */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { spacesApi } from '../../lib/api';
 import { MembersColumnManager } from './MembersColumnManager';
 import { RoleGuard } from '../RoleGuard';
@@ -53,8 +56,25 @@ export function SpaceMembersManager({
       spacesApi.updateMemberRole(spaceId, memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['space-members', spaceId] });
+      // Son propre rôle a pu changer : droits de la page et sidebar à relire
+      queryClient.invalidateQueries({ queryKey: ['space', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
     },
   });
+
+  const navigate = useNavigate();
+  const leaveMutation = useMutation({
+    mutationFn: () => spacesApi.leave(spaceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      navigate('/');
+    },
+    onError: (e) => alert(e instanceof Error ? e.message : 'Impossible de quitter l\'espace'),
+  });
+  const handleLeave = () => {
+    if (confirm('Quitter cet espace ? Vous perdrez l\'accès s\'il est privé.')) leaveMutation.mutate();
+  };
 
   if (spaceType === 'PERSONAL') {
     return null;
@@ -79,7 +99,8 @@ export function SpaceMembersManager({
         onAddMember={(userId, role) => addMemberMutation.mutate({ userId, role })}
         onRemoveMember={(memberId) => removeMemberMutation.mutate(memberId)}
         onUpdateRole={(memberId, role) => updateRoleMutation.mutate({ memberId, role })}
-        isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending}
+        onLeave={handleLeave}
+        isUpdating={addMemberMutation.isPending || removeMemberMutation.isPending || updateRoleMutation.isPending || leaveMutation.isPending}
       />
     </RoleGuard>
   );

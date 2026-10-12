@@ -4,6 +4,7 @@
  * referentiels. Suppression : space OWNER, community OWNER ou admin en mode admin.
  * Gestion (membres, invitations, images, emails) : isSpaceOwnerOrAdmin — le mode admin voit et fait
  * tout. Actions personnelles (join/leave, transfert de sa propriété) liées à l'appelant.
+ * leave : un propriétaire peut partir s'il reste un autre propriétaire (jamais d'espace sans OWNER).
  * GET / en mode admin : espaces de toutes les communautés (ou de celle demandée), privés compris, rôle OWNER.
  * POST / et PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée) — POST l'applique dès la création (GROUP). GET /:id renvoie inheritedVisibility +
  * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
@@ -1107,8 +1108,14 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Not a member of this space');
     }
 
+    // Un propriétaire peut partir s'il en reste un autre (espaces multi-OWNER) ; jamais d'espace sans propriétaire
     if (membership.role === 'OWNER') {
-      return reply.forbidden('The owner cannot leave the space');
+      const otherOwners = await fastify.prisma.spaceMembership.count({
+        where: { spaceId: request.params.id, role: 'OWNER', NOT: { id: membership.id } },
+      });
+      if (otherOwners === 0) {
+        return reply.forbidden('Vous êtes le seul propriétaire : transférez d\'abord la propriété ou nommez un autre propriétaire');
+      }
     }
 
     await fastify.prisma.spaceMembership.delete({
