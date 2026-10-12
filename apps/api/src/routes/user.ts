@@ -1,11 +1,11 @@
-/* Profil utilisateur : préférences (thème), avatar (R2), changement de mot de passe. */
+/* Profil utilisateur : préférences (thème), avatar (R2 ; formats/tailles via validateUpload('image')
+   de @spok/shared), changement de mot de passe. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';
+import { validateUpload } from '@spok/shared';
 import { processAvatar, uploadEntityImage, isR2Configured, deleteFileFromR2 } from '../utils/r2.js';
 import { generateTokens, sendVerificationEmail } from './auth.js';
-
-const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const updatePreferencesSchema = z.object({
   themePreference: z.enum(['light', 'dark', 'system']).optional(),
@@ -162,15 +162,12 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.badRequest('Aucun fichier envoyé');
     }
 
-    if (!ALLOWED_MIMES.includes(file.mimetype)) {
-      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
-    }
+    const typeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename });
+    if (typeError) return reply.badRequest(typeError);
 
     const buffer = await file.toBuffer();
-
-    if (buffer.length > 5 * 1024 * 1024) {
-      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
-    }
+    const sizeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+    if (sizeError) return reply.badRequest(sizeError);
 
     const processed = await processAvatar(buffer);
 

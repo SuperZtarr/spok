@@ -7,19 +7,19 @@
  * PATCH PRIVATE → OPEN/READONLY = même demande (validation admin), sauf admin en mode admin.
  * Visibilité : `visibility` est la seule source de vérité (listes, contrôles d'accès).
  * `isPublic` est déprécié et peut être désynchronisé en base — ne jamais filtrer dessus seul.
+ * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
+import { validateUpload } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from '../utils/audit.js';
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
 import { communityReferentielsRoutes } from './community-referentiels.js';
-
-const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const createCommunitySchema = z.object({
   name: z.string().min(1),
@@ -1085,14 +1085,12 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
-    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
-      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
-    }
+    const typeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename });
+    if (typeError) return reply.badRequest(typeError);
 
     const buffer = await file.toBuffer();
-    if (buffer.length > 5 * 1024 * 1024) {
-      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
-    }
+    const sizeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+    if (sizeError) return reply.badRequest(sizeError);
 
     const processed = await processAvatar(buffer);
     let avatarUrl: string;
@@ -1141,14 +1139,12 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
-    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
-      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
-    }
+    const typeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename });
+    if (typeError) return reply.badRequest(typeError);
 
     const buffer = await file.toBuffer();
-    if (buffer.length > 5 * 1024 * 1024) {
-      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
-    }
+    const sizeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+    if (sizeError) return reply.badRequest(sizeError);
 
     const processed = await processCover(buffer);
     let coverUrl: string;

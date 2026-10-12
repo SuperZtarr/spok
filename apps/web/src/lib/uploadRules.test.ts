@@ -1,4 +1,5 @@
-/* Tests des règles d'envoi de fichiers (images / documents) partagées par les zones de dépôt et l'import en masse. */
+/* Tests des règles d'envoi de fichiers (images / documents) — source @spok/shared partagée avec l'API,
+   via l'adaptateur File du web (zones de dépôt et import en masse). */
 import { validateUploadFile, titleFromFileName, IMAGE_MAX_SIZE, DOCUMENT_MAX_SIZE } from './uploadRules';
 
 function fakeFile(name: string, type: string, size: number): File {
@@ -25,6 +26,10 @@ describe('validateUploadFile — document', () => {
   });
   it('refuse une extension bloquée, quelle que soit la casse', () => {
     expect(validateUploadFile(fakeFile('setup.EXE', 'application/octet-stream', 10), 'document')).toMatch(/pas autorisé/);
+  });
+  // Règle partagée avec l'API (@spok/shared) : le type MIME exécutable est refusé même sans extension suspecte
+  it('refuse un type MIME exécutable, même avec une extension anodine', () => {
+    expect(validateUploadFile(fakeFile('rapport.pdf', 'application/x-msdownload', 10), 'document')).toMatch(/pas autorisé/);
   });
   it('refuse un document au-dessus de 25 Mo', () => {
     expect(validateUploadFile(fakeFile('a.zip', 'application/zip', DOCUMENT_MAX_SIZE + 1), 'document')).toMatch(/max 25 Mo/);

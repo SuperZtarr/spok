@@ -1,32 +1,14 @@
 /*
  * Upload de fichiers d'un item vers R2 : images (5 Mo max, mimes whitelist) et documents
- * (mimes exécutables bloqués). Nécessite R2 configuré (isR2Configured).
+ * (exécutables bloqués, 25 Mo max). Nécessite R2 configuré (isR2Configured).
+ * Formats/tailles : validateUpload de @spok/shared (source unique web + API) — jamais redéfinis ici.
  * Refusé sur copie de séance verrouillée (itemLock).
  */
 import { FastifyPluginAsync } from 'fastify';
+import { validateUpload } from '@spok/shared';
 import { isR2Configured, processImage, uploadImageToR2, deleteImageFromR2, uploadFileToR2, deleteFileFromR2 } from '../utils/r2.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
-
-const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 Mo
-
-const BLOCKED_DOCUMENT_MIMES = new Set([
-  'application/x-msdownload',
-  'application/x-executable',
-  'application/x-sh',
-  'application/x-bat',
-  'application/x-msi',
-  'application/x-dosexec',
-]);
-
-const BLOCKED_DOCUMENT_EXTENSIONS = new Set([
-  '.exe', '.bat', '.cmd', '.com', '.scr', '.msi', '.dll',
-  '.sh', '.bash', '.zsh', '.ps1', '.psm1', '.psd1',
-  '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh',
-  '.jar', '.py', '.rb', '.pl', '.php',
-]);
-const MAX_DOCUMENT_SIZE = 25 * 1024 * 1024; // 25 Mo
 
 export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /:id/image — upload image to R2
@@ -63,14 +45,12 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Aucun fichier envoyé');
       }
 
-      if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
-        return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
-      }
+      const typeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename });
+      if (typeError) return reply.badRequest(typeError);
 
       const buffer = await file.toBuffer();
-      if (buffer.length > MAX_IMAGE_SIZE) {
-        return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
-      }
+      const sizeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+      if (sizeError) return reply.badRequest(sizeError);
 
       // Process and upload
       const processed = await processImage(buffer);
@@ -131,15 +111,12 @@ export const itemUploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.badRequest('Aucun fichier envoyé');
       }
 
-      const ext = '.' + (file.filename.split('.').pop()?.toLowerCase() ?? '');
-      if (BLOCKED_DOCUMENT_MIMES.has(file.mimetype) || BLOCKED_DOCUMENT_EXTENSIONS.has(ext)) {
-        return reply.badRequest('Ce type de fichier n\'est pas autorisé.');
-      }
+      const typeError = validateUpload('document', { mimeType: file.mimetype, fileName: file.filename });
+      if (typeError) return reply.badRequest(typeError);
 
       const buffer = await file.toBuffer();
-      if (buffer.length > MAX_DOCUMENT_SIZE) {
-        return reply.badRequest('Fichier trop volumineux (max 25 Mo)');
-      }
+      const sizeError = validateUpload('document', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+      if (sizeError) return reply.badRequest(sizeError);
 
       // Upload directly (no processing for documents)
       const cdnUrl = await uploadFileToR2(buffer, item.id, file.filename, file.mimetype);

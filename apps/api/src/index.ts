@@ -6,6 +6,7 @@
  * /user/tokens : jetons personnels (MCP distant) ; /mcp : serveur MCP Streamable HTTP (cf. routes/mcp.ts).
  * rate-limit : les sous-requêtes internes du MCP distant (x-spok-internal) en sont exemptées ; /mcp a sa propre
  * limite (120/min/jeton). requestContextPlugin : contexte d'audit (origine MCP) des sous-requêtes internes.
+ * multipart : plafond = DOCUMENT_MAX_SIZE (@spok/shared, règles d'envoi partagées web/API).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -27,6 +28,7 @@ import sensible from '@fastify/sensible';
 import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
 import { Prisma } from '@spok/database';
+import { DOCUMENT_MAX_SIZE } from '@spok/shared';
 import { prismaPlugin } from './plugins/prisma.js';
 import { jwtPlugin } from './plugins/jwt.js';
 import { adminAuthPlugin } from './plugins/adminAuth.js';
@@ -295,7 +297,8 @@ async function buildApp() {
   await app.register(requestContextPlugin);
 
   await app.register(sensible);
-  await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
+  // Plafond multipart = plus gros fichier autorisé (documents), cf. uploadRules de @spok/shared
+  await app.register(multipart, { limits: { fileSize: DOCUMENT_MAX_SIZE } });
 
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);
