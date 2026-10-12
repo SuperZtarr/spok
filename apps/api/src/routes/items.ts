@@ -120,13 +120,15 @@ export async function isCommunityOwnerOfSpace(prisma: any, userId: string, space
 // Même règle : admin global ou membre direct → oui ; propriétaire de la communauté → oui ;
 // visibilité effective (espace → parents → communauté) PRIVATE → non ; sinon membre de la communauté
 // ou communauté non privée → oui. Ne jamais filtrer sur la visibilité propre de l'espace seule.
-export async function filterReadableSpaceIds(prisma: any, userId: string | undefined, spaceIds: string[]): Promise<string[]> {
+// Version en masse de getEffectiveVisibility : visibilité effective (espace → parents → communauté) de
+// chaque espace demandé, en quelques requêtes. Inclut communityId et la visibilité de la communauté.
+// Espace inconnu → absent de la Map.
+export async function getEffectiveVisibilities(prisma: any, spaceIds: string[]): Promise<Map<string, {
+  visibility: string; communityId: string | null; communityVisibility: string | null;
+}>> {
   const ids = [...new Set(spaceIds)];
-  if (ids.length === 0) return [];
-  if (userId) {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
-    if (user?.globalRole === 'ADMIN') return ids;
-  }
+  const result = new Map<string, { visibility: string; communityId: string | null; communityVisibility: string | null }>();
+  if (ids.length === 0) return result;
 
   // Espaces demandés + leurs ancêtres (nécessaires à la visibilité héritée)
   const byId = new Map<string, { id: string; parentId: string | null; visibility: string | null; communityId: string | null }>();
@@ -141,10 +143,42 @@ export async function filterReadableSpaceIds(prisma: any, userId: string | undef
   }
 
   const communityIds = [...new Set([...byId.values()].map(s => s.communityId).filter((c): c is string => !!c))];
-  const [communities, communityMemberships, directMemberships] = await Promise.all([
-    communityIds.length > 0
-      ? prisma.community.findMany({ where: { id: { in: communityIds } }, select: { id: true, visibility: true } })
-      : [],
+  const communities = communityIds.length > 0
+    ? await prisma.community.findMany({ where: { id: { in: communityIds } }, select: { id: true, visibility: true } })
+    : [];
+  const communityVisibility = new Map<string, string>(communities.map((c: any) => [c.id, c.visibility]));
+
+  const effective = (spaceId: string, depth = 0): string => {
+    const s = byId.get(spaceId);
+    if (!s || depth > 50) return 'PRIVATE';
+    if (s.visibility) return s.visibility;
+    if (s.parentId) return effective(s.parentId, depth + 1);
+    return (s.communityId && communityVisibility.get(s.communityId)) || 'PRIVATE';
+  };
+
+  for (const id of ids) {
+    const s = byId.get(id);
+    if (!s) continue;
+    result.set(id, {
+      visibility: effective(id),
+      communityId: s.communityId,
+      communityVisibility: s.communityId ? communityVisibility.get(s.communityId) ?? null : null,
+    });
+  }
+  return result;
+}
+
+export async function filterReadableSpaceIds(prisma: any, userId: string | undefined, spaceIds: string[]): Promise<string[]> {
+  const ids = [...new Set(spaceIds)];
+  if (ids.length === 0) return [];
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+    if (user?.globalRole === 'ADMIN') return ids;
+  }
+
+  const visibilities = await getEffectiveVisibilities(prisma, ids);
+  const communityIds = [...new Set([...visibilities.values()].map(v => v.communityId).filter((c): c is string => !!c))];
+  const [communityMemberships, directMemberships] = await Promise.all([
     userId && communityIds.length > 0
       ? prisma.communityMembership.findMany({ where: { userId, communityId: { in: communityIds } }, select: { communityId: true, role: true } })
       : [],
@@ -152,26 +186,17 @@ export async function filterReadableSpaceIds(prisma: any, userId: string | undef
       ? prisma.spaceMembership.findMany({ where: { userId, spaceId: { in: ids } }, select: { spaceId: true } })
       : [],
   ]);
-  const communityVisibility = new Map<string, string>(communities.map((c: any) => [c.id, c.visibility]));
   const communityRole = new Map<string, string>(communityMemberships.map((m: any) => [m.communityId, m.role]));
   const directIds = new Set<string>(directMemberships.map((m: any) => m.spaceId));
 
-  const effectiveVisibility = (spaceId: string, depth = 0): string => {
-    const s = byId.get(spaceId);
-    if (!s || depth > 50) return 'PRIVATE';
-    if (s.visibility) return s.visibility;
-    if (s.parentId) return effectiveVisibility(s.parentId, depth + 1);
-    return (s.communityId && communityVisibility.get(s.communityId)) || 'PRIVATE';
-  };
-
   return ids.filter(id => {
     if (directIds.has(id)) return true;
-    const s = byId.get(id);
-    if (!s?.communityId) return false;
-    const role = communityRole.get(s.communityId);
+    const v = visibilities.get(id);
+    if (!v?.communityId) return false;
+    const role = communityRole.get(v.communityId);
     if (role === 'OWNER') return true;
-    if (effectiveVisibility(id) === 'PRIVATE') return false;
-    return !!role || communityVisibility.get(s.communityId) !== 'PRIVATE';
+    if (v.visibility === 'PRIVATE') return false;
+    return !!role || v.communityVisibility !== 'PRIVATE';
   });
 }
 

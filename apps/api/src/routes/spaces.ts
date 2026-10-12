@@ -8,6 +8,10 @@
  * PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée). GET /:id renvoie inheritedVisibility +
  * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
+ * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
+ * GET / (sidebar) : espaces non-membre filtrés sur la visibilité EFFECTIVE (keepVisibleWithRole) — jamais
+ * sur la visibilité propre seule, sinon un sous-espace d'un parent privé fuit dans la liste.
+ * PATCH /:id : isSpaceOwnerOrAdmin comme le reste de la gestion — un admin global hors mode admin est refusé.
  * Espace PRIVATE (visibilité effective) : réservé aux membres directs et à l'admin — GET /:id et
  * /:id/members passent par checkSpaceAccess (READONLY → rôle VIEWER), /:id/join réservé aux espaces
  * OUVERTS (hors propriétaire de communauté / mode admin), création d'un sous-espace ou rattachement
@@ -18,9 +22,9 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Role, SpaceDeletePreview } from '@spok/shared';
-import { SPACE_TEMPLATES } from '@spok/shared';
+import { SPACE_TEMPLATES, validateUpload } from '@spok/shared';
 import type { SpaceTemplateItem } from '@spok/shared';
-import { itemsRoutes, getEffectiveVisibility, checkSpaceAccess, isCommunityOwnerOfSpace } from './items.js';
+import { itemsRoutes, getEffectiveVisibility, getEffectiveVisibilities, checkSpaceAccess, isCommunityOwnerOfSpace } from './items.js';
 import { tagsRoutes } from './tags.js';
 import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
@@ -30,8 +34,6 @@ import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '.
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { createInvitation as createInvitationHelper } from './invitations.js';
 import { createItemTree } from '../utils/itemTree.js';
-
-const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const createSpaceSchema = z.object({
   name: z.string().min(1),
@@ -101,6 +103,18 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     await optInstance.register(auditLogsRoutes, { prefix: '/:spaceId/audit-logs' });
   });
 
+  // Espaces non-membre listés : visibilité EFFECTIVE (héritée des parents) — un sous-espace sous un parent
+  // privé n'apparaît pas, et le rôle implicite suit la visibilité héritée (READONLY → VIEWER, OPEN → MEMBER).
+  // Renvoie les espaces non privés avec leur rôle ; ne s'applique pas aux espaces gérés (OWNER).
+  async function keepVisibleWithRole<T extends { id: string }>(spaces: T[]): Promise<Array<{ space: T; role: Role }>> {
+    const visibilities = await getEffectiveVisibilities(fastify.prisma, spaces.map(s => s.id));
+    return spaces.flatMap((space) => {
+      const v = visibilities.get(space.id)?.visibility;
+      if (!v || v === 'PRIVATE') return [];
+      return [{ space, role: (v === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role }];
+    });
+  }
+
   // List spaces (authenticated: all accessible; anonymous: public community spaces only)
   fastify.get<{ Querystring: { communityId?: string; parentId?: string } }>('/', { preHandler: [fastify.optionalAuthenticate] }, async (request) => {
     const { communityId } = request.query;
@@ -114,6 +128,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           where: {
             type: 'GROUP',
             community: { visibility: { not: 'PRIVATE' } },
+            // Pré-filtre (null = héritée, à garder) ; l'héritage est tranché par keepVisibleWithRole
             OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
           },
           include: {
@@ -124,9 +139,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           orderBy: { name: 'asc' },
         });
 
-        return spaces.map((s) => ({
+        return (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
           ...s,
-          role: ((s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
+          role,
           memberCount: s._count.memberships,
           itemCount: s._count.items,
           isMember: false,
@@ -149,9 +164,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { name: 'asc' },
       });
 
-      return spaces.map((s) => ({
+      return (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
         ...s,
-        role: ((s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
+        role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -288,11 +303,19 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { name: 'asc' },
       });
 
-      const nonMemberSpaces = visibleSpaces.map((s) => ({
+      // Mode admin / communauté possédée → OWNER, tout est listé. Sinon visibilité effective : un sous-espace
+      // hérité d'un parent privé est retiré, le rôle implicite suit la visibilité héritée.
+      const managed = visibleSpaces.filter(s => adminModeOn || (s.communityId && ownedCommunityIds.has(s.communityId)));
+      const managedIds = new Set(managed.map(s => s.id));
+      const others = await keepVisibleWithRole(visibleSpaces.filter(s => !managedIds.has(s.id)));
+      const roleById = new Map<string, Role>([
+        ...managed.map(s => [s.id, 'OWNER' as Role] as const),
+        ...others.map(({ space, role }) => [space.id, role] as const),
+      ]);
+
+      const nonMemberSpaces = visibleSpaces.filter(s => roleById.has(s.id)).map((s) => ({
         ...s,
-        role: (adminModeOn || (s.communityId && ownedCommunityIds.has(s.communityId))
-          ? 'OWNER'
-          : (s as any).visibility === 'READONLY' ? 'VIEWER' : 'MEMBER') as Role,
+        role: roleById.get(s.id)!,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
         isMember: false,
@@ -529,42 +552,22 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      // Check if user is global admin
-      const currentUser = await fastify.prisma.user.findUnique({
-        where: { id: request.user.userId },
-        select: { globalRole: true },
-      });
-      const isGlobalAdmin = currentUser?.globalRole === 'ADMIN';
-
-      const membership = await fastify.prisma.spaceMembership.findUnique({
-        where: {
-          userId_spaceId: {
-            userId: request.user.userId,
-            spaceId: request.params.id,
-          },
-        },
-        include: { space: true },
-      });
-
-      // Global admin and community owner can bypass membership check
-      const communityOwner = await isCommunityOwnerOfSpace(fastify.prisma, request.user.userId, request.params.id);
-      let space = membership?.space;
-      if (!membership && !isGlobalAdmin && !communityOwner) {
-        return reply.notFound('Space not found');
-      }
-
-      if (!isGlobalAdmin && !communityOwner && membership!.role !== 'OWNER') {
-        return reply.forbidden('Insufficient permissions');
-      }
-
-      // If global admin / community owner without membership, load space directly
-      if (!space) {
-        space = await fastify.prisma.space.findUnique({
-          where: { id: request.params.id },
+      // Même garde que toute la gestion d'espace : OWNER de l'espace, OWNER de la communauté, ou admin
+      // EN MODE ADMIN (un admin global hors mode admin n'a que ses droits de membre — aligné 2026-10-12)
+      const adminModeOn = await isAdminModeActive(fastify.prisma, request.user.userId, request.isAdminMode);
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, request.params.id, request.user.userId, request.isAdminMode))) {
+        const isMember = await fastify.prisma.spaceMembership.findUnique({
+          where: { userId_spaceId: { userId: request.user.userId, spaceId: request.params.id } },
+          select: { id: true },
         });
-        if (!space) {
-          return reply.notFound('Space not found');
-        }
+        return isMember ? reply.forbidden('Insufficient permissions') : reply.notFound('Space not found');
+      }
+
+      const space = await fastify.prisma.space.findUnique({
+        where: { id: request.params.id },
+      });
+      if (!space) {
+        return reply.notFound('Space not found');
       }
 
       const body = updateSpaceSchema.parse(request.body);
@@ -601,8 +604,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           }
 
           // Rattacher sous un parent = écrire dans ce parent (même règle que POST /) : sinon on
-          // greffe un espace sous un parent privé auquel on n'a pas accès. Admin global : règle de la route
-          if (!isGlobalAdmin) {
+          // greffe un espace sous un parent privé auquel on n'a pas accès. Admin en mode admin : tout
+          if (!adminModeOn) {
             const parentAccess = await checkSpaceAccess(fastify.prisma, request.user.userId, body.parentId, request.isAdminMode);
             if (!parentAccess || (parentAccess.role !== 'OWNER' && parentAccess.role !== 'MEMBER')) {
               return reply.forbidden('Accès en écriture à l\'espace parent requis');
@@ -627,8 +630,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      // Verify user is member of the target community (skip for global admin)
-      if (communityIdOverride && !isGlobalAdmin) {
+      // Verify user is member of the target community (skip for admin in admin mode)
+      if (communityIdOverride && !adminModeOn) {
         const communityMembership = await fastify.prisma.communityMembership.findUnique({
           where: {
             userId_communityId: {
@@ -1485,14 +1488,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
-    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
-      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
-    }
+    const typeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename });
+    if (typeError) return reply.badRequest(typeError);
 
     const buffer = await file.toBuffer();
-    if (buffer.length > 5 * 1024 * 1024) {
-      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
-    }
+    const sizeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+    if (sizeError) return reply.badRequest(sizeError);
 
     const processed = await processAvatar(buffer);
     let avatarUrl: string;
@@ -1542,14 +1543,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const file = await request.file();
     if (!file) return reply.badRequest('Aucun fichier envoyé');
-    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
-      return reply.badRequest('Format non supporté. Utilisez JPEG, PNG, WebP ou GIF.');
-    }
+    const typeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename });
+    if (typeError) return reply.badRequest(typeError);
 
     const buffer = await file.toBuffer();
-    if (buffer.length > 5 * 1024 * 1024) {
-      return reply.badRequest('Fichier trop volumineux (max 5 Mo)');
-    }
+    const sizeError = validateUpload('image', { mimeType: file.mimetype, fileName: file.filename, size: buffer.length });
+    if (sizeError) return reply.badRequest(sizeError);
 
     const processed = await processCover(buffer);
     let coverUrl: string;

@@ -114,6 +114,44 @@ describe('Spaces routes', () => {
       expect(res.json()[0]).toMatchObject({ id: 'sp-priv', role: 'OWNER', isMember: false })
     })
 
+    // Sidebar 2026-10-12 : filtrage sur la visibilité EFFECTIVE (héritée), pas sur la visibilité propre
+    describe('inherited visibility for non-member spaces', () => {
+      const TREE: Record<string, { id: string; parentId: string | null; visibility: string | null; communityId: string }> = {
+        'sp-priv': { id: 'sp-priv', parentId: null, visibility: 'PRIVATE', communityId: 'com-1' },
+        'sp-child-of-priv': { id: 'sp-child-of-priv', parentId: 'sp-priv', visibility: null, communityId: 'com-1' },
+        'sp-ro': { id: 'sp-ro', parentId: null, visibility: 'READONLY', communityId: 'com-1' },
+        'sp-child-of-ro': { id: 'sp-child-of-ro', parentId: 'sp-ro', visibility: null, communityId: 'com-1' },
+      }
+
+      function mockTree(communityRole: 'MEMBER' | 'OWNER') {
+        prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+        prisma.spaceMembership.findMany.mockResolvedValue([])
+        prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'com-1', role: communityRole }])
+        prisma.community.findMany.mockResolvedValue([{ id: 'com-1', visibility: 'OPEN' }])
+        prisma.space.findMany.mockImplementation(async ({ where }: any) =>
+          where.id?.in
+            ? where.id.in.map((id: string) => TREE[id]).filter(Boolean) // getEffectiveVisibilities
+            : [mockSpace({ ...TREE['sp-child-of-priv'] }), mockSpace({ ...TREE['sp-child-of-ro'] })]) // liste
+      }
+
+      it('hides a sub-space inheriting from a private parent and gives VIEWER under a read-only one', async () => {
+        mockTree('MEMBER')
+
+        const res = await app.inject({ method: 'GET', url: '/spaces', headers: { authorization: `Bearer ${token}` } })
+
+        expect(res.statusCode).toBe(200)
+        expect(res.json().map((s: any) => [s.id, s.role])).toEqual([['sp-child-of-ro', 'VIEWER']])
+      })
+
+      it('keeps every space for the community owner, with role OWNER', async () => {
+        mockTree('OWNER')
+
+        const res = await app.inject({ method: 'GET', url: '/spaces', headers: { authorization: `Bearer ${token}` } })
+
+        expect(res.json().map((s: any) => [s.id, s.role])).toEqual([['sp-child-of-priv', 'OWNER'], ['sp-child-of-ro', 'OWNER']])
+      })
+    })
+
     it('should not add other communities spaces for an admin without admin mode', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
       prisma.spaceMembership.findMany.mockResolvedValue([])
@@ -476,6 +514,7 @@ describe('Spaces routes', () => {
     it('should save visibility, and null to inherit again', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
       prisma.spaceMembership.findUnique.mockResolvedValue({ ...mockMembership({ role: 'OWNER' }), space: mockSpace() })
+      prisma.space.findUnique.mockResolvedValue(mockSpace())
       prisma.space.update.mockResolvedValue(mockSpace())
 
       const set = await app.inject({
@@ -524,6 +563,7 @@ describe('Spaces routes', () => {
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace(),
       })
+      prisma.space.findUnique.mockResolvedValue(mockSpace())
       prisma.space.update.mockResolvedValue(mockSpace({ name: 'Renamed' }))
 
       const res = await app.inject({
@@ -537,7 +577,7 @@ describe('Spaces routes', () => {
       expect(prisma.space.update).toHaveBeenCalledOnce()
     })
 
-    it('should allow global admin to update without membership', async () => {
+    it('should allow global admin in admin mode to update without membership', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'ADMIN' })
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
       prisma.space.findUnique.mockResolvedValue(mockSpace())
@@ -546,11 +586,28 @@ describe('Spaces routes', () => {
       const res = await app.inject({
         method: 'PATCH',
         url: `/spaces/${SPACE_ID}`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
         payload: { name: 'Admin Renamed' },
       })
 
       expect(res.statusCode).toBe(200)
+    })
+
+    // Alignement 2026-10-12 : hors mode admin, un admin global n'a que ses droits de membre
+    it('should refuse a global admin without admin mode on a space he does not own', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'ADMIN' })
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(mockSpace())
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Admin Renamed' },
+      })
+
+      expect(res.statusCode).toBe(404)
+      expect(prisma.space.update).not.toHaveBeenCalled()
     })
 
     it('should reject update by MEMBER', async () => {
@@ -576,6 +633,7 @@ describe('Spaces routes', () => {
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace(),
       })
+      prisma.space.findUnique.mockResolvedValue(mockSpace())
 
       const res = await app.inject({
         method: 'PATCH',
@@ -593,6 +651,7 @@ describe('Spaces routes', () => {
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace({ communityId: 'com-old', parentId: null }),
       })
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-old', parentId: null }))
       prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-new' })
       // Arbre : SPACE_ID -> child-1 -> grandchild-1
       prisma.space.findMany
@@ -622,6 +681,7 @@ describe('Spaces routes', () => {
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace({ communityId: 'com-1', parentId: null }),
       })
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', parentId: null }))
       prisma.space.update.mockResolvedValue(mockSpace({ name: 'Renamed' }))
 
       const res = await app.inject({
@@ -641,6 +701,7 @@ describe('Spaces routes', () => {
         ...mockMembership({ role: 'OWNER' }),
         space: mockSpace({ type: 'PERSONAL' }),
       })
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ type: 'PERSONAL' }))
 
       const res = await app.inject({
         method: 'PATCH',
