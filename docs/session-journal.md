@@ -16,6 +16,7 @@
 - MEP a65c23a puis bceb559 + 05bdd18 (CI verte). Détail : llms.txt (apps/web/public + bloc nginx UTF-8), /mcp 401/403/405 explicites (WWW-Authenticate + lien llms.txt), correctifs revue sécu : ids zId() dans mcp-core + chemins piégés refusés dans injectClient, lots JSON-RPC refusés, clé rate-limit = hash Authorization, plafond 600 sous-requêtes/min/jeton. Tests mcp-core 40/40, api mcp 15/15, nginx -t OK
 - Tags MCP corrigés (appelaient /tags inexistant) : list_tags(spaceId) tous profils, create/update/delete_tag sur /spaces/:id/tags en profil admin (couleur #RRGGBB), get_tag supprimé ; create_item/update_item acceptent tags (noms/ids résolus, inconnu refusé). mcp-core 37/37, E2E local OK. NON COMMITÉ
 - Doc SPOK « Serveur MCP SPOK » mise à jour (to_validate). Redémarrer Claude pour charger le nouveau MCP local
+- trustProxy : logs DIAG PROXY prod lus (ip=100.64.0.1 pour tous → quota par IP commun en prod ; XFF = client, edge) → `trustProxy: 2` dans index.ts + diagnostic d7b9a78 retiré. Tests MCP 17/17. MEP 2026-10-12 — vérifier en prod que request.ip = IP client
 
 ### Mode admin — phase 3 (contenu des espaces) — 2026-10-12
 - checkSpaceAccess(prisma, userId, spaceId, isAdminMode) : mode admin → rôle OWNER (membre ou non) ; 40 appels de routes passent request.isAdminMode (items, tags, relations, contributions, réactions, move, merge, bulk, convert, uploads, auditLogs, referentiels). Utilitaires live (liveInvites, helpers live-sessions) inchangés

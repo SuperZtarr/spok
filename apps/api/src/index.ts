@@ -151,6 +151,10 @@ function formatPrismaError(error: Prisma.PrismaClientKnownRequestError): {
 async function buildApp() {
   const app = Fastify({
     logger: envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] ?? true,
+    // Railway place 2 proxys devant l'API (edge public puis proxy interne 100.64.0.1, relevé le 2026-10-12) :
+    // sans ce réglage request.ip vaut 100.64.0.1 pour tous et les limites de débit par IP deviennent un quota commun.
+    // Ne pas passer à `true` : on ferait confiance à un X-Forwarded-For forgé par le client.
+    trustProxy: 2,
   });
 
   // Surveillance des temps de réponse et volumes de données
@@ -193,23 +197,6 @@ async function buildApp() {
     if (perfBuffer.length >= PERF_BUFFER_SIZE) perfBuffer.shift();
     perfBuffer.push({ timestamp: new Date().toISOString(), method, url, status, ms, kb, slow: isSlow, heavy: isHeavy });
 
-    done();
-  });
-
-  // DIAGNOSTIC TEMPORAIRE (2026-10-12) — à retirer dès lecture des logs Railway : déterminer combien de
-  // proxys précèdent l'API (valeur de trustProxy) en loguant les 3 premières requêtes hors /health.
-  let proxyDiagLeft = 3;
-  app.addHook('onRequest', (request, _reply, done) => {
-    if (proxyDiagLeft > 0 && !request.url.startsWith('/health')) {
-      proxyDiagLeft--;
-      app.log.info({
-        diag: 'proxy',
-        ip: request.ip,
-        remoteAddress: request.socket.remoteAddress,
-        xForwardedFor: request.headers['x-forwarded-for'],
-        xRealIp: request.headers['x-real-ip'],
-      }, '[DIAG PROXY]');
-    }
     done();
   });
 
