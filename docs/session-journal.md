@@ -6,6 +6,10 @@
 
 ## EN COURS
 
+### Quitter / se rétrograder dans un espace — 2026-10-12
+- MEP 5494c5b/f0c4574/169b5d5 (CI verte). Revue sécu 169b5d5 : vignette visible des autres présentateurs → correctif proposé, en attente
+- leave OWNER si co-propriétaire ; MembersColumnManager : actions sur soi (onLeave, espaces seulement), flèches visibles ; SpaceSettingsPage : Quitter pour membre direct. spaces 76/76, web settings 4/4, typecheck api+web OK. UI NON vérifiée visuellement. MEP f66d29d
+
 ### Admin hors mode admin = utilisateur normal — 2026-10-12
 - Diagnostic prod (lecture seule) : séance JDR « Mes JDR » privée, communauté « Thomas JDR » = 1 membre (ztarr) → aucun invitable ; espaces OPEN « D&D5 Manu - Rodrigue », « Séance du 20 février 2026 » (à passer en privé par Thomas). Script gardé : apps/api/scripts/check-live-session-access.ts
 - ztarr voyait des espaces privés en lecture seule hors mode admin : passe-droit ADMIN supprimé (checkSpaceAccess, GET /spaces/:id, filterReadableSpaceIds, search). TNR api 643/643, typecheck api OK. MEP f0c4574

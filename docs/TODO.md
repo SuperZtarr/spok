@@ -74,6 +74,8 @@
 - [x] BUG visibilité d'espace jamais enregistrée (PATCH) + choix « Héritée » dans les paramètres — 2026-10-12
 - [x] Admin global HORS mode admin = utilisateur normal (règle Thomas) : plus de lecture d'office — checkSpaceAccess (rôle 'ADMIN' supprimé), GET /spaces/:id, filterReadableSpaceIds (graphes), recherche — 2026-10-12 (f0c4574)
 - [x] Séances live (JDR) : vignette image/schéma à gauche du titre en préparation (`thumbnailUrl`, animateur/présentateurs seulement, null pour les participants) ; liste d'invitation vide expliquée (`NoInviteCandidates` : ajouter d'abord les joueurs à la communauté + lien) — 2026-10-12 (169b5d5)
+- [x] Se retirer d'un espace qu'on possède : leave autorisé pour un OWNER s'il reste un autre propriétaire ; gestionnaire de membres (espaces) : « Me rétrograder en membre » / « Quitter l'espace » sur sa propre ligne, flèches toujours visibles ; bouton « Quitter l'espace » pour un simple membre direct — 2026-10-12 (f66d29d)
+- [ ] Séances : vignette d'une ligne de préparation envoyée à tous les présentateurs (revue sécu 169b5d5) → la limiter à l'animateur et au présentateur de la ligne — proposé, en attente
 - [ ] Actions d'animation des séances live réservées à l'animateur, admin compris — à ouvrir au mode admin ?
 - [x] PATCH /spaces/:id aligné : isSpaceOwnerOrAdmin (OWNER de l'espace ou de la communauté, admin en mode admin) — un admin global hors mode admin est refusé (validé Thomas) — 2026-10-12 (e86878b)
 - [x] Demande de publication : « Annuler la demande » dans les paramètres (PATCH visibility PRIVATE sur communauté privée = annulation) ; reject-public vide aussi pendingVisibility — 2026-10-12 (5494c5b)
