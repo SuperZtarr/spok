@@ -12,7 +12,7 @@ SPOK expose un serveur MCP (Model Context Protocol) permettant à un assistant d
 
 ### Connexion (Claude Code)
 
-1. L'utilisateur se connecte sur https://spok.space, ouvre son profil, section « Accès Claude (MCP) », et crée un jeton (lecture seule, ou lecture et écriture). Le jeton n'est affiché qu'une fois.
+1. L'utilisateur se connecte sur https://spok.space, ouvre son profil, section « Accès Claude (MCP) ». Si l'accès n'est pas encore accordé, il clique sur « Demander l'accès » et attend l'accord de l'administrateur. Il crée ensuite un jeton (lecture seule, ou lecture et écriture). Le jeton n'est affiché qu'une fois.
 2. Il lance, dans un terminal :
 
 ```

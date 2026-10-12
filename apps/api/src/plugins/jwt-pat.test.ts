@@ -1,7 +1,7 @@
 /*
  * TNR de l'authentification par jeton personnel (spok_pat_…) dans authenticate/optionalAuthenticate :
  * jeton valide → request.user, révoqué/expiré/utilisateur désactivé → 401, portée read → 403 sur écriture,
- * mode admin toujours désactivé pour un jeton.
+ * mode admin toujours désactivé pour un jeton, accès MCP non accordé par l'admin → 403 (admin global toujours admis).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -31,7 +31,7 @@ function tokenRow(tokenHash: string, overrides: Record<string, unknown> = {}) {
   return {
     id: 'pat-1', name: 'Claude perso', tokenHash, scope: 'write', userId: 'u1',
     revokedAt: null, expiresAt: null, lastUsedAt: new Date(),
-    user: { id: 'u1', email: 'u1@test.com', disabledAt: null },
+    user: { id: 'u1', email: 'u1@test.com', disabledAt: null, globalRole: 'USER', mcpAccessGrantedAt: new Date() },
     ...overrides,
   }
 }
@@ -100,6 +100,21 @@ describe('Jeton personnel', () => {
     expect(ok.statusCode).toBe(200)
     const profile = await app.inject({ method: 'PATCH', url: '/user/profile', headers: { authorization: `Bearer ${token}` }, payload: { email: 'x@evil.test' } })
     expect(profile.statusCode).toBe(403)
+  })
+
+  it('accès MCP non accordé : jeton valide refusé en 403 avec la marche à suivre, y compris en optionalAuthenticate', async () => {
+    prisma.personalAccessToken.findUnique.mockResolvedValue(tokenRow(tokenHash, { user: { id: 'u1', email: 'u1@test.com', disabledAt: null, globalRole: 'USER', mcpAccessGrantedAt: null } }))
+    const res = await app.inject({ method: 'GET', url: '/spaces/probe', headers: { authorization: `Bearer ${token}` } })
+    expect(res.statusCode).toBe(403)
+    expect(res.json().message).toMatch(/administrateur/)
+    const opt = await app.inject({ method: 'GET', url: '/search/optional', headers: { authorization: `Bearer ${token}` } })
+    expect(opt.statusCode).toBe(403)
+  })
+
+  it('admin global : jeton admis sans accord explicite', async () => {
+    prisma.personalAccessToken.findUnique.mockResolvedValue(tokenRow(tokenHash, { user: { id: 'u1', email: 'u1@test.com', disabledAt: null, globalRole: 'ADMIN', mcpAccessGrantedAt: null } }))
+    const res = await app.inject({ method: 'GET', url: '/spaces/probe', headers: { authorization: `Bearer ${token}` } })
+    expect(res.statusCode).toBe(200)
   })
 
   it('un JWT classique continue de fonctionner (authVia = jwt)', async () => {

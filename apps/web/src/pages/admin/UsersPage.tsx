@@ -1,8 +1,9 @@
-/* Admin utilisateurs (/admin/users) : liste, création, rôles, activation, suppression. */
+/* Admin utilisateurs (/admin/users) : liste, création, rôles, activation, suppression, accès MCP (accorder/retirer,
+ * demandes en attente signalées — tri « MCP » pour les remonter). */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download, Ban, CheckCircle, Network } from 'lucide-react';
+import { Plus, Search, Trash2, Shield, User, ArrowUp, ArrowDown, X, AlertTriangle, Mail, MailCheck, ChevronLeft, ChevronRight, Download, Ban, CheckCircle, Network, Bot } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -28,6 +29,7 @@ const accessors: Record<string, (u: AdminUser) => string | number> = {
   contributions: (u) => u._count?.contributions ?? 0,
   lastLoginAt: (u) => u.lastLoginAt ?? '',
   status: (u) => (u as any).disabledAt ? 1 : 0,
+  mcp: (u) => u.mcpAccessRequestedAt ? 2 : u.mcpAccessGrantedAt ? 1 : 0,
   createdAt: (u) => u.createdAt,
 };
 
@@ -122,6 +124,13 @@ export function UsersPage() {
 
   const enableMutation = useMutation({
     mutationFn: (id: string) => adminApi.users.enable(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+
+  const mcpMutation = useMutation({
+    mutationFn: ({ id, granted }: { id: string; granted: boolean }) => adminApi.users.setMcpAccess(id, granted),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
@@ -237,6 +246,44 @@ export function UsersPage() {
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-green-600 border-green-300">Actif</Badge>
         )}
       </td>
+      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+        {user.globalRole === 'ADMIN' ? (
+          <span className="text-xs text-muted-foreground" title="Les administrateurs ont toujours l'accès MCP">Admin</span>
+        ) : user.mcpAccessGrantedAt ? (
+          <button
+            type="button"
+            disabled={mcpMutation.isPending}
+            onClick={() => {
+              if (confirm(`Retirer l'accès Claude (MCP) de « ${user.name} » ? Ses jetons cesseront de fonctionner.`)) {
+                mcpMutation.mutate({ id: user.id, granted: false });
+              }
+            }}
+            title={`Accordé le ${new Date(user.mcpAccessGrantedAt).toLocaleDateString('fr-FR')} — cliquer pour retirer`}
+          >
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-green-600 border-green-300">
+              <Bot className="w-3 h-3 mr-0.5" />
+              Accordé
+            </Badge>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={mcpMutation.isPending}
+            onClick={() => mcpMutation.mutate({ id: user.id, granted: true })}
+            title={user.mcpAccessRequestedAt
+              ? `Demandé le ${new Date(user.mcpAccessRequestedAt).toLocaleDateString('fr-FR')} — cliquer pour accorder`
+              : "Cliquer pour accorder l'accès Claude (MCP)"}
+          >
+            {user.mcpAccessRequestedAt ? (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-300">
+                Demande en attente
+              </Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground hover:text-foreground">Accorder</span>
+            )}
+          </button>
+        )}
+      </td>
       <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(user.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
         {formatRelativeDate(user.createdAt)}
       </td>
@@ -312,6 +359,7 @@ export function UsersPage() {
               <SortHeader label="Contrib." column="contributions" className="text-center" />
               <SortHeader label="Derniere visite" column="lastLoginAt" />
               <SortHeader label="Statut" column="status" className="text-center" />
+              <SortHeader label="MCP" column="mcp" className="text-center" />
               <SortHeader label="Inscription" column="createdAt" />
               <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-12"></th>
             </tr>
@@ -322,7 +370,7 @@ export function UsersPage() {
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={10} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   Aucun utilisateur
                 </td>
               </tr>

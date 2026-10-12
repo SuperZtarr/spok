@@ -1,5 +1,5 @@
 /* Types notification : Notification, NotificationType, payloads. */
-export type NotificationType = 'INVITATION' | 'ASSIGNMENT' | 'CONTRIBUTION' | 'MENTION' | 'EMAIL_VERIFICATION' | 'NEW_USER' | 'AUDIT_ALERT';
+export type NotificationType = 'INVITATION' | 'ASSIGNMENT' | 'CONTRIBUTION' | 'MENTION' | 'EMAIL_VERIFICATION' | 'NEW_USER' | 'AUDIT_ALERT' | 'MCP_ACCESS_REQUEST';
 
 // 'all' = in-app + email, 'in_app' = in-app only, 'none' = disabled
 export type NotificationChannel = 'all' | 'in_app' | 'none';
@@ -14,6 +14,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   EMAIL_VERIFICATION: 'in_app',
   NEW_USER: 'in_app',
   AUDIT_ALERT: 'in_app',
+  MCP_ACCESS_REQUEST: 'in_app',
 };
 
 export interface Notification {

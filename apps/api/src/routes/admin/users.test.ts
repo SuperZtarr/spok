@@ -1,4 +1,4 @@
-/* TNR de l'administration des utilisateurs : CRUD, rôles, garde authenticateAdmin. */
+/* TNR de l'administration des utilisateurs : CRUD, rôles, garde authenticateAdmin, accord/retrait de l'accès MCP. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
@@ -555,6 +555,46 @@ describe('Admin Users routes', () => {
       })
 
       expect(res.statusCode).toBe(404)
+    })
+  })
+
+  describe('POST /admin/users/:id/mcp-access', () => {
+    it("accorde l'accès, efface la demande et trace l'AuditLog", async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1', mcpAccessGrantedAt: null, mcpAccessRequestedAt: new Date() })
+      prisma.user.update.mockResolvedValue({})
+      prisma.auditLog.create.mockResolvedValue({})
+      const res = await app.inject({
+        method: 'POST', url: '/admin/users/u1/mcp-access',
+        headers: { authorization: `Bearer ${token}` }, payload: { granted: true },
+      })
+      expect(res.statusCode).toBe(200)
+      const data = prisma.user.update.mock.calls[0][0].data
+      expect(data.mcpAccessGrantedAt).toBeInstanceOf(Date)
+      expect(data.mcpAccessRequestedAt).toBeNull()
+      expect(prisma.auditLog.create.mock.calls[0][0].data).toMatchObject({ entity: 'User', entityId: 'u1', userId: ADMIN_ID })
+    })
+
+    it("retire l'accès", async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1', mcpAccessGrantedAt: new Date(), mcpAccessRequestedAt: null })
+      prisma.user.update.mockResolvedValue({})
+      prisma.auditLog.create.mockResolvedValue({})
+      const res = await app.inject({
+        method: 'POST', url: '/admin/users/u1/mcp-access',
+        headers: { authorization: `Bearer ${token}` }, payload: { granted: false },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(prisma.user.update.mock.calls[0][0].data.mcpAccessGrantedAt).toBeNull()
+    })
+
+    it('400 sans booléen granted', async () => {
+      allowAdmin()
+      const res = await app.inject({
+        method: 'POST', url: '/admin/users/u1/mcp-access',
+        headers: { authorization: `Bearer ${token}` }, payload: {},
+      })
+      expect(res.statusCode).toBe(400)
     })
   })
 })

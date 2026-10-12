@@ -687,6 +687,7 @@ const NOTIF_TYPE_LABELS: Record<NotificationType, string> = {
   EMAIL_VERIFICATION: 'Vérification email',
   NEW_USER: 'Nouveaux utilisateurs',
   AUDIT_ALERT: 'Alertes audit',
+  MCP_ACCESS_REQUEST: "Demandes d'accès Claude (MCP)",
 };
 
 const CHANNEL_OPTIONS: { value: NotificationChannel; label: string }[] = [

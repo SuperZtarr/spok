@@ -1,6 +1,7 @@
 /*
  * TNR de /user/tokens : création (jeton en clair renvoyé une seule fois, hash stocké), liste sans hash,
  * révocation scopée au propriétaire, refus de toute gestion de jetons authentifiée par un jeton.
+ * /user/mcp-access : création de jeton refusée sans accès accordé, demande notifiée aux admins une seule fois.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -23,6 +24,10 @@ async function buildApp() {
   return { app, prisma }
 }
 
+function userRow(overrides: Record<string, unknown> = {}) {
+  return { id: USER_ID, name: 'Test', email: 'test@test.com', globalRole: 'USER', mcpAccessGrantedAt: null, mcpAccessRequestedAt: null, ...overrides }
+}
+
 describe('Personal tokens routes', () => {
   let app: FastifyInstance
   let prisma: MockPrisma
@@ -31,6 +36,7 @@ describe('Personal tokens routes', () => {
   beforeEach(async () => {
     ;({ app, prisma } = await buildApp())
     jwt = getTestToken(app)
+    prisma.user.findUnique.mockResolvedValue(userRow({ mcpAccessGrantedAt: new Date() }))
   })
 
   it('crée un jeton : renvoie le clair une fois, stocke uniquement le hash', async () => {
@@ -77,9 +83,47 @@ describe('Personal tokens routes', () => {
     const { token, tokenHash } = generatePersonalToken()
     prisma.personalAccessToken.findUnique.mockResolvedValue({
       id: 'pat-1', name: 'x', tokenHash, scope: 'write', revokedAt: null, expiresAt: null, lastUsedAt: new Date(),
-      user: { id: USER_ID, email: 'test@test.com', disabledAt: null },
+      user: { id: USER_ID, email: 'test@test.com', disabledAt: null, globalRole: 'USER', mcpAccessGrantedAt: new Date() },
     })
     const res = await app.inject({ method: 'GET', url: '/user/tokens', headers: { authorization: `Bearer ${token}` } })
     expect(res.statusCode).toBe(403)
+  })
+
+  it("création de jeton refusée tant que l'admin n'a pas accordé l'accès MCP", async () => {
+    prisma.user.findUnique.mockResolvedValue(userRow())
+    const res = await app.inject({ method: 'POST', url: '/user/tokens', headers: { authorization: `Bearer ${jwt}` }, payload: { name: 'x', scope: 'read' } })
+    expect(res.statusCode).toBe(403)
+    expect(prisma.personalAccessToken.create).not.toHaveBeenCalled()
+  })
+
+  it("GET /mcp-access : état de l'accès (admin global toujours accordé)", async () => {
+    prisma.user.findUnique.mockResolvedValue(userRow())
+    const r1 = await app.inject({ method: 'GET', url: '/user/mcp-access', headers: { authorization: `Bearer ${jwt}` } })
+    expect(r1.json()).toMatchObject({ granted: false, requestedAt: null, viaAdminRole: false })
+    prisma.user.findUnique.mockResolvedValue(userRow({ globalRole: 'ADMIN' }))
+    const r2 = await app.inject({ method: 'GET', url: '/user/mcp-access', headers: { authorization: `Bearer ${jwt}` } })
+    expect(r2.json()).toMatchObject({ granted: true, viaAdminRole: true })
+  })
+
+  it("demande d'accès : enregistrée et notifiée aux admins actifs, sans doublon si déjà en attente", async () => {
+    prisma.user.findUnique.mockResolvedValue(userRow())
+    prisma.user.update.mockResolvedValue({})
+    prisma.user.findMany.mockResolvedValue([{ id: 'admin-1' }, { id: 'admin-2' }])
+    prisma.notification.create.mockResolvedValue({})
+    const res = await app.inject({ method: 'POST', url: '/user/mcp-access/request', headers: { authorization: `Bearer ${jwt}` } })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.user.update.mock.calls[0][0].data.mcpAccessRequestedAt).toBeInstanceOf(Date)
+    expect(prisma.user.findMany.mock.calls[0][0].where).toEqual({ globalRole: 'ADMIN', disabledAt: null })
+    expect(prisma.notification.create).toHaveBeenCalledTimes(2)
+    expect(prisma.notification.create.mock.calls[0][0].data.type).toBe('MCP_ACCESS_REQUEST')
+
+    prisma.user.findUnique.mockResolvedValue(userRow({ mcpAccessRequestedAt: new Date() }))
+    await app.inject({ method: 'POST', url: '/user/mcp-access/request', headers: { authorization: `Bearer ${jwt}` } })
+    expect(prisma.notification.create).toHaveBeenCalledTimes(2)
+  })
+
+  it("demande d'accès refusée si l'accès est déjà accordé", async () => {
+    const res = await app.inject({ method: 'POST', url: '/user/mcp-access/request', headers: { authorization: `Bearer ${jwt}` } })
+    expect(res.statusCode).toBe(400)
   })
 })

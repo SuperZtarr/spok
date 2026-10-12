@@ -58,7 +58,7 @@ describe('POST /mcp', () => {
     token = g.token
     prisma.personalAccessToken.findUnique.mockResolvedValue({
       id: 'pat-1', name: 'Claude perso', tokenHash: g.tokenHash, scope, revokedAt: null, expiresAt: null, lastUsedAt: new Date(),
-      user: { id: 'u1', email: 'u1@test.com', disabledAt: null },
+      user: { id: 'u1', email: 'u1@test.com', disabledAt: null, globalRole: 'USER', mcpAccessGrantedAt: new Date() },
     })
   }
 

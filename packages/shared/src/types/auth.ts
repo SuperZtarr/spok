@@ -57,6 +57,10 @@ export interface AdminUser {
   avatarUrl?: string;
   globalRole: GlobalRole;
   lastLoginAt?: string | null;
+  /** Accès MCP distant accordé par un admin (null = non accordé ; un admin global l'a toujours). */
+  mcpAccessGrantedAt?: string | null;
+  /** Demande d'accès MCP en attente. */
+  mcpAccessRequestedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {

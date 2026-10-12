@@ -30,6 +30,10 @@ model User {
   notificationPreferences   Json?      // { INVITATION: "all", ASSIGNMENT: "all", CONTRIBUTION: "in_app", MENTION: "all" }
   disabledAt        DateTime?
   lastLoginAt       DateTime?
+  // Accès MCP distant (jetons spok_pat_) : accordé par un admin, null = refusé (les admins globaux l'ont toujours).
+  mcpAccessGrantedAt   DateTime?
+  // Demande d'accès MCP en attente de décision admin (effacée à l'accord ou au retrait).
+  mcpAccessRequestedAt DateTime?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -505,6 +509,7 @@ enum NotificationType {
   EMAIL_VERIFICATION
   NEW_USER
   AUDIT_ALERT
+  MCP_ACCESS_REQUEST
 }
 
 // Refresh tokens for JWT

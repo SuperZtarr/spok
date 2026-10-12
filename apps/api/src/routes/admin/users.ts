@@ -2,6 +2,7 @@
  * Administration des utilisateurs : liste, détail, création, rôle global, activation/désactivation,
  * suppression avec réassignation des contenus. Inclut /:id/access-tree (arbre communautés/espaces
  * avec l'accès effectif de l'utilisateur — direct, hérité de la visibilité, ou aucun).
+ * /:id/mcp-access : accorde ou retire l'accès MCP distant (efface la demande en attente, trace AuditLog).
  */
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
@@ -54,6 +55,8 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
           globalRole: true,
           disabledAt: true,
           lastLoginAt: true,
+          mcpAccessGrantedAt: true,
+          mcpAccessRequestedAt: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -345,6 +348,37 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { success: true };
+  });
+
+  // POST /admin/users/:id/mcp-access - Accorder (granted: true) ou retirer l'accès MCP distant.
+  // Le retrait coupe immédiatement les jetons existants (vérifié à chaque requête) sans les révoquer.
+  fastify.post<{ Params: UserParams; Body: { granted?: unknown } }>('/:id/mcp-access', async (request, reply) => {
+    const { id } = request.params;
+    if (typeof request.body?.granted !== 'boolean') return reply.badRequest('granted (booléen) requis');
+    const granted = request.body.granted;
+
+    const user = await fastify.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, mcpAccessGrantedAt: true, mcpAccessRequestedAt: true },
+    });
+    if (!user) return reply.notFound('User not found');
+
+    const after = { mcpAccessGrantedAt: granted ? (user.mcpAccessGrantedAt ?? new Date()) : null, mcpAccessRequestedAt: null };
+    await fastify.prisma.user.update({ where: { id }, data: after });
+    await fastify.prisma.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entity: 'User',
+        entityId: id,
+        userId: request.user.userId,
+        changes: {
+          before: { mcpAccessGrantedAt: user.mcpAccessGrantedAt, mcpAccessRequestedAt: user.mcpAccessRequestedAt },
+          after,
+        } as any,
+      },
+    });
+
+    return { mcpAccessGrantedAt: after.mcpAccessGrantedAt, mcpAccessRequestedAt: null };
   });
 
   // PATCH /admin/users/:id/notification-preferences - Update user notification preferences

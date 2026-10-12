@@ -4,7 +4,8 @@
  * Jetons personnels (spok_pat_…, MCP distant) : acceptés par authenticate/optionalAuthenticate,
  * jamais par authenticateAdmin (jwtVerify échoue sur un PAT). Un PAT force isAdminMode=false ;
  * portée 'read' → 403 sur toute méthode autre que GET/HEAD ; hors PAT_ALLOWED_PREFIXES (périmètre MCP,
- * jamais /user ni /auth) → 403. request.authVia indique la source.
+ * jamais /user ni /auth) → 403 ; accès MCP non accordé par l'admin (hasMcpAccess) → 403, même en
+ * optionalAuthenticate. request.authVia indique la source.
  */
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
@@ -61,13 +62,17 @@ const jwtPluginAsync: FastifyPluginAsync = async (fastify) => {
     return PAT_ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
   }
 
-  /** 'ok' : request.user posé ; 'invalid' : PAT refusé ; 'outOfScope' : route hors périmètre ; 'none' : pas un PAT. */
-  async function tryPersonalToken(request: FastifyRequest): Promise<'ok' | 'invalid' | 'outOfScope' | 'none'> {
+  const MCP_ACCESS_DENIED = "Accès MCP non autorisé pour ce compte : demandez-le à l'administrateur (spok.space → Profil → Accès Claude)";
+
+  /** 'ok' : request.user posé ; 'invalid' : PAT refusé ; 'outOfScope' : route hors périmètre ;
+   *  'notAllowed' : jeton valide mais accès MCP non accordé ; 'none' : pas un PAT. */
+  async function tryPersonalToken(request: FastifyRequest): Promise<'ok' | 'invalid' | 'outOfScope' | 'notAllowed' | 'none'> {
     const bearer = bearerOf(request);
     if (!isPersonalToken(bearer)) return 'none';
     if (!inPatPerimeter(request.url)) return 'outOfScope';
     const resolved = await resolvePersonalToken((fastify as any).prisma, bearer);
     if (!resolved) return 'invalid';
+    if (!resolved.mcpAllowed) return 'notAllowed';
     request.user = { userId: resolved.userId, email: resolved.email };
     request.isAdminMode = false;
     request.authVia = 'pat';
@@ -94,6 +99,10 @@ const jwtPluginAsync: FastifyPluginAsync = async (fastify) => {
       reply.forbidden('Route non accessible avec un jeton personnel');
       return;
     }
+    if (pat === 'notAllowed') {
+      reply.forbidden(MCP_ACCESS_DENIED);
+      return;
+    }
     if (pat === 'ok') {
       if (readOnlyViolation(request)) reply.forbidden('Jeton en lecture seule');
       return;
@@ -115,6 +124,10 @@ const jwtPluginAsync: FastifyPluginAsync = async (fastify) => {
     }
     if (pat === 'outOfScope') {
       reply.forbidden('Route non accessible avec un jeton personnel');
+      return;
+    }
+    if (pat === 'notAllowed') {
+      reply.forbidden(MCP_ACCESS_DENIED);
       return;
     }
     if (pat === 'invalid') {

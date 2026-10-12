@@ -2,11 +2,13 @@
  * Section « Accès Claude (MCP) » de la modale profil : création, liste et révocation des jetons personnels
  * permettant à un Claude externe d'accéder à SPOK via le serveur MCP distant (getMcpServerUrl). Le jeton en
  * clair n'est affiché qu'une fois, juste après création, avec la commande de connexion prête à copier.
+ * Accès accordé par un admin : sans accord, la section propose « Demander l'accès » (puis « demande en attente »)
+ * au lieu de la création de jetons. Les jetons déjà créés restent listés (révocables) même si l'accès est retiré.
  * Aucune prop : agit sur l'utilisateur connecté. Ne jamais stocker le jeton en clair (ni store, ni localStorage).
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Copy, Check, Trash2 } from 'lucide-react';
+import { KeyRound, Copy, Check, Trash2, Clock } from 'lucide-react';
 import { personalTokensApi, getMcpServerUrl, type PersonalToken } from '../lib/api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -39,6 +41,12 @@ export function PersonalTokensSection() {
   const [copied, setCopied] = useState(false);
 
   const { data: tokens = [] } = useQuery({ queryKey: ['personal-tokens'], queryFn: personalTokensApi.list });
+  const { data: access } = useQuery({ queryKey: ['mcp-access'], queryFn: personalTokensApi.mcpAccess });
+
+  const requestMut = useMutation({
+    mutationFn: personalTokensApi.requestMcpAccess,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mcp-access'] }),
+  });
 
   const createMut = useMutation({
     mutationFn: () => personalTokensApi.create({
@@ -93,6 +101,24 @@ export function PersonalTokensSection() {
         </div>
       )}
 
+      {access && !access.granted && (
+        access.requestedAt ? (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="w-3.5 h-3.5" />
+            Demande envoyée le {formatDate(access.requestedAt)}, en attente de l'administrateur.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">L'accès Claude doit être accordé par l'administrateur.</p>
+            <Button size="sm" variant="outline" disabled={requestMut.isPending} onClick={() => requestMut.mutate()}>
+              Demander l'accès
+            </Button>
+            {requestMut.isError && <p className="text-xs text-destructive">{(requestMut.error as Error).message}</p>}
+          </div>
+        )
+      )}
+
+      {access?.granted && (
       <div className="flex flex-wrap gap-2 items-center">
         <Input
           value={name}
@@ -107,6 +133,7 @@ export function PersonalTokensSection() {
           Créer un jeton
         </Button>
       </div>
+      )}
       {createMut.isError && <p className="text-xs text-destructive">{(createMut.error as Error).message}</p>}
 
       {active.length > 0 && (

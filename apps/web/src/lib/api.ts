@@ -495,6 +495,10 @@ export const personalTokensApi = {
   create: (data: { name: string; scope: 'read' | 'write'; expiresInDays: 30 | 90 | 365 | null }) =>
     fetchApi<PersonalToken & { token: string }>('/user/tokens', { method: 'POST', body: JSON.stringify(data) }),
   revoke: (id: string) => fetchApi<void>(`/user/tokens/${id}`, { method: 'DELETE' }),
+  /** Droit d'utiliser le MCP (accordé par un admin ; viaAdminRole = admin global, toujours accordé). */
+  mcpAccess: () =>
+    fetchApi<{ granted: boolean; grantedAt: string | null; requestedAt: string | null; viaAdminRole: boolean }>('/user/mcp-access'),
+  requestMcpAccess: () => fetchApi<{ requestedAt: string }>('/user/mcp-access/request', { method: 'POST' }),
 };
 
 /** URL publique du serveur MCP distant (absolue, à coller dans la config Claude de l'utilisateur). */
@@ -1378,6 +1382,13 @@ export const adminApi = {
     enable: (id: string) =>
       fetchApi<{ success: boolean }>(`/admin/users/${id}/enable`, {
         method: 'POST',
+      }),
+
+    /** Accorde ou retire l'accès MCP distant (efface la demande en attente). */
+    setMcpAccess: (id: string, granted: boolean) =>
+      fetchApi<{ mcpAccessGrantedAt: string | null; mcpAccessRequestedAt: null }>(`/admin/users/${id}/mcp-access`, {
+        method: 'POST',
+        body: JSON.stringify({ granted }),
       }),
 
     addToCommunity: (userId: string, data: { communityId: string; role: CommunityRole }) =>
