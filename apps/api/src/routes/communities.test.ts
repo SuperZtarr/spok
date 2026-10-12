@@ -349,6 +349,22 @@ describe('Communities routes', () => {
       expect(data.pendingVisibility).toBe('OPEN')
     })
 
+    // Mode JDR (2026-10-13) : nouveau contexte de communauté
+    it('should accept the JDR context', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity({ context: 'JDR' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { context: 'JDR' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.community.update.mock.calls[0][0].data.context).toBe('JDR')
+    })
+
     it('should cancel a pending publication request when the OWNER keeps PRIVATE', async () => {
       prisma.community.findUnique.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'READONLY' }))
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))

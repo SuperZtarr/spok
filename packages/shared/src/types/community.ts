@@ -2,7 +2,7 @@
 export type CommunityRole = 'OWNER' | 'MEMBER';
 
 /** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »). */
-export type CommunityContext = 'FORUM' | 'PROJECT';
+export type CommunityContext = 'FORUM' | 'PROJECT' | 'JDR';
 
 export interface Community {
   id: string;

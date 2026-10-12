@@ -140,10 +140,11 @@ enum SpaceVisibility {
 }
 
 // Contexte d'usage d'une communauté : dicte le mode d'interface dérivé
-// (FORUM → vues discussion, PROJECT → outillage projet, null → neutre « tous »).
+// (FORUM → vues discussion, PROJECT → outillage projet, JDR → jeu de rôle, null → neutre « tous »).
 enum CommunityContext {
   FORUM
   PROJECT
+  JDR
 }
 
 // Horizon temporel manuel d'un item sans échéance — dérive automatiquement de dueDate

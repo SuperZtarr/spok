@@ -2,7 +2,7 @@
  * Store du mode d'interface — contexte de la communauté visitée + surcharge manuelle
  * (spec 2026-07-15-community-context-mode, bascule utilisateur réintroduite le 2026-09-27) :
  * - contextMode = mode par défaut dérivé du contexte de la communauté :
- *     FORUM → 'forum', PROJECT → 'projet', hors communauté / contexte neutre → 'tous'
+ *     FORUM → 'forum', PROJECT → 'projet', JDR → 'jdr', hors communauté / contexte neutre → 'tous'
  * - mode = mode effectif lu par toute l'app (GlobalNavBar, SpaceToolbar, ItemEditModal…)
  * Écrivains :
  * - applyContextMode : Layout.tsx UNIQUEMENT, au changement de communauté (id ou contexte) —
@@ -13,7 +13,7 @@
  */
 import { create } from 'zustand';
 
-export type InterfaceMode = 'forum' | 'projet' | 'exploration' | 'tous';
+export type InterfaceMode = 'forum' | 'projet' | 'jdr' | 'exploration' | 'tous';
 
 interface InterfaceModeState {
   mode: InterfaceMode;
@@ -36,6 +36,7 @@ export const useInterfaceModeStore = create<InterfaceModeState>()((set) => ({
 export const MODE_GLOBAL_EXCLUDED: Record<InterfaceMode, Set<string>> = {
   forum:       new Set(['global-graph', 'global-sunburst', 'global-links', 'global-mindmap', 'dashboard', 'tasks', 'activity', 'today']),
   projet:      new Set(['global-sunburst', 'global-mindmap', 'global-graph', 'global-links']),
+  jdr:         new Set(), // navigation globale complète (choix 2026-10-13), seules les vues d'espace changent
   exploration: new Set(['dashboard', 'tasks', 'activity', 'today']),
   tous:        new Set(),
 };

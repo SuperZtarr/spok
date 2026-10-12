@@ -4,6 +4,8 @@
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ;
  * les 2 autres familles restent accessibles via le dropdown "Autres vues", jamais masquées.
+ * Mode JDR : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
+ * famille dans « Autres vues ».
  * liveSessionsSlot : bouton « Séances » (ParentSessionsButton) fourni par SpacePage, rendu avant le compteur ;
  * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
  * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
@@ -97,6 +99,22 @@ const MODE_PRIMARY_GROUP: Record<string, ViewGroupKey | null> = {
   exploration: null,
   tous:        null,
 };
+
+/**
+ * Modes à liste de vues choisie (au lieu d'une famille) : ces vues, dans cet ordre, en boutons directs ;
+ * toutes les autres restent dans « Autres vues » (par famille). JDR : décision Thomas 2026-10-13.
+ */
+export const MODE_PRIMARY_VIEWS: Record<string, string[]> = {
+  jdr: ['list', 'thread', 'mindmap', 'images', 'documents', 'links', 'recent'],
+};
+export const MODE_PRIMARY_VIEWS_LABEL: Record<string, string> = { jdr: 'Vues JDR' };
+
+/** Vues en boutons directs pour un mode à liste choisie, dans l'ordre de la liste (vues inaccessibles ignorées). */
+export function curatedPrimaryViews<T extends { viewMode?: string | null }>(views: T[], mode: string): T[] | null {
+  const ids = MODE_PRIMARY_VIEWS[mode];
+  if (!ids) return null;
+  return ids.map((id) => views.find((v) => v.viewMode === id)).filter((v): v is T => !!v);
+}
 
 const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
@@ -252,24 +270,30 @@ export function SpaceToolbar({
         const baseViews = spaceViews.filter(
           (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
         );
-        const primaryGroup = MODE_PRIMARY_GROUP[interfaceMode] ?? null;
-        const primaryViews = primaryGroup
-          ? baseViews.filter((v) => getViewGroup(v.viewMode!) === primaryGroup)
-          : baseViews;
+        // Mode à liste choisie (JDR) : une seule section ordonnée ; sinon famille principale (forum/projet) ou tout
+        const curated = curatedPrimaryViews(baseViews, interfaceMode);
+        const primaryGroup = curated ? null : MODE_PRIMARY_GROUP[interfaceMode] ?? null;
+        const primaryViews = curated
+          ?? (primaryGroup ? baseViews.filter((v) => getViewGroup(v.viewMode!) === primaryGroup) : baseViews);
 
-        const sectionMap = new Map<string, { sectionOrder: number; views: typeof primaryViews }>();
-        for (const v of primaryViews) {
-          if (!sectionMap.has(v.section)) {
-            sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
+        const sectionMap = new Map<string, { sectionOrder: number; label?: string; views: typeof primaryViews }>();
+        if (curated) {
+          sectionMap.set('curated', { sectionOrder: 0, label: MODE_PRIMARY_VIEWS_LABEL[interfaceMode], views: curated });
+        } else {
+          for (const v of primaryViews) {
+            if (!sectionMap.has(v.section)) {
+              sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
+            }
+            sectionMap.get(v.section)!.views.push(v);
           }
-          sectionMap.get(v.section)!.views.push(v);
         }
         const sections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
 
-        const secondaryGroups = primaryGroup
+        const curatedIds = new Set((curated ?? []).map((v) => v.viewMode));
+        const secondaryGroups = curated || primaryGroup
           ? (['discussion', 'pilotage', 'exploration'] as ViewGroupKey[])
               .filter((g) => g !== primaryGroup)
-              .map((g) => ({ key: g, views: baseViews.filter((v) => getViewGroup(v.viewMode!) === g) }))
+              .map((g) => ({ key: g, views: baseViews.filter((v) => getViewGroup(v.viewMode!) === g && !curatedIds.has(v.viewMode)) }))
               .filter((g) => g.views.length > 0)
           : [];
 
@@ -279,7 +303,7 @@ export function SpaceToolbar({
             {sections.map((section, idx) => (
               <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
                 <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
-                  {section.views[0]?.sectionLabel}
+                  {section.label ?? section.views[0]?.sectionLabel}
                 </span>
                 <div className="flex items-center gap-0.5">
                   {section.views.map((v) => {
@@ -345,8 +369,10 @@ export function SpaceToolbar({
 
       {/* Panneau "Autres vues" — en portal (fixed) pour échapper au overflow-x-auto de la barre de vues */}
       {otherGroupOpen && otherGroupPos && (() => {
+        // Mode à liste choisie : les vues déjà en boutons directs ne sont pas répétées dans « Autres vues »
+        const curatedIds = new Set(MODE_PRIMARY_VIEWS[interfaceMode] ?? []);
         const group = (['discussion', 'pilotage', 'exploration'] as ViewGroupKey[])
-          .map((g) => ({ key: g, views: spaceViews.filter((v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode)) && getViewGroup(v.viewMode) === g) }))
+          .map((g) => ({ key: g, views: spaceViews.filter((v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode)) && getViewGroup(v.viewMode) === g && !curatedIds.has(v.viewMode)) }))
           .find((g) => g.key === otherGroupOpen);
         if (!group) return null;
 

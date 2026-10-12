@@ -1,6 +1,6 @@
 /*
  * Layout principal connecté : header (row 1 : séances live en cours (LiveSessionsButton), notifications, mode admin/dev compact, déconnexion,
- * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/Tous à côté du
+ * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/JDR/Tous à côté du
  * titre ; row 2 : GlobalNavBar) + zone de contenu. Seul appelant de interfaceMode.applyContextMode.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  * Row 1 : le bloc titre est flex-1 min-w-0 (tronque) et le bloc droit flex-shrink-0 — jamais
@@ -46,10 +46,11 @@ import type { SpaceWithRole } from '@spok/shared';
 const INTERFACE_MODES: { value: InterfaceMode; label: string; hint: string }[] = [
   { value: 'forum',  label: 'Forum',  hint: 'Interface axée sujets et discussions' },
   { value: 'projet', label: 'Projet', hint: 'Interface de pilotage complète' },
+  { value: 'jdr',    label: 'JDR',    hint: 'Jeu de rôle : liste, discussions, carte mentale, images, documents, liens, récents' },
   { value: 'tous',   label: 'Tous',   hint: 'Aucun filtrage' },
 ];
 const INTERFACE_MODE_LABELS: Record<InterfaceMode, string> = {
-  forum: 'Forum', projet: 'Projet', exploration: 'Exploration', tous: 'Tous',
+  forum: 'Forum', projet: 'Projet', jdr: 'JDR', exploration: 'Exploration', tous: 'Tous',
 };
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -637,6 +638,7 @@ export function Layout() {
     lastAppliedCommunityRef.current = pairKey;
     const derived: InterfaceMode = currentCommunityContext === 'FORUM' ? 'forum'
       : currentCommunityContext === 'PROJECT' ? 'projet'
+      : currentCommunityContext === 'JDR' ? 'jdr'
       : 'tous';
     useInterfaceModeStore.getState().applyContextMode(derived);
   }, [currentCommunityKey, currentCommunityContext, communityResolving]);

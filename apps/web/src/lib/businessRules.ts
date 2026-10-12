@@ -169,8 +169,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
-    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Tous du header",
-    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté",
+    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-JDR-Tous du header",
+    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, JDR→JDR, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. En JDR, la barre de vues met en avant Liste, Discussions, Carte mentale, Images, Documents, Liens, Récents (dans cet ordre), les autres vues restant dans « Autres vues »",
     location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode)',
   },
   {

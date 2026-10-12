@@ -2,7 +2,8 @@
    Mode admin = mêmes droits que le OWNER partout (canEdit) : visibilité, contexte, gestion des membres
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
-   message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement. */
+   message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement.
+   Contexte : Neutre / Forum / Projet / JDR — donne le mode d'interface par défaut de la communauté (Layout). */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -260,7 +261,7 @@ export function CommunitySettingsPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editVisibility, setEditVisibility] = useState<string>('PRIVATE');
   // Contexte d'usage (spec 2026-07-15-community-context-mode) : 'NONE' = neutre (null en base)
-  const [editContext, setEditContext] = useState<'NONE' | 'FORUM' | 'PROJECT'>('NONE');
+  const [editContext, setEditContext] = useState<'NONE' | 'FORUM' | 'PROJECT' | 'JDR'>('NONE');
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
@@ -375,7 +376,7 @@ export function CommunitySettingsPage() {
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean; visibility?: string; context?: 'FORUM' | 'PROJECT' | null }) =>
+    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean; visibility?: string; context?: 'FORUM' | 'PROJECT' | 'JDR' | null }) =>
       communitiesApi.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
@@ -501,7 +502,7 @@ export function CommunitySettingsPage() {
   );
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string; visibility?: string; context?: 'FORUM' | 'PROJECT' | null } = {};
+    const updates: { name?: string; description?: string; visibility?: string; context?: 'FORUM' | 'PROJECT' | 'JDR' | null } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
     const currentVisibility = (community as any)?.visibility || (community?.isPublic ? 'OPEN' : 'PRIVATE');
@@ -668,11 +669,12 @@ export function CommunitySettingsPage() {
                   {canEdit && (
                     <div>
                       <label className="block text-sm font-medium mb-2">Contexte</label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {([
                           { value: 'NONE', label: 'Neutre', description: 'Toutes les vues et tous les champs disponibles' },
                           { value: 'FORUM', label: 'Forum', description: 'Sujets et discussions — vues et champs axés échange' },
                           { value: 'PROJECT', label: 'Projet', description: 'Sous-projets et pilotage — tout l\'outillage projet' },
+                          { value: 'JDR', label: 'JDR', description: 'Campagnes et séances — fiches, PNJ, cartes, images' },
                         ] as const).map((opt) => (
                           <button
                             key={opt.value}
@@ -726,7 +728,7 @@ export function CommunitySettingsPage() {
                     {(community as any).visibility === 'OPEN' ? 'Ouverte' : (community as any).visibility === 'READONLY' ? 'Lecture seule' : 'Privée'}
                   </span></div>
                   <div><span className="text-muted-foreground">Contexte:</span> <span className="font-medium">
-                    {community.context === 'FORUM' ? 'Forum' : community.context === 'PROJECT' ? 'Projet' : 'Neutre'}
+                    {community.context === 'FORUM' ? 'Forum' : community.context === 'PROJECT' ? 'Projet' : community.context === 'JDR' ? 'JDR' : 'Neutre'}
                   </span></div>
                 </div>
               )}
