@@ -5,6 +5,7 @@
  * global en mode admin, via isOwnerOrAdmin — le mode admin voit et fait tout. Actions personnelles
  * (join/leave/mute, transfert de sa propriété) : liées à l'appelant. Création = PRIVATE + pendingVisibility ;
  * PATCH PRIVATE → OPEN/READONLY = même demande (validation admin), sauf admin en mode admin.
+ * PATCH visibility PRIVATE sur une communauté privée avec demande en cours = annulation de la demande.
  * Visibilité : `visibility` est la seule source de vérité (listes, contrôles d'accès).
  * `isPublic` est déprécié et peut être désynchronisé en base — ne jamais filtrer dessus seul.
  * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
@@ -371,7 +372,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const current = await fastify.prisma.community.findUnique({
         where: { id: request.params.id },
-        select: { name: true, visibility: true },
+        select: { name: true, visibility: true, pendingPublic: true, pendingVisibility: true },
       });
       if (!current) return reply.notFound('Community not found');
 
@@ -384,6 +385,11 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       let publicationRequested = false;
       if (body.name) updateData.name = body.name;
       if (body.description !== undefined) updateData.description = body.description;
+      // Annulation de la demande : rester (ou revenir) en PRIVATE alors qu'une demande est en cours
+      if (requestedVisibility === 'PRIVATE' && current.visibility === 'PRIVATE' && (current.pendingPublic || current.pendingVisibility)) {
+        updateData.pendingPublic = false;
+        updateData.pendingVisibility = null;
+      }
       if (requestedVisibility && requestedVisibility !== current.visibility) {
         if (current.visibility === 'PRIVATE' && requestedVisibility !== 'PRIVATE' && !adminBypass) {
           updateData.pendingPublic = true;

@@ -2,7 +2,7 @@
    Mode admin = mêmes droits que le OWNER partout (canEdit) : visibilité, contexte, gestion des membres
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
-   message d'avertissement avant, « en attente » après ; en mode admin, appliqué directement. */
+   message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement. */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -644,7 +644,19 @@ export function CommunitySettingsPage() {
                       {/* Sortir du privé = demande validée par un admin (sauf mode admin, appliqué directement) */}
                       {(community as any).pendingPublic ? (
                         <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
-                          Demande de publication en « {(community as any).pendingVisibility === 'READONLY' ? 'Lecture seule' : 'Ouverte'} » en attente de validation par un administrateur.
+                          Demande de publication en « {(community as any).pendingVisibility === 'READONLY' ? 'Lecture seule' : 'Ouverte'} » en attente de validation par un administrateur.{' '}
+                          {/* Annulation = PATCH visibility PRIVATE sur la communauté restée privée (efface la demande) */}
+                          <button
+                            type="button"
+                            className="underline font-medium hover:no-underline disabled:opacity-50"
+                            disabled={updateCommunityMutation.isPending}
+                            onClick={() => {
+                              setEditVisibility('PRIVATE');
+                              updateCommunityMutation.mutate({ visibility: 'PRIVATE' });
+                            }}
+                          >
+                            Annuler la demande
+                          </button>
                         </p>
                       ) : !adminMode && (community as any).visibility === 'PRIVATE' && editVisibility !== 'PRIVATE' ? (
                         <p className="text-xs text-muted-foreground mt-2">

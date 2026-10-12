@@ -2,7 +2,8 @@
  * Administration des communautés : liste globale, création, approbation du passage en public
  * (pendingPublic → isPublic), suppression.
  * Toute écriture de isPublic doit renseigner visibility en cohérence (visibility fait foi) —
- * y compris PATCH /:id, qui convertit isPublic en visibility.
+ * y compris PATCH /:id, qui convertit isPublic en visibility. approve/reject-public effacent toujours
+ * pendingPublic ET pendingVisibility.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -511,11 +512,12 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const community = await fastify.prisma.community.findUnique({ where: { id } });
     if (!community) return reply.notFound('Community not found');
-    if (!community.pendingPublic) return reply.badRequest('Community has no pending public request');
+    if (!community.pendingPublic && !community.pendingVisibility) return reply.badRequest('Community has no pending public request');
 
+    // Refus : la demande est entièrement effacée (pendingVisibility compris, sinon « en attente » subsiste)
     const updated = await fastify.prisma.community.update({
       where: { id },
-      data: { pendingPublic: false },
+      data: { pendingPublic: false, pendingVisibility: null },
       include: { _count: { select: { memberships: true, spaces: true } } },
     });
 

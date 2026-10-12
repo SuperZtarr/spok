@@ -349,6 +349,22 @@ describe('Communities routes', () => {
       expect(data.pendingVisibility).toBe('OPEN')
     })
 
+    it('should cancel a pending publication request when the OWNER keeps PRIVATE', async () => {
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'READONLY' }))
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity())
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { visibility: 'PRIVATE' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.community.update.mock.calls[0][0].data).toMatchObject({ pendingPublic: false, pendingVisibility: null })
+    })
+
     it('should apply PRIVATE → OPEN directly for an admin in admin mode', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
       prisma.communityMembership.findUnique.mockResolvedValue(null)
