@@ -1,12 +1,13 @@
 /*
  * Création de notifications en base + envoi d'emails transactionnels (Resend) : invitations,
- * mentions, contributions. sendInvitationEmail no-op sans RESEND_API_KEY.
+ * mentions, contributions. sendInvitationEmail no-op sans RESEND_API_KEY. Les textes (titre, message, noms)
+ * contiennent des saisies utilisateur : toujours les échapper (escapeHtml) avant insertion dans le HTML.
  */
 import type { PrismaClient, NotificationType } from '@spok/database';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@spok/shared';
 import type { NotificationPreferences, NotificationChannel } from '@spok/shared';
 import { Resend } from 'resend';
-import { wrapEmailTemplate } from './emailTemplate.js';
+import { wrapEmailTemplate, escapeHtml, emailSubject } from './emailTemplate.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -43,10 +44,10 @@ async function sendNotificationEmail(
     await resend.emails.send({
       from: 'SPOK <notifications@spok.space>',
       to: email,
-      subject: title,
+      subject: emailSubject(title),
       html: wrapEmailTemplate(`
-        <h2 style="margin: 0 0 12px; color: #18181b; font-size: 18px;">${title}</h2>
-        ${message ? `<p style="margin: 0; color: #52525b; font-size: 14px; line-height: 1.6;">${message}</p>` : ''}
+        <h2 style="margin: 0 0 12px; color: #18181b; font-size: 18px;">${escapeHtml(title)}</h2>
+        ${message ? `<p style="margin: 0; color: #52525b; font-size: 14px; line-height: 1.6;">${escapeHtml(message)}</p>` : ''}
       `),
     });
   } catch (err) {
@@ -76,21 +77,23 @@ export async function sendInvitationEmail(opts: {
   if (!process.env.RESEND_API_KEY) return;
 
   const siteUrl = process.env.SITE_URL || 'https://spok.space';
-  const acceptUrl = `${siteUrl}/invitation?token=${opts.token}`;
+  const acceptUrl = `${siteUrl}/invitation?token=${encodeURIComponent(opts.token)}`;
+  const inviterName = escapeHtml(opts.inviterName);
+  const targetName = escapeHtml(opts.targetName);
 
   const roleLabel = opts.role === 'OWNER' ? 'Propriétaire' : opts.role === 'MEMBER' ? 'Membre' : opts.role;
   const messageBlock = opts.message
     ? `<div style="margin: 16px 0; padding: 12px 16px; background: #f4f4f5; border-radius: 6px; border-left: 3px solid #6366f1;">
-        <p style="margin: 0; color: #52525b; font-size: 14px; font-style: italic;">"${opts.message}"</p>
+        <p style="margin: 0; color: #52525b; font-size: 14px; font-style: italic;">"${escapeHtml(opts.message)}"</p>
       </div>`
     : '';
 
   const html = wrapEmailTemplate(`
     <h2 style="margin: 0 0 16px; color: #18181b; font-size: 18px;">
-      Vous êtes invité(e) à rejoindre ${opts.targetType === 'communauté' ? 'la communauté' : "l'espace"} « ${opts.targetName} »
+      Vous êtes invité(e) à rejoindre ${opts.targetType === 'communauté' ? 'la communauté' : "l'espace"} « ${targetName} »
     </h2>
     <p style="margin: 0 0 8px; color: #52525b; font-size: 14px; line-height: 1.6;">
-      <strong>${opts.inviterName}</strong> vous invite en tant que <strong>${roleLabel}</strong>.
+      <strong>${inviterName}</strong> vous invite en tant que <strong>${escapeHtml(roleLabel)}</strong>.
     </p>
     ${messageBlock}
     <div style="text-align: center; margin: 24px 0 16px;">
@@ -107,7 +110,7 @@ export async function sendInvitationEmail(opts: {
     await resend.emails.send({
       from: 'SPOK <notifications@spok.space>',
       to: opts.to,
-      subject: `${opts.inviterName} vous invite sur SPOK`,
+      subject: emailSubject(`${opts.inviterName} vous invite sur SPOK`),
       html,
     });
   } catch (err) {

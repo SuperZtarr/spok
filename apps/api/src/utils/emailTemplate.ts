@@ -1,4 +1,8 @@
-/* Template HTML commun des emails SPOK (wrapper avec logo et pied de page). */
+/*
+ * Template HTML commun des emails SPOK (wrapper avec logo et pied de page) + échappement des valeurs saisies
+ * par les utilisateurs (noms, titres, messages) : toute donnée utilisateur insérée dans le HTML d'un email
+ * passe par escapeHtml, et tout objet d'email par emailSubject (pas de retour à la ligne).
+ */
 const SITE_URL = process.env.SITE_URL || 'https://spok.space';
 const LOGO_URL = `${SITE_URL}/logo.png`;
 
@@ -43,4 +47,19 @@ export function wrapEmailTemplate(content: string, options?: { subject?: string 
   </div>
 </body>
 </html>`;
+}
+
+/** Échappe une valeur texte avant insertion dans le HTML d'un email (évite l'injection de liens/balises). */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Objet d'email sur une seule ligne (retours à la ligne et tabulations remplacés par une espace). */
+export function emailSubject(value: string): string {
+  return value.replace(/[\r\n\t]+/g, ' ').trim();
 }
