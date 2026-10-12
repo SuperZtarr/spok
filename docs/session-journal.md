@@ -6,6 +6,15 @@
 
 ## EN COURS
 
+### Admin hors mode admin = utilisateur normal — 2026-10-12
+- Diagnostic prod (lecture seule) : séance JDR « Mes JDR » privée, communauté « Thomas JDR » = 1 membre (ztarr) → aucun invitable ; espaces OPEN « D&D5 Manu - Rodrigue », « Séance du 20 février 2026 » (à passer en privé par Thomas). Script gardé : apps/api/scripts/check-live-session-access.ts
+- ztarr voyait des espaces privés en lecture seule hors mode admin : passe-droit ADMIN supprimé (checkSpaceAccess, GET /spaces/:id, filterReadableSpaceIds, search). TNR api 643/643, typecheck api OK. MEP f0c4574
+- Séances : vignette en préparation (thumbnailUrl, jamais aux participants) + NoInviteCandidates (liste vide expliquée, lien membres). TNR api 645/645, web live 33/33, typecheck api/web/shared OK. UI NON vérifiée visuellement. MEP 169b5d5
+
+### Demande de publication — 2026-10-12
+- Annulation par le propriétaire (PATCH PRIVATE + bouton « Annuler la demande ») ; reject-public vide pendingVisibility ; test conversion isPublic du PATCH admin. Tests communautés 72/72, typecheck api+web OK. UI NON vérifiée visuellement (port 3000 pris par une autre session). MEP 5494c5b
+- POST /spaces accepte visibility (GROUP) ; MCP create_space l'envoie dans le POST (PATCH supprimé). spaces 75/75, mcp-core 41/41, typecheck api+mcp-core OK. MEP f0c4574 — après MEP : build:packages déjà prévu, redémarrer Claude pour le MCP local
+
 ### Règles d'envoi partagées — 2026-10-12
 - `@spok/shared` uploadRules (validateUpload) remplace 5 copies (web, item-uploads, spaces, communities, user) + plafond multipart. build:packages fait, web uploadRules 10/10, TNR api 635/635, typecheck api/web/shared OK. MEP bd20247
 - PATCH /spaces/:id : garde isSpaceOwnerOrAdmin (admin global hors mode admin refusé, validé Thomas). TNR api 636/636, typecheck api OK. MEP e86878b
