@@ -5,13 +5,14 @@
  * jamais par authenticateAdmin (jwtVerify échoue sur un PAT). Un PAT force isAdminMode=false ;
  * portée 'read' → 403 sur toute méthode autre que GET/HEAD ; hors PAT_ALLOWED_PREFIXES (périmètre MCP,
  * jamais /user ni /auth) → 403 ; accès MCP non accordé par l'admin (hasMcpAccess) → 403, même en
- * optionalAuthenticate. request.authVia indique la source.
+ * optionalAuthenticate, et alerte aux admins (mcp/deniedAccessAlert.ts, une par utilisateur et par 24 h). request.authVia indique la source.
  */
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import type { JWTPayload } from '@spok/shared';
 import { isPersonalToken, resolvePersonalToken, type PersonalTokenScope } from '../utils/personalTokens.js';
+import { notifyDeniedMcpAttempt } from '../mcp/deniedAccessAlert.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -72,7 +73,10 @@ const jwtPluginAsync: FastifyPluginAsync = async (fastify) => {
     if (!inPatPerimeter(request.url)) return 'outOfScope';
     const resolved = await resolvePersonalToken((fastify as any).prisma, bearer);
     if (!resolved) return 'invalid';
-    if (!resolved.mcpAllowed) return 'notAllowed';
+    if (!resolved.mcpAllowed) {
+      notifyDeniedMcpAttempt((fastify as any).prisma, resolved.userId, resolved.name);
+      return 'notAllowed';
+    }
     request.user = { userId: resolved.userId, email: resolved.email };
     request.isAdminMode = false;
     request.authVia = 'pat';

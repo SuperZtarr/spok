@@ -18,6 +18,8 @@
 - Doc SPOK « Serveur MCP SPOK » mise à jour (to_validate). Redémarrer Claude pour charger le nouveau MCP local
 - trustProxy : logs DIAG PROXY prod lus (ip=100.64.0.1 pour tous → quota par IP commun en prod ; XFF = client, edge) → `trustProxy: 2` dans index.ts + diagnostic d7b9a78 retiré. Tests MCP 17/17. MEP 2026-10-12 — vérifier en prod que request.ip = IP client
 - Accès MCP accordé par l'admin : User.mcpAccessGrantedAt/RequestedAt + notif MCP_ACCESS_REQUEST (db push local), hasMcpAccess vérifié à chaque requête PAT (403), création de jeton bloquée, /user/mcp-access(+/request), POST /admin/users/:id/mcp-access (AuditLog), UI Profil (demander/en attente) + colonne MCP admin, llms.txt, businessRules, doc SPOK to_validate. Tests api ciblés OK, typecheck web+api OK. UI NON vérifiée visuellement. MEP 2026-10-12. Après MEP : `npx tsx apps/api/scripts/backfill-mcp-access.ts --prod` (liste) puis `--apply`
+- MEP b081266 (CI verte). Rattrapage prod NON fait (permission refusée) : à lancer par Thomas.
+- Alerte tentative refusée (MCP_ACCESS_DENIED, 1/utilisateur/24 h, mcp/deniedAccessAlert.ts) + échappement HTML des emails de notification et d'invitation (emailTemplate.ts escapeHtml/emailSubject). Tests 65/65, typecheck web+api OK. MEP 2026-10-12 (8a8c9e6 fix échappement + feat alerte)
 
 ### Mode admin — phase 3 (contenu des espaces) — 2026-10-12
 - checkSpaceAccess(prisma, userId, spaceId, isAdminMode) : mode admin → rôle OWNER (membre ou non) ; 40 appels de routes passent request.isAdminMode (items, tags, relations, contributions, réactions, move, merge, bulk, convert, uploads, auditLogs, referentiels). Utilitaires live (liveInvites, helpers live-sessions) inchangés

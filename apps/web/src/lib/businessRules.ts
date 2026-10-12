@@ -128,8 +128,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'mcp-access-granted-by-admin',
     page: 'Profil utilisateur / Administration → Utilisateurs',
     trigger: "Utilisation du MCP distant (création ou usage d'un jeton personnel)",
-    effect: "L'accès MCP doit être accordé par un admin (les admins globaux l'ont toujours). Sans accès : bouton « Demander l'accès » (admins notifiés une fois, demande en attente visible dans la colonne MCP), création de jeton refusée, et tout jeton existant renvoie 403 — retirer l'accès coupe donc les jetons immédiatement, sans les révoquer. Accord et retrait tracés dans l'AuditLog",
-    location: 'apps/api/src/utils/personalTokens.ts (hasMcpAccess), apps/api/src/plugins/jwt.ts, apps/api/src/routes/personal-tokens.ts, apps/api/src/routes/admin/users.ts, apps/web/src/components/PersonalTokensSection.tsx, apps/web/src/pages/admin/UsersPage.tsx',
+    effect: "L'accès MCP doit être accordé par un admin (les admins globaux l'ont toujours). Sans accès : bouton « Demander l'accès » (admins notifiés une fois, demande en attente visible dans la colonne MCP), création de jeton refusée, et tout jeton existant renvoie 403 — retirer l'accès coupe donc les jetons immédiatement, sans les révoquer. Une tentative refusée d'un utilisateur connu alerte les admins (notification « Accès Claude refusé », au plus une par utilisateur et par 24 h ; tentatives anonymes non signalées). Accord et retrait tracés dans l'AuditLog",
+    location: 'apps/api/src/utils/personalTokens.ts (hasMcpAccess), apps/api/src/plugins/jwt.ts, apps/api/src/mcp/deniedAccessAlert.ts, apps/api/src/routes/personal-tokens.ts, apps/api/src/routes/admin/users.ts, apps/web/src/components/PersonalTokensSection.tsx, apps/web/src/pages/admin/UsersPage.tsx',
   },
   {
     id: 'mark-unread',

@@ -1,14 +1,16 @@
 /*
  * TNR de l'authentification par jeton personnel (spok_pat_…) dans authenticate/optionalAuthenticate :
  * jeton valide → request.user, révoqué/expiré/utilisateur désactivé → 401, portée read → 403 sur écriture,
- * mode admin toujours désactivé pour un jeton, accès MCP non accordé par l'admin → 403 (admin global toujours admis).
+ * mode admin toujours désactivé pour un jeton, accès MCP non accordé par l'admin → 403 + alerte admins une fois
+ * par utilisateur (admin global toujours admis).
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
 import { createMockPrisma, MockPrisma } from '../test/helpers.js'
 import { jwtPlugin } from './jwt.js'
 import { generatePersonalToken } from '../utils/personalTokens.js'
+import { resetDeniedMcpAlerts } from '../mcp/deniedAccessAlert.js'
 
 async function buildApp() {
   const app = Fastify({ logger: false })
@@ -45,6 +47,7 @@ describe('Jeton personnel', () => {
   beforeEach(async () => {
     ;({ app, prisma } = await buildApp())
     ;({ token, tokenHash } = generatePersonalToken())
+    resetDeniedMcpAlerts()
   })
 
   it('authentifie un jeton valide, sans mode admin même si l\'en-tête est envoyé', async () => {
@@ -109,6 +112,21 @@ describe('Jeton personnel', () => {
     expect(res.json().message).toMatch(/administrateur/)
     const opt = await app.inject({ method: 'GET', url: '/search/optional', headers: { authorization: `Bearer ${token}` } })
     expect(opt.statusCode).toBe(403)
+  })
+
+  it('accès refusé : alerte MCP_ACCESS_DENIED aux admins actifs, une seule fois par utilisateur', async () => {
+    prisma.personalAccessToken.findUnique.mockResolvedValue(tokenRow(tokenHash, { user: { id: 'u1', email: 'u1@test.com', disabledAt: null, globalRole: 'USER', mcpAccessGrantedAt: null } }))
+    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', email: 'u1@test.com', notificationPreferences: null })
+    prisma.user.findMany.mockResolvedValue([{ id: 'admin-1' }])
+    prisma.notification.create.mockResolvedValue({})
+    await app.inject({ method: 'GET', url: '/spaces/probe', headers: { authorization: `Bearer ${token}` } })
+    await vi.waitFor(() => expect(prisma.notification.create).toHaveBeenCalledTimes(1))
+    expect(prisma.notification.create.mock.calls[0][0].data).toMatchObject({ userId: 'admin-1', type: 'MCP_ACCESS_DENIED' })
+    expect(prisma.user.findMany.mock.calls[0][0].where).toEqual({ globalRole: 'ADMIN', disabledAt: null })
+
+    await app.inject({ method: 'GET', url: '/spaces/probe', headers: { authorization: `Bearer ${token}` } })
+    await new Promise((r) => setTimeout(r, 20))
+    expect(prisma.notification.create).toHaveBeenCalledTimes(1)
   })
 
   it('admin global : jeton admis sans accord explicite', async () => {

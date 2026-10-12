@@ -8,7 +8,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database, EyeOff, Bot } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database, EyeOff, Bot, ShieldAlert } from 'lucide-react';
 import { notificationsApi, invitationsApi, authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import type { Notification, NotificationType, Invitation } from '@spok/shared';
@@ -22,6 +22,7 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }
   NEW_USER: { icon: UserPlus, color: 'text-teal-500' },
   AUDIT_ALERT: { icon: Database, color: 'text-orange-500' },
   MCP_ACCESS_REQUEST: { icon: Bot, color: 'text-violet-500' },
+  MCP_ACCESS_DENIED: { icon: ShieldAlert, color: 'text-red-500' },
 };
 
 function timeAgo(dateStr: string): string {
