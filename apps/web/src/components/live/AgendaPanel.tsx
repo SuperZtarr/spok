@@ -1,6 +1,7 @@
 /*
  * AgendaPanel — préparation d'une séance : lignes ordonnées (vignette image/schéma, titre, espace source, présentateur,
- * « présenté à HH:MM »). La vignette (thumbnailUrl) n'arrive qu'à l'animateur et aux présentateurs.
+ * « présenté à HH:MM »). La vignette (thumbnailUrl) : l'animateur les reçoit toutes, un présentateur seulement
+ * celles de ses lignes, un participant aucune (filtré par l'API) — afficher la vignette seulement si présente.
  * Animateur/présentateurs : ↑/↓ (règles agendaOrder, miroir de l'API), Retirer (sa ligne ou animateur),
  * Afficher (séance LIVE). Participants : lecture seule. compact = version resserrée pour la fenêtre en direct.
  * Les lignes sont des liens vers les sources : rien n'est copié avant « Afficher ».

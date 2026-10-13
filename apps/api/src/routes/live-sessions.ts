@@ -28,8 +28,9 @@
  * - /by-space/:spaceId : 200 null si l'espace n'est pas une séance (appelé sur chaque espace), 403 si non membre.
  * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
  * la préparation (titres/espaces sources) n'est envoyée en entier qu'à l'animateur et aux présentateurs ;
- * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach), sans vignette
- * (thumbnailUrl = fichier de l'item source, réservé à l'animateur et aux présentateurs).
+ * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach), sans vignette.
+ * Vignette (thumbnailUrl = fichier de l'item source) : l'animateur les voit toutes, un présentateur seulement celles
+ * de ses lignes (l'espace source d'un autre présentateur peut lui être fermé) — y compris dans les réponses HTTP.
  */
 import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
@@ -82,10 +83,17 @@ async function resolveSource(prisma: any, userId: string, sourceItemId: string, 
   return access ? item : null;
 }
 
-/** Préparation visible : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants,
- *  SANS vignette (URL d'un fichier de l'espace source : jamais envoyée à un participant). */
-const visibleAgenda = (agenda: LiveAgendaItem[], canSeeAll: boolean) =>
-  (canSeeAll ? agenda : agenda.filter((a) => a.presentedAt).map((a) => ({ ...a, thumbnailUrl: null })));
+/** Qui regarde la préparation : animateur, présentateur (rôle sans être l'animateur) ou participant. */
+type AgendaViewer = { userId: string; isHost: boolean; hasRole: boolean };
+
+/** Préparation visible : toutes les lignes pour l'animateur/les présentateurs, lignes déjà présentées pour les
+ *  participants. Vignette (URL d'un fichier de l'espace source, que les autres n'ont pas forcément le droit de voir) :
+ *  animateur = toutes ; présentateur = celles de SES lignes ; participant = aucune. */
+const visibleAgenda = (agenda: LiveAgendaItem[], viewer: AgendaViewer) => {
+  if (viewer.isHost) return agenda;
+  if (viewer.hasRole) return agenda.map((a) => (a.presenter?.id === viewer.userId ? a : { ...a, thumbnailUrl: null }));
+  return agenda.filter((a) => a.presentedAt).map((a) => ({ ...a, thumbnailUrl: null }));
+};
 
 const IMAGE_URL = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
 
@@ -154,7 +162,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       roles,
       myRole: mine?.role ?? 'PARTICIPANT',
       entries,
-      agenda: visibleAgenda(await loadAgenda(prisma, s.id), !!mine),
+      agenda: visibleAgenda(await loadAgenda(prisma, s.id), { userId, isHost: s.hostId === userId, hasRole: !!mine }),
       current,
       presence: liveHub.presence(s.id),
     };
@@ -195,12 +203,13 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return prisma.item.findFirst({ where: { id: entry.itemId, spaceId: s.spaceId } });
   }
 
-  /** Diffuse la préparation : complet aux titulaires d'un rôle, lignes présentées aux participants. Renvoie le complet. */
-  async function broadcastAgenda(sessionId: string) {
-    const agenda = await loadAgenda(prisma, sessionId);
-    const roleHolders = new Set(((await prisma.liveSessionRole.findMany({ where: { sessionId }, select: { userId: true } })) ?? []).map((r: any) => r.userId));
-    liveHub.broadcastEach(sessionId, (user) => ({ type: 'agenda', agenda: visibleAgenda(agenda, roleHolders.has(user.id)) }));
-    return agenda;
+  /** Diffuse la préparation à chacun selon son rôle (visibleAgenda) ; renvoie la vue de l'appelant (réponse HTTP). */
+  async function broadcastAgenda(s: { id: string; hostId: string }, callerId: string) {
+    const agenda = await loadAgenda(prisma, s.id);
+    const roleHolders = new Set(((await prisma.liveSessionRole.findMany({ where: { sessionId: s.id }, select: { userId: true } })) ?? []).map((r: any) => r.userId));
+    const viewOf = (userId: string) => visibleAgenda(agenda, { userId, isHost: s.hostId === userId, hasRole: roleHolders.has(userId) });
+    liveHub.broadcastEach(s.id, (user) => ({ type: 'agenda', agenda: viewOf(user.id) }));
+    return viewOf(callerId);
   }
 
   /** Admin global avec le mode admin activé : mêmes droits qu'un OWNER de communauté (création, invitables). */
@@ -462,7 +471,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     liveHub.broadcast(s.id, event);
     if (agendaRow) {
       await prisma.liveSessionAgendaItem.update({ where: { id: agendaRow.id }, data: { presentedAt: new Date() } });
-      await broadcastAgenda(s.id);
+      await broadcastAgenda(s, userId);
     }
     return { entry: event.entry, displayed: event.displayed };
   });
@@ -506,7 +515,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
     }
-    return broadcastAgenda(s.id);
+    return broadcastAgenda(s, userId);
   });
 
   // Nombre de sous-éléments directs d'un item source (pour proposer de les ajouter à la préparation)
@@ -531,7 +540,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!row) return reply.notFound('Ligne introuvable');
     if (s.hostId !== userId && row.presenterId !== userId) return reply.forbidden('Vous ne pouvez retirer que vos propres éléments');
     await prisma.liveSessionAgendaItem.delete({ where: { id: row.id } });
-    return broadcastAgenda(s.id);
+    return broadcastAgenda(s, userId);
   });
 
   // Préparation : réordonner (host : tout ; présentateur : ses lignes entre leurs positions)
@@ -550,7 +559,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       if (moved) return reply.forbidden('Vous ne pouvez déplacer que vos propres éléments');
     }
     await prisma.$transaction(ids.map((id, position) => prisma.liveSessionAgendaItem.update({ where: { id }, data: { position } })));
-    return broadcastAgenda(s.id);
+    return broadcastAgenda(s, userId);
   });
 
   // Sous-items de l'élément courant pas encore révélés (animateur seul — demande Thomas 2026-10-10)

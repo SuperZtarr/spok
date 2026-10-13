@@ -520,7 +520,7 @@ describe('/live-sessions', () => {
       expect(res.json().agenda).toHaveLength(2)
     })
 
-    // Vignettes (2026-10-12) : URL d'un fichier de l'espace source → animateur/présentateurs seulement
+    // Vignettes (2026-10-12) : URL d'un fichier de l'espace source → animateur (toutes), présentateur (ses lignes)
     const sourceItems = async ({ where }: any) => (where?.id?.in
       ? [{ id: 'i1', type: 'IMAGE', url: 'https://cdn/i1.webp' }, { id: 'i2', type: 'DIAGRAM', url: 'https://cdn/i2.png' }]
       : [])
@@ -532,6 +532,33 @@ describe('/live-sessions', () => {
       prisma.item.findMany.mockImplementation(sourceItems)
       const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
       expect(res.json().agenda.map((a: any) => a.thumbnailUrl)).toEqual(['https://cdn/i1.webp', 'https://cdn/i2.png'])
+    })
+
+    // Revue sécu 169b5d5 : l'espace source de la ligne d'un autre présentateur peut lui être fermé
+    const mixedRows = [
+      { ...rows[0], presenter: { id: USER, name: 'T' } },
+      { ...rows[1], presenterId: 'bob', presenter: { id: 'bob', name: 'Bob' } },
+    ]
+
+    it('présentateur : toutes les lignes, mais seulement les vignettes de ses lignes', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other', roles: [{ userId: USER, role: 'PRESENTER', user: { id: USER, name: 'T' } }], entries: [] })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(mixedRows)
+      prisma.item.findMany.mockImplementation(sourceItems)
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
+      expect(res.json().agenda.map((a: any) => [a.title, a.thumbnailUrl])).toEqual([['Déjà vu', 'https://cdn/i1.webp'], ['Secret', null]])
+    })
+
+    it('présentateur : la réponse HTTP d\'une modification de préparation est filtrée de la même façon', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other' })
+      prisma.liveSessionAgendaItem.findFirst.mockResolvedValue({ id: 'a1', presenterId: USER })
+      prisma.liveSessionAgendaItem.delete.mockResolvedValue({})
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(mixedRows)
+      prisma.liveSessionRole.findMany.mockResolvedValue([{ userId: USER }, { userId: 'bob' }])
+      prisma.item.findMany.mockImplementation(sourceItems)
+      const res = await app.inject({ method: 'DELETE', url: '/live-sessions/ls-1/agenda/a1', headers: auth() })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().map((a: any) => a.thumbnailUrl)).toEqual(['https://cdn/i1.webp', null])
     })
 
     it('participant : jamais de vignette (pas d\'URL de fichier source)', async () => {
