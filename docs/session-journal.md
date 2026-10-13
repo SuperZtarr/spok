@@ -6,6 +6,11 @@
 
 ## EN COURS
 
+### Suppression d'espace avec enfants en échec (Sentry P2003) — 2026-10-13
+- Logs Railway : DELETE /spaces/:id?deleteChildren=true → 400 (audit écrit après space.delete d'un sous-espace → FK audit_logs_spaceId_fkey). Pas de transaction : chaque essai supprimait items + 1 sous-espace ; Thomas a fini sans enfants puis via admin (rien de perdu hors intention)
+- Audit avant delete : spaces.ts (sous-espaces), admin/spaces.ts, admin/communities.ts (sous-espaces + espace racine). Web : suppression avec try/catch + erreur affichée. Test d'ordre ajouté. spaces+admin 108/108, typecheck api+web OK. NON COMMITÉ. Transaction de la suppression : non faite (à proposer)
+- Le « 503 page paramètres d'espace » noté plus bas = probablement ce même incident
+
 ### Mode JDR — 2026-10-13
 - Enum CommunityContext + JDR (db:generate fait, db:push local NON fait : Docker arrêté), API zod, interfaceMode 'jdr', Layout (dérivation + bouton), SpaceToolbar MODE_PRIMARY_VIEWS, CommunitySettingsPage (4e option). Tests web 3/3, communautés 57/57, typecheck 6 paquets OK. UI NON vérifiée visuellement. MEP 7013bbd
 

@@ -3,7 +3,8 @@
    Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'.
    Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id).
    Quitter : membre direct sans droits de gestion → bouton sur l'écran « pas les permissions » ; propriétaire →
-   onglet Membres (se rétrograder puis quitter, s'il reste un autre propriétaire). */
+   onglet Membres (se rétrograder puis quitter, s'il reste un autre propriétaire).
+   Suppression : erreur API affichée sous le bouton (jamais de mutateAsync sans catch → rejet non géré Sentry). */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -363,8 +364,12 @@ export function SpaceSettingsPage() {
 
   const handleDeleteSpace = async (deleteChildren: boolean) => {
     if (!space) return;
-    await deleteSpaceMutation.mutateAsync({ id: space.id, deleteChildren });
-    navigate('/');
+    try {
+      await deleteSpaceMutation.mutateAsync({ id: space.id, deleteChildren });
+      navigate('/');
+    } catch {
+      // Erreur affichée sous le bouton (deleteSpaceMutation.isError) — pas de rejet non géré
+    }
   };
 
   if (spaceLoading) {
@@ -798,6 +803,9 @@ export function SpaceSettingsPage() {
                 )}
                 Supprimer cet espace
               </Button>
+              {deleteSpaceMutation.isError && (
+                <p className="text-sm text-destructive mt-2">{(deleteSpaceMutation.error as any)?.message || 'Erreur lors de la suppression'}</p>
+              )}
             </div>
           </div>
         )}

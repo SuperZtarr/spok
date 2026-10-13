@@ -773,6 +773,39 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(200)
     })
 
+    // Régression prod 2026-10-13 : audit écrit après space.delete → FK audit_logs_spaceId_fkey (400)
+    it('deleteChildren : audite chaque sous-espace AVANT de le supprimer', async () => {
+      prisma.space.findUnique
+        .mockResolvedValueOnce(mockSpace())
+        .mockResolvedValueOnce(mockSpace({ id: 'child-space' }))
+      prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership({ role: 'OWNER' }))
+      prisma.space.findMany
+        .mockResolvedValueOnce([{ id: 'child-space' }])
+        .mockResolvedValueOnce([])
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.spaceMembership.deleteMany.mockResolvedValue({ count: 1 })
+      prisma.space.delete.mockResolvedValue(mockSpace())
+      const { createAuditLog } = await import('../utils/audit.js')
+      const audit = vi.mocked(createAuditLog)
+      audit.mockClear()
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/spaces/${SPACE_ID}?deleteChildren=true`,
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(200)
+      for (const id of ['child-space', SPACE_ID]) {
+        const auditIdx = audit.mock.calls.findIndex((c) => c[1].entity === 'Space' && c[1].entityId === id)
+        const deleteIdx = prisma.space.delete.mock.calls.findIndex((c: any[]) => c[0].where.id === id)
+        expect(auditIdx).toBeGreaterThanOrEqual(0)
+        expect(deleteIdx).toBeGreaterThanOrEqual(0)
+        expect(audit.mock.invocationCallOrder[auditIdx])
+          .toBeLessThan(prisma.space.delete.mock.invocationCallOrder[deleteIdx])
+      }
+    })
+
     // Seul le OWNER de la communauté peut supprimer un espace communautaire (plus l'ADMIN)
     it('should allow community OWNER to delete', async () => {
       prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1' }))

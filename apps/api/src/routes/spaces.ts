@@ -942,11 +942,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           await fastify.prisma.spaceMembership.deleteMany({
             where: { spaceId: descendantId },
           });
-          // Delete the space
-          await fastify.prisma.space.delete({
-            where: { id: descendantId },
-          });
-          // Audit
+          // Audit AVANT la suppression : audit_logs.spaceId référence l'espace (FK, SetNull à la suppression)
           await createAuditLog(fastify.prisma, {
             action: 'DELETE',
             entity: 'Space',
@@ -955,6 +951,10 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             spaceId: descendantId,
             batchId,
             changes: { before: serializeSpaceForAudit(descendantSpace as unknown as Record<string, unknown>) },
+          });
+          // Delete the space
+          await fastify.prisma.space.delete({
+            where: { id: descendantId },
           });
         }
       }
