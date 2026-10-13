@@ -1,6 +1,6 @@
 /*
  * Administration des communautés : liste globale, création, approbation du passage en public
- * (pendingPublic → isPublic), suppression.
+ * (pendingPublic → isPublic), suppression (utils/spaceDeletion.ts, en transaction — tout ou rien).
  * Toute écriture de isPublic doit renseigner visibility en cohérence (visibility fait foi) —
  * y compris PATCH /:id, qui convertit isPublic en visibility. approve/reject-public effacent toujours
  * pendingPublic ET pendingVisibility.
@@ -8,7 +8,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { CreateCommunityInput, CommunityDeletePreview } from '@spok/shared';
-import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from '../../utils/audit.js';
+import { runDeletion, deleteCommunityTree } from '../../utils/spaceDeletion.js';
 
 const createCommunitySchema = z.object({
   name: z.string().min(1),
@@ -288,131 +288,11 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const deleteChildren = (request.query as Record<string, string>).deleteChildren === 'true';
-    const batchId = crypto.randomUUID();
+    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID() };
 
-    const communitySpaces = await fastify.prisma.space.findMany({
-      where: { communityId: id },
-    });
-
-    if (deleteChildren) {
-      for (const space of communitySpaces) {
-        // Collect descendant spaces
-        async function collectDescendantSpaces(parentId: string): Promise<string[]> {
-          const children = await fastify.prisma.space.findMany({
-            where: { parentId },
-            select: { id: true },
-          });
-          const ids: string[] = [];
-          for (const child of children) {
-            ids.push(child.id);
-            const grandChildren = await collectDescendantSpaces(child.id);
-            ids.push(...grandChildren);
-          }
-          return ids;
-        }
-
-        const descendantIds = await collectDescendantSpaces(space.id);
-        const allSpaceIds = [space.id, ...descendantIds];
-
-        // Fetch and audit all items
-        const allItems = await fastify.prisma.item.findMany({
-          where: { spaceId: { in: allSpaceIds } },
-        });
-
-        if (allItems.length > 0) {
-          await fastify.prisma.contribution.deleteMany({
-            where: { itemId: { in: allItems.map(i => i.id) } },
-          });
-          await fastify.prisma.itemRelation.deleteMany({
-            where: {
-              OR: [
-                { fromItemId: { in: allItems.map(i => i.id) } },
-                { toItemId: { in: allItems.map(i => i.id) } },
-              ],
-            },
-          });
-          await fastify.prisma.item.deleteMany({
-            where: { spaceId: { in: allSpaceIds } },
-          });
-
-          for (const item of allItems) {
-            await createAuditLog(fastify.prisma, {
-              action: 'DELETE',
-              entity: 'Item',
-              entityId: item.id,
-              userId: request.user.userId,
-              spaceId: item.spaceId,
-              batchId,
-              changes: { before: serializeItemForAudit(item as unknown as Record<string, unknown>) },
-            });
-          }
-        }
-
-        // Delete descendant spaces (leaf-first) + audit
-        const reversedDescendants = [...descendantIds].reverse();
-        for (const descendantId of reversedDescendants) {
-          const descendantSpace = await fastify.prisma.space.findUnique({
-            where: { id: descendantId },
-          });
-          if (descendantSpace) {
-            await fastify.prisma.spaceMembership.deleteMany({ where: { spaceId: descendantId } });
-            // Audit AVANT la suppression : audit_logs.spaceId référence l'espace (FK, SetNull à la suppression)
-            await createAuditLog(fastify.prisma, {
-              action: 'DELETE',
-              entity: 'Space',
-              entityId: descendantId,
-              userId: request.user.userId,
-              spaceId: descendantId,
-              batchId,
-              changes: { before: serializeSpaceForAudit(descendantSpace as unknown as Record<string, unknown>) },
-            });
-            await fastify.prisma.space.delete({ where: { id: descendantId } });
-          }
-        }
-
-        // Delete the top-level space
-        await fastify.prisma.spaceMembership.deleteMany({ where: { spaceId: space.id } });
-        await createAuditLog(fastify.prisma, {
-          action: 'DELETE',
-          entity: 'Space',
-          entityId: space.id,
-          userId: request.user.userId,
-          spaceId: space.id,
-          batchId,
-          changes: { before: serializeSpaceForAudit(space as unknown as Record<string, unknown>) },
-        });
-        await fastify.prisma.space.delete({ where: { id: space.id } });
-      }
-    } else {
-      // Orphan spaces (detach from community)
-      if (communitySpaces.length > 0) {
-        await fastify.prisma.space.updateMany({
-          where: { communityId: id },
-          data: { communityId: null },
-        });
-      }
-    }
-
-    // Delete community memberships
-    await fastify.prisma.communityMembership.deleteMany({
-      where: { communityId: id },
-    });
-
-    // Audit the community
-    await createAuditLog(fastify.prisma, {
-      action: 'DELETE',
-      entity: 'Community',
-      entityId: id,
-      userId: request.user.userId,
-      spaceId: null,
-      batchId,
-      changes: { before: serializeCommunityForAudit(community as unknown as Record<string, unknown>) },
-    });
-
-    // Delete the community
-    await fastify.prisma.community.delete({
-      where: { id },
-    });
+    // Tout ou rien (utils/spaceDeletion.ts) : espaces, sous-espaces, items, membres, communauté
+    await runDeletion(fastify.prisma, (tx) =>
+      deleteCommunityTree(tx, community as unknown as { id: string } & Record<string, unknown>, deleteChildren, ctx));
 
     return { success: true };
   });

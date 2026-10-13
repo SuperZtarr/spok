@@ -2,6 +2,7 @@
  * Fabriques des apps Fastify de test (auth, items, spaces, communities) + MockPrisma.
  * MockPrisma : factory uniforme, findMany→[] par défaut, tous les modèles du schéma —
  * ajouter ici tout nouveau modèle Prisma sinon les routes qui l'utilisent renverront 500 en test.
+ * $transaction(fn) appelle fn avec le même mock (écritures de transaction visibles dans le test).
  */
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -38,7 +39,7 @@ function mockModel() {
 }
 
 export function createMockPrisma() {
-  return {
+  const mock = {
     user: mockModel(),
     space: mockModel(),
     spaceMembership: mockModel(),
@@ -74,13 +75,16 @@ export function createMockPrisma() {
     liveSessionInvite: mockModel(),
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
+    // Transaction interactive : la fonction reçoit CE mock (comme le vrai tx partage les données),
+    // pour que les tests configurent et vérifient les écritures faites dans la transaction
     $transaction: vi.fn().mockImplementation((arg: unknown) => {
       if (Array.isArray(arg)) return Promise.resolve(arg)
-      if (typeof arg === 'function') return (arg as Function)(createMockPrisma())
+      if (typeof arg === 'function') return (arg as Function)(mock)
       return Promise.resolve()
     }),
     $disconnect: vi.fn(),
   }
+  return mock
 }
 
 export type MockPrisma = ReturnType<typeof createMockPrisma>

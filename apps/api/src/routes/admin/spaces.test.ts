@@ -11,8 +11,10 @@ import { adminSpacesRoutes } from './spaces.js'
 
 vi.mock('../../utils/audit.js', () => ({
   createAuditLog: vi.fn().mockResolvedValue({}),
+  createAuditLogs: vi.fn().mockResolvedValue({}),
   serializeItemForAudit: vi.fn((item: unknown) => item),
   serializeSpaceForAudit: vi.fn((space: unknown) => space),
+  serializeCommunityForAudit: vi.fn((c: any) => ({ id: c?.id })),
 }))
 
 const ADMIN_ID = 'admin-user-id'

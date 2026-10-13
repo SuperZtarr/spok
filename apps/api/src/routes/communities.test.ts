@@ -8,6 +8,7 @@ import type { FastifyInstance } from 'fastify'
 
 vi.mock('../utils/audit.js', () => ({
   createAuditLog: vi.fn().mockResolvedValue(undefined),
+  createAuditLogs: vi.fn().mockResolvedValue(undefined),
   serializeItemForAudit: vi.fn((item: any) => ({ id: item?.id })),
   serializeSpaceForAudit: vi.fn((space: any) => ({ id: space?.id })),
   serializeCommunityForAudit: vi.fn((c: any) => ({ id: c?.id })),

@@ -11,6 +11,7 @@ import { adminCommunitiesRoutes } from './communities.js'
 
 vi.mock('../../utils/audit.js', () => ({
   createAuditLog: vi.fn().mockResolvedValue({}),
+  createAuditLogs: vi.fn().mockResolvedValue({}),
   serializeItemForAudit: vi.fn((item: unknown) => item),
   serializeSpaceForAudit: vi.fn((space: unknown) => space),
   serializeCommunityForAudit: vi.fn((community: unknown) => community),

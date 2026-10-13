@@ -1,10 +1,14 @@
 /*
  * Création des entrées AuditLog + sérialiseurs par entité (item, espace, communauté, relation).
  * Écriture issue du MCP distant : changes.source = { via: 'mcp', tokenId, tokenName } (cf. utils/requestContext.ts).
+ * Accepte le client Prisma ou un client de transaction ($transaction interactive).
+ * createAuditLogs : écriture groupée (createMany) — à préférer en boucle sur N items dans une transaction.
  */
-import type { PrismaClient } from '@spok/database';
+import type { PrismaClient, Prisma } from '@spok/database';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 import { getRequestContext } from './requestContext.js';
+
+type AuditDb = PrismaClient | Prisma.TransactionClient;
 
 export interface AuditLogData {
   action: AuditAction;
@@ -19,24 +23,32 @@ export interface AuditLogData {
   };
 }
 
+function toAuditRow(data: AuditLogData) {
+  const ctx = getRequestContext();
+  return {
+    action: data.action,
+    entity: data.entity,
+    entityId: data.entityId,
+    spaceId: data.spaceId,
+    batchId: data.batchId || null,
+    userId: data.userId,
+    changes: (ctx ? { ...data.changes, source: { via: ctx.via, tokenId: ctx.tokenId, tokenName: ctx.tokenName } } : data.changes) as any,
+  };
+}
+
 export async function createAuditLog(
-  prisma: PrismaClient,
+  prisma: AuditDb,
   data: AuditLogData
 ): Promise<void> {
-  await prisma.auditLog.create({
-    data: {
-      action: data.action,
-      entity: data.entity,
-      entityId: data.entityId,
-      spaceId: data.spaceId,
-      batchId: data.batchId || null,
-      userId: data.userId,
-      changes: (() => {
-        const ctx = getRequestContext();
-        return (ctx ? { ...data.changes, source: { via: ctx.via, tokenId: ctx.tokenId, tokenName: ctx.tokenName } } : data.changes) as any;
-      })(),
-    },
-  });
+  await prisma.auditLog.create({ data: toAuditRow(data) });
+}
+
+export async function createAuditLogs(
+  prisma: AuditDb,
+  data: AuditLogData[]
+): Promise<void> {
+  if (data.length === 0) return;
+  await prisma.auditLog.createMany({ data: data.map(toAuditRow) });
 }
 
 /**
