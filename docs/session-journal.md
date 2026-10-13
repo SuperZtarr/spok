@@ -10,6 +10,10 @@
 - Logs Railway : DELETE /spaces/:id?deleteChildren=true → 400 (audit écrit après space.delete d'un sous-espace → FK audit_logs_spaceId_fkey). Pas de transaction : chaque essai supprimait items + 1 sous-espace ; Thomas a fini sans enfants puis via admin (rien de perdu hors intention)
 - Audit avant delete : spaces.ts (sous-espaces), admin/spaces.ts, admin/communities.ts (sous-espaces + espace racine). Web : suppression avec try/catch + erreur affichée. Test d'ordre ajouté. TNR 1005/1005, typecheck OK. MEP ec35d0a. db:push local JDR fait. Transaction de la suppression : non faite (à proposer)
 - Le « 503 page paramètres d'espace » noté plus bas = probablement ce même incident
+- Suppression transactionnelle : utils/spaceDeletion.ts (deleteSpaceTree / deleteCommunityTree / runDeletion, timeout 30 s, audits items en createMany) remplace 4 copies (spaces, admin/spaces, communities, admin/communities). 4e copie (DELETE /communities/:id propriétaire) avait encore le bug FK → corrigé. Mock $transaction(fn) passe désormais le même mock. TNR api 656/656, typecheck api OK, vérif base locale réelle OK (rollback sur panne + suppression complète). MEP 89e8dad
+
+### Vignettes de préparation des séances — 2026-10-13
+- visibleAgenda(agenda, viewer) : animateur = toutes les vignettes, présentateur = celles de ses lignes, participant = aucune ; appliqué aussi aux réponses HTTP (broadcastAgenda renvoie la vue de l'appelant, qui renvoyait la préparation brute). +2 tests, live-sessions 61/61, typecheck api OK. MEP 460c7ef. Doc SPOK « Séances de présentation en direct » (cmv27if320005f3dmsfyejatp) non mise à jour : espace introuvable via MCP
 
 ### Mode JDR — 2026-10-13
 - Enum CommunityContext + JDR (db:generate fait, db:push local NON fait : Docker arrêté), API zod, interfaceMode 'jdr', Layout (dérivation + bouton), SpaceToolbar MODE_PRIMARY_VIEWS, CommunitySettingsPage (4e option). Tests web 3/3, communautés 57/57, typecheck 6 paquets OK. UI NON vérifiée visuellement. MEP 7013bbd
