@@ -1,6 +1,7 @@
 /*
  * TNR de /search : résultats, pagination, périmètre par memberships, anonyme → vide.
- * /search/advanced : portée espace (sous-espaces inclus) / communauté sur items et utilisateurs.
+ * /search/advanced : portée espace (sous-espaces inclus) / communauté sur items et utilisateurs ;
+ * périmètre = espaces lisibles (visibilité effective, anonyme compris), filtres d'items, dès 1 caractère.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -191,10 +192,15 @@ describe('Search routes', () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
       prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }, { spaceId: 's1a' }])
       // s1 → s1a, s1b (s1b non accessible) ; s1a → s1a1 (non accessible) ; fin
-      prisma.space.findMany
-        .mockResolvedValueOnce([{ id: 's1a' }, { id: 's1b' }])
-        .mockResolvedValueOnce([{ id: 's1a1' }])
-        .mockResolvedValueOnce([])
+      prisma.space.findMany.mockImplementation(async ({ where }: any) => {
+        if (where.parentId?.in) {
+          if (where.parentId.in.includes('s1')) return [{ id: 's1a' }, { id: 's1b' }]
+          if (where.parentId.in.includes('s1a')) return [{ id: 's1a1' }]
+          return []
+        }
+        if (where.id?.in) return where.id.in.map((id: string) => ({ id, parentId: null, visibility: null, communityId: null }))
+        return [] // espaces des communautés non privées : aucun
+      })
 
       await app.inject({
         method: 'GET', url: '/search/advanced?q=test&types=items,users&spaceId=s1',
@@ -244,6 +250,60 @@ describe('Search routes', () => {
       const where = prisma.user.findMany.mock.calls[0][0].where
       expect(where.memberships).toBeUndefined()
       expect(where.communityMemberships).toBeUndefined()
+    })
+  })
+
+  // Spec SPOK « Recherche [SearchPage] » + fuite anonyme corrigée le 2026-10-14
+  describe('GET /search/advanced — périmètre lisible, filtres, 1 caractère', () => {
+    // Communauté c1 OUVERTE : « priv » est privé, « sub » hérite de « priv » (donc privé), « open » est ouvert
+    function mockPublicCommunity() {
+      prisma.community.findMany.mockResolvedValue([{ id: 'c1', visibility: 'OPEN' }])
+      const rows: Record<string, any> = {
+        priv: { id: 'priv', parentId: null, visibility: 'PRIVATE', communityId: 'c1' },
+        sub: { id: 'sub', parentId: 'priv', visibility: null, communityId: 'c1' },
+        open: { id: 'open', parentId: null, visibility: null, communityId: 'c1' },
+      }
+      prisma.space.findMany.mockImplementation(async ({ where }: any) => {
+        if (where.id?.in) return where.id.in.map((id: string) => rows[id]).filter(Boolean)
+        if (where.type === 'GROUP') return [{ id: 'priv' }, { id: 'sub' }, { id: 'open' }]
+        return []
+      })
+    }
+
+    it('anonyme : un sous-espace héritant d\'un parent privé n\'est pas cherché', async () => {
+      mockPublicCommunity()
+      const res = await app.inject({ method: 'GET', url: '/search/advanced?q=test&types=items' })
+      expect(res.statusCode).toBe(200)
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: ['open'] })
+    })
+
+    it('connecté : trouve un espace ouvert d\'une communauté publique dont il n\'est pas membre', async () => {
+      mockPublicCommunity()
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      prisma.communityMembership.findMany.mockResolvedValue([])
+      await app.inject({ method: 'GET', url: '/search/advanced?q=test&types=items', headers: { authorization: `Bearer ${token}` } })
+      expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: ['open'] })
+    })
+
+    it('filtres d\'items : contributions filtrées via leur item, sections communautés/espaces/utilisateurs omises', async () => {
+      mockPublicCommunity()
+      const res = await app.inject({
+        method: 'GET', url: '/search/advanced?q=test&itemType=TASK&itemStatus=todo',
+        headers: { authorization: `Bearer ${token}` },
+      })
+      expect(res.json().itemFiltersActive).toBe(true)
+      expect(prisma.contribution.findMany.mock.calls[0][0].where.item).toMatchObject({ type: 'TASK', status: 'todo' })
+      expect(prisma.community.count).not.toHaveBeenCalled()
+      expect(prisma.space.count).not.toHaveBeenCalled()
+      expect(prisma.user.findMany).not.toHaveBeenCalled()
+    })
+
+    it('accepte 1 caractère, 10 résultats par page par défaut', async () => {
+      mockPublicCommunity()
+      const res = await app.inject({ method: 'GET', url: '/search/advanced?q=a&types=items', headers: { authorization: `Bearer ${token}` } })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().pagination.pageSize).toBe(10)
+      expect(prisma.item.findMany.mock.calls[0][0].take).toBe(10)
     })
   })
 })

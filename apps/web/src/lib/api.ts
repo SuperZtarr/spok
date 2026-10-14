@@ -1188,9 +1188,11 @@ export interface AdvancedSearchResponse {
   spaces: Array<{ id: string; name: string; type: string; communityId: string | null; communityName: string | null; memberCount: number; itemCount: number }>;
   items: Array<{ id: string; title: string; type: string; status: string | null; priority: number | null; description: string | null; spaceId: string; spaceName: string; communityName: string | null; createdAt: string; tags: Array<{ id: string; name: string; color: string | null }> }>;
   users: Array<{ id: string; name: string; email: string | null; avatarUrl: string | null; globalRole: string; communityCount: number; spaceCount: number }>;
-  contributions: Array<{ id: string; content: string | null; authorName: string; itemId: string; itemTitle: string; spaceId: string; spaceName: string; createdAt: string }>;
+  contributions: Array<{ id: string; content: string | null; authorName: string; itemId: string; itemTitle: string; spaceId: string; spaceName: string; communityName: string | null; createdAt: string }>;
   totals: { communities: number; spaces: number; items: number; users: number; contributions: number };
   pagination: { page: number; pageSize: number };
+  // Filtres d'items actifs : l'API n'a cherché que les items et les contributions
+  itemFiltersActive?: boolean;
 }
 
 export const searchApi = {

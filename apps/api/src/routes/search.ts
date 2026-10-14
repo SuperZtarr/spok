@@ -1,12 +1,19 @@
 /*
  * Recherche globale (/search et /search/advanced) sur items et contributions.
- * optionalAuthenticate : un anonyme reçoit des résultats vides (pas d'espaces accessibles).
- * Le périmètre est borné aux espaces des memberships (un admin global voit tout, en mode admin seulement).
- * /advanced : spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi
- * la section utilisateurs aux membres (portée par défaut posée par la page Recherche).
+ * /search (recherche rapide) : anonyme = résultats vides ; utilisateur = ses espaces directs.
+ * /advanced (page Recherche, spec SPOK « Recherche [SearchPage] ») :
+ * - périmètre = espaces LISIBLES : directs + communautés de l'utilisateur + communautés non privées,
+ *   filtrés par la visibilité effective (filterReadableSpaceIds), anonyme compris ; admin en mode admin = tout ;
+ * - dès 1 caractère, 10 résultats par page (pagination par section : page s'applique à chaque section) ;
+ * - items et contributions triés communauté › espace › récence (regroupés à l'affichage, groupes contigus) ;
+ * - filtres d'items (type, statut, priorité, tags) : appliqués aux items ET aux contributions (via leur item) ;
+ *   les sections communautés, espaces et utilisateurs sont alors omises (itemFiltersActive dans la réponse) ;
+ * - spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi la section
+ *   utilisateurs aux membres (portée par défaut posée par la page Recherche).
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais filtré).
  */
 import { FastifyPluginAsync } from 'fastify';
+import { filterReadableSpaceIds, readableSpaceIdsForUser } from './items.js';
 
 interface AdvancedSearchQuery {
   q?: string;
@@ -27,16 +34,20 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: AdvancedSearchQuery }>('/advanced', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
     const { q, types: typesParam, communityId, spaceId, itemType, itemStatus, itemPriority, tagIds: tagIdsParam } = request.query;
 
-    if (!q || q.trim().length < 2) {
-      return reply.status(400).send({ statusCode: 400, message: 'Le terme de recherche doit contenir au moins 2 caracteres' });
+    // Dès 1 caractère (spec SearchPage)
+    if (!q || q.trim().length < 1) {
+      return reply.status(400).send({ statusCode: 400, message: 'Le terme de recherche est requis' });
     }
 
     const query = q.trim();
     const page = Math.max(1, parseInt(request.query.page || '1', 10));
-    const pageSize = Math.min(50, Math.max(1, parseInt(request.query.pageSize || '20', 10)));
+    const pageSize = Math.min(50, Math.max(1, parseInt(request.query.pageSize || '10', 10)));
     const skip = (page - 1) * pageSize;
 
+    // Filtres d'items actifs : seules les sections items et contributions (filtrées via leur item) ont un sens
+    const itemFiltersActive = !!(itemType || itemStatus || itemPriority || tagIdsParam);
     const enabledTypes = new Set((typesParam || 'communities,spaces,items,users,contributions').split(','));
+    if (itemFiltersActive) ['communities', 'spaces', 'users'].forEach((t) => enabledTypes.delete(t));
 
     const userId = request.user?.userId;
     // Admin global : tout EN MODE ADMIN seulement (hors mode admin = utilisateur normal)
@@ -44,25 +55,20 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       ? (await fastify.prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }))?.globalRole === 'ADMIN'
       : false;
 
-    // Build accessible space IDs for items/contributions
-    let accessibleSpaceIds: string[] | null = null; // null = all (admin)
-    if (userId && !isAdmin) {
-      const memberships = await fastify.prisma.spaceMembership.findMany({
-        where: { userId },
-        select: { spaceId: true },
-      });
-      accessibleSpaceIds = memberships.map(m => m.spaceId);
-    } else if (!userId) {
-      // Anonymous: only spaces from public communities with open visibility
-      const publicSpaces = await fastify.prisma.space.findMany({
-        where: {
-          type: 'GROUP',
-          community: { visibility: { not: 'PRIVATE' } },
-          OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
-        },
-        select: { id: true },
-      });
-      accessibleSpaceIds = publicSpaces.map(s => s.id);
+    // Espaces lisibles (null = tout, admin en mode admin) : espaces directs + ceux des communautés de
+    // l'utilisateur + ceux des communautés non privées, filtrés par la visibilité EFFECTIVE
+    // (filterReadableSpaceIds) — anonyme compris : un sous-espace héritant d'un parent privé est exclu.
+    let accessibleSpaceIds: string[] | null = null;
+    if (!isAdmin) {
+      const [ownSpaceIds, publicSpaces] = await Promise.all([
+        userId ? readableSpaceIdsForUser(fastify.prisma, userId) : Promise.resolve([] as string[]),
+        fastify.prisma.space.findMany({
+          where: { type: 'GROUP', community: { visibility: { not: 'PRIVATE' } } },
+          select: { id: true },
+        }),
+      ]);
+      const publicReadable = await filterReadableSpaceIds(fastify.prisma, userId, publicSpaces.map(s => s.id));
+      accessibleSpaceIds = [...new Set([...ownSpaceIds, ...publicReadable])];
     }
 
     const spaceFilter = accessibleSpaceIds ? { in: accessibleSpaceIds } : undefined;
@@ -83,6 +89,19 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       effectiveSpaceIds = accessibleSpaceIds ? subtree.filter(id => accessibleSpaceIds!.includes(id)) : subtree;
     }
     const effectiveSpaceFilter = effectiveSpaceIds ? { in: effectiveSpaceIds } : spaceFilter ? { in: spaceFilter.in } : undefined;
+
+    // Filtres d'items (type, statut, priorité, tags) — partagés par les sections Items et Contributions
+    const itemFilterWhere: Record<string, unknown> = {};
+    if (itemType) itemFilterWhere.type = itemType;
+    if (itemStatus) itemFilterWhere.status = itemStatus;
+    if (itemPriority) itemFilterWhere.priority = parseInt(itemPriority, 10);
+    if (tagIdsParam) {
+      const tagValues = tagIdsParam.split(',').filter(Boolean);
+      if (tagValues.length > 0) {
+        // Support both IDs and names
+        itemFilterWhere.tags = { some: { tag: { OR: [{ id: { in: tagValues } }, { name: { in: tagValues } }] } } };
+      }
+    }
 
     const truncate = (text: string | null, maxLen = 200) => {
       if (!text) return null;
@@ -183,16 +202,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       if (effectiveSpaceFilter) itemWhere.spaceId = effectiveSpaceFilter;
       else if (spaceFilter) itemWhere.spaceId = spaceFilter;
       if (communityId && !spaceId) itemWhere.space = { communityId };
-      if (itemType) itemWhere.type = itemType;
-      if (itemStatus) itemWhere.status = itemStatus;
-      if (itemPriority) itemWhere.priority = parseInt(itemPriority, 10);
-      if (tagIdsParam) {
-        const tagValues = tagIdsParam.split(',').filter(Boolean);
-        if (tagValues.length > 0) {
-          // Support both IDs and names
-          itemWhere.tags = { some: { tag: { OR: [{ id: { in: tagValues } }, { name: { in: tagValues } }] } } };
-        }
-      }
+      Object.assign(itemWhere, itemFilterWhere);
 
       const [rows, count] = await Promise.all([
         fastify.prisma.item.findMany({
@@ -203,7 +213,8 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
             space: { select: { name: true, community: { select: { name: true } } } },
             tags: { select: { tag: { select: { id: true, name: true, color: true } } } },
           },
-          orderBy: { updatedAt: 'desc' },
+          // Tri communauté › espace › récence : un groupe reste d'un seul tenant d'une page à l'autre
+          orderBy: [{ space: { community: { name: 'asc' } } }, { space: { name: 'asc' } }, { spaceId: 'asc' }, { updatedAt: 'desc' }],
           skip, take: pageSize,
         }),
         fastify.prisma.item.count({ where: itemWhere as any }),
@@ -268,11 +279,13 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       const contribWhere: Record<string, unknown> = {
         content: { contains: query, mode: 'insensitive' },
       };
-      if (effectiveSpaceFilter) contribWhere.item = { spaceId: effectiveSpaceFilter };
-      else if (spaceFilter) contribWhere.item = { spaceId: spaceFilter };
-      if (communityId && !spaceId) {
-        contribWhere.item = { ...(contribWhere.item as any || {}), space: { communityId } };
-      }
+      // Contraintes sur l'item de la contribution : périmètre + mêmes filtres d'items que la section Items
+      const contribItem: Record<string, unknown> = {};
+      if (effectiveSpaceFilter) contribItem.spaceId = effectiveSpaceFilter;
+      else if (spaceFilter) contribItem.spaceId = spaceFilter;
+      if (communityId && !spaceId) contribItem.space = { communityId };
+      Object.assign(contribItem, itemFilterWhere);
+      if (Object.keys(contribItem).length > 0) contribWhere.item = contribItem;
 
       const [rows, count] = await Promise.all([
         fastify.prisma.contribution.findMany({
@@ -280,9 +293,13 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
           select: {
             id: true, content: true, createdAt: true,
             author: { select: { name: true } },
-            item: { select: { id: true, title: true, spaceId: true, space: { select: { name: true } } } },
+            item: { select: { id: true, title: true, spaceId: true, space: { select: { name: true, community: { select: { name: true } } } } } },
           },
-          orderBy: { createdAt: 'desc' },
+          // Même regroupement que les items : communauté › espace › récence
+          orderBy: [
+            { item: { space: { community: { name: 'asc' } } } }, { item: { space: { name: 'asc' } } },
+            { item: { spaceId: 'asc' } }, { createdAt: 'desc' },
+          ],
           skip, take: pageSize,
         }),
         fastify.prisma.contribution.count({ where: contribWhere as any }),
@@ -290,7 +307,8 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       contributions = rows.map(c => ({
         id: c.id, content: truncate(c.content), authorName: c.author.name,
         itemId: c.item.id, itemTitle: c.item.title,
-        spaceId: c.item.spaceId, spaceName: c.item.space.name, createdAt: c.createdAt,
+        spaceId: c.item.spaceId, spaceName: c.item.space.name,
+        communityName: c.item.space.community?.name || null, createdAt: c.createdAt,
       }));
       totalContributions = count;
     }
@@ -302,6 +320,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         items: totalItems, users: totalUsers, contributions: totalContributions,
       },
       pagination: { page, pageSize },
+      itemFiltersActive,
     };
   });
 

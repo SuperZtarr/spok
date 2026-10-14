@@ -3,12 +3,19 @@
  * Portée par défaut = espace/communauté d'où la recherche est lancée (?spaceId= / ?communityId=,
  * posés par lib/searchScope) ; l'utilisateur élargit explicitement (« Toute la communauté », « Partout »).
  * Tout l'état vit dans l'URL ; modifier plusieurs paramètres → updateParams (un seul setSearchParams).
+ * Spec SPOK « Recherche [SearchPage] » : dès 1 caractère, 10 résultats par page. Pagination PAR SECTION :
+ * plusieurs sections → les 10 premiers de chacune + « Voir les N résultats » (bascule sur cette section) ;
+ * une seule section → chevrons. Filtres d'items (type, statut, tags) : l'API ne renvoie plus que Items et
+ * Contributions (itemFiltersActive). Tags = ceux de l'espace choisi (les tags sont propres à un espace).
+ * Items et contributions regroupés sous des en-têtes « Communauté › Espace » (groupBySpace) : l'API les trie
+ * dans cet ordre, les groupes sont donc consécutifs — ne pas retrier côté client.
  */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
-import { searchApi, communitiesApi, spacesApi } from '../lib/api';
+import { ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES } from '@spok/shared';
+import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -24,7 +31,35 @@ const ENTITY_TYPES = [
 
 type EntityType = typeof ENTITY_TYPES[number]['key'];
 
-const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG'];
+const PAGE_SIZE = 10;
+/** Sections que les filtres d'items laissent affichées (les autres sont omises par l'API). */
+const ITEM_FILTER_SECTIONS = new Set<string>(['items', 'contributions']);
+
+/** Regroupe des résultats déjà triés communauté › espace (API) en groupes consécutifs « Communauté › Espace ». */
+function groupBySpace<T extends { spaceId: string; spaceName: string; communityName: string | null }>(rows: T[]) {
+  const groups: { spaceId: string; spaceName: string; communityName: string; rows: T[] }[] = [];
+  for (const row of rows) {
+    const last = groups[groups.length - 1];
+    if (last && last.spaceId === row.spaceId) last.rows.push(row);
+    else groups.push({ spaceId: row.spaceId, spaceName: row.spaceName, communityName: row.communityName ?? 'Espaces personnels', rows: [row] });
+  }
+  return groups;
+}
+
+/** En-tête d'un groupe de résultats : communauté › espace (lien vers l'espace). */
+function GroupHeader({ communityName, spaceName, spaceId }: { communityName: string; spaceName: string; spaceId: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3 mb-1.5 first:mt-0">
+      <Building2 className="w-3.5 h-3.5" />
+      <span>{communityName}</span>
+      <ChevronRight className="w-3 h-3" />
+      <Link to={`/spaces/${spaceId}`} className="font-medium text-foreground hover:underline">{spaceName}</Link>
+    </div>
+  );
+}
+
+const typeLabel = (t: string) => DEFAULT_TYPE_LABELS[t]?.labelShort ?? t;
+const statusLabel = (s: string) => DEFAULT_STATUSES.find((st) => st.id === s)?.label ?? s;
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -157,9 +192,26 @@ export function SearchPage() {
     return allSpaces;
   }, [allSpaces, effectiveCommunityId]);
 
+  // Tags de l'espace choisi (sélecteur) — sans espace, pas de tags à proposer
+  const { data: scopeTags } = useQuery({
+    queryKey: ['tags', spaceIdParam],
+    queryFn: () => tagsApi.list(spaceIdParam),
+    enabled: !!user && !!spaceIdParam,
+  });
+
+  // Sections réellement affichées : les filtres d'items ne laissent que Items et Contributions
+  const itemFiltersActive = !!(itemTypeParam || itemStatusParam || tagIdsParam);
+  const shownTypes = useMemo(
+    () => [...enabledTypes].filter((t) => !itemFiltersActive || ITEM_FILTER_SECTIONS.has(t)),
+    [enabledTypes, itemFiltersActive],
+  );
+  // Pagination par section : une seule section → page de l'URL ; plusieurs → 10 premiers de chacune
+  const singleSection = shownTypes.length === 1;
+  const effectivePage = singleSection ? pageParam : 1;
+
   // Search query
   const { data, isLoading } = useQuery({
-    queryKey: ['advanced-search', qParam, typesParam, effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, pageParam],
+    queryKey: ['advanced-search', qParam, typesParam, effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, effectivePage],
     queryFn: () => searchApi.advanced({
       q: qParam,
       types: typesParam,
@@ -168,14 +220,24 @@ export function SearchPage() {
       itemType: itemTypeParam || undefined,
       itemStatus: itemStatusParam || undefined,
       tagIds: tagIdsParam || undefined,
-      page: pageParam,
-      pageSize: 20,
+      page: effectivePage,
+      pageSize: PAGE_SIZE,
     }),
-    enabled: qParam.length >= 2,
+    enabled: qParam.length >= 1,
   });
 
   const totalResults = data ? Object.values(data.totals).reduce((a, b) => a + b, 0) : 0;
-  const totalPages = data ? Math.ceil(Math.max(...Object.values(data.totals)) / 20) : 1;
+  const totalPages = data && singleSection
+    ? Math.max(1, Math.ceil((data.totals[shownTypes[0] as keyof typeof data.totals] ?? 0) / PAGE_SIZE))
+    : 1;
+
+  /** Lien « Voir les N résultats » sous une section tronquée (plusieurs sections affichées). */
+  const SeeAll = ({ type, total }: { type: EntityType; total: number }) =>
+    !singleSection && total > PAGE_SIZE ? (
+      <button type="button" onClick={() => updateParam('types', type)} className="mt-2 text-xs text-primary hover:underline">
+        Voir les {total} résultats
+      </button>
+    ) : null;
 
   return (
     <div className="p-6 max-w-5xl mx-auto w-full">
@@ -289,30 +351,50 @@ export function SearchPage() {
               <Select
                 value={itemTypeParam}
                 onChange={e => updateParam('itemType', e.target.value)}
-                options={[{ value: '', label: 'Tous' }, ...ITEM_TYPES.map(t => ({ value: t, label: t }))]}
+                options={[{ value: '', label: 'Tous' }, ...ITEM_TYPES.map(t => ({ value: t, label: typeLabel(t) }))]}
                 className="w-36 h-8 text-sm"
               />
             </div>
           )}
           {enabledTypes.has('items') && (
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground">Tags :</label>
-              <input
+              <label className="text-xs text-muted-foreground">Statut :</label>
+              <Select
+                value={itemStatusParam}
+                onChange={e => updateParam('itemStatus', e.target.value)}
+                options={[{ value: '', label: 'Tous' }, ...DEFAULT_STATUSES.map(s => ({ value: s.id, label: s.label }))]}
+                className="w-36 h-8 text-sm"
+              />
+            </div>
+          )}
+          {enabledTypes.has('items') && user && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground">Tag :</label>
+              <Select
                 value={tagIdsParam}
                 onChange={e => updateParam('tagIds', e.target.value)}
-                placeholder="tag1,tag2..."
-                className="w-44 h-8 px-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+                disabled={!spaceIdParam}
+                title={spaceIdParam ? undefined : 'Choisissez un espace : les tags sont propres à chaque espace'}
+                options={spaceIdParam
+                  ? [{ value: '', label: 'Tous' }, ...(scopeTags ?? []).map(t => ({ value: t.id, label: t.name }))]
+                  : [{ value: '', label: 'Choisir un espace' }]}
+                className="w-40 h-8 text-sm"
               />
             </div>
           )}
         </div>
+        {itemFiltersActive && shownTypes.length < enabledTypes.size && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Filtres d'items actifs : seuls les items et les contributions sont recherchés.
+          </p>
+        )}
       </div>
 
       {/* Results */}
-      {qParam.length < 2 ? (
+      {qParam.length < 1 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p>Entrez au moins 2 caracteres pour lancer la recherche</p>
+          <p>Saisissez un terme pour lancer la recherche</p>
         </div>
       ) : isLoading ? (
         <div className="text-center py-16 text-muted-foreground">Recherche en cours...</div>
@@ -356,6 +438,7 @@ export function SearchPage() {
                   </Link>
                 ))}
               </div>
+              <SeeAll type="communities" total={data.totals.communities} />
             </section>
           )}
 
@@ -380,6 +463,7 @@ export function SearchPage() {
                   </Link>
                 ))}
               </div>
+              <SeeAll type="spaces" total={data.totals.spaces} />
             </section>
           )}
 
@@ -389,13 +473,16 @@ export function SearchPage() {
               <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4" /> Items ({data.totals.items})
               </h2>
+              {groupBySpace(data.items).map(group => (
+              <div key={group.spaceId} className="mb-2">
+              <GroupHeader communityName={group.communityName} spaceName={group.spaceName} spaceId={group.spaceId} />
               <div className="space-y-2">
-                {data.items.map(item => (
+                {group.rows.map(item => (
                   <Link key={item.id} to={`/spaces/${item.spaceId}?item=${item.id}`} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{typeLabel(item.type)}</Badge>
                       <span className="font-medium text-sm"><Highlight text={item.title} query={qParam} /></span>
-                      {item.status && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.status}</Badge>}
+                      {item.status && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{statusLabel(item.status)}</Badge>}
                       {item.priority != null && item.priority > 0 && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">P{item.priority}</Badge>
                       )}
@@ -404,8 +491,6 @@ export function SearchPage() {
                       <p className="text-xs text-muted-foreground line-clamp-2 mb-1"><Highlight text={item.description} query={qParam} /></p>
                     )}
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                      <span>{item.spaceName}</span>
-                      {item.communityName && <span>{item.communityName}</span>}
                       <span>{formatRelativeDate(item.createdAt)}</span>
                       {item.tags.length > 0 && (
                         <span className="flex items-center gap-1">
@@ -417,6 +502,9 @@ export function SearchPage() {
                   </Link>
                 ))}
               </div>
+              </div>
+              ))}
+              <SeeAll type="items" total={data.totals.items} />
             </section>
           )}
 
@@ -452,6 +540,7 @@ export function SearchPage() {
                   </div>
                 ))}
               </div>
+              <SeeAll type="users" total={data.totals.users} />
             </section>
           )}
 
@@ -461,8 +550,11 @@ export function SearchPage() {
               <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" /> Contributions ({data.totals.contributions})
               </h2>
+              {groupBySpace(data.contributions).map(group => (
+              <div key={group.spaceId} className="mb-2">
+              <GroupHeader communityName={group.communityName} spaceName={group.spaceName} spaceId={group.spaceId} />
               <div className="space-y-2">
-                {data.contributions.map(c => (
+                {group.rows.map(c => (
                   <Link key={c.id} to={`/spaces/${c.spaceId}?item=${c.itemId}`} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     {c.content && (
                       <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={qParam} /></p>
@@ -470,12 +562,14 @@ export function SearchPage() {
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                       <span className="font-medium">{c.authorName}</span>
                       <span>sur {c.itemTitle}</span>
-                      <span>{c.spaceName}</span>
                       <span>{formatRelativeDate(c.createdAt)}</span>
                     </div>
                   </Link>
                 ))}
               </div>
+              </div>
+              ))}
+              <SeeAll type="contributions" total={data.totals.contributions} />
             </section>
           )}
 
