@@ -1,5 +1,7 @@
 /* Layout de la MindMap : placement radial des nœuds, espacement, recalcul, rafraîchissement des callbacks des nœuds (withCurrentCallbacks) — zone fragile (cf. CLAUDE.md).
-   Portails de sous-espaces : arc au-dessus du nœud espace, pas de 40° ramené à 360°/N au-delà de 9 (pas de superposition). */
+   Portails de sous-espaces : arc au-dessus du nœud espace, pas de 40° ramené à 360°/N au-delà de 9 (pas de superposition).
+   Hiérarchie (2026-10-14) : un sous-espace dont le parent est aussi affiché est relié au nœud de ce parent
+   (child-space-<parent>) et placé dans son prolongement ; seuls les sous-espaces de premier niveau sont sur l'arc. */
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';
@@ -483,6 +485,21 @@ export function buildPortalNodesAndEdges(
     }
   });
 
+  // Hiérarchie des sous-espaces (2026-10-14) : un espace dont le parent est aussi affiché est rattaché au
+  // nœud de ce parent, pas à la racine. Parent affiché le plus proche (pas de boucle : profondeur bornée).
+  const displayedParentOf = (id: string): string | null => {
+    const parentId = portalSpacesList.find(e => e.id === id)?.space?.parentId ?? null;
+    return parentId && addedSpaceIds.has(parentId) ? parentId : null;
+  };
+  const depthOf = (id: string): number => {
+    let depth = 0;
+    for (let p = displayedParentOf(id); p && depth < 20; p = displayedParentOf(p)) depth++;
+    return depth;
+  };
+  // Parents avant enfants (tri stable : l'ordre d'origine est conservé à profondeur égale)
+  portalSpacesList.sort((a, b) => depthOf(a.id) - depthOf(b.id));
+  const topLevelSpaces = portalSpacesList.filter(e => !displayedParentOf(e.id));
+
   // 3. Position child-space portal nodes — fixed arc centered above the space node.
   // Items always fill the full circle so gap-based placement is unreliable.
   // Instead, portals are placed at a large fixed radius (no collision with items)
@@ -490,7 +507,8 @@ export function buildPortalNodesAndEdges(
   // Au-delà de 9 portails, 40° × N dépasserait 360° (le 10e retombait sur le 1er) : le pas
   // devient 360°/N (cercle complet) et le rayon grandit pour garder MIN_PORTAL_SPACING
   // entre deux portails voisins. ≤ 9 portails : placement inchangé.
-  const totalPortalSpaces = portalSpacesList.length;
+  // L'arc autour de la racine ne porte que les sous-espaces de premier niveau affichés
+  const totalPortalSpaces = topLevelSpaces.length;
   const MAX_PORTAL_ANGLE_STEP = Math.PI / 4.5; // 40° between portals
   const PORTAL_ANGLE_STEP = Math.min(MAX_PORTAL_ANGLE_STEP, (2 * Math.PI) / Math.max(1, totalPortalSpaces));
   const PORTAL_CENTER_ANGLE = -Math.PI / 2; // top of space node
@@ -502,19 +520,40 @@ export function buildPortalNodesAndEdges(
     MIN_PORTAL_SPACING / PORTAL_ANGLE_STEP,
   );
 
-  portalSpacesList.forEach((portalSpaceEntry, index) => {
+  // Sous-sous-espaces : dans le prolongement de leur parent (direction racine → parent), en éventail
+  const NESTED_PORTAL_DIST = 320;
+  const NESTED_SIBLING_STEP = Math.PI / 6; // 30° entre frères
+  const portalPosById = new Map<string, { x: number; y: number }>();
+
+  portalSpacesList.forEach((portalSpaceEntry) => {
     const childPortalId = `child-space-${portalSpaceEntry.id}`;
     const portalItemCount = portalItemsBySpace.get(portalSpaceEntry.id)?.length || 0;
-    const childSpaceRadius = PORTAL_BASE_RADIUS + Math.sqrt(portalItemCount) * 80;
-    const angle = totalPortalSpaces === 1
-      ? PORTAL_CENTER_ANGLE
-      : portalArcStart + index * PORTAL_ANGLE_STEP;
+    const parentSpaceId = displayedParentOf(portalSpaceEntry.id);
 
-    const cx = spacePos.x + childSpaceRadius * Math.cos(angle);
-    const cy = spacePos.y + childSpaceRadius * Math.sin(angle);
+    let cx: number;
+    let cy: number;
+    const parentPos = parentSpaceId ? portalPosById.get(parentSpaceId) : undefined;
+    if (parentSpaceId && parentPos) {
+      const siblings = portalSpacesList.filter(e => displayedParentOf(e.id) === parentSpaceId);
+      const sibIndex = siblings.findIndex(e => e.id === portalSpaceEntry.id);
+      const dirAngle = Math.atan2(parentPos.y - spacePos.y, parentPos.x - spacePos.x)
+        + (sibIndex - (siblings.length - 1) / 2) * NESTED_SIBLING_STEP;
+      const dist = NESTED_PORTAL_DIST + Math.sqrt(portalItemCount) * 80;
+      cx = parentPos.x + dist * Math.cos(dirAngle);
+      cy = parentPos.y + dist * Math.sin(dirAngle);
+    } else {
+      const index = topLevelSpaces.findIndex(e => e.id === portalSpaceEntry.id);
+      const childSpaceRadius = PORTAL_BASE_RADIUS + Math.sqrt(portalItemCount) * 80;
+      const angle = totalPortalSpaces === 1
+        ? PORTAL_CENTER_ANGLE
+        : portalArcStart + index * PORTAL_ANGLE_STEP;
+      cx = spacePos.x + childSpaceRadius * Math.cos(angle);
+      cy = spacePos.y + childSpaceRadius * Math.sin(angle);
+    }
 
     const savedPos = savedPositions[childPortalId];
     const pos = savedPos || { x: cx, y: cy };
+    portalPosById.set(portalSpaceEntry.id, pos);
 
     const spaceData = portalSpaceEntry.space || { id: portalSpaceEntry.id, name: portalSpaceNames.get(portalSpaceEntry.id) || portalSpaceEntry.id, type: 'FOLDER' as any, createdAt: '', updatedAt: '', role: 'MEMBER' as any };
 
@@ -534,7 +573,8 @@ export function buildPortalNodesAndEdges(
 
     portalEdges.push({
       id: `edge-space-${childPortalId}`,
-      source: SPACE_NODE_ID,
+      // Rattaché au nœud de son espace parent s'il est affiché, sinon à la racine
+      source: parentSpaceId ? `child-space-${parentSpaceId}` : SPACE_NODE_ID,
       target: childPortalId,
       sourceHandle: 'bottom-source',
       targetHandle: 'top',
