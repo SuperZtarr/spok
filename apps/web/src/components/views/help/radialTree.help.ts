@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Survolez un nœud pour voir ses détails',
     'Cliquez sur un nœud pour ouvrir sa fiche',
   ],
+  zones: {
+    diagramme: { title: 'Arbre radial', text: 'La hiérarchie de l\'espace en étoile, du centre vers l\'extérieur ; molette pour zoomer.' },
+    noeud: { title: 'Un nœud', text: 'Un élément : survolez-le pour ses détails, cliquez pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

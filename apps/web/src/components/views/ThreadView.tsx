@@ -200,6 +200,7 @@ export function ThreadView({
           {/* Thread header row */}
           <div
             data-tour="thread-topic"
+            data-help-zone="thread:sujet"
             className={`flex items-center gap-3 py-3 cursor-pointer transition-colors ${
               isExpanded ? 'bg-accent/50' : 'hover:bg-accent/30'
             }`}
@@ -336,7 +337,7 @@ export function ThreadView({
           <SpaceExportButton items={items} spaceName={spaceName} viewMode="thread" viewContainerRef={viewContainerRef} />
         )}
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" data-help-zone="thread:contenu">
         <div className="max-w-4xl mx-auto px-4 py-4">
           {/* Thread list — forum style with hierarchy */}
           <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">

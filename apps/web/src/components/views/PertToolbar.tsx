@@ -1,5 +1,6 @@
 /* Toolbar de la vue PERT : filtre par type de relation (4 types officiels, source unique
- * constants/relationTypes.ts), zoom, tri rang/alpha, export SVG (sur ViewToolbar). */
+ * constants/relationTypes.ts), zoom, tri rang/alpha, export SVG (sur ViewToolbar).
+ * Chaque commande sous HelpHint (textes : pert.help.ts → hints), pas de `title` natif. */
 import { Minus, Plus, Info, ArrowUpDown } from 'lucide-react';
 import { RELATION_TYPE_LIST } from '../../constants/relationTypes';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
@@ -10,6 +11,11 @@ import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } fr
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { NewItemButton } from '../ui/NewItemButton';
+import { HelpHint } from '../../help/HelpHint';
+import { help as pertHelp } from './help/pert.help';
+
+/** Infobulles de l'en-tête — textes dans la fiche d'aide (pert.help.ts, hints). */
+const PH = pertHelp.hints!;
 
 function LegendButton() {
   const [open, setOpen] = useState(false);
@@ -33,16 +39,20 @@ function LegendButton() {
 
   return (
     <div className="relative">
-      <button
-        ref={btnRef}
-        data-tour="pert-legend"
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors text-muted-foreground"
-        title="Légende"
-      >
-        <Info className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Légende</span>
-      </button>
+      <HelpHint text={PH.legend}>
+        <button
+          type="button"
+          ref={btnRef}
+          data-tour="pert-legend"
+          onClick={() => setOpen(v => !v)}
+          className="flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors text-muted-foreground"
+          aria-label="Légende"
+          aria-expanded={open}
+        >
+          <Info className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Légende</span>
+        </button>
+      </HelpHint>
       {open && pos && createPortal(
         <div ref={dropRef} className="fixed bg-card border rounded-xl shadow-xl p-4 z-[9999] w-64 space-y-3" style={{ top: pos.top, left: pos.left }}>
           <p className="text-xs font-semibold text-foreground">Contour des nœuds</p>
@@ -131,14 +141,19 @@ export function PertToolbar({
       )}
       <div className="h-4 w-px bg-border mx-1" />
       {onTogglePertRankSort && (
-        <button
-          onClick={onTogglePertRankSort}
-          className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${pertRankSort ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-          title="Trier par rang de dépendance"
-        >
-          <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="hidden sm:inline">Par rang</span>
-        </button>
+        <HelpHint text={PH.rankSort}>
+          <button
+            type="button"
+            onClick={onTogglePertRankSort}
+            data-tour="pert-rank"
+            aria-label="Par rang"
+            aria-pressed={pertRankSort}
+            className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${pertRankSort ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="hidden sm:inline">Par rang</span>
+          </button>
+        </HelpHint>
       )}
       <div className="h-4 w-px bg-border mx-1" />
       {onToggleRelFilter && (
@@ -147,16 +162,19 @@ export function PertToolbar({
           {RELATION_TYPE_LIST.map(({ id: type, label, badgeClass: activeClass, hex }) => {
             const active = activeRelFilters.has(type);
             return (
-              <button
-                key={type}
-                {...(type === RELATION_TYPE_LIST[0].id ? { 'data-tour': 'pert-relation-filter' } : {})}
-                onClick={() => onToggleRelFilter(type)}
-                className={`inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs font-medium transition-colors ${active ? activeClass : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-                title={active ? `Retirer le filtre "${label}"` : `Filtrer les items "${label}"`}
-              >
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
-                <span className="hidden sm:inline">{label}</span>
-              </button>
+              <HelpHint key={type} text={(active ? PH.relFilterOn : PH.relFilterOff).replace('{label}', label)}>
+                <button
+                  type="button"
+                  {...(type === RELATION_TYPE_LIST[0].id ? { 'data-tour': 'pert-relation-filter' } : {})}
+                  onClick={() => onToggleRelFilter(type)}
+                  aria-label={label}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs font-medium transition-colors ${active ? activeClass : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              </HelpHint>
             );
           })}
         </>
@@ -168,15 +186,21 @@ export function PertToolbar({
         />
       )}
       <div className="h-4 w-px bg-border mx-1" />
-      <button onClick={onZoomOut} className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground" title="Dézoomer">
-        <Minus className="w-3.5 h-3.5" />
-      </button>
-      <button onClick={onResetZoom} data-tour="pert-zoom" className="text-xs w-11 text-center tabular-nums text-muted-foreground hover:text-foreground transition-colors" title="Réinitialiser le zoom">
-        {Math.round(zoom * 100)}%
-      </button>
-      <button onClick={onZoomIn} className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground" title="Zoomer">
-        <Plus className="w-3.5 h-3.5" />
-      </button>
+      <HelpHint text={PH.zoomOut}>
+        <button type="button" onClick={onZoomOut} aria-label="Dézoomer" className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground">
+          <Minus className="w-3.5 h-3.5" />
+        </button>
+      </HelpHint>
+      <HelpHint text={PH.zoomReset}>
+        <button type="button" onClick={onResetZoom} data-tour="pert-zoom" aria-label="Revenir à 100 %" className="text-xs w-11 text-center tabular-nums text-muted-foreground hover:text-foreground transition-colors">
+          {Math.round(zoom * 100)}%
+        </button>
+      </HelpHint>
+      <HelpHint text={PH.zoomIn}>
+        <button type="button" onClick={onZoomIn} aria-label="Zoomer" className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground">
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </HelpHint>
       <div className="flex-1" />
       {totalItemCount !== undefined && (
         <span className="text-xs text-muted-foreground flex-shrink-0">

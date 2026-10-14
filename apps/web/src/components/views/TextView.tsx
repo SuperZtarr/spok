@@ -204,7 +204,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
         )}
       </div>
       {/* Search bar */}
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-border" data-help-zone="text:recherche">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
@@ -390,6 +390,7 @@ function TextItem({
       <div
         className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
         data-tour="text-item"
+        data-help-zone="text:element"
         onClick={() => onEdit(item.id)}
       >
         <span className={`flex-shrink-0 ${typeColor.color.replace('border-', 'text-').replace('400', '500')}`}>

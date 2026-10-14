@@ -59,6 +59,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
         target="_blank"
         rel="noopener noreferrer"
         data-tour="links-tag"
+        data-help-zone="links:tag"
         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-full hover:bg-accent hover:border-primary/30 transition-colors shadow-sm"
         title={tooltip}
         onDoubleClick={(e) => { e.preventDefault(); onEdit?.(item.id); }}
@@ -241,6 +242,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
       {groups.map((group) => (
         <DroppableLinkGroup key={group.parentId ?? '__root__'} id={`group:${group.parentId ?? '__root__'}`}>
           <div
+            data-help-zone="links:groupe"
             className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
             onClick={() => group.parentId && onEdit?.(group.parentId)}
           >

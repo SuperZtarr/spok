@@ -180,6 +180,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
       {groups.map((group) => (
         <DroppableDocGroup key={group.parentId ?? '__root__'} id={`group:${group.parentId ?? '__root__'}`}>
           <div
+            data-help-zone="documents:groupe"
             className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 rounded-t-lg cursor-pointer hover:bg-muted/60 transition-colors"
             onClick={() => group.parentId && onEdit?.(group.parentId)}
           >
@@ -196,6 +197,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                   <DraggableDoc key={doc.id} id={doc.id} canDrag={canEdit && !!onMove}>
                   <div
                     data-tour="documents-row"
+                    data-help-zone="documents:ligne"
                     className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
                     onClick={() => onEdit?.(doc.id)}
                   >

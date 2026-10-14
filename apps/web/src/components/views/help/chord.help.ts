@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Plus un ruban est large, plus il y a de relations',
     'Survolez un arc ou un ruban pour voir le détail',
   ],
+  zones: {
+    mode: { title: 'Regroupement', text: 'Groupez par type d\'élément ou par espace ; incluez ou non les liens parent-enfant.' },
+    diagramme: { title: 'Cordes', text: 'Chaque arc du cercle est un groupe, chaque corde les liens entre deux groupes : plus elle est large, plus ils sont reliés.' },
+  },
   tour: [
     {
       popover: {

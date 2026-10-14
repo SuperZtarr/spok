@@ -3,6 +3,7 @@
  * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un item IMAGE
  * par fichier, créé à la racine, image réduite dans le navigateur avant envoi — réservé à canEdit et à
  * l'espace courant (currentSpaceId).
+ * Zoom des vignettes sous HelpHint (textes : images.help.ts → hints), pas de `title` natif.
  */
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useBulkUpload } from '../../hooks/useBulkUpload';
@@ -18,6 +19,11 @@ import { DevModalBadge } from '../ui/DevModalBadge';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { HelpHint } from '../../help/HelpHint';
+import { help as imagesHelp } from './help/images.help';
+
+/** Infobulles du zoom des vignettes — textes dans la fiche d'aide (images.help.ts, hints). */
+const IH = imagesHelp.hints!;
 
 const ZOOM_LEVELS = [
   { cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10', label: 'XS' },
@@ -292,31 +298,40 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
     <div className="flex-1 overflow-auto p-4 space-y-4">
       {/* Zoom controls */}
       <div className="flex items-center gap-3 px-1">
-        <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-2 py-1" data-tour="images-zoom">
-          <button
-            onClick={() => setZoomLevel(z => Math.max(0, z - 1))}
-            disabled={zoomLevel === 0}
-            className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
-            title="Réduire"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={ZOOM_LEVELS.length - 1}
-            value={zoomLevel}
-            onChange={(e) => setZoomLevel(Number(e.target.value))}
-            className="w-24 h-1.5 accent-primary cursor-pointer"
-          />
-          <button
-            onClick={() => setZoomLevel(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))}
-            disabled={zoomLevel === ZOOM_LEVELS.length - 1}
-            className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
-            title="Agrandir"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-2 py-1" data-tour="images-zoom" data-help-zone="images:zoom">
+          <HelpHint text={IH.zoomOut}>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(z => Math.max(0, z - 1))}
+              disabled={zoomLevel === 0}
+              aria-label="Vignettes plus petites"
+              className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+          </HelpHint>
+          <HelpHint text={IH.zoomRange}>
+            <input
+              type="range"
+              min={0}
+              max={ZOOM_LEVELS.length - 1}
+              value={zoomLevel}
+              onChange={(e) => setZoomLevel(Number(e.target.value))}
+              aria-label="Taille des vignettes"
+              className="w-24 h-1.5 accent-primary cursor-pointer"
+            />
+          </HelpHint>
+          <HelpHint text={IH.zoomIn}>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))}
+              disabled={zoomLevel === ZOOM_LEVELS.length - 1}
+              aria-label="Vignettes plus grandes"
+              className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </HelpHint>
           <span className="text-xs text-muted-foreground w-6 text-center">{ZOOM_LEVELS[zoomLevel].label}</span>
         </div>
         <span className="text-xs text-muted-foreground">{images.length} image{images.length > 1 ? 's' : ''}</span>
@@ -356,6 +371,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                   >
                     <button
                       data-tour="images-tile"
+                      data-help-zone="images:vignette"
                       onClick={() => openLightbox(getFlatIndex(img))}
                       onDoubleClick={() => onEdit?.(img.id)}
                       className="flex-1 flex flex-col"

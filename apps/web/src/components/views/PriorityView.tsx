@@ -105,7 +105,7 @@ function PriorityCard({
     : undefined;
 
   return (
-    <div
+    <div data-help-zone="priority:carte"
       ref={setNodeRef}
       style={style}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
@@ -225,7 +225,7 @@ function PriorityColumn({
   const { setNodeRef } = useDroppable({ id: column.id });
 
   return (
-    <div
+    <div data-help-zone="priority:colonne"
       className={`flex-1 min-w-[200px] bg-muted/50 rounded-lg border-t-4 flex flex-col transition-colors ${column.borderColor} ${
         isOver ? 'bg-primary/5' : ''
       }`}

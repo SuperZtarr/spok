@@ -18,6 +18,7 @@
  * dans ZONE_COLORS. Sous-zones nommées `<parent>-<enfant>` (ex. `sidebar-favoris`).
  * `contenu-barre-vue` : posé sur chaque `#view-header` (19 vues + SpacePage) — toute nouvelle vue
  * avec une barre d'en-tête doit le reprendre.
+ * Ces zones servent aussi au mode Aide (textes : help/shellZones.ts) — renommer une zone = renommer son texte.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useDevMode } from './DevDbStatus';
@@ -30,6 +31,12 @@ const ZONE_COLORS: Record<string, string> = {
   bandeau: '#db2777',
   toolbar: '#ea580c',
   contenu: '#059669',
+  // sous-zones de la barre d'espace
+  'toolbar-vues': '#f59e0b',
+  'toolbar-ordre': '#fb923c',
+  'toolbar-filtre': '#c2410c',
+  'toolbar-apercu': '#9a3412',
+  'toolbar-actions': '#7c2d12',
   // sous-zones du contenu
   'contenu-barre-vue': '#0d9488', // #view-header de chaque vue (Nouveau, boutons de vue, aide, export)
   // sous-zones de la sidebar

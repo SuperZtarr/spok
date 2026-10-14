@@ -155,7 +155,7 @@ export function RecentChangesView({
           <div className="flex flex-col gap-4 p-4">
             {newItems.length > 0 && (
               <section>
-                <div className="flex items-center gap-2 mb-2" data-tour="recent-new">
+                <div className="flex items-center gap-2 mb-2" data-tour="recent-new" data-help-zone="recent:nouveaux">
                   <Plus className="w-4 h-4 text-green-600" />
                   <h3 className="text-sm font-semibold text-green-700 dark:text-green-400">
                     Nouveaux ({newItems.length})
@@ -167,7 +167,7 @@ export function RecentChangesView({
 
             {modifiedItems.length > 0 && (
               <section>
-                <div className="flex items-center gap-2 mb-2" data-tour="recent-modified">
+                <div className="flex items-center gap-2 mb-2" data-tour="recent-modified" data-help-zone="recent:modifies">
                   <Pencil className="w-4 h-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-400">
                     Modifiés ({modifiedItems.length})

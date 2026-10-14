@@ -87,7 +87,7 @@ export function TodoView({ items, portalGroups, onNewItem, spaceName, viewContai
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden" data-help-zone="todo:contenu">
       {header}
       <ListView items={todos} portalGroups={todoPortalGroups} hideToolbar canEdit={canEdit} {...rest} />
     </div>

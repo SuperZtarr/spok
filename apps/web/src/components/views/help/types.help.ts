@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Glissez une carte vers une autre colonne pour changer son type',
     'Cliquez sur une carte pour ouvrir sa fiche',
   ],
+  zones: {
+    colonne: { title: 'Colonne', text: 'Un type d\'élément ; glisser une carte dans une autre colonne change son type.' },
+    carte: { title: 'Carte', text: 'Un élément ; cliquez pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

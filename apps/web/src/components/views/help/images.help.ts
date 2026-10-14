@@ -1,5 +1,6 @@
 /* Aide utilisateur de la vue « Images » (images) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+   Lue par le point d'interrogation (ViewHelpButton → HelpButton), le tour (useViewOnboarding) et les infobulles
+   (hints : bouton d'import BulkUploadButton, zoom des vignettes dans ImagesView). */
 import type { HelpEntry } from '../../../help/types';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
@@ -14,6 +15,16 @@ export const help: HelpEntry = {
     'Importez plusieurs images d\'un coup avec le bouton d\'import ou par glisser-déposer',
     'Réglez la taille des vignettes avec le curseur de zoom',
   ],
+  hints: {
+    bulkUpload: 'Importer des images : choisissez plusieurs fichiers, chacun devient un élément Image (ou glissez-les dans la vue)',
+    zoomOut: 'Vignettes plus petites',
+    zoomRange: 'Taille des vignettes',
+    zoomIn: 'Vignettes plus grandes',
+  },
+  zones: {
+    zoom: { title: 'Taille des vignettes', text: 'Réglez la taille d\'affichage de la galerie.' },
+    vignette: { title: 'Une image', text: 'Cliquez pour l\'ouvrir en grand ; double-cliquez pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

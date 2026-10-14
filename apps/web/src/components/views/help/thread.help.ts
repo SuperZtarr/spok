@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Les sujets sont triés par dernière activité',
     'Cliquez « Ouvrir la fiche complète » pour modifier le sujet ou y répondre',
   ],
+  zones: {
+    contenu: { title: 'Discussions', text: 'Les sujets de l\'espace et leurs contributions, comme un forum.' },
+    sujet: { title: 'Un sujet', text: 'Son titre, son auteur et ses réponses ; cliquez pour le déplier et répondre.' },
+  },
   tour: [
     {
       popover: {

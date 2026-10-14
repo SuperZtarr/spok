@@ -146,6 +146,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
       ref={setNodeRef}
       style={style}
       {...(isFirstCard ? { 'data-tour': 'kanban-card' } : {})}
+      data-help-zone="kanban:carte"
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
       } ${item.priority === 4 ? 'animate-urgent-blink ring-1 ring-red-400/60' : (() => { const v = (item as any).viewedAt; return (v === null || (v && new Date(item.updatedAt) > new Date(v))) ? 'animate-unseen-blink ring-1 ring-blue-400/60' : ''; })()}`}
@@ -277,6 +278,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
   return (
     <div
       {...(isFirstColumn ? { 'data-tour': 'kanban-column' } : {})}
+      data-help-zone="kanban:colonne"
       className={`flex-1 min-w-[180px] bg-muted/50 rounded-lg border-t-4 flex flex-col ${borderColorClass} transition-colors ${
         isOver ? bgHoverClass : ''
       }`}

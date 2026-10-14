@@ -218,7 +218,7 @@ export function TreemapView({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Controls */}
-      <div data-tour="treemap-mode" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
+      <div data-tour="treemap-mode" data-help-zone="treemap:mode" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
         <span className="text-xs text-muted-foreground">Taille :</span>
         {([
           { value: 'children' as SizeMode, label: 'Enfants' },
@@ -303,6 +303,7 @@ export function TreemapView({
                 key={node.data.id}
                 opacity={opacity}
                 data-tour="treemap-node"
+                data-help-zone="treemap:noeud"
                 onClick={(e) => handleNodeClick(e, node)}
                 onDoubleClick={(e) => handleDoubleClick(e, node)}
                 onMouseEnter={(e) => handleMouseEnter(e, node, depth)}

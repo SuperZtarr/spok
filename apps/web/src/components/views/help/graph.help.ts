@@ -14,6 +14,10 @@ export const help: HelpEntry = {
     'Cliquez sur un nœud pour ouvrir sa fiche',
     'Choisissez le périmètre et les types de liens dans le panneau',
   ],
+  zones: {
+    canevas: { title: 'Graphe', text: 'Les éléments et leurs liens en réseau. Glissez un nœud ou le fond, molette pour zoomer, cliquez sur un nœud pour ouvrir sa fiche.' },
+    panneau: { title: 'Réglages du graphe', text: 'Choisissez le périmètre et les types de liens affichés (hiérarchie, relations, tags).' },
+  },
   tour: [
     {
       popover: {

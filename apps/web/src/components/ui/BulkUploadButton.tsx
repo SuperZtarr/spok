@@ -6,11 +6,22 @@
  * - BulkUploadStatus : bandeau de progression « 12/40 », puis bilan avec la liste des fichiers refusés.
  * Usage : `const bulk = useBulkUpload(spaceId, 'image')` dans la vue, puis passer `bulk` aux trois.
  * Ne s'affiche que si l'utilisateur peut éditer (la condition reste dans la vue, comme NewItemButton).
+ * Aide : infobulle HelpHint dont le texte vient de la fiche de la vue (images/documents.help.ts → hints.bulkUpload),
+ * pas de `title` natif.
  */
 import { useRef, useState, type ReactNode, type DragEvent } from 'react';
 import { Upload, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import type { useBulkUpload } from '../../hooks/useBulkUpload';
 import { IMAGE_ACCEPTED_TYPES, type UploadKind } from '../../lib/uploadRules';
+import { HelpHint } from '../../help/HelpHint';
+import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
+import { help as imagesHelp } from '../views/help/images.help';
+import { help as documentsHelp } from '../views/help/documents.help';
+
+const UPLOAD_HINTS: Record<UploadKind, string | undefined> = {
+  image: imagesHelp.hints?.bulkUpload,
+  document: documentsHelp.hints?.bulkUpload,
+};
 
 type BulkUpload = ReturnType<typeof useBulkUpload>;
 
@@ -23,17 +34,19 @@ export function BulkUploadButton({ bulk, kind }: { bulk: BulkUpload; kind: Uploa
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <>
-      <button
-        type="button"
-        data-tour="bulk-upload"
-        onClick={() => inputRef.current?.click()}
-        disabled={bulk.running}
-        title={LABELS[kind].button}
-        className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors flex-shrink-0"
-      >
-        {bulk.running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">{LABELS[kind].button}</span>
-      </button>
+      <HelpHint text={UPLOAD_HINTS[kind]} className="inline-flex flex-shrink-0">
+        <button
+          type="button"
+          data-tour="bulk-upload"
+          onClick={() => inputRef.current?.click()}
+          disabled={bulk.running}
+          aria-label={LABELS[kind].button}
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors flex-shrink-0"
+        >
+          {bulk.running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">{LABELS[kind].button}</span>
+        </button>
+      </HelpHint>
       <input
         ref={inputRef}
         type="file"
@@ -114,9 +127,11 @@ export function BulkUploadStatus({ bulk }: { bulk: BulkUpload }) {
           {succeeded} fichier{succeeded > 1 ? 's' : ''} importé{succeeded > 1 ? 's' : ''}
           {failures.length > 0 && `, ${failures.length} refusé${failures.length > 1 ? 's' : ''}`}
         </span>
-        <button type="button" onClick={bulk.dismissResult} className="ml-auto p-0.5 rounded hover:bg-muted" title="Fermer">
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <HelpHint text={SPACE_TOOLBAR_HINTS.dismissImport} className="ml-auto inline-flex">
+          <button type="button" onClick={bulk.dismissResult} className="p-0.5 rounded hover:bg-muted" aria-label="Fermer">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </HelpHint>
       </div>
       {failures.length > 0 && (
         <ul className="mt-1 max-h-32 overflow-auto space-y-0.5 text-muted-foreground">

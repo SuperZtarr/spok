@@ -195,7 +195,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
   const isPortal = !!portalSpaceName;
 
   return (
-    <div
+    <div data-help-zone="planning:element"
       className={`grid grid-cols-[auto_1fr_5rem_5rem_6rem_auto] items-center gap-3 px-4 py-2.5 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer group ${
         isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''
       } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'border-dashed border-primary/30' : ''}`}
@@ -445,7 +445,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
           <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="planning" viewContainerRef={viewContainerRef} />
         )}
       </div>
-    <div className="p-4 overflow-y-auto flex-1" data-tour="planning-sections">
+    <div className="p-4 overflow-y-auto flex-1" data-tour="planning-sections" data-help-zone="planning:contenu">
       {PERIOD_CONFIGS.map((config) => (
         <PeriodSection
           key={config.id}

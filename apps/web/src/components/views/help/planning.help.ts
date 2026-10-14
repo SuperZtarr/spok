@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'En retard en rouge, aujourd\'hui en bleu',
     'Cliquez sur un élément pour ouvrir sa fiche',
   ],
+  zones: {
+    contenu: { title: 'Échéances', text: 'Les éléments classés par urgence de leur échéance : en retard, aujourd\'hui, cette semaine, plus tard.' },
+    element: { title: 'Un élément', text: 'Son échéance et son statut ; cliquez pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

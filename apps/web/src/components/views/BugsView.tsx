@@ -76,7 +76,7 @@ export function BugsView({ items, portalGroups, onNewItem, spaceName, viewContai
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden" data-help-zone="bugs:contenu">
       {header}
       <ListView items={bugs} portalGroups={bugPortalGroups} hideToolbar canEdit={canEdit} {...rest} />
     </div>

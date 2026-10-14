@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Burnup : le total et les tâches terminées, deux courbes montantes',
     'Survolez la courbe pour le détail d\'une date',
   ],
+  zones: {
+    bascule: { title: 'Burndown / Burnup', text: 'Burndown : le reste à faire face à l\'objectif. Burnup : le total et le terminé, l\'écart est ce qui reste.' },
+    graphique: { title: 'Courbe', text: 'L\'avancement jour après jour ; une courbe au-dessus de l\'idéal signale un retard. Survolez pour le détail d\'une date.' },
+  },
   tour: [
     {
       popover: {

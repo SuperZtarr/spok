@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Glissez une carte vers une autre colonne pour changer sa priorité',
     'Cliquez sur une carte pour ouvrir sa fiche',
   ],
+  zones: {
+    colonne: { title: 'Colonne', text: 'Un niveau de priorité ; glisser une carte change sa priorité.' },
+    carte: { title: 'Carte', text: 'Un élément ; cliquez pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

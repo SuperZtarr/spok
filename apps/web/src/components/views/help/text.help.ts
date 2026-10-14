@@ -14,6 +14,10 @@ export const help: HelpEntry = {
     'Cliquez sur un titre pour ouvrir la fiche de l\'élément',
     'Exportez le document en PDF',
   ],
+  zones: {
+    recherche: { title: 'Recherche', text: 'Cherche un mot dans les titres, descriptions et contributions du document.' },
+    element: { title: 'Un passage', text: 'Chaque passage est un élément de l\'espace ; cliquez sur son titre pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

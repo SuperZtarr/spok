@@ -14,6 +14,10 @@ export const help: HelpEntry = {
     'Molette pour zoomer, glisser pour se déplacer',
     'Cliquez sur un nœud pour ouvrir sa fiche',
   ],
+  zones: {
+    diagramme: { title: 'Carte des relations', text: 'Les éléments reliés entre eux et la nature de leurs liens ; cliquez sur un élément pour ouvrir sa fiche.' },
+    filtres: { title: 'Types de liens', text: 'Affichez chaque type de lien ou non, et les éléments sans relation si besoin.' },
+  },
   tour: [
     {
       popover: {

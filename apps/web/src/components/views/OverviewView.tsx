@@ -1,4 +1,5 @@
-/* Vue Aperçu : synthèse d'un espace (description, stats, derniers items). */
+/* Vue Présentation (overview) : carte d'identité d'un espace (couverture, chiffres, vues, sous-espaces, membres).
+   Pas de barre de vue ni de barre d'espace : son tour (overview.help.ts) pointe les sections (data-tour overview-*). */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +12,8 @@ import { useViewModeStore, type ViewMode } from '../../stores/viewMode';
 import { useMenuItems } from '../../hooks/useMenuItems';
 import type { SpaceWithRole } from '@spok/shared';
 import { VIEW_HELP } from './help';
+import { HelpHint } from '../../help/HelpHint';
+import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
@@ -130,16 +133,18 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
             <div className="flex gap-2 pb-1">
               {isAdminOrOwner && (
                 <RoleGuard role="OWNER">
-                  <Button variant="bordered" size="sm" onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
-                    <Settings className="w-4 h-4" />
-                  </Button>
+                  <HelpHint text={SPACE_TOOLBAR_HINTS.settings}>
+                    <Button variant="bordered" size="sm" aria-label="Paramètres de l'espace" data-tour="overview-settings" onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  </HelpHint>
                 </RoleGuard>
               )}
             </div>
           </div>
 
           {/* Info cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8" data-tour="overview-stats" data-help-zone="overview:stats">
             <div className="p-4 rounded-lg border border-border">
               <p className="text-2xl font-bold">{(space as any)?.itemCount || 0}</p>
               <p className="text-xs text-muted-foreground">Elements</p>
@@ -155,7 +160,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
           </div>
 
           {/* Views grid */}
-          <div className="mb-8">
+          <div className="mb-8" data-help-zone="overview:vues">
             <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
               <LayoutGrid className="w-4 h-4" />
               Vues disponibles
@@ -197,7 +202,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
 
           {/* Child spaces */}
           {spaceTree.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-8" data-tour="overview-subspaces" data-help-zone="overview:sousespaces">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                 <FolderOpen className="w-4 h-4" />
                 Sous-espaces ({childSpaces?.length || 0})
@@ -237,7 +242,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
 
           {/* Members */}
           {user && (
-            <div className="mb-8">
+            <div className="mb-8" data-tour="overview-members" data-help-zone="overview:membres">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Membres ({sortedMembers.length})

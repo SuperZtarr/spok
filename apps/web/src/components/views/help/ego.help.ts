@@ -14,6 +14,10 @@ export const help: HelpEntry = {
     'Double-cliquez sur un nœud pour ouvrir sa fiche',
     'Relations et hiérarchie sont toutes deux affichées',
   ],
+  zones: {
+    reglages: { title: 'Réglages', text: 'L\'élément au centre (avec recherche) et la profondeur des liens, de 1 à 3 niveaux.' },
+    noeud: { title: 'Un nœud', text: 'Un clic recentre le réseau sur lui ; un double-clic ouvre sa fiche.' },
+  },
   tour: [
     {
       popover: {

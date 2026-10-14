@@ -178,7 +178,7 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
       </div>
       {items.length === 0 && <EmptyHelp mode="crossTable" title="Aucun élément" banner />}
       {/* Dimension selectors */}
-      <div data-tour="crosstable-dimensions" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm">
+      <div data-tour="crosstable-dimensions" data-help-zone="crossTable:dimensions" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm">
         <label className="flex items-center gap-2">
           <span className="text-muted-foreground">Lignes :</span>
           <select
@@ -280,6 +280,7 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
                           hasSearchMatch ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''
                         } ${hasHighlighted ? 'bg-primary/5' : ''}`}
                         data-tour="crosstable-cell"
+                        data-help-zone="crossTable:case"
                         onClick={() => count > 0 && setExpandedCell(isExpanded ? null : key)}
                         title={count > 0 ? cellItems.map(i => i.title).join('\n') : undefined}
                       >

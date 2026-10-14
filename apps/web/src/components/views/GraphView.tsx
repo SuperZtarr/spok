@@ -388,9 +388,9 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   }
 
   return (
-    <div ref={containerRef} className="relative w-full" style={{ height: `${dimensions.height}px` }}>
+    <div ref={containerRef} className="relative w-full" style={{ height: `${dimensions.height}px` }} data-help-zone="graph:canevas">
       {/* Control panel */}
-      <div data-tour="graph-controls" className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
+      <div data-tour="graph-controls" data-help-zone="graph:panneau" className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
         {/* Scope selector */}
         {scopeOptions.length > 1 && (
           <>

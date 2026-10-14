@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Double-cliquez sur un rectangle pour ouvrir sa fiche',
     'Choisissez la taille : par contributions, par enfants ou égale',
   ],
+  zones: {
+    mode: { title: 'Taille des rectangles', text: 'Par contributions, par nombre d\'enfants ou égale.' },
+    noeud: { title: 'Un rectangle', text: 'Un rectangle qui en contient d\'autres zoome au clic (« Zoom arrière » pour revenir) ; un double-clic ouvre sa fiche.' },
+  },
   tour: [
     {
       popover: {

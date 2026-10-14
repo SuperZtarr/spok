@@ -260,7 +260,7 @@ export function CfdView({ items }: CfdViewProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Controls & Legend */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
+      <div data-help-zone="cfd:legende" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
         <span className="text-xs text-muted-foreground">Flux cumulatif</span>
 
         {currentStats && (
@@ -293,7 +293,7 @@ export function CfdView({ items }: CfdViewProps) {
         className="flex-1 min-h-0 relative overflow-hidden"
         style={{ userSelect: 'none' }}
       >
-        <svg data-tour="cfd-chart" width={dimensions.width} height={dimensions.height}>
+        <svg data-tour="cfd-chart" data-help-zone="cfd:graphique" width={dimensions.width} height={dimensions.height}>
           <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
             {/* Grid lines */}
             {yTicks.map((tick) => (

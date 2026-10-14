@@ -259,6 +259,7 @@ export function RadialTreeView({
   return (
     <div
       ref={containerRef}
+      data-help-zone="radialTree:diagramme"
       className="relative w-full h-full overflow-hidden"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
@@ -334,6 +335,7 @@ export function RadialTreeView({
                 key={d.id}
                 transform={`translate(${x},${y})`}
                 data-tour="radial-node"
+                data-help-zone="radialTree:noeud"
                 onClick={(e) => handleNodeClick(e, node)}
                 onMouseEnter={(e) => handleNodeEnter(e, node)}
                 onMouseMove={(e) => handleNodeMove(e, node)}

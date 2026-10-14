@@ -8,6 +8,8 @@
  * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
  * « Nouvelle séance » ouvre d'abord NewSessionDialog (« Préparer la séance ») : les éléments cochés de cet espace
  * forment la préparation initiale (champ agenda de la création) ; les invités cochés sont transmis (invitees).
+ * Aide : infobulle HelpHint (SPACE_TOOLBAR_HINTS.sessions) et repère de tour data-tour="toolbar-sessions"
+ * (étape commune des tours de vues, help/commonTourSteps.ts) — pas de `title` natif.
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +19,8 @@ import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
 import { todayLocal } from './sessionName';
 import { NewSessionDialog } from './NewSessionDialog';
+import { HelpHint } from '../../help/HelpHint';
+import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
 
 
 export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; canCreate: boolean }) {
@@ -64,13 +68,16 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
 
   return (
     <div className="relative">
-      <button
-        className="flex items-center gap-1 rounded px-2 py-1 text-sm hover:bg-muted"
-        onClick={() => setOpen((o) => !o)}
-        title="Séances de présentation en direct"
-      >
-        <Radio className="h-4 w-4" /> Séances
-      </button>
+      <HelpHint text={SPACE_TOOLBAR_HINTS.sessions}>
+        <button
+          type="button"
+          data-tour="toolbar-sessions"
+          className="flex items-center gap-1 rounded px-2 py-1 text-sm hover:bg-muted"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Radio className="h-4 w-4" /> Séances
+        </button>
+      </HelpHint>
       {open && (
         <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded-lg border border-border bg-background p-2 shadow-xl text-sm">
           {ongoing ? (

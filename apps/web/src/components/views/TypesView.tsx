@@ -134,7 +134,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
   const statusColor = item.status ? (statusColors[item.status] || '') : '';
 
   return (
-    <div
+    <div data-help-zone="types:carte"
       ref={setNodeRef}
       style={style}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
@@ -224,7 +224,7 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
   const Icon = getTypeIcon(column.id);
 
   return (
-    <div
+    <div data-help-zone="types:colonne"
       className={`flex-1 min-w-[180px] bg-muted/50 rounded-lg border-t-4 flex flex-col ${column.color} transition-colors ${
         isOver ? column.bgHover : ''
       }`}

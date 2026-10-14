@@ -14,6 +14,11 @@ export const help: HelpEntry = {
     'Survolez un segment pour voir son chemin complet',
     'Cliquez sur un élément pour ouvrir sa fiche, sur un espace pour y aller',
   ],
+  zones: {
+    diagramme: { title: 'Sunburst', text: 'La hiérarchie en anneaux : le centre, puis chaque niveau d\'enfants vers l\'extérieur ; la taille d\'un segment suit son contenu.' },
+    segment: { title: 'Un segment', text: 'Un élément, un espace ou une communauté. Survolez pour voir son chemin ; cliquez pour ouvrir sa fiche ou y aller.' },
+    communautes: { title: 'Communautés', text: 'Choisissez les communautés représentées dans les anneaux.' },
+  },
   tour: [
     {
       popover: {

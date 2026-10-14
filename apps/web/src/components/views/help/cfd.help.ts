@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'L\'épaisseur d\'une bande donne le nombre d\'éléments dans ce statut',
     'Une bande qui s\'élargit signale un goulot d\'étranglement',
   ],
+  zones: {
+    legende: { title: 'Total et légende', text: 'Le nombre total d\'éléments et la couleur de chaque statut.' },
+    graphique: { title: 'Flux cumulés', text: 'Une bande par statut, son épaisseur est le nombre d\'éléments dans ce statut : une bande « En cours » qui s\'élargit signale du travail qui s\'accumule.' },
+  },
   tour: [
     {
       popover: {

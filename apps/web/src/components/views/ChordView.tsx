@@ -305,7 +305,7 @@ export function ChordView({ items }: ChordViewProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Controls */}
-      <div data-tour="chord-mode" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 flex-wrap">
+      <div data-tour="chord-mode" data-help-zone="chord:mode" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 flex-wrap">
         <span className="text-xs text-muted-foreground">Grouper par</span>
         <div className="flex items-center gap-1">
           <button
@@ -362,7 +362,7 @@ export function ChordView({ items }: ChordViewProps) {
         className="flex-1 min-h-0 relative overflow-hidden"
         style={{ userSelect: 'none' }}
       >
-        <svg data-tour="chord-chart" width={dimensions.width} height={dimensions.height}>
+        <svg data-tour="chord-chart" data-help-zone="chord:diagramme" width={dimensions.width} height={dimensions.height}>
           <g transform={`translate(${cx},${cy})`}>
             {/* Ribbons */}
             {chordLayout.map((d, i) => {

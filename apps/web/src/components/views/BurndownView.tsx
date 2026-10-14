@@ -226,7 +226,7 @@ export function BurndownView({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Controls */}
-      <div data-tour="burndown-toggle" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
+      <div data-tour="burndown-toggle" data-help-zone="burndown:bascule" className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0">
         <span className="text-xs text-muted-foreground">Mode :</span>
         {([
           { value: 'burnup' as ChartMode, label: 'Burnup' },
@@ -286,7 +286,7 @@ export function BurndownView({
         className="flex-1 min-h-0 relative overflow-hidden"
         style={{ userSelect: 'none' }}
       >
-        <svg data-tour="burndown-chart" width={dimensions.width} height={dimensions.height}>
+        <svg data-tour="burndown-chart" data-help-zone="burndown:graphique" width={dimensions.width} height={dimensions.height}>
           <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
             {/* Grid lines */}
             {yTicks.map((tick) => (

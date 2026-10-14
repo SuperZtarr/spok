@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Chaque cellule compte les éléments correspondants',
     'Cliquez sur une cellule pour voir ses éléments, puis sur un élément pour ouvrir sa fiche',
   ],
+  zones: {
+    dimensions: { title: 'Critères', text: 'Choisissez ce qui est en lignes et en colonnes : type, statut, assigné ou espace.' },
+    case: { title: 'Un croisement', text: 'Le nombre d\'éléments à ce croisement ; cliquez pour déplier leur liste.' },
+  },
   tour: [
     {
       popover: {

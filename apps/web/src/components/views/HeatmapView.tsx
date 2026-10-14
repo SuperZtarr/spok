@@ -165,7 +165,7 @@ export function HeatmapView({ items, onEdit, highlightType, highlightStatus, sea
   return (
     <div className="flex flex-col h-full">
       {/* Controls */}
-      <div data-tour="heatmap-controls" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm flex-shrink-0">
+      <div data-tour="heatmap-controls" data-help-zone="heatmap:reglages" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm flex-shrink-0">
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value as Period)}
@@ -256,6 +256,7 @@ export function HeatmapView({ items, onEdit, highlightType, highlightStatus, sea
                 }}
                 onMouseLeave={() => setTooltip(null)}
                 data-tour="heatmap-cell"
+                data-help-zone="heatmap:case"
                 onClick={() => {
                   if (cell.items.length === 1) {
                     onEdit(cell.items[0].id);

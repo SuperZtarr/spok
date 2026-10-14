@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Double-cliquez pour ouvrir la fiche du lien',
     'L\'icône et le titre du site sont récupérés automatiquement',
   ],
+  zones: {
+    groupe: { title: 'Groupe', text: 'Les liens rangés sous un même élément parent ; cliquez sur l\'en-tête pour ouvrir ce parent.' },
+    tag: { title: 'Un lien', text: 'Cliquez pour ouvrir le site ; glissez-le vers un autre groupe pour changer son parent.' },
+  },
   tour: [
     {
       popover: {

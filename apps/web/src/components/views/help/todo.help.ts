@@ -13,6 +13,9 @@ export const help: HelpEntry = {
     'Mêmes gestes que la vue Liste : tri, clic, menu ⋮, glisser-déposer',
     'Une tâche terminée ou annulée sort de cette vue',
   ],
+  zones: {
+    contenu: { title: 'À faire', text: 'Les tâches de l\'espace qui ne sont pas terminées, présentées en liste.' },
+  },
   tour: [
     {
       popover: {

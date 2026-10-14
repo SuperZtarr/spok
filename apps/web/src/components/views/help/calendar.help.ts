@@ -12,6 +12,9 @@ export const help: HelpEntry = {
     'Sélectionnez un ou plusieurs jours vides pour créer un élément sur ces dates',
     'Cliquez sur un élément pour ouvrir sa fiche',
   ],
+  zones: {
+    calendrier: { title: 'Calendrier', text: 'Les éléments datés jour par jour ; changez de période et de vue (mois, semaine, jour) en haut, glissez un événement pour le déplacer.' },
+  },
   tour: [
     {
       popover: {

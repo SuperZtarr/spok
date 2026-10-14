@@ -6,6 +6,7 @@
  * Row 1 : le bloc titre est flex-1 min-w-0 (tronque) et le bloc droit flex-shrink-0 — jamais
  * l'inverse, sinon l'avatar sort de l'écran sur mobile (2026-10-10).
  * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge.
+ * Monte DevZoneInspector (zones de dev) et HelpModeOverlay (mode Aide, qui réutilise les mêmes data-devzone).
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -31,6 +32,7 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import { WelcomeModal } from './WelcomeModal';
 import { UserProfileModal } from './UserProfileModal';
 import { DevZoneInspector } from './DevZoneInspector';
+import { HelpModeOverlay } from '../help/HelpModeOverlay';
 import { NotificationBell } from './NotificationBell';
 import { LiveSessionsButton } from './live/LiveSessionsButton';
 import { GlobalNavBar } from './GlobalNavBar';
@@ -1125,6 +1127,7 @@ export function Layout() {
   return (
     <div className="h-screen flex overflow-hidden relative">
       <DevZoneInspector />
+      <HelpModeOverlay />
       {/* Mobile overlay */}
       {sidebarOpen && !isAuthPage && (
         <div

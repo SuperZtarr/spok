@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Survolez une case pour le détail du jour',
     'Cliquez sur une case qui ne contient qu\'un élément pour ouvrir sa fiche',
   ],
+  zones: {
+    reglages: { title: 'Réglages', text: 'Période (6 mois ou 1 an) et activité comptée (créations ou modifications).' },
+    case: { title: 'Un jour', text: 'Plus la case est foncée, plus il s\'est passé de choses ce jour-là ; survolez pour le détail.' },
+  },
   tour: [
     {
       popover: {

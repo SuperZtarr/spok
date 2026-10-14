@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Glissez la poignée d\'un élément pour le déplacer ou le ranger sous un autre',
     'Cliquez sur un élément pour ouvrir sa fiche',
   ],
+  zones: {
+    contenu: { title: 'Arborescence', text: 'La hiérarchie complète de l\'espace, chaque élément sous son parent.' },
+    ligne: { title: 'Un élément', text: 'La flèche montre ou masque ses enfants ; la poignée le déplace ou le range sous un autre élément.' },
+  },
   tour: [
     {
       popover: {

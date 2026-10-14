@@ -1,5 +1,6 @@
 /* Aide utilisateur de la vue « Carte mentale » (mindmap) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+   Lue par le point d'interrogation (ViewHelpButton → HelpButton), le tour (useViewOnboarding) et les infobulles des
+   commandes de l'en-tête (hints, via HelpHint dans MindMapView). */
 import type { HelpEntry } from '../../../help/types';
 import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
@@ -13,6 +14,18 @@ export const help: HelpEntry = {
     'Glissez un nœud pour le repositionner, ou déposez-le sur un autre pour le ranger dessous',
     'Tirez un lien entre deux nœuds pour créer une relation',
   ],
+  hints: {
+    reset: 'Réorganiser : replace tous les nœuds automatiquement (oublie les positions données à la main)',
+    fit: 'Tout voir : ajuste le zoom pour faire tenir toute la carte',
+    relationsOn: 'Masquer les relations entre éléments',
+    relationsOff: 'Afficher les relations entre éléments (Bloque, Permet, Entraîne, Lié à)',
+    legendOn: 'Masquer la légende',
+    legendOff: 'Afficher la légende : couleurs des statuts et types de liens',
+  },
+  zones: {
+    canevas: { title: 'Carte', text: 'L\'espace au centre, ses éléments en branches, ses sous-espaces autour. Glissez le fond pour vous déplacer, molette pour zoomer.' },
+    noeud: { title: 'Un nœud', text: 'Un élément : cliquez pour ouvrir sa fiche ; glissez-le pour le déplacer ou le ranger sous un autre nœud ; sa flèche replie ses enfants.' },
+  },
   tour: [
     {
       popover: {
@@ -69,7 +82,8 @@ export const help: HelpEntry = {
       },
     },
     {
-      element: '[data-tour="mindmap-controls"]',
+      // React Flow ne transmet pas data-tour à <Controls> : on vise sa classe
+      element: '.react-flow__controls',
       popover: {
         title: 'Zoom',
         description: 'Zoomer, dézoomer, recentrer — ou la molette de la souris.',

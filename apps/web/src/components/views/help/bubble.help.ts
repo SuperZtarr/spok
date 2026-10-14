@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Cliquez sur une bulle sans enfant (ou double-cliquez sur n\'importe laquelle) pour ouvrir sa fiche',
     'Choisissez la taille : égale, par contributions ou par relations',
   ],
+  zones: {
+    noeud: { title: 'Une bulle', text: 'Une bulle qui en contient d\'autres zoome au clic ; une bulle simple (ou un double-clic) ouvre sa fiche.' },
+    taille: { title: 'Taille des bulles', text: 'Égale, ou proportionnelle aux contributions ou aux relations : pour repérer ce qui est le plus discuté ou le plus relié.' },
+  },
   tour: [
     {
       popover: {

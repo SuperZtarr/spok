@@ -14,6 +14,7 @@
  * Déplacement de barre au jour près dans tous les zooms ; seul le resize (poignées) s'aimante au calendrier.
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
+ * En-tête : chaque commande sous HelpHint (textes : timeline.help.ts → hints), pas de `title` natif.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
@@ -49,6 +50,11 @@ import { TreeItemRow, RootDropZone } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { HelpHint } from '../../help/HelpHint';
+import { help as timelineHelp } from './help/timeline.help';
+
+/** Infobulles des commandes de l'en-tête — textes dans la fiche d'aide (timeline.help.ts, hints). */
+const TH = timelineHelp.hints!;
 
 const ROW_HEIGHT = 40;
 const HEADER_HEIGHT = 24;
@@ -1116,15 +1122,21 @@ treeSort: treeSortProp,
         )}
         <div className="h-4 w-px bg-border mx-1" />
         {/* Navigation */}
-        <Button variant="bordered" size="sm" onClick={goToPrevious} title="Précédent">
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
-        <Button variant="bordered" size="sm" onClick={goToToday} title="Centrer sur la date du jour">
-          Aujourd'hui
-        </Button>
-        <Button variant="bordered" size="sm" onClick={goToNext} title="Suivant">
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        <HelpHint text={TH.previous}>
+          <Button variant="bordered" size="sm" onClick={goToPrevious} aria-label="Précédent">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </HelpHint>
+        <HelpHint text={TH.today}>
+          <Button variant="bordered" size="sm" onClick={goToToday} data-tour="timeline-today">
+            Aujourd'hui
+          </Button>
+        </HelpHint>
+        <HelpHint text={TH.next}>
+          <Button variant="bordered" size="sm" onClick={goToNext} aria-label="Suivant">
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </HelpHint>
         <div className="text-sm text-muted-foreground hidden sm:block">
           {formatDateFull(visibleStartDate)} - {formatDateFull(addDays(visibleEndDate, -1))}
         </div>
@@ -1134,44 +1146,55 @@ treeSort: treeSortProp,
           {itemsWithDatesCount} planifiés
         </span>
         {canEdit && spaceId && (
-          <Button variant="bordered" size="sm" onClick={handleChronoReorder} disabled={reordering} title="Réordonner chronologiquement (persisté)">
-            <ArrowUpDown className="w-4 h-4" />
-          </Button>
+          <HelpHint text={TH.chronoReorder}>
+            <Button variant="bordered" size="sm" onClick={handleChronoReorder} disabled={reordering} aria-label="Réordonner chronologiquement" data-tour="timeline-reorder">
+              <ArrowUpDown className="w-4 h-4" />
+            </Button>
+          </HelpHint>
         )}
-        <Button
-          variant={compactMode ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setCompactMode(prev => !prev)}
-          data-tour="timeline-compact"
-          title={compactMode ? 'Afficher tous les éléments' : 'Masquer les éléments sans date'}
-        >
-          {compactMode ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
-        </Button>
+        <HelpHint text={compactMode ? TH.compactOn : TH.compactOff}>
+          <Button
+            variant={compactMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCompactMode(prev => !prev)}
+            data-tour="timeline-compact"
+            aria-label="Éléments sans date"
+            aria-pressed={compactMode}
+          >
+            {compactMode ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
+          </Button>
+        </HelpHint>
         {parentIds.length > 0 && (
           <CollapseToggleButton
             isCollapsed={collapsedIds.size > 0}
             onToggle={() => collapsedIds.size > 0 ? setCollapsedIds(new Set()) : setCollapsedIds(new Set(parentIds))}
           />
         )}
-<Button
-          variant={showCriticalPath ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setShowCriticalPath(prev => !prev)}
-          data-tour="timeline-critical"
-          title={showCriticalPath ? 'Masquer le chemin critique' : 'Afficher le chemin critique'}
-          className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
-        >
-          <GitBranch className="w-4 h-4" />
-        </Button>
-        <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
-          <Button variant="ghost" size="sm" onClick={zoomIn} disabled={!canZoomIn} title="Zoom avant" className="h-8 px-2">
-            <ZoomIn className="w-4 h-4" />
+        <HelpHint text={showCriticalPath ? TH.criticalOn : TH.criticalOff}>
+          <Button
+            variant={showCriticalPath ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowCriticalPath(prev => !prev)}
+            data-tour="timeline-critical"
+            aria-label="Chemin critique"
+            aria-pressed={showCriticalPath}
+            className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
+          >
+            <GitBranch className="w-4 h-4" />
           </Button>
+        </HelpHint>
+        <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
+          <HelpHint text={TH.zoomIn}>
+            <Button variant="ghost" size="sm" onClick={zoomIn} disabled={!canZoomIn} aria-label="Zoom avant" className="h-8 px-2">
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+          </HelpHint>
+          <HelpHint text={TH.zoomLevel}>
           <select
             className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 min-w-[100px] text-center"
             value={zoomLevel}
             onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
-            title="Niveau de zoom"
+            aria-label="Niveau de zoom"
           >
             <option value="day">Jour</option>
             <option value="week">Semaine</option>
@@ -1180,9 +1203,12 @@ treeSort: treeSortProp,
             <option value="year">Année</option>
             <option value="multiyear">Multi-années</option>
           </select>
-          <Button variant="ghost" size="sm" onClick={zoomOut} disabled={!canZoomOut} title="Zoom arrière" className="h-8 px-2">
-            <ZoomOut className="w-4 h-4" />
-          </Button>
+          </HelpHint>
+          <HelpHint text={TH.zoomOut}>
+            <Button variant="ghost" size="sm" onClick={zoomOut} disabled={!canZoomOut} aria-label="Zoom arrière" className="h-8 px-2">
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+          </HelpHint>
         </div>
         <div className="flex-1" />
         <ViewHelpButton viewMode="timeline" onStartTour={onStartTour} pulse={pulseHelp} />
@@ -1206,7 +1232,7 @@ treeSort: treeSortProp,
       <div className="flex-1 overflow-y-auto overflow-x-hidden" ref={containerRef}>
         <div>
           {/* Header */}
-          <div className="sticky top-0 bg-background z-10 border-b">
+          <div className="sticky top-0 bg-background z-10 border-b" data-help-zone="timeline:dates">
             {/* Year row (multiyear zoom) */}
             {showYearRow && (
               <div className="flex border-b">
@@ -1321,7 +1347,7 @@ treeSort: treeSortProp,
           {/* Items rows */}
           {flatItems.length === 0 ? (
             <EmptyHelp mode="timeline" title="Aucun élément daté" className="p-8" />
-          ) : (<div className="relative" ref={timelineAreaRef}>
+          ) : (<div className="relative" ref={timelineAreaRef} data-help-zone="timeline:lignes">
             <DndContext
               sensors={ganttSensors}
               collisionDetection={pointerWithin}

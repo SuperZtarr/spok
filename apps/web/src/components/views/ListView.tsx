@@ -247,7 +247,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
         <>
 
           {/* Header — fixed outside scroll */}
-          <div data-tour="list-headers" className={`sticky top-[33px] z-[1] grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
+          <div data-tour="list-headers" data-help-zone="list:entetes" className={`sticky top-[33px] z-[1] grid ${gridColsClass} items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border bg-muted/50 select-none flex-shrink-0`}>
             <span className="w-4" />
             <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => toggleSort('title')}>
               Titre
@@ -299,6 +299,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                 <div
                   key={item.id}
                   {...(index === 0 ? { 'data-tour': 'list-row' } : {})}
+                  data-help-zone="list:ligne"
                   draggable={canEdit !== false}
                   onDragStart={(e) => {
                     e.dataTransfer.effectAllowed = 'move';

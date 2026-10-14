@@ -290,7 +290,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
 
         {/* Community filter panel (global mode only) */}
         {!spaceId && userCommunities && userCommunities.length > 1 && (
-          <div data-tour="sunburst-communities" className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 shadow-lg">
+          <div data-tour="sunburst-communities" data-help-zone="sunburst:communautes" className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 shadow-lg">
             <div className="text-xs font-medium text-muted-foreground mb-2">Communautes</div>
             {userCommunities.map(c => (
               <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer mb-1">
@@ -333,6 +333,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
         </div>
 
         <svg
+          data-help-zone="sunburst:diagramme"
           width={dimensions.width}
           height={dimensions.height}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
@@ -379,6 +380,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
                   onMouseEnter={() => setHoveredNode(d)}
                   onMouseLeave={() => setHoveredNode(null)}
                   data-tour="sunburst-segment"
+                  data-help-zone="sunburst:segment"
                   onClick={() => handleClick(d)}
                   style={{ transition: 'fill-opacity 0.2s' }}
                 />

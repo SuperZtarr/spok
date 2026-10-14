@@ -119,7 +119,7 @@ export function TreeItemRow({
   const wrapperOpacity = isDragging ? 0.4 : (isInline && isDimmed) ? 0.35 : 1;
 
   return (
-    <div ref={setDropRef} style={{ opacity: wrapperOpacity }}>
+    <div ref={setDropRef} style={{ opacity: wrapperOpacity }} data-help-zone="tree:ligne">
       {isOver && dropPosition === 'before' && (
         <div className="relative h-0.5 mx-2" style={{ marginLeft: `${indent}px` }}>
           <div className="absolute inset-x-0 h-0.5 bg-primary rounded-full" />

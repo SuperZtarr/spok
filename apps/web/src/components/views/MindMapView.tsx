@@ -14,6 +14,7 @@
  * changement de layoutCallbacks (withCurrentCallbacks) — sinon handlers périmés (2026-09-28).
  * Cadrage d'ouverture (initialFit, 2026-10-10) : carte entière ; sur mobile, si le zoom tombe
  * sous 0,6, centrage sur le nœud espace à 0,6 pour garder les étiquettes lisibles.
+ * En-tête : chaque commande sous HelpHint (textes : mindmap.help.ts → hints), pas de `title` natif.
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
@@ -70,6 +71,11 @@ import { SPACE_NODE_ID, calculateLayout, buildPortalNodesAndEdges, buildMindmapN
 import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
 import { NewItemButton } from '../ui/NewItemButton';
+import { HelpHint } from '../../help/HelpHint';
+import { help as mindmapHelp } from './help/mindmap.help';
+
+/** Infobulles de l'en-tête — textes dans la fiche d'aide (mindmap.help.ts, hints). */
+const MH = mindmapHelp.hints!;
 
 const edgeTypes = { relation: RelationEdge };
 
@@ -1385,44 +1391,58 @@ function MindMapViewInner({
           isCollapsed={collapsedIds.size > 0}
           onToggle={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
         />
-        <button
-          onClick={resetLayout}
-          data-tour="mindmap-reset"
-          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          title="Réorganiser les éléments"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Réorganiser</span>
-        </button>
-        <button
-          onClick={fitAll}
-          data-tour="mindmap-fit"
-          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          title="Tout voir"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Tout voir</span>
-        </button>
-        <button
-          onClick={() => setShowRelations(v => !v)}
-          data-tour="mindmap-relations"
-          className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showRelations ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-          title={showRelations ? 'Masquer les relations' : 'Afficher les relations'}
-        >
-          <Share2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Relations</span>
-        </button>
+        <HelpHint text={MH.reset}>
+          <button
+            type="button"
+            onClick={resetLayout}
+            data-tour="mindmap-reset"
+            aria-label="Réorganiser"
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Réorganiser</span>
+          </button>
+        </HelpHint>
+        <HelpHint text={MH.fit}>
+          <button
+            type="button"
+            onClick={fitAll}
+            data-tour="mindmap-fit"
+            aria-label="Tout voir"
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Tout voir</span>
+          </button>
+        </HelpHint>
+        <HelpHint text={showRelations ? MH.relationsOn : MH.relationsOff}>
+          <button
+            type="button"
+            onClick={() => setShowRelations(v => !v)}
+            data-tour="mindmap-relations"
+            aria-label="Relations"
+            aria-pressed={showRelations}
+            className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showRelations ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Relations</span>
+          </button>
+        </HelpHint>
         <div className="flex-1" />
         <div className="relative">
-          <button
-            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            onClick={() => setLegendOpen(v => !v)}
-            data-tour="mindmap-legend"
-            title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
-          >
-            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
-            <span className="hidden sm:inline">Légende</span>
-          </button>
+          <HelpHint text={legendOpen ? MH.legendOn : MH.legendOff}>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              onClick={() => setLegendOpen(v => !v)}
+              data-tour="mindmap-legend"
+              aria-label="Légende"
+              aria-expanded={legendOpen}
+            >
+              <ChevronRight className={`w-3.5 h-3.5 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
+              <span className="hidden sm:inline">Légende</span>
+            </button>
+          </HelpHint>
           {legendOpen && (
             <div className="absolute top-full right-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
               <div className="space-y-1.5 mb-3 text-muted-foreground">
@@ -1475,7 +1495,7 @@ function MindMapViewInner({
           ]}
         />
       </div>
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0" data-help-zone="mindmap:canevas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1513,7 +1533,7 @@ function MindMapViewInner({
       >
         <Background color="#e2e8f0" gap={20} className="dark:hidden" />
         <Background color="#334155" gap={20} className="hidden dark:block" />
-        <Controls className="hidden sm:flex" position="bottom-right" data-tour="mindmap-controls" />
+        <Controls className="hidden sm:flex" position="bottom-right" />
         <MiniMap
           className="hidden md:block"
           nodeColor={(node) => node.data?.hexColor as string || '#f3f4f6'}

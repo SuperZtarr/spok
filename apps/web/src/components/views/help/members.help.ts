@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Glissez une carte vers une colonne pour l\'assigner à ce membre',
     'La colonne « Non assigné » regroupe les éléments sans responsable',
   ],
+  zones: {
+    colonne: { title: 'Colonne', text: 'Une personne et les éléments qui lui sont assignés ; glisser une carte la réassigne.' },
+    carte: { title: 'Carte', text: 'Un élément ; cliquez pour ouvrir sa fiche.' },
+  },
   tour: [
     {
       popover: {

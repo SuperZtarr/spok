@@ -130,7 +130,7 @@ function MemberKanbanCard({
     : undefined;
 
   return (
-    <div
+    <div data-help-zone="members:carte"
       ref={setNodeRef}
       style={style}
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
@@ -240,7 +240,7 @@ function MemberColumnComponent({
   const isUnassigned = column.userId === null;
 
   return (
-    <div
+    <div data-help-zone="members:colonne"
       className={`flex-1 min-w-[200px] bg-muted/50 rounded-lg border-t-4 flex flex-col transition-colors ${
         isUnassigned ? 'border-gray-300' : 'border-blue-400'
       } ${isOver ? 'bg-primary/5' : ''}`}

@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Les colonnes sont les statuts de l\'espace (référentiels)',
     'Cliquez sur une carte pour ouvrir sa fiche',
   ],
+  zones: {
+    colonne: { title: 'Colonne', text: 'Un statut. Glissez une carte d\'une colonne à l\'autre pour changer son statut.' },
+    carte: { title: 'Carte', text: 'Un élément ; cliquez pour ouvrir sa fiche, glissez pour changer son statut.' },
+  },
   tour: [
     {
       popover: {

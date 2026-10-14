@@ -13,6 +13,10 @@ export const help: HelpEntry = {
     'Chaque liste fonctionne comme la vue Liste (clic, menu ⋮, tri)',
     'La date de visite est mise à jour à chaque ouverture : la vue repart de maintenant',
   ],
+  zones: {
+    nouveaux: { title: 'Nouveautés', text: 'Les éléments créés depuis votre dernière visite.' },
+    modifies: { title: 'Modifiés', text: 'Les éléments changés depuis votre dernière visite.' },
+  },
   tour: [
     {
       popover: {

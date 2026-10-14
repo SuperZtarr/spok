@@ -854,7 +854,7 @@ export function PertView({
       </div>
 
       {/* Right panel — PERT SVG */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden" data-help-zone="pert:diagramme">
         <div
           ref={svgScrollRef}
           className="w-full h-full overflow-auto"
@@ -925,6 +925,7 @@ export function PertView({
                 <g
                   key={item.id}
                   data-tour="pert-node"
+                  data-help-zone="pert:noeud"
                   transform={`translate(${x}, ${y})`}
                   style={{ cursor: relationDrag ? 'crosshair' : 'pointer', opacity: nodeIsDimmed ? 0.3 : 1 }}
                   onClick={() => { if (!relationDrag) onEdit(item.id); }}

@@ -10,6 +10,10 @@
  * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
  * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
  * la barre d'outils ne connaît pas la logique des séances live.
+ * Aide : chaque commande est enveloppée d'un HelpHint (textes dans help/spaceToolbar.hints.ts) — jamais de `title`
+ * natif (contrôlé par help/coverage.test.ts) ; repères data-tour toolbar-* pour les étapes communes des tours.
+ * Zones data-devzone toolbar-vues/ordre/filtre/apercu/actions : vocabulaire de DevZoneInspector ET zones du mode Aide
+ * (textes : help/shellZones.ts).
  */
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -302,7 +306,7 @@ export function SpaceToolbar({
 
         if (sections.length === 0 && secondaryGroups.length === 0) return null;
         return (
-          <div className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
+          <div data-devzone="toolbar-vues" className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
             {sections.map((section, idx) => (
               <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
                 <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
@@ -431,7 +435,7 @@ export function SpaceToolbar({
           {/* === ORDRE === */}
           {(['list', 'tree', 'thread', 'kanban', 'timeline', 'pert'] as const).includes(viewMode as any) && (
             <>
-              <div className="flex items-center gap-0.5 flex-shrink-0" data-tour="toolbar-order">
+              <div className="flex items-center gap-0.5 flex-shrink-0" data-tour="toolbar-order" data-devzone="toolbar-ordre">
                 {([
                   { value: 'manual', label: 'Position', hint: H.orderManual },
                   { value: 'alpha-flat', label: 'A→Z à plat', hint: H.orderAlphaFlat },
@@ -457,7 +461,7 @@ export function SpaceToolbar({
             {(() => {
               const hasActive = !!(activeTypeFilter || activeStatusFilter || searchQuery);
               return (
-                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-filter">
+                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-filter" data-devzone="toolbar-filtre">
                   <HelpHint text={H.filter}>
                   <button
                     onClick={() => { setFiltreOpen(v => !v); setAperçuOpen(false); }}
@@ -474,7 +478,7 @@ export function SpaceToolbar({
                   {filtreOpen && (
                     <div className="flex items-center gap-1">
                       {/* Types */}
-                      <div ref={typeDropdownRef} className="relative flex-shrink-0" data-tour="toolbar-filters">
+                      <div ref={typeDropdownRef} className="relative flex-shrink-0">
                         <HelpHint text={H.filterType}>
                         <button
                           onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
@@ -543,14 +547,16 @@ export function SpaceToolbar({
                         })()}
                       </div>
                       {/* Recherche */}
-                      <div className="relative flex-shrink-0" data-tour="toolbar-search">
+                      <div className="relative flex-shrink-0">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
                         <input type="text" placeholder="Rechercher..." value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)}
                           className="h-7 w-28 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
                         {searchQuery && (
-                          <button onClick={() => onSearchQueryChange('')} aria-label={H.clearSearch} title={H.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                            <X className="w-3 h-3" />
-                          </button>
+                          <HelpHint text={H.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex">
+                            <button type="button" onClick={() => onSearchQueryChange('')} aria-label={H.clearSearch} className="text-muted-foreground hover:text-foreground">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </HelpHint>
                         )}
                       </div>
                     </div>
@@ -565,7 +571,7 @@ export function SpaceToolbar({
             {(() => {
               const hasActive = !!(activeHlTypeFilter || activeHlStatusFilter || highlightSearch);
               return (
-                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-highlight">
+                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-highlight" data-devzone="toolbar-apercu">
                   <HelpHint text={H.highlight}>
                   <button
                     onClick={() => { setAperçuOpen(v => !v); setFiltreOpen(false); }}
@@ -650,9 +656,11 @@ export function SpaceToolbar({
                         <input type="text" placeholder="Rechercher..." value={highlightSearch} onChange={(e) => onHighlightSearchChange(e.target.value)}
                           className="h-7 w-28 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
                         {highlightSearch && (
-                          <button onClick={() => onHighlightSearchChange('')} aria-label={H.clearSearch} title={H.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                            <X className="w-3 h-3" />
-                          </button>
+                          <HelpHint text={H.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex">
+                            <button type="button" onClick={() => onHighlightSearchChange('')} aria-label={H.clearSearch} className="text-muted-foreground hover:text-foreground">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </HelpHint>
                         )}
                       </div>
                     </div>
@@ -664,7 +672,7 @@ export function SpaceToolbar({
           </>}
         </div>{/* end mobile filters wrapper */}
 
-        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+        <div className="ml-auto flex items-center gap-1 flex-shrink-0" data-devzone="toolbar-actions">
           {liveSessionsSlot}
           {/* Item count */}
           {showFiltersForView && (
@@ -681,20 +689,22 @@ export function SpaceToolbar({
             </HelpHint>
           )}
           {/* Mobile filter toggle */}
+          <HelpHint text={H.mobileFilters} className="sm:hidden inline-flex">
           <button
-            className={`sm:hidden relative inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors flex-shrink-0 ${
+            type="button"
+            className={`relative inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors flex-shrink-0 ${
               showMobileFilters ? 'border-primary bg-primary/10 text-primary' : 'border-input bg-background text-muted-foreground hover:bg-accent'
             }`}
             onClick={() => setShowMobileFilters(v => !v)}
-            title={H.mobileFilters}
             aria-label={H.mobileFilters}
           >
             <SlidersHorizontal className="w-4 h-4" />
             {(activeTypeFilter || activeStatusFilter) && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />}
           </button>
+          </HelpHint>
           {canEdit && onInsertTemplate && (
             <HelpHint text={H.insertTemplate}>
-              <Button variant="ghost" size="sm" aria-label="Insérer un modèle" onClick={onInsertTemplate}>
+              <Button variant="ghost" size="sm" aria-label="Insérer un modèle" data-tour="toolbar-template" onClick={onInsertTemplate}>
                 <LayoutTemplate className="w-4 h-4" />
               </Button>
             </HelpHint>
@@ -711,7 +721,7 @@ export function SpaceToolbar({
           )}
           {spaceRole === 'OWNER' && (
             <HelpHint text={H.settings}>
-              <Link to={`/spaces/${spaceId}/settings`} aria-label="Paramètres de l'espace" className="inline-flex">
+              <Link to={`/spaces/${spaceId}/settings`} aria-label="Paramètres de l'espace" data-tour="toolbar-settings" className="inline-flex">
                 <Button variant="ghost" size="sm" tabIndex={-1}>
                   <Settings className="w-4 h-4" />
                 </Button>

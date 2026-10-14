@@ -205,7 +205,7 @@ export function CalendarView({
           <SpaceExportButton items={items} spaceName={spaceName} viewMode="calendar" viewContainerRef={viewContainerRef} />
         )}
       </div>
-    <div data-tour="calendar-toolbar" className="flex-1 min-h-0 flex flex-col fc-spok-wrapper">
+    <div data-tour="calendar-toolbar" data-help-zone="calendar:calendrier" className="flex-1 min-h-0 flex flex-col fc-spok-wrapper">
       <style>{`
         .fc-spok-wrapper {
           --fc-border-color: hsl(var(--border));

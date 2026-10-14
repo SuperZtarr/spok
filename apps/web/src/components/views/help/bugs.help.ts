@@ -12,6 +12,9 @@ export const help: HelpEntry = {
     'Affiche uniquement les éléments de type Bug',
     'Mêmes gestes que la vue Liste : tri, clic, menu ⋮, glisser-déposer',
   ],
+  zones: {
+    contenu: { title: 'Bugs', text: 'Les anomalies signalées dans l\'espace, présentées en liste.' },
+  },
   tour: [
     {
       popover: {

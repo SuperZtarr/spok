@@ -196,11 +196,11 @@ export function RelationsMapView({
   const hasHighlight = !!(searchMatchIds?.size || highlightType || highlightStatus);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[400px]" onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}>
+    <div ref={containerRef} className="relative w-full h-full min-h-[400px]" data-help-zone="relations:diagramme" onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}>
       {/* Controls */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
         {/* Relation type toggles */}
-        <div data-tour="relations-filters" className="bg-card/90 backdrop-blur border rounded-lg p-2 flex flex-col gap-1.5">
+        <div data-tour="relations-filters" data-help-zone="relations:filtres" className="bg-card/90 backdrop-blur border rounded-lg p-2 flex flex-col gap-1.5">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Relations</span>
           {RELATION_TYPE_LIST.map(({ id: type, label, hex }) => (
             <label key={type} className="flex items-center gap-2 text-xs cursor-pointer">

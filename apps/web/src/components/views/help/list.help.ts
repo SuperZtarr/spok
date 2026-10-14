@@ -14,6 +14,10 @@ export const help: HelpEntry = {
     'Glissez-déposez une ligne pour la réordonner ou la ranger sous un autre élément',
     'Le menu ⋮ d\'une ligne regroupe toutes les actions',
   ],
+  zones: {
+    entetes: { title: 'Colonnes', text: 'Titre, parent, type, statut, priorité : les informations clés de chaque élément.' },
+    ligne: { title: 'Un élément', text: 'Cliquez pour ouvrir sa fiche ; glissez-le pour le déplacer ; le menu ⋮ regroupe ses actions.' },
+  },
   tour: [
     {
       popover: {
