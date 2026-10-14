@@ -299,6 +299,7 @@ export function TreemapView({
               <g
                 key={node.data.id}
                 opacity={opacity}
+                data-tour="treemap-node"
                 onClick={(e) => handleNodeClick(e, node)}
                 onDoubleClick={(e) => handleDoubleClick(e, node)}
                 onMouseEnter={(e) => handleMouseEnter(e, node, depth)}

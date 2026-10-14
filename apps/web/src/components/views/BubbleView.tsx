@@ -317,6 +317,7 @@ export function BubbleView({
             return (
               <g
                 key={d.id}
+                data-tour="bubble-node"
                 onClick={(e) => handleNodeClick(e, node)}
                 onDoubleClick={(e) => handleDoubleClick(e, node)}
                 onMouseEnter={(e) => handleNodeEnter(e, node)}

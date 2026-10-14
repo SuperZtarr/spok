@@ -330,6 +330,7 @@ export function RadialTreeView({
               <g
                 key={d.id}
                 transform={`translate(${x},${y})`}
+                data-tour="radial-node"
                 onClick={(e) => handleNodeClick(e, node)}
                 onMouseEnter={(e) => handleNodeEnter(e, node)}
                 onMouseMove={(e) => handleNodeMove(e, node)}

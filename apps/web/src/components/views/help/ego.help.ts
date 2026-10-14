@@ -1,31 +1,40 @@
-/* Aide utilisateur de la vue « Réseau égocentrique » (ego) : à quoi elle sert, comment s'en servir, tour guidé.
+/* Aide utilisateur de la vue « Réseau d'un élément » (ego) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
    Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
 import type { HelpEntry } from '../../../help/types';
+import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 export const help: HelpEntry = {
-  title: 'Réseau égocentrique',
-  summary: 'Graphe centré sur un item montrant ses voisins directs et indirects par anneaux concentriques.',
+  title: 'Réseau d\'un élément',
+  summary: 'Le réseau autour d\'un élément choisi : ses voisins directs, puis indirects, en anneaux.',
   tips: [
-    'Sélectionnez l\'item central dans le menu déroulant ou cliquez sur un nœud',
-    'Ajustez la profondeur (1 à 3 niveaux) avec le slider',
-    'Cliquez sur un nœud pour recentrer le réseau sur cet item',
-    'Double-cliquez pour éditer l\'item',
-    'Les relations et la hiérarchie parent-enfant sont toutes deux affichées',
+    'Choisissez l\'élément central dans la liste, ou cliquez sur un nœud pour le recentrer',
+    'Réglez la profondeur de 1 à 3 niveaux',
+    'Double-cliquez sur un nœud pour ouvrir sa fiche',
+    'Relations et hiérarchie sont toutes deux affichées',
   ],
   tour: [
     {
       popover: {
-        title: 'Réseau égocentrique',
-        description: 'Explorez le réseau autour d\'un item. Voyez ses connexions directes et indirectes.',
+        title: 'Vue Réseau d\'un élément',
+        description: 'Tout ce qui gravite autour d\'un élément : ce qu\'il bloque, ce qui le permet, ses parents, ses enfants…',
       },
     },
     {
       element: '[data-tour="ego-controls"]',
       popover: {
-        title: 'Contrôles',
-        description: 'Choisissez l\'item central dans la liste. Ajustez la profondeur (1 à 3 niveaux) pour voir plus ou moins de connexions.',
+        title: 'Élément central et profondeur',
+        description: 'Choisissez l\'élément au centre (avec recherche) ; la profondeur va de 1 (voisins directs) à 3 niveaux.',
         side: 'bottom',
       },
     },
+    {
+      element: '[data-tour="ego-node"]',
+      popover: {
+        title: 'Un nœud',
+        description: 'Un clic recentre le réseau sur lui ; un double-clic ouvre sa fiche.',
+        side: 'right',
+      },
+    },
+    ...SPACE_TOOLBAR_STEPS,
   ],
 };

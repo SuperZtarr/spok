@@ -203,6 +203,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
                       return (
                         <button
                           key={view.key}
+                          data-tour="overview-view-card"
                           onClick={() => setMode(view.viewMode as ViewMode)}
                           className={`flex items-start gap-3 p-3 rounded-lg border transition-colors text-left ${
                             highlighted

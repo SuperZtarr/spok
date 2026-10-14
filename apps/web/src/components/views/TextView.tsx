@@ -391,6 +391,7 @@ function TextItem({
       {/* Item header */}
       <div
         className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-accent/50 rounded-md px-3 -mx-3 transition-colors ${isHighlighted && highlightColor ? `${highlightColor.bg} border-l-2 ${highlightColor.border}` : ''} ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
+        data-tour="text-item"
         onClick={() => onEdit(item.id)}
       >
         <span className={`flex-shrink-0 ${typeColor.color.replace('border-', 'text-').replace('400', '500')}`}>

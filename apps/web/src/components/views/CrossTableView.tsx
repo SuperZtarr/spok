@@ -277,6 +277,7 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
                         } ${isExpanded ? 'bg-primary/5 ring-1 ring-primary ring-inset' : ''} ${
                           hasSearchMatch ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''
                         } ${hasHighlighted ? 'bg-primary/5' : ''}`}
+                        data-tour="crosstable-cell"
                         onClick={() => count > 0 && setExpandedCell(isExpanded ? null : key)}
                         title={count > 0 ? cellItems.map(i => i.title).join('\n') : undefined}
                       >

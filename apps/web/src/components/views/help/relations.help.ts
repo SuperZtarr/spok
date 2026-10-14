@@ -1,29 +1,40 @@
-/* Aide utilisateur de la vue « Relations » (relations) : à quoi elle sert, comment s'en servir, tour guidé.
+/* Aide utilisateur de la vue « Relations » (relations) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
    Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
 import type { HelpEntry } from '../../../help/types';
+import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 export const help: HelpEntry = {
   title: 'Relations',
-  summary: 'Vue focalisée sur les liens entre éléments, montrant le réseau de relations.',
+  summary: 'La carte des liens entre éléments (Bloque, Permet, Entraîne, Lié à), indépendamment de la hiérarchie.',
   tips: [
-    'Les lignes représentent les relations entre éléments',
-    'Zoomez et déplacez la vue pour explorer',
-    'Cliquez sur un nœud pour l\'éditer',
+    'Activez ou désactivez chaque type de relation',
+    'Affichez ou non les éléments sans relation',
+    'Molette pour zoomer, glisser pour se déplacer',
+    'Cliquez sur un nœud pour ouvrir sa fiche',
   ],
   tour: [
     {
       popover: {
         title: 'Vue Relations',
-        description: 'Cartographie des liens entre items (bloque, dépend, lié) indépendamment de la hiérarchie parent-enfant.',
+        description: 'Les dépendances et liens entre éléments, sans la hiérarchie : pour voir ce qui bloque quoi.',
       },
     },
     {
       element: '[data-tour="relations-filters"]',
       popover: {
-        title: 'Filtres de relations',
-        description: 'Activez/désactivez chaque type de relation. Affichez les items isolés (sans relation) si besoin.',
+        title: 'Types de relations',
+        description: 'Affichez chaque type de lien ou non, et les éléments isolés (sans relation) si besoin.',
+        side: 'right',
+      },
+    },
+    {
+      element: '[title="Recentrer"]',
+      popover: {
+        title: 'Recentrer',
+        description: 'Refait tenir toute la carte à l\'écran.',
         side: 'bottom',
       },
     },
+    ...SPACE_TOOLBAR_STEPS,
   ],
 };

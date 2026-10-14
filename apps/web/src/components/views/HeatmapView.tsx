@@ -255,6 +255,7 @@ export function HeatmapView({ items, onEdit, highlightType, highlightStatus, sea
                   }
                 }}
                 onMouseLeave={() => setTooltip(null)}
+                data-tour="heatmap-cell"
                 onClick={() => {
                   if (cell.items.length === 1) {
                     onEdit(cell.items[0].id);

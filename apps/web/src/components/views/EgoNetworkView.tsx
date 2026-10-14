@@ -401,6 +401,7 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
                 <g
                   key={node.id}
                   className="cursor-pointer"
+                  data-tour="ego-node"
                   onClick={() => handleNodeClick(node.id)}
                   onDoubleClick={() => handleNodeDblClick(node.id)}
                   onMouseEnter={(e) => {

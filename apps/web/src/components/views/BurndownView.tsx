@@ -287,7 +287,7 @@ export function BurndownView({
         className="flex-1 min-h-0 relative overflow-hidden"
         style={{ userSelect: 'none' }}
       >
-        <svg width={dimensions.width} height={dimensions.height}>
+        <svg data-tour="burndown-chart" width={dimensions.width} height={dimensions.height}>
           <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
             {/* Grid lines */}
             {yTicks.map((tick) => (

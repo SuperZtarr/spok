@@ -1,21 +1,31 @@
-/* Aide utilisateur de la vue « Arbre radial » (radialTree) : à quoi elle sert, comment s'en servir, tour guidé.
+/* Aide utilisateur de la vue « Arbre radial » (radialTree) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
    Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
 import type { HelpEntry } from '../../../help/types';
+import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 export const help: HelpEntry = {
   title: 'Arbre radial',
-  summary: 'Arbre hiérarchique disposé en cercle, compact et lisible pour les grandes structures.',
+  summary: 'L\'arborescence disposée en cercle : la racine au centre, les branches rayonnent vers l\'extérieur.',
   tips: [
     'La racine est au centre, les feuilles sur les bords',
-    'Zoomez pour explorer les branches',
-    'Cliquez sur un nœud pour l\'éditer',
+    'Survolez un nœud pour voir ses détails',
+    'Cliquez sur un nœud pour ouvrir sa fiche',
   ],
   tour: [
     {
       popover: {
-        title: 'Arbre radial',
-        description: 'Arborescence en cercle : la racine au centre, les branches rayonnent vers l\'extérieur. Survolez pour voir les détails.',
+        title: 'Vue Arbre radial',
+        description: 'Une arborescence compacte, lisible même pour les grandes structures.',
       },
     },
+    {
+      element: '[data-tour="radial-node"]',
+      popover: {
+        title: 'Un nœud',
+        description: 'Survolez-le pour ses détails, cliquez pour ouvrir sa fiche.',
+        side: 'right',
+      },
+    },
+    ...SPACE_TOOLBAR_STEPS,
   ],
 };

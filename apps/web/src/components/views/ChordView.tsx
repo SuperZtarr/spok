@@ -365,7 +365,7 @@ export function ChordView({ items }: ChordViewProps) {
         className="flex-1 min-h-0 relative overflow-hidden"
         style={{ userSelect: 'none' }}
       >
-        <svg width={dimensions.width} height={dimensions.height}>
+        <svg data-tour="chord-chart" width={dimensions.width} height={dimensions.height}>
           <g transform={`translate(${cx},${cy})`}>
             {/* Ribbons */}
             {chordLayout.map((d, i) => {

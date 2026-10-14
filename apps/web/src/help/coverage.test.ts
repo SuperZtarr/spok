@@ -15,6 +15,9 @@ const FULL_TOUR_VIEWS = [
   'list', 'thread', 'mindmap', 'images', 'documents', 'links', 'recent',
   // Lot 2 — vues de pilotage
   'kanban', 'tree', 'timeline', 'planning', 'calendar', 'pert', 'todo', 'bugs', 'types', 'priority', 'members',
+  // Lot 3 — vues d'exploration
+  'graph', 'sunburst', 'radialTree', 'bubble', 'treemap', 'chord', 'heatmap', 'ego', 'relations', 'crossTable',
+  'burndown', 'cfd', 'text', 'overview',
 ]
 
 describe('aide utilisateur — couverture des vues', () => {
@@ -25,6 +28,10 @@ describe('aide utilisateur — couverture des vues', () => {
     expect(help!.summary.trim()).not.toBe('')
     expect(help!.tips.length).toBeGreaterThan(0)
     expect(help!.tour.length).toBeGreaterThan(0)
+  })
+
+  it('toutes les vues sont passées au tour complet (une nouvelle vue doit être ajoutée à FULL_TOUR_VIEWS)', () => {
+    expect(allModes.filter((m) => !FULL_TOUR_VIEWS.includes(m))).toEqual([])
   })
 
   it.each(FULL_TOUR_VIEWS)('vue %s : tour complet (≥ 5 étapes, ≥ 3 pointées)', (mode) => {

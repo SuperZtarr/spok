@@ -1,30 +1,40 @@
-/* Aide utilisateur de la vue « Heatmap » (heatmap) : à quoi elle sert, comment s'en servir, tour guidé.
+/* Aide utilisateur de la vue « Activité (heatmap) » (heatmap) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
    Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
 import type { HelpEntry } from '../../../help/types';
+import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 export const help: HelpEntry = {
-  title: 'Heatmap',
-  summary: 'Carte de chaleur type GitHub montrant l\'activité quotidienne sur 6 mois ou 1 an.',
+  title: 'Activité (heatmap)',
+  summary: 'L\'activité jour par jour, façon GitHub : plus une case est foncée, plus il s\'est passé de choses ce jour-là.',
   tips: [
-    'Chaque case représente un jour, la couleur indique l\'intensité',
-    'Basculez entre créations et modifications',
-    'Survolez une case pour voir les détails du jour',
-    'Cliquez sur une case avec un seul élément pour l\'éditer',
+    'Chaque case est un jour, la couleur indique l\'intensité',
+    'Choisissez 6 mois ou 1 an, créations ou modifications',
+    'Survolez une case pour le détail du jour',
+    'Cliquez sur une case qui ne contient qu\'un élément pour ouvrir sa fiche',
   ],
   tour: [
     {
       popover: {
-        title: 'Heatmap temporelle',
-        description: 'Grille d\'activité : chaque case = un jour. Plus c\'est foncé, plus il y a eu de créations ou modifications.',
+        title: 'Vue Activité',
+        description: 'Le rythme de l\'espace : les jours de forte activité ressortent en foncé.',
       },
     },
     {
       element: '[data-tour="heatmap-controls"]',
       popover: {
-        title: 'Période & mode',
-        description: '6 mois ou 1 an. Créations ou modifications. Survolez une case pour voir le détail du jour.',
+        title: 'Période et mesure',
+        description: '6 mois ou 1 an ; compter les créations ou les modifications.',
         side: 'bottom',
       },
     },
+    {
+      element: '[data-tour="heatmap-cell"]',
+      popover: {
+        title: 'Un jour',
+        description: 'Survolez pour voir ce qui s\'est passé ce jour-là ; si un seul élément est concerné, un clic ouvre sa fiche.',
+        side: 'top',
+      },
+    },
+    ...SPACE_TOOLBAR_STEPS,
   ],
 };

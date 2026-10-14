@@ -1,29 +1,39 @@
-/* Aide utilisateur de la vue « Treemap » (treemap) : à quoi elle sert, comment s'en servir, tour guidé.
+/* Aide utilisateur de la vue « Treemap » (treemap) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
    Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
 import type { HelpEntry } from '../../../help/types';
+import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 export const help: HelpEntry = {
   title: 'Treemap',
-  summary: 'Diagramme en rectangles imbriqués montrant la hiérarchie et les proportions relatives.',
+  summary: 'La hiérarchie en rectangles imbriqués : la surface d\'un rectangle suit le critère choisi.',
   tips: [
-    'La surface de chaque rectangle reflète le poids relatif',
-    'Les couleurs distinguent les types ou niveaux',
-    'Cliquez sur un rectangle pour l\'éditer',
+    'Cliquez sur un rectangle qui contient d\'autres rectangles pour zoomer dessus',
+    'Double-cliquez sur un rectangle pour ouvrir sa fiche',
+    'Choisissez la taille : par contributions, par enfants ou égale',
   ],
   tour: [
     {
       popover: {
         title: 'Vue Treemap',
-        description: 'Rectangles imbriqués : plus un item a d\'enfants ou de contributions, plus il est grand.',
+        description: 'Les éléments en rectangles : un parent contient ses enfants, la surface montre leur poids.',
+      },
+    },
+    {
+      element: '[data-tour="treemap-node"]',
+      popover: {
+        title: 'Un rectangle',
+        description: 'Clic sur un rectangle qui en contient d\'autres : zoom dessus (« Zoom arrière » pour revenir). Double-clic : ouvre sa fiche.',
+        side: 'right',
       },
     },
     {
       element: '[data-tour="treemap-mode"]',
       popover: {
-        title: 'Mode de taille',
-        description: 'Choisissez comment dimensionner : par nombre d\'enfants, de contributions ou en taille égale.',
+        title: 'Taille',
+        description: 'Par contributions, par nombre d\'enfants ou égale.',
         side: 'bottom',
       },
     },
+    ...SPACE_TOOLBAR_STEPS,
   ],
 };

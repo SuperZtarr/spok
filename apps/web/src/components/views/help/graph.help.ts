@@ -1,31 +1,38 @@
-/* Aide utilisateur de la vue « Graphe » (graph) : à quoi elle sert, comment s'en servir, tour guidé.
+/* Aide utilisateur de la vue « Graphe » (graph) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
    Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
 import type { HelpEntry } from '../../../help/types';
+import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 export const help: HelpEntry = {
   title: 'Graphe',
-  summary: 'Réseau interactif montrant les éléments et toutes leurs relations (hiérarchie + liens).',
+  summary: 'Le réseau des éléments : chaque élément est un point, reliés par leur hiérarchie, leurs relations et leurs tags.',
   tips: [
-    'Zoomez avec la molette de la souris',
-    'Glissez le fond pour déplacer la vue',
-    'Glissez un nœud pour le repositionner',
-    'Cliquez sur un nœud pour l\'éditer',
-    'Les couleurs représentent les types d\'éléments',
+    'Molette pour zoomer, glisser le fond pour se déplacer',
+    'Glissez un nœud pour l\'écarter des autres',
+    'Cliquez sur un nœud pour ouvrir sa fiche',
+    'Choisissez le périmètre et les types de liens dans le panneau',
   ],
   tour: [
     {
       popover: {
         title: 'Vue Graphe',
-        description: 'Réseau interactif de vos items. Les liens montrent la hiérarchie et les relations. Cliquez un nœud pour naviguer.',
+        description: 'Vos éléments en réseau : les liens montrent qui dépend de qui, qui contient quoi, qui partage un tag.',
       },
     },
     {
       element: '[data-tour="graph-scope"]',
       popover: {
-        title: 'Portée & filtres',
-        description: 'Choisissez : espace seul, communauté entière ou global. Activez/désactivez hiérarchie, relations et tags.',
-        side: 'bottom',
+        title: 'Périmètre et liens',
+        description: 'Espace seul, communauté ou tout ce que vous voyez ; affichez ou masquez la hiérarchie, les relations, les tags. En global, choisissez aussi les communautés.',
+        side: 'right',
       },
     },
+    {
+      popover: {
+        title: 'Naviguer',
+        description: 'Molette pour zoomer, glisser le fond pour se déplacer, glisser un nœud pour l\'écarter. Survolez un nœud pour son nom, cliquez pour ouvrir sa fiche.',
+      },
+    },
+    ...SPACE_TOOLBAR_STEPS,
   ],
 };

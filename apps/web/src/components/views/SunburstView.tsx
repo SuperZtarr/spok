@@ -379,6 +379,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
                   strokeDasharray={isPortal && !isSearchMatch ? '4 2' : undefined}
                   onMouseEnter={() => setHoveredNode(d)}
                   onMouseLeave={() => setHoveredNode(null)}
+                  data-tour="sunburst-segment"
                   onClick={() => handleClick(d)}
                   style={{ transition: 'fill-opacity 0.2s' }}
                 />
