@@ -36,7 +36,12 @@ Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que
 - **Modifier un comportement d'interface = mettre à jour sa fiche** : bouton ajouté/retiré/renommé → conseil, étape de tour et repère `data-tour` ; nouveau champ → `fields` ; nouvelle vue/page → fiche + registre.
 - Une étape dont la cible est absente est sautée (`runTour`) : acceptable pour une section conditionnelle (favoris, enfants…), pas pour une commande toujours présente — vérifier les repères à l'écran.
 - La dernière étape « Besoin d'aide ? » est ajoutée automatiquement sur le `?` qui a lancé le tour (`TOUR_ANCHOR_ATTR`) : ne pas l'écrire dans les fiches.
-- Contrôle : `apps/web/src/help/coverage.test.ts` (fiche de chaque vue/page, tours complets, repères existants, `EmptyHelp`/`FieldHelp` branchés).
+- **Mode Aide** (Maj+? ou bouton « Mode Aide » du `?`, lecture seule, survol = zone encadrée + explication) : les zones sont marquées SANS wrapper —
+  - cadre et barre d'espace : `data-devzone="<nom>"` (vocabulaire de `DevZoneInspector`), texte dans `help/shellZones.ts` ;
+  - vues (puis pages/modales) : `data-help-zone="<fiche>:<zone>"` sur un élément existant, texte dans le champ `zones` de la fiche (`{ title, text }`, titre ≤ 4 mots, 1 à 3 phrases, sans lister les boutons).
+  - Composants : `help/HelpModeOverlay.tsx` (monté dans Layout), `help/helpZones.ts` (résolution), `stores/helpMode.ts`.
+  - Une zone renommée/ajoutée/supprimée = son texte dans le même changement.
+- Contrôle : `apps/web/src/help/coverage.test.ts` (fiche de chaque vue/page, tours complets, repères existants, `EmptyHelp`/`FieldHelp` branchés, pas de `title` natif dans les en-têtes, zones du cadre ⇔ textes, ≥ 2 zones par vue et aucun texte de zone orphelin).
 
 ---
 

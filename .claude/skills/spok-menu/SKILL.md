@@ -117,7 +117,9 @@ export const help: HelpEntry = {
 Modèle de tour : intro → chaque commande propre à la vue (repère `data-tour` posé sur le bouton) → un élément du
 contenu → ses gestes → barre commune (étapes partagées). `help/coverage.test.ts` échoue si la fiche manque ;
 ajouter la vue à `FULL_TOUR_VIEWS` (≥ 5 étapes dont 3 pointées). Le bouton « ? » : `ViewHelpButton`, à droite du
-`#view-header` (avant Export). Champ `empty` obligatoire (état vide affiché par `EmptyHelp`).
+`#view-header` (avant Export). Champ `empty` obligatoire (état vide affiché par `EmptyHelp`). Mode Aide : poser au
+moins 2 zones `data-help-zone="<vue>:<zone>"` sur des éléments existants de la vue (conteneur, colonne, carte, panneau…)
+et leurs textes dans le champ `zones` de la fiche — contrôlé par coverage.test (aucun texte orphelin).
 
 **Page ou modale** (même principe, couche 3 du skill `spok-doc`) : fiche `pages/help/<page>.help.ts` ou
 `components/help/<modale>.help.ts`, clé ajoutée à `PAGE_HELP` (`help/pageHelp.ts`), puis une ligne dans l'en-tête,
