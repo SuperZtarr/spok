@@ -6,6 +6,10 @@
 
 ## EN COURS
 
+### Fuite « Activité récente » (accueil + /activity) — 2026-10-14
+- GET /activity prenait tous les espaces des communautés suivies (titres d'items d'espaces privés non membre). Filtré par filterReadableSpaceIds (espaces suivis + espaces des items marqués non lus), mode admin via header x-admin-mode (la route a son propre hook jwtVerify). +3 tests, activity 8/8, typecheck api OK. MEP 69215af
+- Audit des lectures non contrôlées : readableSpaceIdsForUser (items.ts) branché sur /user/tasks, /user/agenda, /user/review-queue (mêmes « tous les espaces de mes communautés ») ; IDOR fusion/absorption (item-merge.ts) et réactions (item-reactions.ts) : l'item/la contribution doit appartenir à l'espace de l'URL. Tests : item-cross-space.test.ts (6), review-queue +1, user-tasks réaligné. Reste : recherche anonyme (sous-espace hérité d'un parent privé), dans le chantier Recherche. TNR 1025/1025, typecheck OK. MEP e2be134
+
 ### Suppression d'espace avec enfants en échec (Sentry P2003) — 2026-10-13
 - Logs Railway : DELETE /spaces/:id?deleteChildren=true → 400 (audit écrit après space.delete d'un sous-espace → FK audit_logs_spaceId_fkey). Pas de transaction : chaque essai supprimait items + 1 sous-espace ; Thomas a fini sans enfants puis via admin (rien de perdu hors intention)
 - Audit avant delete : spaces.ts (sous-espaces), admin/spaces.ts, admin/communities.ts (sous-espaces + espace racine). Web : suppression avec try/catch + erreur affichée. Test d'ordre ajouté. TNR 1005/1005, typecheck OK. MEP ec35d0a. db:push local JDR fait. Transaction de la suppression : non faite (à proposer)
