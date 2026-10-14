@@ -4,6 +4,7 @@
  * rate-limit : 100 req/min/IP par défaut globalement, routes auth sensibles surchargées à 5/min (voir auth.ts).
  * /live-sessions : séances de présentation en direct ; le flux SSE /:id/stream est exempté du rate-limit.
  * /user/tokens : jetons personnels (MCP distant) ; /mcp : serveur MCP Streamable HTTP (cf. routes/mcp.ts).
+ * /local-uploads : fichiers du stockage local de dev (utils/r2.ts), enregistrée seulement sans R2 hors production.
  * rate-limit : les sous-requêtes internes du MCP distant (x-spok-internal) en sont exemptées ; /mcp a sa propre
  * limite (120/min/jeton). requestContextPlugin : contexte d'audit (origine MCP) des sous-requêtes internes.
  * multipart : plafond = DOCUMENT_MAX_SIZE (@spok/shared, règles d'envoi partagées web/API).
@@ -54,6 +55,8 @@ import { adminPerfRoutes } from './routes/admin/perf.js';
 import { adminDuplicatesRoutes } from './routes/admin/duplicates.js';
 import { contactRoutes } from './routes/contact.js';
 import { searchRoutes } from './routes/search.js';
+import { localUploadsRoutes } from './routes/local-uploads.js';
+import { isLocalStorageMode } from './utils/r2.js';
 import { userRoutes } from './routes/user.js';
 import { userTasksRoutes } from './routes/user-tasks.js';
 import { calendarFeedsRoutes } from './routes/calendar-feeds.js';
@@ -326,6 +329,8 @@ async function buildApp() {
   await app.register(publicMenuRoutes, { prefix: '/menu' });
   await app.register(contactRoutes, { prefix: '/contact' });
   await app.register(searchRoutes, { prefix: '/search' });
+  // Stockage local de dev (pas de R2, hors production) : sert les fichiers envoyés — absent en prod
+  if (isLocalStorageMode()) await app.register(localUploadsRoutes, { prefix: '/local-uploads' });
   await app.register(userRoutes, { prefix: '/user' });
   await app.register(userTasksRoutes, { prefix: '/user' });
   await app.register(calendarFeedsRoutes, { prefix: '/user' });

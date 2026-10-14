@@ -67,3 +67,6 @@ apps/api/scripts/update-*.ts
 # Fichiers de contexte/config (contiennent des credentials)
 docs/spok-project-context.txt
 docs/CONFIG.md
+
+# Stockage local des fichiers en dev (utils/r2.ts, mode local sans R2)
+apps/api/.local-uploads/
