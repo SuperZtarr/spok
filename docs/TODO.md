@@ -60,7 +60,11 @@
 - [x] BUG clic résultat recherche (SearchPage) : le lien ouvrait l'espace mais pas la modale item — passait `openItemId` en `state` du router, jamais lu (SpacePage ne lit que le param d'URL `?item=`) — corrigé (+ même bug sur clic nœud graphe dans DashboardPage/GraphPage) en alignant sur le pattern `?item=id` déjà utilisé par GlobalSearch — 2026-08-11
 
 ### Didacticiels / aide contextuelle
-- [ ] Revoir tous les tours de vues : contenu manquant ou absent (thread, text, et potentiellement d'autres) — pour chaque vue, soit compléter les étapes dans viewTours.ts, soit supprimer le bouton aide
+- [x] Revoir tous les tours de vues — remplacé par l'aide utilisateur intégrée, phase 1 : fiche + tour pour les 31 vues, contrôle de couverture ; tours complets lots 1 (vues JDR) et 2 (pilotage) — 2026-10-14 (b5eb8d0)
+- [ ] Aide utilisateur intégrée — lot 3 des tours complets : vues d'exploration (Graphe, Sunburst, Arbre radial, Bulles, Treemap, Cordes, Heatmap, Ego, Relations, Tableau croisé, Burndown, Flux cumulés, Texte, Présentation)
+- [ ] Aide utilisateur intégrée — phase 2 : pages (accueil, tableau de bord, recherche, activité, paramètres…) et modales (fiche d'item, séances) en fiches HelpEntry (help/pageTours.ts à résorber) ; regrouper les descriptions de vues dupliquées (OverviewView, LandingPage, SpaceOverviewPage) sur VIEW_HELP ; étendre le contrôle de couverture aux pages
+- [ ] Aide utilisateur intégrée — phase 3 : infobulles (HelpHint), aide sous les champs, états vides (EmptyHelp), composant par composant
+- [ ] Aide utilisateur intégrée — phase 4 : mode Aide (survol d'une zone = son explication)
 
 ### UX & formulaires
 - [x] Recherche : portée par défaut = espace (sous-espaces inclus) ou communauté d'où on la lance, élargissement explicite ; fix choix communauté écrasé ; utilisateurs filtrés par portée — 2026-10-11 (51bc4ee)

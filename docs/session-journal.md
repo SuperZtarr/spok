@@ -6,6 +6,13 @@
 
 ## EN COURS
 
+### Aide utilisateur intégrée — phase 1 — 2026-10-14
+- Décision Thomas : 3 couches de doc (spec SPOK / doc technique dans le code / aide utilisateur dans l'interface), textes d'aide DANS LE CODE (mémoire three-doc-layers). Spec SPOK « Aide utilisateur intégrée [help] » cmv7xld7h00055de22u5fihif (to_validate)
+- help/types.ts (HelpEntry, TourStep), help/HelpButton.tsx (point d'interrogation générique), components/views/help/<vue>.help.ts ×32 + index (VIEW_HELP, Record strict) générés depuis viewDescriptions + viewTours (supprimés) ; tours écrits pour overview, links, bugs, todo, documents, thread, images, recent, pert (+ textes corrigés) ; ViewHelpButton = relais ; useOnboarding/ViewModeSelector sur VIEW_HELP ; tours de pages déplacés tels quels dans help/pageTours.ts ; help/coverage.test.ts (31 vues). typecheck web OK. MEP b5eb8d0
+- Lot 1 tours complets (modèle : intro → commandes de la vue → élément → gestes → barre commune ; « ? » auto en fin) : list, thread, mindmap, images, documents, links, recent. help/commonTourSteps.ts (ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS) ; data-tour posés : new-item, item-menu, bulk-upload, collapse-toggle, toolbar-order/filter/highlight, thread-topic, images-zoom/tile, documents-row, links-tag, recent-new/modified, mindmap-reset/fit/relations/legend. coverage.test : FULL_TOUR_VIEWS (≥5 étapes, ≥3 pointées) + repères existants. Placement du « ? » déjà conforme partout (droite du #view-header). Skill spok-menu mis à jour (redémarrer Claude). coverage 39/39, typecheck web OK. UI NON vérifiée. MEP b5eb8d0
+- Lot 2 tours complets : kanban, tree, timeline, planning, calendar, pert, todo, bugs, types, priority, members (textes corrigés : Planning = par urgence, Gantt = zoom réel, gestes échéance/dépendance/chemin critique). data-tour ajoutés : timeline-compact/critical, pert-node/relation-filter/zoom/legend ; FullCalendar via .fc-header-toolbar/.fc-event. FULL_TOUR_VIEWS = lots 1+2. coverage 50/50, typecheck web OK. UI NON vérifiée. MEP b5eb8d0 (TNR 1087/1087). Reste : lot 3 (vues d'exploration)
+- Reporté : HelpHint/EmptyHelp créés au 1er usage (phase 3, pas de code mort) ; phase 2 = pages/modales + descriptions de vues dupliquées dans OverviewView, LandingPage, SpaceOverviewPage
+
 ### MindMap : sous-sous-espaces rattachés à la racine — 2026-10-14
 - buildPortalNodesAndEdges (mindmap-layout.ts) reliait tout nœud de sous-espace à __space__ → arête vers child-space-<parent> si le parent est affiché, parents traités avant enfants, placement dans le prolongement du parent (arc racine = 1er niveau seulement), position enregistrée prioritaire. mindmap-layout.portals.test.ts (3), mindmap 19/19, typecheck web OK. Validé par Thomas à l'écran. MEP 56ae2c0
 
