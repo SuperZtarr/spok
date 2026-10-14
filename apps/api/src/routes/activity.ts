@@ -3,8 +3,12 @@
  * respect des mutes (membership.muted) et du suivi de lecture (ItemView).
  * « Marquer comme non lu » (ItemView.markedUnread, POST /items/:id/unread) : l'item est inclus quels
  * que soient âge / auteur / mute / espace (perso → groupe PERSONAL_GROUP), effacé par POST …/view.
+ * Accès : seuls les espaces LISIBLES par l'utilisateur (filterReadableSpaceIds : membre direct, OWNER de la
+ * communauté ou visibilité effective non privée) — être membre de la communauté ne suffit pas (fuite corrigée
+ * 2026-10-14 : titres d'items d'espaces privés visibles sur l'accueil et /activity).
  */
 import { FastifyPluginAsync } from 'fastify';
+import { filterReadableSpaceIds } from './items.js';
 
 /** Pseudo-communauté regroupant les items d'espaces perso marqués non lus (pas de mute côté UI). */
 export const PERSONAL_GROUP_ID = '__personal__';
@@ -40,6 +44,23 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
 
     if (communityIds.length === 0 && markedIds.length === 0) return { groups: [], total: 0 };
 
+    // Espaces candidats (communautés suivies + espaces des items marqués), réduits aux espaces lisibles :
+    // un espace privé de la communauté dont on n'est pas membre n'apparaît jamais
+    const [communitySpaces, markedItems] = await Promise.all([
+      communityIds.length > 0
+        ? app.prisma.space.findMany({ where: { communityId: { in: communityIds } }, select: { id: true } })
+        : [],
+      markedIds.length > 0
+        ? app.prisma.item.findMany({ where: { id: { in: markedIds } }, select: { spaceId: true } })
+        : [],
+    ]);
+    const isAdminMode = request.headers['x-admin-mode'] === 'true';
+    const readable = new Set(await filterReadableSpaceIds(
+      app.prisma, userId, [...communitySpaces.map((s) => s.id), ...markedItems.map((i) => i.spaceId)], isAdminMode,
+    ));
+    const followedSpaceIds = communitySpaces.map((s) => s.id).filter((id) => readable.has(id));
+    const markedSpaceIds = [...readable];
+
     // Only look at items updated in the last 60 days
     const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
@@ -48,7 +69,7 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
       where: {
         OR: [
           {
-            space: { communityId: { in: communityIds } },
+            spaceId: { in: followedSpaceIds },
             updatedAt: { gte: since },
             // Created or last-updated by someone else
             OR: [
@@ -58,12 +79,7 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
           },
           {
             id: { in: markedIds },
-            space: {
-              OR: [
-                { community: { memberships: { some: { userId } } } },
-                { memberships: { some: { userId } } },
-              ],
-            },
+            spaceId: { in: markedSpaceIds },
           },
         ],
       },
