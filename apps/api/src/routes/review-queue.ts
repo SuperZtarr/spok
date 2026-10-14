@@ -3,7 +3,8 @@
  * (spec 2026-07-19-horizons-revue-design) — deux groupes distincts, jamais fusionnés :
  * - toTriage : sans échéance ni horizon assigné (bac à trier), les plus anciens en premier
  * - overdue : horizon manuel assigné mais grâce dépassée (isOverdueForReview) — jamais LATER
- * Périmètre : mêmes espaces accessibles que /user/agenda et /user/tasks.
+ * Périmètre : mêmes espaces LISIBLES que /user/agenda et /user/tasks (readableSpaceIdsForUser — jamais un
+ * espace privé de la communauté dont on n'est pas membre).
  */
 import { FastifyPluginAsync } from 'fastify'
 import { isOverdueForReview } from '@spok/shared'
@@ -15,7 +16,7 @@ export const reviewQueueRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate)
 
   fastify.get('/review-queue', async (request) => {
-    const spaceIds = await accessibleSpaceIds(fastify, request.user.userId)
+    const spaceIds = await accessibleSpaceIds(fastify, request.user.userId, request.isAdminMode)
     if (spaceIds.length === 0) {
       return { toTriage: [], overdue: [] }
     }

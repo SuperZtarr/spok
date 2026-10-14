@@ -3,6 +3,7 @@
  * contributions et relations, puis suppression de la source. L'assigné retenu conserve sa date et son
  * auteur d'assignation (assignedAt / assignedById) — pas de nouvel accusé de lecture.
  * Fusion et absorption refusées si un item concerné est une copie de séance verrouillée (itemLock).
+ * Tous les items lus doivent appartenir à l'espace de l'URL (celui dont l'accès est contrôlé) — 404 sinon.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -54,13 +55,14 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Fetch both items with relations
+    // Les deux items doivent appartenir à l'espace contrôlé (sinon fusion d'items d'un espace fermé)
     const [source, target] = await Promise.all([
-      fastify.prisma.item.findUnique({
-        where: { id: sourceId },
+      fastify.prisma.item.findFirst({
+        where: { id: sourceId, spaceId: request.params.spaceId },
         include: { tags: true, relationsFrom: true, relationsTo: true },
       }),
-      fastify.prisma.item.findUnique({
-        where: { id: targetItemId },
+      fastify.prisma.item.findFirst({
+        where: { id: targetItemId, spaceId: request.params.spaceId },
         include: { tags: true, relationsFrom: true, relationsTo: true },
       }),
     ]);
@@ -200,14 +202,14 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const parentId = request.params.id;
-    const parent = await fastify.prisma.item.findUnique({
-      where: { id: parentId },
+    const parent = await fastify.prisma.item.findFirst({
+      where: { id: parentId, spaceId: request.params.spaceId },
       include: { tags: true },
     });
     if (!parent) return reply.notFound('Item not found');
 
     const children = await fastify.prisma.item.findMany({
-      where: { parentId },
+      where: { parentId, spaceId: request.params.spaceId },
       orderBy: { position: 'asc' },
       include: { tags: true, relationsFrom: true, relationsTo: true },
     });

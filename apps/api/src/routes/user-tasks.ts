@@ -1,7 +1,8 @@
 /*
  * GET /user/tasks : items multi-espaces de l'utilisateur (dashboards, accueil, page Tâches) —
- * filtres multi-valeurs, tri, pagination. Périmètre borné aux espaces accessibles, y compris
- * pour les admins (pas de bypass — les pages admin ont leurs propres endpoints).
+ * filtres multi-valeurs, tri, pagination. Périmètre borné aux espaces LISIBLES (readableSpaceIdsForUser :
+ * un espace privé de la communauté dont on n'est pas membre est exclu), y compris pour les admins
+ * hors mode admin (les pages admin ont leurs propres endpoints).
  *
  * `type` : si absent (ou aucune valeur valide) → AUCUN filtre de type, tous les types remontent.
  * Les appelants qui veulent uniquement les tâches passent `type=TASK` explicitement
@@ -10,6 +11,7 @@
  */
 import { FastifyPluginAsync } from 'fastify';
 import { computeAssignmentReceipts } from '../utils/assignment.js';
+import { readableSpaceIdsForUser } from './items.js';
 
 export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
@@ -63,31 +65,10 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     const pageSize = Math.min(2000, Math.max(1, parseInt(pageSizeStr, 10)));
     const skip = (page - 1) * pageSize;
 
-    // 1. Resolve accessible spaceIds based on user memberships
-    // Always filter by membership — admins see only their spaces in dashboards
-    // (admin pages have their own endpoints for global access)
-    const directMemberships = await fastify.prisma.spaceMembership.findMany({
-      where: { userId: request.user.userId },
-      select: { spaceId: true },
-    });
-    const directSpaceIds = directMemberships.map((m) => m.spaceId);
-
-    const communityMemberships = await fastify.prisma.communityMembership.findMany({
-      where: { userId: request.user.userId },
-      select: { communityId: true },
-    });
-    const communityIds = communityMemberships.map((m) => m.communityId);
-
-    let communitySpaceIds: string[] = [];
-    if (communityIds.length > 0) {
-      const communitySpaces = await fastify.prisma.space.findMany({
-        where: { communityId: { in: communityIds } },
-        select: { id: true },
-      });
-      communitySpaceIds = communitySpaces.map((s) => s.id);
-    }
-
-    const accessibleSpaceIds = [...new Set([...directSpaceIds, ...communitySpaceIds])];
+    // 1. Espaces LISIBLES de l'utilisateur (directs + ceux de ses communautés, filtrés par la visibilité
+    // effective) — jamais un espace privé dont il n'est pas membre (fuite corrigée 2026-10-14).
+    // Admins : uniquement leurs espaces dans les tableaux de bord (les pages admin ont leurs routes)
+    const accessibleSpaceIds = await readableSpaceIdsForUser(fastify.prisma, request.user.userId, request.isAdminMode);
     if (accessibleSpaceIds.length === 0) {
       return { data: [], total: 0, page, pageSize, totalPages: 0 };
     }

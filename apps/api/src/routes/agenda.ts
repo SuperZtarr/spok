@@ -11,25 +11,19 @@
  * communityId = contexte de travail (ex. "Thomas Travail" vs "Thomas Perso") : narrows
  * suggestionSpaceIds avant le filtre spaceId, même logique que /user/tasks.
  * Un feed en erreur est signalé (feedErrors + lastError) mais ne bloque jamais la réponse.
+ * Espaces : uniquement les espaces LISIBLES (accessibleSpaceIds → readableSpaceIdsForUser), pas tous ceux
+ * des communautés de l'utilisateur.
  */
 import { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { ItemType } from '@spok/database'
 import { IcsFeedSource } from '../utils/calendar-source.js'
+import { readableSpaceIdsForUser } from './items.js'
 
 const CLOSED_STATUSES = ['done', 'cancelled']
 
-export async function accessibleSpaceIds(fastify: FastifyInstance, userId: string): Promise<string[]> {
-  const direct = await fastify.prisma.spaceMembership.findMany({ where: { userId }, select: { spaceId: true } })
-  const communities = await fastify.prisma.communityMembership.findMany({ where: { userId }, select: { communityId: true } })
-  let communitySpaceIds: string[] = []
-  if (communities.length > 0) {
-    const spaces = await fastify.prisma.space.findMany({
-      where: { communityId: { in: communities.map((c) => c.communityId) } },
-      select: { id: true },
-    })
-    communitySpaceIds = spaces.map((s) => s.id)
-  }
-  return [...new Set([...direct.map((m) => m.spaceId), ...communitySpaceIds])]
+/** Espaces lisibles (readableSpaceIdsForUser : jamais un espace privé dont on n'est pas membre). */
+export async function accessibleSpaceIds(fastify: FastifyInstance, userId: string, isAdminMode = false): Promise<string[]> {
+  return readableSpaceIdsForUser(fastify.prisma, userId, isAdminMode)
 }
 
 export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
@@ -81,7 +75,7 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
         })
       )
 
-      const spaceIds = await accessibleSpaceIds(fastify, userId)
+      const spaceIds = await accessibleSpaceIds(fastify, userId, request.isAdminMode)
 
       // 2. Items MEETING SPOK chevauchant la fenêtre
       if (spaceIds.length > 0) {

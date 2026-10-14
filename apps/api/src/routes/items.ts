@@ -201,6 +201,22 @@ export async function filterReadableSpaceIds(prisma: any, userId: string | undef
   });
 }
 
+/**
+ * Espaces lisibles d'un utilisateur pour les écrans transverses (tâches, agenda, révision, activité) :
+ * ses espaces directs + ceux de ses communautés, filtrés par filterReadableSpaceIds. Ne jamais prendre
+ * « tous les espaces de mes communautés » sans ce filtre (fuite des espaces privés, corrigée 2026-10-14).
+ */
+export async function readableSpaceIdsForUser(prisma: any, userId: string, isAdminMode = false): Promise<string[]> {
+  const [direct, communities] = await Promise.all([
+    prisma.spaceMembership.findMany({ where: { userId }, select: { spaceId: true } }),
+    prisma.communityMembership.findMany({ where: { userId }, select: { communityId: true } }),
+  ]);
+  const communitySpaces = communities.length > 0
+    ? await prisma.space.findMany({ where: { communityId: { in: communities.map((c: any) => c.communityId) } }, select: { id: true } })
+    : [];
+  return filterReadableSpaceIds(prisma, userId, [...direct.map((m: any) => m.spaceId), ...communitySpaces.map((s: any) => s.id)], isAdminMode);
+}
+
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string, isAdminMode = false) {

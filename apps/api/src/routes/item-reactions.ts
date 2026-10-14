@@ -1,4 +1,5 @@
-/* Réactions (emoji) sur items et contributions : toggle par utilisateur et type. */
+/* Réactions (emoji) sur items et contributions : toggle par utilisateur et type.
+   L'item (ou la contribution) doit appartenir à l'espace de l'URL, dont l'accès est contrôlé — 404 sinon. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { checkSpaceAccess } from './items.js';
@@ -6,6 +7,14 @@ import { checkSpaceAccess } from './items.js';
 const reactionSchema = z.object({
   reactionType: z.string().min(1).max(50),
 });
+
+/** L'item de l'URL appartient-il à l'espace contrôlé ? */
+const itemInSpace = (prisma: any, p: { spaceId: string; id: string }) =>
+  prisma.item.findFirst({ where: { id: p.id, spaceId: p.spaceId }, select: { id: true } });
+
+/** La contribution de l'URL appartient-elle à cet item, dans l'espace contrôlé ? */
+const contributionInSpace = (prisma: any, p: { spaceId: string; id: string; contributionId: string }) =>
+  prisma.contribution.findFirst({ where: { id: p.contributionId, itemId: p.id, item: { spaceId: p.spaceId } }, select: { id: true } });
 
 /** Compute reaction summary for an item or contribution */
 async function getReactionSummary(
@@ -40,6 +49,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
+      if (!(await itemInSpace(fastify.prisma, request.params))) return reply.notFound('Item not found');
 
       const body = reactionSchema.parse(request.body);
 
@@ -71,6 +81,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
+      if (!(await itemInSpace(fastify.prisma, request.params))) return reply.notFound('Item not found');
 
       await fastify.prisma.reaction.deleteMany({
         where: {
@@ -91,6 +102,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
+      if (!(await contributionInSpace(fastify.prisma, request.params))) return reply.notFound('Contribution not found');
 
       const body = reactionSchema.parse(request.body);
 
@@ -121,6 +133,7 @@ export const itemReactionRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
       if (!membership) return reply.notFound('Space not found');
+      if (!(await contributionInSpace(fastify.prisma, request.params))) return reply.notFound('Contribution not found');
 
       await fastify.prisma.reaction.deleteMany({
         where: {

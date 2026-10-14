@@ -103,11 +103,18 @@ describe('User Tasks routes', () => {
       expect(where.spaceId).toEqual({ in: ['s1'] })
     })
 
-    it('should include community spaces for regular user', async () => {
+    // Fuite corrigée 2026-10-14 : espaces de la communauté filtrés par leur visibilité effective
+    it('communauté : espace ouvert inclus, espace PRIVÉ dont on n\'est pas membre exclu', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
       prisma.spaceMembership.findMany.mockResolvedValue([])
-      prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'com-1' }])
-      prisma.space.findMany.mockResolvedValue([{ id: 's-com' }])
+      prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'com-1', role: 'MEMBER' }])
+      prisma.community.findMany.mockResolvedValue([{ id: 'com-1', visibility: 'OPEN' }])
+      prisma.space.findMany.mockImplementation(async ({ where }: any) => (where.communityId
+        ? [{ id: 's-com' }, { id: 's-priv' }]
+        : [
+            { id: 's-com', parentId: null, visibility: null, communityId: 'com-1' },
+            { id: 's-priv', parentId: null, visibility: 'PRIVATE', communityId: 'com-1' },
+          ]))
       prisma.item.findMany.mockResolvedValue([])
       prisma.item.count.mockResolvedValue(0)
 
@@ -118,6 +125,7 @@ describe('User Tasks routes', () => {
 
       const where = prisma.item.findMany.mock.calls[0][0].where
       expect(where.spaceId.in).toContain('s-com')
+      expect(where.spaceId.in).not.toContain('s-priv')
     })
 
     it('should narrow to spaces of the selected community (communityId filter)', async () => {

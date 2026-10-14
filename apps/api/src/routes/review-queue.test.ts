@@ -53,6 +53,22 @@ describe('GET /user/review-queue', () => {
     token = getTestToken(app, { userId: USER_ID, email: 'test@test.com' })
   })
 
+  // Fuite corrigée 2026-10-14 : un espace PRIVÉ de la communauté dont on n'est pas membre n'est jamais lu
+  it('exclut les espaces privés de la communauté dont on n\'est pas membre', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([])
+    prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'com-1', role: 'MEMBER' }])
+    prisma.community.findMany.mockResolvedValue([{ id: 'com-1', visibility: 'OPEN' }])
+    prisma.space.findMany.mockImplementation(async ({ where }: any) => (where.communityId
+      ? [{ id: 's-open' }, { id: 's-priv' }]
+      : [
+          { id: 's-open', parentId: null, visibility: null, communityId: 'com-1' },
+          { id: 's-priv', parentId: null, visibility: 'PRIVATE', communityId: 'com-1' },
+        ]))
+    prisma.item.findMany.mockResolvedValue([])
+    await app.inject({ method: 'GET', url: '/user/review-queue', headers: { authorization: `Bearer ${token}` } })
+    expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: ['s-open'] })
+  })
+
   it('retourne les items sans échéance ni horizon dans toTriage', async () => {
     prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: SPACE_ID }])
     prisma.communityMembership.findMany.mockResolvedValue([])
