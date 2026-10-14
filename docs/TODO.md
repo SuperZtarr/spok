@@ -61,7 +61,7 @@
 
 ### Didacticiels / aide contextuelle
 - [x] Revoir tous les tours de vues — remplacé par l'aide utilisateur intégrée, phase 1 : fiche + tour pour les 31 vues, contrôle de couverture ; tours complets lots 1 (vues JDR) et 2 (pilotage) — 2026-10-14 (b5eb8d0)
-- [ ] Aide utilisateur intégrée — lot 3 des tours complets : vues d'exploration (Graphe, Sunburst, Arbre radial, Bulles, Treemap, Cordes, Heatmap, Ego, Relations, Tableau croisé, Burndown, Flux cumulés, Texte, Présentation)
+- [x] Aide utilisateur intégrée — lot 3 des tours complets : vues d'exploration (Graphe, Sunburst, Arbre radial, Bulles, Treemap, Cordes, Heatmap, Ego, Relations, Tableau croisé, Burndown, Flux cumulés, Texte, Présentation) ; toute nouvelle vue doit avoir un tour complet (test) — 2026-10-14 (0c526e3)
 - [ ] Aide utilisateur intégrée — phase 2 : pages (accueil, tableau de bord, recherche, activité, paramètres…) et modales (fiche d'item, séances) en fiches HelpEntry (help/pageTours.ts à résorber) ; regrouper les descriptions de vues dupliquées (OverviewView, LandingPage, SpaceOverviewPage) sur VIEW_HELP ; étendre le contrôle de couverture aux pages
 - [ ] Aide utilisateur intégrée — phase 3 : infobulles (HelpHint), aide sous les champs, états vides (EmptyHelp), composant par composant
 - [ ] Aide utilisateur intégrée — phase 4 : mode Aide (survol d'une zone = son explication)
