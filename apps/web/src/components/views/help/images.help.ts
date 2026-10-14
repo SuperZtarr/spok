@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Images',
   summary: 'La galerie d\'images de l\'espace, regroupées par élément parent.',
+  short: 'Galerie d\'images',
+  empty: 'Aucune image. Ajoutez une image à un élément pour la retrouver dans cette galerie.',
   tips: [
     'Cliquez sur une image pour l\'ouvrir en plein écran ; flèches pour naviguer, Échap pour fermer',
     'Double-cliquez pour ouvrir la fiche de l\'image',

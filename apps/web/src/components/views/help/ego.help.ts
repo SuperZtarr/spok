@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Réseau d\'un élément',
   summary: 'Le réseau autour d\'un élément choisi : ses voisins directs, puis indirects, en anneaux.',
+  short: 'Réseau égocentrique',
+  empty: 'Aucun élément autour duquel construire un réseau. Créez des éléments et reliez-les (hiérarchie, relations, tags).',
   tips: [
     'Choisissez l\'élément central dans la liste, ou cliquez sur un nœud pour le recentrer',
     'Réglez la profondeur de 1 à 3 niveaux',

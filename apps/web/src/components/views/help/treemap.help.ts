@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Treemap',
   summary: 'La hiérarchie en rectangles imbriqués : la surface d\'un rectangle suit le critère choisi.',
+  short: 'Rectangles proportionnels',
+  empty: 'Aucun élément à découper en rectangles. Créez des éléments, puis des enfants sous eux, pour voir les rectangles s\'imbriquer.',
   tips: [
     'Cliquez sur un rectangle qui contient d\'autres rectangles pour zoomer dessus',
     'Double-cliquez sur un rectangle pour ouvrir sa fiche',

@@ -257,6 +257,8 @@ export function DateTimeField({
             <button
               type="button"
               onClick={goToPrevMonth}
+              title="Mois précédent"
+              aria-label="Mois précédent"
               className="p-1 hover:bg-muted rounded transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -267,6 +269,8 @@ export function DateTimeField({
             <button
               type="button"
               onClick={goToNextMonth}
+              title="Mois suivant"
+              aria-label="Mois suivant"
               className="p-1 hover:bg-muted rounded transition-colors"
             >
               <ChevronRight className="w-4 h-4" />

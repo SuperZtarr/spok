@@ -69,7 +69,7 @@ export function AuditLogItem({ log, onViewDetails, onRestore, isRestoring }: Aud
   const title = log.entity === 'Item' ? getItemTitle(log) : `Relation ${log.entityId.slice(0, 8)}...`;
 
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-muted/50 rounded-lg transition-colors group">
+    <div data-tour="history-entry" className="flex items-center gap-4 p-4 hover:bg-muted/50 rounded-lg transition-colors group">
       <div className={`p-2 rounded-lg ${config.color}`}>
         <Icon className="w-4 h-4" />
       </div>
@@ -101,6 +101,7 @@ export function AuditLogItem({ log, onViewDetails, onRestore, isRestoring }: Aud
             onClick={() => onRestore(log)}
             disabled={isRestoring}
             title="Restaurer"
+            data-tour="history-restore"
           >
             <RotateCcw className="w-4 h-4" />
           </Button>

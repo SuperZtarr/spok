@@ -4,7 +4,7 @@
  * Usage dans une fiche : tour: [intro, ...étapes propres à la vue, ...ITEM_MENU_STEP, ...SPACE_TOOLBAR_STEPS].
  * Une étape dont l'élément est absent de l'écran est sautée (runTour, useOnboarding) : une vue sans
  * Ordre ou sans Nouveau ne montre simplement pas l'étape. La dernière étape « point d'interrogation » est
- * ajoutée automatiquement par runTour (HELP_BUTTON_STEP).
+ * ajoutée automatiquement par runTour, sur le « ? » qui a lancé le tour (TOUR_ANCHOR_ATTR).
  */
 import type { TourStep } from './types';
 
@@ -55,7 +55,7 @@ export const SPACE_TOOLBAR_STEPS: TourStep[] = [
     },
   },
   {
-    element: '[title="Historique des modifications"]',
+    element: '[aria-label="Historique des modifications"]',
     popover: {
       title: 'Historique',
       description: 'Qui a modifié quoi et quand dans cet espace — et restauration d\'une version précédente.',

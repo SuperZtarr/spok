@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Burndown',
   summary: 'L\'avancement des tâches dans le temps : ce qui reste à faire (burndown) ou ce qui est fait face au total (burnup).',
+  short: 'Courbe d\'avancement',
+  empty: 'Aucune tâche à suivre. La courbe se construit à partir des tâches de l\'espace et de leur avancement.',
   tips: [
     'Burndown : le reste à faire descend, comparé à une ligne idéale en pointillés',
     'Burnup : le total et les tâches terminées, deux courbes montantes',

@@ -25,6 +25,7 @@ import { Badge } from '../ui/Badge';
 import { getTypeIcon } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface PortalGroup {
   spaceId: string;
@@ -275,7 +276,7 @@ function TypeColumn({ column, items, droppableId, onEdit, onDelete, onAddChild, 
 
         {items.length === 0 && (
           <div className="text-center py-4 text-muted-foreground text-sm">
-            Aucun element
+            Aucun élément
           </div>
         )}
       </div>
@@ -466,6 +467,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
           <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="types" viewContainerRef={viewContainerRef} />
         )}
       </div>
+      {items.length === 0 && <EmptyHelp mode="types" title="Aucun élément" banner />}
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}

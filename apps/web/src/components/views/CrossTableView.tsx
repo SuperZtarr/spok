@@ -6,6 +6,7 @@ import { ViewHelpButton } from '../ViewHelpButton';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS, TYPE_LABELS } from '../../constants/ui';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 type Dimension = 'status' | 'type' | 'assignee' | 'space';
 
@@ -175,6 +176,7 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
           <SpaceExportButton items={items ?? []} spaceName={spaceName} viewMode="crossTable" viewContainerRef={viewContainerRef} />
         )}
       </div>
+      {items.length === 0 && <EmptyHelp mode="crossTable" title="Aucun élément" banner />}
       {/* Dimension selectors */}
       <div data-tour="crosstable-dimensions" className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-sm">
         <label className="flex items-center gap-2">

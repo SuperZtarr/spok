@@ -22,12 +22,16 @@ export interface HelpEntry {
   title: string;
   /** À quoi ça sert — une ou deux phrases. */
   summary: string;
+  /** Accroche d'une ligne pour les cartes (liste des vues : Présentation, aperçu d'espace, page d'accueil publique). */
+  short?: string;
   /** Comment s'en servir — gestes clés, une ligne chacun. */
   tips: string[];
   /** Tour guidé pas à pas (au moins une étape pour une vue — contrôlé par help/coverage.test.ts). */
   tour: TourStep[];
   /** Infobulles des boutons/icônes, par clé stable (lues par HelpHint) — au fil de l'eau. */
   hints?: Record<string, string>;
-  /** Texte d'état vide (rien à afficher) — au fil de l'eau. */
+  /** Texte d'état vide d'une vue (lu par EmptyHelp ; obligatoire pour les vues, cf. coverage.test). */
   empty?: string;
+  /** Aide sous les champs d'un formulaire, par clé de champ (lue par FieldHelp — page/modale : clé du registre PAGE_HELP). */
+  fields?: Record<string, string>;
 }

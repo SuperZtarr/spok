@@ -100,6 +100,8 @@ import { SpaceExportButton } from '../components/SpaceExportButton';
 import { useAuthStore } from '../stores/auth';
 import { recordSpaceVisit } from '../hooks/useRecentSpaces';
 import { useMenuItems } from '../hooks/useMenuItems';
+import { EmptyHelp } from '../help/EmptyHelp';
+import { NewItemButton } from '../components/ui/NewItemButton';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -1519,11 +1521,9 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               pulseHelp={pulseHelp}
             />
           ) : itemsData?.data.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Aucun élément</p>
-              <p className="text-sm">Créez votre premier élément pour commencer</p>
-            </div>
+            <EmptyHelp mode="tree" title="Aucun élément" icon={FileText} className="p-8">
+              {canEdit && <NewItemButton onClick={handleNewItem} />}
+            </EmptyHelp>
           ) : (
             /* Tree view (default) */
             <div className="flex flex-col h-full overflow-hidden">

@@ -15,6 +15,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { PersonalTokensSection } from './PersonalTokensSection';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -490,6 +491,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" devName="UserProfileModal">
       <div className="space-y-4">
+        <div className="flex justify-end -mt-2"><PageHelpButton pageKey="profile" /></div>
         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
           <div className="relative group">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
@@ -544,7 +546,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
 
         {error && <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{error}</div>}
 
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="profile-identity">
           <div className="flex items-center gap-3 text-sm">
             <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -613,7 +615,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
         </div>
 
         <div className="pt-4 border-t border-border">
-          <span className="text-sm font-medium">Thème</span>
+          <span className="text-sm font-medium" data-tour="profile-theme">Thème</span>
           <div className="flex gap-2 mt-2">
             {themeOptions.map(({ value, label, icon: Icon }) => (
               <button key={value} onClick={() => setTheme(value)} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${theme === value ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}>
@@ -623,9 +625,9 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
           </div>
         </div>
 
-        <NotificationPreferencesSection />
+        <div data-tour="profile-notifications"><NotificationPreferencesSection /></div>
 
-        <PersonalTokensSection />
+        <div data-tour="profile-claude"><PersonalTokensSection /></div>
 
         <div className="pt-4 border-t border-border">
           <div className="flex items-center justify-between">
@@ -634,8 +636,9 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
               <span className="text-sm font-medium">Tutoriels</span>
             </div>
             <button
+              data-tour="profile-tutorials"
               onClick={() => {
-                const keys = Object.keys(localStorage).filter(k => k.startsWith('spok-onboarding') || k.startsWith('spok-view-tour') || k.startsWith('spok-dashboard-tour'));
+                const keys = Object.keys(localStorage).filter(k => k.startsWith('spok-onboarding') || k.startsWith('spok-view-tour') || k.startsWith('spok-page-tour') || k.startsWith('spok-dashboard-tour'));
                 keys.forEach(k => localStorage.removeItem(k));
                 alert(`${keys.length} tutoriel(s) réinitialisé(s). Ils se relanceront à la prochaine visite.`);
               }}

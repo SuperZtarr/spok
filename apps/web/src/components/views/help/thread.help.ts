@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Discussions',
   summary: 'Les éléments de l\'espace présentés en sujets de forum, avec leurs contributions.',
+  short: 'Sujets et contributions, façon forum',
+  empty: 'Aucune discussion. Chaque élément devient un sujet ; ajoutez une contribution pour lancer l\'échange.',
   tips: [
     'Cliquez sur un sujet pour le déplier et lire ses contributions',
     'Les sujets sont triés par dernière activité',

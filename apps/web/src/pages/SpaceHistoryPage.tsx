@@ -8,6 +8,7 @@ import { spacesApi } from '../lib/api';
 import { useAuditLogs, useRestoreAuditLog } from '../hooks/useAuditLogs';
 import { Button } from '../components/ui/Button';
 import { AuditLogList } from '../components/audit/AuditLogList';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 export function SpaceHistoryPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -43,12 +44,13 @@ export function SpaceHistoryPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <History className="w-6 h-6 text-primary" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold">Historique</h1>
               <p className="text-muted-foreground">
                 {space?.name} - Modifications et restauration
               </p>
             </div>
+            <PageHelpButton pageKey="space-history" />
           </div>
         </div>
 

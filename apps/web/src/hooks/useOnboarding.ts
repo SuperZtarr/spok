@@ -2,9 +2,11 @@
  * Hook : didacticiels driver.js — tour principal à la première visite + tours par vue (fiches d'aide
  * VIEW_HELP[vue].tour, components/views/help), suivi « déjà vu » en localStorage (spok-onboarding-done,
  * spok-view-tour-done-*).
+ * Dernière étape « Besoin d'aide ? » : pointe le point d'interrogation qui a lancé le tour, marqué par HelpButton
+ * (TOUR_ANCHOR_ATTR) — pas de sélecteur global, une modale ouverte sur une vue affiche deux « ? ».
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { driver } from 'driver.js';
+import { driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import type { TourStep } from '../help/types';
 import { VIEW_HELP } from '../components/views/help';
@@ -74,21 +76,23 @@ function buildMainSteps() {
   ];
 }
 
-const HELP_BUTTON_STEP: TourStep = {
-  element: '[title="Aide sur cette vue"]',
-  popover: {
-    title: 'Besoin d\'aide ?',
-    description: 'Relancez ce tutoriel à tout moment en cliquant sur ce bouton.',
-    side: 'bottom',
-  },
+/** Posé par HelpButton sur son bouton juste avant de lancer le tour, consommé par runTour. */
+export const TOUR_ANCHOR_ATTR = 'data-tour-anchor';
+
+const HELP_BUTTON_POPOVER: DriveStep['popover'] = {
+  title: 'Besoin d\'aide ?',
+  description: 'Relancez ce tutoriel à tout moment en cliquant sur ce bouton.',
+  side: 'bottom',
 };
 
 function runTour(steps: TourStep[], storageKey: string) {
-  // Add help button reminder as final step
-  const allSteps = [...steps, HELP_BUTTON_STEP];
-  const validSteps = allSteps.filter(step =>
+  const anchor = document.querySelector(`[${TOUR_ANCHOR_ATTR}]`);
+  anchor?.removeAttribute(TOUR_ANCHOR_ATTR);
+  const validSteps: DriveStep[] = steps.filter(step =>
     !step.element || document.querySelector(step.element)
   );
+  // Rappel final sur le « ? » qui a lancé le tour (absent pour le guide de démarrage, qui a sa propre fin)
+  if (anchor) validSteps.push({ element: anchor, popover: HELP_BUTTON_POPOVER });
 
   if (validSteps.length === 0) return;
 

@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, Search, FolderOpen, Building2, ChevronRight } from 'lucide-react';
 import { userTasksApi } from '../lib/api';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -29,7 +30,7 @@ function LinkCard({ item }: { item: any }) {
   const tooltip = [meta?.description || item.description, item.url].filter(Boolean).join('\n');
 
   return (
-    <a
+    <a data-tour="global-links-link"
       href={item.url || '#'}
       target="_blank"
       rel="noopener noreferrer"
@@ -177,7 +178,8 @@ export function GlobalLinksPage() {
             <h1 className="text-2xl font-bold">Liens</h1>
             <span className="text-sm text-muted-foreground">({totalLinks})</span>
           </div>
-          <div className="relative w-64">
+          <div className="flex items-center gap-2">
+          <div className="relative w-64" data-tour="global-links-search">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={search}
@@ -185,6 +187,8 @@ export function GlobalLinksPage() {
               placeholder="Rechercher un lien..."
               className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
+          </div>
+            <PageHelpButton pageKey="global-links" />
           </div>
         </div>
 
@@ -202,7 +206,7 @@ export function GlobalLinksPage() {
         ) : (
           <div className="space-y-8">
             {communities.map(community => (
-              <div key={community.communityId} className="rounded-lg border border-border bg-card/50 shadow-sm overflow-hidden">
+              <div key={community.communityId} data-tour="global-links-community" className="rounded-lg border border-border bg-card/50 shadow-sm overflow-hidden">
                 {/* Community header */}
                 <div className="flex items-center gap-2 px-5 py-3 bg-muted/50 border-b border-border">
                   <Building2 className="w-5 h-5 text-primary" />

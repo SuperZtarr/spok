@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Relations',
   summary: 'La carte des liens entre éléments (Bloque, Permet, Entraîne, Lié à), indépendamment de la hiérarchie.',
+  short: 'Carte des relations',
+  empty: 'Aucune relation entre éléments. Ajoutez-en depuis la fiche d\'un élément : Bloque, Permet, Entraîne ou Lié à.',
   tips: [
     'Activez ou désactivez chaque type de relation',
     'Affichez ou non les éléments sans relation',

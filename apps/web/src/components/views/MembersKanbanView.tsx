@@ -28,6 +28,7 @@ import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -512,6 +513,7 @@ export function MembersKanbanView({
           <SpaceExportButton items={items} spaceName={exportSpaceName} viewMode="members" viewContainerRef={viewContainerRef} />
         )}
       </div>
+      {items.length === 0 && <EmptyHelp mode="members" title="Aucun élément" banner />}
       <div className="p-4 overflow-y-auto h-full space-y-2">
         {spaceSections.map((section, idx) => {
           const cols = columnsBySpace[section.spaceId] || [];

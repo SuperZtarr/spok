@@ -61,7 +61,7 @@ export function SaveAsTemplateModal({ isOpen, onClose, itemId, allItems }: SaveA
             Enregistrer comme modèle
             <DevModalBadge name="SaveAsTemplateModal" />
           </h3>
-          <button type="button" onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground">
+          <button type="button" onClick={onClose} title="Fermer" aria-label="Fermer" className="p-1 rounded hover:bg-muted text-muted-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>

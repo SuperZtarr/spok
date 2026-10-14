@@ -2,23 +2,33 @@
  * HelpButton — point d'interrogation de l'aide utilisateur intégrée : encart « à quoi ça sert / comment
  * s'en servir » lu dans une fiche HelpEntry (help/types.ts), + « Lancer le tutoriel » si la fiche a un tour.
  * Props : help (la fiche), onStartTour (lance le tour — fourni par useViewOnboarding / usePageTourPulse),
- * pulse (clignote à la première visite), buttonTitle (infobulle ; « Aide sur cette vue » est ciblé par la
- * dernière étape des tours — useOnboarding HELP_BUTTON_STEP, ne pas le changer sans elle).
+ * pulse (clignote à la première visite), buttonTitle (infobulle), variant
+ * ('toolbar' dans les barres de vue, 'page' encadré dans les en-têtes de page et de modale).
  * Seul composant à rendre ce type d'encart : ne pas recréer de bouton d'aide maison dans une page.
+ * Boutons en type="button" : le « ? » vit souvent dans un <form> (fiche d'item) — sinon un clic enregistre et ferme.
+ * Au lancement du tour, le bouton se marque (TOUR_ANCHOR_ATTR) : c'est lui que pointe la dernière étape.
  */
 import { useState, useRef, useEffect } from 'react';
 import { HelpCircle, X, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import type { HelpEntry } from './types';
+import { TOUR_ANCHOR_ATTR } from '../hooks/useOnboarding';
 
 interface HelpButtonProps {
   help: HelpEntry | undefined;
   onStartTour?: () => void;
   pulse?: boolean;
   buttonTitle?: string;
+  /** 'toolbar' (défaut) : discret, barres de vue ; 'page' : encadré, en-têtes de page et de modale. */
+  variant?: 'toolbar' | 'page';
 }
 
-export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur cette vue' }: HelpButtonProps) {
+const BUTTON_CLASSES = {
+  toolbar: (pulse?: boolean) => `inline-flex items-center justify-center h-7 w-7 rounded transition-colors flex-shrink-0${pulse ? ' animate-pulse text-primary bg-primary/15' : ' text-muted-foreground hover:text-foreground hover:bg-accent'}`,
+  page: (pulse?: boolean) => `inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`,
+};
+
+export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur cette vue', variant = 'toolbar' }: HelpButtonProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -58,9 +68,10 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
   return (
     <>
       <button
+        type="button"
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className={`inline-flex items-center justify-center h-7 w-7 rounded transition-colors flex-shrink-0${pulse ? ' animate-pulse text-primary bg-primary/15' : ' text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+        className={BUTTON_CLASSES[variant](pulse)}
         title={buttonTitle}
       >
         <HelpCircle className="w-4 h-4" />
@@ -74,7 +85,7 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
         >
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <h3 className="text-sm font-semibold text-foreground">{help.title}</h3>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -92,7 +103,12 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
           {canTour && (
             <div className="px-4 pb-3">
               <button
-                onClick={() => { setOpen(false); setTimeout(onStartTour!, 200); }}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  const btn = buttonRef.current;
+                  setTimeout(() => { btn?.setAttribute(TOUR_ANCHOR_ATTR, ''); onStartTour!(); }, 200);
+                }}
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
               >
                 <Play className="w-3.5 h-3.5" />

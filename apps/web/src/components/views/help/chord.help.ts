@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Cordes',
   summary: 'Les relations croisées entre groupes (types ou espaces), en arcs reliés par des rubans.',
+  short: 'Relations croisées entre groupes',
+  empty: 'Aucune relation à dessiner. Les rubans relient des éléments de types ou d\'espaces différents liés par une relation (Bloque, Permet…).',
   tips: [
     'Les arcs sont les groupes (types ou espaces), les rubans les relations entre eux',
     'Plus un ruban est large, plus il y a de relations',

@@ -18,6 +18,7 @@ import { clampGeometry, loadGeometry, saveGeometry, type Geometry } from './live
 import { AgendaPanel } from './AgendaPanel';
 import { PresenterPanel } from './PresenterPanel';
 import { PendingChildren } from './PendingChildren';
+import { PageHelpButton } from '../../help/PageHelpButton';
 
 interface Props {
   state: LiveSessionState;
@@ -115,7 +116,7 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-border cursor-move select-none" onPointerDown={onPointerDown('move')}>
+      <div data-tour="live-header" className="flex items-center gap-1 px-3 py-2 border-b border-border cursor-move select-none" onPointerDown={onPointerDown('move')}>
         <Radio className="h-4 w-4 shrink-0 text-red-500" />
         <span className="text-sm font-medium truncate flex-1" title={state.spaceName}>
           {current ? current.item.title || 'Sans titre' : 'En attente du premier élément'}
@@ -123,6 +124,8 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
         {narrow && (
           <button className="rounded border border-border px-2 py-0.5 text-xs" onClick={() => { setMobileView('space'); onGoToSession(); }}>Voir l'espace</button>
         )}
+        {/* Aide : hors de la zone de déplacement */}
+        <span onPointerDown={(e) => e.stopPropagation()}><PageHelpButton pageKey="live-window" /></span>
         <button aria-label="Aller à la séance" title="Aller à la séance" className={headerBtn} onPointerDown={(e) => e.stopPropagation()} onClick={onGoToSession}>
           <LogIn className="h-4 w-4" />
         </button>
@@ -141,7 +144,7 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
         </button>
       </div>
       {(narrow || geo.mode !== 'minimized') && presenter && (
-        <div className="flex items-center gap-1 px-2 py-1 border-b border-border">
+        <div data-tour="live-tabs" className="flex items-center gap-1 px-2 py-1 border-b border-border">
           <button className={tabBtn('live')} onClick={() => setTab('live')}>Direct</button>
           <button className={tabBtn('agenda')} onClick={() => setTab('agenda')}>Préparation ({state.agenda.length})</button>
           <button className={tabBtn('search')} onClick={() => setTab('search')}>Rechercher</button>
@@ -156,7 +159,7 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
         </div>
       )}
       {(narrow || geo.mode !== 'minimized') && (tab === 'live' || !presenter) && (
-        <div className="flex-1 overflow-auto p-4 cursor-pointer" onClick={() => current && onOpenItem(current.item.id)}>
+        <div data-tour="live-content" className="flex-1 overflow-auto p-4 cursor-pointer" onClick={() => current && onOpenItem(current.item.id)}>
           {current && (
             <>
               <p className="text-xs text-muted-foreground mb-2">Présenté par {current.entry.user.name}</p>

@@ -10,6 +10,7 @@ import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemM
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface ItemWithContributions extends Item {
   contributions?: ContributionWithAuthor[];
@@ -317,10 +318,7 @@ export function ThreadView({
   if (!itemTree.length) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Aucune discussion dans cet espace</p>
-        </div>
+        <EmptyHelp mode="thread" title="Aucune discussion" icon={MessageSquare} className="p-8" />
       </div>
     );
   }

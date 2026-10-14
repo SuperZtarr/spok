@@ -41,7 +41,7 @@ export function AuditLogList({
 
   return (
     <div className="space-y-4">
-      <AuditFilters filters={filters} onFiltersChange={onFiltersChange} />
+      <div data-tour="history-filters"><AuditFilters filters={filters} onFiltersChange={onFiltersChange} /></div>
 
       {isLoading ? (
         <div className="flex items-center justify-center p-8">

@@ -10,37 +10,12 @@ import {
 import { communitiesApi } from '../lib/api';
 import logoUrl from '../assets/logo.png';
 import { useMenuItems } from '../hooks/useMenuItems';
+import { VIEW_HELP } from '../components/views/help';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
   Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
   TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-};
-
-const VIEW_DESCRIPTIONS: Record<string, string> = {
-  list: 'Vue tabulaire avec tri, filtres et recherche',
-  tree: 'Hiérarchie parent-enfant avec drag & drop',
-  kanban: 'Colonnes par statut, glisser-déposer',
-  text: 'Affichage éditorial des contenus',
-  planning: 'Vue par périodes et jalons',
-  timeline: 'Diagramme de Gantt avec dépendances',
-  calendar: 'Vue mensuelle des échéances',
-  types: 'Grille groupée par type d\'item',
-  mindmap: 'Carte mentale interactive avec zones projet',
-  graph: 'Réseau force-directed interactif',
-  sunburst: 'Diagramme solaire hiérarchique',
-  relations: 'Carte des relations entre items',
-  bubble: 'Cercles imbriqués proportionnels',
-  radialTree: 'Arbre radial concentrique',
-  treemap: 'Rectangles proportionnels à la taille',
-  chord: 'Diagramme de flux entre catégories',
-  burndown: 'Courbe d\'avancement du sprint',
-  cfd: 'Flux cumulatif d\'avancement',
-  members: 'Kanban groupé par membre assigné',
-  priority: 'Kanban groupé par niveau de priorité',
-  crossTable: 'Tableau croisé dynamique',
-  heatmap: 'Carte de chaleur de l\'activité temporelle',
-  ego: 'Réseau égocentrique autour d\'un item',
 };
 
 const features = [
@@ -228,7 +203,7 @@ export function LandingPage() {
                           <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                           <div>
                             <p className="font-medium">{v.label}</p>
-                            <p className="text-sm text-muted-foreground">{VIEW_DESCRIPTIONS[v.viewMode || ''] || ''}</p>
+                            <p className="text-sm text-muted-foreground">{(VIEW_HELP as Record<string, { short?: string } | undefined>)[v.viewMode || '']?.short ?? ''}</p>
                           </div>
                         </div>
                       );

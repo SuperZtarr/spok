@@ -20,6 +20,8 @@ import { RoleGuard } from '../components/RoleGuard';
 import { SpaceCard } from '../components/ui/SpaceCard';
 import { VisibilityPill } from '../components/ui/VisibilityPill';
 import { useAdminMode } from '../components/DevDbStatus';
+import { PageHelpButton } from '../help/PageHelpButton';
+import { FieldHelp } from '../help/FieldHelp';
 // Types used implicitly via API responses
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -226,9 +228,10 @@ export function CommunityPage() {
             )}
           </div>
           <div className="flex gap-2 pb-1">
+            <PageHelpButton pageKey="community" />
             {isAdminOrOwner && (
               <RoleGuard role="OWNER">
-                <Button variant="bordered" size="sm" onClick={() => navigate(`/communities/${communityId}/settings`)}>
+                <Button variant="bordered" size="sm" data-tour="community-settings-link" title="Paramètres de la communauté" onClick={() => navigate(`/communities/${communityId}/settings`)}>
                   <Settings className="w-4 h-4" />
                 </Button>
               </RoleGuard>
@@ -239,14 +242,14 @@ export function CommunityPage() {
         {/* Main content: spaces + members side by side */}
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-8">
           {/* Spaces column */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" data-tour="community-spaces">
             <div className="flex items-center justify-between gap-2 mb-3">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground flex items-center gap-2">
                 <FolderOpen className="w-4 h-4" />
                 Espaces ({spaces?.length || 0})
               </h2>
               {canCreateSpace && !showCreateSpace && (
-                <Button size="sm" onClick={() => setShowCreateSpace(true)}>
+                <Button size="sm" data-tour="community-new-space" onClick={() => setShowCreateSpace(true)}>
                   <Plus className="w-4 h-4" />
                   Nouvel espace
                 </Button>
@@ -272,6 +275,7 @@ export function CommunityPage() {
                       onChange={(e) => setNewSpaceParentId(e.target.value)}
                       options={parentSpaceOptions}
                     />
+                    <FieldHelp page="community" field="newSpaceParent" className="text-xs text-muted-foreground" />
                   </div>
                 )}
                 {createSpaceMutation.isError && (
@@ -298,7 +302,7 @@ export function CommunityPage() {
 
           {/* Members column (authenticated only) */}
           {user && (
-            <div className="w-full md:w-64 md:flex-shrink-0">
+            <div className="w-full md:w-64 md:flex-shrink-0" data-tour="community-members">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Membres ({sortedMembers.length})

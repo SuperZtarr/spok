@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'À faire',
   summary: 'Les tâches en cours de l\'espace (hors terminées et annulées), en liste.',
+  short: 'Tâches en cours',
+  empty: 'Aucune tâche en cours. Les tâches terminées ou annulées n\'apparaissent pas ici ; créez-en une avec « Nouveau ».',
   tips: [
     'Affiche uniquement les tâches non terminées',
     'Mêmes gestes que la vue Liste : tri, clic, menu ⋮, glisser-déposer',

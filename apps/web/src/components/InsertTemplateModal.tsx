@@ -76,7 +76,7 @@ export function InsertTemplateModal({ isOpen, onClose, spaceId, allItems, defaul
             Insérer un modèle
             <DevModalBadge name="InsertTemplateModal" />
           </h3>
-          <button type="button" onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground">
+          <button type="button" onClick={onClose} title="Fermer" aria-label="Fermer" className="p-1 rounded hover:bg-muted text-muted-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>

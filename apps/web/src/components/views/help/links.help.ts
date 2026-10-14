@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Liens',
   summary: 'Les éléments de type Lien de l\'espace, affichés en étiquettes avec l\'icône et le titre du site.',
+  short: 'Liens avec favicon',
+  empty: 'Aucun lien. Créez un élément de type Lien en collant son adresse.',
   tips: [
     'Cliquez sur un lien pour l\'ouvrir dans un nouvel onglet',
     'Double-cliquez pour ouvrir la fiche du lien',

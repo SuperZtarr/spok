@@ -6,6 +6,7 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface PortalGroup {
   spaceId: string;
@@ -80,13 +81,7 @@ export function TodoView({ items, portalGroups, onNewItem, spaceName, viewContai
     return (
       <div className="flex flex-col h-full overflow-hidden">
         {header}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center">
-            <CheckSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-            <p className="text-lg font-medium">Aucune tâche en cours</p>
-            <p className="text-sm text-muted-foreground">Toutes les tâches sont terminées ou annulées.</p>
-          </div>
-        </div>
+        <EmptyHelp mode="todo" title="Aucune tâche en cours" icon={CheckSquare} />
       </div>
     );
   }

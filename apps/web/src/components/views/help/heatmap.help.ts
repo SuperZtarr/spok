@@ -6,6 +6,7 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Activité (heatmap)',
   summary: 'L\'activité jour par jour, façon GitHub : plus une case est foncée, plus il s\'est passé de choses ce jour-là.',
+  short: 'Activité temporelle',
   tips: [
     'Chaque case est un jour, la couleur indique l\'intensité',
     'Choisissez 6 mois ou 1 an, créations ou modifications',

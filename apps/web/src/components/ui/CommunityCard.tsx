@@ -135,6 +135,7 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
 
   return (
     <Link
+      data-tour="community-card"
       to={to ?? `/communities/${community.id}`}
       className="group relative border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-card"
     >

@@ -43,6 +43,7 @@ export function SpaceCard({ space, onClick, activityCount, to, visibility, showA
 
   return (
     <Link
+      data-tour="space-card"
       to={to ?? `/spaces/${space.id}`}
       onClick={onClick}
       className="block rounded-lg border border-border hover:border-primary/30 hover:shadow-md transition-all overflow-hidden"
@@ -96,6 +97,7 @@ export function SpaceCard({ space, onClick, activityCount, to, visibility, showA
             {showActions && (
               <button
                 type="button"
+                data-tour="space-card-open-view"
                 onClick={(e) => go(e, `/spaces/${space.id}?view=${defaultView}`)}
                 className={ACTION_BUTTON}
                 title={`Ouvrir la vue par défaut : ${viewMeta?.label ?? defaultView}`}

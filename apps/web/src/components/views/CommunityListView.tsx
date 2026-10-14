@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/auth';
 import { CommunityCard } from '../ui/CommunityCard';
 import { VisibilityPill } from '../ui/VisibilityPill';
 import { DevModalBadge } from '../ui/DevModalBadge';
+import { FieldHelp } from '../../help/FieldHelp';
 
 type CreateStep = 'awareness' | 'form';
 
@@ -225,7 +226,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                 {step === 'awareness' ? 'Créer une communauté' : 'Informations'}
                 <DevModalBadge name="CommunityListView (création)" />
               </h2>
-              <button onClick={closeCreate} className="p-1 rounded-md hover:bg-accent">
+              <button onClick={closeCreate} title="Fermer" aria-label="Fermer" className="p-1 rounded-md hover:bg-accent">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -311,6 +312,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
                     className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                     required
                   />
+                  <FieldHelp page="communities" field="description" className="text-xs text-muted-foreground" />
                 </div>
 
                 <div className="space-y-2">

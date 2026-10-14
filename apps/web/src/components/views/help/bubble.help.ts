@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Bulles',
   summary: 'Les éléments en bulles imbriquées : un parent contient ses enfants, la taille suit le critère choisi.',
+  short: 'Bulles proportionnelles',
+  empty: 'Aucun élément à mettre en bulles. Créez des éléments, puis des enfants sous eux, pour voir les bulles s\'imbriquer.',
   tips: [
     'Cliquez sur une bulle qui contient d\'autres bulles pour zoomer dessus, cliquez à nouveau pour revenir',
     'Cliquez sur une bulle sans enfant (ou double-cliquez sur n\'importe laquelle) pour ouvrir sa fiche',

@@ -1,6 +1,7 @@
 /* Vue Burndown : restant vs temps sur les tâches à échéance (graphique). */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import type { Item } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 type ChartMode = 'burndown' | 'burnup';
 
@@ -218,9 +219,7 @@ export function BurndownView({
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Aucun item à afficher
-      </div>
+      <EmptyHelp mode="burndown" title="Aucune tâche à suivre" />
     );
   }
 

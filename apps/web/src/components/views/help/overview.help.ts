@@ -6,6 +6,7 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Présentation',
   summary: 'Vue d\'ensemble de l\'espace : couverture, chiffres, vues disponibles, sous-espaces et membres.',
+  short: 'Carte d\'identité de l\'espace',
   tips: [
     'Cliquez sur une vue pour y accéder directement',
     'Les sous-espaces sont affichés avec leur couverture',

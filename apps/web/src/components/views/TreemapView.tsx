@@ -2,6 +2,7 @@
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const ITEM_TYPE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -211,6 +212,8 @@ export function TreemapView({
   const handleMouseLeave = useCallback(() => {
     setTooltip(null);
   }, []);
+
+  if (items.length === 0) return <EmptyHelp mode="treemap" title="Aucun élément" />;
 
   return (
     <div className="flex-1 flex flex-col min-h-0">

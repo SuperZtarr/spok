@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES } from '@spok/shared';
 import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
+import { PageHelpButton } from '../help/PageHelpButton';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -243,11 +244,14 @@ export function SearchPage() {
     <div className="p-6 max-w-5xl mx-auto w-full">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
-        <h1 className="text-2xl font-bold mb-1">Recherche avancee</h1>
+        <div className="flex items-center gap-2 mb-1">
+          <h1 className="text-2xl font-bold">Recherche avancée</h1>
+          <div className="ml-auto"><PageHelpButton pageKey="search" /></div>
+        </div>
         <p className="text-sm text-muted-foreground mb-4">Recherchez dans les communautes, espaces, items, utilisateurs et contributions</p>
 
         {/* Search input */}
-        <div className="relative mb-4">
+        <div className="relative mb-4" data-tour="search-input">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             value={search}
@@ -266,7 +270,7 @@ export function SearchPage() {
         {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
             élargissement explicite par l'utilisateur */}
         {user && (spaceIdParam || effectiveCommunityId) && (
-          <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2 mb-4 text-sm" data-tour="search-scope">
             <span className="text-muted-foreground">Recherche dans :</span>
             {spaceIdParam ? (
               <span className="inline-flex items-center gap-1.5 font-medium">
@@ -297,7 +301,7 @@ export function SearchPage() {
         )}
 
         {/* Entity type toggles */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4" data-tour="search-types">
           {ENTITY_TYPES.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -322,7 +326,7 @@ export function SearchPage() {
         </div>
 
         {/* Scope filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3" data-tour="search-filters">
           {user && communities && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-muted-foreground">Communaute :</label>

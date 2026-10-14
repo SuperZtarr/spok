@@ -14,6 +14,7 @@ import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -241,11 +242,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
       </div>}
       {/* Items list */}
       {sortedItems.length === 0 ? (
-        <div className="p-8 text-center text-muted-foreground">
-          <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Aucun élément</p>
-          <p className="text-sm">Créez votre premier élément pour commencer</p>
-        </div>
+        <EmptyHelp mode="list" title="Aucun élément" icon={FileText} className="p-8" />
       ) : (
         <>
 

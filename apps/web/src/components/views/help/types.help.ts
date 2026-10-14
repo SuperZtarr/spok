@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Types',
   summary: 'Les éléments en colonnes par type : notes, tâches, projets, réunions…',
+  short: 'Colonnes par type d\'élément',
+  empty: 'Aucun élément à classer par type. Créez des notes, tâches, projets… avec « Nouveau ».',
   tips: [
     'Chaque colonne correspond à un type d\'élément',
     'Glissez une carte vers une autre colonne pour changer son type',

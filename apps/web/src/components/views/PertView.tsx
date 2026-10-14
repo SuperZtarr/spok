@@ -24,6 +24,7 @@ import { tailwindBgToHex } from './mindmap-utils';
 import { buildPertGraph, computeCriticalPathNaive } from './pert-utils';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { TreeItemRow } from './TreeItemRow';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const LEFT_PANEL_WIDTH = 288;
 const ROW_HEIGHT = 36;
@@ -861,7 +862,7 @@ export function PertView({
           onScroll={(e) => { if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = (e.target as HTMLDivElement).scrollTop / zoom; }}
         >
         {visibleFlatItems.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Aucun item dans cet espace</div>
+          <EmptyHelp mode="pert" title="Aucune tâche" />
         ) : (
           <div style={{ width: svgWidth * zoom, height: Math.max(svgHeight, 100) * zoom, position: 'relative', flexShrink: 0 }}>
           <svg ref={pertSvgRef} width={svgWidth} height={Math.max(svgHeight, 100)} style={{ transformOrigin: 'top left', transform: `scale(${zoom})`, position: 'absolute', top: 0, left: 0, display: 'block' }}>

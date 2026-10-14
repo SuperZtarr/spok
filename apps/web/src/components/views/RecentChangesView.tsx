@@ -6,6 +6,7 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface PortalGroup {
   spaceId: string;
@@ -147,8 +148,7 @@ export function RecentChangesView({
       <div className="flex-1 overflow-auto">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground py-16">
-            <Clock className="w-10 h-10 opacity-30" />
-            <p className="text-sm font-medium">Aucune modification depuis votre dernière visite</p>
+            <EmptyHelp mode="recent" title="Aucune modification" icon={Clock} className="" />
             <p className="text-xs opacity-70">{lastVisit ? formatRelativeTime(lastVisit) : ''}</p>
           </div>
         ) : (

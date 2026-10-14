@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
 import { SpaceCard } from '../components/ui/SpaceCard';
 import type { SpaceWithRole } from '@spok/shared';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 export function SpacesListPage() {
   const user = useAuthStore(s => s.user);
@@ -54,7 +55,10 @@ export function SpacesListPage() {
     <div className="flex-1 overflow-auto p-4 md:p-6">
       <div className="w-full">
         <div className="mb-6">
+          <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold">{title}</h1>
+          <div className="ml-auto"><PageHelpButton pageKey="spaces" /></div>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             {total} espace{total !== 1 ? 's' : ''}
           </p>
@@ -75,7 +79,7 @@ export function SpacesListPage() {
                 {!currentCommunity && (
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Espaces de groupe</h2>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" data-tour="spaces-group">
                   {spaces.map(space => (
                     <SpaceCard key={space.id} space={space} />
                   ))}
@@ -84,7 +88,7 @@ export function SpacesListPage() {
             )}
 
             {personalSpaces.length > 0 && (
-              <div className="mb-8">
+              <div className="mb-8" data-tour="spaces-personal">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Espaces personnels</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {personalSpaces.map(space => (

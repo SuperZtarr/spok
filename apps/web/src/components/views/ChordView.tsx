@@ -3,6 +3,7 @@ import { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { chord, ribbon } from 'd3-chord';
 import { arc as d3Arc } from 'd3-shape';
 import type { Item, ItemRelation } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface ChordViewProps {
   items: Item[];
@@ -288,17 +289,13 @@ export function ChordView({ items }: ChordViewProps) {
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Aucun item à afficher
-      </div>
+      <EmptyHelp mode="chord" title="Aucun élément à afficher" />
     );
   }
 
   if (!chordLayout) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Aucune relation à afficher
-      </div>
+      <EmptyHelp mode="chord" title="Aucune relation à afficher" />
     );
   }
 

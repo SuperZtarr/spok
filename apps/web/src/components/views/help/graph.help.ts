@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Graphe',
   summary: 'Le réseau des éléments : chaque élément est un point, reliés par leur hiérarchie, leurs relations et leurs tags.',
+  short: 'Réseau de relations',
+  empty: 'Aucun élément à relier. Le graphe se remplit dès que l\'espace contient des éléments : hiérarchie, relations et tags dessinent les liens.',
   tips: [
     'Molette pour zoomer, glisser le fond pour se déplacer',
     'Glissez un nœud pour l\'écarter des autres',

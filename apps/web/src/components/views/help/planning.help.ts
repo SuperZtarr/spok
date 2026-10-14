@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Planning',
   summary: 'Les éléments datés regroupés par urgence : en retard, aujourd\'hui, cette semaine, ce mois, plus tard, sans date.',
+  short: 'Échéances rangées par urgence',
+  empty: 'Aucune tâche en cours à planifier. Les tâches non terminées apparaissent ici, rangées selon leur échéance.',
   tips: [
     'Les éléments sont rangés selon leur échéance',
     'En retard en rouge, aujourd\'hui en bleu',

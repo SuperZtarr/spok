@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Liste',
   summary: 'Tous les éléments de l\'espace en tableau : titre, type, statut, priorité, dates, parent.',
+  short: 'Tableau avec colonnes triables',
+  empty: 'L\'espace ne contient encore aucun élément. Créez le premier avec « Nouveau ».',
   tips: [
     'Cliquez sur un en-tête de colonne pour trier, un second clic inverse l\'ordre',
     'Cliquez sur une ligne pour ouvrir la fiche de l\'élément',

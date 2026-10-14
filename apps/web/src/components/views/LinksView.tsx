@@ -10,6 +10,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -227,13 +228,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
     return (
       <div className="flex flex-col h-full overflow-hidden">
         {header}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center">
-            <ExternalLink className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-            <p className="text-lg font-medium">Aucun lien</p>
-            <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item de type LINK.</p>
-          </div>
-        </div>
+        <EmptyHelp mode="links" title="Aucun lien" icon={ExternalLink} />
       </div>
     );
   }

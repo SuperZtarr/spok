@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Flux cumulés',
   summary: 'L\'évolution des statuts dans le temps : une bande colorée par statut, empilées.',
+  short: 'Flux cumulatif',
+  empty: 'Aucun élément dont suivre les statuts. Les bandes se construisent à partir de l\'historique des statuts des éléments.',
   tips: [
     'Chaque bande colorée représente un statut',
     'L\'épaisseur d\'une bande donne le nombre d\'éléments dans ce statut',

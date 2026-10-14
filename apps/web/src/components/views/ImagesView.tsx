@@ -17,6 +17,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const ZOOM_LEVELS = [
   { cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10', label: 'XS' },
@@ -70,7 +71,7 @@ function Lightbox({ images, index, onClose, onNavigate }: {
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={onClose}>
       <div className="absolute top-4 left-4 z-10"><DevModalBadge name="ImagesView (lightbox)" /></div>
-      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
+      <button onClick={onClose} title="Fermer" aria-label="Fermer" className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
         <X className="w-8 h-8" />
       </button>
 
@@ -274,14 +275,9 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
         {header}
         <BulkUploadStatus bulk={bulk} />
         <BulkUploadDropZone bulk={bulk} kind="image" enabled={canBulkUpload}>
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center">
-            <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-            <p className="text-lg font-medium">Aucune image</p>
-            <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item avec une image.</p>
-            {canBulkUpload && <p className="text-sm text-muted-foreground mt-1">Glissez des images ici pour les importer.</p>}
-          </div>
-        </div>
+        <EmptyHelp mode="images" title="Aucune image" icon={ImageIcon}>
+          {canBulkUpload && <p className="text-sm text-muted-foreground">Glissez des images ici pour les importer.</p>}
+        </EmptyHelp>
         </BulkUploadDropZone>
       </div>
     );

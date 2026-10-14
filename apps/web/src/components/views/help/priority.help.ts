@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Priorités',
   summary: 'Les éléments en colonnes par priorité, de P1 (Urgente) à P4 (Basse), plus « Sans priorité ».',
+  short: 'Kanban par priorité',
+  empty: 'Aucun élément à classer. Donnez une priorité (P1 à P4) aux éléments pour remplir les colonnes.',
   tips: [
     'Colonnes P1 (Urgente) à P4 (Basse) puis Sans priorité',
     'Glissez une carte vers une autre colonne pour changer sa priorité',

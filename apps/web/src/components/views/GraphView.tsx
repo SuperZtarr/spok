@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { useGraphData } from '../../hooks/useGraphData';
 import { communitiesApi } from '../../lib/api';
 import { RelationTooltip } from '../RelationTooltip';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const STORAGE_KEY = 'graph-link-types';
 const SCOPE_STORAGE_KEY = 'graph-scope';
@@ -381,9 +382,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   if (!data || data.nodes.length === 0) {
     return (
       <div ref={containerRef} className="w-full" style={{ height: `${dimensions.height}px` }}>
-        <div className="h-full flex items-center justify-center text-muted-foreground">
-          Aucun element a afficher dans le graphe.
-        </div>
+        <EmptyHelp mode="graph" title="Aucun élément à afficher" />
       </div>
     );
   }
@@ -391,7 +390,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
   return (
     <div ref={containerRef} className="relative w-full" style={{ height: `${dimensions.height}px` }}>
       {/* Control panel */}
-      <div className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
+      <div data-tour="graph-controls" className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 space-y-2 shadow-lg">
         {/* Scope selector */}
         {scopeOptions.length > 1 && (
           <>
@@ -457,7 +456,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
           </>
         )}
         <div className="pt-1 border-t">
-          <Button variant="ghost" size="sm" onClick={handleFitView} className="w-full justify-start">
+          <Button variant="ghost" size="sm" onClick={handleFitView} className="w-full justify-start" data-tour="graph-fit">
             <Maximize2 className="w-3.5 h-3.5 mr-1.5" />
             Recentrer
           </Button>

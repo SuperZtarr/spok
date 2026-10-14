@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Tableau croisé',
   summary: 'Le nombre d\'éléments selon deux critères croisés : type, statut, assigné ou espace.',
+  short: 'Tableau croisé dynamique',
+  empty: 'Aucun élément à compter. Le tableau croise les éléments de l\'espace selon les deux critères choisis.',
   tips: [
     'Choisissez le critère des lignes et celui des colonnes',
     'Chaque cellule compte les éléments correspondants',

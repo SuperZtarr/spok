@@ -7,9 +7,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play, AlertTriangle, ArrowRightLeft, Search, Users, FileText, User } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import { COMMUNITY_SETTINGS_TOUR } from '../help/pageTours';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, AlertTriangle, ArrowRightLeft, Search, Users, FileText, User } from 'lucide-react';
+import { HelpButton } from '../help/HelpButton';
+import { PAGE_HELP } from '../help/pageHelp';
+import { FieldHelp } from '../help/FieldHelp';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
@@ -33,84 +34,6 @@ import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
 import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
-
-function CommunitySettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const popRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!open) return;
-    const btn = btnRef.current;
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      const w = 320;
-      let left = rect.right - w;
-      if (left < 8) left = 8;
-      setPos({ top: rect.bottom + 6, left });
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handle = (e: MouseEvent) => {
-      if (popRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', handle);
-    document.addEventListener('keydown', handleKey);
-    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handleKey); };
-  }, [open]);
-
-  const launchTour = () => {
-    setOpen(false);
-    setTimeout(onStartTour, 200);
-  };
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
-        title="Aide"
-      >
-        <HelpCircle className="w-4 h-4" />
-      </button>
-      {open && createPortal(
-        <div ref={popRef} className="fixed z-[200] w-[320px] rounded-lg border border-border bg-card shadow-lg" style={{ top: pos.top, left: pos.left }}>
-          <div className="flex items-center justify-between px-4 pt-3 pb-2">
-            <h3 className="text-sm font-semibold">Paramètres de la communauté</h3>
-            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-          </div>
-          <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">
-            Gérez votre communauté : informations, images, espaces, membres, tags et emails.
-          </p>
-          <ul className="px-4 pb-3 space-y-1">
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Général : nom, description et visibilité publique/privée</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Espaces : organisez la hiérarchie par glisser-déposer</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Membres : 3 colonnes (non-membres, membres, propriétaires)</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Emails : historique des envois, renvoi aux nouveaux membres</li>
-          </ul>
-          <div className="px-4 pb-3">
-            <button
-              type="button"
-              onClick={launchTour}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
-            >
-              <Play className="w-3.5 h-3.5" />
-              Lancer le tutoriel interactif
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -271,7 +194,7 @@ export function CommunitySettingsPage() {
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'tags' | 'spaces' | 'members' | 'emails' | 'apercu' | 'danger'>('general');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
-  const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', COMMUNITY_SETTINGS_TOUR);
+  const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('community-settings', PAGE_HELP['community-settings'].tour);
 
   // Fetch community details
   const { data: community, isLoading: communityLoading } = useQuery({
@@ -560,7 +483,9 @@ export function CommunitySettingsPage() {
           </h1>
           <p className="text-muted-foreground">Paramètres de la communauté</p>
         </div>
-        <CommunitySettingsHelpButton pulse={pulseHelp} onStartTour={startSettingsTour} />
+        <div className="ml-auto">
+          <HelpButton help={PAGE_HELP['community-settings']} onStartTour={startSettingsTour} pulse={pulseHelp} variant="page" buttonTitle="Aide" />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -660,9 +585,7 @@ export function CommunitySettingsPage() {
                           </button>
                         </p>
                       ) : !adminMode && (community as any).visibility === 'PRIVATE' && editVisibility !== 'PRIVATE' ? (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Rendre la communauté visible par tous nécessite la validation d'un administrateur : une demande sera envoyée à l'enregistrement.
-                        </p>
+                        <FieldHelp page="community-settings" field="visibilityRequest" className="text-xs text-muted-foreground mt-2" />
                       ) : null}
                     </div>
                   )}
@@ -691,7 +614,7 @@ export function CommunitySettingsPage() {
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Le contexte adapte automatiquement l'interface (vues, champs) pour tous les visiteurs de la communauté.</p>
+                      <FieldHelp page="community-settings" field="context" />
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
@@ -775,9 +698,7 @@ export function CommunitySettingsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <p className="text-xs text-muted-foreground">
-                        256 × 256 px, rond. Cliquez pour modifier.
-                      </p>
+                      <FieldHelp page="community-settings" field="avatar" className="text-xs text-muted-foreground" />
                       {community.avatarUrl && (
                         <button
                           onClick={() => deleteAvatarMutation.mutate()}

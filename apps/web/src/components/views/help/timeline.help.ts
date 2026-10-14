@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Gantt',
   summary: 'Le diagramme de Gantt : chaque élément daté en barre sur une ligne de temps, avec ses dépendances et son échéance.',
+  short: 'Diagramme de Gantt',
+  empty: 'Aucun élément daté. Donnez des dates de début et de fin (ou une échéance) à un élément pour le voir en barre.',
   tips: [
     'Glissez une barre pour la décaler, tirez ses bords pour changer ses dates',
     'Clic droit sur la ligne d\'un élément pour poser son échéance (losange) ; clic droit sur le losange pour la retirer',

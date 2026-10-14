@@ -9,37 +9,13 @@ import { Button } from '../components/ui/Button';
 import { RoleGuard } from '../components/RoleGuard';
 import { useViewModeStore, type ViewMode } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
+import { VIEW_HELP } from '../components/views/help';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
   Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
   TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-};
-
-const VIEW_DESCRIPTIONS: Partial<Record<ViewMode, string>> = {
-  list: 'Tableau avec colonnes triables',
-  tree: 'Hiérarchie parent-enfant',
-  kanban: 'Colonnes par statut',
-  text: 'Document texte continu',
-  planning: 'Planning avec jalons',
-  timeline: 'Diagramme de Gantt',
-  calendar: 'Vue calendrier mensuelle',
-  types: 'Groupé par type d\'item',
-  mindmap: 'Carte mentale interactive',
-  graph: 'Réseau de relations',
-  sunburst: 'Cercles concentriques',
-  relations: 'Carte des relations',
-  bubble: 'Bulles proportionnelles',
-  radialTree: 'Arbre en cercle',
-  treemap: 'Rectangles proportionnels',
-  chord: 'Diagramme de flux',
-  burndown: 'Courbe d\'avancement',
-  cfd: 'Flux cumulatif',
-  members: 'Kanban par membre',
-  priority: 'Kanban par priorité',
-  crossTable: 'Tableau croisé dynamique',
-  heatmap: 'Activité temporelle',
-  ego: 'Réseau égocentrique',
 };
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -181,7 +157,8 @@ export function SpaceOverviewPage() {
             )}
           </div>
           <div className="flex gap-2 pb-1">
-            <Button variant="default" size="sm" onClick={() => navigate(`/spaces/${spaceId}`)}>
+            <PageHelpButton pageKey="space-overview" />
+            <Button variant="default" size="sm" data-tour="space-overview-open" onClick={() => navigate(`/spaces/${spaceId}`)}>
               <ExternalLink className="w-4 h-4 mr-1.5" />Ouvrir
             </Button>
             {isAdminOrOwner && (
@@ -200,7 +177,7 @@ export function SpaceOverviewPage() {
           {/* Left: views + child spaces */}
           <div className="flex-1 min-w-0">
             {/* Views grid */}
-            <div className="mb-8">
+            <div className="mb-8" data-tour="space-overview-views">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" />
                 Vues disponibles
@@ -226,7 +203,7 @@ export function SpaceOverviewPage() {
                             <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium">{view.label}</p>
-                              <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[(view.viewMode || '') as ViewMode] || ''}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_HELP[(view.viewMode || '') as ViewMode]?.short ?? ''}</p>
                             </div>
                           </button>
                         );
@@ -239,7 +216,7 @@ export function SpaceOverviewPage() {
 
             {/* Child spaces */}
             {spaceTree.length > 0 && (
-              <div className="mb-8">
+              <div className="mb-8" data-tour="space-overview-children">
                 <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                   <FolderOpen className="w-4 h-4" />
                   Sous-espaces ({childSpaces?.length || 0})

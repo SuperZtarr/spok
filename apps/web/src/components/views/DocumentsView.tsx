@@ -16,6 +16,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { getTypeIcon } from '../../constants/ui';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 function getFileIcon(url: string) {
   return getTypeIcon('DOCUMENT', url);
@@ -161,14 +162,9 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
         {header}
         <BulkUploadStatus bulk={bulk} />
         <BulkUploadDropZone bulk={bulk} kind="document" enabled={canBulkUpload}>
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center">
-            <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-            <p className="text-lg font-medium">Aucun document</p>
-            <p className="text-sm text-muted-foreground">Cet espace ne contient aucun item de type DOCUMENT.</p>
-            {canBulkUpload && <p className="text-sm text-muted-foreground mt-1">Glissez des fichiers ici pour les importer.</p>}
-          </div>
-        </div>
+        <EmptyHelp mode="documents" title="Aucun document" icon={FileText}>
+          {canBulkUpload && <p className="text-sm text-muted-foreground">Glissez des fichiers ici pour les importer.</p>}
+        </EmptyHelp>
         </BulkUploadDropZone>
       </div>
     );

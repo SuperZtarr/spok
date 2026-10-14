@@ -13,6 +13,7 @@ import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface Contribution {
   id: string;
@@ -234,10 +235,7 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
               <p className="text-sm">Aucun élément ne correspond à "{searchQuery}"</p>
             </>
           ) : (
-            <>
-              <p>Aucun élément</p>
-              <p className="text-sm">Créez votre premier élément pour commencer</p>
-            </>
+            <EmptyHelp mode="text" title="Aucun élément" className="" />
           )}
         </div>
       ) : (

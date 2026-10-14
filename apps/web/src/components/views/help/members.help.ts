@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Membres',
   summary: 'Les éléments en colonnes par personne assignée, plus « Non assigné ».',
+  short: 'Kanban par membre',
+  empty: 'Aucun élément à répartir. Assignez des éléments à des membres pour remplir leurs colonnes.',
   tips: [
     'Chaque colonne représente un membre de l\'espace',
     'Glissez une carte vers une colonne pour l\'assigner à ce membre',

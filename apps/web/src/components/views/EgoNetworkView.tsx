@@ -2,6 +2,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface EgoNetworkViewProps {
   items: Item[];
@@ -316,9 +317,7 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
       {/* Graph */}
       <div ref={containerRef} className="flex-1 overflow-hidden relative">
         {nodes.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Aucun élément à afficher
-          </div>
+          <EmptyHelp mode="ego" title="Aucun élément à afficher" />
         ) : (
           <svg width={containerSize.width} height={svgH}>
             {/* Ring guides */}

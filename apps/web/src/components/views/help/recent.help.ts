@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Modifications récentes',
   summary: 'Les éléments ajoutés ou modifiés depuis votre dernière visite de l\'espace.',
+  short: 'Nouveautés depuis votre visite',
+  empty: 'Rien de nouveau depuis votre dernière visite de l\'espace.',
   tips: [
     'Les nouveaux éléments sont listés en vert, les éléments modifiés en bleu',
     'Chaque liste fonctionne comme la vue Liste (clic, menu ⋮, tri)',

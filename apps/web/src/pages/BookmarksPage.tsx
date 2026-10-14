@@ -5,6 +5,7 @@ import { Star, Bookmark, Clock, FolderOpen, Loader2, Trash2 } from 'lucide-react
 import { Link } from 'react-router-dom';
 import { spacesApi, bookmarksApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
+import { PageHelpButton } from '../help/PageHelpButton';
 import { TYPE_LABELS, getTypeIcon } from '../constants/ui';
 import type { SpaceWithRole } from '@spok/shared';
 
@@ -138,10 +139,13 @@ export function BookmarksPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Favoris & Epingles</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold">Favoris & Épingles</h1>
+        <div className="ml-auto"><PageHelpButton pageKey="bookmarks" /></div>
+      </div>
 
       {/* Espaces favoris */}
-      <section>
+      <section data-tour="bookmarks-favorites">
         <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
           <Star className="w-5 h-5 text-yellow-500" />
           Espaces favoris
@@ -164,7 +168,7 @@ export function BookmarksPage() {
 
       {/* Espaces recents */}
       {recentSpaces.length > 0 && (
-        <section>
+        <section data-tour="bookmarks-recent">
           <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
             <Clock className="w-5 h-5 text-muted-foreground" />
             Espaces recents
@@ -183,7 +187,7 @@ export function BookmarksPage() {
       )}
 
       {/* Items epingles */}
-      <section>
+      <section data-tour="bookmarks-pinned">
         <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
           <Bookmark className="w-5 h-5 text-blue-500" />
           Items epingles

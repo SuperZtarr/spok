@@ -6,6 +6,7 @@ import { DashboardMindMapView } from '../components/views/DashboardMindMapView';
 import { Button } from '../components/ui/Button';
 import { RotateCcw } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 export function MindMapPage() {
   const resetRef = useRef<(() => void) | null>(null);
@@ -49,11 +50,12 @@ export function MindMapPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
-      <div className="flex items-center justify-end px-4 py-2">
-        <Button size="sm" variant="bordered" onClick={() => resetRef.current?.()}>
+      <div className="flex items-center justify-end gap-2 px-4 py-2">
+        <Button size="sm" variant="bordered" data-tour="global-mindmap-reset" onClick={() => resetRef.current?.()}>
           <RotateCcw className="w-4 h-4 mr-1" />
-          Reorganiser
+          Réorganiser
         </Button>
+        <PageHelpButton pageKey="global-mindmap" />
       </div>
       <DashboardMindMapView
         communityGroups={communityGroups}

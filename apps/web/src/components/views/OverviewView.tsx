@@ -10,6 +10,7 @@ import { RoleGuard } from '../RoleGuard';
 import { useViewModeStore, type ViewMode } from '../../stores/viewMode';
 import { useMenuItems } from '../../hooks/useMenuItems';
 import type { SpaceWithRole } from '@spok/shared';
+import { VIEW_HELP } from './help';
 
 const VIEW_ICONS: Record<string, typeof List> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
@@ -18,37 +19,6 @@ const VIEW_ICONS: Record<string, typeof List> = {
 };
 
 const HIGHLIGHTED_VIEWS = new Set<string>(['mindmap', 'kanban', 'timeline', 'images', 'documents', 'priority', 'thread']);
-
-const VIEW_DESCRIPTIONS: Partial<Record<ViewMode, string>> = {
-  list: 'Tableau avec colonnes triables',
-  tree: 'Hierarchie parent-enfant',
-  kanban: 'Colonnes par statut',
-  text: 'Document texte continu',
-  planning: 'Planning avec jalons',
-  timeline: 'Diagramme de Gantt',
-  calendar: 'Vue calendrier mensuelle',
-  types: 'Groupe par type d\'item',
-  mindmap: 'Carte mentale interactive',
-  graph: 'Reseau de relations',
-  sunburst: 'Cercles concentriques',
-  relations: 'Carte des relations',
-  bubble: 'Bulles proportionnelles',
-  radialTree: 'Arbre en cercle',
-  treemap: 'Rectangles proportionnels',
-  chord: 'Diagramme de flux',
-  burndown: 'Courbe d\'avancement',
-  cfd: 'Flux cumulatif',
-  members: 'Kanban par membre',
-  priority: 'Kanban par priorite',
-  crossTable: 'Tableau croise dynamique',
-  heatmap: 'Activite temporelle',
-  ego: 'Reseau egocentrique',
-  links: 'Liens avec favicon',
-  images: 'Galerie d\'images',
-  documents: 'Fichiers et documents',
-  bugs: 'Liste des bugs',
-  thread: 'Discussions threadées style forum',
-};
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Proprietaire', icon: Crown, color: 'text-amber-500' },
@@ -214,7 +184,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
                           <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${highlighted ? 'text-primary' : 'text-primary'}`} />
                           <div className="min-w-0">
                             <p className={`text-sm ${highlighted ? 'font-semibold' : 'font-medium'}`}>{view.label}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_DESCRIPTIONS[(view.viewMode || '') as ViewMode] || ''}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{VIEW_HELP[(view.viewMode || '') as ViewMode]?.short ?? ''}</p>
                           </div>
                         </button>
                       );

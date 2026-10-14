@@ -23,6 +23,7 @@ import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 // ---------------------------------------------------------------------------
 // Column definitions
@@ -423,6 +424,7 @@ export function PriorityView({
           <SpaceExportButton items={items} spaceName={spaceName} viewMode="priority" viewContainerRef={viewContainerRef} />
         )}
       </div>
+      {items.length === 0 && <EmptyHelp mode="priority" title="Aucun élément" banner />}
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}

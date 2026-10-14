@@ -8,9 +8,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, HelpCircle, Play, X, ArrowRightLeft } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import type { TourStep } from '../help/types';
+import { ArrowLeft, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, ArrowRightLeft } from 'lucide-react';
+import { HelpButton } from '../help/HelpButton';
+import { PAGE_HELP } from '../help/pageHelp';
+import { FieldHelp } from '../help/FieldHelp';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
@@ -30,127 +31,6 @@ import { SpaceCard } from '../components/ui/SpaceCard';
 import { OrgChartView } from '../components/views/OrgChartView';
 import type { Role } from '@spok/shared';
 import { VIEW_MODES } from '../stores/viewMode';
-
-const SPACE_SETTINGS_TOUR: TourStep[] = [
-  {
-    element: '[data-tour="space-tab-general"]',
-    popover: {
-      title: 'Général',
-      description: 'Nom de l\'espace, communauté de rattachement, espace parent et rôle par défaut pour les nouveaux membres de la communauté.',
-      side: 'bottom',
-    },
-  },
-  {
-    element: '[data-tour="space-tab-images"]',
-    popover: {
-      title: 'Images',
-      description: 'Avatar (affiché dans la sidebar et le dashboard) et image de couverture. Glissez une image ou cliquez pour uploader.',
-      side: 'bottom',
-    },
-  },
-  {
-    element: '[data-tour="space-tab-referentiels"]',
-    popover: {
-      title: 'Référentiels',
-      description: 'Personnalisez les statuts (À faire, En cours, Terminé…) et les types d\'items (Note, Tâche, Projet…). Modifiez labels, couleurs et ordre.',
-      side: 'bottom',
-    },
-  },
-  {
-    element: '[data-tour="space-tab-members"]',
-    popover: {
-      title: 'Membres',
-      description: 'Gérez les accès avec 3 colonnes : non-membres → membres → propriétaires. Envoyez des emails et invitez de nouveaux utilisateurs.',
-      side: 'bottom',
-    },
-  },
-  {
-    element: '[data-tour="space-tab-danger"]',
-    popover: {
-      title: 'Zone de danger',
-      description: 'Supprimez l\'espace avec prévisualisation des éléments impactés. Choix entre supprimer les enfants ou les détacher.',
-      side: 'bottom',
-    },
-  },
-];
-
-function SpaceSettingsHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const popRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!open) return;
-    const btn = btnRef.current;
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      const w = 320;
-      let left = rect.right - w;
-      if (left < 8) left = 8;
-      setPos({ top: rect.bottom + 6, left });
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handle = (e: MouseEvent) => {
-      if (popRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', handle);
-    document.addEventListener('keydown', handleKey);
-    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handleKey); };
-  }, [open]);
-
-  const launchTour = () => {
-    setOpen(false);
-    setTimeout(onStartTour, 200);
-  };
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-auto${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
-        title="Aide"
-      >
-        <HelpCircle className="w-4 h-4" />
-      </button>
-      {open && createPortal(
-        <div ref={popRef} className="fixed z-[200] w-[320px] rounded-lg border border-border bg-card shadow-lg" style={{ top: pos.top, left: pos.left }}>
-          <div className="flex items-center justify-between px-4 pt-3 pb-2">
-            <h3 className="text-sm font-semibold">Paramètres de l'espace</h3>
-            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-          </div>
-          <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">
-            Configurez votre espace : nom, communauté, images, référentiels de statuts et types, gestion des membres et permissions.
-          </p>
-          <ul className="px-4 pb-3 space-y-1">
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Personnalisez les statuts et types dans l'onglet Référentiels</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Définissez un rôle par défaut pour les nouveaux membres de la communauté</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Ajoutez un avatar et une couverture dans l'onglet Images</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Gérez les membres avec le système en 3 colonnes</li>
-          </ul>
-          <div className="px-4 pb-3">
-            <button
-              type="button"
-              onClick={launchTour}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
-            >
-              <Play className="w-3.5 h-3.5" />
-              Lancer le tutoriel interactif
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
 
 // Vue ouverte par SpacePage quand l'espace n'a pas de vue par défaut
 const FALLBACK_DEFAULT_VIEW = 'list';
@@ -172,7 +52,7 @@ export function SpaceSettingsPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'members' | 'apercu' | 'danger'>('general');
   const [transferTargetId, setTransferTargetId] = useState('');
-  const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('space-settings', SPACE_SETTINGS_TOUR);
+  const { pulseHelp, startTour: startSettingsTour } = usePageTourPulse('space-settings', PAGE_HELP['space-settings'].tour);
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -442,7 +322,7 @@ export function SpaceSettingsPage() {
           </h1>
           <p className="text-muted-foreground">Paramètres de l'espace</p>
         </div>
-        <SpaceSettingsHelpButton pulse={pulseHelp} onStartTour={startSettingsTour} />
+        <div className="ml-auto"><HelpButton help={PAGE_HELP['space-settings']} onStartTour={startSettingsTour} pulse={pulseHelp} variant="page" buttonTitle="Aide" /></div>
       </div>
 
       {/* Tabs */}
@@ -508,9 +388,7 @@ export function SpaceSettingsPage() {
                   }}
                   options={communityOptions}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Rattacher cet espace à une communauté dont vous êtes membre
-                </p>
+                <FieldHelp page="space-settings" field="community" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Espace parent</label>
@@ -520,9 +398,7 @@ export function SpaceSettingsPage() {
                   options={parentSpaceBaseOptions}
                   groups={parentSpaceGroups}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Imbriquer cet espace sous un autre espace de groupe
-                </p>
+                <FieldHelp page="space-settings" field="parent" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Rôle par défaut des nouveaux membres</label>
@@ -534,9 +410,7 @@ export function SpaceSettingsPage() {
                     { value: 'MEMBER', label: 'Membre' },
                   ]}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Quand un utilisateur rejoint la communauté, il sera automatiquement ajouté à cet espace avec ce rôle
-                </p>
+                <FieldHelp page="space-settings" field="defaultRole" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Visibilité</label>
@@ -568,9 +442,7 @@ export function SpaceSettingsPage() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Contrôle l'accès des membres de la communauté qui ne sont pas explicitement membres de cet espace
-                </p>
+                <FieldHelp page="space-settings" field="visibility" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Vue par défaut</label>
@@ -579,9 +451,7 @@ export function SpaceSettingsPage() {
                   onChange={(e) => setEditDefaultView(e.target.value)}
                   options={VIEW_MODES.map((v) => ({ value: v.value, label: v.label }))}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Vue affichée à l'ouverture de l'espace
-                </p>
+                <FieldHelp page="space-settings" field="defaultView" />
               </div>
               <Button
                 onClick={handleSaveSpaceInfo}
@@ -638,9 +508,7 @@ export function SpaceSettingsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <p className="text-xs text-muted-foreground">
-                        256 × 256 px, rond. Cliquez pour modifier.
-                      </p>
+                      <FieldHelp page="space-settings" field="avatar" className="text-xs text-muted-foreground" />
                       {space?.avatarUrl && (
                         <button
                           onClick={() => deleteAvatarMutation.mutate()}

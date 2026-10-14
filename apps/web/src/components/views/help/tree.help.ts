@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Arborescence',
   summary: 'Les éléments en arbre : chaque élément sous son parent, avec indentation.',
+  short: 'Hiérarchie parent-enfant',
+  empty: 'L\'espace ne contient encore aucun élément. Créez-en un avec « Nouveau », puis ajoutez-lui des enfants depuis son menu pour construire l\'arbre.',
   tips: [
     'Cliquez sur le chevron pour déplier ou replier une branche',
     'Glissez la poignée d\'un élément pour le déplacer ou le ranger sous un autre',

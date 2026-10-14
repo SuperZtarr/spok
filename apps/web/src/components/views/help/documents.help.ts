@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Documents',
   summary: 'Les documents (fichiers) de l\'espace, regroupés par élément parent, avec le type de chaque fichier.',
+  short: 'Fichiers et documents',
+  empty: 'Aucun document. Créez un élément de type Document pour le retrouver ici.',
   tips: [
     'Cliquez sur un document pour ouvrir sa fiche',
     'Le bouton de téléchargement apparaît au survol',

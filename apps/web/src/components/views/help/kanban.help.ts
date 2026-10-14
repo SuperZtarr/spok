@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Kanban',
   summary: 'Les éléments en colonnes par statut, pour suivre l\'avancement du travail.',
+  short: 'Colonnes par statut',
+  empty: 'Aucun élément à classer par statut. Créez-en un avec « Nouveau » : il se range dans la colonne de son statut.',
   tips: [
     'Glissez une carte d\'une colonne à l\'autre pour changer son statut',
     'Les colonnes sont les statuts de l\'espace (référentiels)',

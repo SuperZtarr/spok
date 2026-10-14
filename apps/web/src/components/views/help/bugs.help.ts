@@ -6,6 +6,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 export const help: HelpEntry = {
   title: 'Bugs',
   summary: 'Les anomalies (éléments de type Bug) de l\'espace, en liste.',
+  short: 'Liste des bugs',
+  empty: 'Aucun bug signalé. Créez un élément de type Bug pour le suivre ici.',
   tips: [
     'Affiche uniquement les éléments de type Bug',
     'Mêmes gestes que la vue Liste : tri, clic, menu ⋮, glisser-déposer',

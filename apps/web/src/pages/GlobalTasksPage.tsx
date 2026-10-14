@@ -21,6 +21,7 @@ import { buildStatusColorMap, buildStatusLabelMap, effectiveHorizon, HORIZON_LAB
 import { useGlobalTaskFilters, type GlobalTaskFilterState } from '../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../components/GlobalTaskFilterBar';
 import { HorizonGroup } from '../components/HorizonGroup';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 const STATUS_COLOR_MAP = buildStatusColorMap();
 const STATUS_LABEL_MAP = buildStatusLabelMap();
@@ -241,20 +242,21 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
         <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 mb-3">
             <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-            <h1 className="text-lg sm:text-xl font-bold">Mes taches</h1>
+            <h1 className="text-lg sm:text-xl font-bold">Mes tâches</h1>
             {total > 0 && (
               <span className="text-xs sm:text-sm text-muted-foreground">
                 ({total})
               </span>
             )}
+            <div className="ml-auto"><PageHelpButton pageKey="tasks" /></div>
           </div>
 
-          <GlobalTaskFilterBar filters={filters} />
+          <div data-tour="tasks-filters"><GlobalTaskFilterBar filters={filters} /></div>
         </div>
       )}
 
       {/* Table header — hidden on mobile */}
-      <div className="hidden md:grid grid-cols-[1fr_10rem_9rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
+      <div data-tour="tasks-headers" className="hidden md:grid grid-cols-[1fr_10rem_9rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
         <SortHeader label="Titre" field="title" />
         <SortHeader label="Espace" field="spaceName" />
         <SortHeader label="Assigné" field="assignedToName" />
@@ -303,7 +305,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
         ) : (
           <>
             {/* Desktop table rows */}
-            <div className="hidden md:block">
+            <div className="hidden md:block" data-tour="tasks-horizons">
               {horizonGroups.map((g) => (
                 <HorizonGroup key={g.label} title={g.label} items={g.items} renderItem={renderDesktopRow} getKey={(t: GlobalTask) => t.id} />
               ))}

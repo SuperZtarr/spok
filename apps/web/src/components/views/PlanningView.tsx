@@ -21,6 +21,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 // Get start of today (midnight)
 function getStartOfToday(): Date {
@@ -428,11 +429,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
 
   if (totalActiveItems === 0) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>Aucune tâche en cours</p>
-        <p className="text-sm">Toutes les tâches sont terminées ou il n'y a pas encore d'éléments.</p>
-      </div>
+      <EmptyHelp mode="planning" title="Aucune tâche en cours" icon={CheckSquare} className="p-8" />
     );
   }
 

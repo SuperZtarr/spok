@@ -316,7 +316,7 @@ function CommunityNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } 
   const isDropTarget = data.isDropTarget as boolean;
 
   return (
-    <div
+    <div data-tour="global-mindmap-community"
       className={`px-4 py-2.5 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isDropTarget ? 'ring-4 ring-green-400 !border-green-500 scale-110' : ''
       }`}
@@ -357,7 +357,7 @@ function SpaceNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } }) {
   const isDropTarget = data.isDropTarget as boolean;
 
   return (
-    <div
+    <div data-tour="global-mindmap-space"
       className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         isDropTarget ? 'ring-4 ring-green-400 !border-green-500 scale-110' : ''
       }`}

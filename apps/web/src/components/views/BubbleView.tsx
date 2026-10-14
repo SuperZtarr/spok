@@ -2,6 +2,7 @@
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, pack, type HierarchyCircularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const ITEM_TYPE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -290,6 +291,8 @@ export function BubbleView({
     }
     return [...types].sort();
   }, [items]);
+
+  if (items.length === 0) return <EmptyHelp mode="bubble" title="Aucun élément" />;
 
   return (
     <div

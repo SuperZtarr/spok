@@ -45,11 +45,13 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, HelpCircle, Play, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
-import { ITEM_MODAL_TOUR } from '../help/pageTours';
+import { HelpButton } from '../help/HelpButton';
+import { PAGE_HELP } from '../help/pageHelp';
+import { FieldHelp } from '../help/FieldHelp';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
 import { RuleHint } from './ui/RuleHint';
@@ -79,85 +81,6 @@ import { SaveAsTemplateModal } from './SaveAsTemplateModal';
 import { InsertTemplateModal } from './InsertTemplateModal';
 import { hasHeadings, markItemUnread } from '../lib/itemMenuGroups';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
-
-function ItemHelpButton({ pulse, onStartTour }: { pulse?: boolean; onStartTour: () => void }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const popRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!open) return;
-    const btn = btnRef.current;
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      const w = 320;
-      let left = rect.right - w;
-      if (left < 8) left = 8;
-      setPos({ top: rect.bottom + 6, left });
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handle = (e: MouseEvent) => {
-      if (popRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', handle);
-    document.addEventListener('keydown', handleKey);
-    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handleKey); };
-  }, [open]);
-
-  const launchTour = () => {
-    setOpen(false);
-    setTimeout(onStartTour, 200);
-  };
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={`inline-flex items-center justify-center w-7 h-7 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`}
-        title="Aide"
-      >
-        <HelpCircle className="w-3.5 h-3.5" />
-      </button>
-      {open && createPortal(
-        <div ref={popRef} className="fixed z-[200] w-[320px] rounded-lg border border-border bg-card shadow-lg" style={{ top: pos.top, left: pos.left }}>
-          <div className="flex items-center justify-between px-4 pt-3 pb-2">
-            <h3 className="text-sm font-semibold">Fiche élément</h3>
-            <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-          </div>
-          <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">
-            Cette fiche regroupe toutes les informations d'un élément : description, contributions, relations, tags, dates et priorité.
-          </p>
-          <ul className="px-4 pb-3 space-y-1">
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Utilisez @mentions et #références dans la description</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Ajoutez des réactions pour donner votre avis</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Les contributions permettent de discuter sur l'élément</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Créez des relations pour lier les éléments entre eux</li>
-            <li className="flex items-start gap-2 text-xs text-foreground/80"><span className="text-primary mt-0.5">&#8226;</span>Les enfants sont listés en bas de la fiche</li>
-          </ul>
-          <div className="px-4 pb-3">
-            <button
-              type="button"
-              onClick={launchTour}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
-            >
-              <Play className="w-3.5 h-3.5" />
-              Lancer le tutoriel interactif
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -199,7 +122,7 @@ export function ItemEditModal({
   onSplitDescription,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
-  const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', ITEM_MODAL_TOUR);
+  const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
   const adminMode = useAdminMode();
   const { mode: interfaceMode } = useInterfaceModeStore();
   const isForumMode = interfaceMode === 'forum';
@@ -1091,6 +1014,7 @@ export function ItemEditModal({
               <button
                 type="button"
                 onClick={() => setForumExpanded(v => !v)}
+                data-tour="item-more-fields"
                 className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
                 title={forumExpanded ? 'Masquer les champs avancés' : 'Afficher tous les champs (type, statut, dates, tags…)'}
               >
@@ -1107,7 +1031,7 @@ export function ItemEditModal({
                   <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
               )}
-              <ItemHelpButton pulse={itemPulse} onStartTour={startItemTour} />
+              <HelpButton help={PAGE_HELP['item-modal']} onStartTour={startItemTour} pulse={itemPulse} variant="page" buttonTitle="Aide" />
             </div>
           </div>
 
@@ -1274,7 +1198,7 @@ export function ItemEditModal({
                   };
 
                   return (
-                    <div className="space-y-1">
+                    <div className="space-y-1" data-tour="item-contributions">
                       <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <MessageSquarePlus className="w-4 h-4" />
                         Contributions ({contributionCount})
@@ -1417,6 +1341,7 @@ export function ItemEditModal({
               {/* Priorité */}
               {showAll && <div className="space-y-2">
                 <label className="text-sm font-medium">Priorité</label>
+                {canEdit && <FieldHelp page="item-modal" field="priority" className="text-xs text-muted-foreground" />}
                 {canEdit ? (
                   <>
                     {/* Mobile: select */}
@@ -1478,6 +1403,7 @@ export function ItemEditModal({
                   <div className="flex-1 min-w-0 space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Début</label>
+                    {canEdit && <FieldHelp page="item-modal" field="startEnd" className="text-xs text-muted-foreground" />}
                     {canEdit ? (
                       <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={!allDay} />
                     ) : (
@@ -1510,6 +1436,7 @@ export function ItemEditModal({
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Échéance</label>
+                    {canEdit && <FieldHelp page="item-modal" field="dueDate" className="text-xs text-muted-foreground" />}
                     {canEdit ? (
                       <div className="space-y-2">
                         {startDate && (
@@ -1570,6 +1497,7 @@ export function ItemEditModal({
                       {parentSortMode === 'tree' ? <><GitBranch className="w-3 h-3" /><span>Arborescence</span></> : <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>}
                     </button>
                 </div>
+                  <FieldHelp page="item-modal" field="parent" className="text-xs text-muted-foreground" />
                   <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
               </div>
               )}
@@ -1578,6 +1506,7 @@ export function ItemEditModal({
               {showAll && spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigné à</label>
+                  {canEdit && <FieldHelp page="item-modal" field="assignee" className="text-xs text-muted-foreground" />}
                   {canEdit ? (
                     <div className="flex items-center gap-2">
                       <Select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}

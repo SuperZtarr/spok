@@ -5,6 +5,7 @@ import type { CommunityListViewHandle } from '../components/views/CommunityListV
 import { Button } from '../components/ui/Button';
 import { Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
+import { PageHelpButton } from '../help/PageHelpButton';
 
 export function CommunitiesListPage() {
   const ref = useRef<CommunityListViewHandle>(null);
@@ -13,11 +14,12 @@ export function CommunitiesListPage() {
   return (
     <div className="flex flex-col h-full">
       {user && (
-        <div className="flex items-center justify-end px-4 py-2">
-          <Button size="sm" onClick={() => ref.current?.openCreate()}>
+        <div className="flex items-center justify-end gap-2 px-4 py-2">
+          <Button size="sm" data-tour="communities-new" onClick={() => ref.current?.openCreate()}>
             <Plus className="w-4 h-4 mr-1" />
-            Nouvelle communaute
+            Nouvelle communauté
           </Button>
+          <PageHelpButton pageKey="communities" />
         </div>
       )}
       <CommunityListView ref={ref} />

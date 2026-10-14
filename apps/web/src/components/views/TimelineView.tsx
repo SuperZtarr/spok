@@ -48,6 +48,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const ROW_HEIGHT = 40;
 const HEADER_HEIGHT = 24;
@@ -1319,10 +1320,7 @@ treeSort: treeSortProp,
 
           {/* Items rows */}
           {flatItems.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <p>Aucun élément</p>
-              <p className="text-sm">Créez des éléments pour les voir dans le planning</p>
-            </div>
+            <EmptyHelp mode="timeline" title="Aucun élément daté" className="p-8" />
           ) : (<div className="relative" ref={timelineAreaRef}>
             <DndContext
               sensors={ganttSensors}

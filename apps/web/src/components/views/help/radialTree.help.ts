@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Arbre radial',
   summary: 'L\'arborescence disposée en cercle : la racine au centre, les branches rayonnent vers l\'extérieur.',
+  short: 'Arbre en cercle',
+  empty: 'Aucune arborescence à dessiner. Créez des éléments, puis des enfants sous eux, pour voir les branches rayonner.',
   tips: [
     'La racine est au centre, les feuilles sur les bords',
     'Survolez un nœud pour voir ses détails',

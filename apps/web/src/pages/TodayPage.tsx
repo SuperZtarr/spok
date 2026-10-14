@@ -28,6 +28,7 @@ import { DayPlanList } from '@/components/today/DayPlanList';
 import { CalendarFeedsModal } from '@/components/today/CalendarFeedsModal';
 import { PickTasksModal } from '@/components/today/PickTasksModal';
 import { ReviewQueueSection } from '@/components/today/ReviewQueueSection';
+import { PageHelpButton } from '@/help/PageHelpButton';
 
 function shiftDate(date: string, days: number): string {
   const [y, m, d] = date.split('-').map(Number);
@@ -191,7 +192,7 @@ export function TodayPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-1 px-3 py-2 border-b border-border">
-        <button onClick={() => setDate(shiftDate(date, -1))} className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground" aria-label="Jour précédent">
+        <button data-tour="today-nav" onClick={() => setDate(shiftDate(date, -1))} className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground" aria-label="Jour précédent">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <button onClick={() => setDate(shiftDate(date, 1))} className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground" aria-label="Jour suivant">
@@ -204,12 +205,13 @@ export function TodayPage() {
           </button>
         )}
         <div className="flex-1" />
-        <button onClick={() => setFeedsOpen(true)} className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground" aria-label="Calendriers">
+        <PageHelpButton pageKey="today" />
+        <button data-tour="today-feeds" onClick={() => setFeedsOpen(true)} className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground" aria-label="Calendriers">
           <Settings className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="px-3 py-1 border-b border-border">
+      <div className="px-3 py-1 border-b border-border" data-tour="today-filters">
         <GlobalTaskFilterBar filters={filters} />
       </div>
 
@@ -244,7 +246,7 @@ export function TodayPage() {
               ))}
               {/* Choix des colonnes d'agenda affichées — indépendant de l'activation des
                   feeds (icône réglages) : ici on ne joue que sur l'affichage. */}
-              <div className="flex flex-wrap gap-1 mb-2">
+              <div className="flex flex-wrap gap-1 mb-2" data-tour="today-agendas">
                 {allSources.map((s) => {
                   const visible = visibleSources[s.key] ?? true;
                   return (
@@ -280,7 +282,7 @@ export function TodayPage() {
               />
             </div>
               <div className="flex flex-row gap-3">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0" data-tour="today-review">
                   <ReviewQueueSection
                     toTriage={reviewData?.toTriage ?? []}
                     overdue={reviewData?.overdue ?? []}
@@ -290,7 +292,7 @@ export function TodayPage() {
                     onPlanNow={handleReviewPlanNow}
                   />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0" data-tour="today-plan">
                   <DayPlanList
                     plan={data?.plan ?? []}
                     suggestions={data?.suggestions ?? []}

@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import type { Item } from '@spok/shared';
 import { RelationTooltip } from '../RelationTooltip';
 import { RELATION_TYPE_LIST, RELATION_TYPE_ORDER, getRelationMeta } from '../../constants/relationTypes';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const NODE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -241,9 +242,7 @@ export function RelationsMapView({
       </div>
 
       {graphData.nodes.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">Aucune relation trouvée entre les éléments.</p>
-        </div>
+        <EmptyHelp mode="relations" title="Aucune relation" />
       ) : (
         <ForceGraph2D
           ref={graphRef}

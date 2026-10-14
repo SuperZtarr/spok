@@ -6,6 +6,7 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Carte mentale',
   summary: 'L\'espace en carte : l\'espace au centre, ses éléments en branches, ses sous-espaces en périphérie.',
+  short: 'Carte mentale interactive',
   tips: [
     'Zoomez avec la molette, glissez le fond pour déplacer la vue',
     'Cliquez sur un nœud pour ouvrir sa fiche ; double-cliquez sur un projet pour ne voir que lui',

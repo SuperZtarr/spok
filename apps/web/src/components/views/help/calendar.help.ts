@@ -6,6 +6,7 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'Calendrier',
   summary: 'Les éléments datés sur un calendrier : mois, semaine ou liste.',
+  short: 'Calendrier : mois, semaine ou liste',
   tips: [
     'Glissez un élément vers un autre jour pour le replanifier, tirez son bord pour changer sa durée',
     'Sélectionnez un ou plusieurs jours vides pour créer un élément sur ces dates',

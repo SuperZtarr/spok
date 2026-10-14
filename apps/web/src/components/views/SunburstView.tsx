@@ -7,6 +7,7 @@ import { arc as d3arc } from 'd3-shape';
 import { useSunburstData } from '../../hooks/useSunburstData';
 import { communitiesApi } from '../../lib/api';
 import type { SunburstNode } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const COMMUNITY_FILTER_KEY = 'graph-community-filter';
 
@@ -251,9 +252,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
   if (!sunburstData || slices.length === 0) {
     return (
       <div className="relative flex-1 min-h-0 w-full">
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-          Aucune donnee a afficher.
-        </div>
+        <EmptyHelp mode="sunburst" title="Aucune donnée à afficher" className="absolute inset-0 flex items-center justify-center p-8" />
       </div>
     );
   }
@@ -291,7 +290,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
 
         {/* Community filter panel (global mode only) */}
         {!spaceId && userCommunities && userCommunities.length > 1 && (
-          <div className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 shadow-lg">
+          <div data-tour="sunburst-communities" className="absolute top-3 right-3 z-10 bg-card/90 backdrop-blur border rounded-lg p-3 shadow-lg">
             <div className="text-xs font-medium text-muted-foreground mb-2">Communautes</div>
             {userCommunities.map(c => (
               <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer mb-1">

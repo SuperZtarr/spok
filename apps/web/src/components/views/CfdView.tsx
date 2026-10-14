@@ -1,6 +1,7 @@
 /* Vue Flux cumulatif (CFD) : évolution des statuts dans le temps. */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import type { Item } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface CfdViewProps {
   items: Item[];
@@ -252,9 +253,7 @@ export function CfdView({ items }: CfdViewProps) {
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Aucun item à afficher
-      </div>
+      <EmptyHelp mode="cfd" title="Aucun élément à afficher" />
     );
   }
 

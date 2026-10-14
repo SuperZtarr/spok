@@ -27,6 +27,7 @@ import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { TagBadge } from '../ui/TagBadge';
 import { RoleGuard } from '../RoleGuard';
 import { NewItemButton } from '../ui/NewItemButton';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -326,7 +327,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
 
         {items.length === 0 && (
           <div className="text-center py-4 text-muted-foreground text-sm">
-            Aucun element
+            Aucun élément
           </div>
         )}
       </div>
@@ -497,6 +498,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
           <SpaceExportButton items={items} spaceName={spaceName} viewMode="kanban" viewContainerRef={viewContainerRef} />
         )}
       </div>
+      {items.length === 0 && <EmptyHelp mode="kanban" title="Aucun élément" banner />}
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}

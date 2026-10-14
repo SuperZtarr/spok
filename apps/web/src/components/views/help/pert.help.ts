@@ -6,6 +6,8 @@ import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 export const help: HelpEntry = {
   title: 'PERT',
   summary: 'Le diagramme PERT : les tâches, leurs dépendances et le chemin critique.',
+  short: 'Dépendances et chemin critique',
+  empty: 'Aucune tâche à ordonner. Créez des tâches, puis reliez-les par « Bloque » pour dessiner leurs dépendances.',
   tips: [
     'Les nœuds sont les tâches, les flèches leurs dépendances',
     'Le chemin critique est mis en évidence',

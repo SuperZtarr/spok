@@ -2,6 +2,7 @@
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, tree, type HierarchyPointNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
+import { EmptyHelp } from '../../help/EmptyHelp';
 
 const ITEM_TYPE_COLORS: Record<string, string> = {
   PROJECT: '#3b82f6',
@@ -252,6 +253,8 @@ export function RadialTreeView({
   }, [items]);
 
   const nodeRadius = 6;
+
+  if (items.length === 0) return <EmptyHelp mode="radialTree" title="Aucun élément" />;
 
   return (
     <div
