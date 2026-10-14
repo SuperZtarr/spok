@@ -6,6 +6,16 @@
 
 ## EN COURS
 
+### MindMap : sous-sous-espaces rattachés à la racine — 2026-10-14
+- buildPortalNodesAndEdges (mindmap-layout.ts) reliait tout nœud de sous-espace à __space__ → arête vers child-space-<parent> si le parent est affiché, parents traités avant enfants, placement dans le prolongement du parent (arc racine = 1er niveau seulement), position enregistrée prioritaire. mindmap-layout.portals.test.ts (3), mindmap 19/19, typecheck web OK. Validé par Thomas à l'écran. MEP 56ae2c0
+
+### Stockage local des fichiers en dev — 2026-10-14
+- utils/r2.ts : mode local si pas de R2 ET NODE_ENV !== 'production' (fichiers dans apps/api/.local-uploads, URL /api/local-uploads/<clé>, mêmes clés que R2 ; envoi/suppression/copie/isR2Url) ; routes/local-uploads.ts (GET /local-uploads/*, chemin vérifié), enregistrée par index.ts seulement en mode local ; .gitignore. r2.local.test.ts 5/5, TNR api 677/677, typecheck api OK, route vérifiée sur l'API de dev. Envoi d'image réel NON vérifié (Thomas). MEP dcf55f6
+
+### Recherche (/search) — 2026-10-14
+- search.ts /advanced : périmètre = espaces lisibles (readableSpaceIdsForUser + espaces des communautés non privées, filterReadableSpaceIds) pour connecté ET anonyme (fuite sous-espace hérité d'un parent privé corrigée) ; filtres d'items appliqués aux contributions via l'item, sections communautés/espaces/utilisateurs omises (itemFiltersActive) ; dès 1 caractère, 10/page. SearchPage : libellés type/statut, filtre Statut, sélecteur de tag (tags de l'espace choisi), pagination par section (« Voir les N résultats »). search 17/17, typecheck api+web OK. Doc SPOK « Recherche [SearchPage] » to_validate. UI NON vérifiée visuellement. MEP fbb566c
+- Regroupement (option A validée par Thomas) : items et contributions triés communauté › espace › récence par l'API, affichés sous en-têtes « Communauté › Espace » (groupBySpace, groupes consécutifs ; perso → « Espaces personnels »). typecheck api+web OK, search 17/17, appel API local 200. MEP fbb566c (TNR 1037/1037)
+
 ### Fuite « Activité récente » (accueil + /activity) — 2026-10-14
 - GET /activity prenait tous les espaces des communautés suivies (titres d'items d'espaces privés non membre). Filtré par filterReadableSpaceIds (espaces suivis + espaces des items marqués non lus), mode admin via header x-admin-mode (la route a son propre hook jwtVerify). +3 tests, activity 8/8, typecheck api OK. MEP 69215af
 - Audit des lectures non contrôlées : readableSpaceIdsForUser (items.ts) branché sur /user/tasks, /user/agenda, /user/review-queue (mêmes « tous les espaces de mes communautés ») ; IDOR fusion/absorption (item-merge.ts) et réactions (item-reactions.ts) : l'item/la contribution doit appartenir à l'espace de l'URL. Tests : item-cross-space.test.ts (6), review-queue +1, user-tasks réaligné. Reste : recherche anonyme (sous-espace hérité d'un parent privé), dans le chantier Recherche. TNR 1025/1025, typecheck OK. MEP e2be134
