@@ -70,8 +70,12 @@
   - Pas de page Images globale (le TODO « pages globales » la mentionne)
   - Graphe et Sunburst globaux : aucune aide jusqu'ici (ajoutée)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
-- [ ] Barre de la vue Arborescence et des vues graphiques (SpacePage, ~12 occurrences) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
-- [ ] Aide utilisateur intégrée — phase 4 : mode Aide (survol d'une zone = son explication)
+- [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
+- [x] Aide utilisateur intégrée — commandes de la barre d'espace non couvertes (relevé 2026-10-14, fait — 515065c) : Séances et Exporter sans HelpHint (title natif) ; Séances, Insérer un modèle, Exporter, Paramètres absents de SPACE_TOOLBAR_STEPS (donc d'aucun tour de vue) → infobulles + 4 étapes communes (data-tour stables) + test coverage « tout bouton de barre a infobulle ou étape »
+- [x] Aide utilisateur intégrée — revue complète des 31 vues à l'écran (fait 2026-10-14 : écarts corrigés — 515065c) : inventaire de chaque commande visible (barre d'espace + barre de la vue) vs fiche (conseils, tour, infobulle), cibles de tour réellement affichées ; tableau des écarts à présenter avant correction
+- [x] Aide utilisateur intégrée — phase 4 : mode Aide (Maj+? ou bouton du ?, lecture seule, survol = zone encadrée + explication ; cadre + barre + 31 vues) — 2026-10-14 (515065c, doc 6c0bdb1)
+- [ ] Mode Aide — zones des pages et modales (même attribut data-help-zone, textes dans PAGE_HELP)
+- [ ] Mode Aide — navigation clavier de zone en zone
 - [x] Aide utilisateur intégrée — phase 5 : règles des 3 couches de doc inscrites dans les skills spok-doc (couche 3 : fiches, affichages, mise à jour à chaque évolution), spok-deploy (check-list + vitest src/help), spok-start (rappel), spok-menu (pages, modales, infobulles) — 2026-10-14 (484f6b7)
 
 ### UX & formulaires
