@@ -44,6 +44,8 @@ SpaceToolbar    → sélecteur de vues d'espace (sections basic/itemTypes/planni
 | Rendu de la vue dans l'espace | `apps/web/src/pages/SpacePage.tsx` |
 | Type `ViewMode` | `apps/web/src/stores/viewMode.ts` |
 | Aide utilisateur des vues (fiche + tour) | `apps/web/src/components/views/help/<vue>.help.ts` (+ `help/`) |
+| Aide utilisateur des pages et modales | `apps/web/src/pages/help/<page>.help.ts`, `components/help/<modale>.help.ts`, registre `help/pageHelp.ts` |
+| Infobulles de la barre d'espace | `apps/web/src/help/spaceToolbar.hints.ts` (lues par `HelpHint`) |
 
 ## Structure du menu espace (desktop)
 
@@ -115,7 +117,19 @@ export const help: HelpEntry = {
 Modèle de tour : intro → chaque commande propre à la vue (repère `data-tour` posé sur le bouton) → un élément du
 contenu → ses gestes → barre commune (étapes partagées). `help/coverage.test.ts` échoue si la fiche manque ;
 ajouter la vue à `FULL_TOUR_VIEWS` (≥ 5 étapes dont 3 pointées). Le bouton « ? » : `ViewHelpButton`, à droite du
-`#view-header` (avant Export).
+`#view-header` (avant Export). Champ `empty` obligatoire (état vide affiché par `EmptyHelp`).
+
+**Page ou modale** (même principe, couche 3 du skill `spok-doc`) : fiche `pages/help/<page>.help.ts` ou
+`components/help/<modale>.help.ts`, clé ajoutée à `PAGE_HELP` (`help/pageHelp.ts`), puis une ligne dans l'en-tête,
+à droite du titre : `<PageHelpButton pageKey="<page>" />` — jamais `HelpButton` directement ni de bouton maison.
+Tour d'une page : ≥ 2 étapes pointées (coverage.test). Ne pas poser le « ? » sur un panneau flottant de la page
+(cas du graphe global : panneau en haut à droite → « ? » en haut à gauche). Aide d'un champ : clé dans `fields`
+de la fiche + `<FieldHelp page="<page>" field="<clé>" />` sous le champ.
+
+**Infobulle d'une commande de barre** : texte dans la fiche (`hints`) ou `help/spaceToolbar.hints.ts`, rendu par
+`<HelpHint text={…}>` autour du bouton — pas de `title` natif en plus ; un bouton à icône seule garde son
+`aria-label`. Un `Link` qui habille un `Button` porte l'`aria-label`, le bouton passe en `tabIndex={-1}` (un seul
+arrêt clavier).
 
 ### 4. Web — créer le composant vue
 

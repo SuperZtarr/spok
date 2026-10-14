@@ -40,6 +40,12 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
    - Checklist complémentaire (non scriptable) :
      - Comportement documenté modifié ? → item SPOK à jour (status `to_validate`)
      - Nouveau composant/route/script ? → l'item SPOK existe ou a été signalé comme absent
+     - Interface modifiée (vue, page, modale, bouton, champ) ? → fiche d'aide utilisateur à jour (conseils, tour + repères `data-tour`, infobulles, état vide, aide des champs — cf. skill spok-doc, couche 3)
+   - Contrôle de l'aide utilisateur (si `apps/web` est dans le diff) :
+     ```bash
+     cd C:/_dev/spok/apps/web && pnpm exec vitest run src/help
+     ```
+     Rouge → fiche, registre ou repère manquant : corriger avant de commiter
 
 6. **Commiter**
    ```bash

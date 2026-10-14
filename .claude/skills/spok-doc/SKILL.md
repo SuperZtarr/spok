@@ -14,6 +14,30 @@ description: Hub central de documentation SPOK. Invoquer pour documenter, consul
 
 Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que le TS check.
 
+## Les trois couches de documentation (décision Thomas 2026-10-14)
+
+| Couche | Pour qui | Contenu | Où |
+|---|---|---|---|
+| 1. Spec | Thomas | Ce que le composant est censé faire — **fait foi** | Items de doc SPOK (ce skill) |
+| 2. Doc technique | Claude | Ce que le code est censé faire | En-têtes de fichiers, commentaires, `apps/web/src/lib/businessRules.ts` |
+| 3. Aide utilisateur | Utilisateur final | Comment se servir du composant | **Dans l'interface, textes écrits dans le code** |
+
+**Toute évolution d'un composant met à jour les trois couches dans le même changement** : spec validée → code + en-tête → aide utilisateur.
+
+### Couche 3 — aide utilisateur : règles
+
+- **Une fiche `HelpEntry` par composant** (`apps/web/src/help/types.ts`), à côté du composant :
+  - vues : `components/views/help/<vue>.help.ts`, registre `VIEW_HELP` (`components/views/help/index.ts`)
+  - pages et modales : `pages/help/<page>.help.ts` ou `components/help/<modale>.help.ts`, registre `PAGE_HELP` (`help/pageHelp.ts`)
+- Champs d'une fiche : `title`, `summary`, `short` (accroche des cartes), `tips`, `tour` (étapes driver.js, repères `data-tour`), `hints` (infobulles), `empty` (état vide d'une vue), `fields` (aide sous les champs).
+- **Les textes ne s'écrivent jamais en dur dans un composant** : les affichages lisent la fiche.
+  - `?` : `ViewHelpButton` (vue) / `PageHelpButton` (page, modale) — jamais de bouton d'aide maison
+  - infobulles : `HelpHint` ; états vides : `EmptyHelp` ; aide sous un champ : `FieldHelp`
+- **Modifier un comportement d'interface = mettre à jour sa fiche** : bouton ajouté/retiré/renommé → conseil, étape de tour et repère `data-tour` ; nouveau champ → `fields` ; nouvelle vue/page → fiche + registre.
+- Une étape dont la cible est absente est sautée (`runTour`) : acceptable pour une section conditionnelle (favoris, enfants…), pas pour une commande toujours présente — vérifier les repères à l'écran.
+- La dernière étape « Besoin d'aide ? » est ajoutée automatiquement sur le `?` qui a lancé le tour (`TOUR_ANCHOR_ATTR`) : ne pas l'écrire dans les fiches.
+- Contrôle : `apps/web/src/help/coverage.test.ts` (fiche de chaque vue/page, tours complets, repères existants, `EmptyHelp`/`FieldHelp` branchés).
+
 ---
 
 Ce skill remplit trois rôles :
@@ -41,6 +65,7 @@ Lire en entier avant toute action.
 
 **Après avoir codé** :
 - Si le comportement d'un composant documenté a changé → mettre à jour l'item SPOK (status `to_validate`)
+- Si l'interface a changé → mettre à jour la fiche d'aide utilisateur du composant (couche 3, ci-dessus)
 
 ---
 

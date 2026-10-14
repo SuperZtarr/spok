@@ -63,6 +63,8 @@ Les changements doivent avoir été faits directement sur master — il n'y a do
 
 Ne pas attendre que l'utilisateur le demande. C'est non négociable, au même titre que le typecheck.
 
+Rappel des **trois couches** (détail dans `spok-doc`) : spec SPOK (fait foi) → doc technique dans le code → **aide utilisateur dans l'interface**, textes écrits dans le code (fiche `*.help.ts` du composant). Toute évolution d'interface met à jour la fiche d'aide dans le même changement.
+
 ## Points d'attention
 
 - Ne jamais tuer les processus du projet `bank` (port 3002)
