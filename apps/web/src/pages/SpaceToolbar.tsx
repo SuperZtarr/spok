@@ -425,7 +425,7 @@ export function SpaceToolbar({
           {/* === ORDRE === */}
           {(['list', 'tree', 'thread', 'kanban', 'timeline', 'pert'] as const).includes(viewMode as any) && (
             <>
-              <div className="flex items-center gap-0.5 flex-shrink-0">
+              <div className="flex items-center gap-0.5 flex-shrink-0" data-tour="toolbar-order">
                 {([
                   { value: 'manual', label: 'Position' },
                   { value: 'alpha-flat', label: 'A→Z à plat' },
@@ -449,7 +449,7 @@ export function SpaceToolbar({
             {(() => {
               const hasActive = !!(activeTypeFilter || activeStatusFilter || searchQuery);
               return (
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-filter">
                   <button
                     onClick={() => { setFiltreOpen(v => !v); setAperçuOpen(false); }}
                     className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
@@ -550,7 +550,7 @@ export function SpaceToolbar({
             {(() => {
               const hasActive = !!(activeHlTypeFilter || activeHlStatusFilter || highlightSearch);
               return (
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-highlight">
                   <button
                     onClick={() => { setAperçuOpen(v => !v); setFiltreOpen(false); }}
                     className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${

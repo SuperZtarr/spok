@@ -35,6 +35,7 @@ function LegendButton() {
     <div className="relative">
       <button
         ref={btnRef}
+        data-tour="pert-legend"
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1.5 h-7 text-xs px-2 rounded hover:bg-accent transition-colors text-muted-foreground"
         title="Légende"
@@ -148,6 +149,7 @@ export function PertToolbar({
             return (
               <button
                 key={type}
+                {...(type === RELATION_TYPE_LIST[0].id ? { 'data-tour': 'pert-relation-filter' } : {})}
                 onClick={() => onToggleRelFilter(type)}
                 className={`inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs font-medium transition-colors ${active ? activeClass : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
                 title={active ? `Retirer le filtre "${label}"` : `Filtrer les items "${label}"`}
@@ -169,7 +171,7 @@ export function PertToolbar({
       <button onClick={onZoomOut} className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground" title="Dézoomer">
         <Minus className="w-3.5 h-3.5" />
       </button>
-      <button onClick={onResetZoom} className="text-xs w-11 text-center tabular-nums text-muted-foreground hover:text-foreground transition-colors" title="Réinitialiser le zoom">
+      <button onClick={onResetZoom} data-tour="pert-zoom" className="text-xs w-11 text-center tabular-nums text-muted-foreground hover:text-foreground transition-colors" title="Réinitialiser le zoom">
         {Math.round(zoom * 100)}%
       </button>
       <button onClick={onZoomIn} className="h-7 w-7 flex items-center justify-center hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground" title="Zoomer">

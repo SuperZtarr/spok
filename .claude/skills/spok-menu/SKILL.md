@@ -43,7 +43,7 @@ SpaceToolbar    → sélecteur de vues d'espace (sections basic/itemTypes/planni
 | Hook de chargement | `apps/web/src/hooks/useMenuItems.ts` |
 | Rendu de la vue dans l'espace | `apps/web/src/pages/SpacePage.tsx` |
 | Type `ViewMode` | `apps/web/src/stores/viewMode.ts` |
-| Descriptions/tips des vues | `apps/web/src/constants/viewDescriptions.ts` |
+| Aide utilisateur des vues (fiche + tour) | `apps/web/src/components/views/help/<vue>.help.ts` (+ `help/`) |
 
 ## Structure du menu espace (desktop)
 
@@ -95,18 +95,27 @@ export type ViewMode = '...' | 'ma-vue';
 { value: 'ma-vue', label: 'Ma Vue', icon: 'IconName', category: 'basic' },
 ```
 
-### 3. Web — description de la vue
+### 3. Web — fiche d'aide utilisateur de la vue (OBLIGATOIRE)
+
+`viewDescriptions.ts` et `viewTours.ts` n'existent plus (2026-10-14) : l'aide d'une vue est UNE fiche
+`apps/web/src/components/views/help/ma-vue.help.ts` (type `HelpEntry`, `help/types.ts`) — titre, résumé,
+conseils, tour guidé — enregistrée dans `components/views/help/index.ts` (`VIEW_HELP`, Record strict).
 
 ```ts
-// apps/web/src/constants/viewDescriptions.ts
-'ma-vue': {
-  title: 'Titre affiché',
-  description: 'Description courte.',
-  tips: ['Tip 1', 'Tip 2'],
-},
+import type { HelpEntry } from '../../../help/types';
+import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+export const help: HelpEntry = {
+  title: 'Ma Vue', summary: 'À quoi elle sert.', tips: ['Geste 1', 'Geste 2'],
+  tour: [ { popover: { title: 'Vue Ma Vue', description: '…' } },
+          { element: '[data-tour="ma-vue-xxx"]', popover: { title: '…', description: '…', side: 'bottom' } },
+          ...ITEM_MENU_STEP, ...SPACE_TOOLBAR_STEPS ],
+};
 ```
 
-⚠️ `VIEW_DESCRIPTIONS` est un `Record<ViewMode, ...>` strict — TypeScript échoue si une clé manque.
+Modèle de tour : intro → chaque commande propre à la vue (repère `data-tour` posé sur le bouton) → un élément du
+contenu → ses gestes → barre commune (étapes partagées). `help/coverage.test.ts` échoue si la fiche manque ;
+ajouter la vue à `FULL_TOUR_VIEWS` (≥ 5 étapes dont 3 pointées). Le bouton « ? » : `ViewHelpButton`, à droite du
+`#view-header` (avant Export).
 
 ### 4. Web — créer le composant vue
 
@@ -366,7 +375,7 @@ Bouton Paramètres dans les toolbars : icône `Settings`, visible uniquement si 
 | Erreur | Cause | Fix |
 |--------|-------|-----|
 | Vue absente du menu | Pas dans `DEFAULT_MENU_ITEMS` ou accès insuffisant | Ajouter + `pnpm build:packages` |
-| TS error sur `VIEW_DESCRIPTIONS` | Clé manquante dans le Record | Ajouter l'entrée |
+| TS error sur `VIEW_HELP` / test coverage rouge | Fiche d'aide manquante | Créer `components/views/help/<vue>.help.ts` + l'enregistrer dans l'index |
 | Icône absente (fallback List) | Icône non dans `ICONS` map de `MainMenu.tsx` | Ajouter import + entrée dans ICONS |
 | Vue non rendue | Cas manquant dans SpacePage | Ajouter le ternaire |
 | Dropdown Espaces ne s'ouvre pas | `spaceRenderSections` vide (accès public, items user-only) | Normal pour utilisateurs non connectés |

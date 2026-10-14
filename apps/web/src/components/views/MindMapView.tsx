@@ -1387,6 +1387,7 @@ function MindMapViewInner({
         />
         <button
           onClick={resetLayout}
+          data-tour="mindmap-reset"
           className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           title="Réorganiser les éléments"
         >
@@ -1395,6 +1396,7 @@ function MindMapViewInner({
         </button>
         <button
           onClick={fitAll}
+          data-tour="mindmap-fit"
           className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           title="Tout voir"
         >
@@ -1403,6 +1405,7 @@ function MindMapViewInner({
         </button>
         <button
           onClick={() => setShowRelations(v => !v)}
+          data-tour="mindmap-relations"
           className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showRelations ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
           title={showRelations ? 'Masquer les relations' : 'Afficher les relations'}
         >
@@ -1414,6 +1417,7 @@ function MindMapViewInner({
           <button
             className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             onClick={() => setLegendOpen(v => !v)}
+            data-tour="mindmap-legend"
             title={legendOpen ? 'Masquer la légende' : 'Afficher la légende'}
           >
             <ChevronRight className={`w-3.5 h-3.5 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />

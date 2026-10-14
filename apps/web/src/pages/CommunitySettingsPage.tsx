@@ -9,7 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, HelpCircle, Play, AlertTriangle, ArrowRightLeft, Search, Users, FileText, User } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { COMMUNITY_SETTINGS_TOUR } from '../hooks/viewTours';
+import { COMMUNITY_SETTINGS_TOUR } from '../help/pageTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';

@@ -1,11 +1,13 @@
 /*
- * Hook : didacticiels driver.js — tour principal à la première visite + tours par vue (viewTours),
- * suivi « déjà vu » en localStorage (spok-onboarding-done, spok-view-tour-done-*).
+ * Hook : didacticiels driver.js — tour principal à la première visite + tours par vue (fiches d'aide
+ * VIEW_HELP[vue].tour, components/views/help), suivi « déjà vu » en localStorage (spok-onboarding-done,
+ * spok-view-tour-done-*).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { VIEW_TOURS, type TourStep } from './viewTours';
+import type { TourStep } from '../help/types';
+import { VIEW_HELP } from '../components/views/help';
 import type { ViewMode } from '../stores/viewMode';
 
 const STORAGE_KEY = 'spok-onboarding-done';
@@ -145,8 +147,8 @@ export function useViewOnboarding(viewMode: ViewMode | null) {
 
   const startViewTour = useCallback((mode: ViewMode) => {
     setPulseHelp(false);
-    const steps = VIEW_TOURS[mode];
-    if (!steps) return;
+    const steps = VIEW_HELP[mode]?.tour;
+    if (!steps?.length) return;
     runTour(steps, VIEW_STORAGE_PREFIX + mode);
   }, []);
 
@@ -160,8 +162,8 @@ export function useViewOnboarding(viewMode: ViewMode | null) {
       return;
     }
 
-    const steps = VIEW_TOURS[viewMode];
-    if (!steps) {
+    const steps = VIEW_HELP[viewMode]?.tour;
+    if (!steps?.length) {
       setPulseHelp(false);
       return;
     }

@@ -25,6 +25,7 @@ export function BulkUploadButton({ bulk, kind }: { bulk: BulkUpload; kind: Uploa
     <>
       <button
         type="button"
+        data-tour="bulk-upload"
         onClick={() => inputRef.current?.click()}
         disabled={bulk.running}
         title={LABELS[kind].button}

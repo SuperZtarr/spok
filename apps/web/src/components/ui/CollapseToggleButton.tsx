@@ -11,6 +11,7 @@ export function CollapseToggleButton({ isCollapsed, onToggle, className }: Colla
   return (
     <button
       onClick={onToggle}
+      data-tour="collapse-toggle"
       title={isCollapsed ? 'Tout étendre' : 'Tout réduire'}
       className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex-shrink-0 ${className ?? ''}`}
     >

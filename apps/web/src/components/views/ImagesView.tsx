@@ -296,7 +296,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
     <div className="flex-1 overflow-auto p-4 space-y-4">
       {/* Zoom controls */}
       <div className="flex items-center gap-3 px-1">
-        <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-2 py-1">
+        <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-2 py-1" data-tour="images-zoom">
           <button
             onClick={() => setZoomLevel(z => Math.max(0, z - 1))}
             disabled={zoomLevel === 0}
@@ -359,6 +359,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                     className="group relative flex flex-col rounded-lg overflow-hidden border bg-card hover:shadow-md hover:border-primary/30 transition-all"
                   >
                     <button
+                      data-tour="images-tile"
                       onClick={() => openLightbox(getFlatIndex(img))}
                       onDoubleClick={() => onEdit?.(img.id)}
                       className="flex-1 flex flex-col"

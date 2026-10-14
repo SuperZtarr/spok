@@ -1141,6 +1141,7 @@ treeSort: treeSortProp,
           variant={compactMode ? 'default' : 'outline'}
           size="sm"
           onClick={() => setCompactMode(prev => !prev)}
+          data-tour="timeline-compact"
           title={compactMode ? 'Afficher tous les éléments' : 'Masquer les éléments sans date'}
         >
           {compactMode ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
@@ -1155,6 +1156,7 @@ treeSort: treeSortProp,
           variant={showCriticalPath ? 'default' : 'outline'}
           size="sm"
           onClick={() => setShowCriticalPath(prev => !prev)}
+          data-tour="timeline-critical"
           title={showCriticalPath ? 'Masquer le chemin critique' : 'Afficher le chemin critique'}
           className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
         >

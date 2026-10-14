@@ -198,6 +198,7 @@ export function ThreadView({
         <div className={`${!isMatch ? 'opacity-30' : ''}`}>
           {/* Thread header row */}
           <div
+            data-tour="thread-topic"
             className={`flex items-center gap-3 py-3 cursor-pointer transition-colors ${
               isExpanded ? 'bg-accent/50' : 'hover:bg-accent/30'
             }`}

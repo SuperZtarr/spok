@@ -20,6 +20,7 @@ export function NewItemButton({ onClick, className }: NewItemButtonProps) {
       type="button"
       onClick={onClick}
       title="Nouvel élément"
+      data-tour="new-item"
       className={`inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-semibold bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-colors flex-shrink-0 ${className ?? ''}`}
     >
       <Plus className="w-3.5 h-3.5" />

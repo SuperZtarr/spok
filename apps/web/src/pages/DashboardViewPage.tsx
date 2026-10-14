@@ -2,7 +2,7 @@
 import { HelpCircle } from 'lucide-react';
 import { MyDashboardView } from '../components/views/MyDashboardView';
 import { usePageTourPulse } from '../hooks/useOnboarding';
-import { DASHBOARD_TOUR } from '../hooks/viewTours';
+import { DASHBOARD_TOUR } from '../help/pageTours';
 
 export function DashboardViewPage() {
   const { pulseHelp, startTour } = usePageTourPulse('dashboard', DASHBOARD_TOUR);

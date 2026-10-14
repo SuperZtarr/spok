@@ -10,7 +10,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, Loader2, Building2, Trash2, AlertTriangle, Camera, ImageIcon, HelpCircle, Play, X, ArrowRightLeft } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import type { TourStep } from '../hooks/viewTours';
+import type { TourStep } from '../help/types';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';

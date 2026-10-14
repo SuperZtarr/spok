@@ -49,7 +49,7 @@ import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Lin
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
-import { ITEM_MODAL_TOUR } from '../hooks/viewTours';
+import { ITEM_MODAL_TOUR } from '../help/pageTours';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
 import { RuleHint } from './ui/RuleHint';

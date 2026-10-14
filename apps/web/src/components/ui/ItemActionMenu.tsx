@@ -162,6 +162,7 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
         onClick={(e) => e.stopPropagation()}
         className={triggerClassName || 'p-1 rounded hover:bg-accent transition-colors'}
         title="Actions"
+        data-tour="item-menu"
       >
         <MoreVertical className="w-4 h-4" />
       </button>

@@ -199,6 +199,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                 return (
                   <DraggableDoc key={doc.id} id={doc.id} canDrag={canEdit && !!onMove}>
                   <div
+                    data-tour="documents-row"
                     className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
                     onClick={() => onEdit?.(doc.id)}
                   >

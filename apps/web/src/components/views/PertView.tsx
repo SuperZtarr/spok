@@ -923,6 +923,7 @@ export function PertView({
               return (
                 <g
                   key={item.id}
+                  data-tour="pert-node"
                   transform={`translate(${x}, ${y})`}
                   style={{ cursor: relationDrag ? 'crosshair' : 'pointer', opacity: nodeIsDimmed ? 0.3 : 1 }}
                   onClick={() => { if (!relationDrag) onEdit(item.id); }}

@@ -57,6 +57,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
         href={item.url || '#'}
         target="_blank"
         rel="noopener noreferrer"
+        data-tour="links-tag"
         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-full hover:bg-accent hover:border-primary/30 transition-colors shadow-sm"
         title={tooltip}
         onDoubleClick={(e) => { e.preventDefault(); onEdit?.(item.id); }}
