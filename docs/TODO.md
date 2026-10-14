@@ -62,9 +62,17 @@
 ### Didacticiels / aide contextuelle
 - [x] Revoir tous les tours de vues — remplacé par l'aide utilisateur intégrée, phase 1 : fiche + tour pour les 31 vues, contrôle de couverture ; tours complets lots 1 (vues JDR) et 2 (pilotage) — 2026-10-14 (b5eb8d0)
 - [x] Aide utilisateur intégrée — lot 3 des tours complets : vues d'exploration (Graphe, Sunburst, Arbre radial, Bulles, Treemap, Cordes, Heatmap, Ego, Relations, Tableau croisé, Burndown, Flux cumulés, Texte, Présentation) ; toute nouvelle vue doit avoir un tour complet (test) — 2026-10-14 (0c526e3)
-- [ ] Aide utilisateur intégrée — phase 2 : pages (accueil, tableau de bord, recherche, activité, paramètres…) et modales (fiche d'item, séances) en fiches HelpEntry (help/pageTours.ts à résorber) ; regrouper les descriptions de vues dupliquées (OverviewView, LandingPage, SpaceOverviewPage) sur VIEW_HELP ; étendre le contrôle de couverture aux pages
-- [ ] Aide utilisateur intégrée — phase 3 : infobulles (HelpHint), aide sous les champs, états vides (EmptyHelp), composant par composant
+- [x] Aide utilisateur intégrée — phase 2 (pages et modales : 21 fiches + tours, PageHelpButton, accroches des vues) et revue des vues globales — 2026-10-14 (652665a)
+- [ ] Vues globales — constats de la revue 2026-10-14 (à arbitrer) :
+  - « Non lus → Voir tout » (accueil) mène à /notifications, route inexistante (pas de route attrape-tout : page vide) — page Notifications à créer ou lien à retirer
+  - Carte mentale globale : clic sur une communauté → ses PARAMÈTRES (refusés à un simple membre) au lieu de sa page ; déplacer un espace par glisser-déposer n'attend ni ne signale l'échec (droits insuffisants = silence, carte fausse)
+  - Liens globaux : l'en-tête promet des filtres par espace mais seule une recherche texte existe ; limite de 500 liens sans pagination
+  - Pas de page Images globale (le TODO « pages globales » la mentionne)
+  - Graphe et Sunburst globaux : aucune aide jusqu'ici (ajoutée)
+- [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
+- [ ] Barre de la vue Arborescence et des vues graphiques (SpacePage, ~12 occurrences) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
 - [ ] Aide utilisateur intégrée — phase 4 : mode Aide (survol d'une zone = son explication)
+- [x] Aide utilisateur intégrée — phase 5 : règles des 3 couches de doc inscrites dans les skills spok-doc (couche 3 : fiches, affichages, mise à jour à chaque évolution), spok-deploy (check-list + vitest src/help), spok-start (rappel), spok-menu (pages, modales, infobulles) — 2026-10-14 (484f6b7)
 
 ### UX & formulaires
 - [x] Recherche : portée par défaut = espace (sous-espaces inclus) ou communauté d'où on la lance, élargissement explicite ; fix choix communauté écrasé ; utilisateurs filtrés par portée — 2026-10-11 (51bc4ee)
