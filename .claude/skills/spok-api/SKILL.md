@@ -90,7 +90,7 @@ Pour les scripts de sync ou migration, utiliser le helper `_env.ts` qui charge l
 // apps/api/scripts/mon-script.ts
 import { prodPrisma, localPrisma, ENV } from './_env';
 
-const dev = localPrisma();    // postgresql://spok:spok@localhost:5433/spok
+const dev = localPrisma();    // postgresql://spok:spok@localhost:25432/spok
 const prod = prodPrisma();    // lit PROD_DATABASE_URL depuis .env
 
 // Exécuter : cd C:/_dev/spok && npx tsx apps/api/scripts/mon-script.ts

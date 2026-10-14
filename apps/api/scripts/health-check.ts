@@ -28,7 +28,7 @@ const checks: Check[] = [
     },
   },
   {
-    name: 'DB locale (5433)',
+    name: 'DB locale (25432)',
     run: async () => {
       const p = localPrisma();
       try {

@@ -27,7 +27,7 @@ function required(key: string): string {
 
 export const ENV = {
   // Local
-  LOCAL_DB_URL: process.env.DATABASE_URL || 'postgresql://spok:spok@localhost:5433/spok?schema=public',
+  LOCAL_DB_URL: process.env.DATABASE_URL || 'postgresql://spok:spok@localhost:25432/spok?schema=public',
   LOCAL_ADMIN_ID: 'cmlup9ug40000n86xjf96ej3f',
   LOCAL_API: 'http://localhost:3001',
   LOCAL_ADMIN_EMAIL: 'admin@spok.app',

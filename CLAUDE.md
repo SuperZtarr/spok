@@ -112,7 +112,7 @@ packages/
   database/     # @spok/database - Prisma ORM + schema
   shared/       # @spok/shared - Shared types and constants
 docker/
-  docker-compose.dev.yml  # PostgreSQL dev (port 5433)
+  docker-compose.dev.yml  # PostgreSQL dev (port 25432)
   Dockerfile.api          # Image prod API
   Dockerfile.web          # Image prod Web (nginx)
   docker-compose.yml      # Compose prod
@@ -141,7 +141,7 @@ Core models: User, Space (hierarchy), SpaceMembership, Community, CommunityMembe
 ## Environment Setup
 
 Copy `.env.example` to `.env` and configure:
-- `DATABASE_URL` - PostgreSQL connection string (local: `localhost:5433`, Docker interne: `postgres:5432`)
+- `DATABASE_URL` - PostgreSQL connection string (local: `localhost:25432`, Docker interne: `postgres:5432`)
 - `JWT_SECRET` / `JWT_REFRESH_SECRET` - Change in production
 - `API_PORT` - Default 3001
 - `VITE_API_URL` - API URL for frontend
@@ -156,7 +156,7 @@ Internal packages use `workspace:*` protocol. When importing:
 
 ## Dev local
 
-- **PostgreSQL** en Docker (conteneur `spok-postgres-dev`, port 5433, partage entre projets)
+- **PostgreSQL** en Docker (conteneur `spok-postgres-dev`, port 25432, partage entre projets)
 - **API + Web** en local via `pnpm dev` (hot reload natif, pas de Docker)
 - `pnpm dev:start` fait les deux : demarre postgres Docker puis lance `pnpm dev`
 
