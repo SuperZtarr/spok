@@ -43,7 +43,7 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
      - Interface modifiée (vue, page, modale, bouton, champ) ? → fiche d'aide utilisateur à jour (conseils, tour + repères `data-tour`, infobulles, état vide, aide des champs — cf. skill spok-doc, couche 3)
    - Contrôle de l'aide utilisateur (si `apps/web` est dans le diff) :
      ```bash
-     cd C:/_dev/spok/apps/web && pnpm exec vitest run src/help
+     cd C:/_dev/spok && pnpm exec vitest run --project web apps/web/src/help   # depuis la racine : config jsdom (vitest.config.ts)
      ```
      Rouge → fiche, registre ou repère manquant : corriger avant de commiter
 
