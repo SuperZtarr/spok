@@ -6,6 +6,12 @@
 
 ## EN COURS
 
+### Vues globales — arbitrage de la revue — 2026-10-15
+- Accueil « Voir tout » (Non lus) → ouvre la cloche (stores/notificationPanel.ts, NotificationBell piloté par le store) ; plus de lien vers /notifications
+- Carte mentale globale : clic communauté → /communities/:id ; glisser-déposer gardé (Thomas) + retour de survol (nœud translucide, cible ping vert / rouge, étiquette curseur, cible = nœud sous le curseur) ; dashboard-mindmap-drop.ts (règles pures, 7 tests) ; MindMapPage attend le PATCH, recharge spaces/sidebar/communities, bandeau d'erreur, nœud remis en place ; changement de communauté d'un espace à sous-espaces refusé (API ne propage pas communityId → TODO)
+- Liens globaux : sélecteur Communauté / Espace (+ sous-espaces) côté API, useInfiniteQuery 200/page, « Charger plus », total ; Images globale abandonnée
+- Fiches d'aide home, global-mindmap, global-links à jour ; ARCHITECTURE (store). typecheck web OK, help + drop 317/317 (via --project web). Vérifié en local : survol (4 cas), filtre liens, cloche. Dépôt réel validé par Thomas à l'écran. NON vérifié : « Charger plus » (4 liens en local). Specs SPOK en prod avec accord de Thomas (to_validate) : « Carte mentale globale [MindMapPage] » réécrite (glisser-déposer gardé, clic communauté), « Liens globaux [GlobalLinksPage] » créée (cmv9jvocj000ccrhm5o8dl8gq). MEP 7bd4fc3, 54c69b7, 5276d50
+
 ### Port Postgres dev 5433 → 25432 — 2026-10-14
 - 5433 tombé dans une plage réservée par Hyper-V (5353–5452) → conteneur sans port publié, API « Can't reach database ». Passage à 25432 (aligné dev-environment.md, liste, voyages) : docker-compose.dev.yml, .env, apps/api/.env, .env.example, scripts/_env.ts, health-check.ts, CLAUDE.md, skill spok-api, mémoire. Conteneur recréé (volume conservé), API 200. `bank/.env` encore en 5433 : à mettre à jour (autre projet, non touché). Commit 7a890a4
 

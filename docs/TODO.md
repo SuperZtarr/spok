@@ -63,12 +63,14 @@
 - [x] Revoir tous les tours de vues — remplacé par l'aide utilisateur intégrée, phase 1 : fiche + tour pour les 31 vues, contrôle de couverture ; tours complets lots 1 (vues JDR) et 2 (pilotage) — 2026-10-14 (b5eb8d0)
 - [x] Aide utilisateur intégrée — lot 3 des tours complets : vues d'exploration (Graphe, Sunburst, Arbre radial, Bulles, Treemap, Cordes, Heatmap, Ego, Relations, Tableau croisé, Burndown, Flux cumulés, Texte, Présentation) ; toute nouvelle vue doit avoir un tour complet (test) — 2026-10-14 (0c526e3)
 - [x] Aide utilisateur intégrée — phase 2 (pages et modales : 21 fiches + tours, PageHelpButton, accroches des vues) et revue des vues globales — 2026-10-14 (652665a)
-- [ ] Vues globales — constats de la revue 2026-10-14 (à arbitrer) :
-  - « Non lus → Voir tout » (accueil) mène à /notifications, route inexistante (pas de route attrape-tout : page vide) — page Notifications à créer ou lien à retirer
-  - Carte mentale globale : clic sur une communauté → ses PARAMÈTRES (refusés à un simple membre) au lieu de sa page ; déplacer un espace par glisser-déposer n'attend ni ne signale l'échec (droits insuffisants = silence, carte fausse)
-  - Liens globaux : l'en-tête promet des filtres par espace mais seule une recherche texte existe ; limite de 500 liens sans pagination
-  - Pas de page Images globale (le TODO « pages globales » la mentionne)
+- [x] Vues globales — constats de la revue 2026-10-14, arbitrés par Thomas, faits le 2026-10-15 (7bd4fc3, 54c69b7, 5276d50) :
+  - « Non lus → Voir tout » (accueil) ouvre la cloche (store notificationPanel) — pas de page /notifications (spec : la cloche est la liste)
+  - Carte mentale globale : clic communauté → sa page ; glisser-déposer GARDÉ (décision Thomas) : nœud glissé translucide, cible qui pulse vert / rouge si refusé, étiquette au curseur, règles pures `dashboard-mindmap-drop.ts` (7 tests), PATCH attendu + rechargement, bandeau d'erreur et retour en place ; dépôt sur une autre communauté → communityId envoyé
+  - Liens globaux : sélecteur Communauté / Espace (sous-espaces inclus, filtré par l'API), pages de 200 + « Charger plus » et total
+  - Page Images globale : abandonnée (ni spec ni demande)
   - Graphe et Sunburst globaux : aucune aide jusqu'ici (ajoutée)
+- [ ] Carte globale : retirer le refus « déplacez d'abord les sous-espaces » — constat erroné, PATCH /spaces/:id propage déjà communityId aux descendants (adff75f) ; reste à le passer en transaction (session « PATCH espace : propager la communauté aux sous-espaces », en attente d'accord)
+- [ ] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → lancer `npx vitest run --project web apps/web/src/help` depuis la racine
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
 - [x] Aide utilisateur intégrée — commandes de la barre d'espace non couvertes (relevé 2026-10-14, fait — 515065c) : Séances et Exporter sans HelpHint (title natif) ; Séances, Insérer un modèle, Exporter, Paramètres absents de SPACE_TOOLBAR_STEPS (donc d'aucun tour de vue) → infobulles + 4 étapes communes (data-tour stables) + test coverage « tout bouton de barre a infobulle ou étape »
