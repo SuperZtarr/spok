@@ -212,7 +212,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'live-session-create-access',
     page: 'Espace de communauté (bouton « Séances »), espace de séance',
     trigger: "Création ou ouverture d'une séance de présentation en direct",
-    effect: "Seul un propriétaire de la communauté crée une séance : sous-espace PRIVÉ nommé par la date du jour, dont il est animateur. Seuls les membres de l'espace parent peuvent rejoindre ; rejoindre = devenir membre de l'espace de séance (accès conservé après la séance). L'animateur désigne les présentateurs parmi les membres du parent",
+    effect: "Seul un propriétaire de la communauté crée une séance : sous-espace PRIVÉ nommé « Séance » + date du jour (« Séance 2026-10-15 », puis « (2) »… si déjà pris ; même règle pour une suite — séances antérieures au 15/10/2026 : date seule), dont il est animateur. Seuls les membres de l'espace parent peuvent rejoindre ; rejoindre = devenir membre de l'espace de séance (accès conservé après la séance). L'animateur désigne les présentateurs parmi les membres du parent",
     location: 'apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/ParentSessionsButton.tsx',
   },
   {

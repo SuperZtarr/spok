@@ -17,7 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Radio } from 'lucide-react';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
-import { todayLocal } from './sessionName';
+import { defaultSessionName } from './sessionName';
 import { NewSessionDialog } from './NewSessionDialog';
 import { HelpHint } from '../../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
@@ -58,7 +58,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
   });
   const create = async (agenda: Array<{ sourceItemId: string; includeChildren?: boolean }>, invitees: string[]) => {
     setCreating(true);
-    await run(async () => (await liveSessionsApi.create(spaceId, todayLocal(), agenda, invitees)).session.spaceId);
+    await run(async () => (await liveSessionsApi.create(spaceId, defaultSessionName(), agenda, invitees)).session.spaceId);
     setCreating(false);
   };
 

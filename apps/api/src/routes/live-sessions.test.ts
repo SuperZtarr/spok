@@ -71,7 +71,7 @@ describe('/live-sessions', () => {
     expect(res.statusCode).toBe(201)
     const data = prisma.space.create.mock.calls[0][0].data
     expect(data).toMatchObject({ type: 'GROUP', parentId: 'parent', communityId: 'c1', visibility: 'PRIVATE' })
-    expect(data.name).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(data.name).toMatch(/^Séance \d{4}-\d{2}-\d{2}$/)
     expect(prisma.liveSession.create.mock.calls[0][0].data.roles.create).toEqual({ userId: USER, role: 'HOST' })
     expect(prisma.liveSession.create.mock.calls[0][0].data.status ?? 'PREPARED').toBe('PREPARED')
     expect(res.json().myRole).toBe('HOST')
@@ -411,6 +411,20 @@ describe('/live-sessions', () => {
       prisma.liveSession.findMany.mockResolvedValue([{ space: { name: '2026-10-10' } }, { space: { name: '2026-10-10 (2)' } }])
       await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent', name: '2026-10-10' } })
       expect(prisma.space.create.mock.calls[0][0].data.name).toBe('2026-10-10 (3)')
+    })
+
+    it('sans nom → « Séance » + date du jour', async () => {
+      prisma.liveSession.findFirst.mockResolvedValue(null)
+      prisma.liveSession.findMany.mockResolvedValue([])
+      await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent' } })
+      expect(prisma.space.create.mock.calls[0][0].data.name).toMatch(/^Séance \d{4}-\d{2}-\d{2}$/)
+    })
+
+    it('nom préfixé déjà pris → « Séance 2026-10-10 (2) »', async () => {
+      prisma.liveSession.findFirst.mockResolvedValue(null)
+      prisma.liveSession.findMany.mockResolvedValue([{ space: { name: 'Séance 2026-10-10' } }])
+      await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent', name: 'Séance 2026-10-10' } })
+      expect(prisma.space.create.mock.calls[0][0].data.name).toBe('Séance 2026-10-10 (2)')
     })
 
     it('nom libre → inchangé', async () => {

@@ -13,7 +13,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
-import { todayLocal } from './sessionName';
+import { defaultSessionName } from './sessionName';
 import type { LiveSessionState, SpaceMember } from '@spok/shared';
 import { SessionTimeline } from './SessionTimeline';
 import { PresenterPanel } from './PresenterPanel';
@@ -54,7 +54,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   };
 
   const createSuite = () => run(async () => {
-    const suite = await liveSessionsApi.createSuite(state.session.id, todayLocal());
+    const suite = await liveSessionsApi.createSuite(state.session.id, defaultSessionName());
     queryClient.invalidateQueries({ queryKey: ['spaces'] });
     queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
     queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); // bouton de l'en-tête

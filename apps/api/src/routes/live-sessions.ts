@@ -3,12 +3,12 @@
  * - Cycle : PREPARED (création) → LIVE (/:id/start, animateur) → ENDED (/:id/end). Afficher/révéler : LIVE seulement.
  * - Création : OWNER de la communauté de l'espace parent (ou admin en mode admin) → sous-espace PRIVATE daté + rôle HOST ;
  *   les actions d'animation restent réservées à l'animateur (hostId), y compris pour un admin ;
- *   une seule séance en cours (PREPARED|LIVE) par espace parent (409 sinon) ; nom unique « date (n) ».
+ *   une seule séance en cours (PREPARED|LIVE) par espace parent (409 sinon) ; nom unique « Séance date (n) ».
  *   Préparation initiale facultative (agenda: [{ sourceItemId, includeChildren }]) : éléments de l'espace parent
  *   uniquement (400 sinon, rien n'est créé), sous-éléments directs juste après leur parent.
  * - Suite (/:id/suite, animateur, séance ENDED, une seule suite directe) : nouvelle séance PREPARED liée
  *   (previousSessionId) qui reprend les présentateurs, la préparation NON présentée et recopie les éléments présentés.
- *   Le nom (date locale) est envoyé par le client ; à défaut, date UTC du serveur.
+ *   Le nom (« Séance » + date locale) est envoyé par le client ; à défaut, « Séance » + date UTC du serveur (defaultSessionName).
  * - Invités (champ invitees à la création, /invite-candidates, /:id/invitees GET/POST/DELETE) : membres de la
  *   communauté SANS accès à l'espace parent, membres de l'espace de séance seulement (utils/liveInvites) ;
  *   animateur seul ; ajout tant que la séance n'est pas terminée, retrait à tout moment ; repris dans la suite.
@@ -181,7 +181,10 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   const ongoingIn = (parentSpaceId: string) =>
     prisma.liveSession.findFirst({ where: { parentSpaceId, status: { in: ['PREPARED', 'LIVE'] } }, select: { id: true } });
 
-  /** Nom unique parmi les séances de l'espace : « 2026-10-10 », puis « 2026-10-10 (2) »… */
+  /** Nom unique parmi les séances de l'espace : « Séance 2026-10-10 », puis « Séance 2026-10-10 (2) »… */
+  /** Nom par défaut si le client n'en envoie pas : « Séance » + date UTC (le web envoie la date locale). */
+  const defaultSessionName = () => `Séance ${new Date().toISOString().slice(0, 10)}`;
+
   async function uniqueName(parentSpaceId: string, baseName: string) {
     const siblings = await prisma.liveSession.findMany({ where: { parentSpaceId }, select: { space: { select: { name: true } } } });
     const taken = new Set((siblings ?? []).map((x: any) => x.space?.name));
@@ -263,7 +266,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       if (invalid) return reply.badRequest(invalid);
     }
 
-    const name = await uniqueName(parent.id, body.name ?? new Date().toISOString().slice(0, 10));
+    const name = await uniqueName(parent.id, body.name ?? defaultSessionName());
 
     const space = await prisma.space.create({
       data: {
@@ -620,7 +623,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const space = await prisma.space.create({
       data: {
-        name: await uniqueName(parent.id, body.name ?? new Date().toISOString().slice(0, 10)), type: 'GROUP',
+        name: await uniqueName(parent.id, body.name ?? defaultSessionName()), type: 'GROUP',
         communityId: parent.communityId, parentId: parent.id, visibility: 'PRIVATE',
         memberships: { create: { userId, role: 'OWNER' } },
       },
