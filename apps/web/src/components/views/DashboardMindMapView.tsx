@@ -1,4 +1,11 @@
-/* Carte mentale globale (lecture seule) : tous les espaces accessibles — distincte de MindMapView. */
+/*
+ * Carte mentale globale (/mindmap) : tous les espaces accessibles, regroupés par communauté — distincte de MindMapView.
+ * Clic : espace → sa page, communauté → sa page. Glisser un espace sur un autre espace / une communauté / le groupe
+ * des indépendants = le déplacer (règles : dashboard-mindmap-drop.ts). Pendant le survol : nœud glissé translucide,
+ * cible qui pulse en vert (ou rouge si refusé) et étiquette près du curseur disant ce que fera le dépôt.
+ * Props : onMoveSpace(move) renvoie une promesse — rejet = déplacement annulé à l'écran (l'appelant affiche l'erreur).
+ * Glisser une communauté ou un groupe ne fait que le repositionner (positions en localStorage, « Réinitialiser »).
+ */
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
@@ -19,8 +26,16 @@ import { useNavigate } from 'react-router-dom';
 import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 import { Building2, FolderKanban, User, Globe, Users, RotateCcw } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';
+import { resolveSpaceDrop, type SpaceDropResult } from './dashboard-mindmap-drop';
 
 // --- Types ---
+
+export interface SpaceMove {
+  spaceId: string;
+  parentId: string | null;
+  /** Absent = communauté inchangée ; null = sans communauté (indépendant). */
+  communityId?: string | null;
+}
 
 interface CommunityGroup {
   communityId: string;
@@ -32,7 +47,7 @@ interface DashboardMindMapViewProps {
   communityGroups: CommunityGroup[];
   personalSpaces: SpaceWithRole[];
   independentSpaces: SpaceWithRole[];
-  onMoveSpace?: (spaceId: string, newParentId: string | null) => void;
+  onMoveSpace?: (move: SpaceMove) => Promise<void>;
   resetRef?: React.MutableRefObject<(() => void) | null>;
 }
 
@@ -307,21 +322,34 @@ function CentralNode({ data }: { data: TreeDatum }) {
   );
 }
 
-function CommunityNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } }) {
+type DropState = 'valid' | 'invalid' | undefined;
+
+/** Retour visuel d'une cible de dépôt : vert qui pulse (dépôt possible) ou rouge (refusé). */
+const DROP_STYLES = {
+  valid: { className: 'ring-4 ring-green-400 !border-green-500 scale-110', bg: '#dcfce7', border: '#22c55e', ping: 'ring-green-400' },
+  invalid: { className: 'ring-4 ring-red-400 !border-red-500', bg: '#fee2e2', border: '#ef4444', ping: '' },
+} as const;
+
+function DropPing({ state }: { state: DropState }) {
+  if (state !== 'valid') return null;
+  return <span aria-hidden className={`absolute inset-0 rounded-lg ring-4 ${DROP_STYLES.valid.ping} animate-ping pointer-events-none`} />;
+}
+
+function CommunityNode({ data, dragging }: { data: TreeDatum & { dropState?: DropState }; dragging?: boolean }) {
   const nodeType = data.type as string;
   const isCommunity = nodeType === 'community';
   const isPersonal = nodeType === 'personal-group';
   const Icon = isCommunity ? Building2 : isPersonal ? User : Users;
   const colors = NODE_COLORS[nodeType] || NODE_COLORS['community'];
-  const isDropTarget = data.isDropTarget as boolean;
+  const drop = data.dropState ? DROP_STYLES[data.dropState] : null;
 
   return (
     <div data-tour="global-mindmap-community"
-      className={`px-4 py-2.5 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
-        isDropTarget ? 'ring-4 ring-green-400 !border-green-500 scale-110' : ''
-      }`}
-      style={{ backgroundColor: isDropTarget ? '#dcfce7' : colors.bg, borderColor: isDropTarget ? '#22c55e' : colors.border }}
+      className={`relative px-4 py-2.5 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+        drop?.className ?? ''} ${dragging ? 'opacity-50' : ''}`}
+      style={{ backgroundColor: drop?.bg ?? colors.bg, borderColor: drop?.border ?? colors.border }}
     >
+      <DropPing state={data.dropState} />
       {/* Handles on all sides */}
       <Handle type="target" position={Position.Top} id="top" className={HANDLE_CLASS} />
       <Handle type="target" position={Position.Bottom} id="bottom" className={HANDLE_CLASS} />
@@ -351,18 +379,18 @@ function CommunityNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } 
   );
 }
 
-function SpaceNode({ data }: { data: TreeDatum & { isDropTarget?: boolean } }) {
+function SpaceNode({ data, dragging }: { data: TreeDatum & { dropState?: DropState }; dragging?: boolean }) {
   const colors = NODE_COLORS['space'];
   const hasChildren = (data.children as TreeDatum[])?.length > 0;
-  const isDropTarget = data.isDropTarget as boolean;
+  const drop = data.dropState ? DROP_STYLES[data.dropState] : null;
 
   return (
     <div data-tour="global-mindmap-space"
-      className={`px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
-        isDropTarget ? 'ring-4 ring-green-400 !border-green-500 scale-110' : ''
-      }`}
-      style={{ backgroundColor: isDropTarget ? '#dcfce7' : colors.bg, borderColor: isDropTarget ? '#22c55e' : colors.border }}
+      className={`relative px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
+        drop?.className ?? ''} ${dragging ? 'opacity-50' : ''}`}
+      style={{ backgroundColor: drop?.bg ?? colors.bg, borderColor: drop?.border ?? colors.border }}
     >
+      <DropPing state={data.dropState} />
       {/* Handles on all sides */}
       <Handle type="target" position={Position.Top} id="top" className={HANDLE_CLASS} />
       <Handle type="target" position={Position.Bottom} id="bottom" className={HANDLE_CLASS} />
@@ -434,14 +462,6 @@ function findTreeDatum(datum: TreeDatum, id: string): TreeDatum | null {
   return null;
 }
 
-// Check if targetId is a descendant of sourceId in the tree
-function isDescendantOf(treeData: TreeDatum, sourceId: string, targetId: string): boolean {
-  const sourceNode = findTreeDatum(treeData, sourceId);
-  if (!sourceNode) return false;
-  const descendants = collectDescendantIds(sourceNode);
-  return descendants.includes(targetId);
-}
-
 // --- Position persistence ---
 
 const POSITIONS_STORAGE_KEY = 'dashboard-mindmap-positions';
@@ -464,8 +484,10 @@ function DashboardMindMapInner({
   resetRef,
 }: DashboardMindMapViewProps) {
   const navigate = useNavigate();
-  const { getIntersectingNodes, getNodes, fitView } = useReactFlow();
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const { getIntersectingNodes, getNodes, fitView, screenToFlowPosition } = useReactFlow();
+  // Cible survolée pendant le glisser d'un espace : résultat du dépôt + position du curseur (étiquette)
+  const [drop, setDrop] = useState<{ targetId: string; result: SpaceDropResult; x: number; y: number } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }> } | null>(null);
   const savedPositions = useRef<Record<string, { x: number; y: number }>>(loadSavedPositions());
 
@@ -491,26 +513,57 @@ function DashboardMindMapInner({
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Mark drop target node in data so SpaceNode can render highlight
+  // Marque la cible de dépôt dans data pour que le nœud affiche son retour (vert / rouge)
+  const dropTargetId = drop?.targetId ?? null;
+  const dropKind: DropState = drop ? (drop.result.kind === 'move' ? 'valid' : 'invalid') : undefined;
   useEffect(() => {
     setNodes(prev => prev.map(n => {
       const data = n.data as unknown as TreeDatum;
-      const shouldHighlight = n.id === dropTargetId;
-      if ((data.isDropTarget as boolean) !== shouldHighlight) {
-        return { ...n, data: { ...n.data, isDropTarget: shouldHighlight } };
+      const state = n.id === dropTargetId ? dropKind : undefined;
+      if (data.dropState !== state) {
+        return { ...n, data: { ...n.data, dropState: state } };
       }
       return n;
     }));
-  }, [dropTargetId, setNodes]);
+  }, [dropTargetId, dropKind, setNodes]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     const data = node.data as unknown as TreeDatum;
     if (data.type === 'space' && data.entityId) {
       navigate(`/spaces/${data.entityId}`);
     } else if (data.type === 'community' && data.entityId) {
-      navigate(`/communities/${data.entityId}/settings`);
+      navigate(`/communities/${data.entityId}`);
     }
   }, [navigate]);
+
+  // Cible de dépôt sous le nœud glissé (hors ses propres descendants, qui le suivent) et ce que ferait le dépôt.
+  // Plusieurs nœuds peuvent chevaucher le nœud glissé : on retient celui sous le curseur, sinon le plus recouvert.
+  const findDrop = useCallback((draggedNode: Node, event: React.MouseEvent): { targetId: string; result: SpaceDropResult } | null => {
+    const descendantIds = dragDescendants.current?.ids || [];
+    const pointer = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const dw = draggedNode.measured?.width ?? 150;
+    const dh = draggedNode.measured?.height ?? 40;
+    const rank = (n: Node) => {
+      const w = n.measured?.width ?? 150;
+      const h = n.measured?.height ?? 40;
+      const { x, y } = n.position;
+      const underPointer = pointer.x >= x && pointer.x <= x + w && pointer.y >= y && pointer.y <= y + h;
+      const ox = Math.max(0, Math.min(x + w, draggedNode.position.x + dw) - Math.max(x, draggedNode.position.x));
+      const oy = Math.max(0, Math.min(y + h, draggedNode.position.y + dh) - Math.max(y, draggedNode.position.y));
+      return (underPointer ? 1e9 : 0) + ox * oy;
+    };
+    const candidates = getIntersectingNodes(draggedNode)
+      .filter(n => {
+        if (n.id === draggedNode.id || descendantIds.includes(n.id)) return false;
+        const d = n.data as unknown as TreeDatum;
+        return d.type === 'space' || d.type === 'community' || d.type === 'personal-group' || d.type === 'independent-group';
+      })
+      .sort((a, b) => rank(b) - rank(a));
+    const target = candidates[0];
+    if (!target) return null;
+    const result = resolveSpaceDrop(treeData, draggedNode.id, target.id);
+    return result ? { targetId: target.id, result } : null;
+  }, [getIntersectingNodes, screenToFlowPosition, treeData]);
 
   // Drag start: capture descendant offsets for drag-with-children
   const onNodeDragStart = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
@@ -553,7 +606,7 @@ function DashboardMindMapInner({
   }, [treeData, getNodes]);
 
   // Drag: move descendants + highlight drop target
-  const onNodeDrag = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
+  const onNodeDrag = useCallback((event: React.MouseEvent, draggedNode: Node) => {
     const data = draggedNode.data as unknown as TreeDatum;
     if (data.type === 'central') return;
 
@@ -573,22 +626,17 @@ function DashboardMindMapInner({
       }));
     }
 
-    // Highlight potential drop target only for space nodes being dragged
+    // Retour de survol : seuls les espaces se déposent (communautés et groupes se repositionnent)
     if (data.type === 'space') {
-      const intersecting = getIntersectingNodes(draggedNode);
-      const descendantIds = dragDescendants.current?.ids || [];
-      const target = intersecting.find(n => {
-        if (n.id === draggedNode.id) return false;
-        if (descendantIds.includes(n.id)) return false;
-        const d = n.data as unknown as TreeDatum;
-        return d.type === 'space' || d.type === 'community' || d.type === 'personal-group' || d.type === 'independent-group';
-      });
-      setDropTargetId(target?.id || null);
+      const found = findDrop(draggedNode, event);
+      if (!found) { setDrop(null); return; }
+      const box = wrapperRef.current?.getBoundingClientRect();
+      setDrop({ ...found, x: event.clientX - (box?.left ?? 0), y: event.clientY - (box?.top ?? 0) });
     }
-  }, [getIntersectingNodes, setNodes]);
+  }, [findDrop, setNodes]);
 
   // Drag stop: reparent if dropped on target, otherwise save position
-  const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
+  const onNodeDragStop = useCallback((event: React.MouseEvent, draggedNode: Node) => {
     const data = draggedNode.data as unknown as TreeDatum;
 
     // For non-space nodes (community, group), just save positions
@@ -613,34 +661,24 @@ function DashboardMindMapInner({
       }
       savePositions();
       dragDescendants.current = null;
-      setDropTargetId(null);
+      setDrop(null);
       return;
     }
 
-    // Space nodes: check for drop target
-    const intersecting = getIntersectingNodes(draggedNode);
-    const descendantIds = dragDescendants.current?.ids || [];
-    const target = intersecting.find(n => {
-      if (n.id === draggedNode.id) return false;
-      if (descendantIds.includes(n.id)) return false;
-      const d = n.data as unknown as TreeDatum;
-      return d.type === 'space' || d.type === 'community' || d.type === 'personal-group' || d.type === 'independent-group';
-    });
+    // Espace : dépôt sur une cible ?
+    const found = findDrop(draggedNode, event);
+    const movedIds = [draggedNode.id, ...(dragDescendants.current?.ids || [])];
 
-    if (target && onMoveSpace) {
-      const targetData = target.data as unknown as TreeDatum;
-      const draggedEntityId = data.entityId;
-
-      if (targetData.type === 'space') {
-        const targetEntityId = targetData.entityId;
-        if (draggedEntityId && targetEntityId && !isDescendantOf(treeData, draggedNode.id, target.id)) {
-          onMoveSpace(draggedEntityId, targetEntityId);
-        }
-      } else {
-        if (draggedEntityId) {
-          onMoveSpace(draggedEntityId, null);
-        }
-      }
+    if (found?.result.kind === 'invalid') {
+      // Dépôt refusé : retour à la place d'avant le glisser
+      setNodes(initialNodes);
+    } else if (found?.result.kind === 'move' && onMoveSpace) {
+      const { spaceId, parentId, communityId } = found.result;
+      // Le nouvel emplacement sera recalculé par le layout : oublier les positions enregistrées de la branche
+      for (const id of movedIds) delete savedPositions.current[id];
+      savePositions();
+      onMoveSpace({ spaceId, parentId, ...(communityId !== undefined ? { communityId } : {}) })
+        .catch(() => setNodes(initialNodes)); // échec : la carte revient à l'état de la base
     } else {
       // No reparenting — save positions for dragged node + descendants
       savedPositions.current[draggedNode.id] = {
@@ -661,8 +699,8 @@ function DashboardMindMapInner({
     }
 
     dragDescendants.current = null;
-    setDropTargetId(null);
-  }, [getIntersectingNodes, getNodes, onMoveSpace, treeData, savePositions]);
+    setDrop(null);
+  }, [findDrop, getNodes, onMoveSpace, savePositions, setNodes, initialNodes]);
 
   // Reset layout: clear saved positions and recalculate
   const resetLayout = useCallback(() => {
@@ -680,6 +718,17 @@ function DashboardMindMapInner({
   }, [resetRef, resetLayout]);
 
   return (
+    <div ref={wrapperRef} className="relative flex-1 min-h-0 w-full h-full">
+    {drop && (
+      <div
+        role="status"
+        className={`absolute z-20 pointer-events-none px-2 py-1 rounded-md text-xs font-medium shadow-md whitespace-nowrap ${
+          drop.result.kind === 'move' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}
+        style={{ left: drop.x + 14, top: drop.y + 14 }}
+      >
+        {drop.result.label}
+      </div>
+    )}
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -719,6 +768,7 @@ function DashboardMindMapInner({
         </button>
       </div>
     </ReactFlow>
+    </div>
   );
 }
 

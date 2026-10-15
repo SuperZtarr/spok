@@ -6,8 +6,11 @@ export const help: HelpEntry = {
   title: 'Carte mentale globale',
   summary: 'Toutes vos communautés et leurs espaces en carte, pour voir et réorganiser l\'arborescence.',
   tips: [
-    'Cliquez sur un espace pour l\'ouvrir',
-    'Glissez un espace sur un autre pour le ranger dessous (droits requis)',
+    'Cliquez sur un espace ou une communauté pour ouvrir sa page',
+    'Glissez un espace sur un autre pour le ranger dessous, sur une communauté pour l\'y rattacher à la racine',
+    'Pendant le glisser, la cible pulse en vert et une étiquette dit ce qui va se passer ; en rouge, le dépôt est refusé (avec la raison)',
+    'Il faut être propriétaire de l\'espace déplacé et pouvoir écrire dans la destination ; un refus s\'affiche en haut de la carte',
+    'Un espace qui a des sous-espaces ne change pas de communauté : déplacez d\'abord ses sous-espaces',
     '« Réorganiser » replace tous les nœuds automatiquement',
   ],
   tour: [
@@ -21,7 +24,7 @@ export const help: HelpEntry = {
       element: '[data-tour="global-mindmap-community"]',
       popover: {
         title: 'Une communauté',
-        description: 'Le nœud d\'une communauté regroupe ses espaces.',
+        description: 'Le nœud d\'une communauté regroupe ses espaces. Cliquez pour ouvrir sa page ; déposez-y un espace pour l\'y rattacher.',
         side: 'right',
       },
     },
@@ -29,7 +32,7 @@ export const help: HelpEntry = {
       element: '[data-tour="global-mindmap-space"]',
       popover: {
         title: 'Un espace',
-        description: 'Cliquez pour l\'ouvrir. Glissez-le sur un autre espace pour le ranger dessous.',
+        description: 'Cliquez pour l\'ouvrir. Glissez-le sur un autre espace pour le ranger dessous : la cible pulse en vert, une étiquette annonce le déplacement.',
         side: 'right',
       },
     },
