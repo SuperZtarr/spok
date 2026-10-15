@@ -6,6 +6,15 @@
 
 ## EN COURS
 
+### Validation doc SPOK — 2026-10-15
+- 271 items to_validate relevés. Cancelled (accord Thomas) : 19 fiches-champs du 16/03 de l'ancienne modale d'édition (renvoi vers ItemEditModal de l'espace Items) + « Sélecteur de vue » (doublon GlobalNavBar). 26 autres fiches-champs (profil, création, e-mail…) gardées : pas de remplaçant
+- Pages utilisateur : done ×9 (MindMap, Liens, Recherche, Tâches, Tableau de bord, Ma journée, Sunburst, notes Visualisations/Navigation globales) ; Accueil aligné sur le code (60 j, Voir tout → cloche), to_validate
+- Activité : sourdine documentée (communauté, illimitée, fil d'activité seulement — pas la cloche), validée par Thomas → done ; libellé du bouton trompeur → TODO
+- Graphe global aligné (filtres communauté + types de lien, pas de filtre par type d'item) → done
+- Structure : done ×6 (Charte, Mode d'interface, GlobalNavBar, Sidebar, JWT, Sécurité & Accès) ; corrigés to_validate : En-tête (JDR, séances), Rôles communauté/espace (OWNER/MEMBER seulement, lecture seule = implicite), Rôles plateforme (admin hors mode admin = normal) ; Matrice des droits réécrite d'après checkSpaceAccess (to_validate)
+- Assigné = auteur (décision Thomas) : utils/itemOwnership.ts canMemberManageItem → PATCH, DELETE (items.ts), bulk-move (item-move.ts) ; SpacePage.canEditItem + assigné ; règle businessRules assignee-can-manage-item ; +3 tests (items 56/56). typecheck api+web OK, items/cross-space/bulk 68/68, web lib 125/125. Matrice + Rôles espace à jour (to_validate). MEP 0733420, UI non vérifiée
+- Restent dans Pages utilisateur : Liste des espaces (spec ≠ code : ni filtre, ni bouton, ni ?new=space, hook après return — chantier à arbitrer), Graphe global (filtre par type à vérifier)
+
 ### Vues globales — arbitrage de la revue — 2026-10-15
 - Accueil « Voir tout » (Non lus) → ouvre la cloche (stores/notificationPanel.ts, NotificationBell piloté par le store) ; plus de lien vers /notifications
 - Carte mentale globale : clic communauté → /communities/:id ; glisser-déposer gardé (Thomas) + retour de survol (nœud translucide, cible ping vert / rouge, étiquette curseur, cible = nœud sous le curseur) ; dashboard-mindmap-drop.ts (règles pures, 7 tests) ; MindMapPage attend le PATCH, recharge spaces/sidebar/communities, bandeau d'erreur, nœud remis en place ; changement de communauté d'un espace à sous-espaces refusé (API ne propage pas communityId → TODO)

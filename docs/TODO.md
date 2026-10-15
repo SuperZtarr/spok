@@ -70,7 +70,9 @@
   - Page Images globale : abandonnée (ni spec ni demande)
   - Graphe et Sunburst globaux : aucune aide jusqu'ici (ajoutée)
 - [ ] Carte globale : retirer le refus « déplacez d'abord les sous-espaces » — constat erroné, PATCH /spaces/:id propage déjà communityId aux descendants (adff75f) ; reste à le passer en transaction (session « PATCH espace : propager la communauté aux sous-espaces », en attente d'accord)
-- [ ] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → lancer `npx vitest run --project web apps/web/src/help` depuis la racine
+- [x] Un membre assigné à un item peut le modifier, le supprimer et le déplacer vers un autre espace (avant : web oui, API 403) — 2026-10-15 (0733420)
+- [ ] Libellé du bouton de sourdine (CommunityCard, ActivityPage) : « Notifier » / « Réactiver les notifications » est trompeur — la sourdine ne coupe que le fil d'activité, pas la cloche (spec Activité validée 2026-10-15)
+- [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
 - [x] Aide utilisateur intégrée — commandes de la barre d'espace non couvertes (relevé 2026-10-14, fait — 515065c) : Séances et Exporter sans HelpHint (title natif) ; Séances, Insérer un modèle, Exporter, Paramètres absents de SPACE_TOOLBAR_STEPS (donc d'aucun tour de vue) → infobulles + 4 étapes communes (data-tour stables) + test coverage « tout bouton de barre a infobulle ou étape »
@@ -139,8 +141,8 @@
 - [x] Import en masse dans les vues Images et Documents (bouton + glisser-déposer, un item par fichier) + réduction d'image dans le navigateur avant envoi (1920 px WebP, GIF exclus) — MEP 2026-10-11 (c3c12ad) — envoi R2 en prod vérifié par Thomas (2026-10-12)
 - [x] Règles d'envoi en double web/API : source unique `packages/shared/src/utils/uploadRules.ts` (`validateUpload`, sans File) — web (adaptateur `lib/uploadRules.ts`), item-uploads, avatars/covers espaces/communautés/profil, plafond multipart ; le web bloque aussi les types MIME exécutables — 2026-10-12 (bd20247)
 - [ ] Vue Tableau croisé : export dédié (CSV ou Excel avec lignes/colonnes du tableau)
-- [ ] Pages globales (Liens, Images...) : revoir le filtre/navigation (vue d'espace + vue transverse globale)
-- [ ] Page favoris / epingles (espaces, items, pages epingles par l'utilisateur)
+- [x] Pages globales (Liens, Images...) : revoir le filtre/navigation — périmée : Liens a son filtre communauté/espace (5276d50), page Images abandonnée — 2026-10-15
+- [x] Page favoris / épinglés — périmée : /bookmarks (BookmarksPage) liste espaces et items épinglés ; épingler des pages n'existe pas (non demandé depuis) — 2026-10-15
 - [ ] Whiteboard : tableau blanc collaboratif (dessin libre, post-its, formes)
 - [ ] Mermaid : rendu de diagrammes Mermaid dans l'éditeur ou les descriptions
 - [ ] ajouter un correcteur d'orthographe dans les zones de textes
