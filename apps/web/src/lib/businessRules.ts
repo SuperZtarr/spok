@@ -292,4 +292,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "Mêmes droits que le propriétaire : modifier nom, description, visibilité et contexte, images, référentiels, tags, gérer membres, rôles et invitations, envoyer des emails, supprimer la communauté. Sans le mode admin, un admin global n'a que ses droits de membre. Les actions personnelles (rejoindre, quitter, sourdine, céder sa propre propriété) restent liées à l'utilisateur. Côté espace : membres, rôles, invitations, images, emails, suppression. Côté contenu : rôle OWNER dans tout espace (créer, modifier, déplacer, fusionner, convertir, supprimer des éléments, y compris les copies de séance verrouillées, gérer tags, relations, contributions), et création de séances live ; les actions d'animation restent à l'animateur. Hors mode admin, un admin global est un utilisateur normal : aucune lecture d'office des espaces, éléments, graphes ou résultats de recherche hors de ses propres droits",
     location: 'apps/api/src/routes/communities.ts (isOwnerOrAdmin), apps/api/src/routes/community-referentiels.ts, apps/api/src/routes/spaces.ts (isSpaceOwnerOrAdmin, GET /:id renvoie OWNER), apps/api/src/routes/items.ts (checkSpaceAccess 4e argument isAdminMode), apps/api/src/routes/live-sessions.ts, apps/web/src/pages/CommunitySettingsPage.tsx et SpaceSettingsPage.tsx (canEdit)',
   },
+  {
+    id: 'assignee-can-manage-item',
+    page: "Toutes les vues d'un espace (menu de l'item), modale d'item, déplacement vers un autre espace",
+    trigger: "Un membre (non propriétaire de l'espace) agit sur un item qu'il n'a pas créé mais qui lui est assigné",
+    effect: "Il peut le modifier, le supprimer (avec ses sous-items si demandé) et le déplacer vers un autre espace, comme s'il en était l'auteur. Un item ni créé par lui ni assigné à lui reste en lecture (contributions possibles). Déplacement groupé : refusé dès qu'un item sélectionné n'est ni à lui ni assigné à lui. Les copies de séance verrouillées restent non modifiables (décision Thomas 2026-10-15)",
+    location: 'apps/api/src/utils/itemOwnership.ts (canMemberManageItem), apps/api/src/routes/items.ts (PATCH, DELETE), apps/api/src/routes/item-move.ts (bulk-move), apps/web/src/pages/SpacePage.tsx (canEditItem), apps/web/src/components/ItemEditModal.tsx (isItemAssignee)',
+  },
 ];

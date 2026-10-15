@@ -12,11 +12,13 @@
  * Verrou de séance (copies lockedAt) : cf. utils/itemLock.ts — PATCH (organisation seule), DELETE (OWNER),
  * split refusé, propagation de statut ignore les enfants verrouillés.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
+ * MEMBER : modifie/supprime les items qu'il a créés OU qui lui sont assignés (canMemberManageItem, utils/itemOwnership.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { assignmentStamp, computeAssignmentReceipts } from '../utils/assignment.js';
 import { isLocked, lockedFieldViolations, LOCKED_MESSAGE } from '../utils/itemLock.js';
+import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { createItemTree } from '../utils/itemTree.js';
 import { createNotification } from '../utils/notifications.js';
@@ -623,8 +625,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         if (lockedFieldViolations(request.body as Record<string, unknown>).length > 0) {
           return reply.forbidden(LOCKED_MESSAGE);
         }
-      } else if (membership.role === 'MEMBER' && existingItem.createdById !== request.user.userId) {
-        return reply.forbidden('Members can only edit their own items');
+      } else if (membership.role === 'MEMBER' && !canMemberManageItem(existingItem, request.user.userId)) {
+        return reply.forbidden('Members can only edit items they created or are assigned to');
       }
 
       const body = updateItemSchema.parse(request.body);
@@ -892,8 +894,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.forbidden(LOCKED_MESSAGE);
     }
 
-    if (membership.role === 'MEMBER' && item.createdById !== request.user.userId) {
-      return reply.forbidden('Members can only delete their own items');
+    if (membership.role === 'MEMBER' && !canMemberManageItem(item, request.user.userId)) {
+      return reply.forbidden('Members can only delete items they created or are assigned to');
     }
 
     const deleteChildren = request.query.deleteChildren === 'true';

@@ -916,3 +916,60 @@ describe('filterReadableSpaceIds', () => {
     expect(await run({ userId: 'u1', globalRole: 'ADMIN' }, ALL)).toEqual([])
   })
 })
+
+// Règle assignee-can-manage-item (décision Thomas 2026-10-15) : un MEMBER modifie, supprime et déplace
+// vers un autre espace les items qu'il a créés OU qui lui sont assignés ; les autres restent refusés.
+describe('MEMBER assigné non auteur', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
+  const assigned = { id: 'item-1', spaceId: 'space-1', title: 'T', type: 'TASK', status: null, parentId: null,
+    position: 0, createdById: 'other-user', assignedToId: 'test-user-id', lockedAt: null, tags: [],
+    updatedAt: new Date('2025-01-01T00:00:00.000Z') }
+  const foreign = { ...assigned, assignedToId: 'someone-else' }
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'm', userId: 'test-user-id', spaceId: 'space-1', role: 'MEMBER', joinedAt: new Date() })
+  })
+
+  it('PATCH : l\'assigné modifie (200), un tiers est refusé (403)', async () => {
+    prisma.item.findFirst.mockResolvedValue(assigned)
+    prisma.item.update.mockResolvedValue({ ...assigned, title: 'Nouveau' })
+    const ok = await app.inject({ method: 'PATCH', url: '/spaces/space-1/items/item-1', headers: auth(), payload: { title: 'Nouveau' } })
+    expect(ok.statusCode).toBe(200)
+
+    prisma.item.findFirst.mockResolvedValue(foreign)
+    prisma.item.update.mockClear()
+    const ko = await app.inject({ method: 'PATCH', url: '/spaces/space-1/items/item-1', headers: auth(), payload: { title: 'Nouveau' } })
+    expect(ko.statusCode).toBe(403)
+    expect(prisma.item.update).not.toHaveBeenCalled()
+  })
+
+  it('DELETE : l\'assigné supprime (200), un tiers est refusé (403)', async () => {
+    prisma.item.findFirst.mockResolvedValue(assigned)
+    prisma.item.delete.mockResolvedValue(assigned)
+    const ok = await app.inject({ method: 'DELETE', url: '/spaces/space-1/items/item-1', headers: auth() })
+    expect(ok.statusCode).toBe(200)
+
+    prisma.item.findFirst.mockResolvedValue(foreign)
+    prisma.item.delete.mockClear()
+    const ko = await app.inject({ method: 'DELETE', url: '/spaces/space-1/items/item-1', headers: auth() })
+    expect(ko.statusCode).toBe(403)
+    expect(prisma.item.delete).not.toHaveBeenCalled()
+  })
+
+  it('bulk-move : autorisé si chaque item est à lui ou lui est assigné, refusé sinon', async () => {
+    const own = { ...foreign, id: 'item-2', createdById: 'test-user-id' }
+    prisma.tag.findMany.mockResolvedValue([])
+    prisma.item.findMany.mockResolvedValue([assigned, own])
+    const ok = await app.inject({ method: 'POST', url: '/spaces/space-1/items/bulk-move', headers: auth(),
+      payload: { itemIds: ['item-1', 'item-2'], targetSpaceId: 'space-2', includeChildren: false } })
+    expect(ok.statusCode).toBe(200)
+
+    prisma.item.findMany.mockResolvedValue([assigned, foreign])
+    const ko = await app.inject({ method: 'POST', url: '/spaces/space-1/items/bulk-move', headers: auth(),
+      payload: { itemIds: ['item-1', 'item-3'], targetSpaceId: 'space-2', includeChildren: false } })
+    expect(ko.statusCode).toBe(403)
+  })
+})

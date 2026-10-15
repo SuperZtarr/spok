@@ -2,12 +2,15 @@
  * Déplacement d'un item dans l'arborescence (parentId + position) avec renumérotation des
  * frères. Utilisé par le DnD des vues (ListView, Gantt). Garde anti-cycle.
  * Copies de séance verrouillées : réorganisation libre ici, mais déplacement vers un autre espace refusé.
+ * bulk-move (vers un autre espace) : un MEMBER ne déplace que des items qu'il a créés ou qui lui sont
+ * assignés (canMemberManageItem) — un seul item étranger refuse toute la requête.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
+import { canMemberManageItem } from '../utils/itemOwnership.js';
 
 const moveItemSchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -207,9 +210,9 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
     if (items.some(isLocked)) return reply.forbidden(LOCKED_MESSAGE);
 
     if (membership.role === 'MEMBER') {
-      const unauthorizedItems = items.filter(i => i.createdById !== request.user.userId);
+      const unauthorizedItems = items.filter(i => !canMemberManageItem(i, request.user.userId));
       if (unauthorizedItems.length > 0) {
-        return reply.forbidden('Members can only move their own items');
+        return reply.forbidden('Members can only move items they created or are assigned to');
       }
     }
 

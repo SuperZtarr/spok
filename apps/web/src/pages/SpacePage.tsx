@@ -5,7 +5,7 @@
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
  * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar, passé à SpaceToolbar
  * (liveSessionBarSlot → 3e ligne de la toolbar) ;
- * les copies verrouillées (lockedAt) ne sont pas éditables (canEditItem). Dans un espace de communauté
+ * les copies verrouillées (lockedAt) ne sont pas éditables (canEditItem : OWNER, auteur ou assigné). Dans un espace de communauté
  * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -163,11 +163,13 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   const canEdit = !!user && !!space?.role && space.role !== 'VIEWER';
 
-  const canEditItem = useCallback((item: { createdById?: string; lockedAt?: string | null }) => {
+  // Modifier / supprimer / déplacer depuis les menus des vues : OWNER, ou auteur, ou assigné
+  // (règle assignee-can-manage-item, alignée sur l'API — utils/itemOwnership.ts)
+  const canEditItem = useCallback((item: { createdById?: string; assignedToId?: string | null; lockedAt?: string | null }) => {
     if (!canEdit) return false;
     if (item.lockedAt) return false; // copie de séance : contenu verrouillé (organisation via DnD/tags reste possible)
     if (space?.role === 'OWNER') return true;
-    return item.createdById === user?.id;
+    return !!user?.id && (item.createdById === user.id || item.assignedToId === user.id);
   }, [canEdit, space?.role, user?.id]);
 
   // --- Séances live ---
