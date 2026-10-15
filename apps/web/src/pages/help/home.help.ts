@@ -31,7 +31,7 @@ export const help: HelpEntry = {
       element: '[data-tour="home-previews"]',
       popover: {
         title: 'Aperçus',
-        description: 'Échéances proches, retards, tâches qui vous sont assignées, notifications non lues. « Voir tout » ouvre la page complète.',
+        description: 'Échéances proches, retards, tâches qui vous sont assignées, notifications non lues. « Voir tout » ouvre la page complète (pour les non lus : la cloche des notifications).',
         side: 'bottom',
       },
     },

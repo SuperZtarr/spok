@@ -1,7 +1,8 @@
 /* Accueil connecté : raccourcis, aperçus tableau de bord (échéances, retard, TODO, non lus),
    favoris, communautés, fil d'activité. Écran FirstTimeSetup si aucune communauté/espace.
    Responsive (2026-10-10) : aperçus 1 par ligne sur mobile, en-têtes de carte tronqués pour
-   ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden). */
+   ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden).
+   « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications. */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
@@ -13,6 +14,7 @@ import type { Notification } from '@spok/shared';
 import { TYPE_LABELS } from '../../constants/ui';
 import { TYPE_ICONS } from '../../constants/ui';
 import { useAuthStore } from '../../stores/auth';
+import { useNotificationPanelStore } from '../../stores/notificationPanel';
 import { SpaceCard } from '../ui/SpaceCard';
 import { PageHelpButton } from '../../help/PageHelpButton';
 
@@ -144,6 +146,7 @@ function DashboardPreviewCard({
   count,
   items,
   to,
+  onSeeAll,
   variant = 'default',
   renderItem,
 }: {
@@ -151,7 +154,9 @@ function DashboardPreviewCard({
   icon: React.ReactNode;
   count: number;
   items: { id: string }[];
-  to: string;
+  /** Page « Voir tout » ; à défaut, onSeeAll (ex. ouvrir la cloche : pas de page Notifications). */
+  to?: string;
+  onSeeAll?: () => void;
   variant?: 'default' | 'danger';
   renderItem: (item: any) => React.ReactNode;
 }) {
@@ -167,9 +172,15 @@ function DashboardPreviewCard({
             </span>
           )}
         </div>
-        <Link to={to} className="text-[10px] text-primary hover:underline flex items-center gap-0.5 flex-shrink-0">
-          Voir tout <ArrowRight className="w-2.5 h-2.5" />
-        </Link>
+        {to ? (
+          <Link to={to} className="text-[10px] text-primary hover:underline flex items-center gap-0.5 flex-shrink-0">
+            Voir tout <ArrowRight className="w-2.5 h-2.5" />
+          </Link>
+        ) : (
+          <button type="button" onClick={onSeeAll} className="text-[10px] text-primary hover:underline flex items-center gap-0.5 flex-shrink-0">
+            Voir tout <ArrowRight className="w-2.5 h-2.5" />
+          </button>
+        )}
       </div>
       {count === 0
         ? <p className="text-[11px] text-muted-foreground text-center py-4">—</p>
@@ -215,6 +226,7 @@ const SHORTCUTS = [
 
 export function HomeView() {
   const user = useAuthStore(s => s.user);
+  const openNotifications = useNotificationPanelStore(s => s.setOpen);
 
   const { data: communities, isLoading: loadingCommunities } = useQuery({
     queryKey: ['communities', user?.id || 'public'],
@@ -414,7 +426,7 @@ export function HomeView() {
               icon={<Bell className="w-3.5 h-3.5 text-violet-500" />}
               count={unreadNotifs.length}
               items={unreadNotifs}
-              to="/notifications"
+              onSeeAll={() => openNotifications(true)}
               renderItem={(notif: Notification) => <NotifPreviewRow key={notif.id} notif={notif} />}
             />
           </div>

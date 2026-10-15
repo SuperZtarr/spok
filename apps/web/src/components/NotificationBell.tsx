@@ -3,6 +3,8 @@
  * Le dropdown est rendu via createPortal dans document.body pour échapper
  * au stacking context du header (z-30).
  * Actions par notification : marquer comme lu / non lu (PATCH …/read | …/unread), supprimer.
+ * Ouverture pilotée par useNotificationPanelStore : d'autres écrans peuvent ouvrir le menu
+ * (accueil, « Voir tout » des non lus) — il n'y a pas de page /notifications.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck, Trash2, UserPlus, ClipboardList, MessageSquare, AtSign, Mail, Loader2, CheckCircle, XCircle, Database, EyeOff, Bot, ShieldAlert } from 'lucide-react';
 import { notificationsApi, invitationsApi, authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
+import { useNotificationPanelStore } from '../stores/notificationPanel';
 import type { Notification, NotificationType, Invitation } from '@spok/shared';
 
 const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }> = {
@@ -37,7 +40,8 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NotificationBell() {
-  const [open, setOpen] = useState(false);
+  const open = useNotificationPanelStore(s => s.open);
+  const setOpen = useNotificationPanelStore(s => s.setOpen);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});

@@ -25,6 +25,7 @@
 | `useViewModeStore` | `stores/viewMode.ts` | `mode` (vue active), `allowedViews` — persisté |
 | `useThemeStore` | `stores/theme.ts` | `theme` light/dark — sync avec préférences utilisateur via API |
 | `useDashboardTabStore` | `stores/dashboardTab.ts` | `tab` (onglet dashboard actif) — persisté |
+| `useNotificationPanelStore` | `stores/notificationPanel.ts` | `open` (menu de la cloche) — volatil ; ouvrable depuis l'accueil (pas de page /notifications) |
 
 ⚠️ `selection.ts` existait pour la multi-sélection — **supprimé**, ne pas le recréer.
 
