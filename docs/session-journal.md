@@ -13,6 +13,7 @@
 - Graphe global aligné (filtres communauté + types de lien, pas de filtre par type d'item) → done
 - Structure : done ×6 (Charte, Mode d'interface, GlobalNavBar, Sidebar, JWT, Sécurité & Accès) ; corrigés to_validate : En-tête (JDR, séances), Rôles communauté/espace (OWNER/MEMBER seulement, lecture seule = implicite), Rôles plateforme (admin hors mode admin = normal) ; Matrice des droits réécrite d'après checkSpaceAccess (to_validate)
 - Assigné = auteur (décision Thomas) : utils/itemOwnership.ts canMemberManageItem → PATCH, DELETE (items.ts), bulk-move (item-move.ts) ; SpacePage.canEditItem + assigné ; règle businessRules assignee-can-manage-item ; +3 tests (items 56/56). typecheck api+web OK, items/cross-space/bulk 68/68, web lib 125/125. Matrice + Rôles espace à jour (to_validate). MEP 0733420, UI non vérifiée
+- Revue sécu de 0733420 : fusion/absorption sans garde d'auteur (faille antérieure, exploitable via l'assignation) → gardes canMemberManageItem (source+cible, parent+enfants), item-merge-ownership.test.ts 6/6, TNR api 686/686, typecheck api OK. Suppression/déplacement de branche : sous-items d'autrui emportés, accepté par Thomas. Reste : modale de fusion propose des cibles refusées (TODO). MEP 2ba292f
 - Restent dans Pages utilisateur : Liste des espaces (spec ≠ code : ni filtre, ni bouton, ni ?new=space, hook après return — chantier à arbitrer), Graphe global (filtre par type à vérifier)
 
 ### Vues globales — arbitrage de la revue — 2026-10-15

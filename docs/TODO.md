@@ -71,6 +71,8 @@
   - Graphe et Sunburst globaux : aucune aide jusqu'ici (ajoutée)
 - [ ] Carte globale : retirer le refus « déplacez d'abord les sous-espaces » — constat erroné, PATCH /spaces/:id propage déjà communityId aux descendants (adff75f) ; reste à le passer en transaction (session « PATCH espace : propager la communauté aux sous-espaces », en attente d'accord)
 - [x] Un membre assigné à un item peut le modifier, le supprimer et le déplacer vers un autre espace (avant : web oui, API 403) — 2026-10-15 (0733420)
+- [x] Revue sécu 0733420 : fusion et absorption sans garde d'auteur (un MEMBER réécrivait l'item d'un autre, et la fusion transférait l'assignation) → canMemberManageItem sur source+cible et parent+enfants, item-merge-ownership.test.ts (6) — 2026-10-15 (2ba292f)
+- [ ] Modale de fusion : ne proposer comme cibles que les items que l'utilisateur peut gérer (aujourd'hui : cible étrangère → 403 API)
 - [ ] Libellé du bouton de sourdine (CommunityCard, ActivityPage) : « Notifier » / « Réactiver les notifications » est trompeur — la sourdine ne coupe que le fil d'activité, pas la cloche (spec Activité validée 2026-10-15)
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
