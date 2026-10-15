@@ -296,7 +296,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'assignee-can-manage-item',
     page: "Toutes les vues d'un espace (menu de l'item), modale d'item, déplacement vers un autre espace",
     trigger: "Un membre (non propriétaire de l'espace) agit sur un item qu'il n'a pas créé mais qui lui est assigné",
-    effect: "Il peut le modifier, le supprimer (avec ses sous-items si demandé) et le déplacer vers un autre espace, comme s'il en était l'auteur. Un item ni créé par lui ni assigné à lui reste en lecture (contributions possibles). Déplacement groupé : refusé dès qu'un item sélectionné n'est ni à lui ni assigné à lui. Les copies de séance verrouillées restent non modifiables (décision Thomas 2026-10-15)",
-    location: 'apps/api/src/utils/itemOwnership.ts (canMemberManageItem), apps/api/src/routes/items.ts (PATCH, DELETE), apps/api/src/routes/item-move.ts (bulk-move), apps/web/src/pages/SpacePage.tsx (canEditItem), apps/web/src/components/ItemEditModal.tsx (isItemAssignee)',
+    effect: "Il peut le modifier, le supprimer (avec ses sous-items si demandé) et le déplacer vers un autre espace, comme s'il en était l'auteur. Un item ni créé par lui ni assigné à lui reste en lecture (contributions possibles). Déplacement groupé : refusé dès qu'un item sélectionné n'est ni à lui ni assigné à lui. Fusion : la source ET la cible doivent être à lui ou lui être assignées ; absorption des enfants : le parent ET chaque enfant (sinon une fusion transférerait l'assignation, donc ces droits, sur l'item d'un autre). Les copies de séance verrouillées restent non modifiables (décision Thomas 2026-10-15)",
+    location: 'apps/api/src/utils/itemOwnership.ts (canMemberManageItem), apps/api/src/routes/items.ts (PATCH, DELETE), apps/api/src/routes/item-move.ts (bulk-move), apps/api/src/routes/item-merge.ts (merge, absorb-children), apps/web/src/pages/SpacePage.tsx (canEditItem), apps/web/src/components/ItemEditModal.tsx (isItemAssignee)',
   },
 ];
