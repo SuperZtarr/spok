@@ -1,7 +1,9 @@
 /*
- * LiveSessionsButton — bouton de l'en-tête (à côté de la cloche) pour revenir aux séances en cours (préparées ou en
- * direct) auxquelles l'utilisateur est convié (membre de l'espace parent ou de l'espace de séance).
- * Masqué s'il n'y en a aucune ; badge = nombre de séances, icône rouge si l'une est en direct.
+ * LiveSessionsButton — bouton de l'en-tête (à côté de la cloche) pour rejoindre les séances EN DIRECT auxquelles
+ * l'utilisateur est convié (membre de l'espace parent ou de l'espace de séance). Une séance seulement préparée n'y
+ * apparaît jamais (décision 2026-10-15) : on la rouvre par le bouton « Séances » de l'espace parent ou la sidebar.
+ * Masqué s'il n'y en a aucune ; badge rouge = nombre de séances en direct. L'API ne renvoie que les séances en
+ * direct ; le filtre local est une sécurité.
  * « Ouvrir » / « Rejoindre » : rejoint si besoin, en fait la séance active, rafraîchit la sidebar et y navigue.
  * Requête ['live-sessions-ongoing'] rafraîchie toutes les 30 s (comme NotificationBell) et invalidée par les actions de
  * séance — indépendante de la sidebar (pas de polling sur ['sidebar-spaces']). Liste en portail (position fixe) pour
@@ -26,11 +28,12 @@ export function LiveSessionsButton() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setActive = useActiveLiveSessionStore((s) => s.setActive);
-  const { data: sessions = [] } = useQuery({
+  const { data: ongoing = [] } = useQuery({
     queryKey: ONGOING_SESSIONS_KEY,
     queryFn: () => liveSessionsApi.ongoing(),
     refetchInterval: 30000,
   });
+  const sessions = ongoing.filter((s) => s.status === 'LIVE');
 
   const updatePosition = useCallback(() => {
     const r = buttonRef.current?.getBoundingClientRect();
@@ -50,7 +53,6 @@ export function LiveSessionsButton() {
   }, [open, updatePosition]);
 
   if (sessions.length === 0) return null;
-  const anyLive = sessions.some((s) => s.status === 'LIVE');
 
   const go = async (s: LiveSessionOngoing) => {
     setError(null);
@@ -72,11 +74,11 @@ export function LiveSessionsButton() {
         ref={buttonRef}
         data-testid="live-sessions-button"
         onClick={() => setOpen((o) => !o)}
-        className={`relative p-2 rounded-md hover:bg-accent transition-colors ${anyLive ? 'text-red-600' : ''}`}
-        title={anyLive ? 'Séance en direct' : 'Séances en cours'}
+        className="relative p-2 rounded-md hover:bg-accent transition-colors text-red-600"
+        title="Séances en direct"
       >
-        <Radio className={`w-5 h-5 ${anyLive ? 'animate-pulse' : ''}`} />
-        <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1 ${anyLive ? 'bg-red-500' : 'bg-orange-500'}`}>
+        <Radio className="w-5 h-5 animate-pulse" />
+        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1 bg-red-500">
           {sessions.length}
         </span>
       </button>
@@ -86,7 +88,7 @@ export function LiveSessionsButton() {
           className="fixed z-50 w-80 max-w-[calc(100vw-16px)] rounded-lg border border-border bg-background p-2 shadow-xl text-sm"
           style={{ top: pos.top, right: pos.right }}
         >
-          <p className="px-1 pb-1 text-xs font-medium text-muted-foreground">Séances en cours</p>
+          <p className="px-1 pb-1 text-xs font-medium text-muted-foreground">Séances en direct</p>
           {error && <p className="px-1 pb-1 text-xs text-red-600">{error}</p>}
           <ul className="divide-y divide-border">
             {sessions.map((s) => (
@@ -94,7 +96,7 @@ export function LiveSessionsButton() {
                 <span className="flex-1 min-w-0">
                   <span className="block truncate font-medium">
                     {s.spaceName}
-                    {s.status === 'LIVE' ? <span className="text-red-600"> ● direct</span> : <span className="text-orange-600"> préparée</span>}
+                    <span className="text-red-600"> ● direct</span>
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">{s.parentSpaceName}</span>
                 </span>

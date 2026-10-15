@@ -1,4 +1,4 @@
-/* Tests de LiveSessionsButton (en-tête) : masqué sans séance, badge du nombre, rouge si une séance est en direct,
+/* Tests de LiveSessionsButton (en-tête) : masqué sans séance démarrée (préparée = masqué), badge du nombre de séances en direct,
  * « Rejoindre » rejoint puis active la séance. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, waitFor } from '@testing-library/react'
@@ -30,8 +30,16 @@ describe('LiveSessionsButton', () => {
     expect(container.querySelector('[data-testid="live-sessions-button"]')).toBeNull()
   })
 
-  it('badge du nombre de séances, rouge si une est en direct', async () => {
-    api.ongoing.mockResolvedValue([s('a', 'LIVE'), s('b', 'PREPARED')])
+  it('rien si les séances sont seulement préparées (bouton réservé aux séances démarrées)', async () => {
+    api.ongoing.mockResolvedValue([s('b', 'PREPARED')])
+    const { container } = renderButton()
+    await waitFor(() => expect(api.ongoing).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 50)) // laisser la requête se résoudre et le rendu se faire
+    expect(container.querySelector('[data-testid="live-sessions-button"]')).toBeNull()
+  })
+
+  it('badge = nombre de séances en direct, en rouge', async () => {
+    api.ongoing.mockResolvedValue([s('a', 'LIVE'), s('c', 'LIVE'), s('b', 'PREPARED')])
     const { findByTestId } = renderButton()
     const btn = await findByTestId('live-sessions-button')
     expect(btn.textContent).toContain('2')

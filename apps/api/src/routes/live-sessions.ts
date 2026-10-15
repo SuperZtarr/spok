@@ -13,8 +13,8 @@
  *   communauté SANS accès à l'espace parent, membres de l'espace de séance seulement (utils/liveInvites) ;
  *   animateur seul ; ajout tant que la séance n'est pas terminée, retrait à tout moment ; repris dans la suite.
  *   Un flux SSE déjà ouvert n'est pas coupé au retrait (contrôle d'accès à la connexion).
- * - /ongoing : séances en cours (préparées ou en direct) auxquelles l'utilisateur est convié — membre de l'espace
- *   parent ou de l'espace de séance — pour le bouton de l'en-tête ; en direct d'abord.
+ * - /ongoing : séances EN DIRECT auxquelles l'utilisateur est convié — membre de l'espace parent ou de l'espace de
+ *   séance — pour le bouton de l'en-tête ; une séance seulement préparée n'y figure jamais (décision 2026-10-15).
  * - Préparation (/:id/agenda) : liens vers des items sources (pas de copie), ajout par HOST/PRESENTER avec accès
  *   à la source ; includeChildren ajoute aussi les sous-éléments directs juste après (/:id/source-children les compte) ;
  *   ordre : l'animateur permute tout, un présentateur seulement ses lignes (les autres restent en place).
@@ -337,11 +337,11 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return listInvitees(prisma, s.id);
   });
 
-  // Séances en cours auxquelles je suis convié (bouton de l'en-tête)
+  // Séances en direct auxquelles je suis convié (bouton de l'en-tête) — jamais les séances seulement préparées
   fastify.get('/ongoing', { preHandler: [fastify.authenticate] }, async (request) => {
     const userId = request.user.userId;
     const sessions = await prisma.liveSession.findMany({
-      where: { status: { in: ['PREPARED', 'LIVE'] } },
+      where: { status: 'LIVE' },
       include: {
         space: { select: { name: true, memberships: { where: { userId }, select: { id: true } } } },
         parentSpace: { select: { name: true } },
@@ -351,6 +351,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     });
     const result: LiveSessionOngoing[] = [];
     for (const s of sessions ?? []) {
+      if (s.status !== 'LIVE') continue;
       const isMember = (s.space?.memberships?.length ?? 0) > 0;
       if (!isMember && !(await isParentMember(prisma, userId, s.parentSpaceId))) continue;
       result.push({
@@ -358,7 +359,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         status: s.status, isMember, myRole: s.roles?.[0]?.role ?? 'PARTICIPANT',
       });
     }
-    return result.sort((a, b) => (a.status === b.status ? 0 : a.status === 'LIVE' ? -1 : 1));
+    return result;
   });
 
   // Séances d'un espace parent (liste + bouton Rejoindre)
