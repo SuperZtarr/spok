@@ -6,6 +6,11 @@
 
 ## EN COURS
 
+### Doc séances — processus — 2026-10-15
+- Document SPOK « Processus d'une séance » (cmv9yofvt0004nkmdwe7dpcvs, enfant de LiveSession, espace Espaces, to_validate) : rôles, cycle (schéma texte), avant / pendant / après en tableaux qui / où / effet, visibilité par rôle. Rédigé d'après la spec parente (pas de revue du code). Rendu du schéma et des tableaux non vérifié dans SPOK
+- Nom des espaces de séance préfixé « Séance » (demande Thomas) : components/live/sessionName.ts defaultSessionName (web, date locale) + défaut serveur live-sessions.ts (UTC), nouvelles séances et suites ; séances existantes non renommées. Tests : sessionName.test.ts (2), live-sessions 63/63, live web 35/35, typecheck api+web OK. businessRules + spec LiveSession + Processus à jour (to_validate). MEP f92a183, UI non vérifiée
+- Bouton de l'en-tête des séances réservé aux séances démarrées (demande Thomas) : GET /live-sessions/ongoing → status LIVE seulement ; LiveSessionsButton filtre LIVE, toujours rouge, « Séances en direct ». Tests : ongoing (2 réécrits), LiveSessionsButton (préparée seule → masqué, test rendu fiable), live api 63/63, live web 36/36, typecheck api+web OK. businessRules, specs LiveSession / Processus / En-tête à jour (to_validate). MEP b79097a, UI non vérifiée
+
 ### Validation doc SPOK — 2026-10-15
 - 271 items to_validate relevés. Cancelled (accord Thomas) : 19 fiches-champs du 16/03 de l'ancienne modale d'édition (renvoi vers ItemEditModal de l'espace Items) + « Sélecteur de vue » (doublon GlobalNavBar). 26 autres fiches-champs (profil, création, e-mail…) gardées : pas de remplaçant
 - Pages utilisateur : done ×9 (MindMap, Liens, Recherche, Tâches, Tableau de bord, Ma journée, Sunburst, notes Visualisations/Navigation globales) ; Accueil aligné sur le code (60 j, Voir tout → cloche), to_validate
