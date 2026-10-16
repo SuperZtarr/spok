@@ -72,6 +72,9 @@
 - [ ] Carte globale : retirer le refus « déplacez d'abord les sous-espaces » — constat erroné, PATCH /spaces/:id propage déjà communityId aux descendants (adff75f) ; reste à le passer en transaction (session « PATCH espace : propager la communauté aux sous-espaces », en attente d'accord)
 - [x] Un membre assigné à un item peut le modifier, le supprimer et le déplacer vers un autre espace (avant : web oui, API 403) — 2026-10-15 (0733420)
 - [x] Revue sécu 0733420 : fusion et absorption sans garde d'auteur (un MEMBER réécrivait l'item d'un autre, et la fusion transférait l'assignation) → canMemberManageItem sur source+cible et parent+enfants, item-merge-ownership.test.ts (6) — 2026-10-15 (2ba292f)
+- [x] Modèle de données — fiabilisation : restauration audit complète, suppression d'utilisateur sans trace seulement, SpaceModule et isPublic/pendingPublic supprimés, statut '' → null, relation « parent » retirée, purge refresh tokens — 2026-10-16 (e7f760e)
+- [ ] Prod : `UPDATE items SET status = NULL WHERE status = ''` (statuts vides créés par la création rapide, invisibles au filtre « sans statut »)
+- [ ] Migrations Prisma versionnées (remplacer `db push --accept-data-loss` de start-api.sh, baseline prod) — préalable aux contraintes CHECK (Tag/Reaction/Invitation XOR, PERSONAL ⇔ sans communauté) et à la FK refresh_tokens → users
 - [ ] Modale de fusion : ne proposer comme cibles que les items que l'utilisateur peut gérer (aujourd'hui : cible étrangère → 403 API)
 - [x] Séances : nom de l'espace préfixé « Séance » (nouvelle séance et suite, séances existantes non renommées) — 2026-10-15 (f92a183)
 - [x] Séances : bouton de l'en-tête affiché seulement pour une séance démarrée (préparée = jamais) — 2026-10-15 (b79097a)

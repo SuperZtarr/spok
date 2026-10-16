@@ -6,6 +6,16 @@
 
 ## EN COURS
 
+### Modèle de données — fiabilisation — 2026-10-16
+- Audit de cohérence des 29 tables (doc dans le dossier de notes de session) puis corrections validées par Thomas : restauration audit complète (visibility, context, référentiels…), suppression d'utilisateur réservée aux comptes sans trace (countUserTraces), SpaceModule et statuts des modèles d'espace supprimés, colonnes isPublic/pendingPublic supprimées (API/web/MCP sur visibility ; isPublic accepté en entrée seulement), statut '' → null à l'écriture, relation « parent » retirée, Invitation.role typé, purge refresh tokens expirés, index en double retirés. VIEWER gardé (rôle implicite, recommandation initiale erronée). TNR 1399/1399, typecheck 6 paquets OK. Commit e7f760e
+- Reste : données prod `items.status = ''` à passer à NULL (local fait) ; migrations versionnées (start-api.sh fait `db push --accept-data-loss`) → chantier à part ; MCD/MLD visuel à produire
+
+### Zoom au pincement du pad (Windows) — 2026-10-16
+- Cause : @xyflow/system n'applique le facteur ×10 du pincement (ctrl+wheel) que sur macOS → pincement ~10× trop lent sous Windows. hooks/useTrackpadPinchZoom.ts (capture wheel, ctrl + |deltaY| < 50 en pixels, hors Mac, centré pointeur) branché sur MindMapView et DashboardMindMapView (bornes de zoom en constantes). typecheck web OK. Validé au pad par Thomas. Commit ca38a23, non poussé
+
+### Libellé du bouton de sourdine — 2026-10-16
+- CommunityCard (liste des communautés, Activité) : « Notifier »/« Sourdine » + cloche → « Masquer l'activité » / « Afficher l'activité » (orange) + œil, infobulles précisant que la cloche n'est pas touchée. activity.help.ts aligné, règle businessRules community-mute-activity-only, spec Activité réécrite en Markdown (to_validate). typecheck web OK, help 310/310, vérifié à l'écran sur /communities (bascule aller-retour). Bouton mort de CommunityBanner (jamais de onMute) non touché. Non commité
+
 ### Doc séances — processus — 2026-10-15
 - Document SPOK « Processus d'une séance » (cmv9yofvt0004nkmdwe7dpcvs, enfant de LiveSession, espace Espaces, to_validate) : rôles, cycle (schéma texte), avant / pendant / après en tableaux qui / où / effet, visibilité par rôle. Rédigé d'après la spec parente (pas de revue du code). Rendu du schéma et des tableaux non vérifié dans SPOK
 - Nom des espaces de séance préfixé « Séance » (demande Thomas) : components/live/sessionName.ts defaultSessionName (web, date locale) + défaut serveur live-sessions.ts (UTC), nouvelles séances et suites ; séances existantes non renommées. Tests : sessionName.test.ts (2), live-sessions 63/63, live web 35/35, typecheck api+web OK. businessRules + spec LiveSession + Processus à jour (to_validate). MEP f92a183, UI non vérifiée
