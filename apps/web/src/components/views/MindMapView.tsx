@@ -15,12 +15,14 @@
  * Cadrage d'ouverture (initialFit, 2026-10-10) : carte entière ; sur mobile, si le zoom tombe
  * sous 0,6, centrage sur le nœud espace à 0,6 pour garder les étiquettes lisibles.
  * En-tête : chaque commande sous HelpHint (textes : mindmap.help.ts → hints), pas de `title` natif.
+ * Zoom au pincement du pad hors macOS : useTrackpadPinchZoom (React Flow ne compense que sur Mac).
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useTrackpadPinchZoom } from '../../hooks/useTrackpadPinchZoom';
 import {
   ReactFlow,
   Node,
@@ -127,6 +129,9 @@ interface MindMapViewProps {
   pulseHelp?: boolean;
 }
 
+const MINDMAP_MIN_ZOOM = 0.01;
+const MINDMAP_MAX_ZOOM = 2;
+
 // Inner component that uses useReactFlow
 function MindMapViewInner({
   items,
@@ -189,6 +194,8 @@ function MindMapViewInner({
   useDialogFocus(editRelationDialogRef, !!editingEdge);
   useDialogFocus(portalDialogRef, showPortalDialog && !!pendingPortalParentId);
   const { fitView, getIntersectingNodes, getNodes, getNodesBounds: getNodesBoundsHook, getNode, getZoom, setCenter } = useReactFlow();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  useTrackpadPinchZoom(canvasRef, MINDMAP_MIN_ZOOM, MINDMAP_MAX_ZOOM);
 
   // Cadrage d'ouverture : carte entière, sauf sur mobile si le texte devient illisible
   // (zoom < MOBILE_MIN_INITIAL_ZOOM) → centré sur le nœud espace à ce zoom (décision 2026-10-10).
@@ -1495,7 +1502,7 @@ function MindMapViewInner({
           ]}
         />
       </div>
-      <div className="flex-1 min-h-0" data-help-zone="mindmap:canevas">
+      <div ref={canvasRef} className="flex-1 min-h-0" data-help-zone="mindmap:canevas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1522,8 +1529,8 @@ function MindMapViewInner({
         }}
         fitView
         fitViewOptions={{ padding: 0.1 }}
-        minZoom={0.01}
-        maxZoom={2}
+        minZoom={MINDMAP_MIN_ZOOM}
+        maxZoom={MINDMAP_MAX_ZOOM}
         connectOnClick={false}
         onMoveEnd={() => { userHasInteracted.current = true; }}
         defaultEdgeOptions={{

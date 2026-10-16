@@ -5,6 +5,7 @@
  * cible qui pulse en vert (ou rouge si refusé) et étiquette près du curseur disant ce que fera le dépôt.
  * Props : onMoveSpace(move) renvoie une promesse — rejet = déplacement annulé à l'écran (l'appelant affiche l'erreur).
  * Glisser une communauté ou un groupe ne fait que le repositionner (positions en localStorage, « Réinitialiser »).
+ * Zoom au pincement du pad hors macOS : useTrackpadPinchZoom (React Flow ne compense que sur Mac).
  */
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
@@ -27,6 +28,10 @@ import { hierarchy, tree as d3Tree } from 'd3-hierarchy';
 import { Building2, FolderKanban, User, Globe, Users, RotateCcw } from 'lucide-react';
 import type { SpaceWithRole } from '@spok/shared';
 import { resolveSpaceDrop, type SpaceDropResult } from './dashboard-mindmap-drop';
+import { useTrackpadPinchZoom } from '../../hooks/useTrackpadPinchZoom';
+
+const DASHBOARD_MIN_ZOOM = 0.1;
+const DASHBOARD_MAX_ZOOM = 2;
 
 // --- Types ---
 
@@ -488,6 +493,7 @@ function DashboardMindMapInner({
   // Cible survolée pendant le glisser d'un espace : résultat du dépôt + position du curseur (étiquette)
   const [drop, setDrop] = useState<{ targetId: string; result: SpaceDropResult; x: number; y: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  useTrackpadPinchZoom(wrapperRef, DASHBOARD_MIN_ZOOM, DASHBOARD_MAX_ZOOM);
   const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }> } | null>(null);
   const savedPositions = useRef<Record<string, { x: number; y: number }>>(loadSavedPositions());
 
@@ -741,8 +747,8 @@ function DashboardMindMapInner({
       nodeTypes={nodeTypes}
       fitView
       fitViewOptions={{ padding: 0.3 }}
-      minZoom={0.1}
-      maxZoom={2}
+      minZoom={DASHBOARD_MIN_ZOOM}
+      maxZoom={DASHBOARD_MAX_ZOOM}
       connectOnClick={false}
       defaultEdgeOptions={{
         type: 'default',
