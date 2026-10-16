@@ -20,7 +20,8 @@ export const ROLES = ['OWNER', 'MEMBER'] as const;
 
 export const GLOBAL_ROLES = ['USER', 'ADMIN'] as const;
 
-export const RELATION_TYPES = ['blocks', 'relates', 'implements', 'parent', 'drives'] as const;
+// La hiérarchie passe par Item.parentId — pas de type de relation « parent » (retiré le 2026-10-16).
+export const RELATION_TYPES = ['blocks', 'relates', 'implements', 'drives'] as const;
 
 export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'cancelled'] as const;
 

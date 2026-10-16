@@ -204,8 +204,8 @@ describe('Admin Communities routes', () => {
       expect(res.statusCode).toBe(404)
     })
 
-    // isPublic (déprécié) converti en visibility — source de désynchro corrigée le 2026-10-12
-    it('should keep visibility aligned when isPublic is sent', async () => {
+    // isPublic (alias d'entrée déprécié) converti en visibility, jamais écrit (colonne supprimée le 2026-10-16)
+    it('should convert isPublic into visibility', async () => {
       allowAdmin()
       prisma.community.findUnique.mockResolvedValue({ id: 'c1', visibility: 'READONLY' })
       prisma.community.update.mockResolvedValue({ id: 'c1', _count: { memberships: 1, spaces: 0 } })
@@ -215,7 +215,7 @@ describe('Admin Communities routes', () => {
         headers: { authorization: `Bearer ${token}` },
         payload: { isPublic: true },
       })
-      expect(prisma.community.update.mock.calls[0][0].data).toMatchObject({ isPublic: true, visibility: 'READONLY' })
+      expect(prisma.community.update.mock.calls[0][0].data).toEqual({ visibility: 'READONLY', pendingVisibility: null })
 
       allowAdmin()
       await app.inject({
@@ -223,7 +223,7 @@ describe('Admin Communities routes', () => {
         headers: { authorization: `Bearer ${token}` },
         payload: { isPublic: false },
       })
-      expect(prisma.community.update.mock.calls[1][0].data).toMatchObject({ isPublic: false, visibility: 'PRIVATE' })
+      expect(prisma.community.update.mock.calls[1][0].data).toEqual({ visibility: 'PRIVATE', pendingVisibility: null })
     })
   })
 
@@ -233,7 +233,7 @@ describe('Admin Communities routes', () => {
     // Bug 2026-10-12 : le refus laissait pendingVisibility → « en attente » subsistait
     it('should clear the whole pending request', async () => {
       allowAdmin()
-      prisma.community.findUnique.mockResolvedValue({ id: 'c1', pendingPublic: true, pendingVisibility: 'OPEN' })
+      prisma.community.findUnique.mockResolvedValue({ id: 'c1', pendingVisibility: 'OPEN' })
       prisma.community.update.mockResolvedValue({ id: 'c1', _count: { memberships: 1, spaces: 0 } })
 
       const res = await app.inject({
@@ -242,7 +242,7 @@ describe('Admin Communities routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
-      expect(prisma.community.update.mock.calls[0][0].data).toEqual({ pendingPublic: false, pendingVisibility: null })
+      expect(prisma.community.update.mock.calls[0][0].data).toEqual({ pendingVisibility: null })
     })
   })
 

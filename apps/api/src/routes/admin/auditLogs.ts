@@ -1,11 +1,14 @@
 /* Journal d'audit global (admin) : tous espaces, filtres entité/action/utilisateur/dates, restauration.
  * Restaurer l'assigné d'un item repose la date d'assignation (assignmentStamp — accusé de lecture).
- * Copie de séance verrouillée (itemLock) : seul le rangement (parentId, position) peut être restauré. */
+ * Copie de séance verrouillée (itemLock) : seul le rangement (parentId, position) peut être restauré.
+ * Recréation d'espace/communauté : utils/audit.ts (spaceRestoreData, communityRestoreData) — l'ancien
+ * isPublic des entrées d'audit antérieures est converti en visibility. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 import { assignmentStamp } from '../../utils/assignment.js';
 import { isLocked, LOCKED_MESSAGE } from '../../utils/itemLock.js';
+import { communityRestoreData, restoredCommunityVisibility, spaceRestoreData } from '../../utils/audit.js';
 
 const querySchema = z.object({
   entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community']).optional(),
@@ -218,8 +221,8 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Allowed fields for each entity type
       const ITEM_FIELDS = ['type', 'title', 'description', 'content', 'url', 'status', 'priority', 'position', 'dueDate', 'startDate', 'endDate', 'parentId', 'spaceId', 'assignedToId'];
-      const SPACE_FIELDS = ['name', 'type', 'parentId', 'communityId', 'avatarUrl', 'coverUrl', 'defaultRole'];
-      const COMMUNITY_FIELDS = ['name', 'description', 'isPublic', 'avatarUrl', 'coverUrl'];
+      const SPACE_FIELDS = ['name', 'description', 'type', 'parentId', 'communityId', 'visibility', 'defaultRole', 'defaultView', 'position', 'avatarUrl', 'coverUrl'];
+      const COMMUNITY_FIELDS = ['name', 'description', 'visibility', 'context', 'avatarUrl', 'coverUrl'];
 
       let allowedFields: string[];
       switch (log.entity) {
@@ -231,6 +234,11 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       for (const field of (fieldsToRestore || Object.keys(before))) {
+        // Ancienne entrée de communauté : isPublic (supprimé) se restaure en visibility
+        if (log.entity === 'Community' && field === 'isPublic' && field in before && !('visibility' in before)) {
+          restoreData.visibility = restoredCommunityVisibility(before);
+          continue;
+        }
         if (allowedFields.includes(field) && field in before) {
           let value = before[field];
           // Convert date strings back to Date objects for Prisma
@@ -349,6 +357,8 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             dueDate: before.dueDate ? new Date(before.dueDate as string) : null,
             startDate: before.startDate ? new Date(before.startDate as string) : null,
             endDate: before.endDate ? new Date(before.endDate as string) : null,
+            manualHorizon: (before.manualHorizon as string | null) ?? null,
+            horizonSetAt: before.horizonSetAt ? new Date(before.horizonSetAt as string) : null,
             spaceId: log.spaceId!,
             createdById,
             parentId,
@@ -468,15 +478,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         const restoredSpace = await fastify.prisma.space.create({
-          data: {
-            id: before.id as string,
-            name: before.name as string,
-            type: before.type as string,
-            communityId,
-            parentId,
-            avatarUrl: before.avatarUrl as string | null,
-            coverUrl: before.coverUrl as string | null,
-          } as any,
+          data: spaceRestoreData(before, { communityId, parentId }) as any,
         });
 
         // Create OWNER membership for the restoring admin
@@ -509,14 +511,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         const restoredCommunity = await fastify.prisma.community.create({
-          data: {
-            id: before.id as string,
-            name: before.name as string,
-            description: before.description as string | null,
-            isPublic: before.isPublic as boolean,
-            avatarUrl: before.avatarUrl as string | null,
-            coverUrl: before.coverUrl as string | null,
-          } as any,
+          data: communityRestoreData(before) as any,
         });
 
         // Create OWNER membership for the restoring admin
@@ -590,14 +585,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
               break;
             }
             await fastify.prisma.community.create({
-              data: {
-                id: before.id as string,
-                name: before.name as string,
-                description: before.description as string | null,
-                isPublic: before.isPublic as boolean,
-                avatarUrl: before.avatarUrl as string | null,
-                coverUrl: before.coverUrl as string | null,
-              } as any,
+              data: communityRestoreData(before) as any,
             });
             await fastify.prisma.communityMembership.create({
               data: { userId: request.user.userId, communityId: log.entityId, role: 'OWNER' },
@@ -626,15 +614,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             await fastify.prisma.space.create({
-              data: {
-                id: before.id as string,
-                name: before.name as string,
-                type: before.type as string,
-                communityId,
-                parentId,
-                avatarUrl: before.avatarUrl as string | null,
-                coverUrl: before.coverUrl as string | null,
-              } as any,
+              data: spaceRestoreData(before, { communityId, parentId }) as any,
             });
             await fastify.prisma.spaceMembership.create({
               data: { userId: request.user.userId, spaceId: log.entityId, role: 'OWNER' },
@@ -683,6 +663,8 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
                 dueDate: before.dueDate ? new Date(before.dueDate as string) : null,
                 startDate: before.startDate ? new Date(before.startDate as string) : null,
                 endDate: before.endDate ? new Date(before.endDate as string) : null,
+                manualHorizon: (before.manualHorizon as string | null) ?? null,
+                horizonSetAt: before.horizonSetAt ? new Date(before.horizonSetAt as string) : null,
                 spaceId: log.spaceId!,
                 createdById,
                 parentId,

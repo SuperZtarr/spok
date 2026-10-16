@@ -10,7 +10,7 @@
  *   les sections communautés, espaces et utilisateurs sont alors omises (itemFiltersActive dans la réponse) ;
  * - spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi la section
  *   utilisateurs aux membres (portée par défaut posée par la page Recherche).
- * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais filtré).
+ * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { filterReadableSpaceIds, readableSpaceIdsForUser } from './items.js';
@@ -148,7 +148,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       ]);
       communities = rows.map(c => ({
         id: c.id, name: c.name, description: truncate(c.description),
-        avatarUrl: c.avatarUrl, isPublic: c.isPublic,
+        avatarUrl: c.avatarUrl, visibility: c.visibility,
         memberCount: c._count.memberships, spaceCount: c._count.spaces,
       }));
       totalCommunities = count;

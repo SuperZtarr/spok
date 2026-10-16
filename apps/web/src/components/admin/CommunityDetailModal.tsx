@@ -1,4 +1,5 @@
-/* Modale admin : détail communauté (membres, espaces, approbation visibilité). */
+/* Modale admin : détail communauté (membres, espaces, approbation visibilité).
+ * Case « publique » : lue et écrite sur visibility (PRIVATE ↔ OPEN ; une communauté déjà READONLY le reste). */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building2, Users, FolderKanban, Plus, Trash2, Save, UserPlus, Loader2 } from 'lucide-react';
@@ -9,7 +10,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Modal } from '../ui/Modal';
-import type { CommunityRole } from '@spok/shared';
+import type { CommunityRole, CommunityVisibility } from '@spok/shared';
 
 interface CommunityDetailModalProps {
   communityId: string | null; // null = création
@@ -57,7 +58,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
     if (community) {
       setEditName(community.name);
       setEditDescription(community.description || '');
-      setEditIsPublic(community.isPublic);
+      setEditIsPublic(community.visibility !== 'PRIVATE');
     }
   }, [community]);
 
@@ -76,7 +77,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   // Create community
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string; ownerEmail?: string; isPublic?: boolean }) =>
+    mutationFn: (data: { name: string; description?: string; ownerEmail?: string; visibility?: CommunityVisibility }) =>
       adminApi.communities.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'communities'] });
@@ -87,7 +88,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
 
   // Update community
   const updateMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean }) =>
+    mutationFn: (data: { name?: string; description?: string; visibility?: CommunityVisibility }) =>
       adminApi.communities.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'community', communityId] });
@@ -152,15 +153,17 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
       name: editName,
       description: editDescription || undefined,
       ownerEmail: ownerEmail || undefined,
-      isPublic: editIsPublic,
+      visibility: editIsPublic ? 'OPEN' : 'PRIVATE',
     });
   };
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string; isPublic?: boolean } = {};
+    const updates: { name?: string; description?: string; visibility?: CommunityVisibility } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
-    if (editIsPublic !== community?.isPublic) updates.isPublic = editIsPublic;
+    if (community && editIsPublic !== (community.visibility !== 'PRIVATE')) {
+      updates.visibility = editIsPublic ? 'OPEN' : 'PRIVATE';
+    }
     if (Object.keys(updates).length > 0) {
       updateMutation.mutate(updates);
     }
@@ -169,7 +172,7 @@ export function CommunityDetailModal({ communityId, onClose }: CommunityDetailMo
   const hasInfoChanges = community && (
     editName !== community.name ||
     editDescription !== (community.description || '') ||
-    editIsPublic !== community.isPublic
+    editIsPublic !== (community.visibility !== 'PRIVATE')
   );
 
   useCtrlS(!!hasInfoChanges && !updateMutation.isPending, handleSaveInfo);

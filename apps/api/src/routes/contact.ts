@@ -103,7 +103,6 @@ async function getOrCreateSupportSpace(fastify: any): Promise<string> {
       data: {
         name: SUPPORT_COMMUNITY_NAME,
         description: 'Communaute systeme SPOK',
-        isPublic: false,
         visibility: 'PRIVATE',
         memberships: {
           create: { userId: admin.id, role: 'OWNER' },

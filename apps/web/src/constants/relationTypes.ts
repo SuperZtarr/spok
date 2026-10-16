@@ -1,7 +1,7 @@
 /*
  * Types de relation entre items — SOURCE UNIQUE côté web (décision Thomas 2026-09-28) : libellés,
  * libellé inverse, tournure de phrase, description, icône et couleurs des 4 types officiels
- * (RELATION_TYPES de @spok/shared, hors `parent` qui n'est pas proposé à l'utilisateur).
+ * (RELATION_TYPES de @spok/shared — la hiérarchie passe par parentId, pas par une relation).
  * Règles :
  * - aucune vue ne redéfinit de table locale de libellés/couleurs : elle lit RELATION_TYPE_META /
  *   getRelationMeta ;

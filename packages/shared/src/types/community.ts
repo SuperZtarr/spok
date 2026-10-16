@@ -1,5 +1,8 @@
-/* Types communauté : Community, memberships, rôles, visibilité, admin. */
+/* Types communauté : Community, memberships, rôles, visibilité, admin.
+ * Visibilité : `visibility` / `pendingVisibility` uniquement (isPublic/pendingPublic supprimés le 2026-10-16). */
 export type CommunityRole = 'OWNER' | 'MEMBER';
+
+export type CommunityVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 
 /** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »). */
 export type CommunityContext = 'FORUM' | 'PROJECT' | 'JDR';
@@ -10,10 +13,9 @@ export interface Community {
   description?: string;
   context?: CommunityContext | null;
   /** Source de vérité de la visibilité (renvoyée par l'API). */
-  visibility?: 'OPEN' | 'READONLY' | 'PRIVATE';
-  /** @deprecated — peut être désynchronisé, utiliser visibility. */
-  isPublic: boolean;
-  pendingPublic: boolean;
+  visibility?: CommunityVisibility;
+  /** Visibilité demandée, en attente de validation admin (null = pas de demande). */
+  pendingVisibility?: CommunityVisibility | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   coverPosition?: number;
@@ -50,14 +52,14 @@ export interface CommunityMember {
 export interface CreateCommunityInput {
   name: string;
   description?: string;
-  isPublic?: boolean;
+  visibility?: CommunityVisibility;
   context?: CommunityContext | null;
 }
 
 export interface UpdateCommunityInput {
   name?: string;
   description?: string;
-  isPublic?: boolean;
+  visibility?: CommunityVisibility;
   context?: CommunityContext | null;
 }
 
@@ -71,8 +73,8 @@ export interface AdminCommunity {
   id: string;
   name: string;
   description?: string;
-  isPublic: boolean;
-  pendingPublic: boolean;
+  visibility: CommunityVisibility;
+  pendingVisibility: CommunityVisibility | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   coverPosition?: number;

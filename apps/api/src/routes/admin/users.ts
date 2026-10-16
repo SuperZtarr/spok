@@ -1,13 +1,53 @@
 /*
  * Administration des utilisateurs : liste, détail, création, rôle global, activation/désactivation,
- * suppression avec réassignation des contenus. Inclut /:id/access-tree (arbre communautés/espaces
+ * suppression avec réassignation des contenus — suppression physique réservée aux comptes sans trace
+ * (countUserTraces), sinon désactivation. Inclut /:id/access-tree (arbre communautés/espaces
  * avec l'accès effectif de l'utilisateur — direct, hérité de la visibilité, ou aucun ; communauté
  * publique = visibility !== 'PRIVATE' uniquement, isPublic déprécié jamais lu).
  * /:id/mcp-access : accorde ou retire l'accès MCP distant (efface la demande en attente, trace AuditLog).
  */
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
+import type { PrismaClient } from '@spok/database';
 import type { CreateUserInput, UpdateUserInput, AdminUser, AccessTreeNode, AccessRole, AccessSource } from '@spok/shared';
+
+/**
+ * Traces laissées par un utilisateur qui interdisent sa suppression physique (libellé → nombre).
+ * Tenir à jour à chaque nouvelle relation vers User sans onDelete (Restrict) ou dont la cascade
+ * effacerait du contenu partagé.
+ */
+export async function countUserTraces(
+  prisma: PrismaClient,
+  userId: string,
+): Promise<Record<string, number>> {
+  const [created, assigned, updated, contributions, audit, emailsSent, emailsReceived, sessions, entries, agenda, templates] =
+    await Promise.all([
+      prisma.item.count({ where: { createdById: userId } }),
+      prisma.item.count({ where: { assignedToId: userId } }),
+      prisma.item.count({ where: { updatedById: userId } }),
+      prisma.contribution.count({ where: { authorId: userId } }),
+      prisma.auditLog.count({ where: { userId } }),
+      prisma.communityEmail.count({ where: { sentById: userId } }),
+      prisma.communityEmailRecipient.count({ where: { userId } }),
+      prisma.liveSession.count({ where: { hostId: userId } }),
+      prisma.liveSessionEntry.count({ where: { userId } }),
+      prisma.liveSessionAgendaItem.count({ where: { presenterId: userId } }),
+      prisma.itemTemplate.count({ where: { createdById: userId } }),
+    ]);
+  return {
+    'item(s) créé(s)': created ?? 0,
+    'item(s) assigné(s)': assigned ?? 0,
+    'item(s) modifié(s)': updated ?? 0,
+    'contribution(s)': contributions ?? 0,
+    "entrée(s) d'audit": audit ?? 0,
+    'e-mail(s) de communauté envoyé(s)': emailsSent ?? 0,
+    'e-mail(s) de communauté reçu(s)': emailsReceived ?? 0,
+    'séance(s) animée(s)': sessions ?? 0,
+    'entrée(s) de journal de séance': entries ?? 0,
+    'présentation(s) au programme de séance': agenda ?? 0,
+    "modèle(s) d'items": templates ?? 0,
+  };
+}
 
 interface ListUsersQuery {
   page?: number;
@@ -287,17 +327,20 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // Check if user has contributions — if so, must disable instead of delete
-    const contributionCount = await fastify.prisma.contribution.count({ where: { authorId: id } });
-    const itemCount = await fastify.prisma.item.count({ where: { createdById: id } });
-
-    if (contributionCount > 0 || itemCount > 0) {
+    // Suppression réservée aux comptes sans aucune trace : sinon la base refuse (FK sans cascade :
+    // items, audit, e-mails de communauté) ou la cascade efface du contenu partagé (séances animées,
+    // modèles d'items globaux, journal de séance). Dans ces cas : désactivation.
+    const traces = await countUserTraces(fastify.prisma, id);
+    const blocking = Object.entries(traces).filter(([, count]) => count > 0);
+    if (blocking.length > 0) {
+      const detail = blocking.map(([label, count]) => `${count} ${label}`).join(', ');
       return reply.badRequest(
-        `Ce compte a ${itemCount} item(s) et ${contributionCount} contribution(s). Utilisez la désactivation au lieu de la suppression.`
+        `Ce compte a laissé des traces (${detail}). Utilisez la désactivation au lieu de la suppression.`
       );
     }
 
-    // Delete user (cascade will handle memberships, etc.)
+    // Delete user (cascade will handle memberships, etc.) ; refresh_tokens n'a pas de FK → purge explicite
+    await fastify.prisma.refreshToken.deleteMany({ where: { userId: id } });
     await fastify.prisma.user.delete({
       where: { id },
     });

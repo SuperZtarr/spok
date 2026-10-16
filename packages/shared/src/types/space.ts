@@ -1,5 +1,9 @@
 /* Types espace : Space, memberships, rôles, visibilité, préférences. */
 export type SpaceType = 'PERSONAL' | 'GROUP';
+/**
+ * Rôle d'accès effectif à un espace. OWNER/MEMBER = rôles stockés (enum Prisma Role) ; VIEWER n'est
+ * jamais stocké : rôle implicite calculé par l'API pour un non-membre d'un espace READONLY.
+ */
 export type Role = 'OWNER' | 'MEMBER' | 'VIEWER';
 export type SpaceVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 

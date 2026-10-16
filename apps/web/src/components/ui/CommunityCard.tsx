@@ -24,13 +24,12 @@ interface Community {
   coverPosition?: number;
   coverPositionX?: number;
   coverZoom?: number;
-  isPublic?: boolean;
   visibility?: string | null;
   memberCount?: number;
   spaceCount?: number;
   role?: string | null;
   muted?: boolean;
-  pendingPublic?: boolean;
+  pendingVisibility?: string | null;
 }
 
 // =============================================================================
@@ -194,7 +193,7 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
               </Button>
             )}
             <div className="ml-auto flex items-center gap-1">
-              {community.pendingPublic && (
+              {community.pendingVisibility && (
                 <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium">
                   <Clock className="w-3 h-3" />
                   Publication en attente

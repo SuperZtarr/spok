@@ -431,7 +431,7 @@ export function SearchPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm"><Highlight text={c.name} query={qParam} /></span>
-                        {c.isPublic && <Globe className="w-3 h-3 text-muted-foreground" />}
+                        {c.visibility !== 'PRIVATE' && <Globe className="w-3 h-3 text-muted-foreground" />}
                       </div>
                       {c.description && <p className="text-xs text-muted-foreground line-clamp-1"><Highlight text={c.description} query={qParam} /></p>}
                     </div>

@@ -443,23 +443,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     // Apply template if specified
     const template = body.templateId ? SPACE_TEMPLATES.find(t => t.id === body.templateId) : null;
     if (template && template.id !== 'blank') {
-      // Apply custom statuses via referentiels module
-      if (template.statuses) {
-        const referentielsConfig = {
-          statuses: template.statuses,
-          typeLabels: (await import('@spok/shared')).DEFAULT_TYPE_LABELS,
-        };
-        await fastify.prisma.spaceModule.create({
-          data: {
-            spaceId: space.id,
-            moduleKey: 'referentiels',
-            config: JSON.parse(JSON.stringify(referentielsConfig)),
-            enabled: true,
-          },
-        });
-      }
-
-      // Create template items
+      // Create template items (les statuts restent ceux de la communauté)
       if (template.items && template.items.length > 0) {
         await createItemTree(fastify.prisma, template.items, {
           spaceId: space.id,

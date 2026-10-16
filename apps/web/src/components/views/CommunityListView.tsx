@@ -54,7 +54,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
   }, [publicCommunities, searchExisting]);
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description: string; isPublic: boolean }) =>
+    mutationFn: (data: { name: string; description: string; visibility: 'OPEN' | 'PRIVATE' }) =>
       communitiesApi.create(data),
     onSuccess: (community) => {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
@@ -112,7 +112,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
       createMutation.mutate({
         name: newName.trim(),
         description: newDescription.trim(),
-        isPublic: wantPublic,
+        visibility: wantPublic ? 'OPEN' : 'PRIVATE',
       });
     }
   };

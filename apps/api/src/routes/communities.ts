@@ -1,13 +1,14 @@
 /*
- * Routes /communities : CRUD (visibilité avec workflow d'approbation pendingPublic), membres
+ * Routes /communities : CRUD (visibilité avec workflow d'approbation pendingVisibility), membres
  * (multi-OWNER, mute), invitations par token, join/leave, avatar/cover, tags, emails.
  * Gestion (modification, suppression, membres, invitations, tags, emails, images) : OWNER ou admin
  * global en mode admin, via isOwnerOrAdmin — le mode admin voit et fait tout. Actions personnelles
  * (join/leave/mute, transfert de sa propriété) : liées à l'appelant. Création = PRIVATE + pendingVisibility ;
  * PATCH PRIVATE → OPEN/READONLY = même demande (validation admin), sauf admin en mode admin.
  * PATCH visibility PRIVATE sur une communauté privée avec demande en cours = annulation de la demande.
- * Visibilité : `visibility` est la seule source de vérité (listes, contrôles d'accès).
- * `isPublic` est déprécié et peut être désynchronisé en base — ne jamais filtrer dessus seul.
+ * Visibilité : `visibility` est la seule source de vérité (listes, contrôles d'accès). Les colonnes
+ * isPublic/pendingPublic n'existent plus (2026-10-16) ; `isPublic` reste accepté en ENTRÉE (anciens
+ * clients) et est seulement converti en visibility (true → OPEN, false → PRIVATE).
  * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
  * Suppression : utils/spaceDeletion.ts (deleteCommunityTree), en transaction — tout ou rien.
  */
@@ -26,7 +27,7 @@ import { communityReferentielsRoutes } from './community-referentiels.js';
 const createCommunitySchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
+  isPublic: z.boolean().optional(), // alias d'entrée déprécié → visibility (jamais stocké)
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
   context: z.enum(['FORUM', 'PROJECT', 'JDR']).nullable().optional(), // contexte d'usage, null = neutre
 });
@@ -34,7 +35,7 @@ const createCommunitySchema = z.object({
 const updateCommunitySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  isPublic: z.boolean().optional(), // @deprecated — kept for backward compat
+  isPublic: z.boolean().optional(), // alias d'entrée déprécié → visibility (jamais stocké)
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
   context: z.enum(['FORUM', 'PROJECT', 'JDR']).nullable().optional(), // contexte d'usage, null = neutre
   coverPosition: z.number().int().min(0).max(100).optional(),
@@ -108,8 +109,6 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
         description: body.description,
         visibility: 'PRIVATE',
         pendingVisibility: wantsPublic ? requestedVisibility : null,
-        isPublic: false,
-        pendingPublic: wantsPublic,
         context: body.context ?? null,
         memberships: {
           create: {
@@ -331,7 +330,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       ? await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } })
       : null;
 
-    // Block access if community is private (visibility only — isPublic may be stale)
+    // Block access if community is private (visibility = seule source de vérité)
     const isAccessible = community.visibility !== 'PRIVATE';
     if (!isAccessible && !(currentUser?.globalRole === 'ADMIN' && request.isAdminMode)) {
       return reply.notFound('Community not found or access denied');
@@ -373,33 +372,29 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const current = await fastify.prisma.community.findUnique({
         where: { id: request.params.id },
-        select: { name: true, visibility: true, pendingPublic: true, pendingVisibility: true },
+        select: { name: true, visibility: true, pendingVisibility: true },
       });
       if (!current) return reply.notFound('Community not found');
 
       // Visibilité (isPublic accepté pour compat, converti) — même règle qu'à la création :
       // sortir du privé (PRIVATE → OPEN/READONLY) passe par une demande validée par un admin
-      // (pendingPublic + pendingVisibility), sauf admin en mode admin. Repasser en privé, ou
-      // basculer OPEN ↔ READONLY (déjà public), est immédiat. isPublic suit visibility.
+      // (pendingVisibility), sauf admin en mode admin. Repasser en privé, ou
+      // basculer OPEN ↔ READONLY (déjà public), est immédiat.
       const requestedVisibility = body.visibility ?? (body.isPublic !== undefined ? (body.isPublic ? 'OPEN' : 'PRIVATE') : undefined);
       const updateData: Record<string, unknown> = {};
       let publicationRequested = false;
       if (body.name) updateData.name = body.name;
       if (body.description !== undefined) updateData.description = body.description;
       // Annulation de la demande : rester (ou revenir) en PRIVATE alors qu'une demande est en cours
-      if (requestedVisibility === 'PRIVATE' && current.visibility === 'PRIVATE' && (current.pendingPublic || current.pendingVisibility)) {
-        updateData.pendingPublic = false;
+      if (requestedVisibility === 'PRIVATE' && current.visibility === 'PRIVATE' && current.pendingVisibility) {
         updateData.pendingVisibility = null;
       }
       if (requestedVisibility && requestedVisibility !== current.visibility) {
         if (current.visibility === 'PRIVATE' && requestedVisibility !== 'PRIVATE' && !adminBypass) {
-          updateData.pendingPublic = true;
           updateData.pendingVisibility = requestedVisibility;
           publicationRequested = true;
         } else {
           updateData.visibility = requestedVisibility;
-          updateData.isPublic = requestedVisibility !== 'PRIVATE';
-          updateData.pendingPublic = false;
           updateData.pendingVisibility = null;
         }
       }

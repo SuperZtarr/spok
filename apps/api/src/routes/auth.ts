@@ -2,6 +2,7 @@
  * Authentification : register (vérification email via Resend), login, refresh, logout,
  * reset/forgot password. Tokens JWT (access 15 min / refresh 7 j) — hash bcrypt cost 10.
  * Refresh token stocké en base sous forme de hash SHA-256 (hashRefreshToken), jamais en clair.
+ * Jetons expirés de l'utilisateur purgés à chaque émission (generateTokens).
  * Routes sensibles (register/login/forgot-password/reset-password) limitées à 5 req/min/IP
  * via strictRateLimit (le plugin @fastify/rate-limit global est enregistré dans index.ts).
  */
@@ -557,6 +558,9 @@ export async function generateTokens(
   const refreshToken = randomBytes(64).toString('hex');
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+  // Purge des jetons expirés de l'utilisateur (refresh_tokens n'a ni FK ni purge planifiée)
+  await fastify.prisma.refreshToken.deleteMany({ where: { userId, expiresAt: { lt: new Date() } } });
 
   await fastify.prisma.refreshToken.create({
     data: {

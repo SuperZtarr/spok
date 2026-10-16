@@ -249,6 +249,23 @@ describe('Admin Users routes', () => {
       expect(res.json().success).toBe(true)
     })
 
+    it('refuse la suppression d\'un compte ayant une trace hors items/contributions (audit, e-mail reçu)', async () => {
+      allowAdmin()
+      prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1', globalRole: 'USER' })
+      prisma.auditLog.count.mockResolvedValueOnce(2)
+      prisma.communityEmailRecipient.count.mockResolvedValueOnce(1)
+
+      const res = await app.inject({
+        method: 'DELETE', url: '/admin/users/u1',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(res.statusCode).toBe(400)
+      expect(res.json().message).toContain("2 entrée(s) d'audit")
+      expect(res.json().message).toContain('1 e-mail(s) de communauté reçu(s)')
+      expect(prisma.user.delete).not.toHaveBeenCalled()
+    })
+
     it('should prevent self-deletion', async () => {
       allowAdmin()
 

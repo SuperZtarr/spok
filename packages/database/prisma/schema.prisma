@@ -97,7 +97,6 @@ model Space {
 
   memberships SpaceMembership[]
   items       Item[]
-  modules     SpaceModule[]
   tags        Tag[]
   auditLogs   AuditLog[]
   invitations Invitation[]
@@ -173,10 +172,9 @@ model Community {
   id          String   @id @default(cuid())
   name        String
   description String?
-  isPublic      Boolean  @default(false)    // @deprecated — use visibility instead
-  pendingPublic Boolean  @default(false)   // @deprecated — use pendingVisibility instead
+  // Visibilité : seule source de vérité (isPublic/pendingPublic supprimés le 2026-10-16)
   visibility         SpaceVisibility @default(PRIVATE)
-  pendingVisibility  SpaceVisibility? // Requested visibility awaiting admin approval
+  pendingVisibility  SpaceVisibility? // Visibilité demandée, en attente de validation admin
   context       CommunityContext?    // Contexte d'usage (FORUM/PROJECT), null = neutre « tous »
   avatarUrl     String?
   coverUrl      String?
@@ -273,7 +271,7 @@ model Invitation {
   email       String
   token       String           @unique @default(uuid())
   status      InvitationStatus @default(PENDING)
-  role        String           // Role or CommunityRole as string
+  role        String           // OWNER | MEMBER (valeurs communes à Role et CommunityRole, cf. routes/invitations.ts)
   message     String?          // Optional message from inviter
 
   communityId String?
@@ -292,7 +290,6 @@ model Invitation {
   @@index([email])
   @@index([communityId])
   @@index([spaceId])
-  @@index([token])
   @@map("invitations")
 }
 
@@ -387,7 +384,7 @@ model ItemRelation {
   id         String @id @default(cuid())
   fromItemId String
   toItemId   String
-  type       String // "blocks", "relates", "depends", etc.
+  type       String // RELATION_TYPES de @spok/shared : blocks, relates, implements, drives (validé par l'API)
   label      String? // commentaire/note sur la relation
 
   fromItem Item @relation("RelationFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
@@ -424,20 +421,6 @@ model ItemTag {
 
   @@id([itemId, tagId])
   @@map("item_tags")
-}
-
-// Modules activés par espace
-model SpaceModule {
-  id        String  @id @default(cuid())
-  spaceId   String
-  moduleKey String
-  config    Json?
-  enabled   Boolean @default(true)
-
-  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-
-  @@unique([spaceId, moduleKey])
-  @@map("space_modules")
 }
 
 // Contributions aux éléments
@@ -515,7 +498,8 @@ enum NotificationType {
   MCP_ACCESS_DENIED
 }
 
-// Refresh tokens for JWT
+// Refresh tokens for JWT — userId sans FK (pas de cascade) : purge des expirés à l'émission
+// (routes/auth.ts generateTokens) et purge explicite à la suppression d'un utilisateur.
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -570,7 +554,6 @@ model ItemView {
   item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@id([userId, itemId])
-  @@index([userId])
   @@map("item_views")
 }
 

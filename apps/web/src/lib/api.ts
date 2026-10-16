@@ -1191,7 +1191,7 @@ export interface AdvancedSearchParams {
 }
 
 export interface AdvancedSearchResponse {
-  communities: Array<{ id: string; name: string; description: string | null; avatarUrl: string | null; isPublic: boolean; memberCount: number; spaceCount: number }>;
+  communities: Array<{ id: string; name: string; description: string | null; avatarUrl: string | null; visibility: 'OPEN' | 'READONLY' | 'PRIVATE'; memberCount: number; spaceCount: number }>;
   spaces: Array<{ id: string; name: string; type: string; communityId: string | null; communityName: string | null; memberCount: number; itemCount: number }>;
   items: Array<{ id: string; title: string; type: string; status: string | null; priority: number | null; description: string | null; spaceId: string; spaceName: string; communityName: string | null; createdAt: string; tags: Array<{ id: string; name: string; color: string | null }> }>;
   users: Array<{ id: string; name: string; email: string | null; avatarUrl: string | null; globalRole: string; communityCount: number; spaceCount: number }>;

@@ -1,6 +1,6 @@
 /*
  * Relations entre items : CRUD + commentaire de relation. Types acceptés = RELATION_TYPES (@spok/shared :
- * blocks, relates, implements, parent, drives) — tout autre type (ancien `depends`, `tests`…) est refusé
+ * blocks, relates, implements, drives) — tout autre type (ancien `depends`, `tests`, `parent`…) est refusé
  * en 400 depuis le 2026-09-28. Détection de cycle pour `drives`. La sémantique des types (ordonnancement,
  * libellés) vit côté web : apps/web/src/constants/relationTypes.ts.
  */

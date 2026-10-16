@@ -39,7 +39,7 @@ import { useAdminMode } from '../components/DevDbStatus';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
-import type { StatusConfig, TypeLabelConfig } from '@spok/shared';
+import type { StatusConfig, TypeLabelConfig, CommunityVisibility } from '@spok/shared';
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -242,7 +242,7 @@ export function CommunitySettingsPage() {
     if (community) {
       setEditName(community.name);
       setEditDescription(community.description || '');
-      setEditVisibility((community as any).visibility || (community.isPublic ? 'OPEN' : 'PRIVATE'));
+      setEditVisibility(community.visibility || 'PRIVATE');
       setEditContext(community.context || 'NONE');
     }
   }, [community]);
@@ -342,7 +342,7 @@ export function CommunitySettingsPage() {
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string; isPublic?: boolean; visibility?: string; context?: 'FORUM' | 'PROJECT' | 'JDR' | null }) =>
+    mutationFn: (data: { name?: string; description?: string; visibility?: CommunityVisibility; context?: 'FORUM' | 'PROJECT' | 'JDR' | null }) =>
       communitiesApi.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
@@ -451,16 +451,16 @@ export function CommunitySettingsPage() {
   const hasInfoChanges = community && (
     editName !== community.name ||
     editDescription !== (community.description || '') ||
-    editVisibility !== ((community as any)?.visibility || (community.isPublic ? 'OPEN' : 'PRIVATE')) ||
+    editVisibility !== (community.visibility || 'PRIVATE') ||
     editContext !== (community.context || 'NONE')
   );
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string; visibility?: string; context?: 'FORUM' | 'PROJECT' | 'JDR' | null } = {};
+    const updates: { name?: string; description?: string; visibility?: CommunityVisibility; context?: 'FORUM' | 'PROJECT' | 'JDR' | null } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
-    const currentVisibility = (community as any)?.visibility || (community?.isPublic ? 'OPEN' : 'PRIVATE');
-    if (editVisibility !== currentVisibility && canEdit) updates.visibility = editVisibility;
+    const currentVisibility = community?.visibility || 'PRIVATE';
+    if (editVisibility !== currentVisibility && canEdit) updates.visibility = editVisibility as CommunityVisibility;
     if (editContext !== (community?.context || 'NONE') && canEdit) {
       updates.context = editContext === 'NONE' ? null : editContext;
     }
@@ -599,9 +599,9 @@ export function CommunitySettingsPage() {
                         ))}
                       </div>
                       {/* Sortir du privé = demande validée par un admin (sauf mode admin, appliqué directement) */}
-                      {(community as any).pendingPublic ? (
+                      {community.pendingVisibility ? (
                         <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
-                          Demande de publication en « {(community as any).pendingVisibility === 'READONLY' ? 'Lecture seule' : 'Ouverte'} » en attente de validation par un administrateur.{' '}
+                          Demande de publication en « {community.pendingVisibility === 'READONLY' ? 'Lecture seule' : 'Ouverte'} » en attente de validation par un administrateur.{' '}
                           {/* Annulation = PATCH visibility PRIVATE sur la communauté restée privée (efface la demande) */}
                           <button
                             type="button"

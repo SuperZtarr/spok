@@ -1,5 +1,5 @@
 /*
- * TNR des routes /communities : création (workflow pendingPublic), visibilité, membres
+ * TNR des routes /communities : création (workflow pendingVisibility), visibilité, membres
  * (multi-OWNER), invitations par token. Réalignés le 2026-07-11 sur les comportements actuels.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -35,9 +35,7 @@ function mockCommunity(overrides: Record<string, unknown> = {}) {
     id: COM_ID,
     name: 'Test Community',
     description: null,
-    isPublic: false,
     visibility: 'PRIVATE',
-    pendingPublic: false,
     pendingVisibility: null,
     avatarUrl: null,
     coverUrl: null,
@@ -93,9 +91,10 @@ describe('Communities routes', () => {
     })
 
     // Depuis le workflow d'approbation : une communauté "publique" est créée PRIVATE
-    // avec pendingPublic=true — un admin global doit valider le passage en public.
+    // avec pendingVisibility — un admin global doit valider le passage en public.
+    // isPublic reste accepté en entrée (alias) mais n'est jamais écrit (colonne supprimée).
     it('should create a public community as pending approval', async () => {
-      prisma.community.create.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'OPEN' }))
+      prisma.community.create.mockResolvedValue(mockCommunity({ pendingVisibility: 'OPEN' }))
 
       const res = await app.inject({
         method: 'POST',
@@ -106,9 +105,10 @@ describe('Communities routes', () => {
 
       expect(res.statusCode).toBe(201)
       const arg = prisma.community.create.mock.calls[0][0]
-      expect(arg.data.isPublic).toBe(false)
-      expect(arg.data.pendingPublic).toBe(true)
+      expect(arg.data.visibility).toBe('PRIVATE')
       expect(arg.data.pendingVisibility).toBe('OPEN')
+      expect('isPublic' in arg.data).toBe(false)
+      expect('pendingPublic' in arg.data).toBe(false)
     })
 
     // Depuis la spec 2026-07-15-community-context-mode : contexte d'usage FORUM/PROJECT,
@@ -332,7 +332,7 @@ describe('Communities routes', () => {
     // Option A (2026-10-12) : sortir du privé = demande validée par un admin, comme à la création
     it('should turn PRIVATE → OPEN into a publication request for an OWNER', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
-      prisma.community.update.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'OPEN' }))
+      prisma.community.update.mockResolvedValue(mockCommunity({ pendingVisibility: 'OPEN' }))
       prisma.user.findMany.mockResolvedValue([{ id: 'admin-1' }])
       prisma.user.findUnique.mockResolvedValue({ name: 'Owner' })
 
@@ -346,7 +346,6 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(200)
       const data = prisma.community.update.mock.calls[0][0].data
       expect(data.visibility).toBeUndefined()
-      expect(data.pendingPublic).toBe(true)
       expect(data.pendingVisibility).toBe('OPEN')
     })
 
@@ -367,7 +366,7 @@ describe('Communities routes', () => {
     })
 
     it('should cancel a pending publication request when the OWNER keeps PRIVATE', async () => {
-      prisma.community.findUnique.mockResolvedValue(mockCommunity({ pendingPublic: true, pendingVisibility: 'READONLY' }))
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ pendingVisibility: 'READONLY' }))
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
       prisma.community.update.mockResolvedValue(mockCommunity())
 
@@ -379,7 +378,7 @@ describe('Communities routes', () => {
       })
 
       expect(res.statusCode).toBe(200)
-      expect(prisma.community.update.mock.calls[0][0].data).toMatchObject({ pendingPublic: false, pendingVisibility: null })
+      expect(prisma.community.update.mock.calls[0][0].data).toMatchObject({ pendingVisibility: null })
     })
 
     it('should apply PRIVATE → OPEN directly for an admin in admin mode', async () => {
@@ -397,7 +396,7 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(200)
       const data = prisma.community.update.mock.calls[0][0].data
       expect(data.visibility).toBe('OPEN')
-      expect(data.isPublic).toBe(true)
+      expect('isPublic' in data).toBe(false)
     })
 
     it('should apply a switch back to PRIVATE immediately and clear any pending request', async () => {
@@ -415,7 +414,7 @@ describe('Communities routes', () => {
       expect(res.statusCode).toBe(200)
       const data = prisma.community.update.mock.calls[0][0].data
       expect(data.visibility).toBe('PRIVATE')
-      expect(data.pendingPublic).toBe(false)
+      expect(data.pendingVisibility).toBeNull()
     })
 
     it('should apply OPEN → READONLY immediately (already public)', async () => {

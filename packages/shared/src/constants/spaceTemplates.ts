@@ -1,5 +1,6 @@
-/* Templates de création d'espace : statuts/labels préconfigurés par cas d'usage. */
-import type { StatusConfig, TypeLabelConfig } from '../types/referentiels.js';
+/* Templates de création d'espace : arborescence d'items de départ par cas d'usage.
+ * Pas de statuts ici : les statuts (référentiels) appartiennent à la communauté
+ * (Community.referentiels) — un modèle d'espace ne peut pas les définir (décision 2026-10-16). */
 import type { ItemType } from '../types/item.js';
 
 export interface SpaceTemplateItem {
@@ -13,8 +14,6 @@ export interface SpaceTemplate {
   name: string;
   description: string;
   icon: string; // lucide icon name
-  statuses?: StatusConfig[];
-  typeLabels?: Record<string, TypeLabelConfig>;
   items?: SpaceTemplateItem[];
 }
 
@@ -30,14 +29,6 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     name: 'Projet',
     description: 'Structure de gestion de projet avec phases, jalons et tâches',
     icon: 'FolderKanban',
-    statuses: [
-      { id: 'undefined', label: 'Non défini', color: 'bg-slate-100 text-slate-600', borderColor: 'border-slate-400 bg-slate-100', order: 0, visible: true },
-      { id: 'todo', label: 'À faire', color: 'bg-yellow-100 text-yellow-800', borderColor: 'border-yellow-300 bg-yellow-50', order: 1, visible: true },
-      { id: 'in_progress', label: 'En cours', color: 'bg-orange-100 text-orange-800', borderColor: 'border-orange-300 bg-orange-50', order: 2, visible: true },
-      { id: 'in_review', label: 'En revue', color: 'bg-purple-100 text-purple-800', borderColor: 'border-purple-300 bg-purple-50', order: 3, visible: true },
-      { id: 'done', label: 'Terminé', color: 'bg-green-100 text-green-800', borderColor: 'border-green-300 bg-green-50', order: 4, visible: true },
-      { id: 'cancelled', label: 'Annulé', color: 'bg-gray-100 text-gray-800', borderColor: 'border-gray-300 bg-gray-50', order: 5, visible: true },
-    ],
     items: [
       {
         title: 'Phase 1 — Cadrage',
@@ -95,12 +86,6 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     name: 'Kanban',
     description: 'Tableau Kanban avec workflow et exemples de tâches',
     icon: 'LayoutGrid',
-    statuses: [
-      { id: 'backlog', label: 'Backlog', color: 'bg-slate-100 text-slate-600', borderColor: 'border-slate-400 bg-slate-100', order: 0, visible: true },
-      { id: 'todo', label: 'À faire', color: 'bg-yellow-100 text-yellow-800', borderColor: 'border-yellow-300 bg-yellow-50', order: 1, visible: true },
-      { id: 'in_progress', label: 'En cours', color: 'bg-orange-100 text-orange-800', borderColor: 'border-orange-300 bg-orange-50', order: 2, visible: true },
-      { id: 'done', label: 'Terminé', color: 'bg-green-100 text-green-800', borderColor: 'border-green-300 bg-green-50', order: 3, visible: true },
-    ],
     items: [
       { title: 'Rédiger le brief créatif', type: 'TASK' },
       { title: 'Préparer les visuels', type: 'TASK' },
@@ -209,14 +194,6 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     name: 'Bug Tracker',
     description: 'Suivi de bugs avec workflow de résolution',
     icon: 'Bug',
-    statuses: [
-      { id: 'new', label: 'Nouveau', color: 'bg-red-100 text-red-800', borderColor: 'border-red-300 bg-red-50', order: 0, visible: true },
-      { id: 'confirmed', label: 'Confirmé', color: 'bg-orange-100 text-orange-800', borderColor: 'border-orange-300 bg-orange-50', order: 1, visible: true },
-      { id: 'in_progress', label: 'En cours', color: 'bg-blue-100 text-blue-800', borderColor: 'border-blue-300 bg-blue-50', order: 2, visible: true },
-      { id: 'resolved', label: 'Résolu', color: 'bg-green-100 text-green-800', borderColor: 'border-green-300 bg-green-50', order: 3, visible: true },
-      { id: 'closed', label: 'Fermé', color: 'bg-gray-100 text-gray-800', borderColor: 'border-gray-300 bg-gray-50', order: 4, visible: true },
-      { id: 'wontfix', label: 'Ne sera pas corrigé', color: 'bg-slate-100 text-slate-600', borderColor: 'border-slate-400 bg-slate-100', order: 5, visible: true },
-    ],
     items: [
       {
         title: 'Bugs critiques',
@@ -298,13 +275,6 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     name: 'Sprint Scrum',
     description: 'Organisation Scrum avec backlog, sprints et user stories',
     icon: 'Zap',
-    statuses: [
-      { id: 'backlog', label: 'Product Backlog', color: 'bg-slate-100 text-slate-600', borderColor: 'border-slate-400 bg-slate-100', order: 0, visible: true },
-      { id: 'todo', label: 'Sprint Backlog', color: 'bg-yellow-100 text-yellow-800', borderColor: 'border-yellow-300 bg-yellow-50', order: 1, visible: true },
-      { id: 'in_progress', label: 'En cours', color: 'bg-blue-100 text-blue-800', borderColor: 'border-blue-300 bg-blue-50', order: 2, visible: true },
-      { id: 'in_review', label: 'En revue', color: 'bg-purple-100 text-purple-800', borderColor: 'border-purple-300 bg-purple-50', order: 3, visible: true },
-      { id: 'done', label: 'Terminé', color: 'bg-green-100 text-green-800', borderColor: 'border-green-300 bg-green-50', order: 4, visible: true },
-    ],
     items: [
       {
         title: 'Sprint 1',

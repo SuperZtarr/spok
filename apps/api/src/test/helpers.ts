@@ -52,7 +52,6 @@ export function createMockPrisma() {
     contribution: mockModel(),
     reaction: mockModel(),
     tag: mockModel(),
-    spaceModule: mockModel(),
     community: mockModel(),
     communityMembership: mockModel(),
     communityEmail: mockModel(),

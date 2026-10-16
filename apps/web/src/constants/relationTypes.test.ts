@@ -3,8 +3,8 @@ import { RELATION_TYPES } from '@spok/shared';
 import { RELATION_TYPE_LIST, getRelationMeta, isOrderingRelation, isOfficialRelationType } from './relationTypes';
 
 describe('relationTypes', () => {
-  it('couvre exactement les types officiels proposés à l\'utilisateur (RELATION_TYPES hors parent)', () => {
-    const offered = RELATION_TYPES.filter((t) => t !== 'parent').slice().sort();
+  it('couvre exactement les types officiels (RELATION_TYPES)', () => {
+    const offered = RELATION_TYPES.slice().sort();
     expect(RELATION_TYPE_LIST.map((m) => m.id).sort()).toEqual(offered);
   });
 

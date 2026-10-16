@@ -2,10 +2,19 @@
  * Invitations par token (communauté ou espace) : création, acceptation (avec auto-join des
  * espaces à defaultRole), refus, liste. Helper createInvitation partagé par communities/spaces.
  * Annulation : l'invitant, le OWNER de la cible, ou un admin en mode admin.
+ * Invitation.role est une colonne texte (pas d'enum en base, pour ne pas réécrire la colonne en prod) :
+ * seules OWNER/MEMBER y entrent (createInvitation typé) et en sortent (invitationRole), valeurs communes
+ * aux enums Role (espace) et CommunityRole.
  */
 import { FastifyPluginAsync } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { createNotification } from '../utils/notifications.js';
+
+/** Rôle porté par une invitation : OWNER/MEMBER (communs à Role et CommunityRole), MEMBER par défaut. */
+export type InvitationRole = 'OWNER' | 'MEMBER';
+export function invitationRole(value: string): InvitationRole {
+  return value === 'OWNER' ? 'OWNER' : 'MEMBER';
+}
 
 /** Auto-join user to community spaces that have a defaultRole configured */
 export async function autoJoinCommunitySpaces(prisma: PrismaClient, userId: string, communityId: string) {
@@ -140,7 +149,7 @@ export const invitationsRoutes: FastifyPluginAsync = async (fastify) => {
               data: {
                 userId: user.id,
                 communityId: invitation.communityId!,
-                role: invitation.role as any,
+                role: invitationRole(invitation.role),
               },
             });
             // Auto-join community spaces with defaultRole
@@ -158,7 +167,7 @@ export const invitationsRoutes: FastifyPluginAsync = async (fastify) => {
               data: {
                 userId: user.id,
                 spaceId: invitation.spaceId!,
-                role: invitation.role as any,
+                role: invitationRole(invitation.role),
               },
             });
           }
@@ -271,7 +280,7 @@ export async function createInvitation(
   prisma: PrismaClient,
   opts: {
     email: string;
-    role: string;
+    role: InvitationRole;
     message?: string;
     communityId?: string;
     spaceId?: string;

@@ -16,12 +16,19 @@ import { useSort } from '../../hooks/useSort';
 
 const PAGE_SIZE = 20;
 
+/** Libellé de la visibilité (seule source de vérité : visibility). */
+const VISIBILITY_LABELS: Record<AdminCommunity['visibility'], string> = {
+  OPEN: 'Publique',
+  READONLY: 'Lecture seule',
+  PRIVATE: 'Privee',
+};
+
 interface AdminCommunity {
   id: string;
   name: string;
   description?: string;
-  isPublic: boolean;
-  pendingPublic?: boolean;
+  visibility: 'OPEN' | 'READONLY' | 'PRIVATE';
+  pendingVisibility?: 'OPEN' | 'READONLY' | 'PRIVATE' | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   createdAt: string;
@@ -153,7 +160,7 @@ export function CommunitiesPage() {
     reorderMutation.mutate(newIds);
   }, [sortedCommunities, reorderMutation]);
 
-  const pendingCommunities = sortedCommunities.filter(c => c.pendingPublic);
+  const pendingCommunities = sortedCommunities.filter(c => c.pendingVisibility);
   const totalPages = data?.pagination.totalPages ?? 1;
 
   const handleExportCSV = () => {
@@ -162,7 +169,7 @@ export function CommunitiesPage() {
     const rows = data.data.map((c) => [
       c.name,
       c.description || '',
-      c.isPublic ? 'Publique' : 'Privee',
+      VISIBILITY_LABELS[c.visibility],
       c.memberCount,
       c.spaceCount,
       new Date(c.createdAt).toLocaleDateString('fr-FR'),
@@ -330,14 +337,14 @@ export function CommunitiesPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                          community.isPublic
+                          community.visibility !== 'PRIVATE'
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                         }`}>
-                          {community.isPublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                          {community.isPublic ? 'Publique' : 'Privee'}
+                          {community.visibility !== 'PRIVATE' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                          {VISIBILITY_LABELS[community.visibility]}
                         </span>
-                        {community.pendingPublic && (
+                        {community.pendingVisibility && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                             <Clock className="w-3 h-3" />
                           </span>
@@ -361,7 +368,7 @@ export function CommunitiesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        {community.pendingPublic && (
+                        {community.pendingVisibility && (
                           <>
                             <Button
                               variant="ghost"

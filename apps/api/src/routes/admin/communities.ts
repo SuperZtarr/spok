@@ -1,9 +1,9 @@
 /*
  * Administration des communautés : liste globale, création, approbation du passage en public
- * (pendingPublic → isPublic), suppression (utils/spaceDeletion.ts, en transaction — tout ou rien).
- * Toute écriture de isPublic doit renseigner visibility en cohérence (visibility fait foi) —
- * y compris PATCH /:id, qui convertit isPublic en visibility. approve/reject-public effacent toujours
- * pendingPublic ET pendingVisibility.
+ * (pendingVisibility → visibility), suppression (utils/spaceDeletion.ts, en transaction — tout ou rien).
+ * visibility est la seule source de vérité (colonnes isPublic/pendingPublic supprimées le 2026-10-16) ;
+ * `isPublic` reste accepté en entrée (POST, PATCH) et est seulement converti en visibility.
+ * approve/reject-public effacent toujours pendingVisibility.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -14,7 +14,8 @@ const createCommunitySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   ownerEmail: z.string().email().optional(),
-  isPublic: z.boolean().optional(),
+  isPublic: z.boolean().optional(), // alias d'entrée déprécié → visibility
+  visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
 });
 
 interface ListCommunitiesQuery {
@@ -33,7 +34,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /admin/communities/pending-count - Count communities awaiting public approval
   fastify.get('/pending-count', async () => {
-    const count = await fastify.prisma.community.count({ where: { pendingPublic: true } });
+    const count = await fastify.prisma.community.count({ where: { pendingVisibility: { not: null } } });
     return { count };
   });
 
@@ -141,7 +142,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /admin/communities - Create a new community
   fastify.post<{ Body: z.infer<typeof createCommunitySchema> }>('/', async (request, reply) => {
-    const { name, description, ownerEmail, isPublic } = createCommunitySchema.parse(request.body);
+    const { name, description, ownerEmail, isPublic, visibility } = createCommunitySchema.parse(request.body);
 
     // Determine the owner: specified user or current admin
     let ownerId = request.user.userId;
@@ -162,9 +163,7 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         name,
         description,
-        // visibility = source de vérité ; isPublic (déprécié) maintenu en miroir
-        isPublic: isPublic ?? false,
-        visibility: isPublic ? 'OPEN' : 'PRIVATE',
+        visibility: visibility ?? (isPublic ? 'OPEN' : 'PRIVATE'),
         memberships: {
           create: {
             userId: ownerId,
@@ -187,11 +186,14 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // PATCH /admin/communities/:id - Update a community
-  fastify.patch<{ Params: CommunityParams; Body: { name?: string; description?: string; isPublic?: boolean } }>(
+  fastify.patch<{ Params: CommunityParams; Body: { name?: string; description?: string; isPublic?: boolean; visibility?: 'OPEN' | 'READONLY' | 'PRIVATE' } }>(
     '/:id',
     async (request, reply) => {
       const { id } = request.params;
-      const { name, description, isPublic } = request.body;
+      const { name, description, isPublic, visibility } = request.body;
+      if (visibility !== undefined && !['OPEN', 'READONLY', 'PRIVATE'].includes(visibility)) {
+        return reply.badRequest('Invalid visibility');
+      }
 
       const community = await fastify.prisma.community.findUnique({
         where: { id },
@@ -201,19 +203,17 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Community not found');
       }
 
+      // isPublic (alias déprécié) : une communauté déjà publique garde son niveau (READONLY non forcé en OPEN)
+      const requestedVisibility = visibility ?? (isPublic === undefined
+        ? undefined
+        : isPublic ? (community.visibility !== 'PRIVATE' ? community.visibility : 'OPEN') : 'PRIVATE');
+
       const updated = await fastify.prisma.community.update({
         where: { id },
         data: {
           ...(name && { name }),
           ...(description !== undefined && { description }),
-          // isPublic (déprécié) converti en visibility, les deux restent alignés ; une communauté
-          // déjà publique garde son niveau (READONLY n'est pas forcé en OPEN)
-          ...(isPublic !== undefined && {
-            isPublic,
-            visibility: isPublic
-              ? (community.visibility !== 'PRIVATE' ? community.visibility : 'OPEN')
-              : 'PRIVATE',
-          }),
+          ...(requestedVisibility && { visibility: requestedVisibility, pendingVisibility: null }),
         },
         include: {
           _count: {
@@ -375,12 +375,12 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const community = await fastify.prisma.community.findUnique({ where: { id } });
     if (!community) return reply.notFound('Community not found');
-    if (!community.pendingPublic && !(community as any).pendingVisibility) return reply.badRequest('Community has no pending public request');
+    if (!community.pendingVisibility) return reply.badRequest('Community has no pending public request');
 
-    const approvedVisibility = (community as any).pendingVisibility || 'OPEN';
+    const approvedVisibility = community.pendingVisibility;
     const updated = await fastify.prisma.community.update({
       where: { id },
-      data: { isPublic: true, pendingPublic: false, visibility: approvedVisibility, pendingVisibility: null },
+      data: { visibility: approvedVisibility, pendingVisibility: null },
       include: { _count: { select: { memberships: true, spaces: true } } },
     });
 
@@ -393,12 +393,12 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
     const community = await fastify.prisma.community.findUnique({ where: { id } });
     if (!community) return reply.notFound('Community not found');
-    if (!community.pendingPublic && !community.pendingVisibility) return reply.badRequest('Community has no pending public request');
+    if (!community.pendingVisibility) return reply.badRequest('Community has no pending public request');
 
     // Refus : la demande est entièrement effacée (pendingVisibility compris, sinon « en attente » subsiste)
     const updated = await fastify.prisma.community.update({
       where: { id },
-      data: { pendingPublic: false, pendingVisibility: null },
+      data: { pendingVisibility: null },
       include: { _count: { select: { memberships: true, spaces: true } } },
     });
 

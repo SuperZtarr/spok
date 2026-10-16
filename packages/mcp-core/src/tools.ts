@@ -26,7 +26,7 @@ const ALLOWED: Record<ToolProfile, Level[]> = {
 }
 
 const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const
-/** Miroir de RELATION_TYPES @spok/shared hors `parent` (l'API refuse tout autre type). */
+/** Miroir de RELATION_TYPES @spok/shared (l'API refuse tout autre type). */
 const RELATION_TYPE_VALUES = ['blocks', 'implements', 'drives', 'relates'] as const
 
 type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean }
@@ -227,7 +227,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     async () => {
       const communities = asList(await client.get('/communities'), 'communities', 'data')
       const lines = communities.map((c: any) =>
-        `[${c.id}] ${c.name}${c.description ? ` — ${c.description}` : ''}${c.isPublic ? ' (publique)' : ''}`)
+        `[${c.id}] ${c.name}${c.description ? ` — ${c.description}` : ''}${c.visibility && c.visibility !== 'PRIVATE' ? ` (${c.visibility === 'READONLY' ? 'publique, lecture seule' : 'publique'})` : ''}`)
       return ok(lines.length > 0 ? lines.join('\n') : 'Aucune communauté.')
     })
 
@@ -242,7 +242,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       const lines = [
         `# ${community.name}`,
         community.description ? `Description : ${community.description}` : null,
-        `Visibilité : ${community.isPublic ? 'Publique' : 'Privée'}`,
+        `Visibilité : ${community.visibility ?? '?'}${community.pendingVisibility ? ` (demande ${community.pendingVisibility} en attente)` : ''}`,
         `Espaces (${spaces.length}) :`,
         ...spaces.map((s: any) => `  [${s.id}] ${s.name} | visibilité: ${s.visibility ?? '?'}${s.parentId ? ` | parent: ${s.parentId}` : ''}`),
       ].filter(Boolean)
@@ -465,10 +465,11 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     {
       name: z.string().describe('Nom de la communauté'),
       description: z.string().optional().describe('Description'),
-      isPublic: z.boolean().optional().default(false).describe('Communauté publique (défaut false)'),
+      visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional().default('PRIVATE')
+        .describe('PRIVATE (défaut), OPEN ou READONLY — sortir du privé crée une demande validée par un admin'),
     },
-    async ({ name, description, isPublic }) => {
-      const body: Record<string, unknown> = { name, isPublic }
+    async ({ name, description, visibility }) => {
+      const body: Record<string, unknown> = { name, visibility }
       if (description) body.description = description
       const community = await client.post('/communities', body)
       return ok(`Communauté créée : [${community.id}] ${community.name}`)
@@ -479,7 +480,8 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       communityId: zId().describe('ID de la communauté'),
       name: z.string().optional().describe('Nouveau nom'),
       description: z.string().optional().describe('Nouvelle description'),
-      isPublic: z.boolean().optional().describe('Rendre publique ou privée'),
+      visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional()
+        .describe('OPEN, READONLY ou PRIVATE — sortir du privé crée une demande validée par un admin'),
     },
     async ({ communityId, ...fields }) => {
       const community = await client.patch(`/communities/${communityId}`, fields)

@@ -254,6 +254,22 @@ describe('Items routes', () => {
       const arg = prisma.item.create.mock.calls[0][0]
       expect(arg.data.title).toBe('')
     })
+
+    // « Pas de statut » = null : le web envoie status '' à la création rapide
+    it('normalise un statut vide en null', async () => {
+      allowSpaceAccess()
+      prisma.item.create.mockResolvedValue(mockItem({ status: null, tags: [] }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/items`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { type: 'UNDEFINED', title: '', status: '' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(prisma.item.create.mock.calls[0][0].data.status).toBeNull()
+    })
   })
 
   // ─── GET ITEM BY ID ───────────────────────────────────────────
