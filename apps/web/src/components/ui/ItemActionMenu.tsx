@@ -1,6 +1,9 @@
 /*
  * Menu contextuel générique des items (trigger MoreVertical, portal, sous-menus au survol).
  * Prend des groupes construits par lib/itemMenuGroups — cf. skill spok-menu, ne pas recréer de menu custom.
+ * Ouverture au survol ET au clic (tactile, clavier). tourId : repère data-tour du déclencheur (défaut « item-menu »,
+ * visé par ITEM_MENU_STEP des tours de vue) — tout autre usage (menu ⋯ des espaces de la barre latérale) passe le
+ * sien, sinon le tour d'une vue pointerait la barre latérale (premier élément du DOM).
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical, ChevronRight, Check } from 'lucide-react';
@@ -26,9 +29,12 @@ interface ItemActionMenuProps {
   groups: ItemActionGroup[];
   triggerClassName?: string;
   side?: 'left' | 'right';
+  tourId?: string;
+  /** Libellé accessible / infobulle du déclencheur */
+  triggerLabel?: string;
 }
 
-export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: ItemActionMenuProps) {
+export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId, triggerLabel = 'Actions' }: ItemActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -159,10 +165,11 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left' }: Item
         ref={triggerRef}
         onMouseEnter={openMenu}
         onMouseLeave={scheduleClose}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); openMenu(); }}
         className={triggerClassName || 'p-1 rounded hover:bg-accent transition-colors'}
-        title="Actions"
-        data-tour="item-menu"
+        title={triggerLabel}
+        aria-label={triggerLabel}
+        {...(tourId ? { 'data-tour': tourId } : { 'data-tour': 'item-menu' })}
       >
         <MoreVertical className="w-4 h-4" />
       </button>

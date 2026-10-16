@@ -9,13 +9,13 @@ export const help: HelpEntry = {
   short: 'Carte d\'identité de l\'espace',
   tips: [
     'Cliquez sur une vue pour y accéder directement',
-    'Les sous-espaces sont affichés avec leur couverture',
+    'Les sous-espaces sont affichés avec leur couverture ; « Nouveau sous-espace » en crée un sous celui-ci',
     'Les chiffres résument le contenu de l\'espace',
   ],
   zones: {
     stats: { title: 'En chiffres', text: 'Nombre d\'éléments, de membres et de sous-espaces.' },
     vues: { title: 'Vues disponibles', text: 'Chaque carte ouvre une vue de l\'espace, avec son accroche.' },
-    sousespaces: { title: 'Sous-espaces', text: 'Les espaces rangés sous celui-ci ; cliquez pour y entrer.' },
+    sousespaces: { title: 'Sous-espaces', text: 'Les espaces rangés sous celui-ci ; cliquez pour y entrer, ou créez-en un nouveau.' },
     membres: { title: 'Membres', text: 'Les personnes qui ont accès à l\'espace, avec leur rôle.' },
   },
   tour: [

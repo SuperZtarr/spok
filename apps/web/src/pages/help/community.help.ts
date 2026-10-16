@@ -1,5 +1,6 @@
 /* Aide utilisateur de la page « Communauté » (/communities/:id).
-   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts. */
+   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts.
+   Ses `fields` servent aussi aux modales d'espace partagées : CreateSpaceModal (newSpaceParent), MoveSpaceModal (moveSpace). */
 import type { HelpEntry } from '../../help/types';
 
 export const help: HelpEntry = {
@@ -7,7 +8,8 @@ export const help: HelpEntry = {
   summary: 'La page d\'une communauté : ses espaces et ses membres.',
   tips: [
     'Cliquez sur un espace pour l\'ouvrir',
-    '« Nouvel espace » en crée un dans la communauté',
+    '« Nouvel espace » en crée un dans la communauté, ou un sous-espace si vous choisissez un espace parent',
+    'Dans la barre latérale, survolez un espace : « + » crée un sous-espace, « ⋯ » ouvre ses paramètres, le déplace ou le supprime',
     'La roue dentée ouvre les paramètres (propriétaire)',
   ],
   tour: [
@@ -52,5 +54,6 @@ export const help: HelpEntry = {
   ],
   fields: {
     newSpaceParent: 'Laissez vide pour un espace de premier niveau ; sinon il sera rangé sous l\'espace choisi.',
+    moveSpace: 'Ses sous-espaces le suivent. Un espace ne peut pas être rangé dans un de ses propres sous-espaces.',
   },
 };

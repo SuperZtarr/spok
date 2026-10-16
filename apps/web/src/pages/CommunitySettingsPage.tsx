@@ -3,7 +3,8 @@
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
    message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement.
-   Contexte : Neutre / Forum / Projet / JDR — donne le mode d'interface par défaut de la communauté (Layout). */
+   Contexte : Neutre / Forum / Projet / JDR — donne le mode d'interface par défaut de la communauté (Layout).
+   Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page. */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,7 @@ import { usePasteUpload } from '../hooks/usePasteUpload';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
+import { CreateSpaceModal } from '../components/CreateSpaceModal';
 import type { SpaceWithRole } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -188,7 +190,6 @@ export function CommunitySettingsPage() {
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
-  const [newSpaceName, setNewSpaceName] = useState('');
   const [spaceSearch, setSpaceSearch] = useState('');
   const [spaceToDelete, setSpaceToDelete] = useState<SpaceWithRole | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'tags' | 'spaces' | 'members' | 'emails' | 'apercu' | 'danger'>('general');
@@ -329,18 +330,6 @@ export function CommunitySettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
       setSpaceToDelete(null);
-    },
-  });
-
-  // Create new space in this community
-  const createSpaceMutation = useMutation({
-    mutationFn: (name: string) => spacesApi.create({ name, type: 'GROUP', communityId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spaces'] });
-      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
-      queryClient.invalidateQueries({ queryKey: ['community', communityId] });
-      setShowCreateSpace(false);
-      setNewSpaceName('');
     },
   });
 
@@ -850,7 +839,7 @@ export function CommunitySettingsPage() {
               </h2>
               {canEdit && (
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => { setShowCreateSpace(!showCreateSpace); setShowAddSpace(false); }}>
+                  <Button size="sm" onClick={() => { setShowCreateSpace(true); setShowAddSpace(false); }}>
                     <Plus className="w-4 h-4 mr-1" />
                     Créer un espace
                   </Button>
@@ -863,24 +852,8 @@ export function CommunitySettingsPage() {
               )}
             </div>
 
-            {/* Create space form */}
-            {showCreateSpace && (
-              <div className="px-6 py-4 bg-muted/50 border-b space-y-3">
-                <p className="text-sm text-muted-foreground">Créer un nouvel espace dans cette communauté :</p>
-                <Input
-                  value={newSpaceName}
-                  onChange={(e) => setNewSpaceName(e.target.value)}
-                  placeholder="Nom de l'espace"
-                  onKeyDown={(e) => { if (e.key === 'Enter' && newSpaceName.trim()) createSpaceMutation.mutate(newSpaceName.trim()); }}
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => createSpaceMutation.mutate(newSpaceName.trim())} disabled={!newSpaceName.trim() || createSpaceMutation.isPending}>
-                    {createSpaceMutation.isPending ? 'Création...' : 'Créer'}
-                  </Button>
-                  <Button size="sm" variant="bordered" onClick={() => { setShowCreateSpace(false); setNewSpaceName(''); }}>Annuler</Button>
-                </div>
-              </div>
+            {communityId && (
+              <CreateSpaceModal isOpen={showCreateSpace} onClose={() => setShowCreateSpace(false)} communityId={communityId} openAfterCreate={false} />
             )}
 
             {/* Add space form */}

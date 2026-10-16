@@ -7,6 +7,10 @@
  * l'inverse, sinon l'avatar sort de l'écran sur mobile (2026-10-10).
  * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge.
  * Monte DevZoneInspector (zones de dev) et HelpModeOverlay (mode Aide, qui réutilise les mêmes data-devzone).
+ * Actions d'espace dans la sidebar (2026-10-16) : au survol d'une ligne d'espace, « + » (nouveau sous-espace) et
+ * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
+ * l'en-tête de communauté, global et immersif. Droits et modales centralisés dans Layout (SidebarSpaceActionsContext) :
+ * les modales sont rendues HORS de l'<aside> (Modal n'a pas de portail, la sidebar a un transform).
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -17,9 +21,14 @@ import {
   HelpCircle, Clock, Star, Plus, ArrowLeft,
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide, Copy, LogOut, RotateCcw,
+  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2,
   type LucideIcon,
 } from 'lucide-react';
+import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
+import { CreateSpaceModal } from './CreateSpaceModal';
+import { MoveSpaceModal, type MovableSpace } from './MoveSpaceModal';
+import { SpaceDeleteConfirmModal } from './SpaceDeleteConfirmModal';
+import { useDeleteSpace } from '../hooks/useSpaces';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -110,6 +119,7 @@ function CommunitySection({
   mySpacesEmpty: boolean; favoriteIds: Set<string>; onToggleFavorite: (id: string) => void;
 }) {
   const adminMode = useAdminMode();
+  const spaceActions = useContext(SidebarSpaceActionsContext);
   return (
     <div id={groupIndex === 0 ? 'sidebar-communities' : undefined} data-devzone="sidebar-communaute" className="pt-2 pb-1.5 border-b border-border/50">
       <div
@@ -140,6 +150,16 @@ function CommunitySection({
         </Link>
         {!isExpanded && spaceCount > 0 && (
           <span className="text-[10px] text-muted-foreground/40 flex-shrink-0">{spaceCount}</span>
+        )}
+        {spaceActions?.canCreateIn(community.id) && (
+          <button
+            onClick={(e) => { e.stopPropagation(); spaceActions.openCreate(community.id); }}
+            className={`${SIDEBAR_HOVER_BTN} opacity-100 md:opacity-0 md:group-hover:opacity-100`}
+            title="Nouvel espace"
+            aria-label="Nouvel espace dans la communauté"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
         )}
         {(community.role === 'OWNER' || community.role === 'ADMIN_VIEW' || adminMode) && (
           <RoleGuard role="OWNER">
@@ -194,6 +214,60 @@ export const SidebarDropContext = createContext<SidebarDropCtx>({
   onDragLeave: () => {},
   onDrop: () => {},
 });
+
+// Actions d'espace de la sidebar : droits + ouverture des modales (rendues par Layout, hors de l'<aside>)
+interface SidebarSpaceActionsCtx {
+  canCreateIn: (communityId: string | null) => boolean;
+  canWrite: (space: SpaceWithRole) => boolean;
+  canManage: (space: SpaceWithRole) => boolean;
+  canDelete: (space: SpaceWithRole) => boolean;
+  openCreate: (communityId: string | null, parentId?: string) => void;
+  openMove: (space: SpaceWithRole) => void;
+  openDelete: (space: SpaceWithRole) => void;
+}
+const SidebarSpaceActionsContext = createContext<SidebarSpaceActionsCtx | null>(null);
+
+// Boutons visibles au survol (toujours visibles sur mobile pour le menu ⋯, faute de survol)
+const SIDEBAR_HOVER_BTN = 'p-0.5 rounded hover:bg-accent flex-shrink-0 text-muted-foreground hover:text-foreground transition-opacity focus:opacity-100';
+
+function SidebarSpaceActions({ space }: { space: SpaceWithRole }) {
+  const ctx = useContext(SidebarSpaceActionsContext);
+  const navigate = useNavigate();
+  if (!ctx) return null;
+  const canWrite = ctx.canWrite(space);
+  const canManage = ctx.canManage(space);
+  const groups: ItemActionGroup[] = [
+    { actions: canWrite ? [{ id: 'new-child', label: 'Nouveau sous-espace', icon: Plus, onClick: () => ctx.openCreate(space.communityId ?? null, space.id) }] : [] },
+    {
+      actions: [
+        ...(canManage ? [{ id: 'settings', label: 'Paramètres', icon: Settings, onClick: () => navigate(`/spaces/${space.id}/settings`) }] : []),
+        ...(canManage && space.type === 'GROUP' ? [{ id: 'move', label: 'Déplacer…', icon: FolderInput, onClick: () => ctx.openMove(space) }] : []),
+      ],
+    },
+    { actions: ctx.canDelete(space) ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, variant: 'danger' as const, onClick: () => ctx.openDelete(space) }] : [] },
+  ];
+  return (
+    <>
+      {canWrite && (
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); ctx.openCreate(space.communityId ?? null, space.id); }}
+          className={`${SIDEBAR_HOVER_BTN} hidden md:inline-flex opacity-0 group-hover:opacity-100`}
+          title="Nouveau sous-espace"
+          aria-label="Nouveau sous-espace"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      )}
+      <ItemActionMenu
+        groups={groups}
+        side="right"
+        tourId="sidebar-space-menu"
+        triggerLabel="Actions sur l'espace"
+        triggerClassName={`${SIDEBAR_HOVER_BTN} [&>svg]:w-3 [&>svg]:h-3 md:opacity-0 md:group-hover:opacity-100`}
+      />
+    </>
+  );
+}
 
 function SpaceTreeItem({
   node,
@@ -278,6 +352,7 @@ function SpaceTreeItem({
             }`} />
           </button>
         )}
+        <SidebarSpaceActions space={node} />
         {currentSpaceId && (
           <input
             type="checkbox"
@@ -766,6 +841,50 @@ export function Layout() {
     } catch { /* ignore */ }
   }, [queryClient]);
 
+  // Actions d'espace de la sidebar — mêmes droits que l'API : créer = membre de la communauté (ou écriture dans le
+  // parent) ; paramètres/déplacer = propriétaire de l'espace ; supprimer = propriétaire de l'espace ou de la
+  // communauté ; le mode admin peut tout. Visiteur : rien.
+  const [createSpaceTarget, setCreateSpaceTarget] = useState<{ communityId: string | null; parentId?: string } | null>(null);
+  const [moveSpaceTarget, setMoveSpaceTarget] = useState<MovableSpace | null>(null);
+  const [deleteSpaceTarget, setDeleteSpaceTarget] = useState<SpaceWithRole | null>(null);
+  const deleteSpaceMutation = useDeleteSpace();
+  const sidebarSpaceActions = useMemo<SidebarSpaceActionsCtx>(() => {
+    const communityRole = (id: string | null | undefined) => (id ? communities?.find(c => c.id === id)?.role : undefined);
+    return {
+      canCreateIn: (communityId) => !!user && (adminMode || (!!communityId && ['OWNER', 'MEMBER'].includes(communityRole(communityId) ?? ''))),
+      canWrite: (s) => !!user && s.type === 'GROUP' && (adminMode || s.role === 'OWNER' || s.role === 'MEMBER'),
+      canManage: (s) => !!user && (adminMode || s.role === 'OWNER'),
+      canDelete: (s) => !!user && s.type !== 'PERSONAL' && (adminMode || s.role === 'OWNER' || communityRole(s.communityId) === 'OWNER'),
+      openCreate: (communityId, parentId) => setCreateSpaceTarget({ communityId, parentId }),
+      openMove: (s) => setMoveSpaceTarget(s),
+      openDelete: (s) => setDeleteSpaceTarget(s),
+    };
+  }, [user, adminMode, communities]);
+
+  // Suppression depuis la sidebar : si l'on se trouvait dans l'espace supprimé (ou un sous-espace supprimé avec
+  // lui), aller au parent, sinon à la communauté — jamais à l'accueil pour un espace de communauté.
+  const confirmSidebarDelete = (deleteChildren: boolean) => {
+    const target = deleteSpaceTarget;
+    if (!target) return;
+    deleteSpaceMutation.mutate({ id: target.id, deleteChildren }, {
+      onSuccess: () => {
+        setDeleteSpaceTarget(null);
+        const removed = new Set([target.id]);
+        if (deleteChildren && allSpaces) {
+          let grew = true;
+          while (grew) {
+            grew = false;
+            for (const s of allSpaces) if (s.parentId && removed.has(s.parentId) && !removed.has(s.id)) { removed.add(s.id); grew = true; }
+          }
+        }
+        if (currentSpaceId && removed.has(currentSpaceId)) {
+          navigate(target.parentId ? `/spaces/${target.parentId}` : target.communityId ? `/communities/${target.communityId}` : '/');
+        }
+      },
+      onError: (e) => alert(e instanceof Error ? e.message : 'Suppression impossible'),
+    });
+  };
+
   // Sidebar content for anonymous visitors
   const visitorSidebarContent = (
     <>
@@ -907,17 +1026,41 @@ export function Layout() {
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Toutes les communautés</span>
               </button>
-              <Link to={`/communities/${currentCommunity.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity px-2 mb-2">
-                {currentCommunity.avatarUrl ? (
-                  <img src={currentCommunity.avatarUrl} alt="" className="w-6 h-6 rounded-lg object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-3.5 h-3.5 text-primary" />
-                  </div>
+              <div className="group flex items-center gap-1 pr-1 mb-2">
+                <Link to={`/communities/${currentCommunity.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity px-2 min-w-0 flex-1">
+                  {currentCommunity.avatarUrl ? (
+                    <img src={currentCommunity.avatarUrl} alt="" className="w-6 h-6 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                  )}
+                  <span className="text-base font-bold text-foreground truncate">{currentCommunity.name}</span>
+                  <CommunityBadge visibility={currentCommunity.visibility} role={currentCommunity.role} />
+                </Link>
+                {sidebarSpaceActions.canCreateIn(currentCommunity.id) && (
+                  <button
+                    onClick={() => sidebarSpaceActions.openCreate(currentCommunity.id)}
+                    className={`${SIDEBAR_HOVER_BTN} opacity-100 md:opacity-0 md:group-hover:opacity-100`}
+                    title="Nouvel espace"
+                    aria-label="Nouvel espace dans la communauté"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
                 )}
-                <span className="text-base font-bold text-foreground truncate">{currentCommunity.name}</span>
-                <CommunityBadge visibility={currentCommunity.visibility} role={currentCommunity.role} />
-              </Link>
+                {(currentCommunity.role === 'OWNER' || currentCommunity.role === 'ADMIN_VIEW' || adminMode) && (
+                  <RoleGuard role="OWNER">
+                    <Link
+                      to={`/communities/${currentCommunity.id}/settings`}
+                      title="Paramètres"
+                      aria-label="Paramètres de la communauté"
+                      className={`${SIDEBAR_HOVER_BTN} opacity-100 md:opacity-0 md:group-hover:opacity-100`}
+                    >
+                      <Settings className="w-3 h-3" />
+                    </Link>
+                  </RoleGuard>
+                )}
+              </div>
               {currentCommunityGroup.spaceTree.length > 0 ? (
                 currentCommunityGroup.spaceTree.map((node) => (
                   <SpaceTreeItem
@@ -1170,7 +1313,9 @@ export function Layout() {
           onDragLeave: handleSidebarDragLeave,
           onDrop: handleSidebarDrop,
         }}>
-          {sidebarContent}
+          <SidebarSpaceActionsContext.Provider value={sidebarSpaceActions}>
+            {sidebarContent}
+          </SidebarSpaceActionsContext.Provider>
         </SidebarDropContext.Provider>
       </aside>}
 
@@ -1394,6 +1539,25 @@ export function Layout() {
         onClose={closeWelcome}
         onStartTour={startTour}
       />
+
+      {/* Modales des actions d'espace de la sidebar — hors de l'<aside> (transform → fixed cassé) */}
+      <CreateSpaceModal
+        isOpen={!!createSpaceTarget}
+        onClose={() => setCreateSpaceTarget(null)}
+        communityId={createSpaceTarget?.communityId ?? null}
+        defaultParentId={createSpaceTarget?.parentId}
+      />
+      <MoveSpaceModal isOpen={!!moveSpaceTarget} onClose={() => setMoveSpaceTarget(null)} space={moveSpaceTarget} />
+      {deleteSpaceTarget && (
+        <SpaceDeleteConfirmModal
+          isOpen
+          onClose={() => setDeleteSpaceTarget(null)}
+          onConfirm={confirmSidebarDelete}
+          spaceId={deleteSpaceTarget.id}
+          spaceName={deleteSpaceTarget.name}
+          isPending={deleteSpaceMutation.isPending}
+        />
+      )}
 
     </div>
   );

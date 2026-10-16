@@ -1,13 +1,17 @@
 /* Vue Présentation (overview) : carte d'identité d'un espace (couverture, chiffres, vues, sous-espaces, membres).
-   Pas de barre de vue ni de barre d'espace : son tour (overview.help.ts) pointe les sections (data-tour overview-*). */
-import { useMemo } from 'react';
+   Pas de barre de vue ni de barre d'espace : son tour (overview.help.ts) pointe les sections (data-tour overview-*).
+   Sous-espaces (2026-10-16) : bouton « Nouveau sous-espace » (CreateSpaceModal, parent = cet espace) pour qui peut écrire
+   dans l'espace (OWNER/MEMBER, admin en mode admin) ; la section s'affiche alors même vide. */
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Crown, User, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame, ExternalLink, Image, Bug, MessageSquare } from 'lucide-react';
+import { Plus, Users, FolderOpen, Settings, Crown, User, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame, ExternalLink, Image, Bug, MessageSquare } from 'lucide-react';
 import { spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { Button } from '../ui/Button';
 import { RoleGuard } from '../RoleGuard';
+import { CreateSpaceModal } from '../CreateSpaceModal';
+import { useAdminMode } from '../DevDbStatus';
 import { useViewModeStore, type ViewMode } from '../../stores/viewMode';
 import { useMenuItems } from '../../hooks/useMenuItems';
 import type { SpaceWithRole } from '@spok/shared';
@@ -57,6 +61,9 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
   }, [communitySpaces, spaceId]);
 
   const isAdminOrOwner = space?.role === 'OWNER';
+  const adminMode = useAdminMode();
+  const canCreateChild = !!user && space?.type === 'GROUP' && (space.role === 'OWNER' || space.role === 'MEMBER' || adminMode);
+  const [showCreateChild, setShowCreateChild] = useState(false);
 
   const roleOrder: Record<string, number> = { OWNER: 0, MEMBER: 1 };
   const sortedMembers = [...(members || [])].sort((a, b) =>
@@ -201,12 +208,29 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
           </div>
 
           {/* Child spaces */}
-          {spaceTree.length > 0 && (
+          {(spaceTree.length > 0 || canCreateChild) && (
             <div className="mb-8" data-tour="overview-subspaces" data-help-zone="overview:sousespaces">
-              <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                <FolderOpen className="w-4 h-4" />
-                Sous-espaces ({childSpaces?.length || 0})
-              </h2>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 className="text-sm font-semibold uppercase text-muted-foreground flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  Sous-espaces ({childSpaces?.length || 0})
+                </h2>
+                {canCreateChild && (
+                  <Button size="sm" variant="bordered" onClick={() => setShowCreateChild(true)}>
+                    <Plus className="w-4 h-4" />
+                    Nouveau sous-espace
+                  </Button>
+                )}
+              </div>
+              {canCreateChild && (
+                <CreateSpaceModal
+                  isOpen={showCreateChild}
+                  onClose={() => setShowCreateChild(false)}
+                  communityId={space?.communityId ?? null}
+                  defaultParentId={spaceId}
+                />
+              )}
+              {spaceTree.length === 0 && <p className="text-sm text-muted-foreground">Aucun sous-espace.</p>}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {spaceTree.map(node => (
                   <Link
