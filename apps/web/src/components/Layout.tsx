@@ -21,14 +21,15 @@ import {
   HelpCircle, Clock, Star, Plus, ArrowLeft,
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2,
+  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown,
   type LucideIcon,
 } from 'lucide-react';
 import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
 import { CreateSpaceModal } from './CreateSpaceModal';
 import { MoveSpaceModal, type MovableSpace } from './MoveSpaceModal';
 import { SpaceDeleteConfirmModal } from './SpaceDeleteConfirmModal';
-import { useDeleteSpace } from '../hooks/useSpaces';
+import { useDeleteSpace, useReorderSpaces } from '../hooks/useSpaces';
+import { siblingOrder, shiftInOrder } from '../lib/spaceReorder';
 import { useAuthStore } from '../stores/auth';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
@@ -224,6 +225,9 @@ interface SidebarSpaceActionsCtx {
   openCreate: (communityId: string | null, parentId?: string) => void;
   openMove: (space: SpaceWithRole) => void;
   openDelete: (space: SpaceWithRole) => void;
+  /** Ordre manuel parmi les frères : null = pas le droit ; sinon possibilité de monter / descendre */
+  shiftState: (space: SpaceWithRole) => { up: boolean; down: boolean } | null;
+  shift: (space: SpaceWithRole, delta: -1 | 1) => void;
 }
 const SidebarSpaceActionsContext = createContext<SidebarSpaceActionsCtx | null>(null);
 
@@ -236,12 +240,17 @@ function SidebarSpaceActions({ space }: { space: SpaceWithRole }) {
   if (!ctx) return null;
   const canWrite = ctx.canWrite(space);
   const canManage = ctx.canManage(space);
+  const shift = ctx.shiftState(space);
   const groups: ItemActionGroup[] = [
     { actions: canWrite ? [{ id: 'new-child', label: 'Nouveau sous-espace', icon: Plus, onClick: () => ctx.openCreate(space.communityId ?? null, space.id) }] : [] },
     {
       actions: [
         ...(canManage ? [{ id: 'settings', label: 'Paramètres', icon: Settings, onClick: () => navigate(`/spaces/${space.id}/settings`) }] : []),
         ...(canManage && space.type === 'GROUP' ? [{ id: 'move', label: 'Déplacer…', icon: FolderInput, onClick: () => ctx.openMove(space) }] : []),
+        ...(shift ? [
+          { id: 'up', label: 'Monter', icon: ArrowUp, disabled: !shift.up, onClick: () => ctx.shift(space, -1) },
+          { id: 'down', label: 'Descendre', icon: ArrowDown, disabled: !shift.down, onClick: () => ctx.shift(space, 1) },
+        ] : []),
       ],
     },
     { actions: ctx.canDelete(space) ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, variant: 'danger' as const, onClick: () => ctx.openDelete(space) }] : [] },
@@ -603,8 +612,9 @@ export function Layout() {
   // Separate personal, per-community, and independent spaces
   const { mySpaces, communityGroups, independentSpaces } = useMemo(() => {
     const all = allSpaces || [];
-    const sortByName = (a: { name: string }, b: { name: string }) =>
-      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+    // Ordre manuel des espaces (position, puis nom) — même règle que l'API (utils/spaceOrder.ts)
+    const sortByName = (a: { name: string; position?: number }, b: { name: string; position?: number }) =>
+      (a.position ?? 0) - (b.position ?? 0) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 
     const personalList = all.filter(s => s.type === 'PERSONAL').sort(sortByName);
     const independent = all.filter(s => s.type !== 'PERSONAL' && !s.communityId).sort(sortByName);
@@ -621,7 +631,7 @@ export function Layout() {
 
     // Sort spaces within each community
     for (const [, spaces] of byCommunity) {
-      spaces.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+      spaces.sort(sortByName);
     }
 
     // Build groups ordered by user preference (order field), fallback to name
@@ -848,9 +858,28 @@ export function Layout() {
   const [moveSpaceTarget, setMoveSpaceTarget] = useState<MovableSpace | null>(null);
   const [deleteSpaceTarget, setDeleteSpaceTarget] = useState<SpaceWithRole | null>(null);
   const deleteSpaceMutation = useDeleteSpace();
+  const reorderSpacesMutation = useReorderSpaces();
   const sidebarSpaceActions = useMemo<SidebarSpaceActionsCtx>(() => {
     const communityRole = (id: string | null | undefined) => (id ? communities?.find(c => c.id === id)?.role : undefined);
+    // Ordre manuel : mêmes droits que PUT /spaces/reorder (gestion du parent, sinon propriétaire de la communauté)
+    const canReorder = (s: SpaceWithRole) => !!user && s.type === 'GROUP' && (adminMode || (s.parentId
+      ? allSpaces?.find(p => p.id === s.parentId)?.role === 'OWNER'
+      : communityRole(s.communityId) === 'OWNER'));
+    const siblingsOf = (s: SpaceWithRole) => siblingOrder(allSpaces ?? [], s.parentId ?? null, s.communityId ?? null);
     return {
+      shiftState: (s) => {
+        if (!canReorder(s)) return null;
+        const order = siblingsOf(s);
+        return { up: !!shiftInOrder(order, s.id, -1), down: !!shiftInOrder(order, s.id, 1) };
+      },
+      shift: (s, delta) => {
+        const orderedIds = shiftInOrder(siblingsOf(s), s.id, delta);
+        if (!orderedIds) return;
+        reorderSpacesMutation.mutate(
+          { parentId: s.parentId ?? null, communityId: s.communityId ?? null, orderedIds },
+          { onError: (e) => alert(e instanceof Error ? e.message : 'Réorganisation impossible') },
+        );
+      },
       canCreateIn: (communityId) => !!user && (adminMode || (!!communityId && ['OWNER', 'MEMBER'].includes(communityRole(communityId) ?? ''))),
       canWrite: (s) => !!user && s.type === 'GROUP' && (adminMode || s.role === 'OWNER' || s.role === 'MEMBER'),
       canManage: (s) => !!user && (adminMode || s.role === 'OWNER'),
@@ -859,7 +888,7 @@ export function Layout() {
       openMove: (s) => setMoveSpaceTarget(s),
       openDelete: (s) => setDeleteSpaceTarget(s),
     };
-  }, [user, adminMode, communities]);
+  }, [user, adminMode, communities, allSpaces, reorderSpacesMutation.mutate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Suppression depuis la sidebar : si l'on se trouvait dans l'espace supprimé (ou un sous-espace supprimé avec
   // lui), aller au parent, sinon à la communauté — jamais à l'accueil pour un espace de communauté.

@@ -14,7 +14,7 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   'sidebar-mes-espaces': { title: 'Mes espaces', text: 'Votre espace personnel et les espaces hors communauté dont vous êtes membre.' },
   'sidebar-communaute': { title: 'Une communauté', text: 'Une communauté et ses espaces : cliquez pour déplier ses espaces, ou sur son nom pour ouvrir sa page. Au survol, « + » crée un espace et « ⋯ » sur un espace ouvre ses actions.' },
   'sidebar-autres-espaces': { title: 'Autres espaces', text: 'Des espaces visibles hors de vos communautés : vous pouvez les consulter ou les rejoindre.' },
-  'sidebar-arbre': { title: 'Communauté courante', text: 'La communauté où vous êtes et l\'arbre de ses espaces. « Toutes les communautés » revient à la liste complète. Au survol d\'un espace, « ⋯ » permet de créer un sous-espace, de le déplacer ou de le supprimer.' },
+  'sidebar-arbre': { title: 'Communauté courante', text: 'La communauté où vous êtes et l\'arbre de ses espaces. « Toutes les communautés » revient à la liste complète. Au survol d\'un espace, « ⋯ » permet de créer un sous-espace, de le déplacer, de changer son ordre ou de le supprimer.' },
   'sidebar-footer': { title: 'Pied de barre', text: 'Les pages d\'administration quand le mode admin est actif, et la date de la dernière mise en ligne de SPOK.' },
   header: { title: 'En-tête', text: 'Où vous êtes, le mode d\'affichage (Forum, Projet, JDR, Tous), la création rapide, les séances en direct, les notifications et votre compte.' },
   bandeau: { title: 'Navigation globale', text: 'Les pages qui couvrent toutes vos communautés (accueil, communautés, espaces, graphes, liens), puis vos pages personnelles.' },

@@ -20,6 +20,8 @@
  * (PATCH parentId) = accès en écriture (OWNER/MEMBER) au parent. Être membre de la
  * communauté ne suffit jamais pour un espace privé — être son PROPRIÉTAIRE, si : rôle OWNER dans
  * tous les espaces de la communauté (GET /, GET /:id, PATCH, gestion, join, contenu via checkSpaceAccess).
+ * Ordre manuel (2026-10-16, utils/spaceOrder.ts) : listes triées position puis nom ; création / changement
+ * d'emplacement → en dernier parmi les frères ; PUT /reorder réordonne des frères (droits : voir la route).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -33,6 +35,7 @@ import { auditLogsRoutes } from './auditLogs.js';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { runDeletion, deleteSpaceTree } from '../utils/spaceDeletion.js';
+import { SPACE_ORDER_BY, compareSpaceOrder, nextSiblingPosition, reorderSiblings } from '../utils/spaceOrder.js';
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { createInvitation as createInvitationHelper } from './invitations.js';
 import { createItemTree } from '../utils/itemTree.js';
@@ -60,6 +63,13 @@ const updateSpaceSchema = z.object({
   coverPosition: z.number().int().min(0).max(100).optional(),
   coverPositionX: z.number().int().min(0).max(100).optional(),
   coverZoom: z.number().int().min(100).max(300).optional(),
+});
+
+// PUT /reorder : frères d'un parent (parentId) ou de la racine d'une communauté (parentId null + communityId)
+const reorderSpacesSchema = z.object({
+  parentId: z.string().nullable().optional(),
+  communityId: z.string().nullable().optional(),
+  orderedIds: z.array(z.string()).min(1).max(500),
 });
 
 const inviteSchema = z.object({
@@ -141,7 +151,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             community: { select: { id: true, name: true, avatarUrl: true } },
             parent: { select: { id: true, name: true } },
           },
-          orderBy: { name: 'asc' },
+          orderBy: SPACE_ORDER_BY,
         });
 
         return (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
@@ -166,7 +176,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           community: { select: { id: true, name: true, avatarUrl: true } },
           parent: { select: { id: true, name: true } },
         },
-        orderBy: { name: 'asc' },
+        orderBy: SPACE_ORDER_BY,
       });
 
       return (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
@@ -241,7 +251,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
-      orderBy: { space: { name: 'asc' } },
+      orderBy: [{ space: { position: 'asc' } }, { space: { name: 'asc' } }],
     });
 
     // Communautés dont l'utilisateur est propriétaire : OWNER dans tous leurs espaces, privés compris
@@ -305,7 +315,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             take: 1,
           },
         },
-        orderBy: { name: 'asc' },
+        orderBy: SPACE_ORDER_BY,
       });
 
       // Mode admin / communauté possédée → OWNER, tout est listé. Sinon visibilité effective : un sous-espace
@@ -327,7 +337,8 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         owner: (s as any).memberships?.[0]?.user || null,
       }));
 
-      return [...memberSpaces, ...nonMemberSpaces];
+      // Deux requêtes fusionnées : ordre manuel global (position puis nom), voir utils/spaceOrder.ts
+      return [...memberSpaces, ...nonMemberSpaces].sort(compareSpaceOrder);
     }
 
     return memberSpaces;
@@ -394,6 +405,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    // Ordre manuel : le nouvel espace arrive en dernier parmi ses frères
+    const position = body.type === 'GROUP' ? await nextSiblingPosition(fastify.prisma, body.parentId ?? null, communityId ?? null) : 0;
+
     const space = await fastify.prisma.space.create({
       data: {
         name: body.name,
@@ -401,6 +415,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         type: body.type,
         communityId,
         parentId: body.parentId,
+        position,
         ...(body.type === 'GROUP' && body.visibility !== undefined && { visibility: body.visibility }),
         memberships: {
           create: {
@@ -455,6 +470,34 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     return reply.status(201).send({ ...space, role: 'OWNER' as Role });
+  });
+
+  // Réordonner des espaces frères (ordre manuel, commun à tous les membres — utils/spaceOrder.ts).
+  // Droits : sous un parent → gestion du parent (OWNER, OWNER de la communauté, admin en mode admin) ;
+  // racine d'une communauté → OWNER de la communauté ou admin ; racine sans communauté → admin seulement.
+  fastify.put<{ Body: z.infer<typeof reorderSpacesSchema> }>('/reorder', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const body = reorderSpacesSchema.parse(request.body);
+    const userId = request.user.userId;
+    let communityId = body.communityId ?? null;
+
+    if (body.parentId) {
+      const parent = await fastify.prisma.space.findUnique({ where: { id: body.parentId }, select: { communityId: true } });
+      if (!parent) return reply.notFound('Espace parent introuvable');
+      if (!(await isSpaceOwnerOrAdmin(fastify.prisma, body.parentId, userId, request.isAdminMode))) {
+        return reply.forbidden('Seul le propriétaire de l\'espace parent peut réordonner ses sous-espaces');
+      }
+      communityId = parent.communityId;
+    } else if (!(await isAdminModeActive(fastify.prisma, userId, request.isAdminMode))) {
+      const membership = communityId
+        ? await fastify.prisma.communityMembership.findUnique({ where: { userId_communityId: { userId, communityId } }, select: { role: true } })
+        : null;
+      if (membership?.role !== 'OWNER') {
+        return reply.forbidden('Seul le propriétaire de la communauté peut réordonner ses espaces');
+      }
+    }
+
+    const order = await fastify.prisma.$transaction((tx) => reorderSiblings(tx, body.parentId ?? null, communityId, body.orderedIds));
+    return { order };
   });
 
   // Get space by ID (direct membership, community membership, or public community)
@@ -671,6 +714,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.coverZoom !== undefined) updateData.coverZoom = body.coverZoom;
       if (body.defaultView !== undefined) updateData.defaultView = body.defaultView;
       if (body.visibility !== undefined) updateData.visibility = body.visibility;
+
+      // Ordre manuel : changer d'emplacement (parent ou communauté) = arriver en dernier parmi les nouveaux frères
+      const newParentId = body.parentId !== undefined ? body.parentId : (space.parentId ?? null);
+      const newCommunityId = communityIdOverride !== undefined ? communityIdOverride : (space.communityId ?? null);
+      if (newParentId !== (space.parentId ?? null) || newCommunityId !== (space.communityId ?? null)) {
+        updateData.position = await nextSiblingPosition(fastify.prisma, newParentId, newCommunityId, space.id);
+      }
 
       // Si la communauté change réellement, embarquer tous les sous-espaces descendants —
       // sinon un enfant reste rattaché à l'ancienne communauté alors que son parent a bougé.

@@ -636,6 +636,13 @@ export const spacesApi = {
       body: JSON.stringify(data),
     }),
 
+  /** Ordre manuel des frères d'un parent (parentId) ou de la racine d'une communauté (parentId null + communityId) */
+  reorder: (data: { parentId: string | null; communityId: string | null; orderedIds: string[] }) =>
+    fetchApi<{ order: string[] }>('/spaces/reorder', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
   deletePreview: (id: string) =>
     fetchApi<{
       childSpaces: Array<{ id: string; name: string; itemCount: number }>;

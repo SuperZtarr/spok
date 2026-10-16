@@ -1,4 +1,5 @@
-/* Hooks TanStack Query des espaces : liste (queryKey ['spaces', communityId]), détail, mutations. */
+/* Hooks TanStack Query des espaces : liste (queryKey ['spaces', communityId]), détail, mutations
+   (dont useReorderSpaces : ordre manuel des frères, cf. lib/spaceReorder.ts). */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesApi } from '../lib/api';
 import type { CreateSpaceInput } from '@spok/shared';
@@ -52,6 +53,20 @@ export function useDeleteSpace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+    },
+  });
+}
+
+/** Ordre manuel (PUT /spaces/reorder) : listes d'espaces et communauté rafraîchies après coup */
+export function useReorderSpaces() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { parentId: string | null; communityId: string | null; orderedIds: string[] }) => spacesApi.reorder(data),
+    onSuccess: (_res, data) => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      if (data.communityId) queryClient.invalidateQueries({ queryKey: ['community', data.communityId] });
     },
   });
 }

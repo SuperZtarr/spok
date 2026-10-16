@@ -4,7 +4,9 @@
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
    message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement.
    Contexte : Neutre / Forum / Projet / JDR — donne le mode d'interface par défaut de la communauté (Layout).
-   Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page. */
+   Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page.
+   Glisser-déposer d'une ligne sur une autre (2026-10-16) : quart haut = avant, quart bas = après (ordre manuel commun,
+   PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine. */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +22,8 @@ import { useCtrlS } from '../hooks/useCtrlS';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { CreateSpaceModal } from '../components/CreateSpaceModal';
+import { useReorderSpaces } from '../hooks/useSpaces';
+import { placeRelative, siblingOrder } from '../lib/spaceReorder';
 import type { SpaceWithRole } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -75,14 +79,27 @@ function RootDropZone({ onMove }: { onMove: (spaceId: string, newParentId: strin
   );
 }
 
-function SpaceTableRow({ node, level, onMove, onDelete, canEdit }: {
+// Zone de dépôt sur une ligne : quart haut = avant, quart bas = après (ordre manuel), milieu = dedans (sous-espace)
+type SpaceDropZone = 'before' | 'inside' | 'after';
+function dropZoneAt(e: React.DragEvent<HTMLElement>): SpaceDropZone {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const ratio = (e.clientY - rect.top) / rect.height;
+  return ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside';
+}
+const DROP_ZONE_CLASS: Record<SpaceDropZone, string> = {
+  before: 'shadow-[inset_0_2px_0_0_hsl(var(--primary))]',
+  after: 'shadow-[inset_0_-2px_0_0_hsl(var(--primary))]',
+  inside: 'bg-primary/5 ring-2 ring-inset ring-primary',
+};
+
+function SpaceTableRow({ node, level, onDropOn, onDelete, canEdit }: {
   node: any;
   level: number;
-  onMove: (spaceId: string, newParentId: string | null) => void;
+  onDropOn: (draggedId: string, target: any, zone: SpaceDropZone) => void;
   onDelete: (space: SpaceWithRole) => void;
   canEdit: boolean;
 }) {
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [dropZone, setDropZone] = useState<SpaceDropZone | null>(null);
   const navigate = useNavigate();
 
   return (
@@ -99,17 +116,18 @@ function SpaceTableRow({ node, level, onMove, onDelete, canEdit }: {
           if (e.dataTransfer.types.includes('application/spok-space-id')) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            setIsDragOver(true);
+            setDropZone(dropZoneAt(e));
           }
         }}
-        onDragLeave={() => setIsDragOver(false)}
+        onDragLeave={() => setDropZone(null)}
         onDrop={(e) => {
           e.preventDefault();
-          setIsDragOver(false);
+          const zone = dropZoneAt(e);
+          setDropZone(null);
           const draggedId = e.dataTransfer.getData('application/spok-space-id');
-          if (draggedId && draggedId !== node.id) onMove(draggedId, node.id);
+          if (draggedId && draggedId !== node.id) onDropOn(draggedId, node, zone);
         }}
-        className={`cursor-pointer transition-colors ${isDragOver ? 'bg-primary/5 ring-2 ring-inset ring-primary' : 'hover:bg-muted/50'}`}
+        className={`cursor-pointer transition-colors ${dropZone ? DROP_ZONE_CLASS[dropZone] : 'hover:bg-muted/50'}`}
         onClick={() => navigate(`/spaces/${node.id}`)}
       >
         <td className="px-4 py-3">
@@ -170,7 +188,7 @@ function SpaceTableRow({ node, level, onMove, onDelete, canEdit }: {
         </td>
       </tr>
       {node.children?.map((child: any) => (
-        <SpaceTableRow key={child.id} node={child} level={level + 1} onMove={onMove} onDelete={onDelete} canEdit={canEdit} />
+        <SpaceTableRow key={child.id} node={child} level={level + 1} onDropOn={onDropOn} onDelete={onDelete} canEdit={canEdit} />
       ))}
     </>
   );
@@ -284,7 +302,31 @@ export function CommunitySettingsPage() {
   });
 
   const handleMoveSpace = (spaceId: string, newParentId: string | null) => {
-    moveSpaceMutation.mutate({ spaceId, parentId: newParentId });
+    setOrderError(null);
+    moveSpaceMutation.mutate({ spaceId, parentId: newParentId }, {
+      onError: (e) => setOrderError(e instanceof Error ? e.message : 'Déplacement impossible'),
+    });
+  };
+
+  // Dépôt sur une ligne : dedans = ranger sous l'espace ; avant/après = changer d'emplacement si besoin, puis
+  // réordonner les frères (PUT /spaces/reorder). Erreur API (droits, cycle) affichée au-dessus du tableau.
+  const reorderSpaces = useReorderSpaces();
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const handleDropOnSpace = async (draggedId: string, target: { id: string; parentId?: string | null }, zone: 'before' | 'inside' | 'after') => {
+    if (zone === 'inside') { handleMoveSpace(draggedId, target.id); return; }
+    const dragged = communitySpaces.find(s => s.id === draggedId);
+    if (!dragged || !communityId) return;
+    setOrderError(null);
+    const parentId = target.parentId ?? null;
+    try {
+      if ((dragged.parentId ?? null) !== parentId) await spacesApi.update(draggedId, { parentId });
+      const orderedIds = placeRelative(siblingOrder(communitySpaces, parentId, communityId), draggedId, target.id, zone);
+      await reorderSpaces.mutateAsync({ parentId, communityId, orderedIds });
+    } catch (e) {
+      setOrderError(e instanceof Error ? e.message : 'Réorganisation impossible');
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+    }
   };
 
   // Check permissions (mode admin = mêmes droits que le OWNER)
@@ -874,6 +916,13 @@ export function CommunitySettingsPage() {
               </div>
             )}
 
+            {canEdit && (
+              <div className="px-4 pt-3">
+                <FieldHelp page="community-settings" field="spacesOrder" className="text-xs text-muted-foreground" />
+                {orderError && <p className="text-xs text-destructive mt-1">{orderError}</p>}
+              </div>
+            )}
+
             {/* Search bar */}
             <div className="px-4 py-3 border-b">
               <div className="relative">
@@ -922,14 +971,14 @@ export function CommunitySettingsPage() {
                       </tr>
                     ) : (
                       filteredSpaces.map(space => (
-                        <SpaceTableRow key={space.id} node={{ ...space, children: [] }} level={0} onMove={handleMoveSpace} onDelete={setSpaceToDelete} canEdit={canEdit} />
+                        <SpaceTableRow key={space.id} node={{ ...space, children: [] }} level={0} onDropOn={handleDropOnSpace} onDelete={setSpaceToDelete} canEdit={canEdit} />
                       ))
                     )
                   ) : (
                     <>
                       {canEdit && <RootDropZone onMove={handleMoveSpace} />}
                       {spaceTree.map(node => (
-                        <SpaceTableRow key={node.id} node={node} level={0} onMove={handleMoveSpace} onDelete={setSpaceToDelete} canEdit={canEdit} />
+                        <SpaceTableRow key={node.id} node={node} level={0} onDropOn={handleDropOnSpace} onDelete={setSpaceToDelete} canEdit={canEdit} />
                       ))}
                     </>
                   )}

@@ -3,6 +3,7 @@
  * des espaces de groupe d'UNE communauté (communityId null = espaces indépendants, hors communauté).
  * - excludeSubtreeOf : espace déplacé — lui et ses descendants sont exclus (pas de cycle).
  * - Seuls les espaces GROUP peuvent être parents (règle API POST/PATCH /spaces).
+ * - Ordre : celui de la liste reçue (GET /spaces trie par ordre manuel puis nom) — ne pas retrier par nom.
  * Fonction pure, testée (spaceParentOptions.test.ts) ; utilisée par CreateSpaceModal et MoveSpaceModal.
  */
 
@@ -36,7 +37,6 @@ export function buildParentOptions(
     if (!childrenOf.has(key)) childrenOf.set(key, []);
     childrenOf.get(key)!.push(s);
   }
-  for (const list of childrenOf.values()) list.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 
   const options: ParentOption[] = [{ value: '', label: ROOT_OPTION_LABEL }];
   const walk = (parentKey: string | null, depth: number) => {

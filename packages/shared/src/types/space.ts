@@ -18,6 +18,8 @@ export interface Space {
   defaultRole?: Role | null;
   visibility?: SpaceVisibility;
   defaultView?: string | null;
+  /** Ordre manuel parmi ses frères (PUT /spaces/reorder) ; à égalité, ordre alphabétique */
+  position?: number;
   createdAt: string;
   updatedAt: string;
 }

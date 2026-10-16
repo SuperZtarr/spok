@@ -9,7 +9,7 @@ export const help: HelpEntry = {
   tips: [
     'Cliquez sur un espace pour l\'ouvrir',
     '« Nouvel espace » en crée un dans la communauté, ou un sous-espace si vous choisissez un espace parent',
-    'Dans la barre latérale, survolez un espace : « + » crée un sous-espace, « ⋯ » ouvre ses paramètres, le déplace ou le supprime',
+    'Dans la barre latérale, survolez un espace : « + » crée un sous-espace, « ⋯ » ouvre ses paramètres, le déplace, le monte ou le descend, ou le supprime',
     'La roue dentée ouvre les paramètres (propriétaire)',
   ],
   tour: [

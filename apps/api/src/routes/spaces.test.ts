@@ -1390,4 +1390,73 @@ describe('Spaces routes', () => {
       expect(res.statusCode).toBe(403)
     })
   })
+
+  // Ordre manuel (2026-10-16) : PUT /spaces/reorder, droits par niveau
+  describe('PUT /spaces/reorder', () => {
+    const put = (payload: Record<string, unknown>) =>
+      app.inject({ method: 'PUT', url: '/spaces/reorder', headers: { authorization: `Bearer ${token}` }, payload })
+
+    it('racine d\'une communauté : le propriétaire de la communauté réordonne', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.space.findMany.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
+
+      const res = await put({ parentId: null, communityId: 'com-1', orderedIds: ['b', 'a'] })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().order).toEqual(['b', 'a'])
+      expect(prisma.space.findMany.mock.calls[0][0].where).toEqual({ parentId: null, communityId: 'com-1', type: 'GROUP' })
+    })
+
+    it('racine d\'une communauté : un simple membre est refusé', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+
+      const res = await put({ parentId: null, communityId: 'com-1', orderedIds: ['a'] })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.space.update).not.toHaveBeenCalled()
+    })
+
+    it('sous un parent : il faut gérer le parent', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+
+      const res = await put({ parentId: 'parent-1', orderedIds: ['a'] })
+
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('sous un parent : le propriétaire du parent réordonne ses sous-espaces', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.space.findMany.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
+
+      const res = await put({ parentId: 'parent-1', orderedIds: ['b'] })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.space.findMany.mock.calls[0][0].where).toEqual({ parentId: 'parent-1' })
+    })
+  })
+
+  describe('POST /spaces — ordre manuel', () => {
+    it('un nouvel espace arrive en dernier parmi ses frères', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.space.aggregate.mockResolvedValue({ _max: { position: 3 } })
+      prisma.space.create.mockResolvedValue(mockSpace({ communityId: 'com-1' }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/spaces',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Nouveau', type: 'GROUP', communityId: 'com-1' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(prisma.space.create.mock.calls[0][0].data.position).toBe(4)
+    })
+  })
 })

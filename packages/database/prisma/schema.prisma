@@ -93,6 +93,7 @@ model Space {
   defaultRole Role? // Auto-join role for new community members (null = no auto-join)
   visibility  SpaceVisibility? // null = inherit from parent space or community
   defaultView String? // Default view mode when entering the space (list, kanban, mindmap...)
+  position    Int     @default(0) // Ordre manuel parmi ses frères (même parent / même racine de communauté), puis nom
 
   memberships SpaceMembership[]
   items       Item[]
