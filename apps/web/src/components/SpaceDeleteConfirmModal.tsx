@@ -1,4 +1,6 @@
-/* Confirmation de suppression d'espace : delete-preview (sous-espaces, items) + cascade. */
+/* Confirmation de suppression d'espace : delete-preview (sous-espaces, items) + cascade.
+   Sans cascade, les sous-espaces remontent d'un niveau (utils/spaceDeletion.ts côté API) — le texte
+   de la case doit rester aligné sur ce comportement. */
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Folder, Loader2, FileText } from 'lucide-react';
 import { Modal } from './ui/Modal';
@@ -111,7 +113,7 @@ export function SpaceDeleteConfirmModal({
                   <p className="text-muted-foreground mt-1">
                     {deleteChildren
                       ? 'Tout sera supprim\u00e9 d\u00e9finitivement (restaurable depuis l\u2019admin).'
-                      : 'Les sous-espaces seront d\u00e9tach\u00e9s et deviendront des espaces ind\u00e9pendants.'}
+                      : 'Les sous-espaces sont conserv\u00e9s : ils remontent d\u2019un niveau, sous l\u2019espace parent (ou \u00e0 la racine s\u2019il n\u2019y en a pas), dans la m\u00eame communaut\u00e9.'}
                   </p>
                 </div>
               </label>

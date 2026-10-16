@@ -1,5 +1,8 @@
-/* Liste des communautés (/communities) : les miennes + publiques à rejoindre + invitations en attente. */
-import { useRef } from 'react';
+/* Liste des communautés (/communities) : les miennes + publiques à rejoindre + invitations en attente.
+   ?new=community : ouvre la modale de création à l'arrivée (lien « Créer une communauté » de l'accueil),
+   puis retire le paramètre pour qu'un rechargement ne la rouvre pas. */
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CommunityListView } from '../components/views/CommunityListView';
 import type { CommunityListViewHandle } from '../components/views/CommunityListView';
 import { Button } from '../components/ui/Button';
@@ -10,6 +13,13 @@ import { PageHelpButton } from '../help/PageHelpButton';
 export function CommunitiesListPage() {
   const ref = useRef<CommunityListViewHandle>(null);
   const user = useAuthStore(s => s.user);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('new') !== 'community' || !user) return;
+    ref.current?.openCreate();
+    setSearchParams((p) => { p.delete('new'); return p; }, { replace: true });
+  }, [searchParams, setSearchParams, user]);
 
   return (
     <div className="flex flex-col h-full">

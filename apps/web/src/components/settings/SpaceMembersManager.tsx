@@ -1,6 +1,7 @@
 /* Gestion des membres d'un espace : rôles, invitations, retrait — page settings espace.
    Actions sur soi (onLeave) : se rétrograder en membre (s'il reste un autre propriétaire) et quitter l'espace
-   (confirmation, puis retour à l'accueil). Un changement de son propre rôle rafraîchit l'espace (droits). */
+   (confirmation, puis retour à la page de la communauté de l'espace — communityId — sinon à l'accueil).
+   Un changement de son propre rôle rafraîchit l'espace (droits). */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { spacesApi } from '../../lib/api';
@@ -12,6 +13,8 @@ interface SpaceMembersManagerProps {
   currentUserRole: string;
   currentUserId: string;
   spaceType: string;
+  /** Communauté de l'espace : destination après « Quitter » (accueil si absente) */
+  communityId?: string | null;
 }
 
 export function SpaceMembersManager({
@@ -19,6 +22,7 @@ export function SpaceMembersManager({
   currentUserRole,
   currentUserId,
   spaceType,
+  communityId,
 }: SpaceMembersManagerProps) {
   const queryClient = useQueryClient();
   const isOwner = currentUserRole === 'OWNER';
@@ -68,7 +72,7 @@ export function SpaceMembersManager({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
-      navigate('/');
+      navigate(communityId ? `/communities/${communityId}` : '/');
     },
     onError: (e) => alert(e instanceof Error ? e.message : 'Impossible de quitter l\'espace'),
   });

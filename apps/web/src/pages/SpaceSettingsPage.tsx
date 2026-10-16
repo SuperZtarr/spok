@@ -4,7 +4,10 @@
    Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id).
    Quitter : membre direct sans droits de gestion → bouton sur l'écran « pas les permissions » ; propriétaire →
    onglet Membres (se rétrograder puis quitter, s'il reste un autre propriétaire).
-   Suppression : erreur API affichée sous le bouton (jamais de mutateAsync sans catch → rejet non géré Sentry). */
+   Suppression : erreur API affichée sous le bouton (jamais de mutateAsync sans catch → rejet non géré Sentry).
+   Après suppression → espace parent, sinon page de la communauté, sinon accueil ; après départ → page de la
+   communauté, sinon accueil (le parent peut être inaccessible). Ne jamais renvoyer à '/' un espace de
+   communauté : la barre latérale quitterait le mode communauté (bug corrigé le 2026-10-16). */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -77,7 +80,7 @@ export function SpaceSettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
-      navigate('/');
+      navigate(space?.communityId ? `/communities/${space.communityId}` : '/');
     },
   });
 
@@ -246,7 +249,7 @@ export function SpaceSettingsPage() {
     if (!space) return;
     try {
       await deleteSpaceMutation.mutateAsync({ id: space.id, deleteChildren });
-      navigate('/');
+      navigate(space.parentId ? `/spaces/${space.parentId}` : space.communityId ? `/communities/${space.communityId}` : '/');
     } catch {
       // Erreur affichée sous le bouton (deleteSpaceMutation.isError) — pas de rejet non géré
     }
@@ -585,6 +588,7 @@ export function SpaceSettingsPage() {
               currentUserRole={canEdit ? 'OWNER' : (space.role || 'MEMBER')}
               currentUserId={user.id}
               spaceType={space.type}
+              communityId={space.communityId}
             />
             <div className="border-t pt-4">
               <h3 className="text-sm font-medium mb-3">Organigramme</h3>

@@ -61,12 +61,18 @@ describe('deleteSpaceTree', () => {
     expect(callOrder(db.auditLog.createMany, () => true)).toBeLessThan(callOrder(db.item.deleteMany, () => true))
   })
 
-  it('sans deleteChildren : enfants directs détachés, seuls les items de l\'espace supprimés', async () => {
-    await deleteSpaceTree(db as any, space('root'), false, ctx)
+  it('sans deleteChildren : espace racine → enfants directs à la racine, seuls les items de l\'espace supprimés', async () => {
+    await deleteSpaceTree(db as any, space('root', { parentId: null }), false, ctx)
 
     expect(db.space.updateMany).toHaveBeenCalledWith({ where: { parentId: 'root' }, data: { parentId: null } })
     expect(db.item.findMany).toHaveBeenCalledWith({ where: { spaceId: { in: ['root'] } } })
     expect(db.space.delete.mock.calls.map((c: any[]) => c[0].where.id)).toEqual(['root'])
+  })
+
+  it('sans deleteChildren : sous-espace → ses enfants directs rattachés à son parent', async () => {
+    await deleteSpaceTree(db as any, space('mid', { parentId: 'top' }), false, ctx)
+
+    expect(db.space.updateMany).toHaveBeenCalledWith({ where: { parentId: 'mid' }, data: { parentId: 'top' } })
   })
 
   it('une erreur en cours est propagée (la transaction appelante annule tout)', async () => {

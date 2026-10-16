@@ -9,6 +9,8 @@
  * - Ordre imposé : l'audit d'un espace est écrit AVANT sa suppression (audit_logs.spaceId est une FK,
  *   passée à null par SetNull à la suppression).
  * - Audits des items en un seul createMany (une transaction longue risque le délai d'expiration).
+ * - Sans cascade, les sous-espaces directs remontent d'un niveau : rattachés au parent de l'espace
+ *   supprimé (racine s'il n'en a pas), communauté inchangée (décision Thomas 2026-10-16).
  */
 import type { PrismaClient, Prisma } from '@spok/database';
 import { createAuditLog, createAuditLogs, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from './audit.js';
@@ -76,12 +78,12 @@ async function deleteSpaceRow(db: Db, space: { id: string } & Record<string, unk
 
 /**
  * Supprime un espace. deleteChildren = true : tous les sous-espaces et leurs items ;
- * false : les enfants directs sont détachés (parentId null), seuls les items de l'espace partent.
- * Renvoie les ids des espaces supprimés.
+ * false : les enfants directs sont rattachés au parent de l'espace (racine sinon), seuls les items
+ * de l'espace partent. `space` doit porter son parentId (ligne complète). Renvoie les ids supprimés.
  */
 export async function deleteSpaceTree(
   db: Db,
-  space: { id: string } & Record<string, unknown>,
+  space: { id: string; parentId?: string | null } & Record<string, unknown>,
   deleteChildren: boolean,
   ctx: DeletionContext,
 ): Promise<string[]> {
@@ -95,7 +97,7 @@ export async function deleteSpaceTree(
       if (descendant) await deleteSpaceRow(db, descendant as unknown as { id: string } & Record<string, unknown>, ctx);
     }
   } else {
-    await db.space.updateMany({ where: { parentId: space.id }, data: { parentId: null } });
+    await db.space.updateMany({ where: { parentId: space.id }, data: { parentId: space.parentId ?? null } });
     await deleteItemsOfSpaces(db, [space.id], ctx);
   }
 

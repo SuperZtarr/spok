@@ -2,7 +2,10 @@
    favoris, communautés, fil d'activité. Écran FirstTimeSetup si aucune communauté/espace.
    Responsive (2026-10-10) : aperçus 1 par ligne sur mobile, en-têtes de carte tronqués pour
    ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden).
-   « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications. */
+   « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications.
+   FirstTimeSetup (2026-10-16) : « Créer une communauté » ouvre directement la modale (/communities?new=community) ;
+   « Créer un espace personnel » le crée (POST /spaces PERSONAL) et l'ouvre — l'écran n'apparaît que sans aucun
+   espace, donc sans espace personnel (il est normalement créé à l'inscription / à la connexion). */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
@@ -34,6 +37,15 @@ function FirstTimeSetup({ userName }: { userName: string }) {
       queryClient.invalidateQueries({ queryKey: ['communities-public'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
       queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    },
+  });
+
+  const createPersonalSpaceMutation = useMutation({
+    mutationFn: () => spacesApi.create({ name: 'Mon espace personnel', type: 'PERSONAL' }),
+    onSuccess: (space) => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+      navigate(`/spaces/${space.id}`);
     },
   });
 
@@ -97,7 +109,7 @@ function FirstTimeSetup({ userName }: { userName: string }) {
             Une communauté regroupe des personnes autour d'un sujet commun. Vous en serez le propriétaire.
           </p>
           <button
-            onClick={() => navigate('/communities')}
+            onClick={() => navigate('/communities?new=community')}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -117,13 +129,17 @@ function FirstTimeSetup({ userName }: { userName: string }) {
             Un espace personnel est privé et visible uniquement par vous. Idéal pour tester SPOK.
           </p>
           <button
-            onClick={() => navigate('/spaces?new=space')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
+            onClick={() => createPersonalSpaceMutation.mutate()}
+            disabled={createPersonalSpaceMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
           >
             <FolderKanban className="w-4 h-4" />
             Créer un espace personnel
             <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground" />
           </button>
+          {createPersonalSpaceMutation.isError && (
+            <p className="text-xs text-destructive mt-2">La création a échoué. Réessaie.</p>
+          )}
         </section>
       </div>
     </div>
