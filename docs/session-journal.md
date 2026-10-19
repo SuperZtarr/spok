@@ -6,10 +6,15 @@
 
 ## EN COURS
 
+### Vue Process (chantier A) — 2026-10-20
+- Brainstorm validé par Thomas : cycle brainstorm → enchaînement de tâches → modèle (B) → mise en œuvre planifiée (C) ; A = vue d'espace « Process », un process par espace, page vide + panneau « Non placés », positions libres partagées (table process_nodes), double-clic = NOTE, liens = vraies relations via la modale habituelle, pas de formes graphiques. Plan : docs/superpowers/plans/2026-10-20-vue-process.md
+- Implémenté, testé à l'usage par Thomas, commité d956e91 et poussé : schéma ProcessNode (db push local fait), routes /spaces/:id/process-nodes (7 tests), process-utils (6 tests), useProcessNodes, RelationCreateDialog/RelationEditDialog (copie partagée, MindMap/PERT/Gantt non migrés), ProcessView/ProcessNode/ProcessUnplacedPanel, registre (planning, order 8), fiche d'aide, businessRules, ARCHITECTURE, MODELE-DONNEES (édité à la main, générateur hors dépôt). Typecheck 6 paquets OK, TNR 1420/1420 (compteur de vues 31 → 32). Spec SPOK « Vue Process [ProcessView] » to_validate
+- Reste : chantiers B (carte de session proposée) et C ; migration des modales de relation des autres vues
+
 ### Modèle de données — suite de la session d'audit (coupée par la limite d'usage) — 2026-10-16
 - docs/MODELE-DONNEES.md généré depuis schema.prisma : diagramme Mermaid erDiagram (60 relations, rendu vérifié avec mermaid 10.9.1, 30 tables reliées ; AppConfig et RefreshToken sans relation déclarée), détail des 32 tables (PK/FK/unique/défauts, onDelete, index), 13 enums ; lien vers l'artifact MCD/MLD. Généré par script (scratchpad) : régénérer plutôt que corriger à la main. Commité avec la doc le 2026-10-20
 - packages/database/.env : 5433 → 25432 (oubli du changement de port du 14/10), `prisma db push` local OK (déjà en phase).
-- Restent : UPDATE prod des statuts vides (accord Thomas requis), migrations versionnées (chantier dédié).
+- Prod 2026-10-20 (accord Thomas) : 323 statuts vides passés à NULL (transaction, recompte 0). Reste : migrations versionnées (chantier dédié, proposé en session à part).
 
 ### Navigabilité communautés / espaces — 2026-10-16
 - État des lieux (note de session navigabilite-espaces-constats.md) puis 4 lots validés par Thomas, commités sans push : f022fe4 (bugs : rester dans la communauté après suppression/départ, sous-espaces remontés sous le parent, accueil premier accès), ca7200d (CreateSpaceModal unique, menu ⋯ et « + » de la sidebar, MoveSpaceModal), ba6807d (ordre manuel : Space.position, PUT /spaces/reorder, glisser avant/dans/après, Monter/Descendre). Tests ciblés + typecheck web/api OK, vérifié à l'écran en local. db push local fait (prod : db push au démarrage). Specs SPOK to_validate : Sidebar, Création d'espace, Page/Paramètres communauté, Liste des espaces, Paramètres espace, Confirmation quitter/supprimer, Accueil, Space

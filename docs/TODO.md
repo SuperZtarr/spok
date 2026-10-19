@@ -78,7 +78,11 @@
 - [x] Navigabilité — lot 4 : ordre manuel des espaces (Space.position, PUT /spaces/reorder, glisser avant/dans/après dans les paramètres de la communauté, Monter/Descendre) — 2026-10-16 (ba6807d)
 - [x] `packages/database/.env` aligné sur 25432 (`pnpm db:push` refonctionne) — 2026-10-16 (fichier local, non versionné)
 - [x] Modèle de données en Mermaid : `docs/MODELE-DONNEES.md` (diagramme des relations, tables, enums ; généré depuis schema.prisma, rendu Mermaid vérifié) — 2026-10-16 (commité avec la doc le 2026-10-20)
-- [ ] Prod : `UPDATE items SET status = NULL WHERE status = ''` (statuts vides créés par la création rapide, invisibles au filtre « sans statut »)
+- [x] Prod : statuts vides passés à NULL (323 éléments, transaction, recompte 0) — 2026-10-20, accord Thomas
+- [x] Vue Process (chantier A) : canevas libre par espace, positions partagées (process_nodes), panneau « Non placés », double-clic = note, liens via la modale de relation — 2026-10-20 (d956e91)
+- [ ] Vue Process — chantier B : modèles qui retiennent le process (relations, durées, disposition) — à brainstormer
+- [ ] Vue Process — chantier C : instanciation d'un modèle avec date de départ, dates calculées le long des liens
+- [ ] Modales de relation : migrer MindMap / PERT / Gantt sur RelationCreateDialog / RelationEditDialog (copies inline aujourd'hui)
 - [ ] Migrations Prisma versionnées (remplacer `db push --accept-data-loss` de start-api.sh, baseline prod) — préalable aux contraintes CHECK (Tag/Reaction/Invitation XOR, PERSONAL ⇔ sans communauté) et à la FK refresh_tokens → users
 - [ ] Modale de fusion : ne proposer comme cibles que les items que l'utilisateur peut gérer (aujourd'hui : cible étrangère → 403 API)
 - [x] Séances : nom de l'espace préfixé « Séance » (nouvelle séance et suite, séances existantes non renommées) — 2026-10-15 (f92a183)
