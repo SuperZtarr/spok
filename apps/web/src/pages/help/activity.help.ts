@@ -7,7 +7,7 @@ export const help: HelpEntry = {
   summary: 'Les éléments modifiés par d\'autres que vous n\'avez pas encore vus, rangés par communauté et par espace.',
   tips: [
     'Un élément disparaît de la liste quand vous l\'ouvrez',
-    'Mettez une communauté en sourdine pour ne plus voir son activité',
+    '« Masquer l\'activité » retire une communauté de cette liste ; les notifications de la cloche restent actives',
     '« Marquer comme non lu » (menu d\'un élément) le fait revenir ici',
   ],
   tour: [
@@ -21,7 +21,7 @@ export const help: HelpEntry = {
       element: '[data-tour="activity-community"]',
       popover: {
         title: 'Par communauté',
-        description: 'Chaque bloc est une communauté. Son bouton de sourdine masque son activité ici.',
+        description: 'Chaque bloc est une communauté. Son bouton « Masquer l\'activité » la retire d\'ici (la cloche n\'est pas concernée).',
         side: 'right',
       },
     },

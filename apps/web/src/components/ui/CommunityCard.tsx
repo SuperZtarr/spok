@@ -1,10 +1,12 @@
 /* Carte de communauté (listes/accueil) : nom, visibilité (pastille sur la cover, lue sur visibility), compteurs, cover.
    Pastille de visibilité + raccourci paramètres groupés en bas à droite de la carte, sous l'image (OWNER ou admin en mode admin ; showActions=false
-   pour l'aperçu de CommunitySettingsPage). Boutons dans un Link : preventDefault + stopPropagation. */
+   pour l'aperçu de CommunitySettingsPage). Boutons dans un Link : preventDefault + stopPropagation.
+   Bouton « Masquer / Afficher l'activité » (onMute) : sourdine de la communauté = retrait du fil d'activité seulement,
+   jamais de la cloche — ne pas lui redonner un libellé ou une icône de notification (spec Activité). */
 import { Link, useNavigate } from 'react-router-dom';
 import { VisibilityPill } from './VisibilityPill';
 import { useAdminMode } from '../DevDbStatus';
-import { Settings, Users, Crown, User, Eye, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
+import { Settings, Users, Crown, User, Eye, EyeOff, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
 import { Button } from './Button';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -173,11 +175,13 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
                 variant="bordered"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMute!(!community.muted); }}
                 className={`flex items-center gap-1 text-xs ${community.muted ? 'bg-orange-100 text-orange-700 border-orange-400 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-600' : ''}`}
-                title={community.muted ? 'Réactiver les notifications' : 'Mettre en sourdine'}
+                title={community.muted
+                  ? "Réafficher l'activité de cette communauté dans le fil d'activité"
+                  : "Masquer cette communauté du fil d'activité (les notifications de la cloche restent actives)"}
                 disabled={isMutePending}
               >
-                {community.muted ? <BellOff className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
-                {community.muted ? 'Sourdine' : 'Notifier'}
+                {community.muted ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                {community.muted ? "Afficher l'activité" : "Masquer l'activité"}
               </Button>
             )}
             {showLeaveButton && (
