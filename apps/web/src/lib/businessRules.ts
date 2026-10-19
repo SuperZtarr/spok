@@ -275,8 +275,29 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'space-leave-and-self-demote',
     page: "Paramètres d'un espace (onglet Membres, ou écran « pas les permissions » pour un simple membre)",
     trigger: 'Un membre veut quitter un espace, ou un propriétaire veut redevenir simple membre',
-    effect: "Un propriétaire peut se rétrograder en membre ou quitter l'espace s'il reste au moins un autre propriétaire ; seul propriétaire, il doit d'abord en nommer un autre ou transférer la propriété (un espace n'est jamais sans propriétaire). Un simple membre direct peut quitter depuis les paramètres. Quitter ramène à l'accueil",
+    effect: "Un propriétaire peut se rétrograder en membre ou quitter l'espace s'il reste au moins un autre propriétaire ; seul propriétaire, il doit d'abord en nommer un autre ou transférer la propriété (un espace n'est jamais sans propriétaire). Un simple membre direct peut quitter depuis les paramètres. Quitter ramène à la page de la communauté de l'espace (à l'accueil seulement pour un espace sans communauté — décision Thomas 2026-10-16)",
     location: 'apps/api/src/routes/spaces.ts (POST /:id/leave, PATCH /:id/members/:memberId), apps/web/src/components/settings/MembersColumnManager.tsx, SpaceMembersManager.tsx, apps/web/src/pages/SpaceSettingsPage.tsx',
+  },
+  {
+    id: 'space-delete-stay-in-community',
+    page: "Paramètres d'un espace (onglet Danger), menu ⋯ d'un espace dans la barre latérale",
+    trigger: "Un espace est supprimé alors que l'utilisateur s'y trouve (ou dans un sous-espace supprimé avec lui)",
+    effect: "L'utilisateur est renvoyé à l'espace parent, sinon à la page de la communauté, sinon à l'accueil : il ne sort jamais de la communauté (la barre latérale garde son mode communauté). Depuis les paramètres de la communauté, il reste sur la page (décision Thomas 2026-10-16)",
+    location: 'apps/web/src/pages/SpaceSettingsPage.tsx (handleDeleteSpace), apps/web/src/components/Layout.tsx (confirmSidebarDelete)',
+  },
+  {
+    id: 'space-delete-children-move-up',
+    page: 'Confirmation de suppression d\'un espace (SpaceDeleteConfirmModal)',
+    trigger: 'Suppression d\'un espace qui a des sous-espaces, case « Supprimer aussi les sous-espaces » décochée',
+    effect: "Les sous-espaces directs sont conservés et remontent d'un niveau : rattachés au parent de l'espace supprimé (ou au premier niveau s'il n'en a pas), dans la même communauté. Case cochée : tout part, restaurable depuis l'admin (décision Thomas 2026-10-16)",
+    location: 'apps/api/src/utils/spaceDeletion.ts (deleteSpaceTree), apps/web/src/components/SpaceDeleteConfirmModal.tsx',
+  },
+  {
+    id: 'space-manual-order',
+    page: 'Toutes les listes d\'espaces (barre latérale, page et paramètres de la communauté, présentation, listes « espace parent »)',
+    trigger: 'Affichage d\'espaces frères (même parent, ou premier niveau d\'une même communauté) ; création, déplacement, réordonnancement',
+    effect: "Ordre manuel commun à tous les membres : position puis nom (alphabétique tant que personne n'a réordonné). Un espace créé ou déplacé arrive en dernier parmi ses frères. Réordonner : glisser avant/après dans les paramètres de la communauté, ou Monter/Descendre dans le menu ⋯ de la barre latérale — réservé au propriétaire de l'espace parent (ou de la communauté) pour des sous-espaces, au propriétaire de la communauté pour le premier niveau, à l'admin en mode admin (décision Thomas 2026-10-16)",
+    location: 'apps/api/src/utils/spaceOrder.ts, apps/api/src/routes/spaces.ts (PUT /reorder, GET /, POST /, PATCH /:id), apps/web/src/lib/spaceReorder.ts, apps/web/src/pages/CommunitySettingsPage.tsx, apps/web/src/components/Layout.tsx',
   },
   {
     id: 'community-owner-all-spaces',
@@ -298,5 +319,12 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: "Un membre (non propriétaire de l'espace) agit sur un item qu'il n'a pas créé mais qui lui est assigné",
     effect: "Il peut le modifier, le supprimer (avec ses sous-items si demandé) et le déplacer vers un autre espace, comme s'il en était l'auteur. Un item ni créé par lui ni assigné à lui reste en lecture (contributions possibles). Déplacement groupé : refusé dès qu'un item sélectionné n'est ni à lui ni assigné à lui. Fusion : la source ET la cible doivent être à lui ou lui être assignées ; absorption des enfants : le parent ET chaque enfant (sinon une fusion transférerait l'assignation, donc ces droits, sur l'item d'un autre). Les copies de séance verrouillées restent non modifiables (décision Thomas 2026-10-15)",
     location: 'apps/api/src/utils/itemOwnership.ts (canMemberManageItem), apps/api/src/routes/items.ts (PATCH, DELETE), apps/api/src/routes/item-move.ts (bulk-move), apps/api/src/routes/item-merge.ts (merge, absorb-children), apps/web/src/pages/SpacePage.tsx (canEditItem), apps/web/src/components/ItemEditModal.tsx (isItemAssignee)',
+  },
+  {
+    id: 'community-mute-activity-only',
+    page: 'Activité (/activity), Activité récente de l\'accueil, liste des communautés (bouton « Masquer l\'activité »)',
+    trigger: 'Un membre masque l\'activité d\'une communauté (CommunityMembership.muted, PATCH /communities/:id/mute)',
+    effect: "La communauté disparaît du fil d'activité, sans limite de durée, jusqu'à ce qu'il la réaffiche ; les items qu'il a lui-même marqués non lus restent visibles. Les notifications de la cloche (mentions, assignations, contributions) ne sont PAS coupées — d'où un libellé « Masquer / Afficher l'activité » et une icône d'œil, jamais de cloche",
+    location: 'apps/api/src/routes/activity.ts, apps/api/src/routes/communities.ts (mute), apps/web/src/components/ui/CommunityCard.tsx',
   },
 ];

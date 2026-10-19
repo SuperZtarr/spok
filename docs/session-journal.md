@@ -6,15 +6,24 @@
 
 ## EN COURS
 
+### Modèle de données — suite de la session d'audit (coupée par la limite d'usage) — 2026-10-16
+- docs/MODELE-DONNEES.md généré depuis schema.prisma : diagramme Mermaid erDiagram (60 relations, rendu vérifié avec mermaid 10.9.1, 30 tables reliées ; AppConfig et RefreshToken sans relation déclarée), détail des 32 tables (PK/FK/unique/défauts, onDelete, index), 13 enums ; lien vers l'artifact MCD/MLD. Généré par script (scratchpad) : régénérer plutôt que corriger à la main. Commité avec la doc le 2026-10-20
+- packages/database/.env : 5433 → 25432 (oubli du changement de port du 14/10), `prisma db push` local OK (déjà en phase).
+- Restent : UPDATE prod des statuts vides (accord Thomas requis), migrations versionnées (chantier dédié).
+
+### Navigabilité communautés / espaces — 2026-10-16
+- État des lieux (note de session navigabilite-espaces-constats.md) puis 4 lots validés par Thomas, commités sans push : f022fe4 (bugs : rester dans la communauté après suppression/départ, sous-espaces remontés sous le parent, accueil premier accès), ca7200d (CreateSpaceModal unique, menu ⋯ et « + » de la sidebar, MoveSpaceModal), ba6807d (ordre manuel : Space.position, PUT /spaces/reorder, glisser avant/dans/après, Monter/Descendre). Tests ciblés + typecheck web/api OK, vérifié à l'écran en local. db push local fait (prod : db push au démarrage). Specs SPOK to_validate : Sidebar, Création d'espace, Page/Paramètres communauté, Liste des espaces, Paramètres espace, Confirmation quitter/supprimer, Accueil, Space
+- ba6807d commité en n'indexant que mes passages de spaces.ts/spaces.test.ts (transaction PATCH d'une autre session laissée non commitée)
+
 ### Modèle de données — fiabilisation — 2026-10-16
 - Audit de cohérence des 29 tables (doc dans le dossier de notes de session) puis corrections validées par Thomas : restauration audit complète (visibility, context, référentiels…), suppression d'utilisateur réservée aux comptes sans trace (countUserTraces), SpaceModule et statuts des modèles d'espace supprimés, colonnes isPublic/pendingPublic supprimées (API/web/MCP sur visibility ; isPublic accepté en entrée seulement), statut '' → null à l'écriture, relation « parent » retirée, Invitation.role typé, purge refresh tokens expirés, index en double retirés. VIEWER gardé (rôle implicite, recommandation initiale erronée). TNR 1399/1399, typecheck 6 paquets OK. Commit e7f760e
 - Reste : données prod `items.status = ''` à passer à NULL (local fait) ; migrations versionnées (start-api.sh fait `db push --accept-data-loss`) → chantier à part ; MCD/MLD visuel à produire
 
 ### Zoom au pincement du pad (Windows) — 2026-10-16
-- Cause : @xyflow/system n'applique le facteur ×10 du pincement (ctrl+wheel) que sur macOS → pincement ~10× trop lent sous Windows. hooks/useTrackpadPinchZoom.ts (capture wheel, ctrl + |deltaY| < 50 en pixels, hors Mac, centré pointeur) branché sur MindMapView et DashboardMindMapView (bornes de zoom en constantes). typecheck web OK. Validé au pad par Thomas. Commit ca38a23, non poussé
+- Cause : @xyflow/system n'applique le facteur ×10 du pincement (ctrl+wheel) que sur macOS → pincement ~10× trop lent sous Windows. hooks/useTrackpadPinchZoom.ts (capture wheel, ctrl + |deltaY| < 50 en pixels, hors Mac, centré pointeur) branché sur MindMapView et DashboardMindMapView (bornes de zoom en constantes). typecheck web OK. Validé au pad par Thomas. Commit ca38a23, en prod (poussé avec 4ef85cf). Spec SPOK Carte mentale [MindMapView] : section Navigation (zoom) ajoutée, to_validate
 
 ### Libellé du bouton de sourdine — 2026-10-16
-- CommunityCard (liste des communautés, Activité) : « Notifier »/« Sourdine » + cloche → « Masquer l'activité » / « Afficher l'activité » (orange) + œil, infobulles précisant que la cloche n'est pas touchée. activity.help.ts aligné, règle businessRules community-mute-activity-only, spec Activité réécrite en Markdown (to_validate). typecheck web OK, help 310/310, vérifié à l'écran sur /communities (bascule aller-retour). Bouton mort de CommunityBanner (jamais de onMute) non touché. Non commité
+- CommunityCard (liste des communautés, Activité) : « Notifier »/« Sourdine » + cloche → « Masquer l'activité » / « Afficher l'activité » (orange) + œil, infobulles précisant que la cloche n'est pas touchée. activity.help.ts aligné, règle businessRules community-mute-activity-only, spec Activité réécrite en Markdown (to_validate). typecheck web OK, help 310/310, vérifié à l'écran sur /communities (bascule aller-retour). Bouton mort de CommunityBanner (jamais de onMute) non touché. MEP 2026-10-20 : 32767b0 (sourdine) + fca5974 (transaction PATCH /spaces/:id, carte globale) + businessRules et MODELE-DONNEES.md en commit de doc ; spaces API 84/84, web help+drop 319/319, typecheck api+web OK
 
 ### Doc séances — processus — 2026-10-15
 - Document SPOK « Processus d'une séance » (cmv9yofvt0004nkmdwe7dpcvs, enfant de LiveSession, espace Espaces, to_validate) : rôles, cycle (schéma texte), avant / pendant / après en tableaux qui / où / effet, visibilité par rôle. Rédigé d'après la spec parente (pas de revue du code). Rendu du schéma et des tableaux non vérifié dans SPOK
@@ -33,7 +42,7 @@
 
 ### Vues globales — arbitrage de la revue — 2026-10-15
 - Accueil « Voir tout » (Non lus) → ouvre la cloche (stores/notificationPanel.ts, NotificationBell piloté par le store) ; plus de lien vers /notifications
-- Carte mentale globale : clic communauté → /communities/:id ; glisser-déposer gardé (Thomas) + retour de survol (nœud translucide, cible ping vert / rouge, étiquette curseur, cible = nœud sous le curseur) ; dashboard-mindmap-drop.ts (règles pures, 7 tests) ; MindMapPage attend le PATCH, recharge spaces/sidebar/communities, bandeau d'erreur, nœud remis en place ; changement de communauté d'un espace à sous-espaces refusé (API ne propage pas communityId → TODO)
+- Carte mentale globale : clic communauté → /communities/:id ; glisser-déposer gardé (Thomas) + retour de survol (nœud translucide, cible ping vert / rouge, étiquette curseur, cible = nœud sous le curseur) ; dashboard-mindmap-drop.ts (règles pures, 7 tests) ; MindMapPage attend le PATCH, recharge spaces/sidebar/communities, bandeau d'erreur, nœud remis en place ; changement de communauté d'un espace à sous-espaces permis (l'API propageait déjà communityId depuis adff75f — garde-fou web et conseil d'aide retirés le 2026-10-16, propagation passée en transaction)
 - Liens globaux : sélecteur Communauté / Espace (+ sous-espaces) côté API, useInfiniteQuery 200/page, « Charger plus », total ; Images globale abandonnée
 - Fiches d'aide home, global-mindmap, global-links à jour ; ARCHITECTURE (store). typecheck web OK, help + drop 317/317 (via --project web). Vérifié en local : survol (4 cas), filtre liens, cloche. Dépôt réel validé par Thomas à l'écran. NON vérifié : « Charger plus » (4 liens en local). Specs SPOK en prod avec accord de Thomas (to_validate) : « Carte mentale globale [MindMapPage] » réécrite (glisser-déposer gardé, clic communauté), « Liens globaux [GlobalLinksPage] » créée (cmv9jvocj000ccrhm5o8dl8gq). MEP 7bd4fc3, 54c69b7, 5276d50
 
