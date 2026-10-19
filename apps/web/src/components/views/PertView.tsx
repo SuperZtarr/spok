@@ -5,17 +5,18 @@
  * Relations : les 4 types officiels sont affichés (source unique constants/relationTypes.ts) ; seuls
  * blocks / implements ordonnent les rangs (isOrderingRelation) ; Lié à et Entraîne sont tracés de centre à
  * centre. Type hors liste : ignoré.
+ * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
+ * (phrases « A bloque B » + explication du type, présentation née ici) — ne pas recréer de modale inline.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { useDialogFocus } from '../../hooks/useDialogFocus';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { RELATION_TYPE_LIST, RELATION_TYPE_META, getRelationMeta, isOfficialRelationType, isOrderingRelation } from '../../constants/relationTypes';
 import { PertToolbar } from './PertToolbar';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
-import { DevModalBadge } from '../ui/DevModalBadge';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig, StatusConfig } from '@spok/shared';
+import { RelationCreateDialog } from '../relations/RelationCreateDialog';
+import { RelationEditDialog } from '../relations/RelationEditDialog';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig } from '@spok/shared';
 import type { ViewMode } from '../../stores/viewMode';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
@@ -44,50 +45,8 @@ const SPACE_COLORS = [
 ];
 
 // Types de relation : source unique constants/relationTypes.ts (libellés, couleurs, icônes, ordonnancement)
-const PERT_RELATION_TYPES = RELATION_TYPE_LIST.map((m) => ({
-  id: m.id, label: m.label, Icon: m.Icon, hexColor: m.hex, tailwindColor: m.textClass,
-  selectedClass: m.selectedClass, hoverClass: m.hoverClass,
-}));
-
 function getRelationColor(type: string): string {
   return getRelationMeta(type).hex;
-}
-function ItemChip({ name, status, statusOptions, borderColor }: {
-  name: string;
-  status?: string | null;
-  statusOptions: StatusConfig[];
-  borderColor?: string;
-}) {
-  const statusColor = statusOptions.find(s => s.id === status)?.color ?? 'bg-gray-100 text-gray-700';
-  return (
-    <span
-      className={`block w-full rounded px-2 py-0.5 text-xs font-semibold break-words ${statusColor}`}
-      style={{ border: `1.5px solid ${borderColor ?? '#d1d5db'}` }}
-    >
-      {name}
-    </span>
-  );
-}
-function RelationRow({ typeId, sourceName, targetName, sourceStatus, targetStatus, statusOptions }: {
-  typeId: string;
-  sourceName: string;
-  targetName: string;
-  sourceStatus?: string | null;
-  targetStatus?: string | null;
-  statusOptions: StatusConfig[];
-}) {
-  const borderColor = getRelationColor(typeId);
-  const [item1, verb, item2, s1, s2]: [string, string, string, string | null | undefined, string | null | undefined] =
-    [sourceName, isOfficialRelationType(typeId) ? getRelationMeta(typeId).verb : '→', targetName, sourceStatus, targetStatus];
-  return (
-    <div className="flex items-center gap-2 flex-1 min-w-0">
-      <div className="w-[42%] flex-shrink-0"><ItemChip name={item1} status={s1} statusOptions={statusOptions} borderColor={borderColor} /></div>
-      <div className="w-[20%] flex-shrink-0 text-center">
-        <span className="text-xs font-bold text-foreground whitespace-nowrap">{verb}</span>
-      </div>
-      <div className="flex-1 min-w-0"><ItemChip name={item2} status={s2} statusOptions={statusOptions} borderColor={borderColor} /></div>
-    </div>
-  );
 }
 
 interface PortalGroup {
@@ -181,26 +140,17 @@ export function PertView({
     fromX: number; fromY: number;
     currentX: number; currentY: number;
   } | null>(null);
+  // Modales de relation : RelationCreateDialog / RelationEditDialog (focus, Échap, commentaire gérés par elles)
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
-  const [pendingLabel, setPendingLabel] = useState('');
   const [editingRelation, setEditingRelation] = useState<{
     relationId: string; fromItemId: string; toItemId: string;
     type: string; label: string; sourceName: string; targetName: string;
   } | null>(null);
-  const [editRelationType, setEditRelationType] = useState<string>('');
-  // Focus des modales de relation (création / édition) : panneau, Tab piégé, restauration (useDialogFocus)
-  const createRelationDialogRef = useRef<HTMLDivElement>(null);
-  const editRelationDialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(createRelationDialogRef, !!pendingConnection);
-  useDialogFocus(editRelationDialogRef, !!editingRelation);
-
 
   const [zoom, setZoom] = useState(1);
   const zoomIn = useCallback(() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2)))), []);
   const zoomOut = useCallback(() => setZoom(z => Math.max(0.25, parseFloat((z - 0.1).toFixed(2)))), []);
   const resetZoom = useCallback(() => setZoom(1), []);
-
-  useEscapeKey(() => setEditingRelation(null), !!editingRelation);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const svgScrollRef = useRef<HTMLDivElement>(null);
@@ -667,13 +617,12 @@ export function PertView({
     };
   }, [!!relationDrag]);
 
-  const handleRelationTypeSelect = useCallback((type: string) => {
+  const handleRelationTypeSelect = useCallback((type: string, label?: string) => {
     if (pendingConnection) {
-      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, pendingLabel || undefined);
+      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, label);
       setPendingConnection(null);
-      setPendingLabel('');
     }
-  }, [pendingConnection, pendingLabel, onCreateRelation]);
+  }, [pendingConnection, onCreateRelation]);
 
   const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
   const pendingTargetItem = pendingConnection ? items.find(i => i.id === pendingConnection.target) : null;
@@ -738,7 +687,6 @@ export function PertView({
                 sourceName: sourceItem?.title || '',
                 targetName: targetItem?.title || '',
               });
-              setEditRelationType(rel.type);
             }}
           >
             <title>Cliquer pour modifier</title>
@@ -993,126 +941,33 @@ export function PertView({
 
       {/* Edit relation dialog */}
       {editingRelation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div ref={editRelationDialogRef} className="outline-none bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
-            <h3 className="text-base font-semibold mb-1 flex items-center gap-2">Modifier la relation <DevModalBadge name="PertView (éditer relation)" /></h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              <span className="font-medium">{editingRelation.sourceName}</span>
-              {' → '}
-              <span className="font-medium">{editingRelation.targetName}</span>
-            </p>
-            <div className="flex flex-col gap-2 mb-3">
-              {PERT_RELATION_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setEditRelationType(type.id)}
-                  className={`flex items-center gap-3 px-3 py-2 border rounded-lg transition-colors w-full ${
-                    editRelationType === type.id ? type.selectedClass : `border-border ${type.hoverClass}`
-                  }`}
-                >
-                  <type.Icon className={`w-4 h-4 flex-shrink-0 ${type.tailwindColor}`} />
-                  <RelationRow
-                    typeId={type.id}
-                    sourceName={editingRelation.sourceName}
-                    targetName={editingRelation.targetName}
-                    sourceStatus={items.find(i => i.id === editingRelation.fromItemId)?.status}
-                    targetStatus={items.find(i => i.id === editingRelation.toItemId)?.status}
-                    statusOptions={statusOptions}
-                  />
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={editingRelation.label}
-              onChange={(e) => setEditingRelation({ ...editingRelation, label: e.target.value })}
-              placeholder="Justification de la relation (optionnel)"
-              rows={2}
-              className="w-full text-sm px-3 py-1.5 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring mb-3"
-            />
-            <div className="flex gap-2">
-              {onUpdateRelation && (
-                <button
-                  onClick={() => {
-                    onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type: editRelationType, label: editingRelation.label || null });
-                    setEditingRelation(null);
-                  }}
-                  className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  Enregistrer
-                </button>
-              )}
-              {onDeleteRelation && (
-                <button
-                  onClick={() => {
-                    onDeleteRelation(editingRelation.fromItemId, editingRelation.relationId);
-                    setEditingRelation(null);
-                  }}
-                  className="px-3 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  Supprimer
-                </button>
-              )}
-              <button
-                onClick={() => setEditingRelation(null)}
-                className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
+        <RelationEditDialog
+          source={{ title: editingRelation.sourceName, status: items.find(i => i.id === editingRelation.fromItemId)?.status }}
+          target={{ title: editingRelation.targetName, status: items.find(i => i.id === editingRelation.toItemId)?.status }}
+          statusOptions={statusOptions}
+          type={editingRelation.type}
+          label={editingRelation.label}
+          onSave={onUpdateRelation ? (type, label) => {
+            onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type, label: label || null });
+            setEditingRelation(null);
+          } : undefined}
+          onDelete={onDeleteRelation ? () => {
+            onDeleteRelation(editingRelation.fromItemId, editingRelation.relationId);
+            setEditingRelation(null);
+          } : undefined}
+          onCancel={() => setEditingRelation(null)}
+        />
       )}
 
       {/* Relation type selection modal */}
       {pendingConnection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div ref={createRelationDialogRef} className="outline-none bg-white dark:bg-card rounded-lg shadow-xl p-4 max-w-xl w-full mx-4">
-            <h3 className="text-base font-semibold mb-1 flex items-center gap-2">Type de relation <DevModalBadge name="PertView (créer relation)" /></h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              <span className="font-medium">{pendingSourceItem?.title}</span>
-              {' → '}
-              <span className="font-medium">{pendingTargetItem?.title}</span>
-            </p>
-            <div className="mb-3">
-              <label className="text-xs text-muted-foreground mb-1 block">Commentaire (optionnel)</label>
-              <textarea
-                value={pendingLabel}
-                onChange={e => setPendingLabel(e.target.value)}
-                placeholder="Décrivez cette relation…"
-                rows={2}
-                className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              {PERT_RELATION_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => handleRelationTypeSelect(type.id)}
-                  className={`flex items-center gap-3 px-3 py-2 border border-border rounded-lg transition-colors w-full ${type.hoverClass}`}
-                >
-                  <type.Icon className={`w-4 h-4 flex-shrink-0 ${type.tailwindColor}`} />
-                  <RelationRow
-                    typeId={type.id}
-                    sourceName={pendingSourceItem?.title ?? ''}
-                    targetName={pendingTargetItem?.title ?? ''}
-                    sourceStatus={pendingSourceItem?.status}
-                    targetStatus={pendingTargetItem?.status}
-                    statusOptions={statusOptions}
-                  />
-                </button>
-              ))}
-            </div>
-            {pendingLabel && (
-              <button
-                onClick={() => handleRelationTypeSelect('relates')}
-                className="mt-2 w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Créer avec type par défaut
-              </button>
-            )}
-            <button onClick={() => { setPendingConnection(null); setPendingLabel(''); }} className="mt-3 w-full text-sm text-muted-foreground hover:text-foreground">Annuler</button>
-          </div>
-        </div>
+        <RelationCreateDialog
+          source={{ title: pendingSourceItem?.title ?? '', status: pendingSourceItem?.status }}
+          target={{ title: pendingTargetItem?.title ?? '', status: pendingTargetItem?.status }}
+          statusOptions={statusOptions}
+          onSelect={handleRelationTypeSelect}
+          onCancel={() => setPendingConnection(null)}
+        />
       )}
       </div>
     </div>

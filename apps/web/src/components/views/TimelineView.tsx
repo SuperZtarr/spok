@@ -15,9 +15,10 @@
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  * En-tête : chaque commande sous HelpHint (textes : timeline.help.ts → hints), pas de `title` natif.
+ * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
+ * (phrases « A bloque B » + explication du type) — ne pas recréer de modale inline ici.
  */
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -38,14 +39,14 @@ import { itemsApi } from '../../lib/api';
 import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../../lib/cascadeShift';
 import { dayAtLaneX, dueDateForDay } from '../../lib/timelineDueDate';
 import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
-import { DevModalBadge } from '../ui/DevModalBadge';
+import { RelationCreateDialog } from '../relations/RelationCreateDialog';
+import { RelationEditDialog } from '../relations/RelationEditDialog';
 import { Button } from '../ui/Button';
-import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER, RELATION_TYPES } from './timeline-constants';
+import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER } from './timeline-constants';
 import { RELATION_TYPE_LIST, getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
 import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { NewItemButton } from '../ui/NewItemButton';
@@ -144,8 +145,6 @@ treeSort: treeSortProp,
     relationId: string; fromItemId: string; toItemId: string;
     type: string; label: string; sourceName: string; targetName: string;
   } | null>(null);
-  const [editRelationType, setEditRelationType] = useState<string>('');
-  useEscapeKey(() => setEditingRelation(null), !!editingRelation);
   const [collapsedSpaces, setCollapsedSpaces] = useState<Set<string>>(new Set());
   const toggleSpaceCollapse = useCallback((sid: string) => {
     setCollapsedSpaces(prev => {
@@ -195,13 +194,8 @@ treeSort: treeSortProp,
   } | null>(null);
 
   // Pending connection awaiting type selection
+  // (modale de type : RelationCreateDialog, qui gère focus, Échap et commentaire)
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
-  // Focus des modales de relation (création / édition) : panneau, Tab piégé, restauration (useDialogFocus)
-  const createRelationDialogRef = useRef<HTMLDivElement>(null);
-  const editRelationDialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(createRelationDialogRef, !!pendingConnection);
-  useDialogFocus(editRelationDialogRef, !!editingRelation);
-  const [pendingLabel, setPendingLabel] = useState('');
 
   // DnD state for left-panel reordering
   const [ganttActiveId, setGanttActiveId] = useState<string | null>(null);
@@ -954,13 +948,12 @@ treeSort: treeSortProp,
   }, [relationDrag, flatItems, onCreateRelation]);
 
   // Handle relation type selection from modal
-  const handleRelationTypeSelect = useCallback((type: string) => {
+  const handleRelationTypeSelect = useCallback((type: string, label?: string) => {
     if (pendingConnection) {
-      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, pendingLabel || undefined);
+      onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, label);
       setPendingConnection(null);
-      setPendingLabel('');
     }
-  }, [pendingConnection, pendingLabel, onCreateRelation]);
+  }, [pendingConnection, onCreateRelation]);
 
   // Get item titles for relation dialog
   const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
@@ -1705,7 +1698,6 @@ treeSort: treeSortProp,
                               sourceName: sourceItem?.title || '',
                               targetName: targetItem?.title || '',
                             });
-                            setEditRelationType(arrow.type);
                           }}
                         >
                           <title>{`${relLabel} - Cliquer pour modifier`}</title>
@@ -1795,56 +1787,13 @@ treeSort: treeSortProp,
 
       {/* Relation type selection modal */}
       {pendingConnection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div ref={createRelationDialogRef} className="outline-none bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Type de relation <DevModalBadge name="TimelineView (créer relation)" /></h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              <span className="font-medium">{pendingSourceItem?.title}</span>
-              {' → '}
-              <span className="font-medium">{pendingTargetItem?.title}</span>
-            </p>
-            <div className="mb-3">
-              <label className="text-xs text-muted-foreground mb-1 block">Commentaire (optionnel)</label>
-              <textarea
-                value={pendingLabel}
-                onChange={e => setPendingLabel(e.target.value)}
-                placeholder="Décrivez cette relation…"
-                rows={2}
-                className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {RELATION_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => handleRelationTypeSelect(type.id)}
-                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors text-left group"
-                  title={type.description}
-                >
-                  <type.Icon className={`w-4 h-4 ${type.color}`} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{type.label}</span>
-                    <span className="text-[10px] text-muted-foreground">{type.description}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-            {pendingLabel && (
-              <button
-                onClick={() => handleRelationTypeSelect('relates')}
-                className="mt-2 w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Créer avec type par défaut
-              </button>
-            )}
-            <button
-              onClick={() => { setPendingConnection(null); setPendingLabel(''); }}
-              className="mt-4 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
+        <RelationCreateDialog
+          source={{ title: pendingSourceItem?.title ?? '', status: pendingSourceItem?.status }}
+          target={{ title: pendingTargetItem?.title ?? '', status: pendingTargetItem?.status }}
+          statusOptions={statuses}
+          onSelect={handleRelationTypeSelect}
+          onCancel={() => setPendingConnection(null)}
+        />
       )}
       {pendingCascade && (() => {
         const anchorItem = items.find(i => i.id === pendingCascade.itemId);
@@ -1863,75 +1812,22 @@ treeSort: treeSortProp,
 
       {/* Edit relation dialog */}
       {editingRelation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div ref={editRelationDialogRef} className="outline-none bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifier la relation <DevModalBadge name="TimelineView (éditer relation)" /></h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              <span className="font-medium">{editingRelation.sourceName}</span>
-              {' → '}
-              <span className="font-medium">{editingRelation.targetName}</span>
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Type</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {RELATION_TYPES.map((type) => (
-                    <button
-                      key={type.id}
-                      onClick={() => setEditRelationType(type.id)}
-                      className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
-                        editRelationType === type.id ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
-                      }`}
-                    >
-                      <type.Icon className={`w-4 h-4 ${type.color}`} />
-                      <span className="text-sm font-medium">{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Description</label>
-                <textarea
-                  value={editingRelation.label}
-                  onChange={(e) => setEditingRelation({ ...editingRelation, label: e.target.value })}
-                  placeholder="Justification de la relation (optionnel)"
-                  rows={2}
-                  className="w-full text-sm px-3 py-1.5 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              {onUpdateRelation && (
-                <button
-                  onClick={() => {
-                    onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type: editRelationType, label: editingRelation.label || null });
-                    setEditingRelation(null);
-                  }}
-                  className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  Enregistrer
-                </button>
-              )}
-              {onDeleteRelation && (
-                <button
-                  onClick={() => {
-                    onDeleteRelation(editingRelation.fromItemId, editingRelation.relationId);
-                    setEditingRelation(null);
-                  }}
-                  className="px-3 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  Supprimer
-                </button>
-              )}
-              <button
-                onClick={() => setEditingRelation(null)}
-                className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
+        <RelationEditDialog
+          source={{ title: editingRelation.sourceName, status: items.find(i => i.id === editingRelation.fromItemId)?.status }}
+          target={{ title: editingRelation.targetName, status: items.find(i => i.id === editingRelation.toItemId)?.status }}
+          statusOptions={statuses}
+          type={editingRelation.type}
+          label={editingRelation.label}
+          onSave={onUpdateRelation ? (type, label) => {
+            onUpdateRelation(editingRelation.fromItemId, editingRelation.relationId, { type, label: label || null });
+            setEditingRelation(null);
+          } : undefined}
+          onDelete={onDeleteRelation ? () => {
+            onDeleteRelation(editingRelation.fromItemId, editingRelation.relationId);
+            setEditingRelation(null);
+          } : undefined}
+          onCancel={() => setEditingRelation(null)}
+        />
       )}
     </div>
   );

@@ -81,7 +81,12 @@ function ProcessCanvas({
   const { placed, unplaced } = useMemo(() => splitPlaced(items, positions), [items, positions]);
   const placedIds = useMemo(() => new Set(placed.map((p) => p.item.id)), [placed]);
   const edges = useMemo(() => buildProcessEdges(relations, placedIds), [relations, placedIds]);
-  const titleById = useMemo(() => new Map(items.map((i) => [i.id, i.title || 'Sans titre'])), [items]);
+  // Extrémités d'une relation pour les modales (titre + statut, affichés en phrase « A bloque B »)
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const relationEnd = (id: string) => {
+    const item = itemById.get(id);
+    return { title: item?.title || 'Sans titre', status: item?.status };
+  };
 
   // Callbacks du menu dans une ref : les nœuds ne sont pas reconstruits à chaque rendu de SpacePage
   const menuRef = useRef(menuCallbacks);
@@ -210,8 +215,9 @@ function ProcessCanvas({
 
       {pendingConnection && (
         <RelationCreateDialog
-          sourceTitle={titleById.get(pendingConnection.source) ?? ''}
-          targetTitle={titleById.get(pendingConnection.target) ?? ''}
+          source={relationEnd(pendingConnection.source)}
+          target={relationEnd(pendingConnection.target)}
+          statusOptions={statuses}
           onSelect={(type, label) => {
             onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, label);
             setPendingConnection(null);
@@ -221,8 +227,9 @@ function ProcessCanvas({
       )}
       {editingEdge && (
         <RelationEditDialog
-          sourceTitle={titleById.get(editingEdge.source) ?? ''}
-          targetTitle={titleById.get(editingEdge.target) ?? ''}
+          source={relationEnd(editingEdge.source)}
+          target={relationEnd(editingEdge.target)}
+          statusOptions={statuses}
           type={editingEdge.type}
           label={editingEdge.label}
           onSave={(type, label) => {

@@ -16,11 +16,14 @@
  * sous 0,6, centrage sur le nœud espace à 0,6 pour garder les étiquettes lisibles.
  * En-tête : chaque commande sous HelpHint (textes : mindmap.help.ts → hints), pas de `title` natif.
  * Zoom au pincement du pad hors macOS : useTrackpadPinchZoom (React Flow ne compense que sur Mac).
+ * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
+ * (phrases « A bloque B » + explication du type) ; onConnect / onEdgeClick ne font qu'ouvrir ces modales.
  */
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
-import { DevModalBadge } from '../ui/DevModalBadge';
+import { RelationCreateDialog } from '../relations/RelationCreateDialog';
+import { RelationEditDialog } from '../relations/RelationEditDialog';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useTrackpadPinchZoom } from '../../hooks/useTrackpadPinchZoom';
 import {
@@ -175,23 +178,15 @@ function MindMapViewInner({
 
   const { collapsedIds, setCollapsedIds } = useCollapsedIds(spaceId ?? '');
   const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
+  // Modales de relation : RelationCreateDialog / RelationEditDialog (focus, Échap, commentaire gérés par elles)
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
-  const [pendingLabel, setPendingLabel] = useState('');
-  const [editingEdge, setEditingEdge] = useState<{ relationId: string; fromItemId: string; type: string; label: string; sourceName: string; targetName: string } | null>(null);
-  const [editEdgeType, setEditEdgeType] = useState('');
-  const [editEdgeLabel, setEditEdgeLabel] = useState('');
+  const [editingEdge, setEditingEdge] = useState<{ relationId: string; fromItemId: string; toItemId: string; type: string; label: string; sourceName: string; targetName: string } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [showPortalDialog, setShowPortalDialog] = useState(false);
-  useEscapeKey(() => setPendingConnection(null), !!pendingConnection);
-  useEscapeKey(() => { setEditingEdge(null); setEditEdgeType(''); setEditEdgeLabel(''); }, !!editingEdge);
   useEscapeKey(() => setShowPortalDialog(false), showPortalDialog);
   const [pendingPortalParentId, setPendingPortalParentId] = useState<string | null>(null);
-  // Focus des dialogues (relation : création / édition, portail) : panneau, Tab piégé, restauration
-  const createRelationDialogRef = useRef<HTMLDivElement>(null);
-  const editRelationDialogRef = useRef<HTMLDivElement>(null);
+  // Focus du dialogue de portail : panneau, Tab piégé, restauration
   const portalDialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(createRelationDialogRef, !!pendingConnection);
-  useDialogFocus(editRelationDialogRef, !!editingEdge);
   useDialogFocus(portalDialogRef, showPortalDialog && !!pendingPortalParentId);
   const { fitView, getIntersectingNodes, getNodes, getNodesBounds: getNodesBoundsHook, getNode, getZoom, setCenter } = useReactFlow();
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -898,14 +893,13 @@ function MindMapViewInner({
   );
 
   const handleRelationTypeSelect = useCallback(
-    (type: string) => {
+    (type: string, label?: string) => {
       if (pendingConnection) {
-        onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, pendingLabel || undefined);
+        onCreateRelation?.(pendingConnection.source, pendingConnection.target, type, label);
         setPendingConnection(null);
-        setPendingLabel('');
       }
     },
-    [pendingConnection, pendingLabel, onCreateRelation]
+    [pendingConnection, onCreateRelation]
   );
 
   const pendingSourceItem = pendingConnection ? items.find(i => i.id === pendingConnection.source) : null;
@@ -921,13 +915,12 @@ function MindMapViewInner({
         setEditingEdge({
           relationId: edge.data.relationId as string,
           fromItemId: edge.source,
+          toItemId: edge.target,
           type: relType,
           label: relLabel,
           sourceName: sourceItem?.title || 'Inconnu',
           targetName: targetItem?.title || 'Inconnu',
         });
-        setEditEdgeType(relType);
-        setEditEdgeLabel(relLabel);
       }
     },
     [items]
@@ -1563,128 +1556,33 @@ function MindMapViewInner({
 
       {/* Relation type selection dialog */}
       {pendingConnection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div ref={createRelationDialogRef} className="outline-none bg-white rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Type de relation <DevModalBadge name="MindMapView (créer relation)" /></h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              <span className="font-medium">{pendingSourceItem?.title}</span>
-              {' → '}
-              <span className="font-medium">{pendingTargetItem?.title}</span>
-            </p>
-            <div className="mb-3">
-              <label className="text-xs text-muted-foreground mb-1 block">Commentaire (optionnel)</label>
-              <textarea
-                value={pendingLabel}
-                onChange={e => setPendingLabel(e.target.value)}
-                placeholder="Décrivez cette relation…"
-                rows={2}
-                className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {RELATION_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => handleRelationTypeSelect(type.id)}
-                  className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors text-left group"
-                  title={type.description}
-                >
-                  <type.Icon className={`w-4 h-4 ${type.color}`} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{type.label}</span>
-                    <span className="text-[10px] text-muted-foreground">{type.description}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-            {pendingLabel && (
-              <button
-                onClick={() => handleRelationTypeSelect('relates')}
-                className="mt-2 w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Créer avec type par défaut
-              </button>
-            )}
-            <button
-              onClick={() => { setPendingConnection(null); setPendingLabel(''); }}
-              className="mt-4 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
+        <RelationCreateDialog
+          source={{ title: pendingSourceItem?.title ?? '', status: pendingSourceItem?.status }}
+          target={{ title: pendingTargetItem?.title ?? '', status: pendingTargetItem?.status }}
+          statusOptions={statuses}
+          onSelect={handleRelationTypeSelect}
+          onCancel={() => setPendingConnection(null)}
+        />
       )}
 
       {/* Edit relation dialog */}
       {editingEdge && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div ref={editRelationDialogRef} className="outline-none bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">Modifier la relation <DevModalBadge name="MindMapView (éditer relation)" /></h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              <span className="font-medium">{editingEdge.sourceName}</span>
-              {' → '}
-              <span className="font-medium">{editingEdge.targetName}</span>
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Type</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {RELATION_TYPES.map((type) => (
-                    <button
-                      key={type.id}
-                      onClick={() => setEditEdgeType(type.id)}
-                      className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-left ${
-                        editEdgeType === type.id ? 'bg-purple-50 border-purple-400 dark:bg-purple-900/30' : 'hover:bg-purple-50 hover:border-purple-300'
-                      }`}
-                    >
-                      <type.Icon className={`w-4 h-4 ${type.color}`} />
-                      <span className="text-sm font-medium">{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Commentaire</label>
-                <input
-                  type="text"
-                  value={editEdgeLabel}
-                  onChange={(e) => setEditEdgeLabel(e.target.value)}
-                  placeholder="Commentaire (optionnel)"
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-purple-400 bg-transparent"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => {
-                  onUpdateRelation?.(editingEdge.fromItemId, editingEdge.relationId, {
-                    type: editEdgeType,
-                    label: editEdgeLabel.trim() || null,
-                  });
-                  setEditingEdge(null);
-                }}
-                className="flex-1 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-              >
-                Enregistrer
-              </button>
-              <button
-                onClick={() => {
-                  onDeleteRelation?.(editingEdge.fromItemId, editingEdge.relationId);
-                  setEditingEdge(null);
-                }}
-                className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
-              >
-                Supprimer
-              </button>
-              <button
-                onClick={() => setEditingEdge(null)}
-                className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
+        <RelationEditDialog
+          source={{ title: editingEdge.sourceName, status: items.find(i => i.id === editingEdge.fromItemId)?.status }}
+          target={{ title: editingEdge.targetName, status: items.find(i => i.id === editingEdge.toItemId)?.status }}
+          statusOptions={statuses}
+          type={editingEdge.type}
+          label={editingEdge.label}
+          onSave={onUpdateRelation ? (type, label) => {
+            onUpdateRelation(editingEdge.fromItemId, editingEdge.relationId, { type, label: label || null });
+            setEditingEdge(null);
+          } : undefined}
+          onDelete={onDeleteRelation ? () => {
+            onDeleteRelation(editingEdge.fromItemId, editingEdge.relationId);
+            setEditingEdge(null);
+          } : undefined}
+          onCancel={() => setEditingEdge(null)}
+        />
       )}
 
       {/* Portal selection dialog */}
