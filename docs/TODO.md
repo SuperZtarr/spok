@@ -82,7 +82,8 @@
 - [x] Vue Process (chantier A) : canevas libre par espace, positions partagées (process_nodes), panneau « Non placés », double-clic = note, liens via la modale de relation — 2026-10-20 (d956e91)
 - [ ] Vue Process — chantier B : modèles qui retiennent le process (relations, durées, disposition) — à brainstormer
 - [ ] Vue Process — chantier C : instanciation d'un modèle avec date de départ, dates calculées le long des liens
-- [ ] Modales de relation : migrer MindMap / PERT / Gantt sur RelationCreateDialog / RelationEditDialog (copies inline aujourd'hui)
+- [x] Modales de relation : MindMap / PERT / Gantt / Process sur RelationCreateDialog / RelationEditDialog (phrases du PERT + explication du type) — 2026-10-20 (ece92a6)
+- [ ] Modale « Modifier la relation » d'ItemEditModal : passer aussi sur RelationEditDialog
 - [ ] Migrations Prisma versionnées (remplacer `db push --accept-data-loss` de start-api.sh, baseline prod) — préalable aux contraintes CHECK (Tag/Reaction/Invitation XOR, PERSONAL ⇔ sans communauté) et à la FK refresh_tokens → users
 - [ ] Modale de fusion : ne proposer comme cibles que les items que l'utilisateur peut gérer (aujourd'hui : cible étrangère → 403 API)
 - [x] Séances : nom de l'espace préfixé « Séance » (nouvelle séance et suite, séances existantes non renommées) — 2026-10-15 (f92a183)
