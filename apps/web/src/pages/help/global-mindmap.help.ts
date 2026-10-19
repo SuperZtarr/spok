@@ -10,7 +10,6 @@ export const help: HelpEntry = {
     'Glissez un espace sur un autre pour le ranger dessous, sur une communauté pour l\'y rattacher à la racine',
     'Pendant le glisser, la cible pulse en vert et une étiquette dit ce qui va se passer ; en rouge, le dépôt est refusé (avec la raison)',
     'Il faut être propriétaire de l\'espace déplacé et pouvoir écrire dans la destination ; un refus s\'affiche en haut de la carte',
-    'Un espace qui a des sous-espaces ne change pas de communauté : déplacez d\'abord ses sous-espaces',
     '« Réorganiser » replace tous les nœuds automatiquement',
   ],
   tour: [

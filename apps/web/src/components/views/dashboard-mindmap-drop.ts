@@ -6,8 +6,8 @@
  *  - 'invalid' : dépôt refusé, avec la raison affichée pendant le survol (cible en rouge).
  * Les ids sont ceux des nœuds de la carte (space-…, community-…, personal, independent) ; entityId = id réel.
  * Garde-fous alignés sur PATCH /spaces/:id : espace personnel jamais imbriqué ni rattaché, parent = espace de groupe,
- * pas de cycle. Changer de communauté un espace qui a des sous-espaces est refusé : l'API ne déplace pas la
- * communauté des descendants (ils resteraient dans l'ancienne).
+ * pas de cycle. Changer de communauté un espace qui a des sous-espaces est permis : l'API embarque les
+ * descendants dans la nouvelle communauté (même transaction).
  */
 
 export interface DropTreeNode {
@@ -73,9 +73,6 @@ export function resolveSpaceDrop(root: DropTreeNode, draggedId: string, targetId
   // Communauté de destination : celle de la cible (communauté, ou groupe de l'espace cible)
   const destGroup = t.type === 'space' ? target.group : t;
   const changesCommunity = destGroup?.id !== dragged.group?.id;
-  if (changesCommunity && d.children.length > 0) {
-    return { kind: 'invalid', label: `Impossible : déplacez d'abord les sous-espaces de « ${d.name} » (changement de communauté)` };
-  }
 
   if (t.type === 'space') {
     if (!t.entityId) return null;

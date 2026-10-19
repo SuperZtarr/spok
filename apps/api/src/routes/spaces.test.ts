@@ -692,6 +692,53 @@ describe('Spaces routes', () => {
         where: { id: { in: ['child-1', 'grandchild-1'] } },
         data: { communityId: 'com-new' },
       })
+      // Espace + descendants écrits dans la même transaction (tout ou rien)
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1)
+    })
+
+    it('cascade la communauté héritée du nouveau parent aux descendants', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ ...mockMembership({ role: 'OWNER' }), space: mockSpace() })
+      prisma.space.findUnique.mockImplementation(({ where }: { where: { id: string } }) =>
+        Promise.resolve(where.id === 'parent-new'
+          ? mockSpace({ id: 'parent-new', type: 'GROUP', communityId: 'com-new', parentId: null })
+          : mockSpace({ communityId: 'com-old', parentId: null })))
+      prisma.communityMembership.findUnique.mockResolvedValue({ userId: USER_ID, communityId: 'com-new' })
+      prisma.space.findMany.mockResolvedValueOnce([{ id: 'child-1' }]).mockResolvedValueOnce([])
+      prisma.space.update.mockResolvedValue(mockSpace({ parentId: 'parent-new', communityId: 'com-new' }))
+      prisma.space.updateMany.mockResolvedValue({ count: 1 })
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { parentId: 'parent-new' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.space.update.mock.calls[0][0].data).toMatchObject({ parentId: 'parent-new', communityId: 'com-new' })
+      expect(prisma.space.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['child-1'] } },
+        data: { communityId: 'com-new' },
+      })
+    })
+
+    it('refuse de déplacer vers une communauté dont on n\'est pas membre, sans toucher aux descendants', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'USER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ ...mockMembership({ role: 'OWNER' }), space: mockSpace() })
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-old', parentId: null }))
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { communityId: 'com-new' },
+      })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.space.update).not.toHaveBeenCalled()
+      expect(prisma.space.updateMany).not.toHaveBeenCalled()
     })
 
     it('ne touche pas les descendants si communityId ne change pas', async () => {

@@ -14,6 +14,8 @@
  * GET / (sidebar) : espaces non-membre filtrés sur la visibilité EFFECTIVE (keepVisibleWithRole) — jamais
  * sur la visibilité propre seule, sinon un sous-espace d'un parent privé fuit dans la liste.
  * PATCH /:id : isSpaceOwnerOrAdmin comme le reste de la gestion — un admin global hors mode admin est refusé.
+ * Changement de communauté (explicite ou hérité du nouveau parent) : appliqué à tous les sous-espaces
+ * descendants, dans la même transaction que l'espace (membre de la communauté cible requis hors mode admin).
  * Espace PRIVATE (visibilité effective) : réservé aux membres directs et à l'admin — GET /:id et
  * /:id/members passent par checkSpaceAccess (READONLY → rôle VIEWER), /:id/join réservé aux espaces
  * OUVERTS (hors propriétaire de communauté / mode admin), création d'un sous-espace ou rattachement
@@ -726,31 +728,36 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         descendantIds = await collectDescendantSpaces(request.params.id);
       }
 
-      const updatedSpace = await fastify.prisma.space.update({
-        where: { id: request.params.id },
-        data: updateData,
-        include: {
-          community: {
-            select: {
-              id: true,
-              name: true,
+      // Espace + descendants en une transaction : jamais d'arbre à moitié déplacé entre deux communautés
+      const updatedSpace = await fastify.prisma.$transaction(async (tx) => {
+        const updated = await tx.space.update({
+          where: { id: request.params.id },
+          data: updateData,
+          include: {
+            community: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            parent: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
-          parent: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (descendantIds.length > 0) {
-        await fastify.prisma.space.updateMany({
-          where: { id: { in: descendantIds } },
-          data: { communityId: communityIdOverride },
         });
-      }
+
+        if (descendantIds.length > 0) {
+          await tx.space.updateMany({
+            where: { id: { in: descendantIds } },
+            data: { communityId: communityIdOverride },
+          });
+        }
+
+        return updated;
+      });
 
       return updatedSpace;
     }

@@ -51,10 +51,9 @@ describe('resolveSpaceDrop', () => {
     expect(resolveSpaceDrop(tree, 'space-a2', 'personal')).toMatchObject({ kind: 'invalid' });
   });
 
-  it('refuse de changer de communauté un espace qui a des sous-espaces', () => {
-    expect(resolveSpaceDrop(tree, 'space-a1', 'community-B')).toMatchObject({ kind: 'invalid' });
-    expect(resolveSpaceDrop(tree, 'space-a1', 'space-i1')).toMatchObject({ kind: 'invalid' });
-    // même communauté : autorisé
+  it('change de communauté un espace qui a des sous-espaces (l\'API les embarque)', () => {
+    expect(resolveSpaceDrop(tree, 'space-a1', 'community-B')).toMatchObject({ kind: 'move', spaceId: 'a1', parentId: null, communityId: 'B' });
+    expect(resolveSpaceDrop(tree, 'space-a1', 'space-i1')).toMatchObject({ kind: 'move', spaceId: 'a1', parentId: 'i1' });
     expect(resolveSpaceDrop(tree, 'space-a1', 'space-a2')).toMatchObject({ kind: 'move', parentId: 'a2' });
   });
 });
