@@ -28,6 +28,7 @@ erDiagram
     Item ||--o{ ItemTag : "item"
     Item ||--o{ ItemView : "item"
     Item |o--o{ LiveSessionEntry : "item"
+    Item ||--o{ ProcessNode : "item"
     Item |o--o{ Reaction : "item"
     LiveSession |o--o| LiveSession : "previousSession"
     LiveSession ||--o{ LiveSessionAgendaItem : "session"
@@ -37,6 +38,7 @@ erDiagram
     Space |o--o{ AuditLog : "space"
     Space |o--o{ Invitation : "space"
     Space ||--o{ Item : "space"
+    Space ||--o{ ProcessNode : "space"
     Space ||--o{ LiveSession : "parentSpace"
     Space ||--o| LiveSession : "space"
     Space |o--o{ Space : "parent"
@@ -526,6 +528,25 @@ Révocation = revokedAt non null (jamais de suppression physique : traçabilité
 Clés étrangères : `userId` → User (onDelete Cascade)
 
 Index : (userId)
+
+### ProcessNode (`process_nodes`)
+
+Position d'un item sur le canevas de la vue Process de son espace (2026-10-20). Une ligne = item placé ; absence de ligne = item « non placé ». Partagé entre membres.
+
+| Champ | Type | Contraintes | Note |
+|---|---|---|---|
+| `id` | String | PK, défaut cuid() |  |
+| `spaceId` | String | FK |  |
+| `itemId` | String | FK |  |
+| `x` | Float |  |  |
+| `y` | Float |  |  |
+| `updatedAt` | DateTime | updatedAt |  |
+
+Clés étrangères : `spaceId` → Space (onDelete Cascade) ; `itemId` → Item (onDelete Cascade)
+
+Unicité : (spaceId, itemId)
+
+Index : (spaceId)
 
 ### Reaction (`reactions`)
 

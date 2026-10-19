@@ -41,6 +41,7 @@ export const VIEW_REGISTRY: ViewDefinition[] = [
   { id: 'burndown', label: 'Burndown',       icon: 'TrendingDown',category: 'planning', order: 5, visible: true, access: 'admin'   },
   { id: 'cfd',      label: 'Flux cumulatif', icon: 'Layers',      category: 'planning', order: 6, visible: true, access: 'admin'   },
   { id: 'priority', label: 'Priorités',      icon: 'Flame',       category: 'planning', order: 7, visible: true, access: 'user'   },
+  { id: 'process',  label: 'Process',        icon: 'Workflow',    category: 'planning', order: 8, visible: true, access: 'user'   },
 
   // ── exploration ──
   { id: 'mindmap',    label: 'Carte mentale', icon: 'Share2',     category: 'exploration', order: 0, visible: true, access: 'public' },

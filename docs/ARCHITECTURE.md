@@ -73,6 +73,7 @@ const mutation = useMutation({
 | `useSpaces()` | `['spaces']` | Liste des espaces |
 | `useReferentiels(spaceId)` | `['referentiels', spaceId]` | Statuts/types configurés |
 | `useMenuItems()` | `['menu-items']` | Items de navigation |
+| `useProcessNodes(spaceId)` | `['process-nodes', spaceId]` | Positions du canevas de la vue Process ; `place` / `remove` optimistes (retirer ≠ supprimer l'item) |
 | `useLiveSession(spaceId, { stream })` | `['live-session', spaceId]` | Séance live d'un espace de séance (404 = pas une séance). Flux SSE (`lib/liveStream.ts`) seulement avec `stream: true` — réservé à `LiveSessionHost` (un flux par onglet) ; événements appliqués sur le cache, refetch à chaque reconnexion |
 
 ---

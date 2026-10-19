@@ -34,6 +34,7 @@ import { help as thread } from './thread.help';
 import { help as images } from './images.help';
 import { help as recent } from './recent.help';
 import { help as pert } from './pert.help';
+import { help as processHelp } from './process.help';
 
 export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   overview: overview,
@@ -68,4 +69,5 @@ export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   images: images,
   recent: recent,
   pert: pert,
+  process: processHelp,
 };

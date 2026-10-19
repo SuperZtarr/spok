@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'process-canvas',
+    page: 'Espace → vue Process',
+    trigger: 'Poser, déplacer ou retirer un item du canevas ; double-clic sur le vide',
+    effect: "Un seul process par espace, positions partagées entre membres (table process_nodes) et jamais recalculées. Seuls les items de l'espace courant (pas ceux des sous-espaces inclus). « Retirer du process » renvoie l'item dans le panneau sans le supprimer ; supprimer l'item le retire du canevas. Double-clic sur le vide = nouvelle NOTE posée à cet endroit. Relier deux items crée une vraie relation (visible dans les autres vues). VIEWER : lecture seule",
+    location: 'apps/web/src/components/views/ProcessView.tsx, apps/web/src/hooks/useProcessNodes.ts, apps/api/src/routes/process-nodes.ts',
+  },
+  {
     id: 'personal-token-shown-once',
     page: 'Profil utilisateur',
     trigger: "Création d'un jeton d'accès Claude (MCP distant)",

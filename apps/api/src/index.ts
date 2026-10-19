@@ -8,6 +8,7 @@
  * rate-limit : les sous-requêtes internes du MCP distant (x-spok-internal) en sont exemptées ; /mcp a sa propre
  * limite (120/min/jeton). requestContextPlugin : contexte d'audit (origine MCP) des sous-requêtes internes.
  * multipart : plafond = DOCUMENT_MAX_SIZE (@spok/shared, règles d'envoi partagées web/API).
+ * /spaces/:id/process-nodes : positions des items sur le canevas de la vue Process (routes/process-nodes.ts).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -70,6 +71,7 @@ import { itemTemplatesRoutes } from './routes/item-templates.js';
 import { activityRoutes } from './routes/activity.js';
 import { urlMetaRoutes } from './routes/url-meta.js';
 import { spacePreferencesRoutes } from './routes/space-preferences.js';
+import { processNodesRoutes } from './routes/process-nodes.js';
 import { liveSessionsRoutes } from './routes/live-sessions.js';
 
 const envToLogger = {
@@ -311,6 +313,7 @@ async function buildApp() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(spacesRoutes, { prefix: '/spaces' });
   await app.register(spacePreferencesRoutes, { prefix: '/spaces' });
+  await app.register(processNodesRoutes, { prefix: '/spaces' });
   await app.register(communitiesRoutes, { prefix: '/communities' });
   await app.register(invitationsRoutes, { prefix: '/invitations' });
   await app.register(adminUsersRoutes, { prefix: '/admin/users' });

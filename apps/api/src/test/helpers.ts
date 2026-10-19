@@ -67,6 +67,7 @@ export function createMockPrisma() {
     personalAccessToken: mockModel(),
     dayPlanEntry: mockModel(),
     itemTemplate: mockModel(),
+    processNode: mockModel(),
     liveSession: mockModel(),
     liveSessionRole: mockModel(),
     liveSessionEntry: mockModel(),

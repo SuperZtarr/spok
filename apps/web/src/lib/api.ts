@@ -3,6 +3,7 @@
  * ne pas simplifier, cf. zones fragiles CLAUDE.md) + tous les endpoints groupés par domaine.
  * Uploads de fichiers : toujours via uploadFile (passe par fetchApi → header admin + refresh).
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
+ * processApi : positions du canevas de la vue Process (via hooks/useProcessNodes, pas d'appel direct dans les vues).
  */
 import type {
   AuthResponse,
@@ -888,6 +889,21 @@ export const communitiesApi = {
       method: 'PATCH',
       body: JSON.stringify({ muted }),
     }),
+};
+
+// Vue Process : positions des items sur le canevas de l'espace (routes/process-nodes.ts)
+export const processApi = {
+  list: (spaceId: string) =>
+    fetchApi<Array<{ itemId: string; x: number; y: number }>>(`/spaces/${spaceId}/process-nodes`),
+
+  place: (spaceId: string, itemId: string, x: number, y: number) =>
+    fetchApi<{ itemId: string; x: number; y: number }>(`/spaces/${spaceId}/process-nodes/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ x, y }),
+    }),
+
+  remove: (spaceId: string, itemId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/process-nodes/${itemId}`, { method: 'DELETE' }),
 };
 
 // Items

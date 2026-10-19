@@ -97,6 +97,7 @@ model Space {
 
   memberships SpaceMembership[]
   items       Item[]
+  processNodes ProcessNode[]
   tags        Tag[]
   auditLogs   AuditLog[]
   invitations Invitation[]
@@ -355,6 +356,7 @@ model Item {
   views         ItemView[]
   dayPlanEntries DayPlanEntry[]
   liveSessionEntries LiveSessionEntry[]
+  processNodes  ProcessNode[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -362,6 +364,23 @@ model Item {
   @@index([parentId])
   @@index([sourceItemId])
   @@map("items")
+}
+
+// Position d'un item sur le canevas de la vue Process de son espace (2026-10-20).
+// Une ligne = item placé ; absence de ligne = item « non placé ». Partagé entre membres.
+model ProcessNode {
+  id        String   @id @default(cuid())
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  x         Float
+  y         Float
+  updatedAt DateTime @updatedAt
+
+  @@unique([spaceId, itemId])
+  @@index([spaceId])
+  @@map("process_nodes")
 }
 
 enum ItemType {

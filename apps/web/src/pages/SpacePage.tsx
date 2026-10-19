@@ -1,5 +1,7 @@
 /**
  * Page principale d'un espace (vues : liste, kanban, timeline, mindmap, etc.).
+ * Vue Process : reçoit les seuls items de l'espace courant (pas ceux des sous-espaces inclus — les positions
+ * process_nodes sont par espace) et onCreateNote (double-clic sur le canevas = NOTE vide + modale).
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
@@ -75,6 +77,7 @@ import { DocumentsView } from '../components/views/DocumentsView';
 import { BugsView } from '../components/views/BugsView';
 import { TodoView } from '../components/views/TodoView';
 import { PertView } from '../components/views/PertView';
+import { ProcessView } from '../components/views/ProcessView';
 import { OverviewView } from '../components/views/OverviewView';
 import { RecentChangesView } from '../components/views/RecentChangesView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
@@ -264,7 +267,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   }, [spaceId, includeChildrenSpaceIds, communitySpaces]);
 
   // View mode categorization
-  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert';
+  const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert' || viewMode === 'process';
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'bugs' || viewMode === 'todo';
   const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
@@ -336,6 +339,11 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     queryFn: () => itemsApi.list(spaceId!, { pageSize: 5000, include: 'contributions', additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined }),
     enabled: !!spaceId && (viewMode === 'text' || viewMode === 'thread'),
   });
+
+  // Vue Process : items de l'espace courant seulement (positions par espace) — mémorisés pour ne pas
+  // reconstruire les nœuds du canevas (et annuler un glisser en cours) à chaque rendu de la page
+  const processItems = useMemo(() => (allItemsData?.data || []).filter((item: Item) => item.spaceId === spaceId), [allItemsData?.data, spaceId]);
+  const allRelations = useMemo(() => (allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || []), [allItemsData?.data]);
 
   // All items for lookups (allItemsData preferred, fallback to itemsData)
   const allItems = useMemo(() => allItemsData?.data || itemsData?.data || [], [allItemsData?.data, itemsData?.data]);
@@ -940,6 +948,38 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               pulseHelp={pulseHelp}
               treeSort={treeSort}
               onTreeSortChange={setTreeSort}
+            />
+          ) : viewMode === 'process' ? (
+            <ProcessView
+              items={processItems}
+              relations={allRelations}
+              spaceId={spaceId!}
+              referentiels={referentiels}
+              canEdit={canEdit}
+              canEditItem={canEditItem}
+              highlightType={activeTypeFilter}
+              highlightStatus={activeStatusFilter}
+              searchMatchIds={searchMatchIds}
+              onEdit={setEditingItemId}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
+              onOpen={actions.handleOpen}
+              onOpenInNewTab={actions.handleOpenInNewTab}
+              onCreateRelation={actions.handleCreateRelation}
+              onUpdateRelation={actions.handleUpdateRelation}
+              onDeleteRelation={actions.handleDeleteRelation}
+              onNewItem={canEdit ? handleNewItem : undefined}
+              onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'NOTE', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
             />
           ) : viewMode === 'pert' ? (
             <PertView

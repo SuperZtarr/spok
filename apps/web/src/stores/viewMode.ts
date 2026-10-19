@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { VIEW_REGISTRY } from '@spok/shared';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'bugs' | 'thread' | 'overview' | 'todo' | 'recent' | 'pert';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'bugs' | 'thread' | 'overview' | 'todo' | 'recent' | 'pert' | 'process';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 
