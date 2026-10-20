@@ -10,6 +10,7 @@ export const help: HelpEntry = {
     'Lancée depuis un espace, la recherche se limite à cet espace : « Toute la communauté » ou « Partout » pour élargir',
     'Les filtres d\'éléments (type, statut, tag) ne gardent que les éléments et les contributions',
     'Les éléments sont regroupés par communauté et par espace',
+    'Sur téléphone, les filtres sont repliés derrière le bouton « Filtres » (le chiffre = filtres actifs) et les catégories défilent sur une ligne',
   ],
   tour: [
     {
@@ -46,7 +47,7 @@ export const help: HelpEntry = {
       element: '[data-tour="search-filters"]',
       popover: {
         title: 'Filtres',
-        description: 'Communauté, espace, type, statut, tag (les tags d\'un espace choisi). Un filtre d\'élément ne garde que les éléments et les contributions.',
+        description: 'Communauté, espace, type, statut, tag (les tags d\'un espace choisi). Un filtre d\'élément ne garde que les éléments et les contributions. Sur téléphone, touchez « Filtres » pour les déplier.',
         side: 'bottom',
       },
     },

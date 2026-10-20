@@ -9,11 +9,15 @@
  * Contributions (itemFiltersActive). Tags = ceux de l'espace choisi (les tags sont propres à un espace).
  * Items et contributions regroupés sous des en-têtes « Communauté › Espace » (groupBySpace) : l'API les trie
  * dans cet ordre, les groupes sont donc consécutifs — ne pas retrier côté client.
+ * Mobile (< sm) : seul le champ de saisie reste collé (l'en-tête passe en `contents` pour que le collage vaille
+ * sur toute la page), types sur une ligne défilante, filtres repliés derrière « Filtres » (filtersOpen).
+ * Desktop : tout l'en-tête reste collé, filtres toujours dépliés. Ne pas recoller tout l'en-tête en mobile :
+ * il prenait 70 % de l'écran et masquait les résultats.
  */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, ChevronDown, Tag, SlidersHorizontal } from 'lucide-react';
 import { ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES } from '@spok/shared';
 import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
@@ -101,6 +105,8 @@ export function SearchPage() {
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
 
   const [search, setSearch] = useState(qParam);
+  // Mobile seulement : filtres repliés par défaut (desktop : toujours dépliés, cf. sm:flex)
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const searchRef = useRef(search);
   searchRef.current = search;
 
@@ -202,6 +208,7 @@ export function SearchPage() {
 
   // Sections réellement affichées : les filtres d'items ne laissent que Items et Contributions
   const itemFiltersActive = !!(itemTypeParam || itemStatusParam || tagIdsParam);
+  const activeFilterCount = [effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam].filter(Boolean).length;
   const shownTypes = useMemo(
     () => [...enabledTypes].filter((t) => !itemFiltersActive || ITEM_FILTER_SECTIONS.has(t)),
     [enabledTypes, itemFiltersActive],
@@ -241,17 +248,18 @@ export function SearchPage() {
     ) : null;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto w-full">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full">
+      {/* Header — collé en entier sur desktop ; en mobile `contents` : seul le champ ci-dessous se colle */}
+      <div className="contents sm:block sm:sticky sm:top-0 sm:z-10 sm:bg-background sm:pb-4 sm:-mx-6 sm:px-6 sm:-mt-6 sm:pt-6">
         <div className="flex items-center gap-2 mb-1">
-          <h1 className="text-2xl font-bold">Recherche avancée</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Recherche avancée</h1>
           <div className="ml-auto"><PageHelpButton pageKey="search" /></div>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">Recherchez dans les communautes, espaces, items, utilisateurs et contributions</p>
+        <p className="hidden sm:block text-sm text-muted-foreground mb-4">Recherchez dans les communautes, espaces, items, utilisateurs et contributions</p>
 
-        {/* Search input */}
-        <div className="relative mb-4" data-tour="search-input">
+        {/* Search input — seul élément collé en mobile */}
+        <div className="sticky top-0 z-10 bg-background -mx-4 px-4 py-2 mb-2 sm:static sm:z-auto sm:mx-0 sm:px-0 sm:py-0 sm:mb-4">
+        <div className="relative" data-tour="search-input">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             value={search}
@@ -265,6 +273,7 @@ export function SearchPage() {
               <X className="w-5 h-5" />
             </button>
           )}
+        </div>
         </div>
 
         {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
@@ -301,12 +310,13 @@ export function SearchPage() {
         )}
 
         {/* Entity type toggles */}
-        <div className="flex flex-wrap gap-2 mb-4" data-tour="search-types">
+        {/* Mobile : une seule ligne défilante ; desktop : retour à la ligne */}
+        <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 sm:mb-4 overflow-x-auto no-scrollbar sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0" data-tour="search-types">
           {ENTITY_TYPES.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => toggleType(key)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 enabledTypes.has(key)
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted'
@@ -325,8 +335,22 @@ export function SearchPage() {
           ))}
         </div>
 
-        {/* Scope filters */}
-        <div className="flex flex-wrap gap-3" data-tour="search-filters">
+        {/* Scope filters — repliés en mobile derrière « Filtres », toujours dépliés sur desktop */}
+        <div data-tour="search-filters">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(o => !o)}
+          aria-expanded={filtersOpen}
+          className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-sm text-muted-foreground hover:bg-muted"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Filtres
+          {activeFilterCount > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">{activeFilterCount}</span>
+          )}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+        </button>
+        <div className={`${filtersOpen ? 'flex' : 'hidden'} sm:flex flex-wrap gap-3 mt-3 sm:mt-0`}>
           {user && communities && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-muted-foreground">Communaute :</label>
@@ -386,6 +410,7 @@ export function SearchPage() {
               />
             </div>
           )}
+        </div>
         </div>
         {itemFiltersActive && shownTypes.length < enabledTypes.size && (
           <p className="mt-2 text-xs text-muted-foreground">
