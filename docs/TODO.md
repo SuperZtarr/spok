@@ -80,6 +80,7 @@
 - [x] Modèle de données en Mermaid : `docs/MODELE-DONNEES.md` (diagramme des relations, tables, enums ; généré depuis schema.prisma, rendu Mermaid vérifié) — 2026-10-16 (commité avec la doc le 2026-10-20)
 - [x] Prod : statuts vides passés à NULL (323 éléments, transaction, recompte 0) — 2026-10-20, accord Thomas
 - [x] Vue Process (chantier A) : canevas libre par espace, positions partagées (process_nodes), panneau « Non placés », double-clic = note, liens via la modale de relation — 2026-10-20 (d956e91)
+- [x] Vue Process : panneau « Non placés » en arborescence + bouton « Réorganiser en processus » (rangs PERT en colonnes, PUT groupé) — 2026-10-21 (582bcc5)
 - [ ] Vue Process — chantier B : modèles qui retiennent le process (relations, durées, disposition) — à brainstormer
 - [ ] Vue Process — chantier C : instanciation d'un modèle avec date de départ, dates calculées le long des liens
 - [x] Modales de relation : MindMap / PERT / Gantt / Process sur RelationCreateDialog / RelationEditDialog (phrases du PERT + explication du type) — 2026-10-20 (ece92a6)
