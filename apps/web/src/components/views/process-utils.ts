@@ -17,8 +17,11 @@ import { buildPertGraph, computePertRanks } from './pert-utils';
 
 /** Position d'un nœud : laneId null/absent = libre (x/y absolus) ; sinon x/y relatifs au couloir. */
 export type ProcessPosition = { itemId: string; x: number; y: number; laneId?: string | null };
-/** Couloir : bande nommée par un item (itemId), position = ordre d'empilement de haut en bas. */
-export type ProcessLane = { id: string; itemId: string; position: number };
+/**
+ * Couloir : bande nommée par un item (itemId), position = ordre d'empilement de haut en bas.
+ * x/y : position libre (couloir déplacé à la main) ; null/absent = empilé automatiquement.
+ */
+export type ProcessLane = { id: string; itemId: string; position: number; x?: number | null; y?: number | null };
 export type PlacedItem = { item: Item; x: number; y: number; laneId?: string | null };
 
 export function splitPlaced(
@@ -38,6 +41,104 @@ export function splitPlaced(
   return { placed, unplaced };
 }
 
+// ── Voies des flèches (2026-10-21) ──
+// Le tracé à angles droits tourne par défaut à mi-chemin : une flèche qui saute des colonnes tombait dans la voie
+// verticale d'une autre et s'y superposait. Ici, chaque flèche « vers l'avant » tourne juste avant la colonne de sa
+// cible, et les flèches qui arrivent dans une même colonne reçoivent chacune leur voie (décalées de EDGE_CHANNEL_STEP).
+export const EDGE_CHANNEL_MARGIN = 24;
+export const EDGE_CHANNEL_STEP = 10;
+
+export type NodeBox = { x: number; y: number; width: number; height: number };
+
+/** Marge autour d'un item qu'une voie horizontale ne doit pas traverser ; écart entre deux voies horizontales. */
+const EDGE_OBSTACLE_PAD = 6;
+const EDGE_CORRIDOR_OFFSET = 14;
+
+/**
+ * Routage des flèches vers l'avant (sources à gauche des cibles) :
+ * - voie verticale « tardive » cx propre à la flèche, juste avant la colonne cible (groupée par colonne cible) ;
+ * - voie verticale « précoce » ex, juste après la colonne source (groupée par colonne source) ;
+ * - tronçon horizontal choisi parmi : ligne de départ [sx → cx] (data.centerX = cx), ligne de la cible
+ *   [ex → tx] (data.centerX = ex), sinon voie de contournement à une hauteur libre [ex → cx] (data.corridor =
+ *   { ex, y, cx }) — le premier qui ne traverse aucun autre item (marge EDGE_OBSTACLE_PAD) ni un tronçon horizontal
+ *   déjà pris. Les flèches vers l'arrière ou entre colonnes collées gardent le tracé par défaut.
+ */
+export function assignEdgeChannels<E extends { source: string; target: string; data?: Record<string, unknown> }>(
+  edges: E[],
+  boxes: Map<string, NodeBox>,
+  /** Boîtes à contourner (par défaut toutes) ; la vue exclut les couloirs, qui englobent leurs items */
+  isObstacle: (nodeId: string) => boolean = () => true,
+): E[] {
+  type Routed = { edge: E; sx: number; tx: number; sy: number; ty: number; cx: number; ex: number };
+  const forward: Routed[] = [];
+  for (const edge of edges) {
+    const s = boxes.get(edge.source);
+    const t = boxes.get(edge.target);
+    if (!s || !t) continue;
+    const sx = s.x + s.width;
+    const tx = t.x;
+    if (tx - sx < 2 * EDGE_CHANNEL_MARGIN) continue; // vers l'arrière ou colonnes collées : tracé par défaut
+    forward.push({ edge, sx, tx, sy: s.y + s.height / 2, ty: t.y + t.height / 2, cx: 0, ex: 0 });
+  }
+
+  // Voies verticales : tardive par colonne cible, précoce par colonne source (ordre de haut en bas)
+  const assignVertical = (keyOf: (r: Routed) => number, set: (r: Routed, k: number) => void) => {
+    const groups = new Map<number, Routed[]>();
+    for (const r of forward) {
+      const key = keyOf(r);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(r);
+    }
+    for (const group of groups.values()) {
+      group.sort((a, b) => a.ty - b.ty || a.sy - b.sy);
+      group.forEach((r, k) => set(r, k));
+    }
+  };
+  assignVertical((r) => Math.round(r.tx / 20), (r, k) => {
+    r.cx = Math.max(r.tx - EDGE_CHANNEL_MARGIN - k * EDGE_CHANNEL_STEP, r.sx + EDGE_CHANNEL_MARGIN);
+  });
+  assignVertical((r) => Math.round(r.sx / 20), (r, k) => {
+    r.ex = Math.min(r.sx + EDGE_CHANNEL_MARGIN + k * EDGE_CHANNEL_STEP, r.tx - EDGE_CHANNEL_MARGIN);
+  });
+
+  const allBoxes = [...boxes.entries()].filter(([id]) => isObstacle(id));
+  const taken: Array<{ y: number; x1: number; x2: number }> = [];
+  const overlaps = (a1: number, a2: number, b1: number, b2: number) => Math.min(a2, b2) - Math.max(a1, b1) > 1;
+  /** Tronçon horizontal [x1, x2] à la hauteur y libre : aucun autre item traversé, aucune voie déjà prise. */
+  const isFree = (r: Routed, y: number, x1: number, x2: number) =>
+    !allBoxes.some(([id, b]) => id !== r.edge.source && id !== r.edge.target
+      && overlaps(x1, x2, b.x, b.x + b.width) && y > b.y - EDGE_OBSTACLE_PAD && y < b.y + b.height + EDGE_OBSTACLE_PAD)
+    && !taken.some((t) => Math.abs(t.y - y) < EDGE_CHANNEL_STEP / 2 + 1 && overlaps(x1, x2, t.x1, t.x2));
+
+  const routes = new Map<E, Record<string, unknown>>();
+  // Les plus courtes d'abord : elles gardent les tracés directs, les longues contournent
+  for (const r of [...forward].sort((a, b) => (a.tx - a.sx) - (b.tx - b.sx))) {
+    if (isFree(r, r.sy, r.sx, r.cx)) {
+      taken.push({ y: r.sy, x1: r.sx, x2: r.cx });
+      routes.set(r.edge, { centerX: r.cx });
+      continue;
+    }
+    if (isFree(r, r.ty, r.ex, r.tx)) {
+      taken.push({ y: r.ty, x1: r.ex, x2: r.tx });
+      routes.set(r.edge, { centerX: r.ex });
+      continue;
+    }
+    // Contournement : hauteurs libres juste au-dessus / au-dessous des items gênants, la plus proche du milieu
+    const middle = (r.sy + r.ty) / 2;
+    const candidates = allBoxes
+      .filter(([, b]) => overlaps(r.ex, r.cx, b.x, b.x + b.width))
+      .flatMap(([, b]) => [b.y - EDGE_CORRIDOR_OFFSET, b.y + b.height + EDGE_CORRIDOR_OFFSET])
+      .flatMap((y) => [y, y - EDGE_CHANNEL_STEP, y + EDGE_CHANNEL_STEP, y - 2 * EDGE_CHANNEL_STEP, y + 2 * EDGE_CHANNEL_STEP])
+      .sort((a, b) => Math.abs(a - middle) - Math.abs(b - middle));
+    const y = candidates.find((c) => isFree(r, c, r.ex, r.cx));
+    if (y === undefined) { routes.set(r.edge, { centerX: r.cx }); continue; }
+    taken.push({ y, x1: r.ex, x2: r.cx });
+    routes.set(r.edge, { corridor: { ex: r.ex, y, cx: r.cx } });
+  }
+
+  return edges.map((e) => (routes.has(e) ? { ...e, data: { ...e.data, ...routes.get(e) } } : e));
+}
+
 // ── Géométrie des couloirs ──
 // Couloirs empilés à partir de (0, 0), tous de la même largeur ; un membre est positionné relativement à son
 // couloir, ses colonnes commencent après la bande de titre (LANE_CONTENT_X).
@@ -47,12 +148,16 @@ export const LANE_HEADER_WIDTH = 150;
 export const LANE_PADDING = 24;
 export const LANE_GAP = 16;
 export const LANE_MIN_HEIGHT = 110;
+/** Couloir replié : boîte réduite en hauteur et en longueur (titre seul, items masqués) — bloc « sous-processus ». */
+export const LANE_COLLAPSED_HEIGHT = 44;
+export const LANE_COLLAPSED_WIDTH = LANE_HEADER_WIDTH + 40;
 export const LANE_MIN_WIDTH = 1200;
 /** Abscisse de la première colonne, dans un couloir comme hors couloir (colonnes alignées). */
 export const LANE_CONTENT_X = LANE_HEADER_WIDTH + LANE_PADDING;
 
 export type LaneLayout = {
-  lanes: Array<{ id: string; itemId: string; y: number; height: number }>;
+  /** width : largeur commune, ou LANE_COLLAPSED_WIDTH pour un couloir replié */
+  lanes: Array<{ id: string; itemId: string; x: number; y: number; height: number; width: number; collapsed: boolean }>;
   width: number;
   /** Bas du dernier couloir (0 sans couloir). */
   bottom: number;
@@ -61,6 +166,7 @@ export type LaneLayout = {
 export function computeLaneLayout(
   lanes: ProcessLane[],
   nodes: Array<{ x: number; y: number; laneId?: string | null }>,
+  collapsedIds: Set<string> = new Set(),
 ): LaneLayout {
   const sorted = [...lanes].sort((a, b) => a.position - b.position);
   const members = nodes.filter((n) => n.laneId);
@@ -69,35 +175,67 @@ export function computeLaneLayout(
   let bottom = 0;
   const out: LaneLayout['lanes'] = [];
   for (const lane of sorted) {
+    const collapsed = collapsedIds.has(lane.id);
     const own = members.filter((n) => n.laneId === lane.id);
-    const height = Math.max(LANE_MIN_HEIGHT, ...own.map((n) => n.y + PROCESS_NODE_HEIGHT + LANE_PADDING));
-    out.push({ id: lane.id, itemId: lane.itemId, y, height });
+    const height = collapsed
+      ? LANE_COLLAPSED_HEIGHT
+      : Math.max(LANE_MIN_HEIGHT, ...own.map((n) => n.y + PROCESS_NODE_HEIGHT + LANE_PADDING));
+    const laneWidth = collapsed ? LANE_COLLAPSED_WIDTH : width;
+    const free = lane.x != null && lane.y != null;
+    if (free) {
+      // Couloir déplacé : à sa place, hors de la pile
+      out.push({ id: lane.id, itemId: lane.itemId, x: lane.x!, y: lane.y!, height, width: laneWidth, collapsed });
+      continue;
+    }
+    out.push({ id: lane.id, itemId: lane.itemId, x: 0, y, height, width: laneWidth, collapsed });
     bottom = y + height;
     y = bottom + LANE_GAP;
   }
+  // bottom : bas de la pile des couloirs non déplacés (sert à ranger les items libres)
   return { lanes: out, width, bottom };
 }
 
 /** Couloir dont la bande contient le point (coordonnées absolues du canevas), sinon null. */
 export function findLaneAt(layout: LaneLayout, point: { x: number; y: number }): string | null {
-  if (point.x < 0 || point.x > layout.width) return null;
-  return layout.lanes.find((l) => point.y >= l.y && point.y <= l.y + l.height)?.id ?? null;
+  // Un couloir replié ne reçoit pas d'item (ses membres sont masqués)
+  return layout.lanes.find((l) => !l.collapsed && point.x >= l.x && point.x <= l.x + l.width
+    && point.y >= l.y && point.y <= l.y + l.height)?.id ?? null;
 }
 
-export function buildProcessEdges(relations: ItemRelation[], placedIds: Set<string>): Edge[] {
+/**
+ * endpointOverrides : item → nœud qui le représente à la place de son propre nœud (2026-10-21) — titre d'un couloir
+ * (le lien est gardé, relié au couloir comme à un sous-processus) ou membre d'un couloir replié. Un lien dont les
+ * deux extrémités tombent sur le même nœud (lien interne d'un couloir replié) est masqué.
+ */
+export function buildProcessEdges(
+  relations: ItemRelation[],
+  placedIds: Set<string>,
+  endpointOverrides: Map<string, string> = new Map(),
+  titleOf: (itemId: string) => string = () => '',
+): Edge[] {
+  const endpoint = (itemId: string) => endpointOverrides.get(itemId) ?? (placedIds.has(itemId) ? itemId : null);
   return relations
-    .filter((r) => placedIds.has(r.fromItemId) && placedIds.has(r.toItemId) && isOfficialRelationType(r.type))
-    .map((r) => {
+    .filter((r) => isOfficialRelationType(r.type))
+    .map((r) => ({ r, source: endpoint(r.fromItemId), target: endpoint(r.toItemId) }))
+    .filter((e): e is { r: ItemRelation; source: string; target: string } => !!e.source && !!e.target && e.source !== e.target)
+    .map(({ r, source, target }) => {
       const color = getRelationMeta(r.type).hex;
       return {
         id: `rel-${r.id}`,
-        source: r.fromItemId,
-        target: r.toItemId,
-        type: 'smoothstep',
+        source,
+        target,
+        // Arête partagée RelationEdge (MindMap) : commentaire en icône au milieu, texte en infobulle au survol
+        type: 'relation',
         markerEnd: { type: MarkerType.ArrowClosed, color },
         style: { stroke: color, strokeWidth: 2 },
-        label: r.label || undefined,
-        data: { relationId: r.id, type: r.type, label: r.label ?? '' },
+        // fromItemId / toItemId : vrais items de la relation (source / target peuvent être un couloir) ;
+        // fromTitle / toTitle : lus par l'infobulle du commentaire
+        data: {
+          relationId: r.id, type: r.type, label: r.label ?? '', fromItemId: r.fromItemId, toItemId: r.toItemId,
+          fromTitle: titleOf(r.fromItemId), toTitle: titleOf(r.toItemId),
+          // Angles droits : les flèches suivent les lignes des couloirs (les courbes les traversaient, 2026-10-21)
+          pathStyle: 'smoothstep',
+        },
       };
     });
 }
@@ -131,6 +269,8 @@ export function layoutAsProcess(
     return rowsByBranch(placed, ranks, predecessors).map(({ p, rank, y }) => ({ itemId: p.item.id, x: rank * PROCESS_COLUMN_GAP, y }));
   }
 
+  // Réorganiser remet tous les couloirs dans la pile (positions libres effacées par l'appelant)
+  lanes = lanes.map((l) => ({ ...l, x: null, y: null }));
   const laneIds = new Set(lanes.map((l) => l.id));
   const groupOf = (p: PlacedItem) => (p.laneId && laneIds.has(p.laneId) ? p.laneId : null);
   const result: ProcessPosition[] = [];

@@ -893,7 +893,7 @@ export const communitiesApi = {
 
 // Vue Process : positions des items sur le canevas de l'espace (routes/process-nodes.ts)
 type ProcessNodePosition = { itemId: string; x: number; y: number; laneId?: string | null };
-type ProcessLaneRow = { id: string; itemId: string; position: number };
+type ProcessLaneRow = { id: string; itemId: string; position: number; x?: number | null; y?: number | null };
 
 export const processApi = {
   list: (spaceId: string) =>
@@ -915,6 +915,10 @@ export const processApi = {
 
   reorderLanes: (spaceId: string, ids: string[]) =>
     fetchApi<void>(`/spaces/${spaceId}/process-lanes/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+
+  // Position libre des couloirs (x/y null = remis dans la pile)
+  layoutLanes: (spaceId: string, lanes: Array<{ id: string; x: number | null; y: number | null }>) =>
+    fetchApi<void>(`/spaces/${spaceId}/process-lanes/layout`, { method: 'PUT', body: JSON.stringify({ lanes }) }),
 
   deleteLane: (spaceId: string, laneId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/process-lanes/${laneId}`, { method: 'DELETE' }),

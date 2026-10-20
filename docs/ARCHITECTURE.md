@@ -202,6 +202,10 @@ fastify.get('/spaces/:spaceId/items', { preHandler: [authenticate] }, async (req
 
 ---
 
+⚠️ **Garde d'accès dans une fonction `async`** : ne jamais y faire `return reply.forbidden(...)` / `return reply.notFound(...)`. `reply` est « thenable » : la promesse se résout à `undefined`, l'appelant croit l'accès accordé et la route continue d'écrire après l'erreur (faille de la vue Process, corrigée 2026-10-21, cc944eb). Envoyer l'erreur puis renvoyer un booléen ou `null` (modèles : `denied()` de `process-nodes.ts`, `sessionForMember()` de `live-sessions.ts`), et tester qu'aucune écriture n'a lieu après le refus.
+
+---
+
 ## @spok/shared — exports clés
 
 ```ts

@@ -2,8 +2,10 @@
 import { describe, it, expect } from 'vitest';
 import type { Item, ItemRelation } from '@spok/shared';
 import {
-  splitPlaced, buildProcessEdges, filterUnplaced, layoutAsProcess, computeLaneLayout, findLaneAt,
+  splitPlaced, buildProcessEdges, filterUnplaced, layoutAsProcess, computeLaneLayout, findLaneAt, assignEdgeChannels,
+  PROCESS_NODE_WIDTH,
   PROCESS_COLUMN_GAP, PROCESS_ROW_GAP, LANE_MIN_HEIGHT, LANE_GAP, LANE_PADDING, LANE_CONTENT_X, PROCESS_NODE_HEIGHT,
+  LANE_COLLAPSED_HEIGHT, LANE_COLLAPSED_WIDTH,
 } from './process-utils';
 import { getRelationMeta } from '../../constants/relationTypes';
 
@@ -35,6 +37,35 @@ describe('buildProcessEdges', () => {
     const edges = buildProcessEdges([rel('r1', 'a', 'b'), rel('r2', 'a', 'c')], new Set(['a', 'b']));
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({ source: 'a', target: 'b' });
+  });
+
+  it('garde une relation vers ou depuis un item devenu couloir, reliée au couloir (sous-processus)', () => {
+    const laneNodes = new Map([['p1', 'lane-L1']]);
+    const edges = buildProcessEdges([rel('r1', 'a', 'p1', 'blocks'), rel('r2', 'p1', 'b', 'blocks'), rel('r3', 'z', 'p1')], new Set(['a', 'b']), laneNodes);
+    expect(edges.map((e) => [e.source, e.target])).toEqual([['a', 'lane-L1'], ['lane-L1', 'b']]);
+    expect((edges[0].data as { relationId: string }).relationId).toBe('r1');
+    // la modale d'édition doit recevoir les vrais items, pas le nœud du couloir
+    expect(edges[0].data).toMatchObject({ fromItemId: 'a', toItemId: 'p1' });
+  });
+
+  it('couloir replié : liens de ses items rattachés au couloir, liens internes masqués', () => {
+    // m1, m2 dans le couloir replié L1 ; a et b dehors
+    const overrides = new Map([['m1', 'lane-L1'], ['m2', 'lane-L1']]);
+    const edges = buildProcessEdges(
+      [rel('r1', 'a', 'm1', 'blocks'), rel('r2', 'm1', 'm2', 'blocks'), rel('r3', 'm2', 'b', 'blocks')],
+      new Set(['a', 'b', 'm1', 'm2']), overrides,
+    );
+    expect(edges.map((e) => [e.source, e.target])).toEqual([['a', 'lane-L1'], ['lane-L1', 'b']]);
+  });
+
+  it('commentaire : arête « relation » avec icône (pas de texte sur la flèche), titres pour l\'infobulle', () => {
+    const titles = new Map([['a', 'Maquette'], ['b', 'Dév']]);
+    const [edge] = buildProcessEdges([{ ...rel('r1', 'a', 'b', 'blocks'), label: 'Après validation' }], new Set(['a', 'b']), new Map(), (id) => titles.get(id) ?? '');
+    expect(edge.type).toBe('relation');
+    expect(edge.label).toBeUndefined();
+    expect(edge.data).toMatchObject({ label: 'Après validation', fromTitle: 'Maquette', toTitle: 'Dév' });
+    // tracé à angles droits (lisibilité des couloirs), pas les courbes de la MindMap
+    expect(edge.data).toMatchObject({ pathStyle: 'smoothstep' });
   });
 
   it('ignore un type non officiel', () => {
@@ -95,6 +126,39 @@ describe('couloirs', () => {
     expect(layout.bottom).toBe(h1 + LANE_GAP + LANE_MIN_HEIGHT);
   });
 
+  it('un couloir replié prend la hauteur réduite, quels que soient ses items', () => {
+    const layout = computeLaneLayout(lanes, [{ x: LANE_CONTENT_X, y: 400, laneId: 'L1' }], new Set(['L1']));
+    expect(layout.lanes[0]).toMatchObject({ id: 'L1', y: 0, height: LANE_COLLAPSED_HEIGHT, collapsed: true });
+    expect(layout.lanes[1].y).toBe(LANE_COLLAPSED_HEIGHT + LANE_GAP);
+  });
+
+  it('un couloir replié est aussi réduit en longueur ; les autres gardent la largeur commune', () => {
+    const layout = computeLaneLayout(lanes, [], new Set(['L1']));
+    expect(layout.lanes[0].width).toBe(LANE_COLLAPSED_WIDTH);
+    expect(layout.lanes[1].width).toBe(layout.width);
+    // un point à droite de la boîte repliée, à sa hauteur, n'est dans aucun couloir
+    expect(findLaneAt(layout, { x: LANE_COLLAPSED_WIDTH + 50, y: 10 })).toBeNull();
+  });
+
+  it('un couloir déplacé garde sa position ; les autres restent empilés sans lui', () => {
+    const moved = [{ id: 'L1', itemId: 'p1', position: 0, x: 400, y: 900 }, { id: 'L2', itemId: 'p2', position: 1, x: null, y: null }];
+    const layout = computeLaneLayout(moved, []);
+    expect(layout.lanes.find((l) => l.id === 'L1')).toMatchObject({ x: 400, y: 900 });
+    expect(layout.lanes.find((l) => l.id === 'L2')).toMatchObject({ x: 0, y: 0 });
+    // l'appartenance tient compte du décalage horizontal
+    expect(findLaneAt(layout, { x: 450, y: 920 })).toBe('L1');
+    expect(findLaneAt(layout, { x: 350, y: 920 })).toBeNull();
+  });
+
+  it('Réorganiser range comme si les couloirs étaient remis dans la pile', () => {
+    const moved = [{ id: 'L1', itemId: 'p1', position: 0, x: 400, y: 900 }];
+    const result = layoutAsProcess([{ item: item('a'), x: 0, y: 0, laneId: 'L1' }, { item: item('c'), x: 0, y: 0, laneId: null }], [], moved);
+    const c = result.find((p) => p.itemId === 'c')!;
+    // libres sous la pile (couloir remis à y = 0), pas sous la position déplacée
+    expect(c.y).toBeLessThan(900);
+    expect(c.y).toBeGreaterThanOrEqual(LANE_MIN_HEIGHT);
+  });
+
   it('trouve le couloir sous un point, null hors des bandes', () => {
     const layout = computeLaneLayout(lanes, []);
     expect(findLaneAt(layout, { x: 300, y: LANE_MIN_HEIGHT + LANE_GAP + 10 })).toBe('L2');
@@ -122,6 +186,57 @@ describe('couloirs', () => {
   });
 
   const pos = (result: { itemId: string }[], id: string) => result.find((p) => p.itemId === id) as any;
+});
+
+describe('assignEdgeChannels', () => {
+  const box = (x: number, y: number) => ({ x, y, width: PROCESS_NODE_WIDTH, height: PROCESS_NODE_HEIGHT });
+  const edge = (id: string, source: string, target: string) => ({ id, source, target, data: {} });
+
+  it('chaque flèche tourne juste avant la colonne de sa cible, sur une voie qui lui est propre', () => {
+    // a (col 0) → e (col 3) et c (col 1) → d (col 3, autre ligne) : même colonne cible
+    const boxes = new Map([['a', box(0, 300)], ['c', box(260, 0)], ['e', box(780, 0)], ['d', box(780, 150)]]);
+    const out = assignEdgeChannels([edge('1', 'a', 'e'), edge('2', 'c', 'd')], boxes);
+    const xs = out.map((e) => (e.data as { centerX: number }).centerX);
+    expect(new Set(xs).size).toBe(2); // voies distinctes
+    for (const x of xs) {
+      expect(x).toBeLessThan(780); // avant la cible
+      expect(x).toBeGreaterThan(260 + PROCESS_NODE_WIDTH); // après la sortie de la source la plus proche
+    }
+  });
+
+  it('ne traverse pas un item placé sur sa ligne : passe par une voie de contournement', () => {
+    // s → t sur la même ligne, un item b entre les deux (cas « Overflow » du bas → item E)
+    const boxes = new Map([['s', box(0, 0)], ['b', box(390, 0)], ['t', box(780, 0)]]);
+    const [e] = assignEdgeChannels([edge('1', 's', 't')], boxes);
+    const corridor = (e.data as { corridor?: { y: number } }).corridor;
+    expect(corridor).toBeDefined();
+    // la voie horizontale passe hors de la boîte de b (marge comprise)
+    expect(corridor!.y < 0 || corridor!.y > PROCESS_NODE_HEIGHT).toBe(true);
+  });
+
+  it('deux contournements ne partagent pas la même voie horizontale', () => {
+    const boxes = new Map([
+      ['a', box(0, 0)], ['b1', box(390, 0)], ['e', box(780, 0)],
+      ['a2', box(0, 70)], ['b2', box(390, 70)], ['e2', box(780, 70)],
+    ]);
+    const out = assignEdgeChannels([edge('1', 'a', 'e'), edge('2', 'a2', 'e2')], boxes);
+    const ys = out.map((e) => (e.data as { corridor?: { y: number } }).corridor?.y);
+    expect(ys.every((y) => y !== undefined)).toBe(true);
+    expect(Math.abs(ys[0]! - ys[1]!)).toBeGreaterThanOrEqual(6);
+  });
+
+  it('un couloir (boîte englobante) n\'est pas un obstacle', () => {
+    const boxes = new Map([['lane-L1', { x: 0, y: -20, width: 1200, height: 120 }], ['s', box(170, 0)], ['t', box(950, 0)]]);
+    const [e] = assignEdgeChannels([edge('1', 's', 't')], boxes, (id) => !id.startsWith('lane-'));
+    expect((e.data as { corridor?: unknown }).corridor).toBeUndefined();
+    expect((e.data as { centerX?: number }).centerX).toBeDefined();
+  });
+
+  it('flèche vers l\'arrière : pas de voie imposée (tracé par défaut)', () => {
+    const boxes = new Map([['a', box(520, 0)], ['b', box(0, 0)]]);
+    const [e] = assignEdgeChannels([edge('1', 'a', 'b')], boxes);
+    expect((e.data as { centerX?: number }).centerX).toBeUndefined();
+  });
 });
 
 describe('filterUnplaced', () => {

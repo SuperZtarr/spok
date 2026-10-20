@@ -5,6 +5,7 @@
  * absent → couloir inchangé) ; remove(itemId) le renvoie dans « Non placés » (l'item n'est pas supprimé) ;
  * placeMany(positions) déplace plusieurs nœuds en un appel (réorganisation).
  * Couloirs : addLane(itemId) fait d'un item un couloir (il cesse d'être un nœud) ; reorderLanes(ids) ;
+ * moveLanes([{ id, x, y }]) pose des couloirs à une position libre (x/y null = remis dans la pile) ;
  * removeLane(laneId, freed) supprime le couloir après avoir rendu ses membres libres aux coordonnées `freed`
  * (absolues, calculées par la vue pour qu'ils ne bougent pas à l'écran).
  * Écritures optimistes (cache mis à jour tout de suite, restauré en cas d'échec, resynchronisé ensuite).
@@ -97,6 +98,22 @@ export function useProcessNodes(spaceId: string | undefined) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: lanesKey }),
   });
 
+  const moveLanesMutation = useMutation({
+    mutationFn: (batch: Array<{ id: string; x: number | null; y: number | null }>) => processApi.layoutLanes(spaceId!, batch),
+    onMutate: async (batch) => {
+      await queryClient.cancelQueries({ queryKey: lanesKey });
+      const previous = queryClient.getQueryData<ProcessLane[]>(lanesKey) ?? [];
+      const moved = new Map(batch.map((b) => [b.id, b]));
+      queryClient.setQueryData<ProcessLane[]>(lanesKey, previous.map((l) => {
+        const m = moved.get(l.id);
+        return m ? { ...l, x: m.x, y: m.y } : l;
+      }));
+      return { previous };
+    },
+    onError: (_e, _v, ctx) => { if (ctx) queryClient.setQueryData(lanesKey, ctx.previous); },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: lanesKey }),
+  });
+
   const removeLaneMutation = useMutation({
     mutationFn: async ({ laneId, freed }: { laneId: string; freed: ProcessPosition[] }) => {
       if (freed.length) await processApi.placeMany(spaceId!, freed);
@@ -113,6 +130,8 @@ export function useProcessNodes(spaceId: string | undefined) {
   const { mutate: addLaneMutate } = addLaneMutation;
   const { mutate: reorderLanesMutate } = reorderLanesMutation;
   const { mutate: removeLaneMutate } = removeLaneMutation;
+  const { mutate: moveLanesMutate } = moveLanesMutation;
+  const moveLanes = useCallback((batch: Array<{ id: string; x: number | null; y: number | null }>) => moveLanesMutate(batch), [moveLanesMutate]);
   const place = useCallback((itemId: string, x: number, y: number, laneId?: string | null) => placeMutate({ itemId, x, y, laneId }), [placeMutate]);
   const remove = useCallback((itemId: string) => removeMutate(itemId), [removeMutate]);
   const placeMany = useCallback((batch: ProcessPosition[]) => placeManyMutate(batch), [placeManyMutate]);
@@ -122,6 +141,6 @@ export function useProcessNodes(spaceId: string | undefined) {
 
   return {
     positions: data ?? [], lanes: lanesData ?? [], isLoading,
-    place, remove, placeMany, addLane, reorderLanes, removeLane,
+    place, remove, placeMany, addLane, reorderLanes, removeLane, moveLanes,
   };
 }

@@ -1,6 +1,11 @@
-/* Arête de relation (SVG) partagée : couleur/marqueur par type, commentaire, sélection. */
+/*
+ * Arête de relation (SVG) partagée MindMap / Process : couleur/marqueur par type, commentaire en bulle (texte au
+ * survol), sélection. data.pathStyle : 'smoothstep' = angles droits (vue Process), avec data.centerX facultatif
+ * (voie verticale propre à la flèche) ou data.corridor (contournement des items) ; absent = courbe (MindMap,
+ * comportement d'origine — ne pas changer le défaut, zone fragile MindMap).
+ */
 import { useState } from 'react';
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 import { MessageCircle } from 'lucide-react';
 import { RelationTooltip } from '../RelationTooltip';
 
@@ -9,7 +14,21 @@ export function RelationEdge({
   sourcePosition, targetPosition,
   style, markerEnd, data,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  const pathParams = { sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition };
+  // data.centerX (Process) : abscisse de la voie verticale propre à la flèche (assignEdgeChannels) ;
+  // data.corridor : contournement { ex, y, cx } — sortie, voie horizontale libre, entrée (angles droits)
+  const centerX = typeof data?.centerX === 'number' ? data.centerX : undefined;
+  const corridor = data?.corridor as { ex: number; y: number; cx: number } | undefined;
+  const [edgePath, labelX, labelY] = corridor
+    ? [
+      `M ${sourceX},${sourceY} L ${corridor.ex},${sourceY} L ${corridor.ex},${corridor.y} `
+        + `L ${corridor.cx},${corridor.y} L ${corridor.cx},${targetY} L ${targetX},${targetY}`,
+      (corridor.ex + corridor.cx) / 2,
+      corridor.y,
+    ]
+    : data?.pathStyle === 'smoothstep'
+      ? getSmoothStepPath({ ...pathParams, centerX })
+      : getBezierPath(pathParams);
   const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
   const label = (data?.label as string) ?? '';
   const relationType = (data?.type as string) ?? 'relates';
