@@ -55,7 +55,10 @@ export const PROCESS_ROW_GAP = 90;
 /**
  * Rangement « en processus » (bouton Réorganiser) : une colonne par rang de dépendance, de gauche à droite,
  * rangs calculés comme le PERT (computePertRanks : seuls « Bloque » et « Permet » ordonnent ; item sans lien
- * d'ordre ou pris dans un cycle → première colonne). Dans une colonne, l'ordre vertical actuel est conservé.
+ * d'ordre ou pris dans un cycle → première colonne, empilée dans l'ordre vertical actuel).
+ * Branches multiples (2026-10-21) : dans les colonnes suivantes, un item se place à la hauteur moyenne de ses
+ * prédécesseurs (il reste sur la ligne de sa branche) ; deux items qui voudraient la même hauteur sont décalés
+ * vers le bas d'un PROCESS_ROW_GAP, sans chevauchement.
  */
 export function layoutAsProcess(
   placed: Array<{ item: Item; x: number; y: number }>,
@@ -72,10 +75,25 @@ export function layoutAsProcess(
     columns.get(rank)!.push(p);
   }
 
+  const newY = new Map<string, number>();
   const result: ProcessPosition[] = [];
-  for (const [rank, column] of columns) {
-    column.sort((a, b) => a.y - b.y || a.x - b.x);
-    column.forEach((p, row) => result.push({ itemId: p.item.id, x: rank * PROCESS_COLUMN_GAP, y: row * PROCESS_ROW_GAP }));
+  for (const rank of [...columns.keys()].sort((a, b) => a - b)) {
+    // Hauteur souhaitée : moyenne des prédécesseurs déjà rangés (colonnes précédentes) ; première colonne : pile
+    const wanted = new Map<string, number>();
+    for (const p of columns.get(rank)!) {
+      const predYs = (predecessors.get(p.item.id) ?? []).map((id) => newY.get(id)).filter((y): y is number => y !== undefined);
+      wanted.set(p.item.id, predYs.length ? predYs.reduce((s, y) => s + y, 0) / predYs.length : -Infinity);
+    }
+    const column = columns.get(rank)!.sort((a, b) =>
+      wanted.get(a.item.id)! - wanted.get(b.item.id)! || a.y - b.y || a.x - b.x);
+
+    let prevY = -Infinity;
+    for (const p of column) {
+      const y = Math.max(wanted.get(p.item.id)!, prevY + PROCESS_ROW_GAP, 0);
+      newY.set(p.item.id, y);
+      prevY = y;
+      result.push({ itemId: p.item.id, x: rank * PROCESS_COLUMN_GAP, y });
+    }
   }
   return result;
 }

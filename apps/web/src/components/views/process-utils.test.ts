@@ -54,7 +54,19 @@ describe('layoutAsProcess', () => {
     const result = layoutAsProcess([at('a', 0, 300), at('b', 0, 10), at('c', 0, 0)], [rel('r1', 'a', 'c', 'implements'), rel('r2', 'b', 'c', 'blocks')]);
     expect(pos(result, 'b')).toEqual({ itemId: 'b', x: 0, y: 0 });
     expect(pos(result, 'a')).toEqual({ itemId: 'a', x: 0, y: PROCESS_ROW_GAP });
-    expect(pos(result, 'c')).toEqual({ itemId: 'c', x: PROCESS_COLUMN_GAP, y: 0 });
+    // c se place à la hauteur moyenne de ses deux prédécesseurs (0 et 90)
+    expect(pos(result, 'c')).toEqual({ itemId: 'c', x: PROCESS_COLUMN_GAP, y: PROCESS_ROW_GAP / 2 });
+  });
+
+  it('garde chaque branche sur sa ligne (pas de croisement)', () => {
+    // a → b → c et a → d → e ; avant rangement, e est au-dessus de c alors que d est sous b
+    const result = layoutAsProcess(
+      [at('a', 0, 0), at('b', 0, 0), at('d', 0, 50), at('c', 0, 100), at('e', 0, -100)],
+      [rel('r1', 'a', 'b', 'blocks'), rel('r2', 'a', 'd', 'blocks'), rel('r3', 'b', 'c', 'blocks'), rel('r4', 'd', 'e', 'blocks')],
+    );
+    expect(pos(result, 'c')!.y).toBe(pos(result, 'b')!.y);
+    expect(pos(result, 'e')!.y).toBe(pos(result, 'd')!.y);
+    expect(pos(result, 'd')!.y).toBeGreaterThan(pos(result, 'b')!.y);
   });
 
   it('« Lié à » et « Entraîne » n\'ordonnent pas', () => {
