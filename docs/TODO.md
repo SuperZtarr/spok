@@ -82,7 +82,7 @@
 - [x] Vue Process (chantier A) : canevas libre par espace, positions partagées (process_nodes), panneau « Non placés », double-clic = note, liens via la modale de relation — 2026-10-20 (d956e91)
 - [x] Vue Process : panneau « Non placés » en arborescence + bouton « Réorganiser en processus » (rangs PERT en colonnes, PUT groupé) — 2026-10-21 (582bcc5)
 - [x] Vue Process : branches multiples gardées sur leur ligne à la réorganisation + canevas en pleine hauteur quand tout est placé — 2026-10-21 (383857a)
-- [ ] Vue Process : diagrammes de flux (formes graphiques) — demande Thomas 2026-10-21, à concevoir
+- [x] Vue Process : diagrammes de flux → couloirs nommés par un item (rangement visuel, Réorganiser à colonnes communes), Réorganiser sans confirmation — 2026-10-21 (3bd1d13)
 - [ ] Vue Process — chantier B : modèles qui retiennent le process (relations, durées, disposition) — à brainstormer
 - [ ] Vue Process — chantier C : instanciation d'un modèle avec date de départ, dates calculées le long des liens
 - [x] Modales de relation : MindMap / PERT / Gantt / Process sur RelationCreateDialog / RelationEditDialog (phrases du PERT + explication du type) — 2026-10-20 (ece92a6)
