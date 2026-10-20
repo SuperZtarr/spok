@@ -10,7 +10,8 @@
  * - DELETE /:itemId : retire du process (l'item n'est PAS supprimé), idempotent.
  * Couloirs — /spaces/:spaceId/process-lanes (2026-10-21, bande nommée par un item, rangement purement visuel) :
  * - GET : couloirs dans l'ordre d'empilement ; POST { itemId } : l'item devient couloir (ajouté en dernier) et cesse
- *   d'être un nœud ; PUT /order { ids } : nouvel ordre ; DELETE /:laneId : supprime le couloir (ses nœuds deviennent
+ *   d'être un nœud ; PUT /order { ids } : nouvel ordre ; PUT /layout { lanes: [{ id, x, y }] } : position libre
+ *   (x/y null = empilé automatiquement) ; DELETE /:laneId : supprime le couloir (ses nœuds deviennent
  *   libres via onDelete SetNull — le client convertit d'abord leurs coordonnées en absolu).
  */
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
@@ -28,17 +29,31 @@ const bulkSchema = z.object({
 });
 
 const NODE_SELECT = { itemId: true, x: true, y: true, laneId: true } as const;
-const LANE_SELECT = { id: true, itemId: true, position: true } as const;
+const LANE_SELECT = { id: true, itemId: true, position: true, x: true, y: true } as const;
+
+// Position libre d'un couloir : null/null = empilé automatiquement ; deux nombres = posé à (x, y)
+const laneLayoutSchema = z.object({
+  lanes: z.array(z.object({
+    id: z.string().min(1),
+    x: z.number().finite().nullable(),
+    y: z.number().finite().nullable(),
+  })).max(500),
+});
 
 export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
-  /** Accès à l'espace ; en écriture, OWNER/MEMBER seulement. Renvoie la réponse d'erreur à retourner, ou null si OK. */
-  async function denied(request: FastifyRequest, reply: FastifyReply, spaceId: string, write: boolean) {
+  /**
+   * Accès à l'espace ; en écriture, OWNER/MEMBER seulement. Envoie l'erreur (404/403) et renvoie true si refusé.
+   * ⚠ Renvoyer un booléen, jamais `reply` : reply est « thenable », une fonction async qui le renvoie se résout
+   * à undefined → le refus passait inaperçu et la route continuait d'écrire (faille corrigée le 2026-10-21).
+   */
+  async function denied(request: FastifyRequest, reply: FastifyReply, spaceId: string, write: boolean): Promise<boolean> {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, spaceId, request.isAdminMode);
-    if (!membership) return reply.notFound('Space not found');
+    if (!membership) { reply.notFound('Space not found'); return true; }
     if (write && membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
-      return reply.forbidden('Viewers cannot edit the process');
+      reply.forbidden('Viewers cannot edit the process');
+      return true;
     }
-    return null;
+    return false;
   }
 
   /** Tous les couloirs cités appartiennent à l'espace ? */
@@ -57,7 +72,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
-      const deny = await denied(request, reply, spaceId, false); if (deny) return deny;
+      if (await denied(request, reply, spaceId, false)) return reply;
       return fastify.prisma.processNode.findMany({ where: { spaceId }, select: NODE_SELECT });
     }
   );
@@ -69,7 +84,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
-      const deny = await denied(request, reply, spaceId, true); if (deny) return deny;
+      if (await denied(request, reply, spaceId, true)) return reply;
 
       const { positions } = bulkSchema.parse(request.body);
       const laneIds = positions.map((p) => p.laneId).filter((l): l is string => !!l);
@@ -101,7 +116,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId, itemId } = request.params;
-      const deny = await denied(request, reply, spaceId, true); if (deny) return deny;
+      if (await denied(request, reply, spaceId, true)) return reply;
 
       const { x, y, laneId } = positionSchema.parse(request.body);
 
@@ -124,7 +139,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId, itemId } = request.params;
-      const deny = await denied(request, reply, spaceId, true); if (deny) return deny;
+      if (await denied(request, reply, spaceId, true)) return reply;
 
       await fastify.prisma.processNode.deleteMany({ where: { spaceId, itemId } });
       return reply.status(204).send();
@@ -138,7 +153,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
-      const deny = await denied(request, reply, spaceId, false); if (deny) return deny;
+      if (await denied(request, reply, spaceId, false)) return reply;
       return fastify.prisma.processLane.findMany({ where: { spaceId }, orderBy: { position: 'asc' }, select: LANE_SELECT });
     }
   );
@@ -148,7 +163,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
-      const deny = await denied(request, reply, spaceId, true); if (deny) return deny;
+      if (await denied(request, reply, spaceId, true)) return reply;
 
       const { itemId } = z.object({ itemId: z.string().min(1) }).parse(request.body);
       const item = await fastify.prisma.item.findFirst({ where: { id: itemId, spaceId }, select: { id: true } });
@@ -173,7 +188,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
-      const deny = await denied(request, reply, spaceId, true); if (deny) return deny;
+      if (await denied(request, reply, spaceId, true)) return reply;
 
       const { ids } = z.object({ ids: z.array(z.string().min(1)).max(500) }).parse(request.body);
       await fastify.prisma.$transaction(async (tx) => {
@@ -185,12 +200,32 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Déplacement libre des couloirs (glisser par le titre) et remise dans la pile (Réorganiser : x/y à null)
+  fastify.put<{ Params: { spaceId: string }; Body: unknown }>(
+    '/:spaceId/process-lanes/layout',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const { spaceId } = request.params;
+      if (await denied(request, reply, spaceId, true)) return reply;
+
+      const { lanes } = laneLayoutSchema.parse(request.body);
+      await fastify.prisma.$transaction(async (tx) => {
+        for (const { id, x, y } of lanes) {
+          // x et y vont ensemble : un seul des deux à null remet le couloir dans la pile
+          const free = x !== null && y !== null;
+          await tx.processLane.updateMany({ where: { id, spaceId }, data: free ? { x, y } : { x: null, y: null } });
+        }
+      });
+      return reply.status(204).send();
+    }
+  );
+
   fastify.delete<{ Params: { spaceId: string; laneId: string } }>(
     '/:spaceId/process-lanes/:laneId',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { spaceId, laneId } = request.params;
-      const deny = await denied(request, reply, spaceId, true); if (deny) return deny;
+      if (await denied(request, reply, spaceId, true)) return reply;
 
       await fastify.prisma.processLane.deleteMany({ where: { id: laneId, spaceId } });
       return reply.status(204).send();

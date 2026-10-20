@@ -398,6 +398,9 @@ model ProcessLane {
   itemId    String
   item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   position  Int      @default(0)
+  // Position libre (2026-10-21) : null = couloir empilé automatiquement (selon position) ; sinon posé à (x, y)
+  x         Float?
+  y         Float?
   createdAt DateTime @default(now())
   nodes     ProcessNode[]
 

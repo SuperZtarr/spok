@@ -236,6 +236,36 @@ describe('Process nodes routes', () => {
       expect(prisma.processLane.updateMany).toHaveBeenCalledWith({ where: { id: 'l1', spaceId: 's1' }, data: { position: 1 } })
     })
 
+    it('GET renvoie la position libre des couloirs', async () => {
+      asMember(prisma, 'VIEWER')
+      await app.inject({ method: 'GET', url: '/spaces/s1/process-lanes', headers })
+      expect(prisma.processLane.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        select: expect.objectContaining({ x: true, y: true }),
+      }))
+    })
+
+    it('PUT /layout enregistre ou efface la position libre des couloirs', async () => {
+      asMember(prisma, 'MEMBER')
+
+      const res = await app.inject({
+        method: 'PUT', url: '/spaces/s1/process-lanes/layout', headers,
+        payload: { lanes: [{ id: 'l1', x: 300, y: -40 }, { id: 'l2', x: null, y: null }] },
+      })
+
+      expect(res.statusCode).toBe(204)
+      expect(prisma.processLane.updateMany).toHaveBeenCalledWith({ where: { id: 'l1', spaceId: 's1' }, data: { x: 300, y: -40 } })
+      expect(prisma.processLane.updateMany).toHaveBeenCalledWith({ where: { id: 'l2', spaceId: 's1' }, data: { x: null, y: null } })
+    })
+
+    it('PUT /layout par un VIEWER → 403', async () => {
+      asMember(prisma, 'VIEWER')
+
+      const res = await app.inject({ method: 'PUT', url: '/spaces/s1/process-lanes/layout', headers, payload: { lanes: [{ id: 'l1', x: 1, y: 1 }] } })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.processLane.updateMany).not.toHaveBeenCalled()
+    })
+
     it('DELETE supprime le couloir → 204', async () => {
       asMember(prisma, 'MEMBER')
 
@@ -243,6 +273,44 @@ describe('Process nodes routes', () => {
 
       expect(res.statusCode).toBe(204)
       expect(prisma.processLane.deleteMany).toHaveBeenCalledWith({ where: { id: 'l1', spaceId: 's1' } })
+    })
+  })
+
+  // Non-régression faille 2026-10-21 : un refus (403 / 404) ne doit déclencher AUCUNE écriture, même quand
+  // toutes les données seraient valides (item et couloir de l'espace simulés comme existants).
+  describe('aucune écriture après un refus', () => {
+    const writes = [
+      { name: 'PUT nœud', method: 'PUT', url: '/spaces/s1/process-nodes/i1', payload: { x: 1, y: 2 }, spy: (p: MockPrisma) => p.processNode.upsert },
+      { name: 'PUT groupé', method: 'PUT', url: '/spaces/s1/process-nodes', payload: { positions: [{ itemId: 'i1', x: 1, y: 2 }] }, spy: (p: MockPrisma) => p.processNode.upsert },
+      { name: 'DELETE nœud', method: 'DELETE', url: '/spaces/s1/process-nodes/i1', payload: undefined, spy: (p: MockPrisma) => p.processNode.deleteMany },
+      { name: 'POST couloir', method: 'POST', url: '/spaces/s1/process-lanes', payload: { itemId: 'i1' }, spy: (p: MockPrisma) => p.processLane.create },
+      { name: 'PUT ordre', method: 'PUT', url: '/spaces/s1/process-lanes/order', payload: { ids: ['l1'] }, spy: (p: MockPrisma) => p.processLane.updateMany },
+      { name: 'PUT position couloirs', method: 'PUT', url: '/spaces/s1/process-lanes/layout', payload: { lanes: [{ id: 'l1', x: 1, y: 1 }] }, spy: (p: MockPrisma) => p.processLane.updateMany },
+      { name: 'DELETE couloir', method: 'DELETE', url: '/spaces/s1/process-lanes/l1', payload: undefined, spy: (p: MockPrisma) => p.processLane.deleteMany },
+    ] as const
+
+    const validData = (p: MockPrisma) => {
+      p.item.findFirst.mockResolvedValue({ id: 'i1' })
+      p.item.findMany.mockResolvedValue([{ id: 'i1' }])
+      p.processLane.findFirst.mockResolvedValue(null)
+      p.processLane.aggregate.mockResolvedValue({ _max: { position: 0 } })
+    }
+
+    it.each(writes)('$name par un VIEWER → 403 sans écriture', async ({ method, url, payload, spy }) => {
+      asMember(prisma, 'VIEWER')
+      validData(prisma)
+      const res = await app.inject({ method, url, headers, ...(payload ? { payload } : {}) })
+      expect(res.statusCode).toBe(403)
+      expect(spy(prisma)).not.toHaveBeenCalled()
+    })
+
+    it.each(writes)('$name par un non-membre → 404 sans écriture', async ({ method, url, payload, spy }) => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue(null)
+      validData(prisma)
+      const res = await app.inject({ method, url, headers, ...(payload ? { payload } : {}) })
+      expect(res.statusCode).toBe(404)
+      expect(spy(prisma)).not.toHaveBeenCalled()
     })
   })
 
