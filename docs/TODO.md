@@ -91,6 +91,8 @@
 - [x] Séances : bouton de l'en-tête affiché seulement pour une séance démarrée (préparée = jamais) — 2026-10-15 (b79097a)
 - [x] MindMap (espace et carte globale) : zoom au pincement du pad ~10× trop lent sous Windows (React Flow ne compense que sur Mac) → hook useTrackpadPinchZoom — 2026-10-16 (ca38a23)
 - [x] Libellé du bouton de sourdine (CommunityCard, ActivityPage) : « Notifier » / « Réactiver les notifications » est trompeur — la sourdine ne coupe que le fil d'activité, pas la cloche (spec Activité validée 2026-10-15) → « Masquer / Afficher l'activité » + œil — 2026-10-20 (32767b0)
+- [x] Recherche mobile : l'en-tête collé prenait 70 % de l'écran et masquait les résultats → seul le champ collé, types sur une ligne, filtres repliés derrière « Filtres » — 2026-10-20 (e76eb22)
+- [ ] Premier chargement d'une page par son URL (/search, /communities) : renvoi vers l'accueil au lieu de la page demandée (constaté en dev 2026-10-16 et 2026-10-20, cause non cherchée)
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
