@@ -232,10 +232,48 @@ describe('assignEdgeChannels', () => {
     expect((e.data as { centerX?: number }).centerX).toBeDefined();
   });
 
-  it('flèche vers l\'arrière : pas de voie imposée (tracé par défaut)', () => {
-    const boxes = new Map([['a', box(520, 0)], ['b', box(0, 0)]]);
-    const [e] = assignEdgeChannels([edge('1', 'a', 'b')], boxes);
-    expect((e.data as { centerX?: number }).centerX).toBeUndefined();
+  it('retour (flèche vers l\'arrière) : contourne les items au lieu de les traverser', () => {
+    // a (droite, ligne 200) → t (gauche, ligne 0), un item b au milieu sur la hauteur intermédiaire
+    const boxes = new Map([['a', box(780, 200)], ['t', box(0, 0)], ['b', box(390, 100)]]);
+    const [e] = assignEdgeChannels([edge('1', 'a', 't')], boxes);
+    const c = (e.data as { corridor?: { ex: number; y: number; cx: number } }).corridor;
+    expect(c).toBeDefined();
+    expect(c!.ex).toBeGreaterThan(780 + PROCESS_NODE_WIDTH); // sort à droite de la source
+    expect(c!.cx).toBeLessThan(0); // rentre à gauche de la cible
+    expect(c!.y < 100 || c!.y > 100 + PROCESS_NODE_HEIGHT).toBe(true); // hors de b
+  });
+
+  it('retour entre deux couloirs : passe dans l\'espace qui les sépare', () => {
+    const boxes = new Map([
+      ['lane-A', { x: 0, y: 0, width: 1000, height: 100 }],
+      ['lane-B', { x: 0, y: 100 + LANE_GAP, width: 1000, height: 200 }],
+      ['i', box(400, 150 + LANE_GAP)],
+    ]);
+    const [e] = assignEdgeChannels([edge('1', 'lane-A', 'lane-B')], boxes, (id) => !id.startsWith('lane-'));
+    const c = (e.data as { corridor?: { y: number } }).corridor;
+    expect(c).toBeDefined();
+    expect(c!.y).toBeGreaterThan(100);
+    expect(c!.y).toBeLessThan(100 + LANE_GAP);
+  });
+
+  it('plusieurs retours entre les deux mêmes couloirs restent dans l\'espace, sur des voies distinctes', () => {
+    // a, b dans le couloir A → c dans le couloir B, plus la sortie du couloir A → entrée du couloir B
+    const boxes = new Map([
+      ['lane-A', { x: 0, y: 0, width: 1000, height: 100 }],
+      ['lane-B', { x: 0, y: 100 + LANE_GAP, width: 1000, height: 100 }],
+      ['a', box(700, 20)], ['b', box(400, 20)], ['c', box(170, 100 + LANE_GAP + 20)],
+    ]);
+    const out = assignEdgeChannels(
+      [edge('1', 'lane-A', 'lane-B'), edge('2', 'a', 'c'), edge('3', 'b', 'c')],
+      boxes, (id) => !id.startsWith('lane-'),
+    );
+    const ys = out.map((e) => (e.data as { corridor?: { y: number } }).corridor?.y);
+    for (const y of ys) {
+      expect(y).toBeDefined();
+      expect(y!).toBeGreaterThan(100);
+      expect(y!).toBeLessThan(100 + LANE_GAP);
+    }
+    expect(new Set(ys).size).toBe(3);
   });
 });
 

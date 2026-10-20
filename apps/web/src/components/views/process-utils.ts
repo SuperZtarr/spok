@@ -136,6 +136,58 @@ export function assignEdgeChannels<E extends { source: string; target: string; d
     routes.set(r.edge, { corridor: { ex: r.ex, y, cx: r.cx } });
   }
 
+  // ── Retours (cible à gauche de la source, ex. sortie d'un couloir → entrée du suivant) ──
+  // Sortie à droite de la source (ex), voie horizontale libre, rentrée à gauche de la cible (nx). Voies de
+  // préférence dans l'espace entre deux couloirs (boîtes non-obstacles), sinon au-dessus / au-dessous des items.
+  // La voie ne doit traverser aucun item, source et cible comprises (elle les longe sur toute la largeur).
+  type Back = { edge: E; sx: number; sy: number; tx: number; ty: number; ex: number; nx: number };
+  const back: Back[] = [];
+  for (const edge of edges) {
+    if (routes.has(edge)) continue;
+    const s = boxes.get(edge.source);
+    const t = boxes.get(edge.target);
+    if (!s || !t) continue;
+    const sx = s.x + s.width;
+    if (t.x - sx >= 2 * EDGE_CHANNEL_MARGIN) continue; // vers l'avant : déjà routé (ou tracé par défaut)
+    back.push({ edge, sx, sy: s.y + s.height / 2, tx: t.x, ty: t.y + t.height / 2, ex: 0, nx: 0 });
+  }
+  const groupBy = (list: Back[], keyOf: (b: Back) => number) => {
+    const groups = new Map<number, Back[]>();
+    for (const b of list) {
+      const key = keyOf(b);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(b);
+    }
+    return [...groups.values()].map((g) => g.sort((a, b) => a.ty - b.ty || a.sy - b.sy));
+  };
+  for (const g of groupBy(back, (b) => Math.round(b.sx / 20))) g.forEach((b, k) => { b.ex = b.sx + EDGE_CHANNEL_MARGIN + k * EDGE_CHANNEL_STEP; });
+  for (const g of groupBy(back, (b) => Math.round(b.tx / 20))) g.forEach((b, k) => { b.nx = b.tx - EDGE_CHANNEL_MARGIN - k * EDGE_CHANNEL_STEP; });
+
+  const gapBoxes = [...boxes.entries()].filter(([id]) => !isObstacle(id)).map(([, b]) => b);
+  const backIsFree = (y: number, x1: number, x2: number) =>
+    !allBoxes.some(([, b]) => overlaps(x1, x2, b.x, b.x + b.width) && y > b.y - EDGE_OBSTACLE_PAD && y < b.y + b.height + EDGE_OBSTACLE_PAD)
+    && !taken.some((t) => Math.abs(t.y - y) < EDGE_CHANNEL_STEP / 2 + 1 && overlaps(x1, x2, t.x1, t.x2));
+  const spread = (y: number) => [y, y - EDGE_CHANNEL_STEP, y + EDGE_CHANNEL_STEP, y - 2 * EDGE_CHANNEL_STEP, y + 2 * EDGE_CHANNEL_STEP];
+
+  for (const b of back) {
+    const x1 = Math.min(b.nx, b.ex);
+    const x2 = Math.max(b.nx, b.ex);
+    const middle = (b.sy + b.ty) / 2;
+    const byDistance = (a: number, c: number) => Math.abs(a - middle) - Math.abs(c - middle);
+    // Espaces entre couloirs (bord haut / bas de chaque couloir, à mi-écart), puis abords des items
+    const gapYs = gapBoxes.flatMap((g) => [g.y - LANE_GAP / 2, g.y + g.height + LANE_GAP / 2]).sort(byDistance);
+    const itemYs = allBoxes
+      .filter(([, o]) => overlaps(x1, x2, o.x, o.x + o.width))
+      .flatMap(([, o]) => [o.y - EDGE_CORRIDOR_OFFSET, o.y + o.height + EDGE_CORRIDOR_OFFSET])
+      .sort(byDistance);
+    // Toutes les voies d'un espace entre couloirs (pas de 8 px) avant de chercher plus loin
+    const gapTracks = (g: number) => [0, -8, 8, -16, 16].map((d) => g + d);
+    const y = [...gapYs.flatMap(gapTracks), ...itemYs.flatMap(spread)].find((c) => backIsFree(c, x1, x2));
+    if (y === undefined) continue; // aucune voie libre : tracé par défaut
+    taken.push({ y, x1, x2 });
+    routes.set(b.edge, { corridor: { ex: b.ex, y, cx: b.nx } });
+  }
+
   return edges.map((e) => (routes.has(e) ? { ...e, data: { ...e.data, ...routes.get(e) } } : e));
 }
 
@@ -146,7 +198,8 @@ export const PROCESS_NODE_WIDTH = 192;
 export const PROCESS_NODE_HEIGHT = 56;
 export const LANE_HEADER_WIDTH = 150;
 export const LANE_PADDING = 24;
-export const LANE_GAP = 16;
+/** Espace entre deux couloirs : assez large pour plusieurs voies de retour (2026-10-21, 16 → 40). */
+export const LANE_GAP = 40;
 export const LANE_MIN_HEIGHT = 110;
 /** Couloir replié : boîte réduite en hauteur et en longueur (titre seul, items masqués) — bloc « sous-processus ». */
 export const LANE_COLLAPSED_HEIGHT = 44;
