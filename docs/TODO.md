@@ -83,6 +83,8 @@
 - [x] Vue Process : panneau « Non placés » en arborescence + bouton « Réorganiser en processus » (rangs PERT en colonnes, PUT groupé) — 2026-10-21 (582bcc5)
 - [x] Vue Process : branches multiples gardées sur leur ligne à la réorganisation + canevas en pleine hauteur quand tout est placé — 2026-10-21 (383857a)
 - [x] Vue Process : diagrammes de flux → couloirs nommés par un item (rangement visuel, Réorganiser à colonnes communes), Réorganiser sans confirmation — 2026-10-21 (3bd1d13)
+- [x] Sécurité vue Process : écritures exécutées après un 403/404 (garde async renvoyant reply « thenable ») — corrigé + tests « aucune écriture après refus » — 2026-10-21 (cc944eb)
+- [x] Vue Process : couloirs déplaçables, repliables (boîte), reliables (entrée/sortie, sous-processus), titre cliquable ; flèches à angles droits avec bulle de commentaire, voies distinctes et contournement des items — 2026-10-21 (499a54b)
 - [ ] Vue Process — chantier B : modèles qui retiennent le process (relations, durées, disposition) — à brainstormer
 - [ ] Vue Process — chantier C : instanciation d'un modèle avec date de départ, dates calculées le long des liens
 - [x] Modales de relation : MindMap / PERT / Gantt / Process sur RelationCreateDialog / RelationEditDialog (phrases du PERT + explication du type) — 2026-10-20 (ece92a6)
