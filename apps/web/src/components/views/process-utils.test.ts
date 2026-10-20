@@ -1,7 +1,7 @@
 /* TNR de la logique pure de la vue Process : placés / non placés, arêtes des relations, recherche du panneau. */
 import { describe, it, expect } from 'vitest';
 import type { Item, ItemRelation } from '@spok/shared';
-import { splitPlaced, buildProcessEdges, filterUnplaced } from './process-utils';
+import { splitPlaced, buildProcessEdges, filterUnplaced, layoutAsProcess, PROCESS_COLUMN_GAP, PROCESS_ROW_GAP } from './process-utils';
 import { getRelationMeta } from '../../constants/relationTypes';
 
 const item = (id: string, title = id) => ({ id, title, type: 'NOTE' } as unknown as Item);
@@ -36,6 +36,30 @@ describe('buildProcessEdges', () => {
     const [edge] = buildProcessEdges([rel('r1', 'a', 'b', 'blocks')], new Set(['a', 'b']));
     expect(edge.style?.stroke).toBe(getRelationMeta('blocks').hex);
     expect((edge.data as { relationId: string }).relationId).toBe('r1');
+  });
+});
+
+describe('layoutAsProcess', () => {
+  const at = (id: string, x: number, y: number) => ({ item: item(id), x, y });
+  const pos = (result: { itemId: string; x: number; y: number }[], id: string) => result.find((p) => p.itemId === id);
+
+  it('range une chaîne « bloque » de gauche à droite', () => {
+    const result = layoutAsProcess([at('a', 500, 500), at('b', 0, 0), at('c', 90, 40)], [rel('r1', 'a', 'b', 'blocks'), rel('r2', 'b', 'c', 'blocks')]);
+    expect(pos(result, 'a')).toEqual({ itemId: 'a', x: 0, y: 0 });
+    expect(pos(result, 'b')).toEqual({ itemId: 'b', x: PROCESS_COLUMN_GAP, y: 0 });
+    expect(pos(result, 'c')).toEqual({ itemId: 'c', x: 2 * PROCESS_COLUMN_GAP, y: 0 });
+  });
+
+  it('empile une même colonne en gardant l\'ordre vertical actuel', () => {
+    const result = layoutAsProcess([at('a', 0, 300), at('b', 0, 10), at('c', 0, 0)], [rel('r1', 'a', 'c', 'implements'), rel('r2', 'b', 'c', 'blocks')]);
+    expect(pos(result, 'b')).toEqual({ itemId: 'b', x: 0, y: 0 });
+    expect(pos(result, 'a')).toEqual({ itemId: 'a', x: 0, y: PROCESS_ROW_GAP });
+    expect(pos(result, 'c')).toEqual({ itemId: 'c', x: PROCESS_COLUMN_GAP, y: 0 });
+  });
+
+  it('« Lié à » et « Entraîne » n\'ordonnent pas', () => {
+    const result = layoutAsProcess([at('a', 0, 0), at('b', 0, 50)], [rel('r1', 'a', 'b', 'relates'), rel('r2', 'a', 'b', 'drives')]);
+    expect(result.map((p) => p.x)).toEqual([0, 0]);
   });
 });
 

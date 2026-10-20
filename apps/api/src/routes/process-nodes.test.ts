@@ -114,6 +114,40 @@ describe('Process nodes routes', () => {
     expect(prisma.processNode.upsert).not.toHaveBeenCalled()
   })
 
+  it('PUT groupé enregistre toutes les positions des items de l\'espace', async () => {
+    asMember(prisma, 'MEMBER')
+    prisma.item.findMany.mockResolvedValue([{ id: 'i1' }, { id: 'i2' }])
+    prisma.processNode.upsert.mockImplementation(async (args: any) => ({ itemId: args.create.itemId, x: args.create.x, y: args.create.y }))
+
+    const res = await app.inject({
+      method: 'PUT', url: '/spaces/s1/process-nodes', headers,
+      payload: { positions: [{ itemId: 'i1', x: 0, y: 0 }, { itemId: 'i2', x: 260, y: 0 }, { itemId: 'ghost', x: 1, y: 1 }] },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual([{ itemId: 'i1', x: 0, y: 0 }, { itemId: 'i2', x: 260, y: 0 }])
+    expect(prisma.item.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: { in: ['i1', 'i2', 'ghost'] }, spaceId: 's1' } }))
+    expect(prisma.processNode.upsert).toHaveBeenCalledTimes(2)
+  })
+
+  it('PUT groupé par un VIEWER → 403', async () => {
+    asMember(prisma, 'VIEWER')
+
+    const res = await app.inject({ method: 'PUT', url: '/spaces/s1/process-nodes', headers, payload: { positions: [{ itemId: 'i1', x: 0, y: 0 }] } })
+
+    expect(res.statusCode).toBe(403)
+    expect(prisma.processNode.upsert).not.toHaveBeenCalled()
+  })
+
+  it('PUT groupé avec une position invalide → 400', async () => {
+    asMember(prisma, 'OWNER')
+
+    const res = await app.inject({ method: 'PUT', url: '/spaces/s1/process-nodes', headers, payload: { positions: [{ itemId: 'i1', x: 'a', y: 0 }] } })
+
+    expect(res.statusCode).toBe(400)
+    expect(prisma.processNode.upsert).not.toHaveBeenCalled()
+  })
+
   it('DELETE retire le nœud → 204', async () => {
     asMember(prisma, 'MEMBER')
     prisma.processNode.deleteMany.mockResolvedValue({ count: 1 })

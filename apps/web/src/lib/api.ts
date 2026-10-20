@@ -904,6 +904,13 @@ export const processApi = {
 
   remove: (spaceId: string, itemId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/process-nodes/${itemId}`, { method: 'DELETE' }),
+
+  // Enregistrement groupé (réorganisation en processus) : un seul appel pour toutes les positions
+  placeMany: (spaceId: string, positions: Array<{ itemId: string; x: number; y: number }>) =>
+    fetchApi<Array<{ itemId: string; x: number; y: number }>>(`/spaces/${spaceId}/process-nodes`, {
+      method: 'PUT',
+      body: JSON.stringify({ positions }),
+    }),
 };
 
 // Items

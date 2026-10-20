@@ -1,14 +1,17 @@
 /*
  * ProcessUnplacedPanel — panneau gauche de la vue Process : items de l'espace pas encore posés sur le canevas,
- * avec recherche (filterUnplaced) et compteur. Chaque ligne se glisse vers le canevas (HTML5 drag & drop,
+ * en arborescence parent/enfant (buildTree/flattenTree du Gantt, chevrons pour replier ; un item dont le parent
+ * est déjà placé remonte à la racine), avec recherche (filterUnplaced : résultats à plat) et compteur.
+ * Glisser un parent ne pose que lui, pas ses enfants. Chaque ligne se glisse vers le canevas (HTML5 drag & drop,
  * type MIME PROCESS_DRAG_TYPE = id de l'item ; le dépôt est géré par ProcessView). Non glissable si !canEdit.
  * Repliable pour libérer de la place au canevas.
  */
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { filterUnplaced } from './process-utils';
+import { buildTree, flattenTree } from './timeline-tree';
 
 export const PROCESS_DRAG_TYPE = 'application/spok-item-id';
 
@@ -20,7 +23,21 @@ interface ProcessUnplacedPanelProps {
 export function ProcessUnplacedPanel({ items, canEdit }: ProcessUnplacedPanelProps) {
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
-  const visible = filterUnplaced(items, query);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setCollapsedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  // Arborescence parent/enfant des items non placés ; pendant une recherche : résultats à plat
+  const tree = useMemo(() => buildTree(items), [items]);
+  const rows = useMemo(
+    () => (query.trim()
+      ? filterUnplaced(items, query).map((item) => ({ item, depth: 0, hasChildren: false }))
+      : flattenTree(tree, collapsedIds).map((t) => ({ item: t as Item, depth: t.depth, hasChildren: t.children.length > 0 }))),
+    [items, query, tree, collapsedIds],
+  );
 
   if (collapsed) {
     return (
@@ -66,8 +83,9 @@ export function ProcessUnplacedPanel({ items, canEdit }: ProcessUnplacedPanelPro
         {items.length === 0 && (
           <li className="px-3 py-2 text-xs text-muted-foreground">Tous les items sont placés</li>
         )}
-        {visible.map((item) => {
+        {rows.map(({ item, depth, hasChildren }) => {
           const Icon = getTypeIcon(item.type, item.url);
+          const isCollapsed = collapsedIds.has(item.id);
           return (
             <li
               key={item.id}
@@ -76,9 +94,21 @@ export function ProcessUnplacedPanel({ items, canEdit }: ProcessUnplacedPanelPro
                 e.dataTransfer.setData(PROCESS_DRAG_TYPE, item.id);
                 e.dataTransfer.effectAllowed = 'move';
               }}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs hover:bg-accent ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              className={`flex items-center gap-1 pr-3 py-1 text-xs hover:bg-accent ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              style={{ paddingLeft: 8 + depth * 14 }}
               title={item.title}
             >
+              {hasChildren ? (
+                <button
+                  onClick={() => toggle(item.id)}
+                  className="h-4 w-4 flex items-center justify-center flex-shrink-0 rounded hover:bg-background text-muted-foreground"
+                  aria-label={isCollapsed ? 'Déplier' : 'Replier'}
+                >
+                  {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              ) : (
+                <span className="w-4 flex-shrink-0" />
+              )}
               <Icon className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
               <span className="truncate">{item.title || 'Sans titre'}</span>
             </li>

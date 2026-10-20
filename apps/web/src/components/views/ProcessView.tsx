@@ -10,7 +10,9 @@
  * - Filtres type/statut et recherche de la barre d'espace : surbrillance (dim), jamais de retrait de nœud.
  * - Zoom au pincement du pad à vitesse normale hors macOS : useTrackpadPinchZoom (mêmes bornes que <ReactFlow>).
  * Props : celles de PERT (items de l'espace non filtrés, relations, callbacks du menu d'item) + onCreateNote.
- * Ne pas y ajouter de disposition automatique : la place choisie par l'utilisateur fait foi.
+ * - Bouton « Réorganiser en processus » (canEdit) : layoutAsProcess (colonnes par rang « Bloque » / « Permet »)
+ *   après ConfirmModal, enregistré en un appel (placeMany), puis recadrage.
+ * Pas d'autre disposition automatique : hors ce bouton, la place choisie par l'utilisateur fait foi.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -18,7 +20,10 @@ import {
   type Connection, type Edge, type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Undo2 } from 'lucide-react';
+import { Undo2, Wand2 } from 'lucide-react';
+import { HelpHint } from '../../help/HelpHint';
+import { ConfirmModal } from '../ConfirmModal';
+import { help as processHelp } from './help/process.help';
 import type { Item, ItemRelation, ItemType, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { useProcessNodes } from '../../hooks/useProcessNodes';
@@ -30,13 +35,15 @@ import { EmptyHelp } from '../../help/EmptyHelp';
 import { RelationCreateDialog } from '../relations/RelationCreateDialog';
 import { RelationEditDialog } from '../relations/RelationEditDialog';
 import { getStatusColor, tailwindBgToHex } from './mindmap-utils';
-import { splitPlaced, buildProcessEdges } from './process-utils';
+import { splitPlaced, buildProcessEdges, layoutAsProcess } from './process-utils';
 import { ProcessNode, type ProcessFlowNode } from './ProcessNode';
 import { ProcessUnplacedPanel, PROCESS_DRAG_TYPE } from './ProcessUnplacedPanel';
 
 const NODE_TYPES = { process: ProcessNode };
 const PROCESS_MIN_ZOOM = 0.2;
 const PROCESS_MAX_ZOOM = 2;
+/** Infobulles de l'en-tête — textes dans la fiche d'aide (process.help.ts, hints). */
+const PH = processHelp.hints!;
 
 export interface ProcessViewProps extends ItemMenuCallbacks {
   items: Item[];
@@ -71,8 +78,8 @@ function ProcessCanvas({
   onCreateNote, onNewItem, onCreateRelation, onUpdateRelation, onDeleteRelation, onStartTour, pulseHelp,
   ...menuCallbacks
 }: ProcessViewProps) {
-  const { positions, place, remove } = useProcessNodes(spaceId);
-  const { screenToFlowPosition } = useReactFlow();
+  const { positions, place, remove, placeMany } = useProcessNodes(spaceId);
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const canvasRef = useRef<HTMLDivElement>(null);
   useTrackpadPinchZoom(canvasRef, PROCESS_MIN_ZOOM, PROCESS_MAX_ZOOM);
   const statuses = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
@@ -153,6 +160,14 @@ function ProcessCanvas({
     place(created.id, pos.x, pos.y);
   }, [canEdit, onCreateNote, place, screenToFlowPosition]);
 
+  // « Réorganiser en processus » : seule disposition automatique, après confirmation (écrase la disposition partagée)
+  const [confirmReorganize, setConfirmReorganize] = useState(false);
+  const reorganize = useCallback(() => {
+    placeMany(layoutAsProcess(placed, relations));
+    setConfirmReorganize(false);
+    setTimeout(() => fitView({ maxZoom: 1, duration: 300 }), 50);
+  }, [placeMany, placed, relations, fitView]);
+
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   const onConnect = useCallback((c: Connection) => {
     if (c.source && c.target && c.source !== c.target) setPendingConnection({ source: c.source, target: c.target });
@@ -169,6 +184,21 @@ function ProcessCanvas({
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header" data-devzone="contenu-barre-vue">
         {canEdit && onNewItem && <NewItemButton onClick={onNewItem} />}
+        {canEdit && (
+          <HelpHint text={PH.reorganize}>
+            <button
+              type="button"
+              onClick={() => setConfirmReorganize(true)}
+              disabled={placed.length === 0}
+              data-tour="process-reorganize"
+              aria-label="Réorganiser en processus"
+              className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <Wand2 className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">Réorganiser en processus</span>
+            </button>
+          </HelpHint>
+        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="process" onStartTour={onStartTour} pulse={pulseHelp} />
       </div>
@@ -212,6 +242,17 @@ function ProcessCanvas({
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmReorganize}
+        onClose={() => setConfirmReorganize(false)}
+        onConfirm={reorganize}
+        title="Réorganiser en processus"
+        message="Les items placés seront rangés de gauche à droite selon leurs liens « Bloque » et « Permet » ; ceux sans lien d'ordre iront dans la première colonne."
+        warning="La disposition actuelle sera remplacée pour tous les membres de l'espace."
+        confirmLabel="Réorganiser"
+        confirmVariant="default"
+      />
 
       {pendingConnection && (
         <RelationCreateDialog

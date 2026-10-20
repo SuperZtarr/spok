@@ -10,17 +10,21 @@ export const help: HelpEntry = {
   short: 'Poser et relier librement',
   empty: 'Le process est vide. Glissez un item depuis le panneau de gauche, ou double-cliquez sur le canevas pour noter une idée.',
   tips: [
-    'Glissez un item du panneau « Non placés » sur le canevas pour le poser',
+    'Glissez un item du panneau « Non placés » sur le canevas pour le poser ; le panneau suit l\'arborescence des items',
+    '« Réorganiser en processus » range les items de gauche à droite selon les liens « Bloque » et « Permet »',
     'Double-cliquez sur le vide pour créer une note à cet endroit',
     'Tirez d\'un bord d\'un item vers un autre pour créer une relation',
     'Cliquez sur une flèche pour modifier ou supprimer la relation',
     '« Retirer du process » renvoie l\'item dans le panneau sans le supprimer',
     'Les positions sont partagées avec tous les membres de l\'espace',
   ],
+  hints: {
+    reorganize: 'Ranger les items placés en colonnes, de gauche à droite, selon leurs liens « Bloque » et « Permet » (remplace la disposition actuelle, après confirmation)',
+  },
   zones: {
     canevas: { title: 'Canevas', text: 'Les items posés à la main et leurs relations. Rien n\'est rangé automatiquement : la place choisie reste.' },
     noeud: { title: 'Un item', text: 'Déplacez-le à la souris ; tirez depuis son bord pour le relier ; double-cliquez pour ouvrir sa fiche.' },
-    panneau: { title: 'Non placés', text: 'Les items de l\'espace qui ne sont pas encore sur le canevas. Glissez-les pour les poser.' },
+    panneau: { title: 'Non placés', text: 'Les items de l\'espace qui ne sont pas encore sur le canevas, rangés par parent. Glissez-les pour les poser.' },
   },
   tour: [
     {
@@ -33,7 +37,7 @@ export const help: HelpEntry = {
       element: '[data-tour="process-unplaced"]',
       popover: {
         title: 'Items non placés',
-        description: 'Les items pas encore sur le canevas. Glissez-en un pour le poser ; la recherche aide à le retrouver.',
+        description: 'Les items pas encore sur le canevas, rangés par parent (chevrons pour replier). Glissez-en un pour le poser ; la recherche aide à le retrouver.',
         side: 'right',
       },
     },
@@ -51,6 +55,14 @@ export const help: HelpEntry = {
         title: 'Relier deux items',
         description: 'Tirez depuis le bord droit d\'un item vers un autre : vous choisissez le type de relation. Cliquez sur une flèche pour la modifier.',
         side: 'right',
+      },
+    },
+    {
+      element: '[data-tour="process-reorganize"]',
+      popover: {
+        title: 'Réorganiser en processus',
+        description: 'Range les items placés en colonnes, de gauche à droite, selon leurs liens « Bloque » et « Permet ». Une confirmation est demandée : la disposition est partagée.',
+        side: 'bottom',
       },
     },
     ...ITEM_MENU_STEP,

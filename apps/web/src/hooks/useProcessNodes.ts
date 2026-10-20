@@ -1,7 +1,8 @@
 /*
  * useProcessNodes(spaceId) — positions des items sur le canevas de la vue Process (queryKey ['process-nodes', spaceId]).
  * place(itemId, x, y) : place ou déplace un item ; remove(itemId) : le renvoie dans le panneau « non placés »
- * (l'item n'est pas supprimé). Les deux sont optimistes (cache mis à jour tout de suite, restauré en cas
+ * (l'item n'est pas supprimé) ; placeMany(positions) : déplace plusieurs items placés en un appel (réorganisation).
+ * Tous sont optimistes (cache mis à jour tout de suite, restauré en cas
  * d'échec, resynchronisé ensuite). Réservé à ProcessView ; ne pas appeler processApi directement depuis une vue.
  */
 import { useCallback } from 'react';
@@ -45,10 +46,22 @@ export function useProcessNodes(spaceId: string | undefined) {
     onSettled: settle,
   });
 
+  const placeManyMutation = useMutation({
+    mutationFn: (batch: ProcessPosition[]) => processApi.placeMany(spaceId!, batch),
+    onMutate: (batch) => optimistic((prev) => {
+      const moved = new Map(batch.map((p) => [p.itemId, p]));
+      return prev.map((p) => moved.get(p.itemId) ?? p);
+    }),
+    onError: rollback,
+    onSettled: settle,
+  });
+
   const { mutate: placeMutate } = placeMutation;
   const { mutate: removeMutate } = removeMutation;
+  const { mutate: placeManyMutate } = placeManyMutation;
   const place = useCallback((itemId: string, x: number, y: number) => placeMutate({ itemId, x, y }), [placeMutate]);
   const remove = useCallback((itemId: string) => removeMutate(itemId), [removeMutate]);
+  const placeMany = useCallback((batch: ProcessPosition[]) => placeManyMutate(batch), [placeManyMutate]);
 
-  return { positions: data ?? [], isLoading, place, remove };
+  return { positions: data ?? [], isLoading, place, remove, placeMany };
 }

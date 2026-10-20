@@ -5,10 +5,13 @@
  * - buildProcessEdges : arêtes xyflow des relations dont les DEUX extrémités sont placées, types officiels
  *   seulement (source unique constants/relationTypes.ts) ; data.relationId sert à la modale d'édition.
  * - filterUnplaced : recherche du panneau, insensible à la casse et aux accents.
+ * - layoutAsProcess : rangement en colonnes par rang de dépendance (bouton « Réorganiser en processus »),
+ *   seule disposition automatique de la vue, et uniquement sur action explicite.
  */
 import { MarkerType, type Edge } from '@xyflow/react';
 import type { Item, ItemRelation } from '@spok/shared';
 import { getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
+import { buildPertGraph, computePertRanks } from './pert-utils';
 
 export type ProcessPosition = { itemId: string; x: number; y: number };
 
@@ -43,6 +46,38 @@ export function buildProcessEdges(relations: ItemRelation[], placedIds: Set<stri
         data: { relationId: r.id, type: r.type, label: r.label ?? '' },
       };
     });
+}
+
+/** Écart entre colonnes (rangs) et entre lignes du rangement automatique — nœud de 192 px de large. */
+export const PROCESS_COLUMN_GAP = 260;
+export const PROCESS_ROW_GAP = 90;
+
+/**
+ * Rangement « en processus » (bouton Réorganiser) : une colonne par rang de dépendance, de gauche à droite,
+ * rangs calculés comme le PERT (computePertRanks : seuls « Bloque » et « Permet » ordonnent ; item sans lien
+ * d'ordre ou pris dans un cycle → première colonne). Dans une colonne, l'ordre vertical actuel est conservé.
+ */
+export function layoutAsProcess(
+  placed: Array<{ item: Item; x: number; y: number }>,
+  relations: ItemRelation[],
+): ProcessPosition[] {
+  const items = placed.map((p) => p.item);
+  const { predecessors, successors } = buildPertGraph(items, relations);
+  const ranks = computePertRanks(items, predecessors, successors);
+
+  const columns = new Map<number, Array<{ item: Item; x: number; y: number }>>();
+  for (const p of placed) {
+    const rank = ranks.get(p.item.id) ?? 0;
+    if (!columns.has(rank)) columns.set(rank, []);
+    columns.get(rank)!.push(p);
+  }
+
+  const result: ProcessPosition[] = [];
+  for (const [rank, column] of columns) {
+    column.sort((a, b) => a.y - b.y || a.x - b.x);
+    column.forEach((p, row) => result.push({ itemId: p.item.id, x: rank * PROCESS_COLUMN_GAP, y: row * PROCESS_ROW_GAP }));
+  }
+  return result;
 }
 
 const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
