@@ -2,25 +2,33 @@
  * ProcessUnplacedPanel — panneau gauche de la vue Process : items de l'espace pas encore posés sur le canevas,
  * en arborescence parent/enfant (buildTree/flattenTree du Gantt, chevrons pour replier ; un item dont le parent
  * est déjà placé remonte à la racine), avec recherche (filterUnplaced : résultats à plat) et compteur.
- * Glisser un parent ne pose que lui, pas ses enfants. Chaque ligne se glisse vers le canevas (HTML5 drag & drop,
+ * Glisser un parent ne pose que lui, pas ses enfants. Bouton au survol « Définir comme couloir » (onMakeLane).
+ * Les items devenus titres de couloir n'y figurent pas (filtrés par ProcessView). Chaque ligne se glisse vers le canevas (HTML5 drag & drop,
  * type MIME PROCESS_DRAG_TYPE = id de l'item ; le dépôt est géré par ProcessView). Non glissable si !canEdit.
  * Repliable pour libérer de la place au canevas.
  */
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Rows3, Search } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { filterUnplaced } from './process-utils';
 import { buildTree, flattenTree } from './timeline-tree';
+import { HelpHint } from '../../help/HelpHint';
+import { help as processHelp } from './help/process.help';
+
+/** Infobulles — textes dans la fiche d'aide (process.help.ts, hints). */
+const PH = processHelp.hints!;
 
 export const PROCESS_DRAG_TYPE = 'application/spok-item-id';
 
 interface ProcessUnplacedPanelProps {
   items: Item[];
   canEdit: boolean;
+  /** « Définir comme couloir » (bouton au survol d'une ligne) : l'item devient un couloir du process */
+  onMakeLane?: (itemId: string) => void;
 }
 
-export function ProcessUnplacedPanel({ items, canEdit }: ProcessUnplacedPanelProps) {
+export function ProcessUnplacedPanel({ items, canEdit, onMakeLane }: ProcessUnplacedPanelProps) {
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -94,7 +102,7 @@ export function ProcessUnplacedPanel({ items, canEdit }: ProcessUnplacedPanelPro
                 e.dataTransfer.setData(PROCESS_DRAG_TYPE, item.id);
                 e.dataTransfer.effectAllowed = 'move';
               }}
-              className={`flex items-center gap-1 pr-3 py-1 text-xs hover:bg-accent ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              className={`group flex items-center gap-1 pr-2 py-1 text-xs hover:bg-accent ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
               style={{ paddingLeft: 8 + depth * 14 }}
               title={item.title}
             >
@@ -110,7 +118,19 @@ export function ProcessUnplacedPanel({ items, canEdit }: ProcessUnplacedPanelPro
                 <span className="w-4 flex-shrink-0" />
               )}
               <Icon className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
-              <span className="truncate">{item.title || 'Sans titre'}</span>
+              <span className="flex-1 min-w-0 truncate">{item.title || 'Sans titre'}</span>
+              {canEdit && onMakeLane && (
+                <HelpHint text={PH.makeLane} className="inline-flex flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onMakeLane(item.id)}
+                    className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-background hover:text-foreground"
+                    aria-label="Définir comme couloir"
+                  >
+                    <Rows3 className="w-3.5 h-3.5" />
+                  </button>
+                </HelpHint>
+              )}
             </li>
           );
         })}

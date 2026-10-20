@@ -29,6 +29,8 @@ erDiagram
     Item ||--o{ ItemView : "item"
     Item |o--o{ LiveSessionEntry : "item"
     Item ||--o{ ProcessNode : "item"
+    Item ||--o{ ProcessLane : "item"
+    ProcessLane |o--o{ ProcessNode : "lane"
     Item |o--o{ Reaction : "item"
     LiveSession |o--o| LiveSession : "previousSession"
     LiveSession ||--o{ LiveSessionAgendaItem : "session"
@@ -39,6 +41,7 @@ erDiagram
     Space |o--o{ Invitation : "space"
     Space ||--o{ Item : "space"
     Space ||--o{ ProcessNode : "space"
+    Space ||--o{ ProcessLane : "space"
     Space ||--o{ LiveSession : "parentSpace"
     Space ||--o| LiveSession : "space"
     Space |o--o{ Space : "parent"
@@ -540,7 +543,26 @@ Position d'un item sur le canevas de la vue Process de son espace (2026-10-20). 
 | `itemId` | String | FK |  |
 | `x` | Float |  |  |
 | `y` | Float |  |  |
+| `laneId` | String? | FK | null = item libre (x/y absolus) ; sinon x/y relatifs au couloir |
 | `updatedAt` | DateTime | updatedAt |  |
+
+Clés étrangères : `spaceId` → Space (onDelete Cascade) ; `itemId` → Item (onDelete Cascade) ; `laneId` → ProcessLane (onDelete SetNull)
+
+Unicité : (spaceId, itemId)
+
+Index : (spaceId), (laneId)
+
+### ProcessLane (`process_lanes`)
+
+Couloir (flux) de la vue Process (2026-10-21) : bande horizontale nommée par un item de l'espace, où l'on range visuellement des items (aucun effet sur parent/relations). position = ordre d'empilement, de haut en bas.
+
+| Champ | Type | Contraintes | Note |
+|---|---|---|---|
+| `id` | String | PK, défaut cuid() |  |
+| `spaceId` | String | FK |  |
+| `itemId` | String | FK |  |
+| `position` | Int | défaut 0 |  |
+| `createdAt` | DateTime | défaut now() |  |
 
 Clés étrangères : `spaceId` → Space (onDelete Cascade) ; `itemId` → Item (onDelete Cascade)
 

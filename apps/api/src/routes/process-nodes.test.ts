@@ -148,6 +148,104 @@ describe('Process nodes routes', () => {
     expect(prisma.processNode.upsert).not.toHaveBeenCalled()
   })
 
+  it('GET renvoie le couloir de chaque nœud', async () => {
+    asMember(prisma, 'VIEWER')
+    await app.inject({ method: 'GET', url: '/spaces/s1/process-nodes', headers })
+    expect(prisma.processNode.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ laneId: true }),
+    }))
+  })
+
+  it('PUT avec un couloir d\'un autre espace → 400', async () => {
+    asMember(prisma, 'MEMBER')
+    prisma.item.findFirst.mockResolvedValue({ id: 'i1' })
+    prisma.processLane.findFirst.mockResolvedValue(null)
+
+    const res = await app.inject({ method: 'PUT', url: '/spaces/s1/process-nodes/i1', headers, payload: { x: 1, y: 2, laneId: 'other-lane' } })
+
+    expect(res.statusCode).toBe(400)
+    expect(prisma.processNode.upsert).not.toHaveBeenCalled()
+  })
+
+  it('PUT dans un couloir enregistre le couloir', async () => {
+    asMember(prisma, 'MEMBER')
+    prisma.item.findFirst.mockResolvedValue({ id: 'i1' })
+    prisma.processLane.findFirst.mockResolvedValue({ id: 'l1' })
+    prisma.processNode.upsert.mockResolvedValue({ itemId: 'i1', x: 1, y: 2, laneId: 'l1' })
+
+    const res = await app.inject({ method: 'PUT', url: '/spaces/s1/process-nodes/i1', headers, payload: { x: 1, y: 2, laneId: 'l1' } })
+
+    expect(res.statusCode).toBe(200)
+    expect(prisma.processNode.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ laneId: 'l1' }), update: expect.objectContaining({ laneId: 'l1' }),
+    }))
+  })
+
+  describe('couloirs', () => {
+    it('GET liste les couloirs dans l\'ordre', async () => {
+      asMember(prisma, 'VIEWER')
+      prisma.processLane.findMany.mockResolvedValue([{ id: 'l1', itemId: 'p1', position: 0 }])
+
+      const res = await app.inject({ method: 'GET', url: '/spaces/s1/process-lanes', headers })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toEqual([{ id: 'l1', itemId: 'p1', position: 0 }])
+      expect(prisma.processLane.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { spaceId: 's1' }, orderBy: { position: 'asc' } }))
+    })
+
+    it('POST crée le couloir en dernier et retire le nœud de l\'item', async () => {
+      asMember(prisma, 'MEMBER')
+      prisma.item.findFirst.mockResolvedValue({ id: 'p1' })
+      prisma.processLane.findFirst.mockResolvedValue(null)
+      prisma.processLane.aggregate.mockResolvedValue({ _max: { position: 2 } })
+      prisma.processLane.create.mockResolvedValue({ id: 'l9', itemId: 'p1', position: 3 })
+
+      const res = await app.inject({ method: 'POST', url: '/spaces/s1/process-lanes', headers, payload: { itemId: 'p1' } })
+
+      expect(res.statusCode).toBe(201)
+      expect(res.json()).toEqual({ id: 'l9', itemId: 'p1', position: 3 })
+      expect(prisma.processNode.deleteMany).toHaveBeenCalledWith({ where: { spaceId: 's1', itemId: 'p1' } })
+      expect(prisma.processLane.create).toHaveBeenCalledWith(expect.objectContaining({ data: { spaceId: 's1', itemId: 'p1', position: 3 } }))
+    })
+
+    it('POST sur un item hors espace → 404', async () => {
+      asMember(prisma, 'MEMBER')
+      prisma.item.findFirst.mockResolvedValue(null)
+
+      const res = await app.inject({ method: 'POST', url: '/spaces/s1/process-lanes', headers, payload: { itemId: 'x' } })
+
+      expect(res.statusCode).toBe(404)
+      expect(prisma.processLane.create).not.toHaveBeenCalled()
+    })
+
+    it('POST par un VIEWER → 403', async () => {
+      asMember(prisma, 'VIEWER')
+
+      const res = await app.inject({ method: 'POST', url: '/spaces/s1/process-lanes', headers, payload: { itemId: 'p1' } })
+
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('PUT /order renumérote les couloirs', async () => {
+      asMember(prisma, 'OWNER')
+
+      const res = await app.inject({ method: 'PUT', url: '/spaces/s1/process-lanes/order', headers, payload: { ids: ['l2', 'l1'] } })
+
+      expect(res.statusCode).toBe(204)
+      expect(prisma.processLane.updateMany).toHaveBeenCalledWith({ where: { id: 'l2', spaceId: 's1' }, data: { position: 0 } })
+      expect(prisma.processLane.updateMany).toHaveBeenCalledWith({ where: { id: 'l1', spaceId: 's1' }, data: { position: 1 } })
+    })
+
+    it('DELETE supprime le couloir → 204', async () => {
+      asMember(prisma, 'MEMBER')
+
+      const res = await app.inject({ method: 'DELETE', url: '/spaces/s1/process-lanes/l1', headers })
+
+      expect(res.statusCode).toBe(204)
+      expect(prisma.processLane.deleteMany).toHaveBeenCalledWith({ where: { id: 'l1', spaceId: 's1' } })
+    })
+  })
+
   it('DELETE retire le nœud → 204', async () => {
     asMember(prisma, 'MEMBER')
     prisma.processNode.deleteMany.mockResolvedValue({ count: 1 })

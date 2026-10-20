@@ -1,7 +1,10 @@
 /* TNR de la logique pure de la vue Process : placés / non placés, arêtes des relations, recherche du panneau. */
 import { describe, it, expect } from 'vitest';
 import type { Item, ItemRelation } from '@spok/shared';
-import { splitPlaced, buildProcessEdges, filterUnplaced, layoutAsProcess, PROCESS_COLUMN_GAP, PROCESS_ROW_GAP } from './process-utils';
+import {
+  splitPlaced, buildProcessEdges, filterUnplaced, layoutAsProcess, computeLaneLayout, findLaneAt,
+  PROCESS_COLUMN_GAP, PROCESS_ROW_GAP, LANE_MIN_HEIGHT, LANE_GAP, LANE_PADDING, LANE_CONTENT_X, PROCESS_NODE_HEIGHT,
+} from './process-utils';
 import { getRelationMeta } from '../../constants/relationTypes';
 
 const item = (id: string, title = id) => ({ id, title, type: 'NOTE' } as unknown as Item);
@@ -11,8 +14,14 @@ describe('splitPlaced', () => {
   it('sépare placés et non placés', () => {
     const [a, b, c] = [item('a'), item('b'), item('c')];
     const { placed, unplaced } = splitPlaced([a, b, c], [{ itemId: 'b', x: 1, y: 2 }]);
-    expect(placed).toEqual([{ item: b, x: 1, y: 2 }]);
+    expect(placed).toEqual([{ item: b, x: 1, y: 2, laneId: null }]);
     expect(unplaced).toEqual([a, c]);
+  });
+
+  it('exclut les items devenus titres de couloir', () => {
+    const { placed, unplaced } = splitPlaced([item('a'), item('p1')], [], new Set(['p1']));
+    expect(placed).toEqual([]);
+    expect(unplaced.map((i) => i.id)).toEqual(['a']);
   });
 
   it("ignore une position d'item disparu", () => {
@@ -73,6 +82,46 @@ describe('layoutAsProcess', () => {
     const result = layoutAsProcess([at('a', 0, 0), at('b', 0, 50)], [rel('r1', 'a', 'b', 'relates'), rel('r2', 'a', 'b', 'drives')]);
     expect(result.map((p) => p.x)).toEqual([0, 0]);
   });
+});
+
+describe('couloirs', () => {
+  const lanes = [{ id: 'L1', itemId: 'p1', position: 0 }, { id: 'L2', itemId: 'p2', position: 1 }];
+
+  it('empile les couloirs, hauteur selon le membre le plus bas, hauteur minimale si vide', () => {
+    const layout = computeLaneLayout(lanes, [{ x: LANE_CONTENT_X, y: 200, laneId: 'L1' }]);
+    const h1 = 200 + PROCESS_NODE_HEIGHT + LANE_PADDING;
+    expect(layout.lanes[0]).toMatchObject({ id: 'L1', y: 0, height: h1 });
+    expect(layout.lanes[1]).toMatchObject({ id: 'L2', y: h1 + LANE_GAP, height: LANE_MIN_HEIGHT });
+    expect(layout.bottom).toBe(h1 + LANE_GAP + LANE_MIN_HEIGHT);
+  });
+
+  it('trouve le couloir sous un point, null hors des bandes', () => {
+    const layout = computeLaneLayout(lanes, []);
+    expect(findLaneAt(layout, { x: 300, y: LANE_MIN_HEIGHT + LANE_GAP + 10 })).toBe('L2');
+    expect(findLaneAt(layout, { x: 300, y: layout.bottom + 50 })).toBeNull();
+    expect(findLaneAt(layout, { x: -20, y: 10 })).toBeNull();
+  });
+
+  it('Réorganiser : colonnes communes, chaque item garde son couloir, libres sous les couloirs', () => {
+    const result = layoutAsProcess(
+      [
+        { item: item('a'), x: 500, y: 30, laneId: 'L1' },
+        { item: item('b'), x: 10, y: 90, laneId: 'L2' },
+        { item: item('c'), x: 0, y: 900, laneId: null },
+      ],
+      [rel('r1', 'a', 'b', 'blocks')],
+      lanes,
+    );
+    const a = pos(result, 'a')!, b = pos(result, 'b')!, c = pos(result, 'c')!;
+    expect(a).toMatchObject({ laneId: 'L1', x: LANE_CONTENT_X, y: LANE_PADDING });
+    expect(b).toMatchObject({ laneId: 'L2', x: LANE_CONTENT_X + PROCESS_COLUMN_GAP, y: LANE_PADDING });
+    expect(c.laneId).toBeNull();
+    expect(c.x).toBe(LANE_CONTENT_X);
+    const layout = computeLaneLayout(lanes, result);
+    expect(c.y).toBeGreaterThanOrEqual(layout.bottom);
+  });
+
+  const pos = (result: { itemId: string }[], id: string) => result.find((p) => p.itemId === id) as any;
 });
 
 describe('filterUnplaced', () => {

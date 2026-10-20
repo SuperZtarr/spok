@@ -12,6 +12,8 @@ export const help: HelpEntry = {
   tips: [
     'Glissez un item du panneau « Non placés » sur le canevas pour le poser ; le panneau suit l\'arborescence des items',
     '« Réorganiser en processus » range les items de gauche à droite selon les liens « Bloque » et « Permet »',
+    '« Définir comme couloir » (menu ⋯ d\'un item, ou bouton du panneau) crée une bande nommée par cet item ; glissez-y des items pour les ranger — c\'est purement visuel',
+    'Le menu du titre d\'un couloir permet de le monter, le descendre ou le retirer (ses items restent en place)',
     'Double-cliquez sur le vide pour créer une note à cet endroit',
     'Tirez d\'un bord d\'un item vers un autre pour créer une relation',
     'Cliquez sur une flèche pour modifier ou supprimer la relation',
@@ -19,11 +21,13 @@ export const help: HelpEntry = {
     'Les positions sont partagées avec tous les membres de l\'espace',
   ],
   hints: {
-    reorganize: 'Ranger les items placés en colonnes, de gauche à droite, selon leurs liens « Bloque » et « Permet » (remplace la disposition actuelle, après confirmation)',
+    reorganize: 'Ranger les items placés en colonnes, de gauche à droite, selon leurs liens « Bloque » et « Permet » ; chaque item reste dans son couloir (remplace la disposition actuelle pour tous les membres)',
+    makeLane: 'Définir comme couloir : cet item devient une bande où ranger d\'autres items',
   },
   zones: {
     canevas: { title: 'Canevas', text: 'Les items posés à la main et leurs relations. Rien n\'est rangé automatiquement : la place choisie reste.' },
     noeud: { title: 'Un item', text: 'Déplacez-le à la souris ; tirez depuis son bord pour le relier ; double-cliquez pour ouvrir sa fiche.' },
+    couloir: { title: 'Un couloir', text: 'Une bande nommée par un item, où l\'on range visuellement d\'autres items. Glissez un item dedans ou dehors ; le titre ouvre la fiche de l\'item.' },
     panneau: { title: 'Non placés', text: 'Les items de l\'espace qui ne sont pas encore sur le canevas, rangés par parent. Glissez-les pour les poser.' },
   },
   tour: [
@@ -58,10 +62,18 @@ export const help: HelpEntry = {
       },
     },
     {
+      element: '[data-tour="process-lane"]',
+      popover: {
+        title: 'Couloirs',
+        description: 'Une bande nommée par un item (« Définir comme couloir » dans le menu ⋯). Glissez-y des items pour ranger un flux ; le menu du titre la monte, la descend ou la retire.',
+        side: 'bottom',
+      },
+    },
+    {
       element: '[data-tour="process-reorganize"]',
       popover: {
         title: 'Réorganiser en processus',
-        description: 'Range les items placés en colonnes, de gauche à droite, selon leurs liens « Bloque » et « Permet ». Une confirmation est demandée : la disposition est partagée.',
+        description: 'Range les items placés en colonnes, de gauche à droite, selon leurs liens « Bloque » et « Permet », chacun dans son couloir. La nouvelle disposition est partagée avec tous les membres.',
         side: 'bottom',
       },
     },

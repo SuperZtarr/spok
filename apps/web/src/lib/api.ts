@@ -892,22 +892,39 @@ export const communitiesApi = {
 };
 
 // Vue Process : positions des items sur le canevas de l'espace (routes/process-nodes.ts)
+type ProcessNodePosition = { itemId: string; x: number; y: number; laneId?: string | null };
+type ProcessLaneRow = { id: string; itemId: string; position: number };
+
 export const processApi = {
   list: (spaceId: string) =>
-    fetchApi<Array<{ itemId: string; x: number; y: number }>>(`/spaces/${spaceId}/process-nodes`),
+    fetchApi<ProcessNodePosition[]>(`/spaces/${spaceId}/process-nodes`),
 
-  place: (spaceId: string, itemId: string, x: number, y: number) =>
-    fetchApi<{ itemId: string; x: number; y: number }>(`/spaces/${spaceId}/process-nodes/${itemId}`, {
+  // laneId : couloir (x/y relatifs), null = libre (x/y absolus), absent = couloir inchangé
+  place: (spaceId: string, itemId: string, x: number, y: number, laneId?: string | null) =>
+    fetchApi<ProcessNodePosition>(`/spaces/${spaceId}/process-nodes/${itemId}`, {
       method: 'PUT',
-      body: JSON.stringify({ x, y }),
+      body: JSON.stringify(laneId === undefined ? { x, y } : { x, y, laneId }),
     }),
+
+  // Couloirs (bandes nommées par un item)
+  listLanes: (spaceId: string) =>
+    fetchApi<ProcessLaneRow[]>(`/spaces/${spaceId}/process-lanes`),
+
+  createLane: (spaceId: string, itemId: string) =>
+    fetchApi<ProcessLaneRow>(`/spaces/${spaceId}/process-lanes`, { method: 'POST', body: JSON.stringify({ itemId }) }),
+
+  reorderLanes: (spaceId: string, ids: string[]) =>
+    fetchApi<void>(`/spaces/${spaceId}/process-lanes/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+
+  deleteLane: (spaceId: string, laneId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/process-lanes/${laneId}`, { method: 'DELETE' }),
 
   remove: (spaceId: string, itemId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/process-nodes/${itemId}`, { method: 'DELETE' }),
 
   // Enregistrement groupé (réorganisation en processus) : un seul appel pour toutes les positions
-  placeMany: (spaceId: string, positions: Array<{ itemId: string; x: number; y: number }>) =>
-    fetchApi<Array<{ itemId: string; x: number; y: number }>>(`/spaces/${spaceId}/process-nodes`, {
+  placeMany: (spaceId: string, positions: ProcessNodePosition[]) =>
+    fetchApi<ProcessNodePosition[]>(`/spaces/${spaceId}/process-nodes`, {
       method: 'PUT',
       body: JSON.stringify({ positions }),
     }),

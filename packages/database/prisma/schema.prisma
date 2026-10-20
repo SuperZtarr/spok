@@ -98,6 +98,7 @@ model Space {
   memberships SpaceMembership[]
   items       Item[]
   processNodes ProcessNode[]
+  processLanes ProcessLane[]
   tags        Tag[]
   auditLogs   AuditLog[]
   invitations Invitation[]
@@ -357,6 +358,7 @@ model Item {
   dayPlanEntries DayPlanEntry[]
   liveSessionEntries LiveSessionEntry[]
   processNodes  ProcessNode[]
+  processLanes  ProcessLane[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -376,11 +378,32 @@ model ProcessNode {
   item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   x         Float
   y         Float
+  // Couloir (2026-10-21) : null = item libre (x/y absolus) ; sinon x/y relatifs au couloir. Couloir supprimé → libre.
+  laneId    String?
+  lane      ProcessLane? @relation(fields: [laneId], references: [id], onDelete: SetNull)
   updatedAt DateTime @updatedAt
 
   @@unique([spaceId, itemId])
   @@index([spaceId])
+  @@index([laneId])
   @@map("process_nodes")
+}
+
+// Couloir (flux) de la vue Process (2026-10-21) : bande horizontale nommée par un item de l'espace, où l'on range
+// visuellement des items (aucun effet sur parent/relations). position = ordre d'empilement, de haut en bas.
+model ProcessLane {
+  id        String   @id @default(cuid())
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  nodes     ProcessNode[]
+
+  @@unique([spaceId, itemId])
+  @@index([spaceId])
+  @@map("process_lanes")
 }
 
 enum ItemType {
