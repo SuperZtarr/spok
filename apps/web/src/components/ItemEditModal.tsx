@@ -29,7 +29,6 @@
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useDialogFocus } from '../hooks/useDialogFocus';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
 import { assignmentReceiptLabel } from '../lib/assignmentReceipt';
 import { createPortal } from 'react-dom';
@@ -69,7 +68,8 @@ import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../lib/cascadeShift';
 import { CascadeShiftConfirmModal } from './CascadeShiftConfirmModal';
-import { DevModalBadge } from './ui/DevModalBadge';
+import { RelationEditDialog } from './relations/RelationEditDialog';
+import type { RelationEnd } from './relations/RelationSentenceRow';
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers';
@@ -182,11 +182,8 @@ export function ItemEditModal({
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
   const [newRelationLabel, setNewRelationLabel] = useState('');
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
-  const editRelationDialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(editRelationDialogRef, !!editingRelationId);
-  const [editRelationType, setEditRelationType] = useState('');
-  const [editRelationLabel, setEditRelationLabel] = useState('');
-  const [editingRelationMeta, setEditingRelationMeta] = useState<{ sourceName: string; targetName: string } | null>(null);
+  // Relation ouverte dans RelationEditDialog (modale partagée) : extrémités (titre + statut), type et commentaire initiaux
+  const [editingRelationMeta, setEditingRelationMeta] = useState<{ source: RelationEnd; target: RelationEnd; type: string; label: string } | null>(null);
 
   const { user } = useAuthStore();
 
@@ -482,8 +479,6 @@ export function ItemEditModal({
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
       setEditingRelationId(null);
-      setEditRelationType('');
-      setEditRelationLabel('');
     },
   });
 
@@ -1588,10 +1583,10 @@ export function ItemEditModal({
 
                 {((item.relationsFrom && item.relationsFrom.length > 0) || (item.relationsTo && item.relationsTo.length > 0)) ? (
                   <div className="space-y-2">
-                    {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string } }) => {
+                    {item.relationsFrom?.map((relation: ItemRelation & { toItem?: { id: string; title: string; type: string; status?: string | null } }) => {
                       const typeLabel = getRelationMeta(relation.type).label;
                       const typeClass = getRelationMeta(relation.type).badgeClass;
-                      const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: item.title, targetName: relation.toItem?.title || '' }); } : undefined;
+                      const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditingRelationMeta({ source: { title: item.title, status: item.status }, target: { title: relation.toItem?.title || '', status: relation.toItem?.status }, type: relation.type, label: relation.label || '' }); } : undefined;
                       return (
                         <div key={relation.id}
                           className={`px-3 py-2 bg-card border border-border rounded-lg text-sm flex items-center gap-2 ${canEdit ? 'cursor-pointer hover:bg-muted transition-colors' : ''}`}
@@ -1603,10 +1598,10 @@ export function ItemEditModal({
                         </div>
                       );
                     })}
-                    {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string } }) => {
+                    {item.relationsTo?.map((relation: ItemRelation & { fromItem?: { id: string; title: string; type: string; status?: string | null } }) => {
                       const typeLabel = getRelationMeta(relation.type).inverseLabel;
                       const typeClass = getRelationMeta(relation.type).inverseBadgeClass;
-                      const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditRelationType(relation.type); setEditRelationLabel(relation.label || ''); setEditingRelationMeta({ sourceName: relation.fromItem?.title || '', targetName: item.title }); } : undefined;
+                      const openModal = canEdit ? () => { setEditingRelationId(relation.id); setEditingRelationMeta({ source: { title: relation.fromItem?.title || '', status: relation.fromItem?.status }, target: { title: item.title, status: item.status }, type: relation.type, label: relation.label || '' }); } : undefined;
                       return (
                         <div key={relation.id}
                           className={`px-3 py-2 bg-card border border-border rounded-lg text-sm flex items-center gap-2 ${canEdit ? 'cursor-pointer hover:bg-muted transition-colors' : ''}`}
@@ -1871,54 +1866,20 @@ export function ItemEditModal({
       )}
 
       {/* Relation edit modal */}
+      {/* Relation edit modal — modale partagée (MindMap, PERT, Gantt, Process), au-dessus de la fiche (z-[200]) */}
       {editingRelationId && editingRelationMeta && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setEditingRelationId(null)} />
-          <div ref={editRelationDialogRef} className="outline-none relative bg-background rounded-xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold flex items-center gap-2">Modifier la relation <DevModalBadge name="ItemEditModal (éditer relation)" /></h3>
-              <button type="button" onClick={() => setEditingRelationId(null)} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="flex flex-col gap-2">
-              {RELATION_TYPE_LIST.map((m) => ({ id: m.id, label: m.verb, Icon: m.Icon, hex: m.hex, sel: m.selectedClass, hov: m.hoverClass })).map(type => (
-                <button key={type.id} type="button"
-                  onClick={() => setEditRelationType(type.id)}
-                  className={`flex items-center gap-3 px-3 py-2 border rounded-lg transition-colors w-full text-left ${editRelationType === type.id ? type.sel : `border-border ${type.hov}`}`}
-                >
-                  <type.Icon className="w-4 h-4 flex-shrink-0" style={{ color: type.hex }} />
-                  <span className="text-sm">
-                    <span className="font-medium">{editingRelationMeta.sourceName}</span>
-                    {' '}<span className="font-bold">{type.label}</span>{' '}
-                    <span className="font-medium">{editingRelationMeta.targetName}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={editRelationLabel}
-              onChange={e => setEditRelationLabel(e.target.value)}
-              placeholder="Commentaire (optionnel)"
-              rows={2}
-              className="w-full text-sm border rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <div className="flex gap-2">
-              <button type="button"
-                onClick={() => updateRelationMutation.mutate({ relationId: editingRelationId, data: { type: editRelationType, label: editRelationLabel.trim() || null } })}
-                disabled={updateRelationMutation.isPending}
-                className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">
-                {updateRelationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-              <button type="button"
-                onClick={() => { setEditingRelationId(null); handleDeleteRelation(editingRelationId); }}
-                className="px-3 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:opacity-90 transition-opacity">
-                Supprimer
-              </button>
-              <button type="button" onClick={() => setEditingRelationId(null)}
-                className="px-3 py-2 border border-border text-sm rounded-lg hover:bg-muted transition-colors">
-                Annuler
-              </button>
-            </div>
-          </div>
+        <div className="relative z-[200]">
+          <RelationEditDialog
+            key={editingRelationId}
+            source={editingRelationMeta.source}
+            target={editingRelationMeta.target}
+            statusOptions={referentiels?.statuses}
+            type={editingRelationMeta.type}
+            label={editingRelationMeta.label}
+            onSave={(type, label) => updateRelationMutation.mutate({ relationId: editingRelationId, data: { type, label: label || null } })}
+            onDelete={() => { setEditingRelationId(null); handleDeleteRelation(editingRelationId); }}
+            onCancel={() => setEditingRelationId(null)}
+          />
         </div>,
         document.body
       )}

@@ -1,5 +1,5 @@
 /*
- * RelationEditDialog — modale « Modifier la relation » ouverte au clic sur une flèche (MindMap, PERT, Gantt, Process).
+ * RelationEditDialog — modale « Modifier la relation » ouverte au clic sur une flèche (MindMap, PERT, Gantt, Process) et au clic sur une relation de la fiche d'élément (ItemEditModal).
  * Type parmi les 4 officiels, chacun lu comme une phrase (RelationSentenceRow), commentaire, Enregistrer / Supprimer /
  * Annuler — suppression directe, comme partout. Enregistrer/Supprimer masqués si l'action n'est pas fournie.
  * Props : source/target ({ title, status }), statusOptions (défaut DEFAULT_REFERENTIELS), type/label initiaux,

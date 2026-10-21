@@ -347,10 +347,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         assignedTo: { select: { id: true, name: true, email: true } },
         _count: { select: { children: true, contributions: true } },
         relationsFrom: {
-          include: { toItem: { select: { id: true, title: true, type: true } } },
+          include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
         },
         relationsTo: {
-          include: { fromItem: { select: { id: true, title: true, type: true } } },
+          include: { fromItem: { select: { id: true, title: true, type: true, status: true } } },
         },
       };
 
@@ -542,10 +542,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         createdBy: { select: { id: true, name: true, email: true } },
         assignedTo: { select: { id: true, name: true, email: true } },
         relationsFrom: {
-          include: { toItem: { select: { id: true, title: true, type: true } } },
+          include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
         },
         relationsTo: {
-          include: { fromItem: { select: { id: true, title: true, type: true } } },
+          include: { fromItem: { select: { id: true, title: true, type: true, status: true } } },
         },
         contributions: {
           include: {
