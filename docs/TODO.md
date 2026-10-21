@@ -107,6 +107,10 @@
 - [x] Aide utilisateur intégrée — phase 4 : mode Aide (Maj+? ou bouton du ?, lecture seule, survol = zone encadrée + explication ; cadre + barre + 31 vues) — 2026-10-14 (515065c, doc 6c0bdb1)
 - [ ] Mode Aide — zones des pages et modales (même attribut data-help-zone, textes dans PAGE_HELP)
 - [ ] Mode Aide — navigation clavier de zone en zone
+- [x] Aide utilisateur — lot 1 : 11 pages d'administration (fiche, « ? », tour, rappels fonctionnels — pageHint) — 2026-10-21 (6998566)
+- [ ] /admin/views (ViewsConfigPage) sans effet : ses réglages ne sont lus que par ViewModeSelector, non rendu — supprimer la page ou la rebrancher (décision Thomas) ; spec « Configuration des menus » (/admin/menu non routée) à annuler ou corriger
+- [ ] Aide utilisateur — lot 2 : pages restantes sans aide (acceptation d'invitation ; Contact, Plan du site à arbitrer)
+- [ ] Aide utilisateur — lot 3 : coverage.test exige une fiche + « ? » pour chaque route de App.tsx (liste d'exemptions justifiées : connexion, inscription…)
 - [x] Aide utilisateur intégrée — phase 5 : règles des 3 couches de doc inscrites dans les skills spok-doc (couche 3 : fiches, affichages, mise à jour à chaque évolution), spok-deploy (check-list + vitest src/help), spok-start (rappel), spok-menu (pages, modales, infobulles) — 2026-10-14 (484f6b7)
 
 ### UX & formulaires
