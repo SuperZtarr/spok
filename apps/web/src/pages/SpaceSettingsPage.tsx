@@ -34,6 +34,7 @@ import { SpaceCard } from '../components/ui/SpaceCard';
 import { OrgChartView } from '../components/views/OrgChartView';
 import type { Role } from '@spok/shared';
 import { VIEW_MODES } from '../stores/viewMode';
+import { useGoBack } from '../hooks/useGoBack';
 
 // Vue ouverte par SpacePage quand l'espace n'a pas de vue par défaut
 const FALLBACK_DEFAULT_VIEW = 'list';
@@ -45,6 +46,8 @@ const VISIBILITY_LABELS: Record<string, string> = { OPEN: 'Ouvert', READONLY: 'L
 export function SpaceSettingsPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
+  // Retour : page d'où l'on vient (ex. liste admin des espaces), sinon l'espace
+  const goBack = useGoBack(`/spaces/${spaceId}`);
   const user = useAuthStore((s) => s.user);
   const adminMode = useAdminMode();
 
@@ -312,8 +315,8 @@ export function SpaceSettingsPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/spaces/${spaceId}`)}
-          title="Retour à l'espace"
+          onClick={goBack}
+          title="Retour"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour

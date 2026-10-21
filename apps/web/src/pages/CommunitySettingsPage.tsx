@@ -19,6 +19,7 @@ import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
 import { usePasteUpload } from '../hooks/usePasteUpload';
 import { useCtrlS } from '../hooks/useCtrlS';
+import { useGoBack } from '../hooks/useGoBack';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { CreateSpaceModal } from '../components/CreateSpaceModal';
@@ -197,6 +198,8 @@ function SpaceTableRow({ node, level, onDropOn, onDelete, canEdit }: {
 export function CommunitySettingsPage() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
+  // Retour : page d'où l'on vient (ex. liste admin des communautés), sinon la page de la communauté
+  const goBack = useGoBack(`/communities/${communityId}`);
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
@@ -503,7 +506,7 @@ export function CommunitySettingsPage() {
     <div className={`p-6 flex-1 min-h-0 ${activeTab === 'members' ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} title="Retour au tableau de bord">
+        <Button variant="ghost" size="sm" onClick={goBack} title="Retour">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour
         </Button>
