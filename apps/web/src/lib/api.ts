@@ -1960,27 +1960,19 @@ export const activityApi = {
     fetchApi<void>(`/activity/items/${itemId}/unread`, { method: 'POST' }),
 };
 
-// Public config API (no auth needed) — legacy, kept for backward compat
-export const configApi = {
-  getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/config/views'),
-  getGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/config/global-pages'),
-};
-
-// Admin config API — legacy, kept for backward compat
-export const adminConfigApi = {
-  getViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/admin/config/views'),
-  updateViews: (data: { views: import('@spok/shared').ViewConfigItem[]; categories?: import('@spok/shared').ViewCategoryConfig[] }) =>
-    fetchApi<{ success: boolean }>('/admin/config/views', { method: 'PUT', body: JSON.stringify(data) }),
-  resetViews: () => fetchApi<{ views: import('@spok/shared').ViewConfigItem[]; categories: import('@spok/shared').ViewCategoryConfig[] }>('/admin/config/views/reset', { method: 'POST' }),
-  getGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/admin/config/global-pages'),
-  updateGlobalPages: (data: { pages: import('@spok/shared').GlobalPageConfig[]; groups?: import('@spok/shared').GlobalPageGroupConfig[] }) =>
-    fetchApi<{ success: boolean }>('/admin/config/global-pages', { method: 'PUT', body: JSON.stringify(data) }),
-  resetGlobalPages: () => fetchApi<{ pages: import('@spok/shared').GlobalPageConfig[]; groups: import('@spok/shared').GlobalPageGroupConfig[] }>('/admin/config/global-pages/reset', { method: 'POST' }),
-};
-
 // Unified menu API
 export const menuApi = {
   getAll: () => fetchApi<import('@spok/shared').MenuItemConfig[]>('/menu'),
+};
+
+/** Entrée de menu vue par l'admin : défaut du code (MENU_REGISTRY) + valeur effective (surcharge). */
+export type AdminMenuEntry = import('@spok/shared').MenuItemConfig & { defaultVisible: boolean; defaultAccess: import('@spok/shared').MenuAccess; overridden: boolean };
+
+// Admin : surcharges du menu (visible / accès par clé) — écran /admin/views
+export const adminMenuApi = {
+  getAll: () => fetchApi<AdminMenuEntry[]>('/admin/menu'),
+  saveOverrides: (overrides: import('@spok/shared').MenuOverride[]) =>
+    fetchApi<{ overrides: import('@spok/shared').MenuOverride[] }>('/admin/menu/overrides', { method: 'PUT', body: JSON.stringify({ overrides }) }),
 };
 
 

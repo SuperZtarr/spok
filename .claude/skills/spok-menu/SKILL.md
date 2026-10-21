@@ -30,8 +30,7 @@ SpaceToolbar    → sélecteur de vues d'espace (sections basic/itemTypes/planni
 
 ⚠️ **Constaté 2026-07-12** : `MainMenu.tsx` n'existe plus — remplacé par `GlobalNavBar.tsx` (bandeau, map d'icônes `NAV_ICONS`, masquage par mode d'interface via `MODE_GLOBAL_EXCLUDED`). Les sections d'espace (`basic`/`itemTypes`/`planning`/`exploration`) sont rendues par SpaceToolbar, plus par le menu. Les mentions `MainMenu.tsx` plus bas dans cette skill (structure `__espaces__`, dropdown multi-colonnes) décrivent l'ancienne architecture — à vérifier contre le code avant usage.
 
-⚠️ `ViewModeSelector.tsx` existe mais est **inutilisé**. Ne pas toucher.
-⚠️ `viewDefaults.ts` / `useViewConfig()` / `AppConfig` sont un système **parallèle et séparé** — il sert au composant ViewModeSelector qui n'est pas rendu.
+⚠️ Supprimés le 2026-10-21 : `ViewModeSelector.tsx`, `useViewConfig`, `useGlobalPages`, `viewDefaults.ts`, `types/viewConfig.ts` et les routes `/config/*` et `/admin/config/*` (système parallèle qu'aucun écran ne lisait). Ne pas les réintroduire : la seule configuration du menu est `MENU_REGISTRY` + `menu_overrides`.
 
 ## Fichiers clés
 
@@ -163,9 +162,9 @@ cd apps/web && npx tsc --noEmit
 
 ## Modifier un item existant (label, icône, ordre, visibilité)
 
-**Via l'admin UI** : `/admin/menu` — interface graphique.
+**Via l'admin UI** : `/admin/views` (ViewsConfigPage, menu Administration › Vues) — visible / accès (Tous, Connectés, Admins) de chaque page globale et vue d'espace, enregistré en surcharges `menu_overrides` (`GET /admin/menu`, `PUT /admin/menu/overrides`, seules les différences avec le code sont stockées ; section admin non modifiable). Libellé, icône, ordre et section restent dans le code.
 
-**Via le code** : modifier `MENU_REGISTRY` dans `menuDefaults.ts` (ou `VIEW_REGISTRY` dans `viewRegistry.ts` pour les vues). S'applique partout, sauf si un override AppConfig `menu_overrides` (posé via /admin/menu) écrase visible/access pour cette clé.
+**Via le code** : modifier `MENU_REGISTRY` dans `menuDefaults.ts` (ou `VIEW_REGISTRY` dans `viewRegistry.ts` pour les vues). S'applique partout, sauf si un override AppConfig `menu_overrides` (posé via /admin/views) écrase visible/access pour cette clé.
 
 ---
 

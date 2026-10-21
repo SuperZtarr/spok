@@ -42,6 +42,5 @@ export const MAX_PAGE_SIZE = 100;
 export * from './defaultReferentiels.js';
 export * from './spaceTemplates.js';
 export * from './viewRegistry.js';
-export * from './viewDefaults.js';
 export * from './menuDefaults.js';
 export type { MenuOverride } from '../types/menuItem.js';

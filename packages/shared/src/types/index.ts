@@ -11,7 +11,6 @@ export * from './graph.js';
 export * from './notification.js';
 export * from './invitation.js';
 export * from './reaction.js';
-export * from './viewConfig.js';
 export * from './menuItem.js';
 export * from './itemTemplate.js';
 export * from './liveSession.js';

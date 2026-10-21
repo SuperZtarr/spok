@@ -88,8 +88,7 @@ describe('aide utilisateur — pages et modales', () => {
   })
 
   // Pages d'administration : chacune a son « ? » (règle 2026-10-21 — rappels fonctionnels, cf. skill spok-doc).
-  // ViewsConfigPage : exemptée en attendant la décision de Thomas (réglages lus par aucun écran affiché).
-  const ADMIN_NO_HELP = new Set(['ViewsConfigPage.tsx'])
+  const ADMIN_NO_HELP = new Set<string>()
   const adminDir = join(__dirname, '..', 'pages', 'admin')
   it.each(readdirSync(adminDir).filter((f) => f.endsWith('Page.tsx') && !ADMIN_NO_HELP.has(f)))('admin %s : « ? » (PageHelpButton) présent', (f) => {
     expect(readFileSync(join(adminDir, f), 'utf8')).toContain('<PageHelpButton pageKey=')

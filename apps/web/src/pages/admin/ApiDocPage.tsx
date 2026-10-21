@@ -36,9 +36,7 @@ export function ApiDocPage() {
       {/* Public endpoints */}
       <div data-tour="admin-apidoc-content">
       <Section title="Endpoints publics" subtitle="Accessibles aux visiteurs non connectes. Si connecte, la reponse est enrichie avec les donnees de l'utilisateur.">
-        <Row method="GET" path="/menu" auth="none" desc="Items de menu (table MenuItem)" />
-        <Row method="GET" path="/config/views" auth="none" desc="Configuration des vues (legacy)" />
-        <Row method="GET" path="/config/global-pages" auth="none" desc="Configuration des pages globales (legacy)" />
+        <Row method="GET" path="/menu" auth="none" desc="Entrées de menu : MENU_REGISTRY + surcharges (AppConfig menu_overrides)" />
         <Row method="GET" path="/communities" auth="optional" desc="Visiteur : communautes publiques. Connecte : les siennes + publiques non-rejointes" />
         <Row method="GET" path="/communities/public" auth="optional" desc="Communautes publiques (redondant avec GET /communities)" />
         <Row method="GET" path="/communities/:id" auth="optional" desc="Detail d'une communaute (si publique ou membre)" />
@@ -165,8 +163,8 @@ export function ApiDocPage() {
         <Row method="GET" path="/admin/audit-logs" auth="admin" desc="Logs d'audit" />
         <Row method="GET" path="/admin/anomalies" auth="admin" desc="Diagnostics et anomalies" />
         <Row method="GET" path="/admin/referentiels" auth="admin" desc="Referentiels globaux" />
-        <Row method="GET" path="/admin/config/views" auth="admin" desc="Config vues (legacy)" />
-        <Row method="GET" path="/admin/config/global-pages" auth="admin" desc="Config pages (legacy)" />
+        <Row method="GET" path="/admin/menu" auth="admin" desc="Entrées de menu : défaut du code + valeur effective" />
+        <Row method="PUT" path="/admin/menu/overrides" auth="admin" desc="Remplace les surcharges (visible / accès par clé)" />
       </Section>
     </div>
   );
