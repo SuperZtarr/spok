@@ -103,16 +103,16 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     category: 'status',
     appliesToValues: ['todo', 'in_progress', 'to_validate', 'scheduled', 'late'],
     trigger: 'Statut choisi (≠ "Non défini"), date de début vide',
-    effect: "Remplit la date de début à aujourd'hui",
-    location: 'apps/web/src/components/ItemEditModal.tsx:1088',
+    effect: "Remplit la date de début à aujourd'hui (ou à la date de fin si elle est passée), quel que soit le chemin (modale, menu ⋯, Kanban, Aujourd'hui, MCP), descendants inclus quand le statut leur est propagé",
+    location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/components/ItemEditModal.tsx, apps/web/src/pages/useSpaceActions.ts (handleInlineUpdate)',
   },
   {
     id: 'status-autofill-end-terminal',
     category: 'status',
     appliesToValues: ['done', 'cancelled'],
     trigger: 'Statut = "Terminé"/"Annulé", date de fin vide',
-    effect: "Remplit la date de fin à aujourd'hui",
-    location: 'apps/web/src/components/ItemEditModal.tsx:1087',
+    effect: "Remplit la date de fin à aujourd'hui, quel que soit le chemin (modale, menu ⋯, Kanban, Aujourd'hui, MCP), descendants inclus quand le statut leur est propagé",
+    location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/components/ItemEditModal.tsx, apps/web/src/pages/useSpaceActions.ts (handleInlineUpdate)',
   },
 ];
 

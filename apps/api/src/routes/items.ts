@@ -13,8 +13,11 @@
  * split refusé, propagation de statut ignore les enfants verrouillés.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
  * MEMBER : modifie/supprime les items qu'il a créés OU qui lui sont assignés (canMemberManageItem, utils/itemOwnership.ts).
+ * Dates liées au statut (PATCH et propagation aux descendants) : utils/statusDates.ts — source unique,
+ * tous chemins confondus (modale, menu ⋯, Kanban, Today, MCP) ; ne complète que les dates vides.
  */
 import { FastifyPluginAsync } from 'fastify';
+import { statusDateDefaults } from '../utils/statusDates.js';
 import { z } from 'zod';
 import { assignmentStamp, computeAssignmentReceipts } from '../utils/assignment.js';
 import { isLocked, lockedFieldViolations, LOCKED_MESSAGE } from '../utils/itemLock.js';
@@ -707,10 +710,15 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Auto-set endDate to now when status changes to 'done' or 'cancelled', unless already defined
-      const autoEndDate = (updateData.status === 'done' || updateData.status === 'cancelled') && updateData.endDate === undefined && !existingItem.endDate
-        ? new Date()
-        : undefined;
+      // Dates liées au statut (utils/statusDates.ts) : ne complète que les dates absentes du payload
+      const autoDates = updateData.status !== undefined
+        ? statusDateDefaults(updateData.status, {
+            startDate: updateData.startDate !== undefined ? (updateData.startDate ? new Date(updateData.startDate) : null) : existingItem.startDate,
+            endDate: updateData.endDate !== undefined ? (updateData.endDate ? new Date(updateData.endDate) : null) : existingItem.endDate,
+          })
+        : {};
+      const autoStartDate = updateData.startDate === undefined ? autoDates.startDate : undefined;
+      const autoEndDate = updateData.endDate === undefined ? autoDates.endDate : undefined;
 
       // Auto-set horizonSetAt à chaque changement de manualHorizon — jamais fourni par le
       // client, c'est lui qui mesure le dépassement de grâce (isOverdueForReview), pas updatedAt.
@@ -723,7 +731,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           ...assignmentStamp(existingItem.assignedToId, updateData.assignedToId, request.user.userId),
           updatedById: request.user.userId,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
-          startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : undefined,
+          startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : (autoStartDate || undefined),
           endDate: updateData.endDate === null ? null : updateData.endDate ? new Date(updateData.endDate) : (autoEndDate || undefined),
           horizonSetAt: autoHorizonSetAt,
           tags: tagIds
@@ -752,23 +760,32 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Propagate status to all descendants recursively
       if (propagateToChildren && updateData.status !== undefined) {
-        const collectDescendantIds = async (parentId: string): Promise<string[]> => {
-          const children = await fastify.prisma.item.findMany({
+        type Descendant = { id: string; startDate: Date | null; endDate: Date | null };
+        const collectDescendants = async (parentId: string): Promise<Descendant[]> => {
+          const children: Descendant[] = await fastify.prisma.item.findMany({
             where: { parentId, spaceId: request.params.spaceId, lockedAt: null },
-            select: { id: true },
+            select: { id: true, startDate: true, endDate: true },
           });
-          const ids = children.map(c => c.id);
+          const all = [...children];
           for (const child of children) {
-            ids.push(...await collectDescendantIds(child.id));
+            all.push(...await collectDescendants(child.id));
           }
-          return ids;
+          return all;
         };
-        const descendantIds = await collectDescendantIds(request.params.id);
-        if (descendantIds.length > 0) {
+        const descendants = await collectDescendants(request.params.id);
+        if (descendants.length > 0) {
           await fastify.prisma.item.updateMany({
-            where: { id: { in: descendantIds } },
+            where: { id: { in: descendants.map(d => d.id) } },
             data: { status: updateData.status },
           });
+          // Mêmes règles de dates que l'item propagé, item par item (dates vides seulement)
+          const now = new Date();
+          for (const d of descendants) {
+            const dates = statusDateDefaults(updateData.status, d, now);
+            if (dates.startDate || dates.endDate) {
+              await fastify.prisma.item.update({ where: { id: d.id }, data: dates });
+            }
+          }
         }
       }
 

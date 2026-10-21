@@ -486,6 +486,90 @@ describe('Items routes', () => {
       const updateArg = prisma.item.update.mock.calls[0][0]
       expect(updateArg.data.endDate).toBeInstanceOf(Date)
     })
+
+    // Règle status-autofill-start (businessRules.ts) : appliquée par l'API quel que soit le chemin
+    it('should auto-set startDate when a status is set on an item without start date', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem({ status: null, startDate: null, endDate: null }))
+      prisma.item.update.mockResolvedValue(mockItem({ status: 'todo', tags: [] }))
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { status: 'todo' },
+      })
+
+      const updateArg = prisma.item.update.mock.calls[0][0]
+      expect(updateArg.data.startDate).toBeInstanceOf(Date)
+      expect(updateArg.data.endDate).toBeUndefined()
+    })
+
+    it('should use a past endDate as startDate when status is set', async () => {
+      allowSpaceAccess()
+      const pastEnd = new Date('2026-01-10T00:00:00.000Z')
+      prisma.item.findFirst.mockResolvedValue(mockItem({ status: null, startDate: null, endDate: pastEnd }))
+      prisma.item.update.mockResolvedValue(mockItem({ status: 'done', tags: [] }))
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { status: 'done' },
+      })
+
+      const updateArg = prisma.item.update.mock.calls[0][0]
+      expect(updateArg.data.startDate).toEqual(pastEnd)
+      expect(updateArg.data.endDate).toBeUndefined()
+    })
+
+    it('should not override dates sent explicitly with the status', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem({ status: null, startDate: null, endDate: null }))
+      prisma.item.update.mockResolvedValue(mockItem({ status: 'done', tags: [] }))
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { status: 'done', startDate: null, endDate: '2026-02-01T00:00:00.000Z' },
+      })
+
+      const updateArg = prisma.item.update.mock.calls[0][0]
+      expect(updateArg.data.startDate).toBeNull()
+      expect(updateArg.data.endDate).toEqual(new Date('2026-02-01T00:00:00.000Z'))
+    })
+
+    it('should apply status date rules to propagated descendants', async () => {
+      allowSpaceAccess('OWNER')
+      prisma.item.findFirst.mockResolvedValue(mockItem({ status: 'in_progress', endDate: null }))
+      prisma.item.update.mockResolvedValue(mockItem({ status: 'done', tags: [] }))
+      const existingEnd = new Date('2026-03-01T00:00:00.000Z')
+      prisma.item.findMany.mockImplementation(async (args: any) => {
+        if (args?.where?.parentId === 'item-1') return [
+          { id: 'child-1', startDate: null, endDate: null },
+          { id: 'child-2', startDate: new Date('2026-02-01T00:00:00.000Z'), endDate: existingEnd },
+        ]
+        return []
+      })
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { status: 'done', propagateToChildren: true },
+      })
+
+      expect(prisma.item.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['child-1', 'child-2'] } },
+        data: { status: 'done' },
+      })
+      const childUpdates = prisma.item.update.mock.calls.map((c: any[]) => c[0]).filter((a: any) => a.where.id !== 'item-1')
+      expect(childUpdates).toHaveLength(1)
+      expect(childUpdates[0].where.id).toBe('child-1')
+      expect(childUpdates[0].data.endDate).toBeInstanceOf(Date)
+      expect(childUpdates[0].data.startDate).toBeInstanceOf(Date)
+    })
   })
 
   // ─── DELETE ITEM ──────────────────────────────────────────────

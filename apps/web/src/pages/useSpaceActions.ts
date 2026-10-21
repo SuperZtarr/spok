@@ -291,7 +291,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     const itemSpaceId = resolveItemSpaceId(id);
     const updates = { ...data };
 
-    // Auto-fill dates when status changes
+    // Auto-fill dates when status changes — pré-remplissage pour l'affichage immédiat (optimistic) ;
+    // la règle fait foi côté API (apps/api/src/utils/statusDates.ts), qui l'applique aussi aux descendants propagés
     if (updates.status !== undefined) {
       const item = allItems.find(i => i.id === id);
       const now = new Date().toISOString();
