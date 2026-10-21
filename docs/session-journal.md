@@ -6,6 +6,16 @@
 
 ## EN COURS
 
+### Modes d'affichage — sélecteur de vues — 2026-10-21
+- Organisation des menus présentée à Thomas (2 classements : catégories du registre / familles de SpaceToolbar). Demandes : mode Projet sans Types/Images/Liens/Documents en boutons directs, avec Carte mentale ; « Autres vues » = un menu par catégorie (Basique, Types, Planification, Exploration) au lieu des familles.
+- SpaceToolbar : MODE_PRIMARY_ADJUST (projet), splitViewsForMode = répartition unique (ligne de boutons + panneau, avant calculées séparément), menus OTHER_MENU_KEYS par catégorie. Tests SpaceToolbar.curatedViews 9/9, typecheck web OK, vérifié à l'écran (Forum, Projet). Spec SPOK « Mode d'interface » to_validate. MEP 49814cb
+- Forum : + Images et Calendrier en boutons directs (MODE_PRIMARY_ADJUST.forum). Tests 9/9, typecheck OK, vérifié à l'écran. Spec mise à jour. MEP 49814cb
+- Projet : Liste retirée des boutons directs (reste dans « Basique »). « Forum : ajoute Récents » : déjà en direct (famille Discussion), rien à faire. Tests 9/9, vérifié à l'écran, spec à jour. MEP 49814cb
+- JDR : Liste et Liens retirés (Discussions, Carte mentale, Images, Documents, Récents). businessRules.ts (règle du mode) mis à jour. Tests 9/9, typecheck OK, vérifié à l'écran ; changer de mode ne change pas la vue affichée (vérifié). Spec à jour. MEP 49814cb
+
+### Modale de relation de la fiche d'élément — 2026-10-21
+- ItemEditModal : modale inline « Modifier la relation » remplacée par RelationEditDialog (portail z-[200] au-dessus de la fiche ; état réduit à editingRelationMeta {source, target, type, label}). API items.ts : status ajouté aux select toItem/fromItem du détail (pastilles colorées par statut). Typecheck web/api OK, tests API relations 16/16, vérifié à l'écran (ouverture, Annuler ne ferme que la relation). Constat existant non traité : Échap ferme aussi la fiche (toutes les sous-modales de la fiche). MEP 825ef12
+
 ### Recherche mobile — résultats masqués — 2026-10-20
 - Mesure 375×812 : en-tête collé de SearchPage = 538 px sur 763 (70 %), filtres empilés (208 px) + 5 types sur 3 lignes. Correctif (accord Thomas) : en mobile seul le champ est collé (en-tête en `contents`), description masquée, types sur une ligne défilante (no-scrollbar), filtres repliés derrière « Filtres » (pastille = nb actifs) ; desktop inchangé. Après : partie collée 70 px, premiers résultats à 309 px (avant 639), pas de débordement horizontal ; desktop vérifié. search.help.ts (conseil + tour), spec Recherche (Markdown, to_validate). typecheck web OK, help 320/320. MEP e76eb22
 - Constat hors périmètre : au premier chargement par URL (/search, /communities), l'appli renvoie vers l'accueil → TODO
@@ -29,6 +39,7 @@
 - Commité 499a54b (mep) : relations vers l'entrée (gauche) / depuis la sortie (droite) d'un couloir — poignées reliables, onConnect traduit lane-<id> en item du couloir. Typecheck web OK
 - Commité b6a6575 (mep) : retours de processus (flèches vers l'arrière : sortie de couloir → entrée du suivant) traversaient les items — cause : tracé par défaut (tournant à mi-hauteur). assignEdgeChannels les route aussi : sortie à droite, voie horizontale de préférence entre deux couloirs, sinon aux abords des items, rentrée à gauche, voie propre par flèche. process-utils 27/27, typecheck OK
 - Commité b6a6575 (mep) : retours qui « font le tour » — cause : espace entre couloirs de 16 px = une seule voie, déjà prise → repli sur l'espace au-dessus du 1er / sous le dernier couloir. LANE_GAP 16 → 40 et 5 voies par espace (pas de 8 px) essayées avant d'aller plus loin. process-utils 28/28, typecheck OK
+- 2026-10-22 Chantier B (modèles) — brainstorm SUSPENDU par Thomas : il réfléchit à « un process doit-il permettre de créer un modèle ? ». Acquis : besoin = réfléchir une fois une démarche/bonnes pratiques (rdv, copil, projet = grappe d'items : préparation, réunion, CR…), l'enregistrer en modèle, l'insérer quand le cas se présente dans un espace existant (plusieurs fois possible ; un projet né d'un modèle peut ensuite devenir un espace dédié via « Convertir en espace ») ; modèle = un item parent + sa grappe (pas tout le process d'un espace) ; recopier presque tout (contenu, tags par nom, relations internes, couloirs, disposition) sauf statut/dates/assigné/commentaires ; rythme = écarts de dates de l'exemple par rapport à une étape de référence choisie à l'enregistrement (option 1 retenue), date de référence donnée à l'insertion. Conception complète proposée en chat, non validée
 - Reste : chantiers B (carte de session proposée) et C ; modale de relation d'ItemEditModal
 
 ### Modèle de données — suite de la session d'audit (coupée par la limite d'usage) — 2026-10-16
@@ -146,7 +157,7 @@
 
 ### MCP distant pour utilisateurs tiers — 2026-10-12
 - Conception validée : MCP monté dans l'API (`POST /mcp`, outils via fastify.inject avec le jeton de l'appelant), jetons personnels (étape 1), OAuth claude.ai/Desktop (étape 2, plus tard), conformité = instructions serveur + get_space_conventions + validation stricte + Markdown→HTML, audit source MCP
-- Plan étape 1 : docs/superpowers/plans/2026-10-12-mcp-distant-etape1.md — IMPLÉMENTÉ, NON COMMITÉ
+- Plan étape 1 : docs/superpowers/plans/2026-10-12-mcp-distant-etape1.md — IMPLÉMENTÉ, MEP 825ef12 (typecheck 6 paquets OK, TNR 1478/1478)
 - Fait : table personal_access_tokens (db push local) ; auth PAT dans jwt.ts (portée read, périmètre /spaces /communities /search /notifications /mcp, jamais /user /auth /admin) ; /user/tokens ; packages/mcp-core (outils, instructions, conventions, Markdown) ; apps/mcp rebranché (45 outils) ; POST /mcp ; audit changes.source via plugins/requestContext ; UI Profil → Accès Claude ; Dockerfile.api
 - Vérifs : TNR 925/925, typecheck 5 paquets OK, build Docker OK (contexte git), E2E HTTP local OK (statut libellé → id, Markdown échappé, audit source). UI NON vérifiée visuellement (à faire par Thomas)
 - Bug create_contribution (objet Tiptap vs z.string) corrigé
