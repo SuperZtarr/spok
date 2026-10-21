@@ -19,7 +19,7 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   header: { title: 'En-tête', text: 'Où vous êtes, le mode d\'affichage (Forum, Projet, JDR, Tous), la création rapide, les séances en direct, les notifications et votre compte.' },
   bandeau: { title: 'Navigation globale', text: 'Les pages qui couvrent toutes vos communautés (accueil, communautés, espaces, graphes, liens), puis vos pages personnelles.' },
   toolbar: { title: 'Barre de l\'espace', text: 'Commune à toutes les vues de l\'espace : choix de la vue, ordre, filtre, aperçu et actions de l\'espace.' },
-  'toolbar-vues': { title: 'Vues', text: 'Les vues de la famille du mode courant en accès direct ; les autres familles sont dans les menus déroulants. Le contenu reste le même, seule la présentation change.' },
+  'toolbar-vues': { title: 'Vues', text: 'Les vues du mode courant en accès direct ; les autres sont dans les menus « Autres vues », un par catégorie (Basique, Types, Planification, Exploration). Le contenu reste le même, seule la présentation change.' },
   'toolbar-ordre': { title: 'Ordre', text: 'L\'ordre des éléments dans les vues en liste : votre ordre manuel ou alphabétique.' },
   'toolbar-filtre': { title: 'Filtre', text: 'Ne garde que les éléments d\'un type, d\'un statut ou contenant un texte. Le filtre reste actif quand vous changez de vue.' },
   'toolbar-apercu': { title: 'Aperçu', text: 'Met en évidence les éléments qui correspondent, sans masquer les autres.' },
