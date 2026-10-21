@@ -3,7 +3,8 @@
      accroche, conseils, tour d'au moins 5 étapes dont 3 pointées) ;
    - toute page ou modale du registre PAGE_HELP a une fiche complète (tour d'au moins 2 étapes pointées — une petite
      page n'a pas plus de zones à montrer ; ne pas gonfler un tour pour atteindre un seuil) ;
-   - tout <FieldHelp page field> pointe un texte existant dans `fields` de la fiche ;
+   - tout <FieldHelp page field> pointe un texte existant dans `fields` de la fiche, et tout pageHint('page', 'clé')
+     (rappels fonctionnels des actions et blocs de décision) un texte existant dans `hints` ;
    - toute vue (sauf NO_EMPTY_STATE) a un texte d'état vide et un <EmptyHelp mode="…"> branché ;
    - chaque repère data-tour cité par un tour existe dans le code (littéral ou généré : `prefix-${…}`) ;
    - barre d'espace (SpaceToolbar, Séances, Exporter) : aucun `title` natif, et toute commande nommée (aria-label)
@@ -84,6 +85,20 @@ describe('aide utilisateur — pages et modales', () => {
     expect(help.tips.length).toBeGreaterThan(0)
     expect(help.tour.filter((s) => s.element).length).toBeGreaterThanOrEqual(2)
     expectAnchors(help, key)
+  })
+
+  // Pages d'administration : chacune a son « ? » (règle 2026-10-21 — rappels fonctionnels, cf. skill spok-doc).
+  // ViewsConfigPage : exemptée en attendant la décision de Thomas (réglages lus par aucun écran affiché).
+  const ADMIN_NO_HELP = new Set(['ViewsConfigPage.tsx'])
+  const adminDir = join(__dirname, '..', 'pages', 'admin')
+  it.each(readdirSync(adminDir).filter((f) => f.endsWith('Page.tsx') && !ADMIN_NO_HELP.has(f)))('admin %s : « ? » (PageHelpButton) présent', (f) => {
+    expect(readFileSync(join(adminDir, f), 'utf8')).toContain('<PageHelpButton pageKey=')
+  })
+
+  const hintRefs = [...code.matchAll(/pageHint\('([^']+)', '([^']+)'\)/g)].map((m) => `${m[1]}.${m[2]}`)
+  it.each([...new Set(hintRefs)])('rappel fonctionnel %s : texte présent dans la fiche (hints)', (ref) => {
+    const [page, key] = ref.split('.')
+    expect(pageHelp[page]?.hints?.[key]?.trim(), `hints.${key} manquant dans la fiche ${page}`).toBeTruthy()
   })
 
   const fieldRefs = [...code.matchAll(/<FieldHelp page="([^"]+)" field="([^"]+)"/g)].map((m) => `${m[1]}.${m[2]}`)

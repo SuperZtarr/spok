@@ -26,6 +26,17 @@ import { help as globalGraphHelp } from '../pages/help/global-graph.help';
 import { help as globalSunburstHelp } from '../pages/help/global-sunburst.help';
 import { help as globalMindmapHelp } from '../pages/help/global-mindmap.help';
 import { help as globalLinksHelp } from '../pages/help/global-links.help';
+import { help as adminUsersHelp } from '../pages/help/admin-users.help';
+import { help as adminUserAccessHelp } from '../pages/help/admin-user-access.help';
+import { help as adminCommunitiesHelp } from '../pages/help/admin-communities.help';
+import { help as adminSpacesHelp } from '../pages/help/admin-spaces.help';
+import { help as adminAnomaliesHelp } from '../pages/help/admin-anomalies.help';
+import { help as adminDuplicatesHelp } from '../pages/help/admin-duplicates.help';
+import { help as adminReferentielsHelp } from '../pages/help/admin-referentiels.help';
+import { help as adminStatsHelp } from '../pages/help/admin-stats.help';
+import { help as adminAuditHelp } from '../pages/help/admin-audit.help';
+import { help as adminApiDocHelp } from '../pages/help/admin-api-doc.help';
+import { help as adminPerfHelp } from '../pages/help/admin-perf.help';
 
 export const PAGE_HELP = {
   dashboard,
@@ -49,6 +60,17 @@ export const PAGE_HELP = {
   'global-sunburst': globalSunburstHelp,
   'global-mindmap': globalMindmapHelp,
   'global-links': globalLinksHelp,
+  'admin-users': adminUsersHelp,
+  'admin-user-access': adminUserAccessHelp,
+  'admin-communities': adminCommunitiesHelp,
+  'admin-spaces': adminSpacesHelp,
+  'admin-anomalies': adminAnomaliesHelp,
+  'admin-duplicates': adminDuplicatesHelp,
+  'admin-referentiels': adminReferentielsHelp,
+  'admin-stats': adminStatsHelp,
+  'admin-audit': adminAuditHelp,
+  'admin-api-doc': adminApiDocHelp,
+  'admin-perf': adminPerfHelp,
 } satisfies Record<string, HelpEntry>;
 
 export type PageHelpKey = keyof typeof PAGE_HELP;

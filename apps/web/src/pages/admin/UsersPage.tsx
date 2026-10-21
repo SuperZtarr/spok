@@ -1,5 +1,8 @@
 /* Admin utilisateurs (/admin/users) : liste, création, rôles, activation, suppression, accès MCP (accorder/retirer,
- * demandes en attente signalées — tri « MCP » pour les remonter). */
+ * demandes en attente signalées — tri « MCP » pour les remonter).
+ * Aide utilisateur : fiche pages/help/admin-users.help.ts — « ? » (PageHelpButton) et rappels fonctionnels (pageHint)
+ * sur chaque action à effet (accès Claude, désactiver, réactiver, supprimer…) : textes à garder alignés sur
+ * routes/admin/users.ts. */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -13,6 +16,9 @@ import { UserProfileModal } from '../../components/UserProfileModal';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useSort } from '../../hooks/useSort';
 import type { AdminUser } from '@spok/shared';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 const PAGE_SIZE = 20;
 
@@ -248,8 +254,9 @@ export function UsersPage() {
       </td>
       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
         {user.globalRole === 'ADMIN' ? (
-          <span className="text-xs text-muted-foreground" title="Les administrateurs ont toujours l'accès MCP">Admin</span>
+          <HelpHint text={pageHint('admin-users', 'mcpAdmin')}><span className="text-xs text-muted-foreground">Admin</span></HelpHint>
         ) : user.mcpAccessGrantedAt ? (
+          <HelpHint text={`Accordé le ${new Date(user.mcpAccessGrantedAt).toLocaleDateString('fr-FR')}. ${pageHint('admin-users', 'mcpRevoke')}`}>
           <button
             type="button"
             disabled={mcpMutation.isPending}
@@ -258,21 +265,21 @@ export function UsersPage() {
                 mcpMutation.mutate({ id: user.id, granted: false });
               }
             }}
-            title={`Accordé le ${new Date(user.mcpAccessGrantedAt).toLocaleDateString('fr-FR')} — cliquer pour retirer`}
+            aria-label="Retirer l'accès Claude"
           >
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-green-600 border-green-300">
               <Bot className="w-3 h-3 mr-0.5" />
               Accordé
             </Badge>
           </button>
+          </HelpHint>
         ) : (
+          <HelpHint text={`${user.mcpAccessRequestedAt ? `Demandé le ${new Date(user.mcpAccessRequestedAt).toLocaleDateString('fr-FR')}. ` : ''}${pageHint('admin-users', 'mcpGrant')}`}>
           <button
             type="button"
             disabled={mcpMutation.isPending}
             onClick={() => mcpMutation.mutate({ id: user.id, granted: true })}
-            title={user.mcpAccessRequestedAt
-              ? `Demandé le ${new Date(user.mcpAccessRequestedAt).toLocaleDateString('fr-FR')} — cliquer pour accorder`
-              : "Cliquer pour accorder l'accès Claude (MCP)"}
+            aria-label="Accorder l'accès Claude"
           >
             {user.mcpAccessRequestedAt ? (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-300">
@@ -282,6 +289,7 @@ export function UsersPage() {
               <span className="text-xs text-muted-foreground hover:text-foreground">Accorder</span>
             )}
           </button>
+          </HelpHint>
         )}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground" title={new Date(user.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}>
@@ -289,53 +297,61 @@ export function UsersPage() {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${user.id}/access`); }}
-            title="Voir l'accès (communautés/espaces)"
-            className="h-7 w-7 p-0"
-          >
-            <Network className="w-3.5 h-3.5 text-muted-foreground" />
-          </Button>
+          <HelpHint text={pageHint('admin-users', 'access')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${user.id}/access`); }}
+              aria-label="Voir l'accès (communautés/espaces)"
+              className="h-7 w-7 p-0"
+            >
+              <Network className="w-3.5 h-3.5 text-muted-foreground" />
+            </Button>
+          </HelpHint>
           {(user as any).disabledAt ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); enableMutation.mutate(user.id); }}
-              disabled={enableMutation.isPending}
-              title="Réactiver"
-              className="h-7 w-7 p-0"
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-            </Button>
+            <HelpHint text={pageHint('admin-users', 'enable')}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); enableMutation.mutate(user.id); }}
+                disabled={enableMutation.isPending}
+                aria-label="Réactiver"
+                className="h-7 w-7 p-0"
+              >
+                <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+              </Button>
+            </HelpHint>
           ) : (
+            <HelpHint text={pageHint('admin-users', 'disable')}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Désactiver le compte de « ${user.name} » ?`)) {
+                    disableMutation.mutate(user.id);
+                  }
+                }}
+                disabled={disableMutation.isPending}
+                aria-label="Désactiver"
+                className="h-7 w-7 p-0"
+              >
+                <Ban className="w-3.5 h-3.5 text-orange-500" />
+              </Button>
+            </HelpHint>
+          )}
+          <HelpHint text={pageHint('admin-users', 'delete')}>
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm(`Désactiver le compte de « ${user.name} » ?`)) {
-                  disableMutation.mutate(user.id);
-                }
-              }}
-              disabled={disableMutation.isPending}
-              title="Désactiver"
+              onClick={(e) => { e.stopPropagation(); setDeletingUser(user); }}
+              disabled={deleteMutation.isPending}
+              aria-label="Supprimer"
               className="h-7 w-7 p-0"
             >
-              <Ban className="w-3.5 h-3.5 text-orange-500" />
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); setDeletingUser(user); }}
-            disabled={deleteMutation.isPending}
-            title="Supprimer"
-            className="h-7 w-7 p-0"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-          </Button>
+          </HelpHint>
         </div>
       </td>
     </tr>
@@ -387,7 +403,10 @@ export function UsersPage() {
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Utilisateurs</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Utilisateurs</h1>
+              <PageHelpButton pageKey="admin-users" />
+            </div>
             {data && (
               <p className="text-sm text-muted-foreground mt-0.5">
                 {data.pagination.total} utilisateur{data.pagination.total > 1 ? 's' : ''} au total
@@ -395,14 +414,18 @@ export function UsersPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
-              <Download className="w-4 h-4 mr-1.5" />
-              CSV
-            </Button>
-            <Button onClick={() => setModalUserId(null)}>
-              <Plus className="w-4 h-4 mr-1.5" />
-              Nouvel utilisateur
-            </Button>
+            <HelpHint text={pageHint('admin-users', 'csv')}>
+              <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
+                <Download className="w-4 h-4 mr-1.5" />
+                CSV
+              </Button>
+            </HelpHint>
+            <HelpHint text={pageHint('admin-users', 'new')}>
+              <Button onClick={() => setModalUserId(null)} data-tour="admin-users-new">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Nouvel utilisateur
+              </Button>
+            </HelpHint>
           </div>
         </div>
 
@@ -411,6 +434,7 @@ export function UsersPage() {
             <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
             <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
               {anomalyLabels[anomaly] || anomaly}
+              <span className="block text-xs font-normal">{pageHint('admin-users', 'anomalyFilter')}</span>
             </span>
             <button
               onClick={clearAnomaly}
@@ -461,7 +485,7 @@ export function UsersPage() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="admin-users-table">
           {adminUsers.length > 0 && (
             <UserTable users={adminUsers} title="Administrateurs" icon={Shield} iconColor="text-primary" />
           )}

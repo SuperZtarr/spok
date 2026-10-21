@@ -1,4 +1,5 @@
-/* Admin statistiques (/admin/stats) : compteurs par entité et activité. */
+/* Admin statistiques (/admin/stats) : compteurs par entité et activité (lecture seule).
+   Aide utilisateur : fiche pages/help/admin-stats.help.ts — « ? » (PageHelpButton). */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, FileText, MessageSquare, Users, FolderKanban, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -15,6 +16,7 @@ import {
   Legend,
 } from 'recharts';
 import { adminApi } from '../../lib/api';
+import { PageHelpButton } from '../../help/PageHelpButton';
 
 const PERIODS = [
   { value: '7d', label: '7j' },
@@ -80,10 +82,13 @@ export function StatsPage() {
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Statistiques</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Statistiques</h1>
+              <PageHelpButton pageKey="admin-stats" />
+            </div>
             <p className="text-sm text-muted-foreground mt-0.5">Vue d'ensemble de l'activite</p>
           </div>
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1" data-tour="admin-stats-period">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
@@ -111,7 +116,7 @@ export function StatsPage() {
       {data && (
         <>
           {/* Totals */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-tour="admin-stats-content">
             <StatCard label="Items" value={data.totals.items} icon={FileText} />
             <StatCard label="Contributions" value={data.totals.contributions} icon={MessageSquare} />
             <StatCard label="Utilisateurs" value={data.totals.users} icon={Users} />

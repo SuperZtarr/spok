@@ -1,15 +1,20 @@
-/* Admin doc API (/admin/api-doc) : référence des endpoints REST. */
+/* Admin doc API (/admin/api-doc) : référence des endpoints REST (statique).
+   Aide utilisateur : fiche pages/help/admin-api-doc.help.ts — « ? » (PageHelpButton). */
+import { PageHelpButton } from '../../help/PageHelpButton';
 export function ApiDocPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Documentation API</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Documentation API</h1>
+          <PageHelpButton pageKey="admin-api-doc" />
+        </div>
         <p className="text-sm text-muted-foreground mt-1">Architecture des endpoints, niveaux d'authentification et logique d'acces</p>
         <p className="text-xs text-muted-foreground/60 mt-1">Derniere mise a jour : 20 mars 2026</p>
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-6 text-xs">
+      <div className="flex flex-wrap gap-3 mb-6 text-xs" data-tour="admin-apidoc-legend">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
           Public (optionalAuthenticate)
@@ -29,6 +34,7 @@ export function ApiDocPage() {
       </div>
 
       {/* Public endpoints */}
+      <div data-tour="admin-apidoc-content">
       <Section title="Endpoints publics" subtitle="Accessibles aux visiteurs non connectes. Si connecte, la reponse est enrichie avec les donnees de l'utilisateur.">
         <Row method="GET" path="/menu" auth="none" desc="Items de menu (table MenuItem)" />
         <Row method="GET" path="/config/views" auth="none" desc="Configuration des vues (legacy)" />
@@ -54,6 +60,7 @@ export function ApiDocPage() {
         <Row method="GET" path="/invitations/:token" auth="none" desc="Detail d'une invitation par token" />
         <Row method="GET" path="/health" auth="none" desc="Health check" />
       </Section>
+      </div>
 
       {/* User endpoints - READ */}
       <Section title="Endpoints utilisateur (lecture)" subtitle="Necessitent une connexion. Donnees specifiques a l'utilisateur.">

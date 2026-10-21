@@ -1,4 +1,4 @@
-/* Exécution des TNR depuis l'admin (spawn vitest) — usage local/debug uniquement. */
+/* Contrôles d'intégrité admin (onglet Tests de Diagnostics) : requêtes SQL en lecture seule sur la base (clés orphelines, incohérences) — aucune écriture. */
 import { FastifyPluginAsync } from 'fastify';
 
 interface TestResult {

@@ -1,4 +1,6 @@
-/* Admin journaux d'audit (/admin/audit-logs) : tous espaces, filtres globaux. */
+/* Admin journaux d'audit (/admin/audit-logs) : tous espaces, filtres globaux, restauration, purges.
+   Aide utilisateur : fiche pages/help/admin-audit.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint)
+   sur Restaurer / Restaurer le batch / Purger (irréversible). */
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter, Copy, Check } from 'lucide-react';
@@ -8,6 +10,9 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { AuditRestoreDialog } from '../../components/AuditRestoreDialog';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 function CopyId({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
@@ -175,7 +180,10 @@ export function AuditLogsPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
-        <h1 className="text-2xl font-bold">Audit Logs</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Audit Logs</h1>
+          <PageHelpButton pageKey="admin-audit" />
+        </div>
         <p className="text-sm text-muted-foreground mt-0.5">Historique des modifications et restauration</p>
       </div>
 
@@ -197,29 +205,34 @@ export function AuditLogsPage() {
               {stats.estimatedSizeMB} Mo
             </p>
           </div>
-          <div className="bg-card border border-border rounded-lg p-4">
+          <div className="bg-card border border-border rounded-lg p-4" data-tour="admin-audit-maintenance">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Maintenance</p>
             </div>
             <div className="flex flex-col gap-1.5 mt-2">
-              <Button
-                variant="bordered"
-                size="sm"
-                onClick={() => setShowPurgeModal(true)}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1" />
-                Purger ({purgeDays}j)
-              </Button>
-              {stats && stats.totalCount > OVERFLOW_THRESHOLD && (
+              <HelpHint text={pageHint('admin-audit', 'purge')} className="flex">
                 <Button
                   variant="bordered"
                   size="sm"
-                  className="border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20"
-                  onClick={() => setShowPurgeOverflowModal(true)}
+                  className="w-full"
+                  onClick={() => setShowPurgeModal(true)}
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1" />
-                  Purger &gt; {OVERFLOW_THRESHOLD.toLocaleString()}
+                  Purger ({purgeDays}j)
                 </Button>
+              </HelpHint>
+              {stats && stats.totalCount > OVERFLOW_THRESHOLD && (
+                <HelpHint text={pageHint('admin-audit', 'purgeOverflow')} className="flex">
+                  <Button
+                    variant="bordered"
+                    size="sm"
+                    className="w-full border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                    onClick={() => setShowPurgeOverflowModal(true)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />
+                    Purger &gt; {OVERFLOW_THRESHOLD.toLocaleString()}
+                  </Button>
+                </HelpHint>
               )}
             </div>
           </div>
@@ -283,7 +296,7 @@ export function AuditLogsPage() {
       </div>
 
       {/* Logs table */}
-      <div className="bg-card border border-border rounded-lg overflow-auto max-h-[70vh]">
+      <div className="bg-card border border-border rounded-lg overflow-auto max-h-[70vh]" data-tour="admin-audit-list">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -341,25 +354,29 @@ export function AuditLogsPage() {
                       </td>
                       <td className="px-4 py-2 text-right">
                         {log.action === 'DELETE' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => restoreMutation.mutate(log.id)}
-                            disabled={restoreMutation.isPending}
-                          >
-                            <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                            Restaurer
-                          </Button>
+                          <HelpHint text={pageHint('admin-audit', 'restore')}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => restoreMutation.mutate(log.id)}
+                              disabled={restoreMutation.isPending}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                              Restaurer
+                            </Button>
+                          </HelpHint>
                         )}
                         {(log.action === 'UPDATE' || log.action === 'MOVE') && (log.changes as any)?.before && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setRestoreUpdateLog(log)}
-                          >
-                            <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                            Restaurer
-                          </Button>
+                          <HelpHint text={pageHint('admin-audit', 'restoreUpdate')}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRestoreUpdateLog(log)}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                              Restaurer
+                            </Button>
+                          </HelpHint>
                         )}
                       </td>
                     </tr>
@@ -391,15 +408,17 @@ export function AuditLogsPage() {
                             ))}
                           </div>
                           <div className="ml-auto">
-                            <Button
-                              variant="bordered"
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); batchRestoreMutation.mutate(batchId); }}
-                              disabled={batchRestoreMutation.isPending}
-                            >
-                              <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                              Restaurer le batch
-                            </Button>
+                            <HelpHint text={pageHint('admin-audit', 'restoreBatch')}>
+                              <Button
+                                variant="bordered"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); batchRestoreMutation.mutate(batchId); }}
+                                disabled={batchRestoreMutation.isPending}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                                Restaurer le batch
+                              </Button>
+                            </HelpHint>
                           </div>
                         </div>
 
@@ -431,23 +450,29 @@ export function AuditLogsPage() {
                                   <td className="px-4 py-1.5 w-20"></td>
                                   <td className="px-4 py-1.5 text-right w-32">
                                     {log.action === 'DELETE' && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => restoreMutation.mutate(log.id)}
-                                        disabled={restoreMutation.isPending}
-                                      >
-                                        <RotateCcw className="w-3 h-3" />
-                                      </Button>
+                                      <HelpHint text={pageHint('admin-audit', 'restore')}>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => restoreMutation.mutate(log.id)}
+                                          disabled={restoreMutation.isPending}
+                                          aria-label="Restaurer"
+                                        >
+                                          <RotateCcw className="w-3 h-3" />
+                                        </Button>
+                                      </HelpHint>
                                     )}
                                     {(log.action === 'UPDATE' || log.action === 'MOVE') && (log.changes as any)?.before && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setRestoreUpdateLog(log)}
-                                      >
-                                        <RotateCcw className="w-3 h-3" />
-                                      </Button>
+                                      <HelpHint text={pageHint('admin-audit', 'restoreUpdate')}>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => setRestoreUpdateLog(log)}
+                                          aria-label="Restaurer les champs"
+                                        >
+                                          <RotateCcw className="w-3 h-3" />
+                                        </Button>
+                                      </HelpHint>
                                     )}
                                   </td>
                                 </tr>

@@ -1,4 +1,5 @@
-/* Admin espaces (/admin/spaces) : liste globale avec compteurs, détail (SpaceDetailModal), suppression. */
+/* Admin espaces (/admin/spaces) : liste globale avec compteurs, détail (SpaceDetailModal), suppression.
+   Aide utilisateur : fiche pages/help/admin-spaces.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -10,6 +11,9 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { SpaceDeleteConfirmModal } from '../../components/SpaceDeleteConfirmModal';
 import { useSort } from '../../hooks/useSort';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 const PAGE_SIZE = 20;
 
@@ -159,17 +163,22 @@ export function SpacesPage() {
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Espaces de travail</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Espaces de travail</h1>
+              <PageHelpButton pageKey="admin-spaces" />
+            </div>
             {data && (
               <p className="text-sm text-muted-foreground mt-0.5">
                 {data.pagination.total} espace{data.pagination.total > 1 ? 's' : ''} au total
               </p>
             )}
           </div>
-          <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
-            <Download className="w-4 h-4 mr-1.5" />
-            CSV
-          </Button>
+          <HelpHint text={pageHint('admin-spaces', 'csv')}>
+            <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length} data-tour="admin-spaces-csv">
+              <Download className="w-4 h-4 mr-1.5" />
+              CSV
+            </Button>
+          </HelpHint>
         </div>
 
         {anomaly && (
@@ -177,6 +186,7 @@ export function SpacesPage() {
             <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
             <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
               {anomalyLabels[anomaly] || anomaly}
+              <span className="block text-xs font-normal">{pageHint('admin-spaces', 'anomalyFilter')}</span>
             </span>
             <button
               onClick={clearAnomaly}
@@ -229,7 +239,7 @@ export function SpacesPage() {
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="border border-border rounded-lg overflow-hidden" data-tour="admin-spaces-table">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
@@ -322,16 +332,18 @@ export function SpacesPage() {
                       {formatRelativeDate(space.createdAt)}
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); setSpaceToDelete(space); }}
-                        disabled={deleteMutation.isPending}
-                        title="Supprimer"
-                        className="h-7 w-7 p-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </Button>
+                      <HelpHint text={pageHint('admin-spaces', 'delete')}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); setSpaceToDelete(space); }}
+                          disabled={deleteMutation.isPending}
+                          aria-label="Supprimer"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </HelpHint>
                     </td>
                   </tr>
                 ))}

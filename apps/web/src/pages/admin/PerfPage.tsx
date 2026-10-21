@@ -1,9 +1,13 @@
-/* Admin performance (/admin/perf) : métriques DB et temps de réponse. */
+/* Admin performance (/admin/perf) : métriques DB et temps de réponse (journal en mémoire du serveur).
+   Aide utilisateur : fiche pages/help/admin-perf.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Activity, Trash2, RefreshCw, AlertTriangle, Weight } from 'lucide-react';
 import { adminPerfApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 function ms(value: number) {
   if (value >= 1000) return `${(value / 1000).toFixed(1)}s`;
@@ -52,17 +56,22 @@ export function PerfPage() {
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-semibold">Performances API</h1>
+          <PageHelpButton pageKey="admin-perf" />
           {dataUpdatedAt > 0 && (
             <span className="text-xs text-muted-foreground">{timeAgo(new Date(dataUpdatedAt).toISOString())}</span>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="bordered" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'perf'] })}>
-            <RefreshCw className="w-4 h-4 mr-1" /> Actualiser
-          </Button>
-          <Button variant="bordered" size="sm" onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending}>
-            <Trash2 className="w-4 h-4 mr-1" /> Vider
-          </Button>
+        <div className="flex gap-2" data-tour="admin-perf-actions">
+          <HelpHint text={pageHint('admin-perf', 'refresh')}>
+            <Button variant="bordered" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'perf'] })}>
+              <RefreshCw className="w-4 h-4 mr-1" /> Actualiser
+            </Button>
+          </HelpHint>
+          <HelpHint text={pageHint('admin-perf', 'clear')}>
+            <Button variant="bordered" size="sm" onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending}>
+              <Trash2 className="w-4 h-4 mr-1" /> Vider
+            </Button>
+          </HelpHint>
         </div>
       </div>
 
@@ -85,7 +94,7 @@ export function PerfPage() {
 
       {/* Top slow endpoints */}
       {topSlow.length > 0 && (
-        <div>
+        <div data-tour="admin-perf-slow">
           <h2 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Endpoints les plus lents (moyenne)</h2>
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">

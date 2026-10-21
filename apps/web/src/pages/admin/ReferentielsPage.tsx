@@ -1,10 +1,12 @@
-/* Admin référentiels (/admin/referentiels) : défauts + communautés personnalisées. */
+/* Admin référentiels (/admin/referentiels) : défauts + communautés personnalisées (lecture seule).
+   Aide utilisateur : fiche pages/help/admin-referentiels.help.ts — « ? » (PageHelpButton). */
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { PageHelpButton } from '../../help/PageHelpButton';
 
 export function ReferentielsPage() {
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -18,7 +20,10 @@ export function ReferentielsPage() {
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Referentiels</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Referentiels</h1>
+              <PageHelpButton pageKey="admin-referentiels" />
+            </div>
             {data && (
               <p className="text-sm text-muted-foreground mt-0.5">
                 {data.defaults.statuses.length} statuts · {Object.keys(data.defaults.typeLabels).length} types d'items
@@ -31,6 +36,7 @@ export function ReferentielsPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
+            data-tour="admin-referentiels-refresh"
           >
             <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
             Actualiser
@@ -45,7 +51,7 @@ export function ReferentielsPage() {
       {data && (
         <div className="space-y-6">
           {/* Section 1: Statuts par defaut */}
-          <div>
+          <div data-tour="admin-referentiels-statuses">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Statuts par defaut
               <span className="ml-2 font-normal">({data.defaults.statuses.length})</span>

@@ -1,4 +1,6 @@
-// apps/web/src/pages/admin/DuplicatesPage.tsx
+/* Admin doublons (/admin/duplicates) : items de même titre, URL ou nom de fichier sur tous les espaces ; ouverture et
+   suppression (confirmée, restaurable depuis l'audit).
+   Aide utilisateur : fiche pages/help/admin-duplicates.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -6,6 +8,9 @@ import { RefreshCw, Copy, ExternalLink, ChevronRight, AlertCircle, Trash2, X } f
 import { adminApi, itemsApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { getTypeIcon } from '../../constants/ui';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 type Reason = 'title' | 'url' | 'filename';
 
@@ -94,19 +99,22 @@ export function DuplicatesPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Copy className="w-6 h-6 text-orange-500" />
             Doublons
+            <PageHelpButton pageKey="admin-duplicates" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Items avec titre, URL ou nom de fichier identique sur tous les espaces
           </p>
         </div>
-        <Button variant="bordered" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-2">
+        <HelpHint text={pageHint('admin-duplicates', 'refresh')}>
+        <Button variant="bordered" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-2" data-tour="admin-duplicates-refresh">
           <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           Actualiser
         </Button>
+        </HelpHint>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-border">
+      <div className="flex gap-1 mb-6 border-b border-border" data-tour="admin-duplicates-tabs">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -205,9 +213,9 @@ export function DuplicatesPage() {
                             to={`/spaces/${item.spaceId}?item=${item.id}`}
                             target="_blank"
                             className="p-1 rounded border border-border hover:bg-accent transition-colors"
-                            title="Ouvrir dans un nouvel onglet"
+                            aria-label="Ouvrir dans un nouvel onglet"
                           >
-                            <ExternalLink className="w-3 h-3" />
+                            <HelpHint text={pageHint('admin-duplicates', 'open')}><ExternalLink className="w-3 h-3" /></HelpHint>
                           </Link>
                           {isConfirming ? (
                             <>
@@ -227,13 +235,15 @@ export function DuplicatesPage() {
                               </button>
                             </>
                           ) : (
-                            <button
-                              onClick={() => setConfirmId(item.id)}
-                              className="p-1 rounded border border-border hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-colors"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                            <HelpHint text={pageHint('admin-duplicates', 'delete')}>
+                              <button
+                                onClick={() => setConfirmId(item.id)}
+                                className="p-1 rounded border border-border hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-colors"
+                                aria-label="Supprimer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </HelpHint>
                           )}
                         </div>
                       </div>

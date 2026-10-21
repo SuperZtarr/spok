@@ -1,10 +1,14 @@
-/* Admin diagnostics (/admin/anomalies) : anomalies de données par catégorie. */
+/* Admin diagnostics (/admin/anomalies) : anomalies de données par catégorie, contrôles d'intégrité (lecture seule).
+   Aide utilisateur : fiche pages/help/admin-anomalies.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, ChevronDown, ChevronRight, ExternalLink, CheckCircle, AlertTriangle, AlertCircle, Info, Play, XCircle, Clock, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 // --- Anomalies types & config ---
 
@@ -162,10 +166,12 @@ function AnomaliesTab() {
             </p>
           )}
         </div>
-        <Button variant="bordered" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
+        <HelpHint text={pageHint('admin-anomalies', 'refresh')}>
+          <Button variant="bordered" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </HelpHint>
       </div>
 
       {isLoading && <div className="text-center py-12 text-sm text-muted-foreground">Analyse en cours...</div>}
@@ -267,10 +273,12 @@ function TestsTab() {
             </p>
           )}
         </div>
+        <HelpHint text={pageHint('admin-anomalies', 'runTests')}>
         <Button variant="bordered" size="sm" onClick={handleRun} disabled={isFetching}>
           {isFetching ? <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" /> : <Play className="w-4 h-4 mr-1.5" />}
           {isFetching ? 'Execution...' : 'Lancer les tests'}
         </Button>
+        </HelpHint>
       </div>
 
       {/* Summary bar */}
@@ -381,10 +389,13 @@ export function AnomaliesPage() {
     <div className="p-6 max-w-5xl mx-auto">
       {/* Header sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
-        <h1 className="text-2xl font-bold mb-0.5">Diagnostics</h1>
+        <div className="flex items-center gap-2 mb-0.5">
+          <h1 className="text-2xl font-bold">Diagnostics</h1>
+          <PageHelpButton pageKey="admin-anomalies" />
+        </div>
         <p className="text-sm text-muted-foreground mb-3">Detection d'anomalies et tests d'integrite</p>
 
-        <div className="flex gap-1 border-b border-border">
+        <div className="flex gap-1 border-b border-border" data-tour="admin-anomalies-tabs">
           <button
             onClick={() => setActiveTab('anomalies')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -410,7 +421,7 @@ export function AnomaliesPage() {
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4" data-tour="admin-anomalies-content">
         {activeTab === 'anomalies' ? <AnomaliesTab /> : <TestsTab />}
       </div>
     </div>

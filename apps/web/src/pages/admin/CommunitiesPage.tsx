@@ -1,4 +1,7 @@
-/* Admin communautés (/admin/communities) : liste, approbation des passages en public, suppression. */
+/* Admin communautés (/admin/communities) : liste, approbation des passages en public, suppression.
+   Aide utilisateur : fiche pages/help/admin-communities.help.ts — « ? » (PageHelpButton), rappels fonctionnels
+   (pageHint) sur chaque action à effet et sur le bloc « En attente d'approbation », qui affiche aussi la visibilité
+   demandée et sa signification (ce que l'on valide). */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +16,9 @@ import { Badge } from '../../components/ui/Badge';
 import { CommunityDetailModal } from '../../components/admin/CommunityDetailModal';
 import { CommunityDeleteConfirmModal } from '../../components/CommunityDeleteConfirmModal';
 import { useSort } from '../../hooks/useSort';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 const PAGE_SIZE = 20;
 
@@ -22,6 +28,16 @@ const VISIBILITY_LABELS: Record<AdminCommunity['visibility'], string> = {
   READONLY: 'Lecture seule',
   PRIVATE: 'Privee',
 };
+
+/** Visibilité demandée lue en clair, avec sa signification (rappel fonctionnel de la demande de publication). */
+const PENDING_VISIBILITY_TEXT: Record<AdminCommunity['visibility'], string | undefined> = {
+  OPEN: pageHint('admin-communities', 'visOPEN'),
+  READONLY: pageHint('admin-communities', 'visREADONLY'),
+  PRIVATE: pageHint('admin-communities', 'visPRIVATE'),
+};
+function pendingVisibilityText(v: AdminCommunity['visibility'] | null | undefined): string {
+  return v ? PENDING_VISIBILITY_TEXT[v] ?? VISIBILITY_LABELS[v] : '';
+}
 
 interface AdminCommunity {
   id: string;
@@ -206,7 +222,10 @@ export function CommunitiesPage() {
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Communautes</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Communautes</h1>
+              <PageHelpButton pageKey="admin-communities" />
+            </div>
             {data && (
               <p className="text-sm text-muted-foreground mt-0.5">
                 {data.pagination.total} communaute{data.pagination.total > 1 ? 's' : ''} au total
@@ -214,14 +233,18 @@ export function CommunitiesPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
-              <Download className="w-4 h-4 mr-1.5" />
-              CSV
-            </Button>
-            <Button onClick={() => setCreateModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-1.5" />
-              Nouvelle communaute
-            </Button>
+            <HelpHint text={pageHint('admin-communities', 'csv')}>
+              <Button variant="bordered" size="sm" onClick={handleExportCSV} disabled={!data?.data?.length}>
+                <Download className="w-4 h-4 mr-1.5" />
+                CSV
+              </Button>
+            </HelpHint>
+            <HelpHint text={pageHint('admin-communities', 'new')}>
+              <Button onClick={() => setCreateModalOpen(true)} data-tour="admin-communities-new">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Nouvelle communaute
+              </Button>
+            </HelpHint>
           </div>
         </div>
 
@@ -246,11 +269,12 @@ export function CommunitiesPage() {
 
       {/* Pending public approval banner */}
       {pendingCommunities.length > 0 && (
-        <div className="mb-6 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4">
-          <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2 mb-3">
+        <div data-tour="admin-communities-pending" className="mb-6 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4">
+          <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4" />
             En attente d'approbation ({pendingCommunities.length})
           </h2>
+          <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mb-3">{pageHint('admin-communities', 'pending')}</p>
           <div className="space-y-2">
             {pendingCommunities.map(community => (
               <div key={community.id} className="flex items-center justify-between bg-background/80 rounded-md px-4 py-2.5">
@@ -261,32 +285,40 @@ export function CommunitiesPage() {
                     {community.description && (
                       <p className="text-xs text-muted-foreground line-clamp-1">{community.description}</p>
                     )}
+                    {/* Ce que l'on valide : la visibilité demandée et sa signification (rappel fonctionnel) */}
+                    <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">
+                      {pageHint('admin-communities', 'requested')} : <span className="font-medium">{pendingVisibilityText(community.pendingVisibility)}</span>
+                    </p>
                   </div>
                   <Badge variant="secondary" className="text-[10px]">
                     {community.memberCount} membre{community.memberCount > 1 ? 's' : ''}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => approveMutation.mutate(community.id)}
-                    disabled={approveMutation.isPending}
-                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    Approuver
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => rejectMutation.mutate(community.id)}
-                    disabled={rejectMutation.isPending}
-                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Rejeter
-                  </Button>
+                  <HelpHint text={pageHint('admin-communities', 'approve')}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => approveMutation.mutate(community.id)}
+                      disabled={approveMutation.isPending}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      Approuver
+                    </Button>
+                  </HelpHint>
+                  <HelpHint text={pageHint('admin-communities', 'reject')}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => rejectMutation.mutate(community.id)}
+                      disabled={rejectMutation.isPending}
+                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Rejeter
+                    </Button>
+                  </HelpHint>
                 </div>
               </div>
             ))}
@@ -298,7 +330,7 @@ export function CommunitiesPage() {
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="border border-border rounded-lg overflow-hidden" data-tour="admin-communities-table">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
@@ -370,38 +402,44 @@ export function CommunitiesPage() {
                       <div className="flex items-center justify-end gap-1">
                         {community.pendingVisibility && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); approveMutation.mutate(community.id); }}
-                              disabled={approveMutation.isPending}
-                              title="Approuver"
-                              className="h-7 w-7 p-0"
-                            >
-                              <Check className="w-3.5 h-3.5 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(community.id); }}
-                              disabled={rejectMutation.isPending}
-                              title="Rejeter"
-                              className="h-7 w-7 p-0"
-                            >
-                              <X className="w-3.5 h-3.5 text-amber-600" />
-                            </Button>
+                            <HelpHint text={`${pendingVisibilityText(community.pendingVisibility)} — ${pageHint('admin-communities', 'approve')}`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); approveMutation.mutate(community.id); }}
+                                disabled={approveMutation.isPending}
+                                aria-label="Approuver"
+                                className="h-7 w-7 p-0"
+                              >
+                                <Check className="w-3.5 h-3.5 text-green-600" />
+                              </Button>
+                            </HelpHint>
+                            <HelpHint text={pageHint('admin-communities', 'reject')}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(community.id); }}
+                                disabled={rejectMutation.isPending}
+                                aria-label="Rejeter"
+                                className="h-7 w-7 p-0"
+                              >
+                                <X className="w-3.5 h-3.5 text-amber-600" />
+                              </Button>
+                            </HelpHint>
                           </>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); setCommunityToDelete(community); }}
-                          disabled={deleteMutation.isPending}
-                          title="Supprimer"
-                          className="h-7 w-7 p-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </Button>
+                        <HelpHint text={pageHint('admin-communities', 'delete')}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); setCommunityToDelete(community); }}
+                            disabled={deleteMutation.isPending}
+                            aria-label="Supprimer"
+                            className="h-7 w-7 p-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </HelpHint>
                       </div>
                             </td>
                           </>

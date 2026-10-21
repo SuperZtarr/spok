@@ -3,6 +3,7 @@
  * son accès effectif sur chaque nœud (adhésion directe, hérité de la visibilité d'espace/communauté,
  * bypass admin global, ou aucun accès — auquel cas un admin pourrait lui en accorder un).
  * Réutilise BoxTreeDiagram (moteur de layout partagé avec OrgChartView) et GET /admin/users/:id/access-tree.
+ * Aide utilisateur : fiche pages/help/admin-user-access.help.ts — « ? » (PageHelpButton).
  */
 import { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -12,6 +13,7 @@ import { adminApi } from '../../lib/api';
 import { BoxTreeDiagram } from '../../components/ui/BoxTreeDiagram';
 import type { BoxTreeNode } from '../../components/ui/BoxTreeDiagram';
 import type { AccessTreeNode, AccessRole, AccessSource } from '@spok/shared';
+import { PageHelpButton } from '../../help/PageHelpButton';
 
 const ROLE_LABELS: Record<Exclude<AccessRole, null>, string> = {
   OWNER: 'Propriétaire',
@@ -83,12 +85,15 @@ export function UserAccessPage() {
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-lg font-semibold">Accès de {user?.name || user?.email || '…'}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold">Accès de {user?.name || user?.email || '…'}</h1>
+            <PageHelpButton pageKey="admin-user-access" />
+          </div>
           <p className="text-sm text-muted-foreground">Communautés et espaces — accès effectif et accès possible</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 text-xs">
+      <div className="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 text-xs" data-tour="admin-access-legend">
         {(Object.keys(ROLE_LABELS) as Exclude<AccessRole, null>[]).map((role) => (
           <div key={role} className="flex items-center gap-1">
             <span
@@ -112,7 +117,7 @@ export function UserAccessPage() {
       ) : roots.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">Aucune communauté</div>
       ) : (
-        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden flex flex-col" data-tour="admin-access-tree">
           <BoxTreeDiagram roots={roots} />
         </div>
       )}
