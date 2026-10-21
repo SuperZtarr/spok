@@ -24,6 +24,13 @@ Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que
 
 **Toute évolution d'un composant met à jour les trois couches dans le même changement** : spec validée → code + en-tête → aide utilisateur.
 
+**Point d'entrée** : toute modification de code passe par la skill `spok-dev`, qui appelle ce skill avant (spec) et
+après (liste de contrôle des trois couches). Cette skill-ci garde les règles ; `spok-dev` garde le déroulé.
+
+**Composant sans aide** : toucher une page, une modale ou une vue qui n'a pas encore de fiche d'aide = la créer dans
+le même changement (règle 2026-10-21, après le constat des pages d'administration sans aucune aide). Ne jamais
+laisser un composant modifié sans « ? » ni rappels fonctionnels.
+
 ### Couche 3 — aide utilisateur : règles
 
 - **Une fiche `HelpEntry` par composant** (`apps/web/src/help/types.ts`), à côté du composant :
@@ -33,6 +40,14 @@ Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que
 - **Les textes ne s'écrivent jamais en dur dans un composant** : les affichages lisent la fiche.
   - `?` : `ViewHelpButton` (vue) / `PageHelpButton` (page, modale) — jamais de bouton d'aide maison
   - infobulles : `HelpHint` ; états vides : `EmptyHelp` ; aide sous un champ : `FieldHelp`
+- **Rappels fonctionnels** (demande Thomas 2026-10-21 : « je ne sais plus ce que je valide ») — l'interface doit
+  dire ce que fait chaque fonction, pas seulement comment s'en servir :
+  - **toute action à effet** (approuver, rejeter, supprimer, changer un rôle, fusionner, publier, inviter,
+    restaurer…) porte une infobulle `HelpHint` qui dit **ce qui va se passer** : quelles données changent, pour qui,
+    si c'est réversible. Texte dans `hints` de la fiche, vérifié dans le code de l'API (ne rien affirmer de faux) ;
+  - **tout bloc qui demande une décision** (file d'attente, demande en attente, alerte, conflit) porte une phrase
+    d'explication sous son titre (texte dans la fiche) : d'où vient la demande, ce que chaque choix entraîne ;
+  - pages d'administration comprises : elles ont une fiche et un « ? » comme les autres.
 - **Modifier un comportement d'interface = mettre à jour sa fiche** : bouton ajouté/retiré/renommé → conseil, étape de tour et repère `data-tour` ; nouveau champ → `fields` ; nouvelle vue/page → fiche + registre.
 - Une étape dont la cible est absente est sautée (`runTour`) : acceptable pour une section conditionnelle (favoris, enfants…), pas pour une commande toujours présente — vérifier les repères à l'écran.
 - La dernière étape « Besoin d'aide ? » est ajoutée automatiquement sur le `?` qui a lancé le tour (`TOUR_ANCHOR_ATTR`) : ne pas l'écrire dans les fiches.
@@ -68,9 +83,12 @@ Lire en entier avant toute action.
 4. Coder en respectant la spec
 5. Si le code existant diverge de la doc → signaler la divergence, ne pas la suivre silencieusement
 
-**Après avoir codé** :
-- Si le comportement d'un composant documenté a changé → mettre à jour l'item SPOK (status `to_validate`)
-- Si l'interface a changé → mettre à jour la fiche d'aide utilisateur du composant (couche 3, ci-dessus)
+**Après avoir codé** — liste de contrôle « terminé » (déroulée par `spok-dev`) :
+- **Spec** : comportement d'un composant documenté changé → item SPOK mis à jour (status `to_validate`) ; item absent → signalé
+- **Doc technique** : en-têtes des fichiers touchés ; `businessRules.ts` si règle de gestion
+- **Aide utilisateur** : fiche du composant à jour (ou créée), « ? », tour et repères, rappels fonctionnels sur les actions
+  à effet et les blocs de décision, `fields` / `empty` / zones si concernés (couche 3, ci-dessus)
+- **Contrôle** : `pnpm exec vitest run --project web apps/web/src/help` vert
 
 ---
 

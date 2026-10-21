@@ -53,17 +53,10 @@ Les changements doivent avoir été faits directement sur master — il n'y a do
 
 ## Règle de documentation — obligatoire avant tout code
 
-**Avant de modifier ou créer un fichier source** (`.ts`, `.tsx`, route API, hook, store, utilitaire) :
-
-1. Invoquer le skill `spok-doc` : `Skill({ skill: "spok-doc" })`
-2. Après avoir codé : ajouter un bloc `/* ... */` en tête de chaque fichier modifié (avant les imports) :
-   - Raison d'être du fichier
-   - Props/params clés
-   - Règles d'usage
-
-Ne pas attendre que l'utilisateur le demande. C'est non négociable, au même titre que le typecheck.
-
-Rappel des **trois couches** (détail dans `spok-doc`) : spec SPOK (fait foi) → doc technique dans le code → **aide utilisateur dans l'interface**, textes écrits dans le code (fiche `*.help.ts` du composant). Toute évolution d'interface met à jour la fiche d'aide dans le même changement.
+**Toute demande de modification de code** (fonctionnalité, correctif, retouche d'interface, route API…) passe par la
+skill **`spok-dev`** : `Skill({ skill: "spok-dev" })`. Elle appelle `spok-doc` avant (spec) et après (liste de
+contrôle des trois couches : spec SPOK, en-têtes et `businessRules.ts`, aide utilisateur dans l'interface avec
+rappels fonctionnels). Ne pas attendre que l'utilisateur le demande.
 
 ## Points d'attention
 

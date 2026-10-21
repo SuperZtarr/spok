@@ -48,6 +48,9 @@ Format : bloc `/* ... */` ou JSDoc `/** ... */` avant les imports. Une ligne suf
 
 ### Documentation — règles obligatoires
 
+**Toute modification de code passe par la skill `spok-dev`** : elle appelle `spok-doc` avant (spec) et après
+(trois couches : spec SPOK, doc technique dans le code, aide utilisateur dans l'interface avec rappels fonctionnels).
+
 **Consulter avant de coder**
 - Avant toute modification de code sur un composant, page ou comportement : lire l'item de doc correspondant dans SPOK via `mcp__spok__search_items` ou `mcp__spok__get_space`
 - Si l'item n'existe pas → le signaler à l'utilisateur avant de coder

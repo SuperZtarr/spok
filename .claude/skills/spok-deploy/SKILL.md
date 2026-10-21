@@ -41,6 +41,7 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
      - Comportement documenté modifié ? → item SPOK à jour (status `to_validate`)
      - Nouveau composant/route/script ? → l'item SPOK existe ou a été signalé comme absent
      - Interface modifiée (vue, page, modale, bouton, champ) ? → fiche d'aide utilisateur à jour (conseils, tour + repères `data-tour`, infobulles, état vide, aide des champs — cf. skill spok-doc, couche 3)
+     - Actions à effet et blocs de décision touchés ? → rappel fonctionnel présent (ce qui va se passer) — liste de contrôle « terminé » de la skill `spok-dev`
    - Contrôle de l'aide utilisateur (si `apps/web` est dans le diff) :
      ```bash
      cd C:/_dev/spok && pnpm exec vitest run --project web apps/web/src/help   # depuis la racine : config jsdom (vitest.config.ts)
