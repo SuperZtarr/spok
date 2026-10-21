@@ -90,6 +90,7 @@
 - [ ] Vue Process — chantier C : instanciation d'un modèle avec date de départ, dates calculées le long des liens
 - [x] Modales de relation : MindMap / PERT / Gantt / Process sur RelationCreateDialog / RelationEditDialog (phrases du PERT + explication du type) — 2026-10-20 (ece92a6)
 - [x] Modale « Modifier la relation » d'ItemEditModal : passée sur RelationEditDialog (phrases + explications, statuts des deux items — API : status de toItem/fromItem dans le détail d'item) — 2026-10-21 (825ef12)
+- [x] BUG statut Terminé via le menu ⋯ sans date de fin : règles de dates liées au statut appliquées par l'API (utils/statusDates.ts), descendants propagés inclus, début rempli aussi hors modale — 2026-10-21 (cbd6362)
 - [x] Modes d'affichage : boutons directs revus (Forum + Images/Calendrier ; Projet sans Liste/Types/Images/Liens/Documents, + Carte mentale ; JDR sans Liste/Liens), « Autres vues » = un menu par catégorie — 2026-10-21 (49814cb)
 - [ ] Migrations Prisma versionnées (remplacer `db push --accept-data-loss` de start-api.sh, baseline prod) — préalable aux contraintes CHECK (Tag/Reaction/Invitation XOR, PERSONAL ⇔ sans communauté) et à la FK refresh_tokens → users
 - [ ] Modale de fusion : ne proposer comme cibles que les items que l'utilisateur peut gérer (aujourd'hui : cible étrangère → 403 API)
