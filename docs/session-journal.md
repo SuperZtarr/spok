@@ -6,6 +6,18 @@
 
 ## EN COURS
 
+### Nettoyage relations / TODO — 2026-10-22
+- Tour fiche d'élément, étape Relations : types actuels (bloque, permet, entraîne, lié à). seed.ts : dernière relation `depends` → `blocks` inversée (comme la migration prod). TODO : accusé de lecture (a2eb5d9), doublon « Sélecteur de vue » (annulé 15/10) et types de relation (069d869) cochés. Aide 393/393, typecheck database sans erreur. Seed non relancé. Commit be27c21
+
+### Modale de fusion : cibles autorisées seulement + fiche d'aide — 2026-10-22
+- API (item-merge.ts) refusait : cible non gérable par un MEMBER (403), copie verrouillée (403), cible d'un autre espace (404, sous-espaces inclus dans la vue). lib/mergeTargets.ts (pur, test 3/3) + canManageItem = canEditItem de SpacePage. Modale sans aide → fiche components/help/merge-item.help.ts (registre 'merge-item', « ? », tour merge-source / merge-targets, rappels pickTarget / noTarget / transfer / sourceDeleted / confirm écrits d'après la route), textes en dur remplacés. businessRules merge-targets-allowed-only. Aide 396/396, typecheck web OK. Vérifié en bob (MEMBER, compte seed) : 3 cibles = ses éléments sur 64, explication et « ? » affichés, étape de comparaison OK (annulée, aucune fusion). Spec SPOK : item existant « Fusion d'items [MergeItemModal] » (espace Items, c4f07580…) retrouvé et réécrit (il inversait source et cible, sans les droits), to_validate. Commit d584882
+
+### Séance live : plus de requête pour un anonyme — 2026-10-22
+- useLiveSession (appelé par SpacePage sur chaque espace) : `enabled` exige un utilisateur connecté → plus de GET /live-sessions/by-space en 401 pour un anonyme. businessRules anonymous-read-only complétée. Test useLiveSession.anonymous.test.tsx 2/2 ; LiveSessionHost.test aligné (utilisateur connecté, l'hôte n'est monté que connecté) ; tests séances + aide 431/431, typecheck web OK ; vérifié en anonyme (aucune requête live-sessions, tout en 200). Base locale remise en l'état. Commit a2e1a5f (MEP 2026-10-22 : typecheck 5 paquets OK, TNR 1569/1569)
+
+### Prod — clés AppConfig orphelines supprimées — 2026-10-22
+- Accord explicite de Thomas. Script jetable via prodPrisma() (lecture + sauvegarde, puis suppression par clé exacte) : 2 lignes présentes (views 2722 car., view_categories 204 car., inchangées depuis le 2026-03-17), global_pages / global_page_groups absentes. Supprimées 2, recompte 0 ; app_config prod vide ensuite. Sauvegarde : _old/appconfig-orphans-prod-2026-10-22.json (non versionné). Script supprimé
+
 ### Fiche d'élément réduite / complète dans tous les modes — 2026-10-22
 - Demande Thomas : bouton « Plus de champs » visible hors Forum pour masquer les champs en Projet etc. ; défaut réduit en Forum ET JDR (précision Thomas), complet en Projet / Tous, non mémorisé. ItemEditModal : forumExpanded → expanded (défaut par mode, reset à chaque fiche et changement de mode), bouton et résumé dans tous les modes, commentaires alignés. businessRules (forum-modal-reduced-with-summary réécrite, id conservé), aide item-modal (conseil + étape). Tests aide + item-edit-helpers 399/399, typecheck web OK, vérifié à l'écran (Forum/JDR réduite, Projet/Tous complète, repli en Projet OK). Spec « Modale d'édition d'item » to_validate. Commit f42b831
 
