@@ -1,6 +1,7 @@
 /*
  * Client API REST : fetch typé + gestion des tokens (refresh proactif < 1 min et retry sur 401 —
  * ne pas simplifier, cf. zones fragiles CLAUDE.md) + tous les endpoints groupés par domaine.
+ * 401 sans session (visiteur anonyme) : simple ApiError, jamais d'expiration forcée (hasSession).
  * Uploads de fichiers : toujours via uploadFile (passe par fetchApi → header admin + refresh).
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
  * processApi : positions du canevas de la vue Process (via hooks/useProcessNodes, pas d'appel direct dans les vues).
@@ -185,6 +186,20 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
+/**
+ * Une session existe-t-elle (jeton d'accès ou de rafraîchissement) ? Sans session, un 401 n'est pas une
+ * expiration : un visiteur anonyme qui touche une route réservée reçoit une simple erreur, sans
+ * clearAuth ni auth:logout (sinon renvoi vers /login depuis une page publique — bug 2026-10-21).
+ */
+function hasSession(accessToken: string | null): boolean {
+  if (accessToken) return true;
+  try {
+    return !!JSON.parse(localStorage.getItem('auth-storage') || '{}')?.state?.refreshToken;
+  } catch {
+    return false;
+  }
+}
+
 let isLoggingOut = false;
 function clearAuth() {
   if (isLoggingOut) return; // prevent re-entrant logout loop
@@ -253,8 +268,8 @@ async function fetchApi<T>(
   }
 
   if (!response.ok) {
-    // Handle 401 Unauthorized - try to refresh token
-    if (response.status === 401 && !isRetry && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/refresh') && !endpoint.startsWith('/auth/register')) {
+    // Handle 401 Unauthorized - try to refresh token (only when a session exists, cf. hasSession)
+    if (response.status === 401 && !isRetry && hasSession(token) && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/refresh') && !endpoint.startsWith('/auth/register')) {
       // Coalesce concurrent refresh attempts into a single promise
       if (!refreshPromise) {
         refreshPromise = tryRefreshToken().finally(() => {

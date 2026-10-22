@@ -3,6 +3,8 @@
  * Affiche les sections de menu issues de useMenuItems, filtrées par mode d'interface.
  * Déconnexion, toggles mode admin/dev et bouton "Retourner à" ont été déplacés dans la
  * row 1 du header (Layout.tsx, 2026-08-31) — ce bandeau ne gère plus que la navigation.
+ * Badge d'activité : GET /activity seulement si connecté — le bandeau s'affiche aussi aux visiteurs anonymes
+ * (/communities, /search…) et un 401 y renvoyait vers /login (bug 2026-10-21).
  */
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -17,6 +19,7 @@ import { activityApi } from '../lib/api';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { resolveMenuRoute } from '../lib/searchScope';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED } from '../stores/interfaceMode';
+import { useAuthStore } from '../stores/auth';
 import type { MenuItemConfig } from '@spok/shared';
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -38,6 +41,7 @@ export function GlobalNavBar() {
   const location = useLocation();
   const { sections } = useMenuItems();
   const { mode: interfaceMode } = useInterfaceModeStore();
+  const user = useAuthStore((s) => s.user);
 
   const handleItemClick = (item: MenuItemConfig) => {
     // Recherche : portée par défaut = espace/communauté courant (cf. lib/searchScope)
@@ -49,6 +53,7 @@ export function GlobalNavBar() {
     queryFn: () => activityApi.feed(),
     refetchInterval: 60_000,
     staleTime: 30_000,
+    enabled: !!user,
   });
   const activityCount = activityData?.total ?? 0;
 

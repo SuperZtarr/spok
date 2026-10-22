@@ -174,6 +174,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/pages/LoginPage.tsx',
   },
   {
+    id: 'session-expired-only-with-session',
+    page: 'Toutes',
+    trigger: "Réponse 401 de l'API",
+    effect: "Avec une session (jeton d'accès ou de rafraîchissement) : tentative de rafraîchissement, puis si elle échoue expiration forcée (déconnexion, renvoi vers /login, « Retourner à » après reconnexion). Sans session (visiteur anonyme) : simple erreur, le visiteur reste sur la page demandée. Les appels réservés aux connectés (activité du bandeau…) ne partent pas sans utilisateur",
+    location: 'apps/web/src/lib/api.ts (fetchApi, hasSession), apps/web/src/components/GlobalNavBar.tsx',
+  },
+  {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
     trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-JDR-Tous du header",
