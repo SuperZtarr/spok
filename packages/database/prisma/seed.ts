@@ -1,4 +1,5 @@
-/* Seed initial de la base locale : admin, communauté et espaces d'exemple (pnpm db:seed). */
+/* Seed initial de la base locale : admin, communauté et espaces d'exemple (pnpm db:seed).
+   Relations : uniquement les types officiels (blocks / implements / drives / relates — constants/relationTypes). */
 import { PrismaClient, SpaceType, Role, ItemType, GlobalRole, CommunityRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 
@@ -815,9 +816,9 @@ async function main() {
     data: { fromItemId: taskDone.id, toItemId: taskBlocked.id, type: 'blocks' },
   });
 
-  // Tests E2E dépendent du formulaire reset password
+  // Le formulaire reset password bloque les tests E2E (ancien « depends » inversé, comme la migration prod 2026-09-28)
   await prisma.itemRelation.create({
-    data: { fromItemId: taskLate.id, toItemId: taskInProgress.id, type: 'depends' },
+    data: { fromItemId: taskInProgress.id, toItemId: taskLate.id, type: 'blocks' },
   });
 
   // Bug login lié au projet auth

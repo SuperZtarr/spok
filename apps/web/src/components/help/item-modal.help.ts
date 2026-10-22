@@ -91,7 +91,7 @@ export const help: HelpEntry = {
       element: '[data-tour="item-relations"]',
       popover: {
         title: 'Relations',
-        description: 'Liez cet élément à d\'autres : bloque, dépend de, lié à, duplique, implémente, teste. Ajoutez un commentaire sur chaque relation.',
+        description: 'Liez cet élément à d\'autres : bloque, permet, entraîne (décaler l\'un décale l\'autre) ou lié à. Ajoutez un commentaire sur chaque relation.',
         side: 'left',
       },
     },
