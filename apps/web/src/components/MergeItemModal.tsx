@@ -1,4 +1,9 @@
-/* Fusion de deux items : choix champ par champ source/cible, aperçu du résultat. */
+/*
+ * Fusion de deux items : choix de la cible, puis champ par champ source/cible, aperçu du résultat.
+ * Cibles : mergeTargets (lib/mergeTargets.ts) — même espace que la source, gérables par l'utilisateur
+ * (canManageItem = canEditItem de SpacePage) : jamais une cible que l'API refuserait (403/404).
+ * Aide : fiche components/help/merge-item.help.ts (« ? », tour merge-source / merge-targets, rappels pageHint).
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { Search, ArrowRight } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +12,10 @@ import { Button } from './ui/Button';
 import { TYPE_ICONS, TYPE_LABELS, getPriorityConfig } from '../constants/ui';
 import type { Item } from '@spok/shared';
 import { itemsApi } from '../lib/api';
+import { mergeTargets } from '../lib/mergeTargets';
+import { PageHelpButton } from '../help/PageHelpButton';
+import { HelpHint } from '../help/HelpHint';
+import { pageHint } from '../help/pageHint';
 
 type KeepChoice = 'source' | 'target';
 type DescriptionChoice = 'source' | 'target' | 'concat';
@@ -24,6 +33,8 @@ interface MergeItemModalProps {
   sourceItem: Item | null;
   allItems: Item[];
   spaceId: string;
+  /** L'utilisateur peut-il gérer cet item ? (règle de l'API) — absent = tout est gérable */
+  canManageItem?: (item: Item) => boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,7 +53,7 @@ function displayValue(val: string | null | undefined): string {
   return val || '—';
 }
 
-export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId }: MergeItemModalProps) {
+export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId, canManageItem }: MergeItemModalProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'pick' | 'compare'>('pick');
   const [search, setSearch] = useState('');
@@ -61,24 +72,11 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
     }
   }, [isOpen]);
 
-  // Filter items for picker (exclude source and its descendants)
-  const pickableItems = useMemo(() => {
-    if (!sourceItem) return [];
-    const excludeIds = new Set<string>();
-    excludeIds.add(sourceItem.id);
-    // Exclude descendants
-    function addDescendants(parentId: string) {
-      for (const item of allItems) {
-        if (item.parentId === parentId && !excludeIds.has(item.id)) {
-          excludeIds.add(item.id);
-          addDescendants(item.id);
-        }
-      }
-    }
-    addDescendants(sourceItem.id);
-
-    return allItems.filter(i => !excludeIds.has(i.id));
-  }, [sourceItem, allItems]);
+  // Cibles possibles : mêmes refus que l'API (cf. lib/mergeTargets.ts)
+  const pickableItems = useMemo(
+    () => (sourceItem ? mergeTargets(sourceItem, allItems, canManageItem) : []),
+    [sourceItem, allItems, canManageItem],
+  );
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) return pickableItems;
@@ -155,10 +153,11 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Fusionner avec..." size={step === 'compare' ? 'large' : 'default'} devName="MergeItemModal">
+      <div className="flex justify-end -mt-2 mb-1"><PageHelpButton pageKey="merge-item" /></div>
       {step === 'pick' && (
         <div className="space-y-3">
           {/* Source item display */}
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-md" data-tour="merge-source">
             <SourceIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="text-sm text-muted-foreground">Source :</span>
             <span className="font-semibold truncate">{sourceItem.title}</span>
@@ -168,6 +167,7 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
             <ArrowRight className="w-4 h-4" />
             <span>Choisir l'élément cible (la source sera supprimée après fusion)</span>
           </div>
+          <p className="text-xs text-muted-foreground -mt-1">{pageHint('merge-item', 'pickTarget')}</p>
 
           {/* Search */}
           <div className="relative">
@@ -183,9 +183,11 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
           </div>
 
           {/* Item list */}
-          <div className="max-h-[400px] overflow-y-auto border rounded-md divide-y">
+          <div className="max-h-[400px] overflow-y-auto border rounded-md divide-y" data-tour="merge-targets">
             {filteredItems.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">Aucun élément trouvé</div>
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                {pickableItems.length === 0 ? pageHint('merge-item', 'noTarget') : 'Aucun élément trouvé'}
+              </div>
             ) : (
               filteredItems.slice(0, 50).map((item) => {
                 const Icon = TYPE_ICONS[item.type] || TYPE_ICONS.NOTE;
@@ -331,8 +333,8 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
 
           {/* Info about what will be transferred */}
           <div className="text-xs text-muted-foreground space-y-1 px-1">
-            <p>Les enfants, contributions, tags et relations de la source seront transférés à la cible.</p>
-            <p className="text-red-500">La source sera supprimée après la fusion.</p>
+            <p>{pageHint('merge-item', 'transfer')}</p>
+            <p className="text-red-500">{pageHint('merge-item', 'sourceDeleted')}</p>
           </div>
 
           {/* Actions */}
@@ -344,9 +346,11 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId 
               <Button variant="bordered" onClick={onClose}>
                 Annuler
               </Button>
-              <Button onClick={handleConfirm} disabled={mergeMutation.isPending}>
-                {mergeMutation.isPending ? 'Fusion...' : 'Fusionner'}
-              </Button>
+              <HelpHint text={pageHint('merge-item', 'confirm')}>
+                <Button onClick={handleConfirm} disabled={mergeMutation.isPending}>
+                  {mergeMutation.isPending ? 'Fusion...' : 'Fusionner'}
+                </Button>
+              </HelpHint>
             </div>
           </div>
 

@@ -160,6 +160,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/constants/ui.ts (PRIORITIES)',
   },
   {
+    id: 'merge-targets-allowed-only',
+    page: 'Modale « Fusionner avec… » (MergeItemModal)',
+    trigger: 'Choix de la cible d\'une fusion',
+    effect: "Ne sont proposés que les éléments du même espace que la source (hors source et ses descendants) que l'utilisateur peut gérer : propriétaire de l'espace (ou mode admin) = tous ; membre = ceux qu'il a créés ou qui lui sont assignés ; jamais une copie de séance verrouillée. Mêmes refus que l'API (403 / 404), qui reste seule garante",
+    location: 'apps/web/src/lib/mergeTargets.ts, apps/web/src/components/MergeItemModal.tsx, apps/web/src/pages/SpacePage.tsx (canEditItem)',
+  },
+  {
     id: 'absorb-children-only-if-children',
     page: 'Toutes les vues (menu contextuel) + modale item',
     trigger: "Affichage de l'action « Absorber les enfants »",

@@ -1745,6 +1745,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
         sourceItem={allItems.find(i => i.id === actions.mergingItemId) || null}
         allItems={allItems}
         spaceId={spaceId!}
+        canManageItem={canEditItem}
       />
 
       {/* Cross-space move confirmation modal */}
