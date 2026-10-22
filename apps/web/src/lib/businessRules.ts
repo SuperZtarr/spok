@@ -184,8 +184,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'anonymous-read-only',
     page: 'Toutes (espaces et fiches des communautés publiques)',
     trigger: 'Visiteur non connecté',
-    effect: "Lecture seule : aucune action de modification proposée. Réactions affichées en compteurs sans clic ni ajout, « Marquer comme non lu » absent du menu des éléments, pas d'enregistrement « vu » à l'ouverture d'une fiche. L'API refuse de toute façon toute écriture sans jeton (401)",
-    location: 'apps/web/src/components/ReactionBar.tsx (readOnly), apps/web/src/components/ItemEditModal.tsx, apps/web/src/lib/itemMenuGroups.ts',
+    effect: "Lecture seule : aucune action de modification proposée. Réactions affichées en compteurs sans clic ni ajout, « Marquer comme non lu » absent du menu des éléments, pas d'enregistrement « vu » à l'ouverture d'une fiche, pas de lecture de l'état de séance live d'un espace (séances réservées aux membres). L'API refuse de toute façon toute écriture sans jeton (401)",
+    location: 'apps/web/src/components/ReactionBar.tsx (readOnly), apps/web/src/components/ItemEditModal.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/hooks/useLiveSession.ts',
   },
   {
     id: 'interface-mode-context-override',

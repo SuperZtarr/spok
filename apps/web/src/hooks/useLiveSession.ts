@@ -7,12 +7,14 @@
  * Invalide ['items', spaceId] à chaque display/reveal : les copies apparaissent dans les vues de l'espace.
  * start()/end() refetch aussitôt ; les mutations de préparation posent la liste renvoyée dans le cache.
  * Préparation : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants (filtré par l'API).
+ * Visiteur anonyme : aucune requête (séances réservées aux membres, route authentifiée) — state reste undefined.
  */
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LiveAgendaItem, LiveEvent, LiveSessionState } from '@spok/shared';
 import { liveSessionsApi } from '../lib/api';
 import { openLiveStream } from '../lib/liveStream';
+import { useAuthStore } from '../stores/auth';
 
 export function applyLiveEvent(state: LiveSessionState, event: LiveEvent): LiveSessionState {
   switch (event.type) {
@@ -44,10 +46,11 @@ export function applyLiveEvent(state: LiveSessionState, event: LiveEvent): LiveS
 export function useLiveSession(spaceId: string | undefined, options: { stream?: boolean } = {}) {
   const queryClient = useQueryClient();
   const key = ['live-session', spaceId];
+  const isLoggedIn = useAuthStore((s) => !!s.user);
   const { data: state, isError, refetch } = useQuery({
     queryKey: key,
     queryFn: () => liveSessionsApi.getBySpace(spaceId!),
-    enabled: !!spaceId,
+    enabled: !!spaceId && isLoggedIn,
     retry: false,
     staleTime: Infinity,
   });

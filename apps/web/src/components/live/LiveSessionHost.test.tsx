@@ -1,4 +1,6 @@
-/* Tests de LiveSessionHost : fenêtre seulement en LIVE, séance active vidée si l'API refuse (403/404). */
+/* Tests de LiveSessionHost : fenêtre seulement en LIVE, séance active vidée si l'API refuse (403/404).
+   Utilisateur connecté posé dans beforeEach : l'hôte n'est monté que connecté (App.tsx) et useLiveSession
+   ne requête pas sans utilisateur. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -7,9 +9,11 @@ import { MemoryRouter } from 'react-router-dom'
 const getBySpace = vi.fn()
 vi.mock('../../lib/api', () => ({ liveSessionsApi: { getBySpace: (...a: unknown[]) => getBySpace(...a) }, searchApi: {}, getValidAccessToken: vi.fn(), LIVE_API_URL: '/api' }))
 vi.mock('../../lib/liveStream', () => ({ openLiveStream: () => () => {} }))
+vi.mock('../../stores/theme', () => ({ useThemeStore: { getState: () => ({ initTheme: vi.fn() }) } }))
 
 import { LiveSessionHost } from './LiveSessionHost'
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession'
+import { useAuthStore } from '../../stores/auth'
 
 const state = (status: string) => ({
   session: { id: 'ls', spaceId: 'sp', parentSpaceId: 'p', hostId: 'h', status, controllerId: null, currentEntryId: null, startedAt: 'x', liveAt: null, endedAt: null },
@@ -26,6 +30,7 @@ describe('LiveSessionHost', () => {
   beforeEach(() => {
     localStorage.clear()
     getBySpace.mockReset()
+    useAuthStore.setState({ user: { id: 'u1' } as never, isAuthenticated: true })
     useActiveLiveSessionStore.getState().clear()
     useActiveLiveSessionStore.getState().setActive('sp')
   })
