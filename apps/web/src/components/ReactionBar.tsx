@@ -1,4 +1,8 @@
-/* Barre de réactions (emoji) d'un item ou d'une contribution : compteurs + toggle utilisateur. */
+/*
+ * Barre de réactions (emoji) d'un item ou d'une contribution : compteurs + toggle utilisateur.
+ * readOnly (visiteur anonyme — un anonyme ne modifie rien, spec « Sécurité & Accès ») : compteurs affichés
+ * sans clic, pas de bouton d'ajout ; sinon le clic partait à l'API et échouait en silence (401).
+ */
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SmilePlus } from 'lucide-react';
@@ -13,9 +17,10 @@ interface ReactionBarProps {
   summary: ReactionSummary[];
   onReacted?: (reactionType: string) => void;
   label?: string;
+  readOnly?: boolean;
 }
 
-export function ReactionBar({ spaceId, itemId, contributionId, summary, onReacted, label }: ReactionBarProps) {
+export function ReactionBar({ spaceId, itemId, contributionId, summary, onReacted, label, readOnly = false }: ReactionBarProps) {
   const queryClient = useQueryClient();
   const [localSummary, setLocalSummary] = useState<ReactionSummary[]>(summary);
   const [showPicker, setShowPicker] = useState(false);
@@ -80,6 +85,23 @@ export function ReactionBar({ spaceId, itemId, contributionId, summary, onReacte
   };
 
   const userReaction = localSummary.find(s => s.userReacted);
+
+  if (readOnly) {
+    if (localSummary.length === 0) return null;
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        {localSummary.map(s => {
+          const config = getReactionConfig(s.type);
+          return (
+            <span key={s.type} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-border text-muted-foreground" title={config.label}>
+              <span>{config.emoji}</span>
+              <span>{s.count}</span>
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1 flex-wrap relative">

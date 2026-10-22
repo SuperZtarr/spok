@@ -27,6 +27,8 @@
  * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions).
+ * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
+ * pas d'enregistrement « vu » (markViewed) à l'ouverture.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
@@ -258,7 +260,8 @@ export function ItemEditModal({
     if (isOpen && itemId) {
       const fromList = allItems.find(i => i.id === itemId);
       viewedAtRef.current = (fromList as any)?.viewedAt ?? null;
-      activityApi.markViewed(itemId).catch(() => {});
+      // Lecture personnelle : rien à enregistrer pour un visiteur anonyme (l'API répond 401)
+      if (user) activityApi.markViewed(itemId).catch(() => {});
     }
   }, [isOpen, itemId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1088,6 +1091,7 @@ export function ItemEditModal({
                     summary={(item as any).reactionSummary || []}
                     onReacted={() => canInteract && setShowContributionField(true)}
                     label="Réagissez ou Contribuez à l'article"
+                    readOnly={!user}
                   />
                 )}
 
@@ -1157,6 +1161,7 @@ export function ItemEditModal({
                                   contributionId={contribution.id}
                                   summary={(contribution as any).reactionSummary || []}
                                   label="Réagissez ou Contribuez au commentaire"
+                                  readOnly={!user}
                                   onReacted={() => { if (canInteract) { setReplyToContributionId(contribution.id); setShowContributionField(true); setNewContribution(''); }}}
                                 />
                                 {canInteract && (contribution.authorId === user?.id) && (

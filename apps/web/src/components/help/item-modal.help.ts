@@ -7,7 +7,7 @@ export const help: HelpEntry = {
   summary: 'Toutes les informations d\'un élément : description, contributions, relations, tags, dates et priorité.',
   tips: [
     'Utilisez @mentions et #références dans la description',
-    'Ajoutez des réactions pour donner votre avis',
+    'Ajoutez des réactions pour donner votre avis (une fois connecté — un visiteur voit seulement les compteurs)',
     'Les contributions permettent de discuter sur l\'élément',
     'Créez des relations pour lier les éléments entre eux',
     'Les enfants sont listés en bas de la fiche',
@@ -59,7 +59,7 @@ export const help: HelpEntry = {
       element: '[data-tour="item-reactions"]',
       popover: {
         title: 'Réactions',
-        description: 'Exprimez votre avis d\'un clic : utile, intéressant, urgent… Cliquez le smiley pour choisir.',
+        description: 'Exprimez votre avis d\'un clic : utile, intéressant, urgent… Cliquez le smiley pour choisir. Réservé aux utilisateurs connectés : un visiteur voit seulement les compteurs.',
         side: 'top',
       },
     },

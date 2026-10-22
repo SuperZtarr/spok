@@ -181,6 +181,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/lib/api.ts (fetchApi, hasSession), apps/web/src/components/GlobalNavBar.tsx',
   },
   {
+    id: 'anonymous-read-only',
+    page: 'Toutes (espaces et fiches des communautés publiques)',
+    trigger: 'Visiteur non connecté',
+    effect: "Lecture seule : aucune action de modification proposée. Réactions affichées en compteurs sans clic ni ajout, « Marquer comme non lu » absent du menu des éléments, pas d'enregistrement « vu » à l'ouverture d'une fiche. L'API refuse de toute façon toute écriture sans jeton (401)",
+    location: 'apps/web/src/components/ReactionBar.tsx (readOnly), apps/web/src/components/ItemEditModal.tsx, apps/web/src/lib/itemMenuGroups.ts',
+  },
+  {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
     trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-JDR-Tous du header",

@@ -1,7 +1,8 @@
 /*
  * Construction des groupes d'actions du menu contextuel des items (ItemActionMenu) : Ajouter,
  * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
- * « Marquer comme non lu » (groupe Ouvrir, toujours présent) : markItemUnread, sans callback à câbler.
+ * « Marquer comme non lu » (groupe Ouvrir) : markItemUnread, sans callback à câbler ; présent pour tout utilisateur
+ * connecté (même sans droit d'édition), absent pour un visiteur anonyme (lu via useAuthStore.getState()).
  * Section « Séance » (Ajouter à la préparation / Présenter en séance) : ajoutée d'office si une séance live active
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  */
@@ -11,6 +12,7 @@ import { activityApi } from './api';
 import { queryClient } from './queryClient';
 import { buildLiveItemActions } from './liveItemActions';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
+import { useAuthStore } from '../stores/auth';
 
 /**
  * « Marquer comme non lu » : pose la marque serveur puis rafraîchit le feed d'activité (page Activité,
@@ -88,11 +90,12 @@ export function buildItemMenuGroups(
   } = callbacks;
   const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true } = options;
 
-  // Groupe 1 — Ouvrir (toujours visible)
+  // Groupe 1 — Ouvrir (toujours visible ; « non lu » réservé aux connectés : un anonyme ne modifie rien)
+  const isLoggedIn = !!useAuthStore.getState().user;
   const group1: ItemAction[] = [
     ...(onOpen ? [{ id: 'open', label: 'Ouvrir', icon: Eye, onClick: () => onOpen(itemId) }] : []),
     ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
-    { id: 'mark-unread', label: 'Marquer comme non lu', icon: EyeOff, onClick: () => { void markItemUnread(itemId); } },
+    ...(isLoggedIn ? [{ id: 'mark-unread', label: 'Marquer comme non lu', icon: EyeOff, onClick: () => { void markItemUnread(itemId); } }] : []),
   ];
 
   // Groupe 2 — Modifier (write) : Modifier, Absorber, Éclater, Fusionner
